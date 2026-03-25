@@ -1,6 +1,41 @@
 module "terraform_state_s3" {
   source      = "../../modules/s3"
   bucket_name = "open-jii-terraform-state-${var.environment}"
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "backup" {
+  source = "../../modules/backup"
+
+  vault_name  = "open-jii-${var.environment}-backup-vault"
+  environment = var.environment
+
+  aurora_cluster_arns = [module.aurora_db.cluster_arn]
+
+  dynamodb_table_arns = [
+    module.terraform_state_lock.table_arn,
+  ]
+
+  backup_retention_days    = 14
+  dr_backup_retention_days = 30
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "disaster-recovery"
+  }
+
+  depends_on = [module.aurora_db, module.terraform_state_lock]
 }
 
 module "terraform_state_lock" {
@@ -38,6 +73,11 @@ module "logs_bucket" {
     ManagedBy   = "Terraform"
     Component   = "logging"
   }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 }
 
 module "docusaurus_s3" {
@@ -45,6 +85,12 @@ module "docusaurus_s3" {
   enable_versioning           = false
   bucket_name                 = "open-jii-docs-public-${var.environment}"
   cloudfront_distribution_arn = module.docs_cloudfront.cloudfront_distribution_arn
+  create_cloudfront_policy    = true
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 }
 
 module "timestream" {
@@ -111,8 +157,15 @@ module "databricks_workspace_s3_policy" {
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
   bucket_name        = "open-jii-databricks-root-bucket-${var.environment}"
-  enable_versioning  = false
+  enable_versioning  = true # required by CRR
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
+
+  enable_crr = true
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 }
 
 module "databricks_workspace" {
@@ -1209,6 +1262,16 @@ module "migration_runner_ecr" {
     ManagedBy   = "terraform"
     Component   = "database-migrations"
   }
+}
+
+module "ecr_replication" {
+  source = "../../modules/ecr-replication"
+
+  dr_region = "eu-west-1"
+  repository_names = [
+    module.backend_ecr.repository_name,
+    module.migration_runner_ecr.repository_name,
+  ]
 }
 
 module "migration_runner_ecs" {

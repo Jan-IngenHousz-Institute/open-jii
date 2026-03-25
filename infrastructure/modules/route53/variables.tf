@@ -37,3 +37,21 @@ variable "use_environment_prefix" {
   type        = bool
   default     = true
 }
+
+variable "existing_zone_id" {
+  description = "ID of an existing Route53 hosted zone to reuse. When set, no new zone is created — used in the DR environment to reuse the prod zone without taking ownership of it."
+  type        = string
+  default     = null
+}
+
+variable "existing_cloudfront_certificate_arns" {
+  description = "Map of logical name (api/docs/web) to existing ACM certificate ARN in us-east-1. When provided, no new CloudFront certs are created and DNS validation is skipped — used in DR to reuse prod's already-validated certs and avoid propagation delays."
+  type        = map(string)
+  default     = null
+}
+
+variable "create_dns_records" {
+  description = "Whether to create the CloudFront alias A records and www CNAME. Set to false in DR to deploy all infrastructure safely before cutting over traffic. Flip to true only when performing the actual DNS failover."
+  type        = bool
+  default     = true
+}
