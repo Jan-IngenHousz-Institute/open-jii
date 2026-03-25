@@ -109,6 +109,11 @@ export class ExperimentMetadataRepository {
     const now = new Date();
     const isoNow = now.toISOString();
     const metadataJson = JSON.stringify(dto.metadata);
+
+    if (!this.schemas.jsonString.safeParse(metadataJson).success) {
+      return failure(AppError.validationError("Metadata payload exceeds the 5 MB size limit"));
+    }
+
     const metadataId = randomUUID();
 
     const insertQuery = `
@@ -143,20 +148,22 @@ export class ExperimentMetadataRepository {
     });
   }
 
-  async deleteByMetadataId(metadataId: string): Promise<Result<boolean>> {
+  async deleteByMetadataId(metadataId: string, experimentId: string): Promise<Result<boolean>> {
     this.logger.log({
       msg: "Deleting metadata by metadata ID",
       operation: "deleteByMetadataId",
       metadataId,
+      experimentId,
     });
 
-    if (!this.validate.uuid(metadataId).success) {
-      return failure(AppError.validationError("Invalid metadata ID format"));
+    if (!this.validate.uuid(metadataId).success || !this.validate.uuid(experimentId).success) {
+      return failure(AppError.validationError("Invalid metadata ID or experiment ID format"));
     }
 
     const query = `
       DELETE FROM ${this.metadataTable}
       WHERE metadata_id = ${this.formatSqlValue(metadataId)}
+        AND experiment_id = ${this.formatSqlValue(experimentId)}
     `;
 
     const result = await this.databricksPort.executeSqlQuery(
@@ -203,26 +210,33 @@ export class ExperimentMetadataRepository {
     metadataId: string,
     dto: UpdateExperimentMetadataDto,
     _userId: string,
+    experimentId: string,
   ): Promise<Result<ExperimentMetadataDto>> {
     this.logger.log({
       msg: "Updating metadata",
       operation: "update",
       metadataId,
+      experimentId,
     });
 
-    if (!this.validate.uuid(metadataId).success) {
-      return failure(AppError.validationError("Invalid metadata ID format"));
+    if (!this.validate.uuid(metadataId).success || !this.validate.uuid(experimentId).success) {
+      return failure(AppError.validationError("Invalid metadata ID or experiment ID format"));
     }
 
     const now = new Date();
     const isoNow = now.toISOString();
     const metadataJson = JSON.stringify(dto.metadata);
 
+    if (!this.schemas.jsonString.safeParse(metadataJson).success) {
+      return failure(AppError.validationError("Metadata payload exceeds the 5 MB size limit"));
+    }
+
     const updateQuery = `
       UPDATE ${this.metadataTable}
       SET metadata = PARSE_JSON(${this.formatSqlValue(metadataJson)}),
           updated_at = ${this.formatSqlValue(isoNow)}
       WHERE metadata_id = ${this.formatSqlValue(metadataId)}
+        AND experiment_id = ${this.formatSqlValue(experimentId)}
     `;
 
     const updateResult = await this.databricksPort.executeSqlQuery(
@@ -239,6 +253,7 @@ export class ExperimentMetadataRepository {
       SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
       FROM ${this.metadataTable}
       WHERE metadata_id = ${this.formatSqlValue(metadataId)}
+        AND experiment_id = ${this.formatSqlValue(experimentId)}
     `;
 
     const selectResult = await this.databricksPort.executeSqlQuery(

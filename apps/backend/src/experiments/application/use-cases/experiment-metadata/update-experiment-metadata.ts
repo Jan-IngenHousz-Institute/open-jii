@@ -69,7 +69,7 @@ export class UpdateExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have write access to this experiment"));
         }
 
-        const result = await this.experimentMetadataRepository.update(metadataId, data, userId);
+        const result = await this.experimentMetadataRepository.update(metadataId, data, userId, experimentId);
 
         if (result.isSuccess()) {
           this.logger.log({

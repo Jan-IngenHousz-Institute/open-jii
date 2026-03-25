@@ -195,22 +195,28 @@ describe("ExperimentMetadataRepository", () => {
   });
 
   describe("deleteByMetadataId", () => {
-    it("should delete metadata by metadata_id", async () => {
+    it("should delete metadata by metadata_id scoped to experiment", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
 
-      const result = await repository.deleteByMetadataId(mockMetadataId);
+      const result = await repository.deleteByMetadataId(mockMetadataId, mockExperimentId);
 
       assertSuccess(result);
       expect(result.value).toBe(true);
 
-      expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
-        databricksPort.CENTRUM_SCHEMA_NAME,
-        expect.stringContaining("DELETE FROM"),
-      );
+      const call = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
+      expect(call[1]).toContain("DELETE FROM");
+      expect(call[1]).toContain(mockMetadataId);
+      expect(call[1]).toContain(mockExperimentId);
     });
 
     it("should reject invalid metadata ID", async () => {
-      const result = await repository.deleteByMetadataId("not-valid");
+      const result = await repository.deleteByMetadataId("not-valid", mockExperimentId);
+
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should reject invalid experiment ID", async () => {
+      const result = await repository.deleteByMetadataId(mockMetadataId, "not-valid");
 
       expect(result.isFailure()).toBe(true);
     });
@@ -220,7 +226,7 @@ describe("ExperimentMetadataRepository", () => {
         failure(AppError.internal("Delete failed")),
       );
 
-      const result = await repository.deleteByMetadataId(mockMetadataId);
+      const result = await repository.deleteByMetadataId(mockMetadataId, mockExperimentId);
 
       expect(result.isFailure()).toBe(true);
     });
@@ -229,7 +235,7 @@ describe("ExperimentMetadataRepository", () => {
   describe("update", () => {
     const updateDto = { metadata: { location: "Lab C", count: 99 } };
 
-    it("should update metadata and return the updated record", async () => {
+    it("should update metadata scoped to experiment and return the updated record", async () => {
       const updatedSchemaData = buildMetadataSchemaData({
         metadata: updateDto.metadata,
         updatedAt: "2026-02-01T10:00:00.000Z",
@@ -239,11 +245,15 @@ describe("ExperimentMetadataRepository", () => {
         .mockResolvedValueOnce(success(emptySchemaData)) // UPDATE
         .mockResolvedValueOnce(success(updatedSchemaData)); // SELECT
 
-      const result = await repository.update(mockMetadataId, updateDto, mockUserId);
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
 
       assertSuccess(result);
       expect(result.value.metadataId).toBe(mockMetadataId);
       expect(result.value.metadata).toEqual(updateDto.metadata);
+
+      const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
+      expect(updateCall[1]).toContain(mockMetadataId);
+      expect(updateCall[1]).toContain(mockExperimentId);
     });
 
     it("should use PARSE_JSON in UPDATE query", async () => {
@@ -251,7 +261,7 @@ describe("ExperimentMetadataRepository", () => {
         .mockResolvedValueOnce(success(emptySchemaData))
         .mockResolvedValueOnce(success(buildMetadataSchemaData()));
 
-      await repository.update(mockMetadataId, updateDto, mockUserId);
+      await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
 
       const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       expect(updateCall[1]).toContain("PARSE_JSON");
@@ -259,7 +269,13 @@ describe("ExperimentMetadataRepository", () => {
     });
 
     it("should reject invalid metadata ID", async () => {
-      const result = await repository.update("bad-id", updateDto, mockUserId);
+      const result = await repository.update("bad-id", updateDto, mockUserId, mockExperimentId);
+
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should reject invalid experiment ID", async () => {
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId, "bad-id");
 
       expect(result.isFailure()).toBe(true);
     });
@@ -269,7 +285,7 @@ describe("ExperimentMetadataRepository", () => {
         failure(AppError.internal("Update failed")),
       );
 
-      const result = await repository.update(mockMetadataId, updateDto, mockUserId);
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
 
       expect(result.isFailure()).toBe(true);
     });
@@ -281,7 +297,7 @@ describe("ExperimentMetadataRepository", () => {
           success({ ...emptySchemaData, columns: buildMetadataSchemaData().columns }),
         ); // SELECT returns empty
 
-      const result = await repository.update(mockMetadataId, updateDto, mockUserId);
+      const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
 
       expect(result.isFailure()).toBe(true);
     });

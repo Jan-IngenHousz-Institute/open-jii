@@ -60,7 +60,10 @@ export class DeleteExperimentMetadataUseCase {
           return failure(AppError.forbidden("You do not have write access to this experiment"));
         }
 
-        const deleteResult = await this.experimentMetadataRepository.deleteByMetadataId(metadataId);
+        const deleteResult = await this.experimentMetadataRepository.deleteByMetadataId(
+          metadataId,
+          experimentId,
+        );
 
         if (deleteResult.isFailure()) {
           this.logger.error({
