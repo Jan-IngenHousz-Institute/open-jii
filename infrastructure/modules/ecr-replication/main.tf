@@ -4,6 +4,9 @@ data "aws_caller_identity" "current" {}
 # can exist per AWS account. Managing it here (rather than inside individual
 # ECR repository modules) ensures a single apply never silently overwrites the
 # replication rules for other repositories in the same account.
+# Note: ECR auto-creates destination repositories on the first image push with
+# default settings (mutable tags, no lifecycle policy). Adjust manually in the
+# DR region if stricter settings are required.
 resource "aws_ecr_replication_configuration" "this" {
   replication_configuration {
     rule {

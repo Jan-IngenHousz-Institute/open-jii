@@ -9,8 +9,11 @@ resource "aws_s3_bucket" "bucket" {
 resource "aws_s3_bucket_versioning" "versioning" {
   bucket = aws_s3_bucket.bucket.id
   versioning_configuration {
-    # CRR requires versioning on the source bucket regardless of enable_versioning.
-    status = (var.enable_versioning || var.enable_crr) ? "Enabled" : "Disabled"
+    # "Disabled" is only valid on buckets that have never had versioning enabled.
+    # Once a bucket has been versioned, AWS only allows "Enabled" or "Suspended".
+    # Using "Suspended" as the off-state avoids a 400 on buckets that were
+    # previously versioned (e.g. after CRR is removed).
+    status = (var.enable_versioning || var.enable_crr) ? "Enabled" : "Suspended"
   }
 }
 
@@ -172,6 +175,8 @@ resource "aws_s3_bucket_replication_configuration" "crr" {
   rule {
     id     = "replicate-all-to-dr"
     status = "Enabled"
+
+    filter {}
 
     delete_marker_replication {
       status = "Enabled"
