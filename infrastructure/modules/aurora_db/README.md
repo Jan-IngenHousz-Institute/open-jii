@@ -45,6 +45,7 @@ graph TD;
 | `backup_retention_period`    | Number of days to retain backups           | `number`  | `7`                     | ❌ No   |
 | `performance_insights_retention_period` | Performance Insights retention  | `number`  | `7`                     | ❌ No   |
 | `skip_final_snapshot`        | Skip final snapshot on deletion            | `bool`    | `false`                 | ❌ No   |
+| `snapshot_identifier`        | Snapshot identifier (ARN) to restore the Aurora cluster from. Used for disaster recovery scenarios when restoring from AWS Backup cross-region snapshots. When null, creates a fresh cluster. | `string` | `null` | ❌ No |
 | `enable_kms_key_rotation`    | Enable automatic KMS key rotation          | `bool`    | `true`                  | ❌ No   |
 | `kms_key_deletion_window`    | Days to retain KMS keys before deletion    | `number`  | `7`                     | ❌ No   |
 
@@ -65,4 +66,16 @@ The security group restricts database access to the VPC range to ensure private 
 Private subnets are used to prevent unauthorized external access.
 
 Automatic backups ensure data integrity, following AWS best practices.
+
+## 🔄 Disaster Recovery
+
+The module supports disaster recovery restore scenarios via the `snapshot_identifier` parameter:
+
+- **Fresh Cluster**: When `snapshot_identifier` is `null` (default), the module creates a new Aurora cluster from scratch with the specified `database_name` and `master_username`.
+
+- **Restore from Snapshot**: When `snapshot_identifier` is provided, the cluster is restored from that snapshot instead of creating a fresh cluster. This is particularly useful for DR environments that need to restore from AWS Backup cross-region snapshots.
+
+- **Expected Format**: The `snapshot_identifier` expects an RDS cluster snapshot ARN (e.g., `arn:aws:rds:region:account:cluster-snapshot:snapshot-name`), not an AWS Backup recovery-point ARN.
+
+- **Parameter Restrictions**: When restoring from a snapshot, `database_name` and `master_username` are ignored (set to `null` automatically), as these values are inherited from the source snapshot.
 ```

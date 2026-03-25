@@ -68,6 +68,12 @@ variable "skip_final_snapshot" {
   default     = false
 }
 
+variable "snapshot_identifier" {
+  description = "ARN or ID of a DB snapshot to restore the cluster from. Used during DR recovery to restore from an AWS Backup cross-region snapshot. Leave null for a fresh cluster."
+  type        = string
+  default     = null
+}
+
 variable "enable_kms_key_rotation" {
   description = "Enable automatic rotation for KMS keys"
   type        = bool

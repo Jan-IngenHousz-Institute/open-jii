@@ -74,7 +74,9 @@ vi.mock("react-async-hook", () => ({
 
 const baseArgs = {
   rawMeasurement: { data: 1 },
+  // NOTE: timestamp === normalized UTC timestamp (no local offset suffix)
   timestamp: "2026-03-02T10:00:00.000Z",
+  timezone: "Europe/Amsterdam",
   experimentName: "Test Experiment",
   experimentId: "exp-1",
   protocolId: "proto-1",
@@ -184,6 +186,21 @@ describe("useMeasurementUpload", () => {
     expect(mockToastError).toHaveBeenCalledWith("Could not save measurement. Please try again.");
 
     vi.restoreAllMocks();
+  });
+
+  it("forwards the UTC timestamp and timezone to the MQTT payload unchanged", async () => {
+    mockSendMqttEvent.mockResolvedValueOnce(undefined);
+    mockSaveSuccessfulUpload.mockResolvedValueOnce(undefined);
+
+    const utcTimestamp = "2026-03-16T13:00:18.022Z";
+    const timezone = "Europe/Amsterdam";
+
+    await capturedCallback({ ...baseArgs, timestamp: utcTimestamp, timezone });
+
+    expect(mockSendMqttEvent).toHaveBeenCalledWith(
+      "mock/topic",
+      expect.objectContaining({ timestamp: utcTimestamp, timezone }),
+    );
   });
 
   it("skips upload when rawMeasurement is not an object", async () => {

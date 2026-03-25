@@ -52,8 +52,9 @@ vi.mock("react-async-hook", () => ({
 }));
 
 const baseArgs = {
+  // NOTE: timestamp === normalized UTC timestamp (no local offset suffix)
   timestamp: "2026-03-02T10:00:00.000Z",
-  timezone: "UTC",
+  timezone: "Europe/Amsterdam",
   experimentName: "Test Experiment",
   experimentId: "exp-1",
   userId: "user-1",

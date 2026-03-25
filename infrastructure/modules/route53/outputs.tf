@@ -16,8 +16,8 @@ output "regional_services_certificate_arn" {
 }
 
 output "name_servers" {
-  description = "Name servers for the Route53 zone"
-  value       = aws_route53_zone.main.name_servers
+  description = "Name servers for the Route53 zone (empty list when reusing an existing zone)"
+  value       = try(aws_route53_zone.main[0].name_servers, [])
 }
 
 output "environment_domain" {
@@ -37,7 +37,7 @@ output "docs_domain" {
 
 output "cloudfront_certificate_arns" {
   description = "A map of CloudFront domain logical names to their ACM certificate ARNs in us-east-1."
-  value = {
+  value = var.existing_cloudfront_certificate_arns != null ? var.existing_cloudfront_certificate_arns : {
     for key, cert in aws_acm_certificate.cloudfront_certs : key => cert.arn
   }
 }
