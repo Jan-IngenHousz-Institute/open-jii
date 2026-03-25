@@ -1,20 +1,11 @@
 import { cva } from "class-variance-authority";
-import clsx from "clsx";
-import { CameraView, useCameraPermissions } from "expo-camera";
-import { Camera, CameraOff, Info, ShieldAlert, X } from "lucide-react-native";
+import { CameraView } from "expo-camera";
+import { Info, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Linking,
-  Dimensions,
-} from "react-native";
-import { Button } from "~/components/Button";
+import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
+
+import { CameraPermissionState, useCameraPermission } from "./camera-permission-state";
 
 const closeButtonVariants = cva("absolute right-5 top-14 z-10 rounded-full p-2", {
   variants: {
@@ -25,18 +16,6 @@ const closeButtonVariants = cva("absolute right-5 top-14 z-10 rounded-full p-2",
   },
   defaultVariants: {
     cameraActive: false,
-  },
-});
-
-const iconBadgeVariants = cva("h-20 w-20 items-center justify-center rounded-full border", {
-  variants: {
-    permanentlyDenied: {
-      false: "bg-[#E2FCFC] border-[#005E5E]",
-      true: "bg-[#FFE5E5] border-[#DC2626]",
-    },
-  },
-  defaultVariants: {
-    permanentlyDenied: false,
   },
 });
 
@@ -53,9 +32,9 @@ export function QRScannerModal({
   onScanned,
   showMatchNote,
 }: QRScannerModalProps) {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission] = useCameraPermission();
   const [scanned, setScanned] = useState(false);
-  const { colors, classes } = useTheme();
+  const { colors } = useTheme();
   const { height } = Dimensions.get("window");
   // Reset scan state whenever the modal becomes visible
   useEffect(() => {
@@ -67,66 +46,15 @@ export function QRScannerModal({
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
-    console.log("QR code scanned:", data);
+    console.log("[qr-scanner] Scan successful:", data);
     onScanned(data);
     onClose();
   };
 
   const renderContent = () => {
-    if (!permission) {
+    if (!permission?.granted) {
       return (
-        <View className="flex-1 items-center justify-center gap-6 px-8">
-          <View className={iconBadgeVariants({ permanentlyDenied: false })}>
-            <Camera size={40} color={colors.primary.dark} />
-          </View>
-          <View className="items-center gap-2">
-            <Text className={clsx("text-xl font-bold", classes.text)}>Starting camera</Text>
-            <Text className={clsx("text-center text-sm", classes.textMuted)}>
-              Please wait while the camera initialises…
-            </Text>
-          </View>
-          <ActivityIndicator size="large" color={colors.primary.dark} />
-        </View>
-      );
-    }
-
-    if (!permission.granted) {
-      const permanentlyDenied = !permission.canAskAgain;
-
-      return (
-        <View className="flex-1 items-center justify-center gap-6 px-8">
-          {/* Icon badge */}
-          <View className={iconBadgeVariants({ permanentlyDenied })}>
-            {permanentlyDenied ? (
-              <ShieldAlert size={40} color={"#DC2626"} />
-            ) : (
-              <CameraOff size={40} color={colors.primary.dark} />
-            )}
-          </View>
-
-          {/* Text block */}
-          <View className="items-center gap-2">
-            <Text className={clsx("text-xl font-bold", classes.text)}>
-              {permanentlyDenied ? "Permission disabled" : "Camera access required"}
-            </Text>
-            <Text className={clsx("text-center text-sm leading-5", classes.textMuted)}>
-              {permanentlyDenied
-                ? "Camera access has been permanently denied. Open your device settings to enable it for openJII."
-                : "openJII needs access to your camera to scan QR codes."}
-            </Text>
-          </View>
-
-          {/* Action */}
-          {!permanentlyDenied ? (
-            <Button onPress={requestPermission} title="Grant permission" variant="primary" />
-          ) : (
-            <Button
-              onPress={() => Linking.openSettings()}
-              title="Open settings"
-              variant="outline"
-            />
-          )}
-        </View>
+        <CameraPermissionState permission={permission} requestPermission={requestPermission} />
       );
     }
 
