@@ -248,30 +248,14 @@ export class ExperimentMetadataRepository {
       return failure(AppError.internal(`Failed to update metadata: ${updateResult.error.message}`));
     }
 
-    // Fetch the updated row to return the full DTO
-    const selectQuery = `
-      SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
-      FROM ${this.metadataTable}
-      WHERE metadata_id = ${this.formatSqlValue(metadataId)}
-        AND experiment_id = ${this.formatSqlValue(experimentId)}
-    `;
-
-    const selectResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      selectQuery,
-    );
-
-    if (selectResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to fetch updated metadata: ${selectResult.error.message}`),
-      );
-    }
-
-    if (selectResult.value.rows.length === 0) {
-      return failure(AppError.notFound(`Metadata with ID ${metadataId} not found`));
-    }
-
-    return success(this.mapRowToDto(selectResult.value.columns, selectResult.value.rows[0]));
+    return success({
+      metadataId,
+      experimentId,
+      metadata: dto.metadata,
+      createdBy: _userId,
+      createdAt: now, // approximate; true value lives in DB
+      updatedAt: now,
+    });
   }
 
   /** Map a raw Databricks row to ExperimentMetadataDto */

@@ -236,19 +236,13 @@ describe("ExperimentMetadataRepository", () => {
     const updateDto = { metadata: { location: "Lab C", count: 99 } };
 
     it("should update metadata scoped to experiment and return the updated record", async () => {
-      const updatedSchemaData = buildMetadataSchemaData({
-        metadata: updateDto.metadata,
-        updatedAt: "2026-02-01T10:00:00.000Z",
-      });
-
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(success(emptySchemaData)) // UPDATE
-        .mockResolvedValueOnce(success(updatedSchemaData)); // SELECT
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(success(emptySchemaData));
 
       const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
 
       assertSuccess(result);
       expect(result.value.metadataId).toBe(mockMetadataId);
+      expect(result.value.experimentId).toBe(mockExperimentId);
       expect(result.value.metadata).toEqual(updateDto.metadata);
 
       const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
@@ -257,9 +251,7 @@ describe("ExperimentMetadataRepository", () => {
     });
 
     it("should use PARSE_JSON in UPDATE query", async () => {
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(success(emptySchemaData))
-        .mockResolvedValueOnce(success(buildMetadataSchemaData()));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(success(emptySchemaData));
 
       await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
 
@@ -284,18 +276,6 @@ describe("ExperimentMetadataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         failure(AppError.internal("Update failed")),
       );
-
-      const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
-
-      expect(result.isFailure()).toBe(true);
-    });
-
-    it("should return NOT_FOUND when metadata row does not exist after update", async () => {
-      vi.spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValueOnce(success(emptySchemaData)) // UPDATE succeeds
-        .mockResolvedValueOnce(
-          success({ ...emptySchemaData, columns: buildMetadataSchemaData().columns }),
-        ); // SELECT returns empty
 
       const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
 
