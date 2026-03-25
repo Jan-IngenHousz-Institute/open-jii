@@ -273,13 +273,16 @@ export class ExperimentMetadataRepository {
       }
     }
 
+    const createdAtRaw = row[colIndex("created_at")];
+    const updatedAtRaw = row[colIndex("updated_at")];
+
     return {
       metadataId: row[colIndex("metadata_id")] ?? "",
       experimentId: row[colIndex("experiment_id")] ?? "",
       metadata,
       createdBy: row[colIndex("created_by")] ?? "",
-      createdAt: new Date(row[colIndex("created_at")] ?? ""),
-      updatedAt: new Date(row[colIndex("updated_at")] ?? ""),
+      createdAt: createdAtRaw ? new Date(createdAtRaw) : new Date(0),
+      updatedAt: updatedAtRaw ? new Date(updatedAtRaw) : new Date(0),
     };
   }
 }

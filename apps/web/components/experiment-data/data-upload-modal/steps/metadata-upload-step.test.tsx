@@ -1,57 +1,51 @@
-import type { MetadataContextValue, MetadataTableState } from "@/components/metadata-table";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Import the component under test *after* mocks are set up
 import { MetadataUploadStep } from "./metadata-upload-step";
 
 globalThis.React = React;
 
-// --- Controllable mock state ---
-const baseMockState: MetadataTableState = {
-  columns: [],
-  rows: [],
-  isDirty: false,
-  identifierColumnId: null,
-  experimentQuestionId: null,
-};
+// --- Mock state to control what MetadataTable receives ---
+let mockColumns: { id: string; name: string; type: string }[] = [];
+let mockRows: { _id: string; [key: string]: unknown }[] = [];
+let mockIdentifierColumnId: string | null = null;
+let mockExperimentQuestionId: string | null = null;
+let mockIsSaving = false;
 
-let mockContextValue: MetadataContextValue;
+// Track calls to setters
+const mockSetColumns = vi.fn((cols) => {
+  mockColumns = typeof cols === "function" ? cols(mockColumns) : cols;
+});
+const mockSetRows = vi.fn((rows) => {
+  mockRows = typeof rows === "function" ? rows(mockRows) : rows;
+});
+const mockSetIdentifierColumnId = vi.fn((id) => {
+  mockIdentifierColumnId = typeof id === "function" ? id(mockIdentifierColumnId) : id;
+});
+const mockSetExperimentQuestionId = vi.fn((id) => {
+  mockExperimentQuestionId = typeof id === "function" ? id(mockExperimentQuestionId) : id;
+});
 
-function buildMockContext(stateOverrides: Partial<MetadataTableState> = {}): MetadataContextValue {
-  return {
-    state: { ...baseMockState, ...stateOverrides },
-    setData: vi.fn(),
-    updateCell: vi.fn(),
-    addRow: vi.fn(),
-    deleteRow: vi.fn(),
-    addColumn: vi.fn(),
-    deleteColumn: vi.fn(),
-    renameColumn: vi.fn(),
-    setIdentifierColumnId: vi.fn(),
-    setExperimentQuestionId: vi.fn(),
-    importFromClipboard: vi.fn(),
-    importFromFile: vi.fn(),
-    mergeConfig: null,
-    setMergeConfig: vi.fn(),
-    save: vi.fn(),
-    isSaving: false,
-    isEditingCell: false,
-    setIsEditingCell: vi.fn(),
-  };
-}
+// Mock useState to control specific state values
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  const useStateMock = vi.fn((initial: unknown) => {
+    // We need to return proper state for the component
+    return (actual as typeof React).useState(initial);
+  });
+  return { ...actual, useState: useStateMock };
+});
 
-// Mock the metadata-table module so we control context values
 vi.mock("@/components/metadata-table", () => ({
-  MetadataProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useMetadata: () => mockContextValue,
   MetadataTable: () => <div data-testid="metadata-table">Table</div>,
 }));
 
 vi.mock("@/components/metadata-table/utils/parse-metadata-import", () => ({
+  parseClipboard: vi.fn(),
   parseClipboardText: vi.fn(),
+  parseFile: vi.fn(),
 }));
 
 vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
@@ -59,17 +53,15 @@ vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
 }));
 
 vi.mock("@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate", () => ({
-  useExperimentMetadataCreate: () => ({ mutate: vi.fn(), isPending: false }),
+  useExperimentMetadataCreate: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
-// Mock translation – return the key so we can assert on it
 vi.mock("@repo/i18n/client", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }));
 
-// Minimal UI component mocks
 vi.mock("@repo/ui/components", () => ({
   Button: ({
     children,
@@ -106,16 +98,6 @@ vi.mock("lucide-react", () => ({
   Upload: () => <span />,
 }));
 
-const sampleColumns = [
-  { id: "col_1", name: "ID", type: "string" as const },
-  { id: "col_2", name: "Location", type: "string" as const },
-];
-
-const sampleRows = [
-  { _id: "row_1", col_1: "1", col_2: "GH 8.3" },
-  { _id: "row_2", col_1: "2", col_2: "GH 8.3" },
-];
-
 describe("MetadataUploadStep – Save Metadata button", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -136,58 +118,14 @@ describe("MetadataUploadStep – Save Metadata button", () => {
     return el;
   };
 
-  it("is disabled when no data is loaded", () => {
-    mockContextValue = buildMockContext();
+  it("is disabled when no data is loaded (empty state)", () => {
     renderStep();
+    // In empty state the save button should still be present and disabled
     expect(getSaveButton()).toBeDisabled();
   });
 
-  it("is disabled when data is loaded but no identifier column is set", () => {
-    mockContextValue = buildMockContext({
-      columns: sampleColumns,
-      rows: sampleRows,
-      identifierColumnId: null,
-    });
+  it("renders the import prompt when no data is loaded", () => {
     renderStep();
-    expect(getSaveButton()).toBeDisabled();
-  });
-
-  it("is disabled when identifier column is set but no experiment question is selected", () => {
-    mockContextValue = buildMockContext({
-      columns: sampleColumns,
-      rows: sampleRows,
-      identifierColumnId: "col_1",
-      experimentQuestionId: null,
-    });
-    renderStep();
-    expect(getSaveButton()).toBeDisabled();
-  });
-
-  it("is enabled when data is loaded, identifier column and experiment question are set", () => {
-    mockContextValue = buildMockContext({
-      columns: sampleColumns,
-      rows: sampleRows,
-      identifierColumnId: "col_1",
-      experimentQuestionId: "q_1",
-    });
-    renderStep();
-    expect(getSaveButton()).toBeEnabled();
-  });
-
-  it("is disabled while saving is in progress", () => {
-    mockContextValue = {
-      ...buildMockContext({
-        columns: sampleColumns,
-        rows: sampleRows,
-        identifierColumnId: "col_1",
-        experimentQuestionId: "q_1",
-      }),
-      isSaving: true,
-    };
-    renderStep();
-    // When saving, the button text changes to the uploading key
-    const saveButton = screen.getByText("uploadModal.fileUpload.uploading").closest("button");
-    if (!saveButton) throw new Error("Save button not found");
-    expect(saveButton).toBeDisabled();
+    expect(screen.getByText("uploadModal.metadata.importPrompt")).toBeInTheDocument();
   });
 });

@@ -1,13 +1,16 @@
 "use client";
 
-import { MetadataProvider, MetadataTable, useMetadata } from "@/components/metadata-table";
+import { MetadataTable } from "@/components/metadata-table";
 import type { MetadataColumn, MetadataRow } from "@/components/metadata-table";
-import { parseClipboardText } from "@/components/metadata-table/utils/parse-metadata-import";
+import {
+  parseClipboard,
+  parseClipboardText,
+  parseFile,
+} from "@/components/metadata-table/utils/parse-metadata-import";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
 import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Trash2, Upload } from "lucide-react";
-import * as React from "react";
-import { useRef, useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
 import {
@@ -21,6 +24,25 @@ import {
 } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
+/**
+ * Sanitize a question label to match the pipeline's `questions_data` key format.
+ * Must stay in sync with `sanitize_label` in centrum_pipeline.py.
+ */
+function sanitizeQuestionLabel(label: string): string {
+  if (!label) return "question_empty";
+
+  let s = label.toLowerCase();
+  s = s.replace(/[ ,;{}()\n\t=.]+/g, "_");
+  s = s.replace(/^_+|_+$/g, "");
+  s = s.replace(/_+/g, "_");
+
+  if (!s || /^\d/.test(s)) {
+    s = `question_${s}`;
+  }
+
+  return s;
+}
+
 interface MetadataUploadStepProps {
   experimentId: string;
   onBack: () => void;
@@ -32,103 +54,82 @@ export function MetadataUploadStep({
   onBack,
   onUploadSuccess,
 }: MetadataUploadStepProps) {
-  const createMutation = useExperimentMetadataCreate();
-
-  const handleSave = async (
-    columns: MetadataColumn[],
-    rows: MetadataRow[],
-    identifierColumnId: string | null,
-    experimentQuestionId: string | null,
-  ): Promise<void> => {
-    await createMutation.mutateAsync({
-      params: { id: experimentId },
-      body: {
-        metadata: {
-          columns,
-          rows,
-          identifierColumnId,
-          experimentQuestionId,
-        },
-      },
-    });
-    onUploadSuccess();
-  };
-
-  return (
-    <MetadataProvider experimentId={experimentId} onSave={handleSave}>
-      <MetadataUploadStepContent experimentId={experimentId} onBack={onBack} />
-    </MetadataProvider>
-  );
-}
-
-interface QuestionOption {
-  id: string;
-  name: string;
-}
-
-function MetadataUploadStepContent({
-  experimentId,
-  onBack,
-}: {
-  experimentId: string;
-  onBack: () => void;
-}) {
   const { t } = useTranslation("experiments");
-  const {
-    state,
-    importFromClipboard,
-    importFromFile,
-    save,
-    isSaving,
-    isEditingCell,
-    setData,
-    setExperimentQuestionId,
-  } = useMetadata();
+  const createMutation = useExperimentMetadataCreate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [isPasting, setIsPasting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Table state
+  const [columns, setColumns] = useState<MetadataColumn[]>([]);
+  const [rows, setRows] = useState<MetadataRow[]>([]);
+  const [identifierColumnId, setIdentifierColumnId] = useState<string | null>(null);
+  const [experimentQuestionId, setExperimentQuestionId] = useState<string | null>(null);
 
   // Fetch experiment flow to get question nodes
   const { data: flowData } = useExperimentFlow(experimentId);
 
-  const questionOptions: QuestionOption[] = React.useMemo(() => {
+  const questionOptions = useMemo(() => {
     const nodes = flowData?.body.graph.nodes;
     if (!nodes) return [];
     return nodes
       .filter((node: { type: string }) => node.type === "question")
       .map((node: { id: string; name: string }) => ({
-        id: node.id,
+        id: sanitizeQuestionLabel(node.name),
         name: node.name,
       }));
   }, [flowData]);
 
-  // Prevent dialog from closing when editing a cell
-  useEffect(() => {
-    if (!isEditingCell) return;
+  const setData = useCallback((newColumns: MetadataColumn[], newRows: MetadataRow[]) => {
+    setColumns(newColumns);
+    setRows(newRows);
+    setIdentifierColumnId(null);
+    setExperimentQuestionId(null);
+  }, []);
 
-    const handleEscapeCapture = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        e.preventDefault();
-      }
-    };
+  const updateCell = useCallback(
+    (rowId: string, columnId: string, value: string | number | null) => {
+      setRows((prev) =>
+        prev.map((row) => (row._id === rowId ? { ...row, [columnId]: value } : row)),
+      );
+    },
+    [],
+  );
 
-    document.addEventListener("keydown", handleEscapeCapture, true);
-    return () => document.removeEventListener("keydown", handleEscapeCapture, true);
-  }, [isEditingCell]);
+  const deleteRow = useCallback((rowId: string) => {
+    setRows((prev) => prev.filter((row) => row._id !== rowId));
+  }, []);
+
+  const deleteColumn = useCallback((columnId: string) => {
+    setColumns((prev) => prev.filter((col) => col.id !== columnId));
+    setIdentifierColumnId((prev) => (prev === columnId ? null : prev));
+    setRows((prev) =>
+      prev.map((row) => {
+        const { [columnId]: _, ...rest } = row;
+        return rest as MetadataRow;
+      }),
+    );
+  }, []);
+
+  const renameColumn = useCallback((columnId: string, newName: string) => {
+    setColumns((prev) =>
+      prev.map((col) => (col.id === columnId ? { ...col, name: newName } : col)),
+    );
+  }, []);
 
   // Handle paste events as fallback for clipboard API
   useEffect(() => {
     const handlePasteEvent = (e: ClipboardEvent) => {
-      // Only handle if we don't have data yet and not editing a cell
-      if (state.columns.length > 0 || isEditingCell) return;
+      if (columns.length > 0) return;
 
       const text = e.clipboardData?.getData("text/plain");
       if (text) {
         try {
           setImportError(null);
-          const { columns, rows } = parseClipboardText(text);
-          setData(columns, rows);
+          const result = parseClipboardText(text);
+          setData(result.columns, result.rows);
           e.preventDefault();
         } catch (error) {
           setImportError(error instanceof Error ? error.message : "Failed to paste from clipboard");
@@ -138,28 +139,55 @@ function MetadataUploadStepContent({
 
     document.addEventListener("paste", handlePasteEvent);
     return () => document.removeEventListener("paste", handlePasteEvent);
-  }, [state.columns.length, isEditingCell, setData]);
+  }, [columns.length, setData]);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  const handleFileImport = useCallback(
+    async (file: File) => {
       try {
         setImportError(null);
-        await importFromFile(file);
+        const result = await parseFile(file);
+        setData(result.columns, result.rows);
       } catch (error) {
         setImportError(error instanceof Error ? error.message : "Failed to import file");
       }
-    }
+    },
+    [setData],
+  );
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await handleFileImport(file);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) void handleFileImport(file);
+    },
+    [handleFileImport],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
   const handlePaste = async () => {
     setImportError(null);
     setIsPasting(true);
     try {
-      await importFromClipboard();
+      const result = await parseClipboard();
+      setData(result.columns, result.rows);
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "Failed to paste from clipboard");
     } finally {
@@ -167,16 +195,40 @@ function MetadataUploadStepContent({
     }
   };
 
-  const hasData = state.columns.length > 0;
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await createMutation.mutateAsync({
+        params: { id: experimentId },
+        body: {
+          metadata: {
+            columns,
+            rows,
+            identifierColumnId,
+            experimentQuestionId,
+          },
+        },
+      });
+      onUploadSuccess();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const hasData = columns.length > 0;
 
   return (
-    <div className="max-full space-y-6 overflow-x-scroll">
+    <div className="max-w-full space-y-6 overflow-x-scroll">
       {!hasData ? (
         <div className="space-y-4">
           <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             className={cn(
               "flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8",
               "hover:border-primary/50 hover:bg-muted/50 transition-colors",
+              isDragging && "border-primary bg-muted/50",
             )}
           >
             <FileSpreadsheet className="text-muted-foreground h-12 w-12" />
@@ -219,7 +271,7 @@ function MetadataUploadStepContent({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
-              {t("uploadModal.metadata.rowCount", { count: state.rows.length })}
+              {t("uploadModal.metadata.rowCount", { count: rows.length })}
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setData([], [])}>
@@ -229,15 +281,17 @@ function MetadataUploadStepContent({
             </div>
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.tsv,.txt,.xlsx,.xls"
-            onChange={handleFileSelect}
-            className="hidden"
+          <MetadataTable
+            columns={columns}
+            rows={rows}
+            identifierColumnId={identifierColumnId}
+            onUpdateCell={updateCell}
+            onDeleteRow={deleteRow}
+            onDeleteColumn={deleteColumn}
+            onRenameColumn={renameColumn}
+            onSetIdentifierColumn={setIdentifierColumnId}
+            pageSize={10}
           />
-
-          <MetadataTable pageSize={10} />
 
           <div className="grid gap-2">
             <Label htmlFor="experiment-question">
@@ -257,7 +311,7 @@ function MetadataUploadStepContent({
                   })}
             </p>
             <Select
-              value={state.experimentQuestionId ?? ""}
+              value={experimentQuestionId ?? ""}
               onValueChange={(val) => setExperimentQuestionId(val || null)}
               disabled={questionOptions.length === 0}
             >
@@ -292,10 +346,8 @@ function MetadataUploadStepContent({
           {t("uploadModal.fileUpload.back")}
         </Button>
         <Button
-          onClick={save}
-          disabled={
-            !hasData || isSaving || !state.identifierColumnId || !state.experimentQuestionId
-          }
+          onClick={handleSave}
+          disabled={!hasData || isSaving || !identifierColumnId || !experimentQuestionId}
         >
           {isSaving
             ? t("uploadModal.fileUpload.uploading")

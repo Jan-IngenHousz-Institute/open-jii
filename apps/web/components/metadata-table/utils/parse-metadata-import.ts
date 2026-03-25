@@ -83,6 +83,36 @@ export function parseDelimitedText(
 }
 
 /**
+ * Extract the text value from an ExcelJS cell, which can be a primitive,
+ * Date, rich text object, formula object, or hyperlink object.
+ */
+function resolveExcelCellValue(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    // Rich text: { richText: [{ text: '...', font: {...} }] }
+    if ("richText" in obj && Array.isArray(obj.richText)) {
+      return (obj.richText as { text?: string }[]).map((r) => r.text ?? "").join("");
+    }
+    // Formula: { formula: '...', result: ... }
+    if ("result" in obj) return resolveExcelCellValue(obj.result);
+    // Hyperlink: { text: '...', hyperlink: '...' }
+    if ("text" in obj) return String(obj.text ?? "");
+  }
+  return "";
+}
+
+function escapeCsvField(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/**
  * Read and parse a File (CSV or Excel)
  */
 export async function parseFile(
@@ -103,15 +133,44 @@ export async function parseFile(
   }
 
   if (extension === "xlsx" || extension === "xls") {
-    const XLSX = await import("xlsx");
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array" });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) return { columns: [], rows: [] };
-    const firstSheet = workbook.Sheets[sheetName];
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await file.arrayBuffer());
+    const sheet = workbook.worksheets[0];
+    if (!sheet || sheet.rowCount === 0) return { columns: [], rows: [] };
 
-    // Convert sheet to CSV and let PapaParse handle parsing
-    const csv = XLSX.utils.sheet_to_csv(firstSheet);
+    // Collect all rows from the sheet
+    const allRows: string[][] = [];
+    sheet.eachRow((row) => {
+      const cells: string[] = [];
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cells.push(resolveExcelCellValue(cell.value));
+      });
+      allRows.push(cells);
+    });
+    if (allRows.length === 0) return { columns: [], rows: [] };
+
+    // Skip leading title rows: a title row typically has all cells with the
+    // same value (e.g. sheet name in a merged cell) while the real header row
+    // has distinct column names.
+    let startIdx = 0;
+    if (allRows.length > 1) {
+      const firstUnique = new Set(allRows[0].filter(Boolean));
+      const secondUnique = new Set(allRows[1].filter(Boolean));
+      if (firstUnique.size <= 1 && secondUnique.size > firstUnique.size) {
+        startIdx = 1;
+      }
+    }
+
+    // Normalize column count across rows (title rows or merged cells may have fewer)
+    const rows = allRows.slice(startIdx);
+    const maxCols = Math.max(...rows.map((r) => r.length));
+    const csv = rows
+      .map((r) => {
+        while (r.length < maxCols) r.push("");
+        return r.map(escapeCsvField).join(",");
+      })
+      .join("\n");
     return parseDelimitedText(csv, ",");
   }
 

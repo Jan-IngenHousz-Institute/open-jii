@@ -8,16 +8,6 @@ import { EditableCell } from "./editable-cell";
 
 globalThis.React = React;
 
-/* --------------------------------- Mocks --------------------------------- */
-
-const mockSetIsEditingCell = vi.fn();
-
-vi.mock("./metadata-context", () => ({
-  useMetadata: () => ({
-    setIsEditingCell: mockSetIsEditingCell,
-  }),
-}));
-
 /* --------------------------------- Tests --------------------------------- */
 
 describe("EditableCell", () => {
@@ -78,16 +68,6 @@ describe("EditableCell", () => {
       render(<EditableCell {...defaultProps} />);
       fireEvent.keyDown(screen.getByRole("button"), { key: " " });
       expect(screen.getByRole("textbox")).toBeInTheDocument();
-    });
-
-    it("syncs editing state with context", async () => {
-      const user = userEvent.setup();
-      render(<EditableCell {...defaultProps} />);
-
-      mockSetIsEditingCell.mockClear();
-      await user.click(screen.getByRole("button"));
-
-      expect(mockSetIsEditingCell).toHaveBeenCalledWith(true);
     });
   });
 

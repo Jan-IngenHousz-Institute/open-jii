@@ -31,25 +31,41 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import { EditableCell } from "./editable-cell";
-import { useMetadata } from "./metadata-context";
-import type { MetadataRow } from "./types";
+import type { MetadataColumn, MetadataRow } from "./types";
 
 interface MetadataTableProps {
+  columns: MetadataColumn[];
+  rows: MetadataRow[];
+  identifierColumnId: string | null;
+  onUpdateCell: (rowId: string, columnId: string, value: string | number | null) => void;
+  onDeleteRow: (rowId: string) => void;
+  onDeleteColumn: (columnId: string) => void;
+  onRenameColumn: (columnId: string, newName: string) => void;
+  onSetIdentifierColumn: (columnId: string | null) => void;
   pageSize?: number;
   disabled?: boolean;
 }
 
-export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTableProps) {
-  const { state, updateCell, deleteRow, deleteColumn, renameColumn, setIdentifierColumnId } =
-    useMetadata();
+export function MetadataTable({
+  columns: metaColumns,
+  rows,
+  identifierColumnId,
+  onUpdateCell,
+  onDeleteRow,
+  onDeleteColumn,
+  onRenameColumn,
+  onSetIdentifierColumn,
+  pageSize = 10,
+  disabled = false,
+}: MetadataTableProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize,
   });
 
   const columns = useMemo<ColumnDef<MetadataRow>[]>(() => {
-    const cols: ColumnDef<MetadataRow>[] = state.columns.map((col) => {
-      const isIdentifier = state.identifierColumnId === col.id;
+    const cols: ColumnDef<MetadataRow>[] = metaColumns.map((col) => {
+      const isIdentifier = identifierColumnId === col.id;
       return {
         id: col.id,
         accessorKey: col.id,
@@ -67,18 +83,19 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
             {!disabled && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    aria-label="Column options"
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     onClick={() => {
-                      if (isIdentifier) {
-                        setIdentifierColumnId(null);
-                      } else {
-                        setIdentifierColumnId(col.id);
-                      }
+                      onSetIdentifierColumn(isIdentifier ? null : col.id);
                     }}
                   >
                     <KeyRound className="mr-2 h-4 w-4" />
@@ -88,7 +105,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
                     onClick={() => {
                       const newName = prompt("Enter new column name:", col.name);
                       if (newName && newName !== col.name) {
-                        renameColumn(col.id, newName);
+                        onRenameColumn(col.id, newName);
                       }
                     }}
                   >
@@ -97,7 +114,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
-                    onClick={() => deleteColumn(col.id)}
+                    onClick={() => onDeleteColumn(col.id)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete column
@@ -113,14 +130,13 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
             rowId={row.original._id}
             columnId={col.id}
             type={col.type}
-            onUpdate={updateCell}
+            onUpdate={onUpdateCell}
             disabled={disabled}
           />
         ),
       };
     });
 
-    // Add actions column (sticky, no rename/delete options)
     if (!disabled) {
       cols.push({
         id: "actions",
@@ -132,7 +148,8 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-            onClick={() => deleteRow(row.original._id)}
+            onClick={() => onDeleteRow(row.original._id)}
+            aria-label="Delete row"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -142,18 +159,18 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
 
     return cols;
   }, [
-    state.columns,
-    state.identifierColumnId,
-    updateCell,
-    deleteRow,
-    deleteColumn,
-    renameColumn,
-    setIdentifierColumnId,
+    metaColumns,
+    identifierColumnId,
+    onUpdateCell,
+    onDeleteRow,
+    onDeleteColumn,
+    onRenameColumn,
+    onSetIdentifierColumn,
     disabled,
   ]);
 
   const table = useReactTable({
-    data: state.rows,
+    data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -163,7 +180,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
 
   const totalPages = table.getPageCount();
 
-  if (state.columns.length === 0) {
+  if (metaColumns.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
         <p className="text-muted-foreground text-sm">
@@ -182,7 +199,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   const isActionsColumn = header.column.id === "actions";
-                  const isIdentifierColumn = header.column.id === state.identifierColumnId;
+                  const isIdentifierColumn = header.column.id === identifierColumnId;
                   return (
                     <TableHead
                       key={header.id}
@@ -217,7 +234,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => {
                     const isActionsColumn = cell.column.id === "actions";
-                    const isIdentifierColumn = cell.column.id === state.identifierColumnId;
+                    const isIdentifierColumn = cell.column.id === identifierColumnId;
                     return (
                       <TableCell
                         key={cell.id}
@@ -242,7 +259,7 @@ export function MetadataTable({ pageSize = 10, disabled = false }: MetadataTable
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground text-sm">
-            {state.rows.length} row{state.rows.length !== 1 ? "s" : ""}
+            {rows.length} row{rows.length !== 1 ? "s" : ""}
           </p>
           <Pagination>
             <PaginationContent>

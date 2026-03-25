@@ -66,4 +66,4 @@ def add_custom_metadata_column(df, metadata_df):
 
     except Exception as e:
         print(f"Warning: Could not enrich with experiment metadata: {str(e)}")
-        return df.withColumn("custom_metadata", F.lit(None).cast("string"))
+        return df.withColumn("custom_metadata", F.lit(None).cast("variant"))

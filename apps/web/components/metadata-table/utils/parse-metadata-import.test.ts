@@ -184,7 +184,7 @@ describe("parseClipboardText", () => {
 
 describe("parseClipboard", () => {
   const originalNavigator = global.navigator;
-  const _originalDocument = global.document;
+  const originalDocument = global.document;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -196,6 +196,11 @@ describe("parseClipboard", () => {
     // Restore original navigator
     Object.defineProperty(global, "navigator", {
       value: originalNavigator,
+      writable: true,
+    });
+    // Restore original document
+    Object.defineProperty(global, "document", {
+      value: originalDocument,
       writable: true,
     });
   });

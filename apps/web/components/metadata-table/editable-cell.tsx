@@ -5,8 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Input } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
-import { useMetadata } from "./metadata-context";
-
 interface EditableCellProps {
   value: string | number | null | undefined;
   rowId: string;
@@ -24,7 +22,6 @@ export function EditableCell({
   onUpdate,
   disabled = false,
 }: EditableCellProps) {
-  const { setIsEditingCell } = useMetadata();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(value ?? ""));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,14 +37,15 @@ export function EditableCell({
     }
   }, [isEditing]);
 
-  // Sync local editing state with context
-  useEffect(() => {
-    setIsEditingCell(isEditing);
-  }, [isEditing, setIsEditingCell]);
-
   const handleBlur = useCallback(() => {
     setIsEditing(false);
-    const newValue = type === "number" ? (editValue === "" ? null : Number(editValue)) : editValue;
+    let newValue: string | number | null;
+    if (type === "number") {
+      const num = Number(editValue);
+      newValue = editValue === "" || !Number.isFinite(num) ? null : num;
+    } else {
+      newValue = editValue;
+    }
     if (newValue !== value) {
       onUpdate(rowId, columnId, newValue);
     }
@@ -58,6 +56,7 @@ export function EditableCell({
       if (e.key === "Enter") {
         handleBlur();
       } else if (e.key === "Escape") {
+        e.stopPropagation();
         setEditValue(String(value ?? ""));
         setIsEditing(false);
       }

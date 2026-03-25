@@ -31,6 +31,7 @@
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/react-query": "^3.52.1",
     "@xyflow/react": "^12.10.2",
+    "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.507.0",
     "next": "catalog:",
@@ -43,7 +44,6 @@
     "react-i18next": "^15.7.4",
     "tailwind-merge": "^3.5.0",
     "uuid": "^11.1.0",
-    "xlsx": "^0.18.5",
     "zod": "catalog:"
   },
   "devDependencies": {
