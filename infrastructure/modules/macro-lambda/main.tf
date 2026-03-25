@@ -152,6 +152,8 @@ resource "aws_lambda_function" "this" {
   timeout     = each.value.timeout
   memory_size = each.value.memory
 
+  reserved_concurrent_executions = var.reserved_concurrent_executions
+
   vpc_config {
     subnet_ids         = var.isolated_subnet_ids
     security_group_ids = [var.lambda_sg_id]
@@ -168,6 +170,8 @@ resource "aws_lambda_function" "this" {
     Security = "isolated"
   })
 
+  # image_uri is set to :latest for initial creation; CI/CD updates it
+  # via `aws lambda update-function-code` in deploy-macro-sandbox.yml
   lifecycle {
     ignore_changes = [image_uri]
   }

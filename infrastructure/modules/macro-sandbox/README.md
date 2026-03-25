@@ -109,7 +109,7 @@ resource "aws_iam_role_policy_attachment" "backend_invoke" {
 
 ### Adding a new language
 
-Add a key to `languages` — that's it:
+1. Add a key to `languages` in the environment config:
 
 ```hcl
 languages = {
@@ -120,27 +120,30 @@ languages = {
 }
 ```
 
-This creates a new ECR repo, Lambda function, CloudWatch log group, and updates all IAM policies automatically.
+2. Add a Dockerfile under `apps/macro-sandbox/<language>/Dockerfile`.
+3. Add the language to the `matrix.language` array in `.github/workflows/deploy-macro-sandbox.yml`.
+
+Step 1 creates the ECR repo, Lambda function, CloudWatch log group, and updates all IAM policies automatically. Steps 2–3 ensure CI/CD builds and deploys the image.
 
 ## 🔑 Inputs
 
-| Name                      | Description                                                   | Type                             | Default       | Required |
-| ------------------------- | ------------------------------------------------------------- | -------------------------------- | ------------- | :------: |
-| `aws_region`              | AWS region for ECR repositories                               | `string`                         | —             |  ✅ Yes  |
-| `environment`             | Environment name (e.g., dev, staging, prod)                   | `string`                         | —             |  ✅ Yes  |
-| `ci_cd_role_arn`          | IAM role ARN used by CI/CD to push images to ECR              | `string`                         | —             |  ✅ Yes  |
-| `isolated_subnet_ids`     | Isolated subnet IDs where Lambda functions run                | `list(string)`                   | —             |  ✅ Yes  |
-| `lambda_sg_id`            | Security group ID for Lambda functions                        | `string`                         | —             |  ✅ Yes  |
-| `languages`               | Per-language Lambda config (memory in MB, timeout in seconds) | `map(object({memory, timeout}))` | —             |  ✅ Yes  |
-| `image_tag_mutability`    | ECR tag mutability (`MUTABLE` for dev, `IMMUTABLE` for prod)  | `string`                         | `"IMMUTABLE"` |  ❌ No   |
-| `force_delete`            | Allow ECR deletion with images (true for dev, false for prod) | `bool`                           | `false`       |  ❌ No   |
-| `log_retention_days`      | CloudWatch log retention for Lambda logs (days)               | `number`                         | `7`           |  ❌ No   |
-| `flow_log_retention_days` | CloudWatch log retention for VPC flow logs (days)             | `number`                         | `14`          |  ❌ No   |
-| `tags`                    | Additional tags for all resources                             | `map(string)`                    | `{}`          |  ❌ No   |
+| Name                      | Description                                                   | Type                                               | Default       | Required |
+| ------------------------- | ------------------------------------------------------------- | -------------------------------------------------- | ------------- | :------: |
+| `aws_region`              | AWS region for ECR repositories                               | `string`                                           | —             |  ✅ Yes  |
+| `environment`             | Environment name (e.g., dev, staging, prod)                   | `string`                                           | —             |  ✅ Yes  |
+| `ci_cd_role_arn`          | IAM role ARN used by CI/CD to push images to ECR              | `string`                                           | —             |  ✅ Yes  |
+| `isolated_subnet_ids`     | Isolated subnet IDs where Lambda functions run                | `list(string)`                                     | —             |  ✅ Yes  |
+| `lambda_sg_id`            | Security group ID for Lambda functions                        | `string`                                           | —             |  ✅ Yes  |
+| `languages`               | Per-language Lambda config (memory in MB, timeout in seconds) | `map(object({memory = number, timeout = number}))` | —             |  ✅ Yes  |
+| `image_tag_mutability`    | ECR tag mutability (`MUTABLE` for dev, `IMMUTABLE` for prod)  | `string`                                           | `"IMMUTABLE"` |  ❌ No   |
+| `force_delete`            | Allow ECR deletion with images (true for dev, false for prod) | `bool`                                             | `false`       |  ❌ No   |
+| `log_retention_days`      | CloudWatch log retention for Lambda logs (days)               | `number`                                           | `7`           |  ❌ No   |
+| `flow_log_retention_days` | CloudWatch log retention for VPC flow logs (days)             | `number`                                           | `14`          |  ❌ No   |
+| `tags`                    | Additional tags for all resources                             | `map(string)`                                      | `{}`          |  ❌ No   |
 
 ## 📤 Outputs
 
-| Name                | Description                                                                              |
-| ------------------- | ---------------------------------------------------------------------------------------- |
+| Name                | Description                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------- |
 | `function_names`    | Lambda function names keyed by language (e.g., `{ python = "macro-sandbox-python-dev" }`) |
-| `invoke_policy_arn` | IAM policy ARN granting `lambda:InvokeFunction` — attach to backend task role            |
+| `invoke_policy_arn` | IAM policy ARN granting `lambda:InvokeFunction` — attach to backend task role             |

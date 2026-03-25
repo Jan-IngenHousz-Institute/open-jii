@@ -148,6 +148,8 @@ module "macro_sandbox" {
   log_retention_days      = 30
   flow_log_retention_days = 30
 
+  reserved_concurrent_executions = 20
+
   tags = {
     Environment = var.environment
     Project     = "open-jii"

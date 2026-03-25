@@ -11,6 +11,11 @@ variable "environment" {
 variable "subnet_ids" {
   description = "Subnet IDs to attach flow logs to"
   type        = list(string)
+
+  validation {
+    condition     = length(var.subnet_ids) > 0
+    error_message = "At least one subnet ID is required for VPC flow logs."
+  }
 }
 
 variable "retention_in_days" {

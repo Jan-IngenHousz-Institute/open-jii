@@ -176,6 +176,8 @@ module "macro_sandbox" {
   force_delete         = true
   log_retention_days   = 7
 
+  reserved_concurrent_executions = 10
+
   tags = {
     Environment = var.environment
     Project     = "open-jii"

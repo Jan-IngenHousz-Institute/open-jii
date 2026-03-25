@@ -36,7 +36,7 @@ graph LR
 
 ### What a flow log entry looks like
 
-```
+```text
 2 123456789012 eni-abc123 10.0.4.15 10.0.1.50 54321 443 6 5 1500 1708000000 1708000060 ACCEPT OK
 2 123456789012 eni-abc123 10.0.4.15 8.8.8.8   54322 53  17 1 64   1708000000 1708000060 REJECT OK
 ```
@@ -79,15 +79,15 @@ resource "aws_cloudwatch_log_metric_filter" "rejected" {
 
 ## 🔑 Inputs
 
-| Name                       | Description                                      | Type           | Default | Required |
-| -------------------------- | ------------------------------------------------ | -------------- | ------- | :------: |
+| Name                       | Description                                       | Type           | Default | Required |
+| -------------------------- | ------------------------------------------------- | -------------- | ------- | :------: |
 | `name_prefix`              | Prefix for resource names (e.g., `macro-sandbox`) | `string`       | —       |  ✅ Yes  |
-| `environment`              | Environment name (e.g., dev, staging, prod)      | `string`       | —       |  ✅ Yes  |
-| `subnet_ids`               | Subnet IDs to attach flow logs to                | `list(string)` | —       |  ✅ Yes  |
-| `retention_in_days`        | CloudWatch log retention (days)                  | `number`       | `14`    |  ❌ No   |
-| `traffic_type`             | Traffic to capture: `ACCEPT`, `REJECT`, or `ALL` | `string`       | `"ALL"` |  ❌ No   |
-| `max_aggregation_interval` | Aggregation window in seconds (`60` or `600`)    | `number`       | `60`    |  ❌ No   |
-| `tags`                     | Additional tags for all resources                | `map(string)`  | `{}`    |  ❌ No   |
+| `environment`              | Environment name (e.g., dev, staging, prod)       | `string`       | —       |  ✅ Yes  |
+| `subnet_ids`               | Subnet IDs to attach flow logs to                 | `list(string)` | —       |  ✅ Yes  |
+| `retention_in_days`        | CloudWatch log retention (days)                   | `number`       | `14`    |  ❌ No   |
+| `traffic_type`             | Traffic to capture: `ACCEPT`, `REJECT`, or `ALL`  | `string`       | `"ALL"` |  ❌ No   |
+| `max_aggregation_interval` | Aggregation window in seconds (`60` or `600`)     | `number`       | `60`    |  ❌ No   |
+| `tags`                     | Additional tags for all resources                 | `map(string)`  | `{}`    |  ❌ No   |
 
 ## 📤 Outputs
 
