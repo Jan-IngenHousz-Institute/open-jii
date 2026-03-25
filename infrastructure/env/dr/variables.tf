@@ -30,7 +30,7 @@ variable "enable_ses_cutover" {
 variable "prod_ses_smtp_server" {
   description = "Prod SES SMTP server endpoint (e.g. email-smtp.eu-central-1.amazonaws.com). Used when enable_ses_cutover=false to reuse prod SES without touching the Route53 zone. Retrieve from the openjii-ses-secrets-prod secret in eu-central-1."
   type        = string
-  default     = null
+  default     = "email-smtp.eu-central-1.amazonaws.com"
 }
 
 variable "enable_dns_cutover" {
