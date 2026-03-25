@@ -29,14 +29,14 @@ At the moment the mobile app is mostly targeted at the MultispeQ sensor, but mor
 
 ![Comments and swiping: (1) the bottom-sheet comment modal that appears when adding a comment to a measurement, (2) a measurement list item mid-swipe showing the swipe action buttons (e.g. upload, comment, delete).](image-1.png)
 
-
 ### Logging in on a phone without email inbox
 
 Be sure to have an [openJII account](../introduction/quick-start-guide).
 Log in via ORCID, GitHub or if you want to use a phone that does **not** have access to your email inbox, you need this procedure to log in.
 
 Use the following steps to **log in via email**:
-- Download the openJII app on the phone (let's call it the 'sensorphone') that you want to connect to your sensor
+
+- Download the openJII app on the phone (lets call it the 'sensorphone') that you want to connect to your sensor
 - Open the app and enter your email address at the login screen
 - Now go to a device that has your email inbox, like a desktop, laptop, tablet or (personal) mobile phone. Open the email and scroll to the 6-digit code
 - Use the sensorphone and enter the 6-digit code
@@ -45,5 +45,6 @@ Use the following steps to **log in via email**:
 ![Screenshot of the 6-digit code entry screen on the app (the step where you type the code from the email).](image-2.png)
 
 ### Minimal specs
+
 - Android 7.0 Nougat (API level 24) or newer
 - minimum 2 GB of RAM
