@@ -297,7 +297,8 @@
       "rowCount_other": "{{count}} rows imported",
       "replaceData": "Replace Data",
       "clearData": "Clear Data",
-      "saveMetadata": "Save Metadata"
+      "saveMetadata": "Save Metadata",
+      "savingMetadata": "Saving..."
     },
     "uploading": {
       "title": "Uploading Data",
