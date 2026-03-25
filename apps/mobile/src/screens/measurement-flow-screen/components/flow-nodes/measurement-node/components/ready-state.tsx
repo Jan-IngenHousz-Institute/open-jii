@@ -24,10 +24,10 @@ interface ReadyStateProps {
 }
 
 export function ReadyState({ onCardPress }: ReadyStateProps) {
-  const { classes, colors } = useTheme();
+  const theme = useTheme();
+  const { classes, colors } = theme;
   const { flowNodes, iterationCount } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore();
-  const theme = useTheme();
 
   const questionEntries: { node: FlowNode; index: number }[] = flowNodes
     .map((node, index) => ({ node, index }))

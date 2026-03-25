@@ -61,7 +61,7 @@ export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenE
             }}
             onPress={handleClear}
           >
-            <Text className="font-semibold">Clear text </Text>
+            <Text className="font-semibold">Clear text</Text>
           </TouchableOpacity>
         )}
 
