@@ -537,5 +537,33 @@ describe("ExperimentDataRepository", () => {
         expect(result.error).toBe(error);
       }
     });
+
+    it("should return failure when table config is not found for unknown static table", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "unknown_table",
+          tableType: "static",
+          rowCount: 10,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "unknown_table",
+      });
+
+      expect(result.isSuccess()).toBe(false);
+      if (result.isFailure()) {
+        expect(result.error.code).toBe("UNKNOWN_TABLE_CONFIG");
+      }
+    });
   });
 });

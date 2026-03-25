@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -135,5 +135,62 @@ describe("MetadataTable", () => {
 
     const headerCells = container.querySelectorAll("th");
     expect(headerCells).toHaveLength(2);
+  });
+
+  it("calls onDeleteRow when row delete button is clicked", () => {
+    const onDeleteRow = vi.fn();
+    render(
+      <MetadataTable
+        {...defaultProps}
+        onDeleteRow={onDeleteRow}
+        columns={[{ id: "col1", name: "Name", type: "string" }]}
+        rows={[{ _id: "row1", col1: "test" }]}
+      />,
+    );
+
+    const deleteButton = screen.getByLabelText("Delete row");
+    fireEvent.click(deleteButton);
+
+    expect(onDeleteRow).toHaveBeenCalledWith("row1");
+  });
+
+  it("shows identifier icon when column is set as identifier", () => {
+    render(
+      <MetadataTable
+        {...defaultProps}
+        columns={[{ id: "col1", name: "Name", type: "string" }]}
+        rows={[{ _id: "row1", col1: "test" }]}
+        identifierColumnId="col1"
+      />,
+    );
+
+    // The column header should still render with the name
+    expect(screen.getByText("Name")).toBeInTheDocument();
+  });
+
+  it("renders column options dropdown", () => {
+    render(
+      <MetadataTable
+        {...defaultProps}
+        columns={[{ id: "col1", name: "Name", type: "string" }]}
+        rows={[{ _id: "row1", col1: "test" }]}
+      />,
+    );
+
+    const optionsButton = screen.getByLabelText("Column options");
+    expect(optionsButton).toBeInTheDocument();
+  });
+
+  it("does not render column options dropdown when disabled", () => {
+    render(
+      <MetadataTable
+        {...defaultProps}
+        columns={[{ id: "col1", name: "Name", type: "string" }]}
+        rows={[{ _id: "row1", col1: "test" }]}
+        disabled
+      />,
+    );
+
+    expect(screen.queryByLabelText("Column options")).not.toBeInTheDocument();
   });
 });

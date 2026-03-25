@@ -19,6 +19,11 @@ vi.mock("./steps/data-selection-step", () => ({
       </button>
     </div>
   ),
+  DATA_OPTIONS: [
+    { id: "multispeq", category: "sensor", disabled: true },
+    { id: "ambyte", category: "sensor", disabled: false },
+    { id: "metadata", category: "metadata", disabled: false },
+  ],
 }));
 
 vi.mock("./steps/file-upload-step", () => ({
@@ -60,8 +65,8 @@ vi.mock("./steps/metadata-upload-step", () => ({
 }));
 
 vi.mock("./steps/success-step", () => ({
-  SuccessStep: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="success-step">
+  SuccessStep: ({ onClose, isMetadata }: { onClose: () => void; isMetadata?: boolean }) => (
+    <div data-testid="success-step" data-is-metadata={isMetadata}>
       <button onClick={onClose} data-testid="close-button">
         Close
       </button>
@@ -282,5 +287,111 @@ describe("DataUploadModal", () => {
     // The dialog component should be able to trigger onOpenChange
     // This would be handled by the Dialog component internally
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
+  });
+
+  it("starts at metadata-upload step when initialStep is metadata-upload", () => {
+    render(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={true}
+        onOpenChange={mockOnOpenChange}
+        initialStep="metadata-upload"
+      />,
+    );
+
+    expect(screen.getByTestId("metadata-upload-step")).toBeInTheDocument();
+    expect(screen.queryByTestId("data-selection-step")).not.toBeInTheDocument();
+    expect(screen.getByText("uploadModal.metadata.title")).toBeInTheDocument();
+    expect(screen.getByText("uploadModal.metadata.description")).toBeInTheDocument();
+  });
+
+  it("starts at file-upload step when initialStep is file-upload", () => {
+    render(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={true}
+        onOpenChange={mockOnOpenChange}
+        initialStep="file-upload"
+      />,
+    );
+
+    expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
+    expect(screen.queryByTestId("data-selection-step")).not.toBeInTheDocument();
+    expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
+    expect(screen.getByText("uploadModal.fileUpload.description")).toBeInTheDocument();
+  });
+
+  it("closes modal when going back from non-selection initialStep", () => {
+    render(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={true}
+        onOpenChange={mockOnOpenChange}
+        initialStep="metadata-upload"
+      />,
+    );
+
+    // Go back — should close modal rather than go to selection
+    fireEvent.click(screen.getByTestId("metadata-back-button"));
+
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("passes isMetadata=true to SuccessStep when metadata option is selected", async () => {
+    renderModal();
+
+    // Select metadata option
+    fireEvent.click(screen.getByTestId("select-metadata"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("metadata-upload-step")).toBeInTheDocument();
+    });
+
+    // Trigger upload success
+    fireEvent.click(screen.getByTestId("metadata-upload-success"));
+
+    await waitFor(() => {
+      const successStep = screen.getByTestId("success-step");
+      expect(successStep).toHaveAttribute("data-is-metadata", "true");
+    });
+  });
+
+  it("resets to initialStep when modal is closed and reopened", async () => {
+    const { rerender } = render(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={true}
+        onOpenChange={mockOnOpenChange}
+        initialStep="file-upload"
+      />,
+    );
+
+    expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
+
+    // Close modal
+    rerender(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={false}
+        onOpenChange={mockOnOpenChange}
+        initialStep="file-upload"
+      />,
+    );
+
+    // Wait for reset timeout
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    // Reopen modal
+    rerender(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={true}
+        onOpenChange={mockOnOpenChange}
+        initialStep="file-upload"
+      />,
+    );
+
+    // Should be back at file-upload (the initialStep)
+    expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
   });
 });

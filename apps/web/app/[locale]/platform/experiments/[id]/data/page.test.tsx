@@ -67,11 +67,13 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
   DataUploadModal: ({
     open,
     onOpenChange,
+    initialStep,
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    initialStep?: string;
   }) => (
-    <div data-testid="data-upload-modal" data-open={open}>
+    <div data-testid="data-upload-modal" data-open={open} data-initial-step={initialStep}>
       <button onClick={() => onOpenChange(false)}>Close Modal</button>
     </div>
   ),
@@ -120,9 +122,24 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ),
 }));
 
+vi.mock("lucide-react", () => ({
+  BarChart3: () => <span data-testid="icon-bar-chart" />,
+  Database: () => <span data-testid="icon-database" />,
+  FileSpreadsheet: () => <span data-testid="icon-file-spreadsheet" />,
+  Pencil: () => <span data-testid="icon-pencil" />,
+}));
+
 vi.mock("@repo/ui/components", () => ({
-  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
-    <button data-testid="button" onClick={onClick}>
+  Button: ({
+    children,
+    onClick,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+  }) => (
+    <button data-testid="button" onClick={onClick} disabled={disabled}>
       {children}
     </button>
   ),
@@ -473,6 +490,158 @@ describe("ExperimentDataPage", () => {
       expect(trigger).toBeInTheDocument();
       // The truncate class should be present in the parent structure
       expect(container.querySelector(".truncate")).toBeInTheDocument();
+    });
+  });
+
+  it("shows editMetadata text when metadata already exists", async () => {
+    mockMetadataUseQuery.mockReturnValue({
+      data: { body: [{ id: "m1", metadata: {} }] },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.editMetadata")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-pencil")).toBeInTheDocument();
+    });
+  });
+
+  it("shows uploadMetadata text when no metadata exists", async () => {
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.uploadMetadata")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-file-spreadsheet")).toBeInTheDocument();
+    });
+  });
+
+  it("opens upload modal with metadata-upload step when clicking metadata button", async () => {
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const metadataBtn = screen.getByText("experimentData.uploadMetadata").closest("button");
+      expect(metadataBtn).not.toBeDisabled();
+      metadataBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("data-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
+      expect(modal).toHaveAttribute("data-initial-step", "metadata-upload");
+    });
+  });
+
+  it("opens upload modal with file-upload step when clicking sensor data button", async () => {
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const sensorBtn = screen.getByText("experimentData.uploadSensorData").closest("button");
+      expect(sensorBtn).not.toBeDisabled();
+      sensorBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("data-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
+      expect(modal).toHaveAttribute("data-initial-step", "file-upload");
+    });
+  });
+
+  it("shows editMetadata in no-data state when metadata exists", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    });
+    mockMetadataUseQuery.mockReturnValue({
+      data: { body: [{ id: "m1", metadata: {} }] },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.editMetadata")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-pencil")).toBeInTheDocument();
+    });
+  });
+
+  it("opens metadata upload from no-data state", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    });
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const metadataBtn = screen.getByText("experimentData.uploadMetadata").closest("button");
+      metadataBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("data-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
+      expect(modal).toHaveAttribute("data-initial-step", "metadata-upload");
+    });
+  });
+
+  it("opens sensor data upload from no-data state", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    });
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const sensorBtn = screen.getByText("experimentData.uploadSensorData").closest("button");
+      sensorBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("data-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
+      expect(modal).toHaveAttribute("data-initial-step", "file-upload");
     });
   });
 });

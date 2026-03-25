@@ -1,6 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { parseDelimitedText, parseClipboard, parseClipboardText } from "./parse-metadata-import";
+import {
+  parseDelimitedText,
+  parseClipboard,
+  parseClipboardText,
+  parseFile,
+} from "./parse-metadata-import";
+
+/** Create a File-like object with arrayBuffer() support for test environments that lack it. */
+function createTestFile(name: string, content: ArrayBuffer = new ArrayBuffer(10)): File {
+  const file = new File([content], name);
+  if (typeof file.arrayBuffer !== "function") {
+    (file as unknown as Record<string, unknown>).arrayBuffer = () => Promise.resolve(content);
+  }
+  return file;
+}
 
 describe("parseDelimitedText", () => {
   describe("delimiter detection", () => {
@@ -422,5 +436,558 @@ describe("parseClipboard", () => {
 
     expect(mockExecCommand).toHaveBeenCalledWith("paste");
     expect(result.columns).toHaveLength(2);
+  });
+});
+
+describe("parseFile", () => {
+  it("should parse a CSV file", async () => {
+    const csvContent = "ID,Name,Value\n1,Test,100\n2,Test2,200";
+    const file = new File([csvContent], "test.csv", { type: "text/csv" });
+
+    const result = await parseFile(file);
+
+    expect(result.columns).toHaveLength(3);
+    expect(result.columns.map((c) => c.name)).toEqual(["ID", "Name", "Value"]);
+    expect(result.rows).toHaveLength(2);
+  });
+
+  it("should parse a TSV file", async () => {
+    const tsvContent = "ID\tName\tValue\n1\tTest\t100";
+    const file = new File([tsvContent], "data.tsv", { type: "text/tsv" });
+
+    const result = await parseFile(file);
+
+    expect(result.columns).toHaveLength(3);
+    expect(result.rows).toHaveLength(1);
+  });
+
+  it("should parse a TXT file as delimited", async () => {
+    const txtContent = "ID,Name\n1,Test";
+    const file = new File([txtContent], "data.txt", { type: "text/plain" });
+
+    const result = await parseFile(file);
+
+    expect(result.columns).toHaveLength(2);
+    expect(result.rows).toHaveLength(1);
+  });
+
+  it("should throw for unsupported file types", async () => {
+    const file = new File(["data"], "test.pdf", { type: "application/pdf" });
+
+    await expect(parseFile(file)).rejects.toThrow("Unsupported file type: pdf");
+  });
+
+  it("should throw for file with no extension", async () => {
+    const file = new File(["data"], "noext", { type: "text/plain" });
+    // The extension will be undefined
+    await expect(parseFile(file)).rejects.toThrow("Unsupported file type");
+  });
+
+  describe("Excel file handling", () => {
+    afterEach(() => {
+      vi.doUnmock("exceljs");
+      vi.resetModules();
+    });
+
+    it("should parse xlsx files using ExcelJS", async () => {
+      // Create a mock that simulates ExcelJS workbook
+      const mockRow1Cells = [{ value: "ID" }, { value: "Name" }, { value: "Count" }];
+      const mockRow2Cells = [{ value: 1 }, { value: "Alice" }, { value: 42 }];
+      const mockRow3Cells = [{ value: 2 }, { value: "Bob" }, { value: 99 }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells, mockRow3Cells];
+
+      const mockSheet = {
+        rowCount: 3,
+        eachRow: (
+          callback: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            callback({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: {
+          load: vi.fn().mockResolvedValue(undefined),
+        },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      // Need to re-import to pick up the mock
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+
+      const file = createTestFile("test.xlsx");
+
+      const result = await parseFileFresh(file);
+
+      expect(result.columns).toHaveLength(3);
+      expect(result.columns.map((c) => c.name)).toEqual(["ID", "Name", "Count"]);
+      expect(result.rows).toHaveLength(2);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should return empty when xlsx has no worksheets", async () => {
+      const mockWorkbook = {
+        worksheets: [],
+        xlsx: {
+          load: vi.fn().mockResolvedValue(undefined),
+        },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+
+      const file = createTestFile("test.xlsx");
+
+      const result = await parseFileFresh(file);
+
+      expect(result.columns).toHaveLength(0);
+      expect(result.rows).toHaveLength(0);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should return empty when xlsx has empty sheet", async () => {
+      const mockSheet = {
+        rowCount: 0,
+        eachRow: (_cb: unknown) => {
+          // intentionally empty: simulates a sheet with no rows
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: {
+          load: vi.fn().mockResolvedValue(undefined),
+        },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+
+      const file = createTestFile("test.xlsx");
+
+      const result = await parseFileFresh(file);
+
+      expect(result.columns).toHaveLength(0);
+      expect(result.rows).toHaveLength(0);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should handle Excel rich text cells", async () => {
+      const mockRow1Cells = [{ value: "Header" }];
+      const mockRow2Cells = [{ value: { richText: [{ text: "Hello " }, { text: "World" }] } }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells];
+      const mockSheet = {
+        rowCount: 2,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0].col_0).toBe("Hello World");
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should handle Excel formula cells", async () => {
+      const mockRow1Cells = [{ value: "Header" }];
+      const mockRow2Cells = [{ value: { formula: "=A1+1", result: 42 } }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells];
+      const mockSheet = {
+        rowCount: 2,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xls");
+      const result = await parseFileFresh(file);
+
+      expect(result.rows[0].col_0).toBe(42);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should handle Excel Date cells", async () => {
+      const testDate = new Date("2024-06-15T00:00:00.000Z");
+      const mockRow1Cells = [{ value: "Date" }];
+      const mockRow2Cells = [{ value: testDate }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells];
+      const mockSheet = {
+        rowCount: 2,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      // resolveExcelCellValue converts Date to ISO string, then parseDelimitedText
+      // may produce a number (via dynamicTyping + Number()) since Number(isoString) yields a timestamp
+      const dateVal = result.rows[0].col_0;
+      if (typeof dateVal === "number") {
+        expect(dateVal).toBe(testDate.getTime());
+      } else {
+        expect(String(dateVal)).toContain("2024");
+      }
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should handle Excel hyperlink cells", async () => {
+      const mockRow1Cells = [{ value: "Link" }];
+      const mockRow2Cells = [{ value: { text: "Click here", hyperlink: "https://example.com" } }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells];
+      const mockSheet = {
+        rowCount: 2,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      expect(result.rows[0].col_0).toBe("Click here");
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should handle null/undefined Excel cells", async () => {
+      const mockRow1Cells = [{ value: "Header" }];
+      const mockRow2Cells = [{ value: null }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells];
+      const mockSheet = {
+        rowCount: 2,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      // Empty row should be skipped
+      expect(result.rows).toHaveLength(0);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should handle boolean Excel cells", async () => {
+      const mockRow1Cells = [{ value: "Flag" }];
+      const mockRow2Cells = [{ value: true }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells];
+      const mockSheet = {
+        rowCount: 2,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      expect(result.rows[0].col_0).toBe(true);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should skip title rows in Excel when first row has all same values", async () => {
+      // First row: merged title "My Report"
+      // Second row: real header "ID", "Name"
+      // Third row: data "1", "Alice"
+      const mockRow1Cells = [{ value: "My Report" }];
+      const mockRow2Cells = [{ value: "ID" }, { value: "Name" }];
+      const mockRow3Cells = [{ value: "1" }, { value: "Alice" }];
+
+      const mockRows = [mockRow1Cells, mockRow2Cells, mockRow3Cells];
+      const mockSheet = {
+        rowCount: 3,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      // Should skip first row (title) and use second as header
+      expect(result.columns.map((c) => c.name)).toEqual(["ID", "Name"]);
+      expect(result.rows).toHaveLength(1);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should return empty when eachRow provides no rows", async () => {
+      const mockSheet = {
+        rowCount: 1,
+        eachRow: () => {
+          // no rows returned
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      expect(result.columns).toHaveLength(0);
+      expect(result.rows).toHaveLength(0);
+
+      vi.doUnmock("exceljs");
+    });
+  });
+});
+
+describe("parseDelimitedText – escapeCsvField edge cases", () => {
+  it("should handle values with commas in CSV fields via round-trip", () => {
+    // This tests that values with special characters survive CSV parsing
+    const text = 'Name,Description\n"Alice, Bob","Has ""quotes"""';
+    const result = parseDelimitedText(text);
+
+    expect(result.rows[0].col_0).toBe("Alice, Bob");
+    expect(result.rows[0].col_1).toBe('Has "quotes"');
+  });
+
+  it("should handle newlines within quoted fields", () => {
+    const text = 'Name,Notes\n"Alice","Line 1\nLine 2"';
+    const result = parseDelimitedText(text);
+
+    expect(result.rows[0].col_1).toBe("Line 1\nLine 2");
+  });
+});
+
+describe("parseClipboardText – additional cases", () => {
+  it("should throw when parsed data produces zero columns", () => {
+    // Completely blank after trim → empty error
+    expect(() => parseClipboardText("   ")).toThrow("Clipboard is empty");
   });
 });

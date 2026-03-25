@@ -291,5 +291,155 @@ describe("ExperimentMetadataRepository", () => {
 
       expect(result.isFailure()).toBe(true);
     });
+
+    it("should reject metadata payload exceeding 5 MB size limit", async () => {
+      const hugePayload = { data: "x".repeat(5_000_001) };
+      const result = await repository.update(
+        mockMetadataId,
+        { metadata: hugePayload },
+        mockUserId,
+        mockExperimentId,
+      );
+
+      expect(result.isFailure()).toBe(true);
+      if (result.isFailure()) {
+        expect(result.error.message).toContain("5 MB");
+      }
+    });
+  });
+
+  describe("deleteAllByExperimentId", () => {
+    it("should delete all metadata for a given experiment", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptySchemaData));
+
+      const result = await repository.deleteAllByExperimentId(mockExperimentId);
+
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+
+      const call = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
+      expect(call[1]).toContain("DELETE FROM");
+      expect(call[1]).toContain(mockExperimentId);
+    });
+
+    it("should reject invalid experiment ID", async () => {
+      const result = await repository.deleteAllByExperimentId("not-a-uuid");
+
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should return failure when DELETE query fails", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        failure(AppError.internal("Delete all failed")),
+      );
+
+      const result = await repository.deleteAllByExperimentId(mockExperimentId);
+
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("create – edge cases", () => {
+    it("should reject metadata payload exceeding 5 MB on create", async () => {
+      const hugeDto = { metadata: { data: "x".repeat(5_000_001) } };
+
+      const result = await repository.create(mockExperimentId, hugeDto, mockUserId);
+
+      expect(result.isFailure()).toBe(true);
+      if (result.isFailure()) {
+        expect(result.error.message).toContain("5 MB");
+      }
+    });
+
+    it("should reject invalid user ID on create", async () => {
+      const result = await repository.create(mockExperimentId, { metadata: {} }, "bad-user-id");
+
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("mapRowToDto – edge cases", () => {
+    it("should handle null metadata JSON gracefully", async () => {
+      const schemaData: SchemaData = {
+        columns: [
+          { name: "metadata_id", type_name: "STRING", type_text: "STRING", position: 0 },
+          { name: "experiment_id", type_name: "STRING", type_text: "STRING", position: 1 },
+          { name: "metadata", type_name: "STRING", type_text: "STRING", position: 2 },
+          { name: "created_by", type_name: "STRING", type_text: "STRING", position: 3 },
+          { name: "created_at", type_name: "STRING", type_text: "STRING", position: 4 },
+          { name: "updated_at", type_name: "STRING", type_text: "STRING", position: 5 },
+        ],
+        rows: [[mockMetadataId, mockExperimentId, null, mockUserId, null, null]],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(schemaData));
+
+      const result = await repository.findAllByExperimentId(mockExperimentId);
+
+      assertSuccess(result);
+      expect(result.value[0].metadata).toEqual({});
+      expect(result.value[0].createdAt).toEqual(new Date(0));
+      expect(result.value[0].updatedAt).toEqual(new Date(0));
+    });
+
+    it("should handle invalid metadata JSON gracefully", async () => {
+      const schemaData: SchemaData = {
+        columns: [
+          { name: "metadata_id", type_name: "STRING", type_text: "STRING", position: 0 },
+          { name: "experiment_id", type_name: "STRING", type_text: "STRING", position: 1 },
+          { name: "metadata", type_name: "STRING", type_text: "STRING", position: 2 },
+          { name: "created_by", type_name: "STRING", type_text: "STRING", position: 3 },
+          { name: "created_at", type_name: "STRING", type_text: "STRING", position: 4 },
+          { name: "updated_at", type_name: "STRING", type_text: "STRING", position: 5 },
+        ],
+        rows: [
+          [
+            mockMetadataId,
+            mockExperimentId,
+            "NOT VALID JSON {{{",
+            mockUserId,
+            "2026-01-15T10:00:00.000Z",
+            "2026-01-15T10:00:00.000Z",
+          ],
+        ],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(schemaData));
+
+      const result = await repository.findAllByExperimentId(mockExperimentId);
+
+      assertSuccess(result);
+      // Invalid JSON should fallback to empty object
+      expect(result.value[0].metadata).toEqual({});
+    });
+
+    it("should handle missing column values gracefully", async () => {
+      const schemaData: SchemaData = {
+        columns: [
+          { name: "metadata_id", type_name: "STRING", type_text: "STRING", position: 0 },
+          { name: "experiment_id", type_name: "STRING", type_text: "STRING", position: 1 },
+          { name: "metadata", type_name: "STRING", type_text: "STRING", position: 2 },
+          { name: "created_by", type_name: "STRING", type_text: "STRING", position: 3 },
+          { name: "created_at", type_name: "STRING", type_text: "STRING", position: 4 },
+          { name: "updated_at", type_name: "STRING", type_text: "STRING", position: 5 },
+        ],
+        rows: [[null, null, null, null, null, null]],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(schemaData));
+
+      const result = await repository.findAllByExperimentId(mockExperimentId);
+
+      assertSuccess(result);
+      expect(result.value[0].metadataId).toBe("");
+      expect(result.value[0].experimentId).toBe("");
+      expect(result.value[0].createdBy).toBe("");
+    });
   });
 });

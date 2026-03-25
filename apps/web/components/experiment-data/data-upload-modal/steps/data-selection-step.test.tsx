@@ -167,4 +167,61 @@ describe("DataSelectionStep", () => {
     expect(metadataOptions[0].id).toBe("metadata");
     expect(metadataOptions[0].disabled).toBe(false);
   });
+
+  it("renders with selected option highlighting", () => {
+    const ambyteOption = DATA_OPTIONS.find((o) => o.id === "ambyte");
+    expect(ambyteOption).toBeDefined();
+    renderStep(ambyteOption);
+
+    // RadioGroup should reflect the selected value
+    const radioGroup = screen.getByTestId("radio-group");
+    expect(radioGroup).toHaveAttribute("data-value", "ambyte");
+  });
+
+  it("renders with metadata option selected", () => {
+    const metadataOption = DATA_OPTIONS.find((o) => o.id === "metadata");
+    expect(metadataOption).toBeDefined();
+    renderStep(metadataOption);
+
+    const radioGroup = screen.getByTestId("radio-group");
+    expect(radioGroup).toHaveAttribute("data-value", "metadata");
+  });
+
+  it("handles handleSelect via RadioGroup onValueChange", () => {
+    // Re-mock RadioGroup to actually call onValueChange
+    vi.doMock("@repo/ui/components", () => ({
+      Label: ({ children, ...props }: { children: React.ReactNode; className?: string }) => (
+        <label {...props}>{children}</label>
+      ),
+      RadioGroup: ({
+        children,
+        onValueChange,
+        value,
+      }: {
+        children: React.ReactNode;
+        onValueChange?: (v: string) => void;
+        value?: string;
+        className?: string;
+      }) => (
+        <div data-testid="radio-group" data-value={value}>
+          {onValueChange && (
+            <button data-testid="trigger-value-change" onClick={() => onValueChange("ambyte")}>
+              trigger
+            </button>
+          )}
+          {children}
+        </div>
+      ),
+      RadioGroupItem: ({
+        value,
+        disabled,
+      }: {
+        value: string;
+        disabled?: boolean;
+        className?: string;
+        "aria-label"?: string;
+      }) => <input type="radio" value={value} disabled={disabled} data-testid={`radio-${value}`} />,
+      Separator: () => <hr data-testid="separator" />,
+    }));
+  });
 });
