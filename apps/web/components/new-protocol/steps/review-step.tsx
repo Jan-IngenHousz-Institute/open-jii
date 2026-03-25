@@ -82,7 +82,7 @@ export function ReviewStep({
                 </div>
               </div>
 
-              {formData.description && formData.description.replace(/<[^>]*>/g, "").trim() ? (
+              {formData.description?.replace(/<[^>]*>/g, "").trim() ? (
                 <div>
                   <div className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
                     {t("newProtocol.description_field")}
