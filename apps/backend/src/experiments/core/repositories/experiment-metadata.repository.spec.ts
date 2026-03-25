@@ -238,7 +238,12 @@ describe("ExperimentMetadataRepository", () => {
     it("should update metadata scoped to experiment and return the updated record", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(success(emptySchemaData));
 
-      const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
+      const result = await repository.update(
+        mockMetadataId,
+        updateDto,
+        mockUserId,
+        mockExperimentId,
+      );
 
       assertSuccess(result);
       expect(result.value.metadataId).toBe(mockMetadataId);
@@ -277,7 +282,12 @@ describe("ExperimentMetadataRepository", () => {
         failure(AppError.internal("Update failed")),
       );
 
-      const result = await repository.update(mockMetadataId, updateDto, mockUserId, mockExperimentId);
+      const result = await repository.update(
+        mockMetadataId,
+        updateDto,
+        mockUserId,
+        mockExperimentId,
+      );
 
       expect(result.isFailure()).toBe(true);
     });
