@@ -58,6 +58,7 @@ export function MetadataUploadStep({
   const createMutation = useExperimentMetadataCreate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isPasting, setIsPasting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -197,6 +198,7 @@ export function MetadataUploadStep({
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
       await createMutation.mutateAsync({
         params: { id: experimentId },
@@ -210,6 +212,8 @@ export function MetadataUploadStep({
         },
       });
       onUploadSuccess();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to save metadata");
     } finally {
       setIsSaving(false);
     }
@@ -350,10 +354,12 @@ export function MetadataUploadStep({
           disabled={!hasData || isSaving || !identifierColumnId || !experimentQuestionId}
         >
           {isSaving
-            ? t("uploadModal.fileUpload.uploading")
+            ? t("uploadModal.metadata.savingMetadata", { defaultValue: "Saving..." })
             : t("uploadModal.metadata.saveMetadata")}
         </Button>
       </div>
+
+      {saveError && <p className="text-destructive text-sm">{saveError}</p>}
     </div>
   );
 }

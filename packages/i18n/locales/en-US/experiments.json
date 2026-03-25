@@ -293,7 +293,8 @@
       "uploadFile": "Upload File",
       "pasteClipboard": "Paste from Clipboard",
       "pasting": "Pasting...",
-      "rowCount": "{{count}} rows imported",
+      "rowCount_one": "{{count}} row imported",
+      "rowCount_other": "{{count}} rows imported",
       "replaceData": "Replace Data",
       "clearData": "Clear Data",
       "saveMetadata": "Save Metadata"

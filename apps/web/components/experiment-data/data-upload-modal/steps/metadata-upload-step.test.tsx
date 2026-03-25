@@ -7,37 +7,6 @@ import { MetadataUploadStep } from "./metadata-upload-step";
 
 globalThis.React = React;
 
-// --- Mock state to control what MetadataTable receives ---
-let mockColumns: { id: string; name: string; type: string }[] = [];
-let mockRows: { _id: string; [key: string]: unknown }[] = [];
-let mockIdentifierColumnId: string | null = null;
-let mockExperimentQuestionId: string | null = null;
-let mockIsSaving = false;
-
-// Track calls to setters
-const mockSetColumns = vi.fn((cols) => {
-  mockColumns = typeof cols === "function" ? cols(mockColumns) : cols;
-});
-const mockSetRows = vi.fn((rows) => {
-  mockRows = typeof rows === "function" ? rows(mockRows) : rows;
-});
-const mockSetIdentifierColumnId = vi.fn((id) => {
-  mockIdentifierColumnId = typeof id === "function" ? id(mockIdentifierColumnId) : id;
-});
-const mockSetExperimentQuestionId = vi.fn((id) => {
-  mockExperimentQuestionId = typeof id === "function" ? id(mockExperimentQuestionId) : id;
-});
-
-// Mock useState to control specific state values
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  const useStateMock = vi.fn((initial: unknown) => {
-    // We need to return proper state for the component
-    return (actual as typeof React).useState(initial);
-  });
-  return { ...actual, useState: useStateMock };
-});
-
 vi.mock("@/components/metadata-table", () => ({
   MetadataTable: () => <div data-testid="metadata-table">Table</div>,
 }));
