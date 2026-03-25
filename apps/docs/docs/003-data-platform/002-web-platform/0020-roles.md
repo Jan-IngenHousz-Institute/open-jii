@@ -9,6 +9,8 @@ An experiment is set up and owned by an 'admin'. This person has editing (admin)
 ### Experiment member
 An experiment member is appointed by an admin of an experiment. A member is someone who contributes to (manual) measurements and can support in setting up and configuring sensors and devices. Generally, a member is someone who takes measurements in a field (using the openJII mobile app).
 
+![Screenshot of the experiment members panel showing the list of members/admins with their roles and the option to add or change roles.](image-8.png)
+
 ### Roles and rights at experiments
 |   | Non-member | Experiment member | Experiment admin | 
 | :--- | :-----------: |:-----------: |:-----------: |

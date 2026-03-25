@@ -23,43 +23,10 @@ At the moment the mobile app is mostly targeted at the MultispeQ sensor, but mor
 - **Turn off** sensor device
 
 ### Measurement flow
+![Measurement flow screens: (1) progress bar / step indicator showing which step in the flow the user is on, (2) a question screen with answer options and the auto-advance behaviour, (3) result preview screen with raw and processed data after a measurement completes.](image.png)
 
-The measurement flow guides you through an experiment's configured steps (instructions, questions, measurements, analysis). Key behaviors:
+![Comments and swiping: (1) the bottom-sheet comment modal that appears when adding a comment to a measurement, (2) a measurement list item mid-swipe showing the swipe action buttons (e.g. flag, delete, export).](image-1.png)
 
-- **Experiment selection** is integrated into the flow — select your experiment and start immediately.
-- **Progress bar** shows your position in the flow with an animated gradient indicator.
-- **Auto-advance** — yes/no and multi-choice questions advance automatically after selection (unless optional).
-- **Smart skipping** — on repeat iterations, instruction steps and remembered answers are skipped automatically.
-- **Overview screen** — before submitting, review all your answers. Tap any answer to navigate back and edit it.
-- **Results** — after measurement, view raw data and processed results in a tabbed view.
-
-### Comments and annotations
-
-You can add comments to unsynced measurements:
-- Swipe left on a measurement to reveal the comment button.
-- A bottom-sheet modal opens showing measurement context (answers, experiment, timestamp).
-- Enter your comment and save — it will be included when the measurement is uploaded.
-
-### Exporting measurements
-
-Measurements can be exported locally for backup or troubleshooting:
-- In the **Recent** tab, tap the export button to save all measurements as a JSON file.
-- Individual measurements can also be exported as rescue files.
-- Exported files include sync status, timestamps, experiment names, and full measurement data.
-- Files are shared via the system's native share dialog.
-
-### Data compression
-
-Measurements are automatically compressed (gzip) before being stored on-device, significantly reducing storage usage. Legacy uncompressed entries are handled transparently — no manual migration needed.
-
-MQTT payloads are also compressed (gzip + base64) before transmission, reducing data usage on mobile networks.
-
-### Crash reporting and diagnostics
-
-The app includes automatic crash reporting via PostHog:
-- Uncaught exceptions, unhandled promise rejections, and console errors are tracked.
-- App lifecycle events (install, update, open, background) are captured.
-- Data is sent to a EU-hosted endpoint for privacy compliance.
 
 ### Logging in on a phone without emailbox
 
@@ -72,6 +39,8 @@ Use the following steps to **log in via email**:
 - Now go to a device that has your emailbox, like a desktop, laptop, tablet or (personal) mobile phone. Open the email and scroll to the 6-digit code
 - Use the sensorphone and enter the 6-digit code
 - You will be logged in to the app
+
+![Screenshot of the 6-digit code entry screen on the app (the step where you type the code from the email).](image-2.png)
 
 ### Minimal specs
 - Android 7.0 Nougat (API level 24) or newer

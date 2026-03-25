@@ -7,6 +7,8 @@ Protocols and macros have a **many-to-many relationship**: a single protocol can
 
 ## Contents of a protocol
 
+![Protocol detail page showing the new single-page layout: left sidebar with name/description/metadata, compatible sensors/experiments cards in the main area, and the code editor panel with the protocol JSON/code.](image-6.png)
+
 - **Name & description:** concise human-readable title and short summary of the protocol's purpose.
 - **Protocol code:** sensor-specific parameters such as integration time, LED intensity, or measurement mode.
 - **Output schema:** the structure of the produced measurement record and any computed outputs.
@@ -14,6 +16,8 @@ Protocols and macros have a **many-to-many relationship**: a single protocol can
 - **Compatible macros:** one or more macros linked to the protocol for post-processing.
 
 ## Creating a protocol
+
+![Screenshot of the Create Protocol form showing the Name, Description, and protocol code editor fields.](image-5.png)
 
 1. On the openJII web platform, go to the Protocols area.
 2. Click **Create Protocol** and provide required metadata (name, description, family).
@@ -68,6 +72,8 @@ For advanced usage and authoring of analysis macros, refer to the Developers gui
 A macro is a piece of post-processing code that turns your raw data into more valuable processed data that is easier to digest.
 
 ## Creating a macro
+
+![Screenshot of the Create Macro form showing the macro editor with the JavaScript code template.](image-7.png)
 
 1. On the openJII web platform, go to the Macros area.
 2. Click **Create Macro** and provide required metadata (name, description, language).

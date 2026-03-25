@@ -4,6 +4,8 @@ import DocButton from '@site/src/components/DocButton';
 
 The openJII Web Platform (https://openjii.org/) provides a secure, scalable environment to manage experiments, collect sensor time-series, and run reproducible analyses.
 
+![General dashboard / home screen of the web platform after logging in — showing the experiments list, navigation sidebar, and any summary widgets.](image-10.png)
+
 ### Key features
 
 - **Scalable data layer:** Centralized `centrum` schema with medallion architecture (Bronze–Silver–Gold) for efficient ingestion, storage, and querying of large time-series and sensor datasets.
@@ -16,6 +18,8 @@ The openJII Web Platform (https://openjii.org/) provides a secure, scalable envi
 - **Data export:** Asynchronous export system — select your format, initiate the export, and download when ready.
 - **Project transfers:** Import experiments, protocols, and measurement data from external platforms.
 - **Analysis & reproducibility:** Run analysis macros, integrate notebooks (Databricks/Jupyter), and capture provenance so analyses can be reproduced.
+
+![Data export modal showing format selection options (e.g. CSV) and export history / download list.](image-9.png)
 
 See [features of mobile app](../002-mobile-app.md)
 
