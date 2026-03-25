@@ -10,7 +10,7 @@ import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
-import { getSyncedLocalISO, getTimeSyncState } from "~/utils/time-sync";
+import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
 
 export function QuestionsOnlySubmitNode() {
   const { classes } = useTheme();
@@ -38,7 +38,7 @@ export function QuestionsOnlySubmitNode() {
       return false;
     }
 
-    const timestamp = getSyncedLocalISO();
+    const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
 
     await uploadQuestions({
