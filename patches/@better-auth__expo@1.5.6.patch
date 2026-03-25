@@ -1,23 +1,28 @@
-diff --git a/dist/client.mjs b/dist/client.mjs
-index 1d9716326a8b9d670377b0d101ca9d0fe8387d5b..70fb3a681a1fb4bdaba75d67c311be2bc0521d2d 100644
---- a/dist/client.mjs
-+++ b/dist/client.mjs
-@@ -1,5 +1,6 @@
+diff --git a/dist/client.js b/dist/client.js
+index 95d09477aa152b81457fbcaebc5e665e64f50ade..0fe7ffbdcc1a131428628b8bd504bece7f1c967d 100644
+--- a/dist/client.js
++++ b/dist/client.js
+@@ -2,6 +2,7 @@ import { safeJSONParse } from "@better-auth/core/utils/json";
+ import { SECURE_COOKIE_PREFIX, parseSetCookieHeader, parseSetCookieHeader as parseSetCookieHeader$1, stripSecureCookiePrefix } from "better-auth/cookies";
  import Constants from "expo-constants";
  import * as Linking from "expo-linking";
 +import * as WebBrowser from "expo-web-browser";
  import { AppState, Platform } from "react-native";
  import { kFocusManager, kOnlineManager } from "better-auth/client";
  
-@@ -269,12 +270,7 @@ const expoClient = (opts) => {
+@@ -250,16 +251,7 @@ const expoClient = (opts) => {
  				if (context.data?.redirect && (context.request.url.toString().includes("/sign-in") || context.request.url.toString().includes("/link-social")) && !context.request?.body.includes("idToken")) {
  					const to = JSON.parse(context.request.body)?.callbackURL;
  					const signInURL = context.data?.url;
 -					let Browser = void 0;
 -					try {
 -						Browser = await import("expo-web-browser");
--					} catch (error) {
--						throw new Error("\"expo-web-browser\" is not installed as a dependency!", { cause: error });
+-					} catch {
+-						try {
+-							Browser = __require("expo-web-browser");
+-						} catch (error) {
+-							throw new Error("\"expo-web-browser\" is not installed as a dependency!", { cause: error });
+-						}
 -					}
 +					let Browser = WebBrowser;
  					if (Platform.OS === "android") try {
