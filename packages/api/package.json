@@ -24,8 +24,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@ts-rest/core": "^3.52.1",
-    "@ts-rest/open-api": "^3.52.1",
+    "@ts-rest/core": "catalog:ts-rest",
+    "@ts-rest/open-api": "catalog:ts-rest",
     "zod": "catalog:"
   },
   "devDependencies": {
