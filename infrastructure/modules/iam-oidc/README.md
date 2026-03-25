@@ -4,7 +4,7 @@ This module configures an AWS OpenID Connect (OIDC) provider for GitHub Actions 
 
 ## 📖 Overview
 
-This module performs **registers an OIDC Provider**, i.e. creates (or ensures the existence of) an AWS IAM OIDC provider using GitHub Actions' OIDC endpoint (`https://token.actions.githubusercontent.com`). Additionally, it will **create an IAM Role** , with a trust policy that restricts access to a specific GitHub repository and branch, enabling GitHub Actions workflows to assume this role securely. Finally, the policy is attached with required permissions. The IAM role is granted permissions for VPC, S3, CloudFront, Timestream, Kinesis and other relevant actions.
+This module performs **registers an OIDC Provider**, i.e. creates (or ensures the existence of) an AWS IAM OIDC provider using GitHub Actions' OIDC endpoint (`https://token.actions.githubusercontent.com`). Additionally, it will **create an IAM Role** , with a trust policy that restricts access to a specific GitHub repository and branch, enabling GitHub Actions workflows to assume this role securely. Finally, the policy is attached with required permissions. The IAM role is granted permissions for VPC, S3, CloudFront, Timestream, Kinesis, AWS Backup, and other relevant actions.
 
 ```mermaid
 flowchart TD;
@@ -19,7 +19,7 @@ flowchart TD;
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`aws_iam_openid_connect_provider`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_openid_connect_provider) | Registers the GitHub Actions OIDC provider in AWS.                                                                | [OIDC Provider](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) |
 | [`aws_iam_role`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                       | Creates an IAM role with a trust policy allowing GitHub Actions to assume it via OIDC.                            | [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html)                                                                                            |
-| [`aws_iam_policy`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy)                                   | Defines an inline IAM policy with permissions for VPC, S3, CloudFront, Timestream, Kinesis, IoT, and IAM actions. | [IAM Policy](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_create-console.html)                                                                    |
+| [`aws_iam_policy`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy)                                   | Defines an inline IAM policy with permissions for VPC, S3, CloudFront, Timestream, Kinesis, AWS Backup, IoT, and IAM actions. | [IAM Policy](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_create-console.html)                                                                    |
 | [`aws_iam_role_policy_attachment`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment)   | Attaches the generated policy to the IAM role.                                                                    | [Policy Attachment](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_job-functions_create-policies.html)                                              |
 
 ## ⚙️ Usage
@@ -39,7 +39,7 @@ output "github_oidc_role_arn" {
 }
 ```
 
-This configuration creates an OIDC provider (if not already present) and an IAM role that GitHub Actions can assume via OIDC. The trust policy is limited to workflows originating from the specified repository and branch, as well as from pull requests. The role will have permissions to manage infrastructure related to infrastructure modules.
+This configuration creates an OIDC provider (if not already present) and an IAM role that GitHub Actions can assume via OIDC. The trust policy is limited to workflows originating from the specified repository and branch, as well as from pull requests. The role will have permissions to manage infrastructure related to infrastructure modules, including AWS Backup vault, plan, and selection management, as well as S3 and ECR replication configuration.
 
 ## 🔑 Inputs
 
@@ -58,6 +58,36 @@ This configuration creates an OIDC provider (if not already present) and an IAM 
 | ------------------- | ----------------------------------------------------- |
 | `oidc_provider_arn` | The ARN of the created OIDC provider.                 |
 | `role_arn`          | The ARN of the IAM role that can be assumed via OIDC. |
+
+## 🔐 Granted Permissions
+
+The IAM role includes permissions for the following AWS services and operations:
+
+### S3
+- Bucket configuration and management (read/write)
+- Object operations (Get, Put, Delete)
+- **Replication configuration**: `s3:PutReplicationConfiguration`
+
+### ECR (Elastic Container Registry)
+- Repository management (Create, Delete, Describe, List)
+- Image lifecycle and tagging
+- **Replication configuration** (account-level): `ecr:PutReplicationConfiguration`, `ecr:DescribeReplicationConfigurations`
+- Image push/pull operations
+
+### AWS Backup
+- **Vault management**: `CreateBackupVault`, `DeleteBackupVault`, `DescribeBackupVault`, `ListBackupVaults`
+- **Plan management**: `CreateBackupPlan`, `DeleteBackupPlan`, `DescribeBackupPlan`, `GetBackupPlan`, `UpdateBackupPlan`, `ListBackupPlans`
+- **Selection management**: `CreateBackupSelection`, `DeleteBackupSelection`, `GetBackupSelection`, `ListBackupSelections`
+- **Tagging**: `TagResource`, `UntagResource`, `ListTags`
+- **Policy and notification management**: `GetBackupVaultAccessPolicy`, `PutBackupVaultAccessPolicy`, `DeleteBackupVaultAccessPolicy`, `GetBackupVaultNotifications`
+
+### Other Services
+- **VPC**: Network infrastructure management
+- **CloudFront**: Distribution configuration
+- **Timestream**: Database operations
+- **Kinesis**: Stream management
+- **IoT**: Device and policy management
+- **IAM**: Role and policy management for service integrations
 
 ## 🌍 Notes
 
