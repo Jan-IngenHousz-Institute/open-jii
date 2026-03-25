@@ -9,7 +9,11 @@ resource "aws_s3_bucket" "bucket" {
 resource "aws_s3_bucket_versioning" "versioning" {
   bucket = aws_s3_bucket.bucket.id
   versioning_configuration {
-    status = var.enable_versioning ? "Enabled" : "Disabled"
+    # "Disabled" is only valid on buckets that have never had versioning enabled.
+    # Once a bucket has been versioned, AWS only allows "Enabled" or "Suspended".
+    # Using "Suspended" as the off-state avoids a 400 on buckets that were
+    # previously versioned (e.g. after CRR is removed).
+    status = (var.enable_versioning || var.enable_crr) ? "Enabled" : "Suspended"
   }
 }
 
@@ -46,7 +50,7 @@ resource "aws_s3_bucket_public_access_block" "block" {
 
 # Optional: Add CloudFront-specific bucket policy when a distribution ARN is provided
 resource "aws_s3_bucket_policy" "cloudfront_access" {
-  count  = var.cloudfront_distribution_arn != null ? 1 : 0
+  count  = var.create_cloudfront_policy ? 1 : 0
   bucket = aws_s3_bucket.bucket.id
 
   policy = jsonencode({
@@ -72,4 +76,135 @@ resource "aws_s3_bucket_policy" "custom_policy" {
   count  = var.custom_policy_json != null ? 1 : 0
   bucket = aws_s3_bucket.bucket.id
   policy = var.custom_policy_json
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Cross-Region Replication — only created when enable_crr = true
+# Continuously replicates all objects to a DR region bucket.
+# AWS requires versioning enabled on both source and destination.
+# ──────────────────────────────────────────────────────────────────────────────
+
+resource "aws_s3_bucket" "dr_bucket" {
+  provider = aws.dr
+  count    = var.enable_crr ? 1 : 0
+  bucket   = var.dr_bucket_name != null ? var.dr_bucket_name : "${var.bucket_name}-dr"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_s3_bucket_versioning" "dr_versioning" {
+  provider = aws.dr
+  count    = var.enable_crr ? 1 : 0
+  bucket   = aws_s3_bucket.dr_bucket[0].id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "dr_encryption" {
+  provider = aws.dr
+  count    = var.enable_crr ? 1 : 0
+  bucket   = aws_s3_bucket.dr_bucket[0].id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "dr_block" {
+  provider                = aws.dr
+  count                   = var.enable_crr ? 1 : 0
+  bucket                  = aws_s3_bucket.dr_bucket[0].id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_iam_role" "replication" {
+  count = var.enable_crr ? 1 : 0
+  name  = "s3-crr-role-${var.bucket_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "s3.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "replication" {
+  count = var.enable_crr ? 1 : 0
+  name  = "s3-crr-policy-${var.bucket_name}"
+  role  = aws_iam_role.replication[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetReplicationConfiguration", "s3:ListBucket"]
+        Resource = aws_s3_bucket.bucket.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObjectVersionForReplication", "s3:GetObjectVersionAcl", "s3:GetObjectVersionTagging"]
+        Resource = "${aws_s3_bucket.bucket.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ReplicateObject", "s3:ReplicateDelete", "s3:ReplicateTags"]
+        Resource = "${aws_s3_bucket.dr_bucket[0].arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_s3_bucket_replication_configuration" "crr" {
+  count  = var.enable_crr ? 1 : 0
+  bucket = aws_s3_bucket.bucket.id
+  role   = aws_iam_role.replication[0].arn
+
+  rule {
+    id     = "replicate-all-to-dr"
+    status = "Enabled"
+
+    filter {}
+
+    delete_marker_replication {
+      status = "Enabled"
+    }
+
+    destination {
+      bucket        = aws_s3_bucket.dr_bucket[0].arn
+      storage_class = "STANDARD_IA" # Cost-optimised storage class for rarely-accessed DR data
+    }
+  }
+
+  depends_on = [
+    aws_s3_bucket_versioning.versioning,
+    aws_s3_bucket_versioning.dr_versioning,
+  ]
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "dr_lifecycle" {
+  provider = aws.dr
+  count    = var.enable_crr ? 1 : 0
+  bucket   = aws_s3_bucket.dr_bucket[0].id
+
+  rule {
+    id     = "expire-old-versions"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90 # Adjust based on DR requirements
+    }
+  }
 }

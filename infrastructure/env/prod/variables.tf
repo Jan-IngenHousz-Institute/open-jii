@@ -4,6 +4,12 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
+variable "dr_region" {
+  description = "AWS region used for disaster recovery backups and data replication"
+  type        = string
+  default     = "eu-west-1"
+}
+
 variable "environment" {
   description = "Environment of the deployment (e.g., 'dev')"
   type        = string

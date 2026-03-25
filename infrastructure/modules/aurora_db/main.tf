@@ -142,10 +142,10 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
   engine             = "aurora-postgresql"
   engine_mode        = "provisioned"
   engine_version     = "16.8"
-  database_name      = var.database_name
+  database_name      = var.snapshot_identifier == null ? var.database_name : null
 
   # Authentication and security
-  master_username                     = var.master_username
+  master_username                     = var.snapshot_identifier == null ? var.master_username : null
   manage_master_user_password         = true
   iam_database_authentication_enabled = true
   storage_encrypted                   = true
@@ -163,6 +163,10 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
   final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.cluster_identifier}-final-snapshot"
   copy_tags_to_snapshot     = true
   deletion_protection       = true
+
+  # DR restore: when snapshot_identifier is set the cluster is restored from that
+  # snapshot instead of being created fresh. Used during Backup & Restore failover.
+  snapshot_identifier = var.snapshot_identifier
 
   # Maintenance and monitoring
   preferred_maintenance_window    = "sun:03:00-sun:07:00"
