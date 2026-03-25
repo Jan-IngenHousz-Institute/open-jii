@@ -42,7 +42,7 @@ describe("DeleteExperimentMetadataUseCase", () => {
 
     expect(result.isSuccess()).toBe(true);
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(metadataRepository.deleteByMetadataId).toHaveBeenCalledWith(metadataId);
+    expect(metadataRepository.deleteByMetadataId).toHaveBeenCalledWith(metadataId, experiment.id);
   });
 
   it("should return NOT_FOUND if experiment does not exist", async () => {

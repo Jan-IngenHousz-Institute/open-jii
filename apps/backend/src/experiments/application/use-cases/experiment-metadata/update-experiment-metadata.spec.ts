@@ -61,7 +61,12 @@ describe("UpdateExperimentMetadataUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     expect(result.value).toEqual(mockResult);
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(metadataRepository.update).toHaveBeenCalledWith(metadataId, sampleUpdate, testUserId);
+    expect(metadataRepository.update).toHaveBeenCalledWith(
+      metadataId,
+      sampleUpdate,
+      testUserId,
+      experiment.id,
+    );
   });
 
   it("should return NOT_FOUND if experiment does not exist", async () => {

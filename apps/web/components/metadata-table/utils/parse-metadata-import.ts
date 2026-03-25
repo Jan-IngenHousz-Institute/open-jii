@@ -100,7 +100,7 @@ function resolveExcelCellValue(value: unknown): string {
     // Formula: { formula: '...', result: ... }
     if ("result" in obj) return resolveExcelCellValue(obj.result);
     // Hyperlink: { text: '...', hyperlink: '...' }
-    if ("text" in obj) return String(obj.text ?? "");
+    if ("text" in obj) return typeof obj.text === "string" ? obj.text : "";
   }
   return "";
 }
@@ -136,8 +136,9 @@ export async function parseFile(
     const ExcelJS = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(await file.arrayBuffer());
+    if (workbook.worksheets.length === 0) return { columns: [], rows: [] };
     const sheet = workbook.worksheets[0];
-    if (!sheet || sheet.rowCount === 0) return { columns: [], rows: [] };
+    if (sheet.rowCount === 0) return { columns: [], rows: [] };
 
     // Collect all rows from the sheet
     const allRows: string[][] = [];

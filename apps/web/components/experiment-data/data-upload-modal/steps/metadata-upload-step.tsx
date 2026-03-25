@@ -167,8 +167,9 @@ export function MetadataUploadStep({
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) void handleFileImport(file);
+      if (e.dataTransfer.files.length > 0) {
+        void handleFileImport(e.dataTransfer.files[0]);
+      }
     },
     [handleFileImport],
   );
