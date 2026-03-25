@@ -14,9 +14,14 @@ The mobile app works seamlessly with the MultispeQ sensor. Additional sensors an
 
 ## Highlights
 
-- Scalable time-series data ingestion and storage
-- Visual measurement flow editor (Instruction, Question, Measurement, Analysis)
-- Interactive dashboards and exportable data for downstream analysis
+- **Scalable data layer:** Centralized `centrum` schema with medallion architecture (Bronze–Silver–Gold) for efficient ingestion, storage, and querying of large time-series and sensor datasets
+- **Secure authentication:** Email login via 6-digit OTP code, ORCID and GitHub sign-in
+- **User invitations:** Invite collaborators by email — pending invitations are automatically accepted when the invitee creates an account
+- **Protocol-macro compatibility:** Many-to-many linking between protocols and macros
+- **Visual measurement flows:** Drag-and-drop flow editor (Instruction, Question, Measurement, Analysis nodes)
+- **Data exploration & visualization:** Interactive dashboards, plots, filtering, and export in multiple formats (CSV, NDJSON, JSON, Parquet) for downstream analysis
+- **Data export:** Asynchronous export system — select your format, initiate the export, and download when ready
+- **Project transfers:** Import experiments, protocols, and measurement data from external platforms
 
 Excited to try it?
 

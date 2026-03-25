@@ -2,6 +2,8 @@
 
 This page explains how to create or edit an experiment using the openJII web platform. The guide covers creating the experiment record, configuring visibility and locations, and building a Measurement Flow to collect data.
 
+![Screenshot of the Experiments list page showing the **Create Experiment** button.](image-4.png)
+
 ## Quick overview
 
 1. Go to the **Experiments** section in the Web platform.
@@ -23,6 +25,10 @@ Recommended minimal flow:
 - Instruction node (yellow): add the instructions shown to the person operating the sensor.
 - Measurement node (measurement icon): select the protocol you want to run.
 - Analysis node (analysis icon): choose the analysis macro that corresponds to the chosen protocol (usually they share the same name).
+
+:::note[🎬 Video needed]
+Short screen recording (30–60s) showing the full flow-building process: adding an Instruction node, a Measurement node, an Analysis node, connecting them, and saving.
+:::
 
 How to build the flow:
 
