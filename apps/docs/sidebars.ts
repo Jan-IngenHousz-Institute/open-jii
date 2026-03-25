@@ -107,6 +107,7 @@ const sidebars: SidebarsConfig = {
         "data-platform/web-platform/register",
         "data-platform/web-platform/create-add-experiment",
         "data-platform/web-platform/protocol",
+        "data-platform/web-platform/project-transfers",
         "data-platform/web-platform/roles",
       ],
     },
@@ -134,6 +135,11 @@ const sidebars: SidebarsConfig = {
       type: "doc",
       id: "data-platform/report-issue",
       label: "Report issue / Request feature",
+    },
+    {
+      type: "doc",
+      id: "data-platform/support",
+      label: "Support & Triage",
     },
     /*{
       type: "category",
