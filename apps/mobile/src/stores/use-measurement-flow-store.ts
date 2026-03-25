@@ -11,6 +11,7 @@ interface MeasurementFlowStore {
   isFlowFinished: boolean; // True when user explicitly finishes the flow
   isQuestionsSubmitPending: boolean; // True when a questions-only iteration is awaiting upload
   scanResult?: any; // Store the scan result from measurement step
+  isFromOverview: boolean; // True when navigated to a question node from the ready-state overview
 
   // Navigation
   setExperimentId: (experimentId: string) => void;
@@ -29,6 +30,8 @@ interface MeasurementFlowStore {
   finishFlow: () => void;
   setScanResult: (result: any) => void;
   dismissQuestionsSubmit: () => void;
+  navigateToQuestionFromOverview: (questionIndex: number) => void;
+  returnToOverview: () => void;
 }
 
 export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
@@ -41,6 +44,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   isFlowFinished: false,
   isQuestionsSubmitPending: false,
   scanResult: undefined,
+  isFromOverview: false,
 
   // Experiment selection
   setExperimentId: (experimentId) => set({ experimentId }),
@@ -51,6 +55,12 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
 
   nextStep: () =>
     set((state) => {
+      if (state.isFromOverview) {
+        return {
+          currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
+          isFromOverview: false,
+        };
+      }
       if (state.experimentId && state.flowNodes.length > 0) {
         const nextFlowStep = state.currentFlowStep + 1;
         const isCompleted = nextFlowStep >= state.flowNodes.length;
@@ -76,6 +86,12 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
 
   previousStep: () =>
     set((state) => {
+      if (state.isFromOverview) {
+        return {
+          currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
+          isFromOverview: false,
+        };
+      }
       if (state.experimentId && state.flowNodes.length > 0) {
         if (state.isQuestionsSubmitPending) {
           // Go back to the last question from the submit screen
@@ -105,7 +121,13 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       return { currentStep: Math.max(0, state.currentStep - 1) };
     }),
 
-  reset: () => set({ experimentId: undefined, protocolId: undefined, currentStep: 0 }),
+  reset: () =>
+    set({
+      experimentId: undefined,
+      protocolId: undefined,
+      currentStep: 0,
+      isFromOverview: false,
+    }),
 
   // Flow orchestration
   setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0 }),
@@ -121,6 +143,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       isQuestionsSubmitPending: false,
       scanResult: undefined,
       protocolId: undefined,
+      isFromOverview: false,
     }),
 
   startNewIteration: () =>
@@ -129,6 +152,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       iterationCount: state.iterationCount + 1,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
+      isFromOverview: false,
     })),
 
   retryCurrentIteration: () =>
@@ -136,6 +160,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       currentFlowStep: 0,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
+      isFromOverview: false,
     })),
 
   finishFlow: () =>
@@ -143,6 +168,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       currentFlowStep: state.flowNodes.length,
       isFlowFinished: true,
       isQuestionsSubmitPending: false,
+      isFromOverview: false,
     })),
 
   setScanResult: (result) => set({ scanResult: result }),
@@ -153,5 +179,17 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       currentFlowStep: 0,
       iterationCount: state.iterationCount + 1,
       scanResult: undefined,
+    })),
+
+  navigateToQuestionFromOverview: (questionIndex) =>
+    set({
+      currentFlowStep: questionIndex,
+      isFromOverview: true,
+    }),
+
+  returnToOverview: () =>
+    set((state) => ({
+      currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
+      isFromOverview: false,
     })),
 }));

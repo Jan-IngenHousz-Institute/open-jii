@@ -5,7 +5,10 @@ import { FlowNode } from "../../../types";
 
 /**
  * Returns the index of the next step after `fromIndex` that needs manual input.
- * Skips instructions on iterations > 0, and questions with remember/auto-increment enabled.
+ * Skips:
+ * - instruction steps on iterations > 0
+ * - question steps with auto-increment or remember enabled,
+ *   unless the question is required and has no value yet
  * Returns `flowNodes.length` if no mandatory step remains.
  */
 export function findNextMandatoryStep(
@@ -13,12 +16,15 @@ export function findNextMandatoryStep(
   flowNodes: FlowNode[],
   iterationCount: number,
 ): number {
-  const { isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore.getState();
+  const { isAutoincrementEnabled, isRememberAnswerEnabled, getAnswer } =
+    useFlowAnswersStore.getState();
   for (let i = fromIndex + 1; i < flowNodes.length; i++) {
     const node = flowNodes[i];
     if (node.type === "instruction" && iterationCount > 0) continue;
     if (node.type === "question") {
-      if (isAutoincrementEnabled(node.id) || isRememberAnswerEnabled(node.id)) continue;
+      const isAutoOrRemember = isAutoincrementEnabled(node.id) || isRememberAnswerEnabled(node.id);
+      const hasValue = !!getAnswer(iterationCount, node.id)?.trim();
+      if (isAutoOrRemember && (!node.content.required || hasValue)) continue;
     }
     return i;
   }
@@ -33,8 +39,15 @@ export function findNextMandatoryStep(
 export function advanceWithAnswer(node: FlowNode, answerValue: string) {
   const { setAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } =
     useFlowAnswersStore.getState();
-  const { iterationCount, currentFlowStep, nextStep, flowNodes, setCurrentFlowStep } =
-    useMeasurementFlowStore.getState();
+  const {
+    iterationCount,
+    currentFlowStep,
+    nextStep,
+    flowNodes,
+    setCurrentFlowStep,
+    isFromOverview,
+    returnToOverview,
+  } = useMeasurementFlowStore.getState();
   const content = node.content;
 
   // Seed this answer into the NEXT iteration
@@ -52,7 +65,9 @@ export function advanceWithAnswer(node: FlowNode, answerValue: string) {
   // Jump to the next step that actually needs input, skipping any question
   // whose answer is already seeded for this iteration.
   const nextMandatory = findNextMandatoryStep(currentFlowStep, flowNodes, iterationCount);
-  if (nextMandatory >= flowNodes.length) {
+  if (isFromOverview) {
+    returnToOverview();
+  } else if (nextMandatory >= flowNodes.length) {
     // Every remaining step is done – trigger iteration completion / wrap-around
     nextStep();
   } else {

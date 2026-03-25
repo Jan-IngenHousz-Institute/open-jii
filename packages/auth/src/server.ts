@@ -94,6 +94,9 @@ export const auth = betterAuth({
     },
   },
   user: {
+    changeEmail: {
+      enabled: true,
+    },
     additionalFields: {
       registered: {
         type: "boolean",

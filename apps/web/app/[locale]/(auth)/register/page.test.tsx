@@ -36,8 +36,16 @@ vi.mock("~/components/auth/auth-hero-section", () => ({
 }));
 
 vi.mock("~/components/auth/registration-form", () => ({
-  RegistrationForm: ({ callbackUrl, termsData }: { callbackUrl?: string; termsData: unknown }) => (
-    <div data-testid="registration-form">
+  RegistrationForm: ({
+    callbackUrl,
+    termsData,
+    emailOnly,
+  }: {
+    callbackUrl?: string;
+    termsData: unknown;
+    emailOnly?: boolean;
+  }) => (
+    <div data-testid="registration-form" data-email-only={String(emailOnly)}>
       Registration form - {callbackUrl ?? "no callback"} - {termsData ? "with terms" : "no terms"}
     </div>
   ),
@@ -98,7 +106,9 @@ describe("UserRegistrationPage", () => {
   });
 
   it("redirects to platform if user already registered", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "123", registered: true } });
+    mockAuth.mockResolvedValue({
+      user: { id: "123", registered: true, email: "user@example.com" },
+    });
 
     try {
       await UserRegistrationPage(defaultProps);
@@ -107,6 +117,27 @@ describe("UserRegistrationPage", () => {
     }
 
     expect(mockRedirect).toHaveBeenCalledWith(`/${locale}/platform`);
+  });
+
+  it("does not redirect to platform when user is registered but has no valid email", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "123", registered: true, emailVerified: true, email: null },
+    });
+
+    render(await UserRegistrationPage(defaultProps));
+
+    expect(mockRedirect).not.toHaveBeenCalled();
+    expect(screen.getByTestId("registration-form")).toBeInTheDocument();
+  });
+
+  it("passes emailOnly=true to RegistrationForm when user is registered but has no valid email", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "123", registered: true, emailVerified: true, email: null },
+    });
+
+    render(await UserRegistrationPage(defaultProps));
+
+    expect(screen.getByTestId("registration-form")).toHaveAttribute("data-email-only", "true");
   });
 
   it("renders with session for unregistered user", async () => {

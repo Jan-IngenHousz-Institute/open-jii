@@ -1,4 +1,4 @@
-import { Trash2, UploadCloud } from "lucide-react-native";
+import { Trash2 } from "lucide-react-native";
 import React from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -83,28 +83,22 @@ export function SwipeableMeasurementRow({
         }}
         className="absolute bottom-0 right-0 top-0 flex-row justify-center gap-3 overflow-hidden rounded-bl-lg rounded-tl-xl bg-[#CDD5DB] p-4"
       >
-        {showComment && (
+        {showSync && (
           <Button
-            title="Comment"
-            onPress={handleComment}
+            title="Upload"
+            onPress={handleSync}
             variant="tertiary"
             style={{ borderColor: "transparent", width: COMMENT_BUTTON_WIDTH }}
           />
         )}
 
-        {showSync && (
-          <View
-            style={{ width: ICON_BUTTON_SIZE }}
-            className="overflow-hidden rounded-lg bg-[#EDF2F6]"
-          >
-            <TouchableOpacity
-              onPress={handleSync}
-              className="flex-1 items-center justify-center"
-              activeOpacity={0.7}
-            >
-              <UploadCloud size={16} color={colors.semantic.info} />
-            </TouchableOpacity>
-          </View>
+        {showComment && (
+          <Button
+            title="Comment"
+            onPress={handleComment}
+            variant="light"
+            style={{ width: COMMENT_BUTTON_WIDTH }}
+          />
         )}
 
         {showDelete && (

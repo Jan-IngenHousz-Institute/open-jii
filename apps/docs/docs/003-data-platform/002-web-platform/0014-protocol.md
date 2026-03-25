@@ -33,7 +33,7 @@ Be sure to add a macro that fits the protocol as well to post-process the measur
 ## Examples
 
 - "Chlorophyll Fluorescence Standard": MultispeQ protocol using standard integration times and producing Fv/Fm and other derived traits.
-- "Leaf Gas Exchange (Beta)": gas-exchange protocol with extended inputs and analysis macro for photosynthetic parameters.
+- "Leaf Gas Exchange": gas-exchange protocol with extended inputs and analysis macro for photosynthetic parameters.
 
 For advanced usage and authoring of analysis macros, refer to the Developers guide and Analysis documentation.
 

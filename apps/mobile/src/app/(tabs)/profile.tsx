@@ -4,12 +4,14 @@ import * as Application from "expo-application";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Alert, Linking, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Linking, Image } from "react-native";
+import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
+import { clearSessionFlag } from "~/services/session-persistence";
 import { getEnvVar } from "~/stores/environment-store";
 import { formatRelativeTime } from "~/utils/format-relative-time";
 
@@ -22,6 +24,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     queryClient.resetQueries();
+    await clearSessionFlag();
     await signOut();
     router.replace("/callback");
   };
@@ -33,7 +36,7 @@ export default function ProfileScreen() {
     if (canOpen) {
       await Linking.openURL(url);
     } else {
-      Alert.alert("Error", "Cannot open web profile. Please check your internet connection.");
+      showAlert("Error", "Cannot open web profile. Please check your internet connection.");
     }
   };
 

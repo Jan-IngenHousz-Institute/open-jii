@@ -1,9 +1,8 @@
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
 import { MessageCircle, X } from "lucide-react-native";
-import React, { useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import type { MeasurementItem } from "~/hooks/use-all-measurements";
@@ -27,8 +26,30 @@ export function MeasurementQuestionsModal({
   const insets = useSafeAreaInsets();
   const { updateMeasurementComment } = useFailedUploads();
   const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const sheetRef = useRef<BottomSheetModal>(null);
 
-  // Extract questions from measurementResult
+  useEffect(() => {
+    if (visible) {
+      sheetRef.current?.present();
+    } else {
+      sheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (visible) {
+        sheetRef.current?.dismiss();
+        return true; // prevent default navigation
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+    return () => subscription.remove();
+  }, [visible]);
+
   const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
   const questions = parseQuestions(measurement.data.measurementResult);
   const experimentName = measurement.experimentName;
@@ -42,99 +63,115 @@ export function MeasurementQuestionsModal({
     setCommentModalVisible(false);
   };
 
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <BottomSheetModalProvider>
-          <View
-            className={clsx("flex-1", classes.background)}
-            style={{
-              paddingTop: insets.top,
-              paddingBottom: insets.bottom,
-            }}
-          >
-            {/* Header */}
-            <View
-              className={clsx("flex-row items-center justify-between border-b p-4", classes.border)}
-            >
-              <View className="flex-1">
-                <Text className={clsx("text-lg font-bold", classes.text)}>{experimentName}</Text>
-                <Text className={clsx("mt-1 text-xs", classes.textMuted)}>{timestamp}</Text>
-              </View>
-              <View className="flex-row items-center gap-2">
-                {isUnsynced && (
-                  <TouchableOpacity
-                    onPress={() => setCommentModalVisible(true)}
-                    className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
-                    style={{ backgroundColor: colors.surface }}
-                    activeOpacity={0.7}
-                  >
-                    <MessageCircle size={20} color={colors.onSurface} />
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  onPress={onClose}
-                  className="h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.surface }}
-                  activeOpacity={0.7}
-                >
-                  <X size={20} color={colors.onSurface} />
-                </TouchableOpacity>
-              </View>
-            </View>
+  const renderBackdrop = useCallback(
+    (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
+    ),
+    [],
+  );
 
-            {/* Content */}
-            <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
-              {questions.length === 0 ? (
-                <View className="items-center justify-center py-8">
-                  <Text className={clsx("text-center", classes.textSecondary)}>
-                    No questions answered for this measurement
-                  </Text>
-                </View>
-              ) : (
-                <View className="gap-3">
-                  {questions.map((question, index) => (
-                    <View
-                      key={index}
-                      className={clsx("rounded-lg border p-4", classes.card, classes.border)}
-                    >
-                      <Text
-                        className={clsx("mb-1 text-xs font-semibold uppercase", classes.textMuted)}
-                      >
-                        {question.question_label}
-                      </Text>
-                      <Text className={clsx("mb-2 text-base", classes.text)}>
-                        {question.question_text}
-                      </Text>
-                      <View
-                        className="rounded-md px-3 py-2"
-                        style={{ backgroundColor: colors.primary.dark + "15" }}
-                      >
-                        <Text
-                          className="text-base font-medium"
-                          style={{ color: colors.primary.dark }}
-                        >
-                          {question.question_answer}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </ScrollView>
+  return (
+    <>
+      <BottomSheetModal
+        ref={sheetRef}
+        snapPoints={["100%"]}
+        enableDynamicSizing={false}
+        backdropComponent={renderBackdrop}
+        onDismiss={onClose}
+        handleIndicatorStyle={{ backgroundColor: colors.inactive }}
+        topInset={insets.top}
+        stackBehavior="push"
+      >
+        {/* Header */}
+        <View
+          className={clsx(
+            "flex-row items-center justify-between border-b px-4 py-4",
+            classes.border,
+            classes.background,
+          )}
+        >
+          <View className="flex-1">
+            <Text className={clsx("text-lg font-bold", classes.text)}>{experimentName}</Text>
+            <Text className={clsx("mt-1 text-xs", classes.textMuted)}>{timestamp}</Text>
           </View>
 
-          <CommentModal
-            visible={commentModalVisible}
-            initialText={currentComment}
-            experimentName={experimentName}
-            questions={questions}
-            timestamp={measurement.timestamp}
-            onSave={handleSaveComment}
-            onCancel={() => setCommentModalVisible(false)}
-          />
-        </BottomSheetModalProvider>
-      </GestureHandlerRootView>
-    </Modal>
+          <View className="flex-row items-center gap-2">
+            {isUnsynced && (
+              <TouchableOpacity
+                onPress={() => setCommentModalVisible(true)}
+                className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
+                style={{ backgroundColor: colors.surface }}
+                activeOpacity={0.7}
+              >
+                <MessageCircle size={20} color={colors.onSurface} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              onPress={onClose}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.surface }}
+              activeOpacity={0.7}
+            >
+              <X size={20} color={colors.onSurface} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Scrollable Content */}
+        <BottomSheetScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: insets.bottom + 16,
+          }}
+          nestedScrollEnabled
+        >
+          {questions.length === 0 ? (
+            <View className="items-center justify-center py-8">
+              <Text className={clsx("text-center", classes.textSecondary)}>
+                No questions answered for this measurement
+              </Text>
+            </View>
+          ) : (
+            <View className="gap-3">
+              {questions.map((question, index) => (
+                <View
+                  key={index}
+                  className={clsx("rounded-lg border p-4", classes.card, classes.border)}
+                >
+                  <Text className={clsx("mb-1 text-xs font-semibold uppercase", classes.textMuted)}>
+                    {question.question_label}
+                  </Text>
+
+                  <Text className={clsx("mb-2 text-base", classes.text)}>
+                    {question.question_text}
+                  </Text>
+
+                  <View
+                    className="rounded-md px-3 py-2"
+                    style={{ backgroundColor: colors.primary.dark + "15" }}
+                  >
+                    <Text className="text-base font-medium" style={{ color: colors.primary.dark }}>
+                      {question.question_answer}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </BottomSheetScrollView>
+      </BottomSheetModal>
+
+      <CommentModal
+        visible={commentModalVisible}
+        initialText={currentComment}
+        experimentName={experimentName}
+        questions={questions}
+        timestamp={measurement.timestamp}
+        onSave={handleSaveComment}
+        onCancel={() => setCommentModalVisible(false)}
+      />
+    </>
   );
 }
