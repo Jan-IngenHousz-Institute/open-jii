@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useScannerCommandExecutorStore } from "~/stores/use-scanner-command-executor-store";
 import type { Device } from "~/types/device";
@@ -12,18 +13,22 @@ import {
   getSerialDevices,
 } from "./device-queries";
 
-/** How often to poll the OS for the current Bluetooth connection status (ms). */
-const DEVICE_CONNECTION_POLL_INTERVAL_MS = 5_000;
-
 export function useConnectedDevice() {
+  const client = useQueryClient();
+
+  // Subscribe to native disconnect events so the query updates instantly
+  // instead of waiting for a poll cycle.
+  useEffect(() => {
+    const subscription = RNBluetoothClassic.onDeviceDisconnected(() => {
+      void client.invalidateQueries({ queryKey: ["connected-device"] });
+    });
+    return () => subscription.remove();
+  }, [client]);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["connected-device"],
     queryFn: getConnectedDevice,
     networkMode: "always",
-    // Poll periodically so the app detects a device that disconnected due to
-    // inactivity (e.g. Android BT power management) without the user having
-    // to trigger a manual action first.
-    refetchInterval: DEVICE_CONNECTION_POLL_INTERVAL_MS,
   });
 
   return { data, isLoading, error };
