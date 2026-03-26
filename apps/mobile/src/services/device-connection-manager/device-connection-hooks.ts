@@ -1,5 +1,7 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import RNBluetoothClassic from "react-native-bluetooth-classic";
+import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useScannerCommandExecutorStore } from "~/stores/use-scanner-command-executor-store";
 import type { Device } from "~/types/device";
 
@@ -11,7 +13,28 @@ import {
   getSerialDevices,
 } from "./device-queries";
 
+/**
+ * Register the native disconnect listener once at module level so that
+ * multiple components calling useConnectedDevice() don't each create their
+ * own subscription.  The listener is bound lazily on the first call to
+ * initDisconnectListener and never removed (lives for the app lifetime).
+ */
+let disconnectListenerBound = false;
+function initDisconnectListener(client: QueryClient) {
+  if (disconnectListenerBound) return;
+  disconnectListenerBound = true;
+  RNBluetoothClassic.onDeviceDisconnected(() => {
+    // Clean up the scanner executor so the stale connection doesn't block
+    // the next connectToDevice → setDevice call (isInitializing guard).
+    void useScannerCommandExecutorStore.getState().setDevice(undefined);
+    void client.invalidateQueries({ queryKey: ["connected-device"] });
+  });
+}
+
 export function useConnectedDevice() {
+  const client = useQueryClient();
+  initDisconnectListener(client);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["connected-device"],
     queryFn: getConnectedDevice,
@@ -25,6 +48,7 @@ export function useConnectToDevice() {
   const client = useQueryClient();
   const [connectingDeviceId, setConnectingDeviceId] = useState<string>();
   const { setDevice } = useScannerCommandExecutorStore();
+  const { setLastConnectedDevice } = useDeviceConnectionStore();
 
   return {
     connectingDeviceId,
@@ -33,6 +57,9 @@ export function useConnectToDevice() {
       try {
         await connectToDevice(device);
         await setDevice(device);
+        // Remember this device so the measurement flow can offer an inline
+        // reconnect button if the connection is lost during a session.
+        setLastConnectedDevice(device);
         await client.invalidateQueries({
           queryKey: ["connected-device"],
         });

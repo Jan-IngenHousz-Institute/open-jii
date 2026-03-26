@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { useRouter } from "expo-router";
 import { Info } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text } from "react-native";
 import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
@@ -41,6 +41,20 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   useEffect(() => {
     setProtocolId(content.protocolId);
   }, [setProtocolId, content.protocolId]);
+
+  // Keep a stable ref to resetScan so the disconnect-cleanup effect below
+  // doesn't need to list it as a dependency (avoids any memoisation concerns).
+  const resetScanRef = useRef(resetScan);
+  resetScanRef.current = resetScan;
+
+  // When the device unexpectedly disconnects while a scan is in progress,
+  // reset the scan so the user can reconnect and retry cleanly rather than
+  // being stuck on the scanning screen.
+  useEffect(() => {
+    if (!device && isScanning) {
+      resetScanRef.current();
+    }
+  }, [device, isScanning]);
 
   const handleCardPress = (flowStepIndex: number) => {
     navigateToQuestionFromOverview(flowStepIndex);
