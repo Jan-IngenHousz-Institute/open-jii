@@ -29,7 +29,7 @@ interface AnalysisNodeProps {
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
-  const { macro, isLoading: isLoading } = useMacro(content.macroId);
+  const { macro, isLoading } = useMacro(content.macroId);
   const {
     scanResult,
     previousStep,
