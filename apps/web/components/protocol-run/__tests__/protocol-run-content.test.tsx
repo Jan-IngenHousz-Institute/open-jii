@@ -47,11 +47,13 @@ vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
 }));
 
 const mockStartEditing = vi.fn();
+const mockCloseEditing = vi.fn();
 const mockHandleChange = vi.fn();
 let mockAutoSave = {
   editedCode: null as unknown,
   syncStatus: "synced" as string,
   startEditing: mockStartEditing,
+  closeEditing: mockCloseEditing,
   handleChange: mockHandleChange,
   isEditing: false,
 };
@@ -67,6 +69,24 @@ vi.mock("@repo/auth/client", () => ({
 vi.mock("../../protocol-code-editor", () => ({
   __esModule: true,
   default: () => <div data-testid="code-editor" />,
+}));
+
+vi.mock("../../json-code-viewer", () => ({
+  JsonCodeViewer: ({
+    onEditStart,
+  }: {
+    value: unknown;
+    height?: string;
+    onEditStart?: () => void;
+  }) => (
+    <div data-testid="json-viewer" onClick={onEditStart}>
+      {onEditStart && <button data-testid="edit-trigger">Edit</button>}
+    </div>
+  ),
+}));
+
+vi.mock("../../shared/code-editor-header-actions", () => ({
+  CodeEditorHeaderActions: () => <div data-testid="editor-header-actions" />,
 }));
 
 vi.mock("../../iot/iot-protocol-runner", () => ({
@@ -128,6 +148,7 @@ describe("<ProtocolRunContent />", () => {
       editedCode: null,
       syncStatus: "synced",
       startEditing: mockStartEditing,
+      closeEditing: mockCloseEditing,
       handleChange: mockHandleChange,
       isEditing: false,
     };
@@ -149,7 +170,7 @@ describe("<ProtocolRunContent />", () => {
     expect(screen.getByText("protocols.notFound")).toBeInTheDocument();
   });
 
-  it("should render code editor and IoT runner when browser supported", () => {
+  it("should render read-only json viewer and IoT runner by default", () => {
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -157,7 +178,8 @@ describe("<ProtocolRunContent />", () => {
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
+    expect(screen.queryByTestId("code-editor")).not.toBeInTheDocument();
     expect(screen.getByTestId("iot-runner")).toBeInTheDocument();
   });
 
@@ -186,9 +208,8 @@ describe("<ProtocolRunContent />", () => {
     expect(backLink).toHaveAttribute("href", "/en/platform/protocols/proto-1");
   });
 
-  it("should show save button for creators", () => {
+  it("should show edit trigger for creators in read-only mode", () => {
     mockSession = { user: { id: "user-1" } };
-    mockAutoSave = { ...mockAutoSave, isEditing: true, syncStatus: "unsynced" };
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -196,26 +217,10 @@ describe("<ProtocolRunContent />", () => {
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    const saveBtn = screen.getByText("common.save");
-    expect(saveBtn).toBeInTheDocument();
-    expect(saveBtn.closest("button")).not.toBeDisabled();
+    expect(screen.getByTestId("edit-trigger")).toBeInTheDocument();
   });
 
-  it("should disable save button when synced", () => {
-    mockSession = { user: { id: "user-1" } };
-    mockAutoSave = { ...mockAutoSave, isEditing: true, syncStatus: "synced" };
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
-
-    render(<ProtocolRunContent protocolId="proto-1" />);
-
-    const saveBtn = screen.getByText("common.save").closest("button");
-    expect(saveBtn).toBeDisabled();
-  });
-
-  it("should not show save button for non-creators", () => {
+  it("should not show edit trigger for non-creators", () => {
     mockSession = { user: { id: "other-user" } };
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
@@ -224,11 +229,12 @@ describe("<ProtocolRunContent />", () => {
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(screen.queryByText("common.save")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("edit-trigger")).not.toBeInTheDocument();
   });
 
-  it("should auto-start editing for creators", () => {
+  it("should show code editor with header actions when editing", () => {
     mockSession = { user: { id: "user-1" } };
+    mockAutoSave = { ...mockAutoSave, isEditing: true, editedCode: [{ averages: 1 }] };
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -236,6 +242,21 @@ describe("<ProtocolRunContent />", () => {
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(mockStartEditing).toHaveBeenCalledWith(mockProtocol.code);
+    expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("editor-header-actions")).toBeInTheDocument();
+    expect(screen.queryByTestId("json-viewer")).not.toBeInTheDocument();
+  });
+
+  it("should not show a separate save button", () => {
+    mockSession = { user: { id: "user-1" } };
+    mockAutoSave = { ...mockAutoSave, isEditing: true };
+    mockUseProtocol.mockReturnValue({
+      data: { body: mockProtocol },
+      isLoading: false,
+    });
+
+    render(<ProtocolRunContent protocolId="proto-1" />);
+
+    expect(screen.queryByText("common.save")).not.toBeInTheDocument();
   });
 });

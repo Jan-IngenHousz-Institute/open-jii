@@ -31,6 +31,7 @@ interface ProtocolCodeEditorProps {
   headerActions?: React.ReactNode;
   height?: number | string;
   borderless?: boolean;
+  readOnly?: boolean;
 }
 type IStandaloneCodeEditor = Parameters<OnMount>[0];
 
@@ -45,6 +46,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   headerActions,
   height = 700,
   borderless = false,
+  readOnly = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isValidJson, setIsValidJson] = useState(true);
@@ -303,6 +305,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
               </div>
             }
             options={{
+              readOnly,
               minimap: { enabled: false },
               fontSize: 14,
               fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",

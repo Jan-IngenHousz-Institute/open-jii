@@ -1,14 +1,12 @@
 "use client";
 
 import { IotProtocolRunner } from "@/components/iot/iot-protocol-runner";
-import ProtocolCodeEditor from "@/components/protocol-code-editor";
+import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { useCodeAutoSave } from "@/hooks/useCodeAutoSave";
 import { useLocale } from "@/hooks/useLocale";
+import { useProtocolCodeAutoSave } from "@/hooks/useProtocolCodeAutoSave";
 import { ArrowLeft, MonitorX } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { SensorFamily } from "@repo/api";
@@ -16,8 +14,6 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button, ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
-
-type ProtocolCode = Record<string, unknown>[] | string | undefined;
 
 interface ProtocolRunContentProps {
   protocolId: string;
@@ -29,38 +25,15 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   const { data: session } = useSession();
   const { t } = useTranslation();
   const { t: tIot } = useTranslation("iot");
-  const { mutate: saveProtocol } = useProtocolUpdate(protocolId);
 
   const family = (protocolData?.body as { family?: SensorFamily } | undefined)?.family;
   const browserSupport = useIotBrowserSupport(family);
 
-  const buildPayload = useCallback(
-    (code: ProtocolCode) => ({
-      params: { id: protocolId },
-      body: { code: code as Record<string, unknown>[] },
-    }),
-    [protocolId],
-  );
-
-  const { editedCode, syncStatus, startEditing, handleChange, isEditing } = useCodeAutoSave<
-    ProtocolCode,
-    ReturnType<typeof buildPayload>
-  >({
-    saveFn: saveProtocol,
-    buildPayload,
-    toKey: (code) => JSON.stringify(code),
-    isValid: (value) => Array.isArray(value),
-  });
+  const { editedCode, syncStatus, startEditing, closeEditing, handleChange, isEditing } =
+    useProtocolCodeAutoSave(protocolId);
 
   const protocol = protocolData?.body;
   const isCreator = session?.user.id === protocol?.createdBy;
-
-  // Auto-enter editing mode for creators once protocol data is available
-  useEffect(() => {
-    if (isCreator && protocol && !isEditing) {
-      startEditing(protocol.code);
-    }
-  }, [isCreator, protocol, isEditing, startEditing]);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -89,24 +62,20 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
             {t("experiments.back")}
           </Link>
         </Button>
-        {isCreator && (
-          <Button
-            size="sm"
-            disabled={!isEditing || syncStatus === "synced"}
-            isLoading={syncStatus === "syncing"}
-          >
-            {t("common.save")}
-          </Button>
-        )}
       </div>
       <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-lg border">
         {/* Left Panel — Code Editor */}
         <ResizablePanel defaultSize={browserSupport.any ? 55 : 85} minSize={30}>
           <div className="h-full min-h-[200px]">
-            <ProtocolCodeEditor
-              value={protocolCode}
-              onChange={isEditing ? handleChange : () => undefined}
-              label=""
+            <ProtocolCodePanel
+              code={protocol.code}
+              isCreator={isCreator}
+              isEditing={isEditing}
+              editedCode={editedCode}
+              handleChange={handleChange}
+              syncStatus={syncStatus}
+              closeEditing={closeEditing}
+              startEditing={() => startEditing(protocol.code)}
               placeholder={t("newProtocol.codePlaceholder")}
               height="100%"
               borderless
