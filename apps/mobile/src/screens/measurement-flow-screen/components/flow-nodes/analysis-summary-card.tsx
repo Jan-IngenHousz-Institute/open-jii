@@ -1,9 +1,19 @@
+import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { DateTime } from "luxon";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import type { AnswerData } from "~/utils/convert-cycle-answers-to-array";
+
+const answersValueStyle = cva("flex-1", {
+  variants: {
+    hasAnswers: {
+      true: "",
+      false: "italic",
+    },
+  },
+});
 
 interface AnalysisSummaryCardProps {
   experimentName: string;
@@ -50,9 +60,14 @@ export function AnalysisSummaryCard({
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
-            className={clsx("flex-1", classes.textMuted)}
+            className={clsx(
+              answersValueStyle({ hasAnswers: questions.length > 0 }),
+              classes.textMuted,
+            )}
           >
-            {questions.length === 0 ? "None" : questions.map((q) => q.question_answer).join(" | ")}
+            {questions.length === 0
+              ? "No questions answered"
+              : questions.map((q) => q.question_answer).join(" | ")}
           </Text>
         </View>
         <View className="flex-row items-center">
