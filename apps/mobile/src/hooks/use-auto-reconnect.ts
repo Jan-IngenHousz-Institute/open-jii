@@ -37,7 +37,10 @@ export function useAutoReconnect() {
         !connectedRef.current &&
         !connectingRef.current
       ) {
-        void connectRef.current(lastDeviceRef.current);
+        connectRef.current(lastDeviceRef.current).catch(() => {
+          // Connection failed (e.g. device powered off) — no action needed.
+          // The user can still tap the inline reconnect button manually.
+        });
       }
     });
 

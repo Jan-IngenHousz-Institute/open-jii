@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useScannerCommandExecutorStore } from "~/stores/use-scanner-command-executor-store";
@@ -13,17 +13,24 @@ import {
   getSerialDevices,
 } from "./device-queries";
 
+/**
+ * Register the native disconnect listener once at module level so that
+ * multiple components calling useConnectedDevice() don't each create their
+ * own subscription.  The listener is bound lazily on the first call to
+ * initDisconnectListener and never removed (lives for the app lifetime).
+ */
+let disconnectListenerBound = false;
+function initDisconnectListener(client: QueryClient) {
+  if (disconnectListenerBound) return;
+  disconnectListenerBound = true;
+  RNBluetoothClassic.onDeviceDisconnected(() => {
+    void client.invalidateQueries({ queryKey: ["connected-device"] });
+  });
+}
+
 export function useConnectedDevice() {
   const client = useQueryClient();
-
-  // Subscribe to native disconnect events so the query updates instantly
-  // instead of waiting for a poll cycle.
-  useEffect(() => {
-    const subscription = RNBluetoothClassic.onDeviceDisconnected(() => {
-      void client.invalidateQueries({ queryKey: ["connected-device"] });
-    });
-    return () => subscription.remove();
-  }, [client]);
+  initDisconnectListener(client);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["connected-device"],

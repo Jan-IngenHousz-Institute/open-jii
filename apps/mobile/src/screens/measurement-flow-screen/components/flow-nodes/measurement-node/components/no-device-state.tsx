@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import React from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { Button } from "~/components/Button";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useConnectToDevice } from "~/services/device-connection-manager/device-connection-hooks";
@@ -21,6 +21,9 @@ export function NoDeviceState() {
           <ActivityIndicator size="large" />
         ) : (
           <>
+            <Text className="text-center text-sm text-gray-500">
+              Device disconnected — {lastConnectedDevice.name}
+            </Text>
             <Button
               title={`Reconnect to ${lastConnectedDevice.name}`}
               onPress={() => void connectToDevice(lastConnectedDevice)}
