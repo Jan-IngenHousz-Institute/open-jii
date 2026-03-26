@@ -384,7 +384,7 @@ resource "databricks_grants" "centrum_schema" {
   schema   = "${module.databricks_catalog.catalog_name}.centrum"
 
   grant {
-    principal  = module.node_service_principal.service_principal_application_id
+    principal = module.node_service_principal.service_principal_application_id
     privileges = [
       "USE_SCHEMA",
       "CREATE_TABLE",
