@@ -3,7 +3,6 @@
 import { ProtocolLayoutContent } from "@/components/protocol-overview/protocol-layout-content";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useLocale } from "@/hooks/useLocale";
 import { ArrowLeft, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -16,8 +15,7 @@ interface ProtocolLayoutProps {
 }
 
 export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
-  const { id } = useParams<{ id: string }>();
-  const locale = useLocale();
+  const { id, locale } = useParams<{ id: string; locale: string }>();
   const pathname = usePathname();
   const { t } = useTranslation();
   const { data, isLoading, error } = useProtocol(id);

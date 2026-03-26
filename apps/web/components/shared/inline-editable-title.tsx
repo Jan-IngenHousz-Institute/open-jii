@@ -106,10 +106,12 @@ export function InlineEditableTitle({
         </CardTitle>
       )}
 
-      <div className="flex items-center gap-2">
-        {badges}
-        {actions}
-      </div>
+      {(badges ?? actions) && (
+        <div className="flex items-center gap-2">
+          {badges}
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

@@ -5,16 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ProtocolRunContent } from "../protocol-run-content";
 
-globalThis.React = React;
-
 // --------------------
 // Mocks
 // --------------------
 
 vi.mock("@repo/i18n", () => ({
-  useTranslation: (ns?: string) => ({
+  useTranslation: () => ({
     t: (k: string) => k,
-    ...(ns === "iot" ? {} : {}),
   }),
 }));
 
@@ -37,7 +34,13 @@ vi.mock("../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
   useProtocolUpdate: () => ({ mutate: mockSaveProtocol }),
 }));
 
-let mockBrowserSupport = { bluetooth: true, serial: true, any: true };
+let mockBrowserSupport = {
+  bluetooth: true,
+  serial: true,
+  any: true,
+  bluetoothReason: null,
+  serialReason: null,
+};
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
 }));
@@ -126,7 +129,13 @@ describe("<ProtocolRunContent />", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBrowserSupport = { bluetooth: true, serial: true, any: true };
+    mockBrowserSupport = {
+      bluetooth: true,
+      serial: true,
+      any: true,
+      bluetoothReason: null,
+      serialReason: null,
+    };
     mockSession = null;
     mockAutoSave = {
       editedCode: null,

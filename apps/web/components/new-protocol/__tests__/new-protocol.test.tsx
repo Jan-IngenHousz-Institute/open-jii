@@ -104,6 +104,8 @@ vi.mock("@repo/i18n", () => ({
 // Mock toast
 vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
+  useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
+  useIsMobile: () => false,
 }));
 
 // Mock ProtocolCodeEditor
@@ -145,7 +147,13 @@ vi.mock("../../iot/iot-protocol-runner", () => ({
 
 // Mock useIotBrowserSupport
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
-  useIotBrowserSupport: () => ({ bluetooth: true, serial: true, any: true }),
+  useIotBrowserSupport: () => ({
+    bluetooth: true,
+    serial: true,
+    any: true,
+    bluetoothReason: null,
+    serialReason: null,
+  }),
 }));
 
 describe("NewProtocolForm", () => {

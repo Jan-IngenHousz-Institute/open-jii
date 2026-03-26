@@ -114,6 +114,18 @@ describe("DeviceStatusCard", () => {
       expect(screen.getByTestId("battery-icon")).toBeInTheDocument();
     });
 
+    it("displays 0% battery level", () => {
+      const deviceInfo = {
+        device_name: "MultispeQ V2",
+        device_battery: 0,
+      };
+
+      render(<DeviceStatusCard {...defaultProps} isConnected={true} deviceInfo={deviceInfo} />);
+
+      expect(screen.getByText("0%")).toBeInTheDocument();
+      expect(screen.getByTestId("battery-icon")).toBeInTheDocument();
+    });
+
     it("shows connection type label when not connected", () => {
       render(<DeviceStatusCard {...defaultProps} connectionType="bluetooth" />);
       expect(screen.getByText("iot.protocolRunner.wireless")).toBeInTheDocument();

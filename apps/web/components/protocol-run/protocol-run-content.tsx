@@ -44,7 +44,8 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
     );
   }
 
-  const protocolCode = (isEditing ? editedCode : protocol.code) as Record<string, unknown>[];
+  const rawCode = isEditing ? editedCode : protocol.code;
+  const protocolCode = Array.isArray(rawCode) ? rawCode : protocol.code;
 
   const codePanel = (
     <ProtocolCodePanel

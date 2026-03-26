@@ -50,7 +50,7 @@ vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
 
 const mockNotFound = vi.fn();
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "test-id" }) as { id: string },
+  useParams: () => ({ id: "test-id", locale: "en" }) as { id: string; locale: string },
   usePathname: () => "/en/platform/protocols/test-id",
   notFound: () => mockNotFound() as never,
 }));

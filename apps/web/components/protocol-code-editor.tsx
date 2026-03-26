@@ -63,7 +63,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const onValidationChangeRef = useRef(onValidationChange);
   onValidationChangeRef.current = onValidationChange;
 
-  // Check feature flag for validation strategy — default to warning mode when flag hasn't resolved
+  // Check feature flag for validation strategy — default to strict mode when flag hasn't resolved
   const validationAsWarning =
     useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ?? false;
 
