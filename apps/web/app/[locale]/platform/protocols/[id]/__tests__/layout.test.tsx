@@ -51,7 +51,20 @@ vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
 const mockNotFound = vi.fn();
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "test-id" }) as { id: string },
+  usePathname: () => "/en/platform/protocols/test-id",
   notFound: () => mockNotFound() as never,
+}));
+
+vi.mock("next/link", () => ({
+  __esModule: true,
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
+vi.mock("lucide-react", () => ({
+  ArrowLeft: () => <span data-testid="arrow-left-icon" />,
+  Play: () => <span data-testid="play-icon" />,
 }));
 
 vi.mock("@repo/auth/client", () => ({
@@ -64,6 +77,7 @@ vi.mock("@repo/i18n", () => ({
   __esModule: true,
   useTranslation: (namespace?: string) => ({
     t: (key: string) => (namespace ? `${namespace}.${key}` : key),
+    i18n: { language: "en" },
   }),
 }));
 
@@ -87,6 +101,7 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
     hasAccess,
     isPending,
     badges,
+    actions,
     onSave,
   }: {
     name: string;
@@ -94,12 +109,14 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
     onSave: (newName: string) => Promise<void>;
     isPending: boolean;
     badges?: React.ReactNode;
+    actions?: React.ReactNode;
   }) => (
     <div data-testid="inline-editable-title">
       <span data-testid="title-name">{name}</span>
       <span data-testid="title-has-access">{String(hasAccess)}</span>
       <span data-testid="title-is-pending">{String(isPending)}</span>
       {badges && <div data-testid="title-badges">{badges}</div>}
+      {actions && <div data-testid="title-actions">{actions}</div>}
       <button data-testid="save-title-btn" onClick={() => onSave("New Title")}>
         Save
       </button>
@@ -117,6 +134,12 @@ vi.mock("@repo/ui/components", () => ({
       {children}
     </span>
   ),
+  Button: ({
+    children,
+    asChild,
+    ...rest
+  }: React.ComponentProps<"button"> & { asChild?: boolean; size?: string }) =>
+    asChild ? <>{children}</> : <button {...rest}>{children}</button>,
 }));
 
 // -------------------

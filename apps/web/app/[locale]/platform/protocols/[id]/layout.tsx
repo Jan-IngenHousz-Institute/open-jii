@@ -4,7 +4,7 @@ import { ProtocolLayoutContent } from "@/components/protocol-overview/protocol-l
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useLocale } from "@/hooks/useLocale";
-import { Play } from "lucide-react";
+import { ArrowLeft, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
@@ -23,6 +23,23 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
   const { data, isLoading, error } = useProtocol(id);
 
   const isOverview = pathname === `/${locale}/platform/protocols/${id}`;
+  const isRun = pathname === `/${locale}/platform/protocols/${id}/run`;
+
+  const actions = isOverview ? (
+    <Button size="sm" asChild>
+      <Link href={`/${locale}/platform/protocols/${id}/run`}>
+        <Play className="mr-2 h-4 w-4" />
+        {t("protocolSettings.testerTitle")}
+      </Link>
+    </Button>
+  ) : isRun ? (
+    <Button variant="outline" size="sm" asChild>
+      <Link href={`/${locale}/platform/protocols/${id}`}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        {t("experiments.back")}
+      </Link>
+    </Button>
+  ) : undefined;
 
   return (
     <EntityLayoutShell
@@ -33,20 +50,7 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
       errorDescription={t("protocols.notFoundDescription")}
     >
       {data?.body && (
-        <ProtocolLayoutContent
-          id={id}
-          protocol={data.body}
-          actions={
-            isOverview ? (
-              <Button size="sm" asChild>
-                <Link href={`/${locale}/platform/protocols/${id}/run`}>
-                  <Play className="mr-2 h-4 w-4" />
-                  {t("protocolSettings.testerTitle")}
-                </Link>
-              </Button>
-            ) : undefined
-          }
-        >
+        <ProtocolLayoutContent id={id} protocol={data.body} actions={actions}>
           {children}
         </ProtocolLayoutContent>
       )}

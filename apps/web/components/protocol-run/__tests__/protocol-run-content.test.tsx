@@ -37,10 +37,6 @@ vi.mock("../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
   useProtocolUpdate: () => ({ mutate: mockSaveProtocol }),
 }));
 
-vi.mock("../../../hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
 let mockBrowserSupport = { bluetooth: true, serial: true, any: true };
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
@@ -68,7 +64,9 @@ vi.mock("@repo/auth/client", () => ({
 
 vi.mock("../../protocol-code-editor", () => ({
   __esModule: true,
-  default: () => <div data-testid="code-editor" />,
+  default: ({ headerActions }: { headerActions?: React.ReactNode }) => (
+    <div data-testid="code-editor">{headerActions}</div>
+  ),
 }));
 
 vi.mock("../../json-code-viewer", () => ({
@@ -94,31 +92,17 @@ vi.mock("../../iot/iot-protocol-runner", () => ({
 }));
 
 vi.mock("lucide-react", () => ({
-  ArrowLeft: () => <span data-testid="arrow-left" />,
   MonitorX: () => <span data-testid="monitor-x" />,
 }));
 
-vi.mock("next/link", () => ({
-  __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
+vi.mock("@repo/ui/hooks", () => ({
+  useIsMobile: () => false,
+  useIsTablet: () => false,
+  useIsLgTablet: () => false,
+  useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
 }));
 
 vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    disabled,
-    asChild,
-    ...rest
-  }: React.ComponentProps<"button"> & { asChild?: boolean; isLoading?: boolean }) =>
-    asChild ? (
-      <>{children}</>
-    ) : (
-      <button disabled={disabled} {...rest}>
-        {children}
-      </button>
-    ),
   ResizablePanelGroup: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="panel-group">{children}</div>
   ),
@@ -194,18 +178,6 @@ describe("<ProtocolRunContent />", () => {
 
     expect(screen.getByText("iot.protocolRunner.browserNotSupported")).toBeInTheDocument();
     expect(screen.queryByTestId("iot-runner")).not.toBeInTheDocument();
-  });
-
-  it("should render back button linking to overview", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
-
-    render(<ProtocolRunContent protocolId="proto-1" />);
-
-    const backLink = screen.getByText("experiments.back").closest("a");
-    expect(backLink).toHaveAttribute("href", "/en/platform/protocols/proto-1");
   });
 
   it("should show edit trigger for creators in read-only mode", () => {

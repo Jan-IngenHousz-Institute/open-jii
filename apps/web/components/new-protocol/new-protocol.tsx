@@ -81,26 +81,26 @@ export function NewProtocolForm() {
 
   // Helper to create DetailsStep with the details card
   const createDetailsStep = () => {
-    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => {
-      const DetailsCardWithMacros = ({
-        form,
-      }: {
-        form: UseFormReturn<CreateProtocolRequestBody>;
-      }) => (
-        <NewProtocolDetailsCard
-          form={form}
-          selectedMacros={selectedMacros}
-          onAddMacro={(macro: Macro) => {
-            setSelectedMacros((prev) => {
-              if (prev.some((m) => m.id === macro.id)) return prev;
-              setHasFormData(true);
-              return [...prev, macro];
-            });
-          }}
-          onRemoveMacro={handleRemoveMacro}
-        />
-      );
+    const DetailsCardWithMacros = ({
+      form,
+    }: {
+      form: UseFormReturn<CreateProtocolRequestBody>;
+    }) => (
+      <NewProtocolDetailsCard
+        form={form}
+        selectedMacros={selectedMacros}
+        onAddMacro={(macro: Macro) => {
+          setSelectedMacros((prev) => {
+            if (prev.some((m) => m.id === macro.id)) return prev;
+            setHasFormData(true);
+            return [...prev, macro];
+          });
+        }}
+        onRemoveMacro={handleRemoveMacro}
+      />
+    );
 
+    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => {
       return <DetailsStep {...props} cards={[DetailsCardWithMacros]} />;
     };
     return Component;
