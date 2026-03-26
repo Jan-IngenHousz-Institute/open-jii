@@ -22,7 +22,7 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
   const { t } = useTranslation();
   const { t: tIot } = useTranslation("iot");
   const { data, isLoading, error } = useProtocol(id);
-  const browserSupport = useIotBrowserSupport(data?.body?.family);
+  const browserSupport = useIotBrowserSupport(data?.body.family);
 
   const isOverview = pathname === `/${locale}/platform/protocols/${id}`;
   const isRun = pathname === `/${locale}/platform/protocols/${id}/run`;
