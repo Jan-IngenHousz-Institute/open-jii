@@ -24,6 +24,9 @@ function initDisconnectListener(client: QueryClient) {
   if (disconnectListenerBound) return;
   disconnectListenerBound = true;
   RNBluetoothClassic.onDeviceDisconnected(() => {
+    // Clean up the scanner executor so the stale connection doesn't block
+    // the next connectToDevice → setDevice call (isInitializing guard).
+    void useScannerCommandExecutorStore.getState().setDevice(undefined);
     void client.invalidateQueries({ queryKey: ["connected-device"] });
   });
 }
