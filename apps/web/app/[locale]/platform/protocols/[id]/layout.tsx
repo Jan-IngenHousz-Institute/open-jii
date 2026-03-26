@@ -6,9 +6,11 @@ import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { ArrowLeft, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
+import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components";
 
 interface ProtocolLayoutProps {
   children: React.ReactNode;
@@ -18,18 +20,38 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
   const { id, locale } = useParams<{ id: string; locale: string }>();
   const pathname = usePathname();
   const { t } = useTranslation();
+  const { t: tIot } = useTranslation("iot");
   const { data, isLoading, error } = useProtocol(id);
+  const browserSupport = useIotBrowserSupport(data?.body?.family);
 
   const isOverview = pathname === `/${locale}/platform/protocols/${id}`;
   const isRun = pathname === `/${locale}/platform/protocols/${id}/run`;
 
-  const actions = isOverview ? (
-    <Button size="sm" asChild>
-      <Link href={`/${locale}/platform/protocols/${id}/run`}>
-        <Play className="mr-2 h-4 w-4" />
-        {t("protocolSettings.testerTitle")}
-      </Link>
+  const connectButton = (
+    <Button size="sm" disabled={!browserSupport.any} asChild={browserSupport.any}>
+      {browserSupport.any ? (
+        <Link href={`/${locale}/platform/protocols/${id}/run`}>
+          <Play className="mr-2 h-4 w-4" />
+          {t("protocolSettings.testerTitle")}
+        </Link>
+      ) : (
+        <>
+          <Play className="mr-2 h-4 w-4" />
+          {t("protocolSettings.testerTitle")}
+        </>
+      )}
     </Button>
+  );
+
+  const actions = isOverview ? (
+    browserSupport.any ? (
+      connectButton
+    ) : (
+      <Tooltip>
+        <TooltipTrigger asChild>{connectButton}</TooltipTrigger>
+        <TooltipContent>{tIot("iot.protocolRunner.browserNotSupported")}</TooltipContent>
+      </Tooltip>
+    )
   ) : isRun ? (
     <Button variant="outline" size="sm" asChild>
       <Link href={`/${locale}/platform/protocols/${id}`}>

@@ -91,6 +91,17 @@ vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
+const mockBrowserSupport = {
+  bluetooth: true,
+  serial: true,
+  any: true,
+  bluetoothReason: null as string | null,
+  serialReason: null as string | null,
+};
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => mockBrowserSupport,
+}));
+
 vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
 }));
@@ -140,6 +151,11 @@ vi.mock("@repo/ui/components", () => ({
     ...rest
   }: React.ComponentProps<"button"> & { asChild?: boolean; size?: string }) =>
     asChild ? <>{children}</> : <button {...rest}>{children}</button>,
+  Tooltip: ({ children }: React.PropsWithChildren) => <>{children}</>,
+  TooltipTrigger: ({ children }: React.PropsWithChildren<{ asChild?: boolean }>) => <>{children}</>,
+  TooltipContent: ({ children }: React.PropsWithChildren) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
 }));
 
 // -------------------
@@ -165,6 +181,11 @@ function renderLayout(children: React.ReactNode = <div>Children Content</div>) {
 describe("ProtocolLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockBrowserSupport.bluetooth = true;
+    mockBrowserSupport.serial = true;
+    mockBrowserSupport.any = true;
+    mockBrowserSupport.bluetoothReason = null;
+    mockBrowserSupport.serialReason = null;
     mockUseProtocolUpdate.mockReturnValue({
       mutateAsync: mockMutateAsync,
       isPending: false,
