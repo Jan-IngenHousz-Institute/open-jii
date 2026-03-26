@@ -21,10 +21,6 @@ resource "databricks_pipeline" "this" {
 
   catalog = var.catalog_name
 
-  lifecycle {
-    prevent_destroy = true
-  }
-
   # Support for notebook libraries
   dynamic "library" {
     for_each = var.notebook_paths
