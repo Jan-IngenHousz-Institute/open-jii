@@ -1,18 +1,10 @@
 import { clsx } from "clsx";
-import { CircleCheckBig, ChevronUp } from "lucide-react-native";
-import { DateTime } from "luxon";
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-  TouchableOpacity,
-} from "react-native";
-import { Button } from "~/components/Button";
-import { MeasurementResult } from "~/components/measurement-result/measurement-result";
+import { CircleCheckBig } from "lucide-react-native";
+import React, { useMemo, useState } from "react";
+import { View, Text, ScrollView } from "react-native";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
+import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
+import type { MeasurementItem } from "~/hooks/use-all-measurements";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useMacro } from "~/hooks/use-macro";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
@@ -24,6 +16,10 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
 
+import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
+import { AnalysisMacroResult } from "./analysis-macro-result";
+import { AnalysisSummaryCard } from "./analysis-summary-card";
+
 interface AnalysisNodeProps {
   content: {
     params: Record<string, any>;
@@ -32,8 +28,8 @@ interface AnalysisNodeProps {
 }
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
-  const { classes, colors } = useTheme();
-  const { macro, isLoading } = useMacro(content.macroId);
+  const { classes } = useTheme();
+  const { macro, isLoading: isLoading } = useMacro(content.macroId);
   const {
     scanResult,
     previousStep,
@@ -52,6 +48,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
   const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
   const { protocol } = useProtocol(protocolId);
@@ -64,51 +61,24 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
   const displayTimestamp = useMemo(() => getSyncedLocalISO(), [scanResult]);
 
-  const renderContent = () => {
-    if (!scanResult) {
-      return (
-        <View className="items-center py-8">
-          <Text className={clsx("mb-4 text-center text-lg font-semibold", classes.text)}>
-            No Measurement Data
-          </Text>
-          <Text className={clsx("mb-6 text-center", classes.textSecondary)}>
-            Please complete the measurement step first
-          </Text>
-        </View>
-      );
-    }
-
-    if (isLoading) {
-      return (
-        <View className="items-center py-8">
-          <Text className={clsx("mb-4 text-center text-lg font-semibold", classes.text)}>
-            Loading Macro...
-          </Text>
-        </View>
-      );
-    }
-
-    if (!macro) {
-      return (
-        <View className="items-center py-8">
-          <Text className={clsx("mb-4 text-center text-lg font-semibold", classes.text)}>
-            Macro Not Found
-          </Text>
-          <Text className={clsx("mb-6 text-center", classes.textSecondary)}>
-            Macro ID: {content.macroId}
-          </Text>
-        </View>
-      );
-    }
-
-    return (
-      <MeasurementResult
-        rawMeasurement={scanResult}
-        macro={macro}
-        onCommentPress={() => setCommentModalVisible(true)}
-      />
-    );
-  };
+  const currentMeasurement = useMemo<MeasurementItem>(
+    () => ({
+      key: "current", // Random key, measurement not saved or uploaded yet
+      timestamp: displayTimestamp,
+      experimentName,
+      status: "synced", // To hide the comment button in modal
+      data: {
+        topic: "",
+        measurementResult: { ...(scanResult ?? {}), questions },
+        metadata: {
+          experimentName,
+          protocolName: protocol?.name ?? "",
+          timestamp: displayTimestamp,
+        },
+      },
+    }),
+    [displayTimestamp, experimentName, questions, protocol?.name, scanResult],
+  );
 
   const handleUploadMeasurement = async () => {
     if (!scanResult) {
@@ -136,9 +106,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
 
-    const cycleAnswers = getCycleAnswers(iterationCount);
-    const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
-
     await uploadMeasurement({
       rawMeasurement: scanResult,
       timestamp,
@@ -154,6 +121,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       },
       questions,
       commentText: measurementComment.trim() || undefined,
+      protocolName: protocol?.name ?? protocolId,
     });
     finishFlow();
   };
@@ -162,17 +130,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     previousStep();
   };
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [hasScrolled, setHasScrolled] = useState(false);
-
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    setHasScrolled(offsetY > 50);
-  }, []);
-
-  const scrollToTop = () => {
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-  };
+  const { scrollViewRef, hasScrolled, handleScroll, scrollToTop } = useScrollToTop();
 
   return (
     <View className="flex-1 px-4 pt-4">
@@ -187,81 +145,36 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
           <CircleCheckBig size={16} />
         </View>
 
-        <View className="my-4 gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
-          <View className="flex-row items-center">
-            <Text className={clsx("font-semibold", classes.text)}>Experiment: </Text>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              className={clsx("flex-1", classes.textMuted)}
-            >
-              {experimentName}
-            </Text>
-          </View>
-          <View className="flex-row items-center">
-            <Text className={clsx("font-semibold", classes.text)}>Protocol: </Text>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              className={clsx("flex-1", classes.textMuted)}
-            >
-              {protocol?.name ?? "Protocol"}
-            </Text>
-          </View>
-          <View className="flex-row items-center">
-            <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              className={clsx("flex-1", classes.textMuted)}
-            >
-              {questions.length === 0
-                ? "None"
-                : questions.map((q) => q.question_answer).join(" | ")}
-            </Text>
-          </View>
-          <View className="flex-row items-center">
-            <Text className={clsx("font-semibold", classes.text)}>Date: </Text>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              className={clsx("flex-1", classes.textMuted)}
-            >
-              {DateTime.fromISO(displayTimestamp).toFormat("d MMMM yyyy, HH:mm")}
-            </Text>
-          </View>
-        </View>
+        <AnalysisSummaryCard
+          experimentName={experimentName}
+          protocolName={protocol?.name ?? "Protocol"}
+          questions={questions}
+          displayTimestamp={displayTimestamp}
+          onPress={() => setQuestionsModalVisible(true)}
+        />
 
-        <View>{renderContent()}</View>
+        <AnalysisMacroResult
+          macro={macro}
+          isLoading={isLoading}
+          macroId={content.macroId}
+          scanResult={scanResult}
+          onCommentPress={() => setCommentModalVisible(true)}
+        />
       </ScrollView>
 
-      {hasScrolled ? (
-        <View className="w-full items-start py-3">
-          <TouchableOpacity
-            onPress={scrollToTop}
-            className={clsx("-ml-4 h-[44px] flex-row items-center justify-end gap-1 px-4")}
-            activeOpacity={0.7}
-          >
-            <ChevronUp size={20} color={colors.onSurface} />
-            <Text className={clsx("text-lg font-medium", classes.text)}>Scroll to top</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View className="flex-row gap-4 py-3">
-          <Button
-            title="Discard & retry"
-            onPress={handleRetry}
-            variant="tertiary"
-            style={{ flex: 1, height: 44, borderColor: "transparent" }}
-          />
-          <Button
-            title={isUploading ? "Uploading..." : "Accept data"}
-            onPress={() => handleUploadMeasurement().catch(console.log)}
-            disabled={isUploading}
-            style={{ flex: 1, height: 44 }}
-          />
-        </View>
-      )}
+      <AnalysisActionBar
+        hasScrolled={hasScrolled}
+        isUploading={isUploading}
+        onScrollToTop={scrollToTop}
+        onRetry={handleRetry}
+        onUpload={() => handleUploadMeasurement().catch(console.log)}
+      />
+
+      <MeasurementQuestionsModal
+        visible={questionsModalVisible}
+        measurement={currentMeasurement}
+        onClose={() => setQuestionsModalVisible(false)}
+      />
 
       <CommentModal
         visible={commentModalVisible}

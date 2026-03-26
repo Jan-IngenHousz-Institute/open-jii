@@ -1,6 +1,6 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
-import { MessageCircle, X } from "lucide-react-native";
+import { Clock, FlaskConical, MessageCircle, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -53,6 +53,7 @@ export function MeasurementQuestionsModal({
   const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
   const questions = parseQuestions(measurement.data.measurementResult);
   const experimentName = measurement.experimentName;
+  const protocolName = measurement.data.metadata.protocolName;
   const timestamp = new Date(measurement.timestamp).toLocaleString();
   const isUnsynced = measurement.status === "unsynced";
 
@@ -83,38 +84,55 @@ export function MeasurementQuestionsModal({
         stackBehavior="push"
       >
         {/* Header */}
-        <View
-          className={clsx(
-            "flex-row items-center justify-between border-b px-4 py-4",
-            classes.border,
-            classes.background,
-          )}
-        >
-          <View className="flex-1">
-            <Text className={clsx("text-lg font-bold", classes.text)}>{experimentName}</Text>
-            <Text className={clsx("mt-1 text-xs", classes.textMuted)}>{timestamp}</Text>
-          </View>
+        <View className={clsx("border-b px-4 pb-4 pt-2", classes.border, classes.background)}>
+          <View className="flex-row items-start justify-between">
+            <View className="mr-3 flex-1">
+              <Text className={clsx("text-xl font-bold", classes.text)}>{experimentName}</Text>
 
-          <View className="flex-row items-center gap-2">
-            {isUnsynced && (
+              <View className="mt-2 flex-row flex-wrap items-center gap-2">
+                {!!protocolName && (
+                  <View
+                    className="max-w-full flex-row items-center gap-1 rounded-full px-2.5 py-1"
+                    style={{ backgroundColor: colors.primary.dark + "15" }}
+                  >
+                    <FlaskConical size={11} color={colors.primary.dark} />
+                    <Text
+                      className="shrink text-xs font-semibold"
+                      style={{ color: colors.primary.dark }}
+                    >
+                      {protocolName}
+                    </Text>
+                  </View>
+                )}
+
+                <View className="flex-row items-center gap-1">
+                  <Clock size={11} color={colors.inactive} />
+                  <Text className={clsx("text-xs", classes.textMuted)}>{timestamp}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View className="flex-row items-center gap-2">
+              {isUnsynced && (
+                <TouchableOpacity
+                  onPress={() => setCommentModalVisible(true)}
+                  className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
+                  style={{ backgroundColor: colors.surface }}
+                  activeOpacity={0.7}
+                >
+                  <MessageCircle size={20} color={colors.onSurface} />
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
-                onPress={() => setCommentModalVisible(true)}
-                className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
+                onPress={onClose}
+                className="h-10 w-10 items-center justify-center rounded-full"
                 style={{ backgroundColor: colors.surface }}
                 activeOpacity={0.7}
               >
-                <MessageCircle size={20} color={colors.onSurface} />
+                <X size={20} color={colors.onSurface} />
               </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              onPress={onClose}
-              className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.surface }}
-              activeOpacity={0.7}
-            >
-              <X size={20} color={colors.onSurface} />
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -134,27 +152,71 @@ export function MeasurementQuestionsModal({
               </Text>
             </View>
           ) : (
-            <View className="gap-3">
+            <View className="gap-2">
+              <View className="mb-1 flex-row items-center justify-between">
+                <Text
+                  className={clsx(
+                    "text-xs font-semibold uppercase tracking-wider",
+                    classes.textMuted,
+                  )}
+                >
+                  Questions & Answers
+                </Text>
+                <View
+                  className="rounded-full px-2 py-0.5"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Text className={clsx("text-xs font-semibold", classes.textMuted)}>
+                    {questions.length}
+                  </Text>
+                </View>
+              </View>
+
               {questions.map((question, index) => (
                 <View
                   key={index}
-                  className={clsx("rounded-lg border p-4", classes.card, classes.border)}
+                  className={clsx(
+                    "overflow-hidden rounded-xl border",
+                    classes.card,
+                    classes.border,
+                  )}
                 >
-                  <Text className={clsx("mb-1 text-xs font-semibold uppercase", classes.textMuted)}>
-                    {question.question_label}
-                  </Text>
+                  <View className="flex-row items-start gap-3 p-4">
+                    <View
+                      className="mt-0.5 h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: colors.primary.dark + "15" }}
+                    >
+                      <Text className="text-xs font-bold" style={{ color: colors.primary.dark }}>
+                        {index + 1}
+                      </Text>
+                    </View>
 
-                  <Text className={clsx("mb-2 text-base", classes.text)}>
-                    {question.question_text}
-                  </Text>
+                    <View className="flex-1">
+                      <Text
+                        className={clsx(
+                          "mb-0.5 text-xs font-semibold uppercase tracking-wide",
+                          classes.textMuted,
+                        )}
+                      >
+                        {question.question_label}
+                      </Text>
 
-                  <View
-                    className="rounded-md px-3 py-2"
-                    style={{ backgroundColor: colors.primary.dark + "15" }}
-                  >
-                    <Text className="text-base font-medium" style={{ color: colors.primary.dark }}>
-                      {question.question_answer}
-                    </Text>
+                      <Text className={clsx("mb-3 text-sm", classes.text)}>
+                        {question.question_text}
+                      </Text>
+
+                      <View
+                        className="self-start rounded-lg px-3 py-1.5"
+                        style={{ backgroundColor: colors.primary.dark + "12" }}
+                      >
+                        <Text
+                          className="text-sm font-semibold"
+                          style={{ color: colors.primary.dark }}
+                        >
+                          {question.question_answer}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               ))}
