@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Device } from "~/types/device";
 
 export type ConnectionType = "usb" | "bluetooth-classic" | "mock-device" | "ble";
 export type DeviceType = "multispeq";
@@ -8,6 +9,8 @@ interface DeviceConnectionState {
   deviceType: DeviceType | undefined;
   batteryLevel: number | undefined;
   deviceName: string | undefined;
+  /** The last successfully connected device, used for inline reconnect in the measurement flow. */
+  lastConnectedDevice: Device | undefined;
 }
 
 interface DeviceConnectionActions {
@@ -16,6 +19,7 @@ interface DeviceConnectionActions {
   setBatteryLevel: (batteryLevel: number | undefined) => void;
   setDeviceName: (deviceName: string | undefined) => void;
   setDeviceInfo: (info: Partial<DeviceConnectionState>) => void;
+  setLastConnectedDevice: (device: Device | undefined) => void;
   clearConnection: () => void;
 }
 
@@ -26,12 +30,14 @@ export const useDeviceConnectionStore = create<DeviceConnectionState & DeviceCon
     deviceType: undefined,
     batteryLevel: undefined,
     deviceName: undefined,
+    lastConnectedDevice: undefined,
 
     // Actions
     setConnectionType: (connectionType) => set({ connectionType }),
     setDeviceType: (deviceType) => set({ deviceType }),
     setBatteryLevel: (batteryLevel) => set({ batteryLevel }),
     setDeviceName: (deviceName) => set({ deviceName }),
+    setLastConnectedDevice: (device) => set({ lastConnectedDevice: device }),
 
     setDeviceInfo: (info) => set((state) => ({ ...state, ...info })),
 
