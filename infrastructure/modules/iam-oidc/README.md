@@ -80,6 +80,8 @@ The IAM role includes permissions for the following AWS services and operations:
 - **Selection management**: `CreateBackupSelection`, `DeleteBackupSelection`, `GetBackupSelection`, `ListBackupSelections`
 - **Tagging**: `TagResource`, `UntagResource`, `ListTags`
 - **Policy and notification management**: `GetBackupVaultAccessPolicy`, `PutBackupVaultAccessPolicy`, `DeleteBackupVaultAccessPolicy`, `GetBackupVaultNotifications`
+- **Grant management operations**: `kms:CreateGrant`, `kms:ListGrants`, `kms:RevokeGrant` (required by AWS Backup's CreateBackupVault to establish ongoing encryption access for the vault)
+
 
 ### Other Services
 - **VPC**: Network infrastructure management

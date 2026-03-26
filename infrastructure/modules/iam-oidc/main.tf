@@ -341,6 +341,11 @@ locals {
         "kms:GenerateDataKey",
         "kms:GenerateDataKeyWithoutPlaintext",
         "kms:Decrypt",
+        # Required by CreateBackupVault — AWS Backup calls CreateGrant on the
+        # KMS key to establish ongoing encryption access for the vault
+        "kms:CreateGrant",
+        "kms:ListGrants",
+        "kms:RevokeGrant",
       ]
       resource = "*"
     }
