@@ -404,8 +404,6 @@ module "databricks_catalog" {
   depends_on = [module.node_service_principal]
 }
 
-// The centrum schema is created by the DLT pipeline at runtime; Terraform only manages
-// its permissions. No import required — databricks_grants targets the schema by name.
 resource "databricks_grants" "centrum_schema" {
   provider = databricks.workspace
   schema   = "${module.databricks_catalog.catalog_name}.centrum"
