@@ -49,7 +49,8 @@ export class AddCompatibleProtocolsUseCase {
       return failure(AppError.forbidden("Only the macro creator can manage compatible protocols"));
     }
 
-    // Validate that all protocols exist
+    // Validate that all protocols exist and get their latest versions
+    const protocolRefs: { id: string; version: number }[] = [];
     for (const protocolId of protocolIds) {
       const protocolResult = await this.macroProtocolRepository.findProtocolById(protocolId);
       if (protocolResult.isFailure()) {
@@ -58,10 +59,16 @@ export class AddCompatibleProtocolsUseCase {
       if (!protocolResult.value) {
         return failure(AppError.notFound(`Protocol with ID ${protocolId} not found`));
       }
+      protocolRefs.push({ id: protocolResult.value.id, version: protocolResult.value.version });
     }
 
-    // Add the compatibility links
-    const addResult = await this.macroProtocolRepository.addProtocols(macroId, protocolIds);
+    // Add the compatibility links using latest versions
+    const macroVersion = macroResult.value.version;
+    const addResult = await this.macroProtocolRepository.addProtocols(
+      macroId,
+      macroVersion,
+      protocolRefs,
+    );
     if (addResult.isFailure()) {
       this.logger.error({
         msg: "Failed to add compatible protocols",

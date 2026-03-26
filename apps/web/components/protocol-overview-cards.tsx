@@ -48,7 +48,7 @@ function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; ena
     <div className="flex flex-wrap gap-1">
       {macros.map((entry) => (
         <span
-          key={entry.macro.id}
+          key={`${entry.macro.id}-v${entry.macro.version}`}
           className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
         >
           {entry.macro.name}
@@ -81,6 +81,7 @@ function ProtocolCard({
           <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
             {protocol.family}
           </Badge>
+          <Badge className="bg-slate-200 text-slate-700">v{protocol.version}</Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
           )}

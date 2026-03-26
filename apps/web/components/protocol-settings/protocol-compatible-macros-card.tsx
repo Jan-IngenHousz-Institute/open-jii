@@ -52,17 +52,23 @@ const getLanguageColor = (language: string) => {
 
 interface ProtocolCompatibleMacrosCardProps {
   protocolId: string;
+  protocolVersion?: number;
   embedded?: boolean;
 }
 
 export function ProtocolCompatibleMacrosCard({
   protocolId,
+  protocolVersion,
   embedded,
 }: ProtocolCompatibleMacrosCardProps) {
   const { t } = useTranslation();
   const locale = useLocale();
 
-  const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(protocolId);
+  const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(
+    protocolId,
+    true,
+    protocolVersion,
+  );
   const compatibleMacros = useMemo(() => compatibleData?.body ?? [], [compatibleData]);
 
   const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacro(protocolId);
@@ -125,7 +131,7 @@ export function ProtocolCompatibleMacrosCard({
         <div className="space-y-3">
           {compatibleMacros.map((entry) => (
             <div
-              key={entry.macro.id}
+              key={`${entry.macro.id}-v${entry.macro.version}`}
               className="group rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">
@@ -148,9 +154,12 @@ export function ProtocolCompatibleMacrosCard({
                       <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
                     </Link>
                   </div>
-                  <Badge className={getLanguageColor(entry.macro.language)}>
-                    {getLanguageDisplay(entry.macro.language)}
-                  </Badge>
+                  <div className="flex gap-1">
+                    <Badge className={getLanguageColor(entry.macro.language)}>
+                      {getLanguageDisplay(entry.macro.language)}
+                    </Badge>
+                    <Badge className="bg-slate-200 text-slate-700">v{entry.macro.version}</Badge>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"

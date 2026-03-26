@@ -1,14 +1,13 @@
 import { tsr } from "../../../lib/tsr";
 
 /**
- * Hook to fetch compatible protocols for a macro
- * @param macroId The macro ID
- * @param enabled Whether to enable the query (default: true)
+ * Hook to fetch compatible protocols for a specific macro version.
+ * Without version, returns protocols compatible with the latest version.
  */
-export const useMacroCompatibleProtocols = (macroId: string, enabled = true) => {
+export const useMacroCompatibleProtocols = (macroId: string, enabled = true, version?: number) => {
   return tsr.macros.listCompatibleProtocols.useQuery({
-    queryData: { params: { id: macroId } },
-    queryKey: ["macro-compatible-protocols", macroId],
+    queryData: { params: { id: macroId }, query: { version } },
+    queryKey: ["macro-compatible-protocols", macroId, version],
     enabled: enabled && !!macroId,
   });
 };

@@ -14,6 +14,7 @@ import { CreateMacroUseCase } from "../application/use-cases/create-macro/create
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListCompatibleProtocolsUseCase } from "../application/use-cases/list-compatible-protocols/list-compatible-protocols";
+import { ListMacroVersionsUseCase } from "../application/use-cases/list-macro-versions/list-macro-versions";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
 import { RemoveCompatibleProtocolUseCase } from "../application/use-cases/remove-compatible-protocol/remove-compatible-protocol";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
@@ -35,6 +36,7 @@ export class MacroController {
     private readonly listCompatibleProtocolsUseCase: ListCompatibleProtocolsUseCase,
     private readonly addCompatibleProtocolsUseCase: AddCompatibleProtocolsUseCase,
     private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
+    private readonly listMacroVersionsUseCase: ListMacroVersionsUseCase,
   ) {}
 
   @TsRestHandler(macroContract.createMacro)
@@ -55,8 +57,8 @@ export class MacroController {
 
   @TsRestHandler(macroContract.getMacro)
   getMacro() {
-    return tsRestHandler(macroContract.getMacro, async ({ params }) => {
-      const result = await this.getMacroUseCase.execute(params.id);
+    return tsRestHandler(macroContract.getMacro, async ({ params, query }) => {
+      const result = await this.getMacroUseCase.execute(params.id, query.version);
 
       if (isSuccess(result)) {
         return {
@@ -136,8 +138,8 @@ export class MacroController {
 
   @TsRestHandler(macroContract.listCompatibleProtocols)
   listCompatibleProtocols() {
-    return tsRestHandler(macroContract.listCompatibleProtocols, async ({ params }) => {
-      const result = await this.listCompatibleProtocolsUseCase.execute(params.id);
+    return tsRestHandler(macroContract.listCompatibleProtocols, async ({ params, query }) => {
+      const result = await this.listCompatibleProtocolsUseCase.execute(params.id, query.version);
 
       if (result.isSuccess()) {
         return {
@@ -183,6 +185,22 @@ export class MacroController {
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.listMacroVersions)
+  listMacroVersions() {
+    return tsRestHandler(macroContract.listMacroVersions, async ({ params }) => {
+      const result = await this.listMacroVersionsUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK,
+          body: formatDatesList(result.value),
         };
       }
 

@@ -1,8 +1,19 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { and, eq, ilike, protocols, experimentProtocols, users, asc } from "@repo/database";
-import { profiles } from "@repo/database";
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  max,
+  sql,
+  protocols,
+  experimentProtocols,
+  users,
+  asc,
+  profiles,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -10,7 +21,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
+import { CreateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 @Injectable()
 export class ProtocolRepository {
@@ -19,6 +30,11 @@ export class ProtocolRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
+  /**
+   * Create a new protocol (v1) or a new version of an existing protocol.
+   * For v1: pass data without id (will be auto-generated).
+   * For new version: pass data with the same id and incremented version.
+   */
   async create(
     createProtocolDto: CreateProtocolDto,
     userId: string,
@@ -28,6 +44,8 @@ export class ProtocolRepository {
         .insert(protocols)
         .values({
           ...createProtocolDto,
+          id: createProtocolDto.id ?? crypto.randomUUID(),
+          version: createProtocolDto.version ?? 1,
           createdBy: userId,
         })
         .returning();
@@ -35,6 +53,9 @@ export class ProtocolRepository {
     });
   }
 
+  /**
+   * List protocols, returning only the latest version of each.
+   */
   async findAll(
     search?: ProtocolFilter,
     filter?: "my",
@@ -61,9 +82,12 @@ export class ProtocolRepository {
         conditions.push(eq(protocols.createdBy, userId));
       }
 
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions)) as typeof query;
-      }
+      // Only return the latest version of each protocol (by id)
+      conditions.push(
+        sql`${protocols.version} = (SELECT MAX(p2.version) FROM protocols p2 WHERE p2.id = ${protocols.id})`,
+      );
+
+      query = query.where(and(...conditions)) as typeof query;
 
       const results = await query;
       return results.map((result) => {
@@ -77,8 +101,21 @@ export class ProtocolRepository {
     });
   }
 
-  async findOne(id: string): Promise<Result<ProtocolDto | null>> {
+  /**
+   * Find a protocol by id. If version is provided, returns that exact version.
+   * Otherwise returns the latest version.
+   */
+  async findOne(id: string, version?: number): Promise<Result<ProtocolDto | null>> {
     return tryCatch(async () => {
+      const conditions = [eq(protocols.id, id)];
+      if (version !== undefined) {
+        conditions.push(eq(protocols.version, version));
+      } else {
+        conditions.push(
+          sql`${protocols.version} = (SELECT MAX(p2.version) FROM protocols p2 WHERE p2.id = ${id})`,
+        );
+      }
+
       const result = await this.database
         .select({
           protocols,
@@ -87,7 +124,7 @@ export class ProtocolRepository {
         })
         .from(protocols)
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
-        .where(eq(protocols.id, id))
+        .where(and(...conditions))
         .limit(1);
 
       if (result.length === 0) {
@@ -110,6 +147,7 @@ export class ProtocolRepository {
         .from(protocols)
         .innerJoin(users, eq(protocols.createdBy, users.id))
         .where(eq(protocols.name, name))
+        .orderBy(desc(protocols.version))
         .limit(1);
 
       if (result.length === 0) {
@@ -122,24 +160,58 @@ export class ProtocolRepository {
     });
   }
 
-  async update(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto[]>> {
+  /**
+   * Find all versions of a protocol by id, ordered by version descending.
+   */
+  async findVersionsById(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
       const results = await this.database
-        .update(protocols)
-        .set({
-          ...updateProtocolDto,
-          updatedAt: new Date(),
+        .select({
+          protocols,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
         })
+        .from(protocols)
+        .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
         .where(eq(protocols.id, id))
-        .returning();
+        .orderBy(desc(protocols.version));
 
-      return results as unknown as ProtocolDto[];
+      return results.map((result) => {
+        const augmentedResult = result.protocols as ProtocolDto;
+        const firstName = result.firstName;
+        const lastName = result.lastName;
+        augmentedResult.createdByName =
+          firstName && lastName ? `${firstName} ${lastName}` : undefined;
+        return augmentedResult;
+      });
     });
   }
 
-  async delete(id: string): Promise<Result<ProtocolDto[]>> {
+  /**
+   * Get the highest version number for a given protocol id.
+   * Returns 0 if no protocol with that id exists.
+   */
+  async findMaxVersion(id: string): Promise<Result<number>> {
     return tryCatch(async () => {
-      const results = await this.database.delete(protocols).where(eq(protocols.id, id)).returning();
+      const result = await this.database
+        .select({ maxVersion: max(protocols.version) })
+        .from(protocols)
+        .where(eq(protocols.id, id));
+
+      return result[0]?.maxVersion ?? 0;
+    });
+  }
+
+  async delete(id: string, version?: number): Promise<Result<ProtocolDto[]>> {
+    return tryCatch(async () => {
+      const conditions = [eq(protocols.id, id)];
+      if (version !== undefined) {
+        conditions.push(eq(protocols.version, version));
+      }
+      const results = await this.database
+        .delete(protocols)
+        .where(and(...conditions))
+        .returning();
 
       return results as unknown as ProtocolDto[];
     });

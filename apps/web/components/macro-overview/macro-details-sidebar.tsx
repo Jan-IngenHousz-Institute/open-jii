@@ -1,7 +1,9 @@
 "use client";
 
+import { VersionPicker } from "@/components/shared/version-picker";
 import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useMacroVersions } from "@/hooks/macro/useMacroVersions/useMacroVersions";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
@@ -51,7 +53,12 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
   const { mutateAsync: deleteMacro, isPending: isDeleting } = useMacroDelete();
-  const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(macroId);
+  const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(
+    macroId,
+    true,
+    macro.version,
+  );
+  const { data: versions } = useMacroVersions(macroId);
   const compatibleProtocolsCount =
     (compatibleProtocolsData?.body as unknown[] | undefined)?.length ?? 0;
 
@@ -109,6 +116,18 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       </div>
 
       <div className="space-y-1">
+        <h4 className="text-sm font-medium">Version</h4>
+        {versions && versions.length > 1 ? (
+          <VersionPicker
+            currentVersion={macro.version}
+            versions={versions.map((v) => ({ version: v.version, updatedAt: v.updatedAt }))}
+          />
+        ) : (
+          <p className="text-muted-foreground text-sm">v{macro.version}</p>
+        )}
+      </div>
+
+      <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.updated")}</h4>
         <p className="text-muted-foreground text-sm">{formatDate(macro.updatedAt)}</p>
       </div>
@@ -131,7 +150,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       />
 
       {isCreator ? (
-        <MacroCompatibleProtocolsCard macroId={macroId} embedded />
+        <MacroCompatibleProtocolsCard macroId={macroId} macroVersion={macro.version} embedded />
       ) : (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{t("macroSettings.compatibleProtocols")}</h4>

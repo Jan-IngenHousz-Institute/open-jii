@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api";
 import type { MacroProtocolList } from "@repo/api";
-import { protocols } from "@repo/database";
+import { macros, protocols } from "@repo/database";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
@@ -73,10 +73,12 @@ describe("MacroController", () => {
       const mockMacro: MacroDto = {
         id: macroId,
         name: macroData.name,
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 1),
         description: macroData.description ?? "",
         language: macroData.language,
         code: macroData.code,
+        version: 1,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -162,10 +164,12 @@ describe("MacroController", () => {
       const mockMacro: MacroDto = {
         id: macroId,
         name: "Test Macro",
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 1),
         description: "Test Description",
         language: "python",
         code: "cHl0aG9uIGNvZGU=",
+        version: 1,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -224,10 +228,12 @@ describe("MacroController", () => {
         {
           id: macroIds[0],
           name: "Test Macro 1",
-          filename: generateHashedFilename(macroIds[0]),
+          filename: generateHashedFilename(macroIds[0], 1),
           description: "Test Description 1",
           language: "python",
           code: "dGVzdCBjb2RlIDE=", // base64 encoded "test code 1"
+          version: 1,
+          sortOrder: null,
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -236,10 +242,12 @@ describe("MacroController", () => {
         {
           id: macroIds[1],
           name: "Test Macro 2",
-          filename: generateHashedFilename(macroIds[1]),
+          filename: generateHashedFilename(macroIds[1], 1),
           description: "Test Description 2",
           language: "javascript",
           code: "dGVzdCBjb2RlIDI=", // base64 encoded "test code 2"
+          version: 1,
+          sortOrder: null,
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -307,10 +315,12 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: "Updated Macro",
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 2),
         description: "Updated Description",
         language: "javascript",
         code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
+        version: 2,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -369,10 +379,12 @@ describe("MacroController", () => {
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
         name: updateData.name,
-        filename: generateHashedFilename(macroId),
+        filename: generateHashedFilename(macroId, 2),
         description: "Description",
         language: "python",
         code: "dXBkYXRlZCBjb2RlIHdpdGggZmlsZQ==", // base64 encoded "updated code with file"
+        version: 2,
+        sortOrder: null,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -588,7 +600,10 @@ describe("MacroController – macro-protocol endpoints", () => {
 
       const protocol1 = await createTestProtocol(testUserId);
       const protocol2 = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol1.id, protocol2.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol1.id, version: protocol1.version },
+        { id: protocol2.id, version: protocol2.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
         id: macro.id,
@@ -728,7 +743,9 @@ describe("MacroController – macro-protocol endpoints", () => {
       });
 
       const protocol = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol.id, version: protocol.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
         id: macro.id,
@@ -752,7 +769,9 @@ describe("MacroController – macro-protocol endpoints", () => {
       });
 
       const protocol = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol.id, version: protocol.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
         id: macro.id,
@@ -770,7 +789,9 @@ describe("MacroController – macro-protocol endpoints", () => {
 
       const otherUserId = await testApp.createTestUser({ email: "other-remove-ctrl@example.com" });
       const protocol = await createTestProtocol(testUserId);
-      await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
+      await macroProtocolRepository.addProtocols(macro.id, macro.version, [
+        { id: protocol.id, version: protocol.version },
+      ]);
 
       const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
         id: macro.id,
@@ -791,5 +812,98 @@ describe("MacroController – macro-protocol endpoints", () => {
 
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
+  });
+});
+
+describe("MacroController – listMacroVersions", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+
+  beforeAll(async () => {
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  it("should return 200 with all versions ordered by version descending", async () => {
+    const macroId = faker.string.uuid();
+    const filename = `macro_${faker.string.alphanumeric(12)}`;
+
+    await testApp.database.insert(macros).values([
+      {
+        id: macroId,
+        version: 1,
+        name: "Multi-Version Macro",
+        filename: `${filename}_v1`,
+        description: "v1",
+        language: "python",
+        code: btoa("print('v1')"),
+        createdBy: testUserId,
+      },
+      {
+        id: macroId,
+        version: 2,
+        name: "Multi-Version Macro",
+        filename: `${filename}_v2`,
+        description: "v2",
+        language: "python",
+        code: btoa("print('v2')"),
+        createdBy: testUserId,
+      },
+      {
+        id: macroId,
+        version: 3,
+        name: "Multi-Version Macro",
+        filename: `${filename}_v3`,
+        description: "v3",
+        language: "python",
+        code: btoa("print('v3')"),
+        createdBy: testUserId,
+      },
+    ]);
+
+    const path = testApp.resolvePath(contract.macros.listMacroVersions.path, { id: macroId });
+
+    const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+    expect(response.body).toHaveLength(3);
+    expect((response.body as { version: number }[])[0].version).toBe(3);
+    expect((response.body as { version: number }[])[1].version).toBe(2);
+    expect((response.body as { version: number }[])[2].version).toBe(1);
+  });
+
+  it("should return 200 with single version for macro with no updates", async () => {
+    const macro = await testApp.createMacro({
+      name: "Single Version Macro",
+      createdBy: testUserId,
+    });
+
+    const path = testApp.resolvePath(contract.macros.listMacroVersions.path, { id: macro.id });
+
+    const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+    expect(response.body).toHaveLength(1);
+    expect((response.body as { version: number }[])[0].version).toBe(1);
+  });
+
+  it("should return 404 for non-existent macro", async () => {
+    const nonExistentId = faker.string.uuid();
+    const path = testApp.resolvePath(contract.macros.listMacroVersions.path, {
+      id: nonExistentId,
+    });
+
+    await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
   });
 });

@@ -21,12 +21,13 @@ interface MeasurementNodeProps {
   content: {
     params: Record<string, unknown>;
     protocolId: string;
+    protocolVersion?: number;
   };
 }
 
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
-  const { protocol } = useProtocol(content.protocolId);
+  const { protocol } = useProtocol(content.protocolId, content.protocolVersion);
   const {
     executeScan,
     isScanning,

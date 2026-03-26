@@ -13,12 +13,12 @@ export class UpdateProtocolUseCase {
 
   async execute(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto>> {
     this.logger.log({
-      msg: "Updating protocol",
+      msg: "Creating new protocol version",
       operation: "updateProtocol",
       protocolId: id,
     });
 
-    // Check if protocol exists
+    // Fetch the existing protocol (latest version)
     const existingProtocolResult = await this.protocolRepository.findOne(id);
 
     if (existingProtocolResult.isFailure()) {
@@ -36,52 +36,49 @@ export class UpdateProtocolUseCase {
       return failure(AppError.notFound(`Protocol not found`));
     }
 
-    // Prevent update if protocol is assigned to any experiment
-    const isAssignedResult = await this.protocolRepository.isAssignedToAnyExperiment(id);
-    if (isAssignedResult.isFailure()) {
+    // Get the next version number for this protocol id
+    const maxVersionResult = await this.protocolRepository.findMaxVersion(id);
+    if (maxVersionResult.isFailure()) {
+      return maxVersionResult;
+    }
+    const nextVersion = maxVersionResult.value + 1;
+
+    // Create a new version: same UUID, incremented version, merged data
+    const createResult = await this.protocolRepository.create(
+      {
+        id: protocol.id, // Same UUID
+        version: nextVersion,
+        name: updateProtocolDto.name ?? protocol.name,
+        description: updateProtocolDto.description ?? protocol.description,
+        code: updateProtocolDto.code ?? protocol.code,
+        family: updateProtocolDto.family ?? protocol.family,
+        sortOrder: protocol.sortOrder,
+      },
+      protocol.createdBy,
+    );
+
+    if (createResult.isFailure()) {
       this.logger.error({
-        msg: "Error checking protocol assignment",
-        errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
-        operation: "updateProtocol",
-        protocolId: id,
-        error: isAssignedResult.error,
-      });
-      return failure(isAssignedResult.error);
-    }
-    if (isAssignedResult.value) {
-      this.logger.warn({
-        msg: "Cannot update protocol assigned to experiment",
-        errorCode: ErrorCodes.PROTOCOL_ASSIGNED,
-        operation: "updateProtocol",
-        protocolId: id,
-      });
-      return failure(AppError.forbidden("Cannot update protocol assigned to an experiment"));
-    }
-
-    // Protocol exists and is not assigned, now update it
-    const updateResult = await this.protocolRepository.update(id, updateProtocolDto);
-
-    if (updateResult.isFailure()) {
-      return updateResult;
-    }
-
-    const protocols = updateResult.value;
-    if (protocols.length === 0) {
-      this.logger.error({
-        msg: "Failed to update protocol",
+        msg: "Failed to create new protocol version",
         errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
         operation: "updateProtocol",
         protocolId: id,
       });
-      return failure(AppError.internal("Failed to update protocol"));
+      return createResult;
+    }
+
+    const newProtocols = createResult.value;
+    if (newProtocols.length === 0) {
+      return failure(AppError.internal("Failed to create new protocol version"));
     }
 
     this.logger.log({
-      msg: "Protocol updated successfully",
+      msg: "New protocol version created successfully",
       operation: "updateProtocol",
       protocolId: id,
+      version: nextVersion,
       status: "success",
     });
-    return success(protocols[0]);
+    return success(newProtocols[0]);
   }
 }

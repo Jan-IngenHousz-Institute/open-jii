@@ -56,8 +56,8 @@ describe("useProtocol", () => {
     });
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: "protocol-123" } },
-      queryKey: ["protocol", "protocol-123"],
+      queryData: { params: { id: "protocol-123" }, query: { version: undefined } },
+      queryKey: ["protocol", "protocol-123", undefined],
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
       enabled: true,
     });
@@ -149,8 +149,8 @@ describe("useProtocol", () => {
     });
 
     expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: "protocol-123" } },
-      queryKey: ["protocol", "protocol-123"],
+      queryData: { params: { id: "protocol-123" }, query: { version: undefined } },
+      queryKey: ["protocol", "protocol-123", undefined],
       retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
       enabled: false,
     });
@@ -173,13 +173,13 @@ describe("useProtocol", () => {
 
     expect(mockUseQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ["protocol", "protocol-1"],
+        queryKey: ["protocol", "protocol-1", undefined],
       }),
     );
 
     expect(mockUseQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ["protocol", "protocol-2"],
+        queryKey: ["protocol", "protocol-2", undefined],
       }),
     );
   });

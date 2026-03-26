@@ -386,11 +386,13 @@ export const zInstructionContent = z.object({
 
 export const zMeasurementContent = z.object({
   protocolId: z.string().uuid("A valid protocol must be selected for measurement nodes"),
+  protocolVersion: z.number().int().optional(),
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const zAnalysisContent = z.object({
   macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
+  macroVersion: z.number().int().optional(),
   params: z.record(z.string(), z.unknown()).optional(),
 });
 

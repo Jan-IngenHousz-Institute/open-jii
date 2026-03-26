@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 
@@ -12,6 +13,7 @@ export class RemoveCompatibleMacroUseCase {
   constructor(
     private readonly protocolRepository: ProtocolRepository,
     private readonly protocolMacroRepository: ProtocolMacroRepository,
+    private readonly macroRepository: MacroRepository,
   ) {}
 
   async execute(protocolId: string, macroId: string, currentUserId: string): Promise<Result<void>> {
@@ -44,7 +46,17 @@ export class RemoveCompatibleMacroUseCase {
       return failure(AppError.forbidden("Only the protocol creator can manage compatible macros"));
     }
 
-    const removeResult = await this.protocolMacroRepository.removeMacro(protocolId, macroId);
+    const protocolVersion = protocolResult.value.version;
+    // Look up the macro's latest version
+    const macroLookup = await this.macroRepository.findById(macroId);
+    const macroVersion =
+      macroLookup.isSuccess() && macroLookup.value ? macroLookup.value.version : 1;
+    const removeResult = await this.protocolMacroRepository.removeMacro(
+      protocolId,
+      protocolVersion,
+      macroId,
+      macroVersion,
+    );
     if (removeResult.isFailure()) {
       this.logger.error({
         msg: "Failed to remove compatible macro",

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { primaryKey, check } from "drizzle-orm/pg-core";
+import { primaryKey, check, unique, foreignKey } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -210,25 +210,26 @@ export const invitations = pgTable(
   ],
 );
 
-// Associative table: Experiment Protocols
+// Associative table: Experiment Protocols (version-specific)
 export const experimentProtocols = pgTable(
   "experiment_protocols",
   {
     experimentId: uuid("experiment_id")
       .references(() => experiments.id, { onDelete: "cascade" })
       .notNull(),
-    protocolId: uuid("protocol_id")
-      .references(() => protocols.id)
-      .notNull(),
+    protocolId: uuid("protocol_id").notNull(),
+    protocolVersion: integer("protocol_version").notNull().default(1),
     order: integer("order").default(0).notNull(),
     addedAt: timestamp("added_at")
       .default(sql`(now() AT TIME ZONE 'UTC')`)
       .notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.experimentId, table.protocolId] }),
-    // Add index on experimentId for faster lookups
-    { index: { columns: [table.experimentId] } },
+    primaryKey({ columns: [table.experimentId, table.protocolId, table.protocolVersion] }),
+    foreignKey({
+      columns: [table.protocolId, table.protocolVersion],
+      foreignColumns: [protocols.id, protocols.version],
+    }),
   ],
 );
 
@@ -245,53 +246,80 @@ export const auditLogs = pgTable("audit_logs", {
   details: jsonb("details"),
 });
 
-// Protocols Table
-export const protocols = pgTable("protocols", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  code: jsonb("code").notNull(),
-  family: sensorFamilyEnum("family").notNull(),
-  sortOrder: integer("sort_order"),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  ...timestamps,
-});
+// Protocols Table — PK is (id, version) for immutable versioning
+export const protocols = pgTable(
+  "protocols",
+  {
+    id: uuid("id").defaultRandom().notNull(),
+    version: integer("version").notNull().default(1),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    code: jsonb("code").notNull(),
+    family: sensorFamilyEnum("family").notNull(),
+    sortOrder: integer("sort_order"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id, table.version] }),
+    unique("protocols_name_version").on(table.name, table.version),
+  ],
+);
 
 // Macro Language Enum
 export const macroLanguageEnum = pgEnum("macro_language", ["python", "r", "javascript"]);
 
-// Macros Table - only stores metadata, actual code files are handled by Databricks
-export const macros = pgTable("macros", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  filename: varchar("filename", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  language: macroLanguageEnum("language").notNull(),
-  code: text("code").notNull(), // Base64 encoded content of the macro code
-  sortOrder: integer("sort_order"),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  ...timestamps,
-});
+// Macros Table — PK is (id, version) for immutable versioning
+// Actual code files are handled by Databricks
+export const macros = pgTable(
+  "macros",
+  {
+    id: uuid("id").defaultRandom().notNull(),
+    version: integer("version").notNull().default(1),
+    name: varchar("name", { length: 255 }).notNull(),
+    filename: varchar("filename", { length: 255 }).notNull(),
+    description: text("description"),
+    language: macroLanguageEnum("language").notNull(),
+    code: text("code").notNull(), // Base64 encoded content of the macro code
+    sortOrder: integer("sort_order"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id, table.version] }),
+    unique("macros_name_version").on(table.name, table.version),
+  ],
+);
 
-// Protocol-Macro Compatibility (many-to-many)
+// Protocol-Macro Compatibility (many-to-many, version-specific)
 export const protocolMacros = pgTable(
   "protocol_macros",
   {
-    protocolId: uuid("protocol_id")
-      .references(() => protocols.id, { onDelete: "cascade" })
-      .notNull(),
-    macroId: uuid("macro_id")
-      .references(() => macros.id, { onDelete: "cascade" })
-      .notNull(),
+    protocolId: uuid("protocol_id").notNull(),
+    protocolVersion: integer("protocol_version").notNull().default(1),
+    macroId: uuid("macro_id").notNull(),
+    macroVersion: integer("macro_version").notNull().default(1),
     addedAt: timestamp("added_at")
       .default(sql`(now() AT TIME ZONE 'UTC')`)
       .notNull(),
   },
-  (table) => [primaryKey({ columns: [table.protocolId, table.macroId] })],
+  (table) => [
+    primaryKey({
+      columns: [table.protocolId, table.protocolVersion, table.macroId, table.macroVersion],
+    }),
+    foreignKey({
+      columns: [table.protocolId, table.protocolVersion],
+      foreignColumns: [protocols.id, protocols.version],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.macroId, table.macroVersion],
+      foreignColumns: [macros.id, macros.version],
+    }).onDelete("cascade"),
+  ],
 );
 
 // Flows Table - stores a single graph JSON per experiment (1:1)

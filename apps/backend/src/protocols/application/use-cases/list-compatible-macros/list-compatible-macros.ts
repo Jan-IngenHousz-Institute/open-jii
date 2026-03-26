@@ -15,14 +15,14 @@ export class ListCompatibleMacrosUseCase {
     private readonly protocolMacroRepository: ProtocolMacroRepository,
   ) {}
 
-  async execute(protocolId: string): Promise<Result<ProtocolMacroDto[]>> {
+  async execute(protocolId: string, version?: number): Promise<Result<ProtocolMacroDto[]>> {
     this.logger.log({
       msg: "Listing compatible macros for protocol",
       operation: "listCompatibleMacros",
       protocolId,
     });
 
-    const protocolResult = await this.protocolRepository.findOne(protocolId);
+    const protocolResult = await this.protocolRepository.findOne(protocolId, version);
     if (protocolResult.isFailure()) {
       return failure(AppError.internal("Failed to fetch protocol"));
     }
@@ -30,7 +30,8 @@ export class ListCompatibleMacrosUseCase {
       return failure(AppError.notFound(`Protocol with ID ${protocolId} not found`));
     }
 
-    const result = await this.protocolMacroRepository.listMacros(protocolId);
+    const protocolVersion = protocolResult.value.version;
+    const result = await this.protocolMacroRepository.listMacros(protocolId, protocolVersion);
     if (result.isFailure()) {
       this.logger.error({
         msg: "Failed to list compatible macros",

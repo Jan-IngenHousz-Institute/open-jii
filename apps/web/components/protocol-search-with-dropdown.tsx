@@ -87,7 +87,8 @@ export function ProtocolSearchWithDropdown({
                   </Link>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
-                  {selectedProtocol.family} • {t("common.by")} {selectedProtocol.createdByName}
+                  {selectedProtocol.family} • v{selectedProtocol.version} • {t("common.by")}{" "}
+                  {selectedProtocol.createdByName}
                 </span>
               </div>
             ) : (

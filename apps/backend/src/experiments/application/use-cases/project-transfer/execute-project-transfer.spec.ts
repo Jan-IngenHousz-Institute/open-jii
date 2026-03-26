@@ -297,7 +297,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       const result = await useCase.execute(payload);
 
       assertSuccess(result);
-      expect(result.value.macroFilename).toMatch(/^macro_[a-f0-9]+$/);
+      expect(result.value.macroFilename).toMatch(/^macro_[a-f0-9]+(_v\d+)?$/);
       expect(result.value.macroName).toBeDefined();
     });
 

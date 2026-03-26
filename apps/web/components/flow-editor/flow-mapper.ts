@@ -45,7 +45,9 @@ export interface FlowNodeDataBase extends Record<string, unknown> {
 export interface FlowNodeDataWithSpec extends FlowNodeDataBase {
   stepSpecification?: StepSpecification | QuestionUI; // UI format for questions, API format for others
   protocolId?: string; // measurement convenience field (when not yet set in stepSpecification)
+  protocolVersion?: number; // pinned protocol version
   macroId?: string; // analysis convenience field (when not yet set in stepSpecification)
+  macroVersion?: number; // pinned macro version
 }
 
 export interface FlowEdgeData extends Record<string, unknown> {
@@ -128,19 +130,21 @@ export class FlowMapper {
         stepSpecification: FlowMapper.convertApiContentToUISpec(apiNode.type, apiNode.content),
       };
 
-      // For measurement nodes, also set protocolId directly on the node data
+      // For measurement nodes, also set protocolId/version directly on the node data
       if (apiNode.type === "measurement" && isObject(apiNode.content)) {
         const measurementContent = apiNode.content as MeasurementContent;
         if (measurementContent.protocolId) {
           nodeData.protocolId = measurementContent.protocolId;
+          nodeData.protocolVersion = measurementContent.protocolVersion;
         }
       }
 
-      // For analysis nodes, also set macroId directly on the node data
+      // For analysis nodes, also set macroId/version directly on the node data
       if (apiNode.type === "analysis" && isObject(apiNode.content)) {
         const analysisContent = apiNode.content as AnalysisContent;
         if (analysisContent.macroId) {
           nodeData.macroId = analysisContent.macroId;
+          nodeData.macroVersion = analysisContent.macroVersion;
         }
       }
 
@@ -233,8 +237,14 @@ export class FlowMapper {
         const rawParams = isObject(data.stepSpecification)
           ? (data.stepSpecification as { params?: Record<string, unknown> }).params
           : undefined;
+        const protocolVersion =
+          data.protocolVersion ??
+          (isObject(data.stepSpecification)
+            ? (data.stepSpecification as { protocolVersion?: number }).protocolVersion
+            : undefined);
         const candidate: MeasurementContent = {
           protocolId: protocolId ?? "", // Let Zod validate empty/invalid protocol
+          protocolVersion,
           params: rawParams ?? {},
         } as const;
 
@@ -253,8 +263,14 @@ export class FlowMapper {
         const rawParams = isObject(data.stepSpecification)
           ? (data.stepSpecification as { params?: Record<string, unknown> }).params
           : undefined;
+        const macroVersion =
+          data.macroVersion ??
+          (isObject(data.stepSpecification)
+            ? (data.stepSpecification as { macroVersion?: number }).macroVersion
+            : undefined);
         const candidate: AnalysisContent = {
           macroId: macroId ?? "", // Let Zod validate empty/invalid macro
+          macroVersion,
           params: rawParams ?? {},
         } as const;
 

@@ -1,9 +1,9 @@
 import { tsr } from "~/api/tsr";
 
-export function useProtocol(protocolId: string | undefined) {
+export function useProtocol(protocolId: string | undefined, version?: number) {
   const { data, isLoading, error } = tsr.protocols.getProtocol.useQuery({
-    queryKey: ["protocol", protocolId],
-    queryData: { params: { id: protocolId ?? "" } },
+    queryKey: ["protocol", protocolId, version],
+    queryData: { params: { id: protocolId ?? "" }, query: { version } },
     enabled: !!protocolId,
     networkMode: "offlineFirst",
   });

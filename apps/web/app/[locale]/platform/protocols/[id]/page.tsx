@@ -9,6 +9,7 @@ import { InlineEditableDescription } from "@/components/shared/inline-editable-d
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useCodeAutoSave } from "@/hooks/useCodeAutoSave";
+import { useSearchParams } from "next/navigation";
 import { use, useCallback } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -24,7 +25,9 @@ interface ProtocolOverviewPageProps {
 
 export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
   const { id } = use(params);
-  const { data, isLoading, error } = useProtocol(id);
+  const searchParams = useSearchParams();
+  const version = searchParams.get("v") ? Number(searchParams.get("v")) : undefined;
+  const { data, isLoading, error } = useProtocol(id, true, version);
   const { t } = useTranslation();
   const { data: session } = useSession();
   const {

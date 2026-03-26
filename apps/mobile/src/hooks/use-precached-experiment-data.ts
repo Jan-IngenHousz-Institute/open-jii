@@ -1,7 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { uniq } from "lodash";
 import { tsr } from "~/api/tsr";
 import type { FlowNode } from "~/screens/measurement-flow-screen/types";
+
+interface MacroRef {
+  id: string;
+  version?: number;
+}
+
+interface ProtocolRef {
+  id: string;
+  version?: number;
+}
 
 async function precacheExperimentMacrosFn(
   experimentId: string,
@@ -14,23 +23,32 @@ async function precacheExperimentMacrosFn(
 
   const nodes = flowResponse.body?.graph?.nodes ?? [];
 
-  // Extract all analysis nodes and their macroIds
-  const macroIds = nodes
+  // Extract all analysis nodes and their macro refs (id + optional version)
+  const macroRefs: MacroRef[] = nodes
     .filter((node: FlowNode) => node.type === "analysis" && node.content?.macroId)
-    .map((node: FlowNode) => node.content.macroId as string)
-    .filter((id): id is string => !!id);
+    .map((node: FlowNode) => ({
+      id: node.content.macroId as string,
+      version: node.content.macroVersion as number | undefined,
+    }));
 
-  // Remove duplicates
-  const uniqueMacroIds = uniq<string>(macroIds);
+  // Deduplicate by (id, version) — treat undefined version as "latest"
+  const seen = new Set<string>();
+  const uniqueRefs = macroRefs.filter((ref) => {
+    const key = `${ref.id}:${ref.version ?? "latest"}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
-  // Prefetch each macro
+  // Prefetch each macro with its pinned version (or latest if no version)
   await Promise.all(
-    uniqueMacroIds.map((macroId: string) =>
+    uniqueRefs.map((ref) =>
       queryClient.prefetchQuery({
-        queryKey: ["macro", macroId],
+        queryKey: ["macro", ref.id, ref.version],
         queryFn: async () => {
           const response = await tsr.macros.getMacro.query({
-            params: { id: macroId },
+            params: { id: ref.id },
+            query: { version: ref.version },
           });
           return { body: response.body };
         },
@@ -38,7 +56,7 @@ async function precacheExperimentMacrosFn(
     ),
   );
 
-  return uniqueMacroIds;
+  return uniqueRefs.map((ref) => ref.id);
 }
 
 async function precacheExperimentProtocolsFn(
@@ -52,23 +70,32 @@ async function precacheExperimentProtocolsFn(
 
   const nodes = flowResponse.body?.graph?.nodes ?? [];
 
-  // Extract all measurement nodes and their protocolIds
-  const protocolIds = nodes
+  // Extract all measurement nodes and their protocol refs (id + optional version)
+  const protocolRefs: ProtocolRef[] = nodes
     .filter((node: FlowNode) => node.type === "measurement" && node.content?.protocolId)
-    .map((node: FlowNode) => node.content.protocolId as string)
-    .filter((id): id is string => !!id);
+    .map((node: FlowNode) => ({
+      id: node.content.protocolId as string,
+      version: node.content.protocolVersion as number | undefined,
+    }));
 
-  // Remove duplicates
-  const uniqueProtocolIds = uniq<string>(protocolIds);
+  // Deduplicate by (id, version) — treat undefined version as "latest"
+  const seen = new Set<string>();
+  const uniqueRefs = protocolRefs.filter((ref) => {
+    const key = `${ref.id}:${ref.version ?? "latest"}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
-  // Prefetch each protocol
+  // Prefetch each protocol with its pinned version (or latest if no version)
   await Promise.all(
-    uniqueProtocolIds.map((protocolId: string) =>
+    uniqueRefs.map((ref) =>
       queryClient.prefetchQuery({
-        queryKey: ["protocol", protocolId],
+        queryKey: ["protocol", ref.id, ref.version],
         queryFn: async () => {
           const response = await tsr.protocols.getProtocol.query({
-            params: { id: protocolId },
+            params: { id: ref.id },
+            query: { version: ref.version },
           });
           return { body: response.body };
         },
@@ -76,7 +103,7 @@ async function precacheExperimentProtocolsFn(
     ),
   );
 
-  return uniqueProtocolIds;
+  return uniqueRefs.map((ref) => ref.id);
 }
 
 async function precacheExperimentDataFn(

@@ -6,6 +6,7 @@ export const zSensorFamily = z.enum(["multispeq", "ambit", "generic"]);
 export const zProtocol = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  version: z.number().int(),
   description: z.string().nullable(),
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
@@ -62,6 +63,7 @@ export const zProtocolErrorResponse = z.object({
 export const zCompatibleMacroSummary = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  version: z.number().int(),
   filename: z.string(),
   language: z.enum(["python", "r", "javascript"]),
   createdBy: z.string().uuid(),

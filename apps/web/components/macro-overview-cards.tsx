@@ -68,7 +68,7 @@ function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enable
     <div className="flex flex-wrap gap-1">
       {protocols.map((entry) => (
         <span
-          key={entry.protocol.id}
+          key={`${entry.protocol.id}-v${entry.protocol.version}`}
           className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
         >
           {entry.protocol.name}
@@ -101,6 +101,7 @@ function MacroCard({
           <Badge className={getLanguageColor(macro.language)}>
             {getLanguageDisplay(macro.language)}
           </Badge>
+          <Badge className="bg-slate-200 text-slate-700">v{macro.version}</Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
           )}

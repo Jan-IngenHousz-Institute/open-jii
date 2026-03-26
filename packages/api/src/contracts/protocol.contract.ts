@@ -1,4 +1,5 @@
 import { initContract } from "@ts-rest/core";
+import { z } from "zod";
 
 import {
   zProtocol,
@@ -32,12 +33,13 @@ export const protocolContract = c.router({
     method: "GET",
     path: "/api/v1/protocols/:id",
     pathParams: zProtocolIdPathParam,
+    query: z.object({ version: z.coerce.number().int().optional() }),
     responses: {
       200: zProtocol,
       404: zProtocolErrorResponse,
     },
     summary: "Get protocol by ID",
-    description: "Returns a protocol by its ID",
+    description: "Returns a protocol by its ID. Without version param, returns the latest version.",
   },
 
   createProtocol: {
@@ -82,12 +84,14 @@ export const protocolContract = c.router({
     method: "GET",
     path: "/api/v1/protocols/:id/macros",
     pathParams: zProtocolIdPathParam,
+    query: z.object({ version: z.coerce.number().int().optional() }),
     responses: {
       200: zProtocolMacroList,
       404: zProtocolErrorResponse,
     },
     summary: "List compatible macros for a protocol",
-    description: "Returns macros that are marked as compatible with this protocol",
+    description:
+      "Returns macros compatible with this protocol version. Without version, uses latest.",
   },
 
   addCompatibleMacros: {
@@ -117,5 +121,17 @@ export const protocolContract = c.router({
     },
     summary: "Remove a compatible macro from a protocol",
     description: "Unlinks a macro from this protocol's compatibility list (creator only)",
+  },
+
+  listProtocolVersions: {
+    method: "GET",
+    path: "/api/v1/protocols/:id/versions",
+    pathParams: zProtocolIdPathParam,
+    responses: {
+      200: zProtocolList,
+      404: zProtocolErrorResponse,
+    },
+    summary: "List all versions of a protocol",
+    description: "Returns all versions of a protocol, ordered by version descending",
   },
 });

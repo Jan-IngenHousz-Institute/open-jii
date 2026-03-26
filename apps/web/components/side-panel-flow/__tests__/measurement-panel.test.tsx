@@ -137,7 +137,7 @@ describe("<MeasurementPanel />", () => {
     renderPanel({ onChange });
     const target = screen.getByRole("button", { name: "Protocol Beta" });
     await userEvent.click(target);
-    expect(onChange).toHaveBeenCalledWith("proto-2");
+    expect(onChange).toHaveBeenCalledWith("proto-2", undefined);
     expect(lastDropdownProps?.searchValue).toBe("");
   });
 

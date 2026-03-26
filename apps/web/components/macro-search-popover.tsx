@@ -84,7 +84,10 @@ function MacroList({
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
               {/* Macro name */}
               <div className="mb-1 flex items-center gap-1">
-                <h4 className="text-foreground truncate text-sm font-medium">{macro.name}</h4>
+                <h4 className="text-foreground truncate text-sm font-medium">
+                  {macro.name}
+                  <span className="ml-1 text-xs font-normal text-slate-500">v{macro.version}</span>
+                </h4>
 
                 <Link
                   href={`/${locale}/platform/macros/${macro.id}`}

@@ -1,6 +1,8 @@
 "use client";
 
+import { VersionPicker } from "@/components/shared/version-picker";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useProtocolVersions } from "@/hooks/protocol/useProtocolVersions/useProtocolVersions";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
@@ -51,8 +53,13 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
 
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
   const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
-  const { data: compatibleMacrosData } = useProtocolCompatibleMacros(protocolId);
+  const { data: compatibleMacrosData } = useProtocolCompatibleMacros(
+    protocolId,
+    true,
+    protocol.version,
+  );
   const compatibleMacrosCount = compatibleMacrosData?.body.length ?? 0;
+  const { data: versions } = useProtocolVersions(protocolId);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -109,6 +116,18 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       </div>
 
       <div className="space-y-1">
+        <h4 className="text-sm font-medium">Version</h4>
+        {versions && versions.length > 1 ? (
+          <VersionPicker
+            currentVersion={protocol.version}
+            versions={versions.map((v) => ({ version: v.version, updatedAt: v.updatedAt }))}
+          />
+        ) : (
+          <p className="text-muted-foreground text-sm">v{protocol.version}</p>
+        )}
+      </div>
+
+      <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.updated")}</h4>
         <p className="text-muted-foreground text-sm">{formatDate(protocol.updatedAt)}</p>
       </div>
@@ -131,7 +150,11 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       />
 
       {isCreator ? (
-        <ProtocolCompatibleMacrosCard protocolId={protocolId} embedded />
+        <ProtocolCompatibleMacrosCard
+          protocolId={protocolId}
+          protocolVersion={protocol.version}
+          embedded
+        />
       ) : (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{t("protocolSettings.compatibleMacros")}</h4>

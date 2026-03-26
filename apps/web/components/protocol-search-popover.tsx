@@ -76,7 +76,12 @@ function ProtocolList({
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
               {/* Protocol name */}
               <div className="mb-1 flex items-center gap-1">
-                <h4 className="text-foreground truncate text-sm font-medium">{protocol.name}</h4>
+                <h4 className="text-foreground truncate text-sm font-medium">
+                  {protocol.name}
+                  <span className="ml-1 text-xs font-normal text-slate-500">
+                    v{protocol.version}
+                  </span>
+                </h4>
 
                 <Link
                   href={`/${locale}/platform/protocols/${protocol.id}`}

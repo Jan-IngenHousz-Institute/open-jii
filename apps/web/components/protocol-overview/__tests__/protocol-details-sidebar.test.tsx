@@ -74,6 +74,17 @@ vi.mock("../../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatib
   useProtocolCompatibleMacros: useProtocolCompatibleMacrosMock,
 }));
 
+vi.mock("@/hooks/protocol/useProtocolVersions/useProtocolVersions", () => ({
+  useProtocolVersions: vi.fn(() => ({
+    data: [{ version: 1, updatedAt: "2026-01-01T00:00:00Z" }],
+    isLoading: false,
+  })),
+}));
+
+vi.mock("@/components/shared/version-picker", () => ({
+  VersionPicker: () => <div data-testid="version-picker" />,
+}));
+
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
