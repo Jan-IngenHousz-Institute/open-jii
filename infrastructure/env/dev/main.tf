@@ -404,32 +404,22 @@ module "databricks_catalog" {
   depends_on = [module.node_service_principal]
 }
 
-// This resource is imported by hand, databricks_pipeline creates the schema and tables,
-// but we want to manage permissions on the catalog level from Terraform,
-// so we need to import the catalog resource after the pipeline is created and then manage permissions from Terraform 
-module "centrum_schema" {
-  source = "../../modules/databricks/schema"
+// The centrum schema is created by the DLT pipeline at runtime; Terraform only manages
+// its permissions. No import required — databricks_grants targets the schema by name.
+resource "databricks_grants" "centrum_schema" {
+  provider = databricks.workspace
+  schema   = "${module.databricks_catalog.catalog_name}.centrum"
 
-  catalog_name = module.databricks_catalog.catalog_name
-  schema_name  = "centrum"
-  comment      = "Central schema for experiment data"
-
-  grants = {
-    node_service_principal = {
-      principal = module.node_service_principal.service_principal_application_id
-      privileges = [
-        "USE_SCHEMA",
-        "CREATE_TABLE",
-        "CREATE_MATERIALIZED_VIEW",
-        "CREATE_VOLUME",
-        "SELECT",
-        "MODIFY",
-      ]
-    }
-  }
-
-  providers = {
-    databricks.workspace = databricks.workspace
+  grant {
+    principal  = module.node_service_principal.service_principal_application_id
+    privileges = [
+      "USE_SCHEMA",
+      "CREATE_TABLE",
+      "CREATE_MATERIALIZED_VIEW",
+      "CREATE_VOLUME",
+      "SELECT",
+      "MODIFY",
+    ]
   }
 
   depends_on = [module.databricks_catalog]
@@ -482,7 +472,7 @@ module "centrum_pipeline" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.node_cluster_policy, module.centrum_schema]
+  depends_on = [module.node_cluster_policy, databricks_grants.centrum_schema]
 }
 
 module "pipeline_scheduler" {
@@ -697,7 +687,7 @@ module "data_downloads_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_imports_volume" {
@@ -719,7 +709,7 @@ module "data_imports_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_legacy_volume" {
@@ -741,7 +731,7 @@ module "data_legacy_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -785,7 +775,7 @@ module "openjii_project_transfer_requests_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "experiment_annotations_table" {
@@ -822,7 +812,7 @@ module "experiment_annotations_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "experiment_export_metadata_table" {
@@ -859,7 +849,7 @@ module "experiment_export_metadata_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "experiment_custom_metadata_table" {
@@ -895,7 +885,7 @@ module "experiment_custom_metadata_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_schema]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_export_job" {

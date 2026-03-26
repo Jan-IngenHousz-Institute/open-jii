@@ -4,14 +4,8 @@ variable "catalog_name" {
 }
 
 variable "schema_name" {
-  description = "Name of the schema to create"
+  description = "Name of the schema to grant permissions on"
   type        = string
-}
-
-variable "comment" {
-  description = "Human-readable comment for the schema"
-  type        = string
-  default     = ""
 }
 
 variable "grants" {
