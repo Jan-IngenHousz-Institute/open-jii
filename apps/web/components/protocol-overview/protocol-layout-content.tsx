@@ -17,7 +17,12 @@ interface ProtocolLayoutContentProps {
   actions?: React.ReactNode;
 }
 
-export function ProtocolLayoutContent({ id, protocol, children, actions }: ProtocolLayoutContentProps) {
+export function ProtocolLayoutContent({
+  id,
+  protocol,
+  children,
+  actions,
+}: ProtocolLayoutContentProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();

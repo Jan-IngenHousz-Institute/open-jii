@@ -3,7 +3,6 @@
 import { JsonCodeViewer } from "@/components/json-code-viewer";
 import ProtocolCodeEditor from "@/components/protocol-code-editor";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
-
 import type { ProtocolCode } from "@/hooks/useProtocolCodeAutoSave";
 
 interface ProtocolCodePanelProps {
@@ -56,7 +55,7 @@ export function ProtocolCodePanel({
       height={height}
       title={title}
       onEditStart={isCreator ? startEditing : undefined}
-      className={borderless ? "h-full border-0 rounded-none shadow-none" : undefined}
+      className={borderless ? "h-full rounded-none border-0 shadow-none" : undefined}
     />
   );
 }
