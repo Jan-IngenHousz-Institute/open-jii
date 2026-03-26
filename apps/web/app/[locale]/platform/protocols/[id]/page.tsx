@@ -9,11 +9,15 @@ import { InlineEditableDescription } from "@/components/shared/inline-editable-d
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useCodeAutoSave } from "@/hooks/useCodeAutoSave";
+import { useLocale } from "@/hooks/useLocale";
+import { Play } from "lucide-react";
+import Link from "next/link";
 import { use, useCallback } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 type ProtocolCode = Record<string, unknown>[] | string | undefined;
@@ -24,6 +28,7 @@ interface ProtocolOverviewPageProps {
 
 export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
   const { id } = use(params);
+  const locale = useLocale();
   const { data, isLoading, error } = useProtocol(id);
   const { t } = useTranslation();
   const { data: session } = useSession();
@@ -80,6 +85,14 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
       <ProtocolDetailsSidebar protocolId={id} protocol={protocol} />
 
       <div className="flex-1 space-y-10 md:order-1">
+        <div className="-mt-10 flex justify-end">
+          <Button size="sm" asChild>
+            <Link href={`/${locale}/platform/protocols/${id}/run`}>
+              <Play className="mr-2 h-4 w-4" />
+              {t("protocolSettings.testerTitle")}
+            </Link>
+          </Button>
+        </div>
         <InlineEditableDescription
           description={protocol.description ?? ""}
           hasAccess={isCreator}
