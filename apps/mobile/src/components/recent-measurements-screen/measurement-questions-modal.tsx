@@ -90,7 +90,7 @@ export function MeasurementQuestionsModal({
               <Text className={clsx("text-xl font-bold", classes.text)}>{experimentName}</Text>
 
               <View className="mt-2 flex-row flex-wrap items-center gap-2">
-                {!!protocolName && (
+                {protocolName && (
                   <View
                     className="max-w-full flex-row items-center gap-1 rounded-full px-2.5 py-1"
                     style={{ backgroundColor: colors.primary.dark + "15" }}

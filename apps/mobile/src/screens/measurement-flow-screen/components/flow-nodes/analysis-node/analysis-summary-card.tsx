@@ -17,7 +17,7 @@ const answersValueStyle = cva("flex-1", {
 
 interface AnalysisSummaryCardProps {
   experimentName: string;
-  protocolName: string;
+  protocolName?: string;
   questions: AnswerData[];
   displayTimestamp: string;
   onPress: () => void;
@@ -45,16 +45,18 @@ export function AnalysisSummaryCard({
             {experimentName}
           </Text>
         </View>
-        <View className="flex-row items-center">
-          <Text className={clsx("font-semibold", classes.text)}>Protocol: </Text>
-          <Text
-            numberOfLines={1}
-            ellipsizeMode="tail"
-            className={clsx("flex-1", classes.textMuted)}
-          >
-            {protocolName}
-          </Text>
-        </View>
+        {protocolName && (
+          <View className="flex-row items-center">
+            <Text className={clsx("font-semibold", classes.text)}>Protocol: </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className={clsx("flex-1", classes.textMuted)}
+            >
+              {protocolName}
+            </Text>
+          </View>
+        )}
         <View className="flex-row items-center">
           <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
           <Text
