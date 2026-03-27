@@ -123,7 +123,10 @@ resource "aws_iam_role_policy" "lambda_deny" {
         "apigateway:*",
         "cognito-idp:*",
         "cognito-identity:*",
-        "lambda:*"
+        "lambda:*",
+        "ec2:RunInstances",
+        "ec2:TerminateInstances",
+        "ec2:ModifyInstanceAttribute"
       ]
       Resource = "*"
     }]
