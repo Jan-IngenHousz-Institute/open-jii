@@ -4,6 +4,7 @@ import {
   BottomSheetTextInput,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
+import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +15,15 @@ import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/utils/format-time-ago";
+
+const answersValueStyle = cva("flex-1", {
+  variants: {
+    hasAnswers: {
+      true: "",
+      false: "italic",
+    },
+  },
+});
 
 interface CommentModalProps {
   visible: boolean;
@@ -99,10 +109,13 @@ export function CommentModal({
             <Text
               numberOfLines={1}
               ellipsizeMode="tail"
-              className={clsx("flex-1", classes.textMuted)}
+              className={clsx(
+                answersValueStyle({ hasAnswers: questions.length > 0 }),
+                classes.textMuted,
+              )}
             >
               {questions.length === 0
-                ? "None"
+                ? "No questions answered"
                 : questions.map((q) => q.question_answer).join(" | ")}
             </Text>
           </View>

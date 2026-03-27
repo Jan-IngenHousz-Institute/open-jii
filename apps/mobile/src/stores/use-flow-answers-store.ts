@@ -44,11 +44,16 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
         newHistory.push({});
       }
 
-      // Set the answer for the specific cycle and question
-      newHistory[cycle] = {
-        ...newHistory[cycle],
-        [name]: value,
-      };
+      const cycleAnswers = { ...newHistory[cycle] };
+
+      if (value.trim() === "") {
+        // Treat clearing/deselecting as if the question was never answered
+        delete cycleAnswers[name];
+      } else {
+        cycleAnswers[name] = value;
+      }
+
+      newHistory[cycle] = cycleAnswers;
 
       return { answersHistory: newHistory };
     });

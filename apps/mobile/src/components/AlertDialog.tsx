@@ -55,13 +55,13 @@ export function AlertDialog() {
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <Pressable className="flex-1 items-center justify-center bg-black/50" onPress={hide}>
         <Pressable
-          className={clsx("w-[85%] max-w-sm rounded-2xl p-4", classes.card)}
+          className={clsx("w-[85%] max-w-sm rounded-2xl p-4 pb-2.5", classes.card)}
           onPress={(e) => e.stopPropagation()}
         >
           <Text className="mb-2 text-left text-lg font-semibold">{title}</Text>
           <Text className="mb-4 text-left text-sm font-normal">{message}</Text>
 
-          <View className="gap-4">
+          <View className="gap-3.5">
             {buttons.map((button, index) => {
               return (
                 <Button
