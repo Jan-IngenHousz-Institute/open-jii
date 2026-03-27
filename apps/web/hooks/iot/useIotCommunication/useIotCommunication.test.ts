@@ -127,18 +127,14 @@ describe("useIotCommunication", () => {
       });
     });
 
-    it("successfully connects via serial with multispeq", async () => {
+    it("successfully connects via serial with multispeq (skips getDeviceInfo)", async () => {
       const { result } = renderHook(() => useIotCommunication("multispeq", "serial"));
 
       void result.current.connect();
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
-        expect(result.current.deviceInfo).toEqual({
-          device_name: "Test Device",
-          device_version: "1.0.0",
-          device_battery: 85,
-        });
+        expect(result.current.deviceInfo).toBe(null);
         expect(result.current.driver).not.toBeNull();
       });
     });
@@ -150,10 +146,6 @@ describe("useIotCommunication", () => {
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
-        expect(result.current.deviceInfo).toEqual({
-          device_name: "Generic Device",
-          device_version: "1.0.0",
-        });
         expect(result.current.driver).not.toBeNull();
       });
     });
@@ -215,6 +207,40 @@ describe("useIotCommunication", () => {
       await result.current.disconnect();
 
       expect(result.current.isConnected).toBe(false);
+    });
+  });
+
+  describe("device disconnect", () => {
+    it("resets state when device disconnects via transport status change", async () => {
+      // Capture the onStatusChanged callback so we can trigger it
+      let statusCallback: ((connected: boolean, error?: Error) => void) | undefined;
+      const { WebSerialAdapter } = await import("@repo/iot/transport/web");
+      vi.mocked(WebSerialAdapter.requestAndConnect).mockResolvedValue({
+        isConnected: vi.fn().mockReturnValue(true),
+        send: vi.fn(),
+        onDataReceived: vi.fn(),
+        onStatusChanged: vi.fn((cb: (connected: boolean, error?: Error) => void) => {
+          statusCallback = cb;
+        }),
+        disconnect: vi.fn().mockResolvedValue(undefined),
+      });
+
+      const { result } = renderHook(() => useIotCommunication("multispeq", "serial"));
+
+      void result.current.connect();
+
+      await waitFor(() => {
+        expect(result.current.isConnected).toBe(true);
+      });
+
+      // Simulate device disconnect
+      statusCallback?.(false, new Error("Device removed"));
+
+      await waitFor(() => {
+        expect(result.current.isConnected).toBe(false);
+        expect(result.current.driver).toBe(null);
+        expect(result.current.error).toBe("Device removed");
+      });
     });
   });
 

@@ -50,7 +50,6 @@ describe("MultispeqDriver", () => {
     it("should send command with line ending", async () => {
       driver.initialize(transport);
 
-      // Simulate response arriving after send
       vi.mocked(transport.send).mockImplementation(() => {
         setTimeout(() => transport.simulateData('{"result":"ok"}ABCD1234\n'), 0);
         return Promise.resolve();
@@ -77,7 +76,7 @@ describe("MultispeqDriver", () => {
       );
     });
 
-    it("should extract checksum from response (last 8 chars)", async () => {
+    it("should extract checksum from JSON response (last 8 chars)", async () => {
       driver.initialize(transport);
 
       vi.mocked(transport.send).mockImplementation(() => {
@@ -90,6 +89,21 @@ describe("MultispeqDriver", () => {
       expect(result.success).toBe(true);
       expect(result.checksum).toBe("ABCD1234");
       expect(result.data).toEqual({ value: 42 });
+    });
+
+    it("should not extract checksum from plain text response", async () => {
+      driver.initialize(transport);
+
+      vi.mocked(transport.send).mockImplementation(() => {
+        setTimeout(() => transport.simulateData("MultispeQ Ready\n"), 0);
+        return Promise.resolve();
+      });
+
+      const result = await driver.execute("hello");
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe("MultispeQ Ready");
+      expect(result.checksum).toBeUndefined();
     });
 
     it("should buffer incomplete messages until newline", async () => {
@@ -111,20 +125,19 @@ describe("MultispeqDriver", () => {
       expect(result.data).toEqual({ value: 1 });
     });
 
-    it("should return raw string when response is not valid JSON", async () => {
+    it("should return raw string when response is plain text", async () => {
       driver.initialize(transport);
 
-      // "battery:85" + 8-char checksum + newline
       vi.mocked(transport.send).mockImplementation(() => {
-        setTimeout(() => transport.simulateData("battery:8512345678\n"), 0);
+        setTimeout(() => transport.simulateData("battery:85\n"), 0);
         return Promise.resolve();
       });
 
       const result = await driver.execute("battery");
 
       expect(result.success).toBe(true);
-      // extractChecksum removes last 8 chars, tryParseJson returns raw string
       expect(result.data).toBe("battery:85");
+      expect(result.checksum).toBeUndefined();
     });
 
     it("should return failure on transport error", async () => {
@@ -147,11 +160,11 @@ describe("MultispeqDriver", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // battery command
-          setTimeout(() => transport.simulateData("battery:9212345678\n"), 0);
+          // battery command — plain text
+          setTimeout(() => transport.simulateData("battery:92\n"), 0);
         } else {
-          // hello command
-          setTimeout(() => transport.simulateData("MultispeQ_12345678\n"), 0);
+          // hello command — plain text
+          setTimeout(() => transport.simulateData("MultispeQ_\n"), 0);
         }
         return Promise.resolve();
       });
@@ -171,8 +184,8 @@ describe("MultispeqDriver", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // battery succeeds
-          setTimeout(() => transport.simulateData("battery:8512345678\n"), 0);
+          // battery succeeds — plain text
+          setTimeout(() => transport.simulateData("battery:85\n"), 0);
           return Promise.resolve();
         }
         // hello fails
@@ -195,8 +208,8 @@ describe("MultispeqDriver", () => {
           // battery fails
           return Promise.reject(new Error("timeout"));
         }
-        // hello succeeds
-        setTimeout(() => transport.simulateData("MultispeQ_12345678\n"), 0);
+        // hello succeeds — plain text
+        setTimeout(() => transport.simulateData("MultispeQ_\n"), 0);
         return Promise.resolve();
       });
 
@@ -252,11 +265,11 @@ describe("MultispeqDriver", () => {
       vi.mocked(transport.send).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // battery returns non-numeric
-          setTimeout(() => transport.simulateData("battery:abc12345678\n"), 0);
+          // battery returns non-numeric — plain text
+          setTimeout(() => transport.simulateData("battery:abc\n"), 0);
         } else {
-          // hello succeeds
-          setTimeout(() => transport.simulateData("MultispeQ_12345678\n"), 0);
+          // hello succeeds — plain text
+          setTimeout(() => transport.simulateData("MultispeQ_\n"), 0);
         }
         return Promise.resolve();
       });

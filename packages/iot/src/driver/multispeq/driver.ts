@@ -67,13 +67,18 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     this.bufferLength = 0;
 
     const cleanData = removeLineEnding(fullData);
-    const { data: jsonData, checksum } = extractChecksum(
+
+    // Only extract checksum if the data portion (without last 8 chars) is valid JSON.
+    // Plain text responses like "MultispeQ Ready" don't have checksums.
+    const { data: possibleJson, checksum: possibleChecksum } = extractChecksum(
       cleanData,
       MULTISPEQ_FRAMING.CHECKSUM_LENGTH,
     );
+    const parsed = tryParseJson(possibleJson);
+    const hasChecksum = parsed !== possibleJson; // tryParseJson returns the original string if parsing fails
 
-    // Try to parse as JSON, fall back to raw string
-    const parsedData: unknown = tryParseJson(jsonData);
+    const parsedData = hasChecksum ? parsed : tryParseJson(cleanData);
+    const checksum = hasChecksum ? possibleChecksum : undefined;
 
     // Emit response event
     void this.emitter.emit("receivedReplyFromDevice", {

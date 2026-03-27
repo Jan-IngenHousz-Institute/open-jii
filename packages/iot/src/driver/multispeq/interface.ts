@@ -5,7 +5,7 @@
 /** MultispeQ-specific events */
 export interface MultispeqStreamEvents extends Record<string, unknown> {
   sendCommandToDevice: string | object;
-  receivedReplyFromDevice: { data: unknown; checksum: string };
+  receivedReplyFromDevice: { data: unknown; checksum?: string };
   bufferOverflow: { discardedBytes: number };
   destroy: void;
 }
@@ -13,7 +13,7 @@ export interface MultispeqStreamEvents extends Record<string, unknown> {
 /** MultispeQ command result */
 export interface MultispeqCommandResult<T = unknown> {
   data: T;
-  checksum: string;
+  checksum?: string;
 }
 
 /** MultispeQ device info */

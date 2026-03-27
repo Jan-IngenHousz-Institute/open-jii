@@ -71,6 +71,7 @@ export function useIotCommunication(
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [driver, setDriver] = useState<IDeviceDriver | null>(null);
   const driverRef = useRef<IDeviceDriver | null>(null);
+  const adapterRef = useRef<ITransportAdapter | null>(null);
 
   // Keep ref in sync so the unmount cleanup always sees the latest driver
   useEffect(() => {
@@ -98,10 +99,21 @@ export function useIotCommunication(
       const newDriver = createDriver(sensorFamily);
       await newDriver.initialize(adapter);
 
-      const info = await newDriver.getDeviceInfo?.();
+      // Listen for device disconnect events from the transport
+      adapter.onStatusChanged((connected, err) => {
+        if (!connected) {
+          console.debug("[IoT] Device disconnected", err);
+          setIsConnected(false);
+          setDriver(null);
+          setDeviceInfo(null);
+          setError(err ? err.message : "Device disconnected");
+          driverRef.current = null;
+          adapterRef.current = null;
+        }
+      });
 
+      adapterRef.current = adapter;
       setDriver(newDriver);
-      setDeviceInfo(info ? (info as DeviceInfo) : null);
       setIsConnected(true);
     } catch (err) {
       // Release the port/adapter so the user can retry
