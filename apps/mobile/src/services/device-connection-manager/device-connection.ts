@@ -5,6 +5,15 @@ import { setSerialPortConnection } from "./serial-port-connection";
 
 export async function connectToDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
+    // Always clean up any stale native socket first — after a BT toggle or
+    // unexpected disconnect the old connection reference may still linger,
+    // causing the next connectToDevice call to fail.
+    try {
+      await RNBluetoothClassic.disconnectFromDevice(device.id);
+    } catch {
+      // Already disconnected — expected.
+    }
+
     try {
       await RNBluetoothClassic.connectToDevice(device.id);
     } catch {

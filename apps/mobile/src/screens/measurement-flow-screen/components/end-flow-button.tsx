@@ -15,7 +15,7 @@ export function EndFlowButton({ onPress }: EndFlowButtonProps) {
         onPress: onPress,
       },
       {
-        text: "Continue flow",
+        text: "Continue",
         variant: "ghost",
       },
     ]);

@@ -2,7 +2,7 @@ import React from "react";
 import { View, ScrollView } from "react-native";
 
 import { FlowNode } from "../../types";
-import { AnalysisNode } from "../flow-nodes/analysis-node";
+import { AnalysisNode } from "../flow-nodes/analysis-node/analysis-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
 import { QuestionNode } from "../flow-nodes/question-node";

@@ -106,7 +106,12 @@ export function NavigationButtons() {
     <Animated.View className={clsx("w-full", classes.card)} style={navStyle}>
       {isFromOverview ? (
         <View className="px-4 py-3">
-          <Button title="Back to overview" onPress={returnToOverview} style={{ height: 44 }} />
+          <Button
+            title="Back to overview"
+            onPress={returnToOverview}
+            isDisabled={isNextDisabled}
+            style={{ height: 44 }}
+          />
         </View>
       ) : (
         <View className="flex-row items-center justify-between py-3">
