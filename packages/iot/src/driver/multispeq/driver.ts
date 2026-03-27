@@ -117,14 +117,16 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
 
   async getDeviceInfo(): Promise<MultispeqDeviceInfo> {
     // device_info returns JSON with name, version, id, battery, firmware, config
-    const result = await this.execute<MultispeqDeviceInfo>(MULTISPEQ_COMMANDS.DEVICE_INFO);
+    // const result = await this.execute<MultispeqDeviceInfo>(MULTISPEQ_COMMANDS.DEVICE_INFO);
 
-    if (result.success && typeof result.data === "object") {
-      return result.data;
-    }
+    // if (result.success && typeof result.data === "object") {
+    //   return result.data;
+    // }
 
     // Fallback: try battery command alone (older firmware or partial failure)
     const batteryResult = await this.execute<string>(MULTISPEQ_COMMANDS.BATTERY);
+    const helloResult = await this.execute<string>(MULTISPEQ_COMMANDS.HELLO);
+
     const info: MultispeqDeviceInfo = {};
 
     if (batteryResult.success && typeof batteryResult.data === "string") {
@@ -133,6 +135,10 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
       if (!isNaN(battery)) {
         info.device_battery = battery;
       }
+    }
+
+    if (helloResult.success && typeof helloResult.data === "string") {
+      info.device_name = helloResult.data;
     }
 
     return info;

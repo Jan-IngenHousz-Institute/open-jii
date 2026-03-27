@@ -140,70 +140,70 @@ describe("MultispeqDriver", () => {
   });
 
   describe("getDeviceInfo", () => {
-    it("should return parsed device_info JSON when available", async () => {
-      driver.initialize(transport);
-
-      const deviceInfoJson = {
-        device_name: "MultispeQ",
-        device_version: "2.0038",
-        device_id: "abc-123",
-        device_battery: 92,
-      };
-      const jsonStr = JSON.stringify(deviceInfoJson);
-      const checksum = "ABCD1234";
-
-      vi.mocked(transport.send).mockImplementation(() => {
-        setTimeout(() => transport.simulateData(`${jsonStr}${checksum}\n`), 0);
-        return Promise.resolve();
-      });
-
-      const info = await driver.getDeviceInfo();
-
-      expect(transport.send).toHaveBeenCalledWith(`device_info${MULTISPEQ_FRAMING.LINE_ENDING}`);
-      expect(info.device_battery).toBe(92);
-      expect(info.device_version).toBe("2.0038");
-      expect(info.device_id).toBe("abc-123");
-    });
-
-    it("should fall back to battery command when device_info fails", async () => {
+    it("should return battery and device name from battery and hello commands", async () => {
       driver.initialize(transport);
 
       let callCount = 0;
       vi.mocked(transport.send).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // device_info fails
-          return Promise.reject(new Error("timeout"));
+          // battery command
+          setTimeout(() => transport.simulateData("battery:9212345678\n"), 0);
+        } else {
+          // hello command
+          setTimeout(() => transport.simulateData("MultispeQ_12345678\n"), 0);
         }
-        // battery succeeds
-        setTimeout(() => transport.simulateData("battery:8512345678\n"), 0);
         return Promise.resolve();
+      });
+
+      const info = await driver.getDeviceInfo();
+
+      expect(transport.send).toHaveBeenCalledWith(`battery${MULTISPEQ_FRAMING.LINE_ENDING}`);
+      expect(transport.send).toHaveBeenCalledWith(`hello${MULTISPEQ_FRAMING.LINE_ENDING}`);
+      expect(info.device_battery).toBe(92);
+      expect(info.device_name).toBe("MultispeQ_");
+    });
+
+    it("should return only battery when hello fails", async () => {
+      driver.initialize(transport);
+
+      let callCount = 0;
+      vi.mocked(transport.send).mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // battery succeeds
+          setTimeout(() => transport.simulateData("battery:8512345678\n"), 0);
+          return Promise.resolve();
+        }
+        // hello fails
+        return Promise.reject(new Error("timeout"));
       });
 
       const info = await driver.getDeviceInfo();
 
       expect(info.device_battery).toBe(85);
+      expect(info.device_name).toBeUndefined();
     });
 
-    it("should fall back to battery when device_info returns non-object", async () => {
+    it("should return only device name when battery fails", async () => {
       driver.initialize(transport);
 
       let callCount = 0;
       vi.mocked(transport.send).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // device_info returns a raw string (older firmware)
-          setTimeout(() => transport.simulateData("unknown_cmd12345678\n"), 0);
-        } else {
-          // battery command
-          setTimeout(() => transport.simulateData("battery:7012345678\n"), 0);
+          // battery fails
+          return Promise.reject(new Error("timeout"));
         }
+        // hello succeeds
+        setTimeout(() => transport.simulateData("MultispeQ_12345678\n"), 0);
         return Promise.resolve();
       });
 
       const info = await driver.getDeviceInfo();
 
-      expect(info.device_battery).toBe(70);
+      expect(info.device_battery).toBeUndefined();
+      expect(info.device_name).toBe("MultispeQ_");
     });
 
     it("should return empty info when both commands fail", async () => {
@@ -245,25 +245,26 @@ describe("MultispeqDriver", () => {
   });
 
   describe("getDeviceInfo edge cases", () => {
-    it("should return empty info when battery fallback value is NaN", async () => {
+    it("should return only device name when battery value is NaN", async () => {
       driver.initialize(transport);
 
       let callCount = 0;
       vi.mocked(transport.send).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // device_info returns non-object
-          setTimeout(() => transport.simulateData("not_json_12345678\n"), 0);
-        } else {
           // battery returns non-numeric
           setTimeout(() => transport.simulateData("battery:abc12345678\n"), 0);
+        } else {
+          // hello succeeds
+          setTimeout(() => transport.simulateData("MultispeQ_12345678\n"), 0);
         }
         return Promise.resolve();
       });
 
       const info = await driver.getDeviceInfo();
 
-      expect(info).toEqual({});
+      expect(info.device_battery).toBeUndefined();
+      expect(info.device_name).toBe("MultispeQ_");
     });
   });
 });
