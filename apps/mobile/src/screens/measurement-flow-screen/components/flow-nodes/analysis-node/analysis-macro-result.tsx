@@ -4,11 +4,13 @@ import { View, Text } from "react-native";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
 import { useTheme } from "~/hooks/use-theme";
 
+import type { Macro } from "@repo/api";
+
 interface AnalysisMacroResultProps {
-  macro: any;
+  macro: Macro | undefined;
   isLoading: boolean;
   macroId: string;
-  scanResult: any;
+  scanResult: object;
   onCommentPress: () => void;
 }
 

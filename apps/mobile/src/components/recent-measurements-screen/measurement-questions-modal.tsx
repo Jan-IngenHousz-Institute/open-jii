@@ -84,55 +84,59 @@ export function MeasurementQuestionsModal({
         stackBehavior="push"
       >
         {/* Header */}
-        <View className={clsx("border-b px-4 pb-4 pt-2", classes.border, classes.background)}>
-          <View className="flex-row items-start justify-between">
-            <View className="mr-3 flex-1">
-              <Text className={clsx("text-xl font-bold", classes.text)}>{experimentName}</Text>
+        <View
+          className={clsx(
+            "flex-row items-start justify-between border-b px-4 pb-4 pt-2",
+            classes.border,
+            classes.background,
+          )}
+        >
+          <View className="mr-3 flex-1">
+            <Text className={clsx("text-xl font-bold", classes.text)}>{experimentName}</Text>
 
-              <View className="mt-2 flex-row flex-wrap items-center gap-2">
-                {protocolName && (
-                  <View
-                    className="max-w-full flex-row items-center gap-1 rounded-full px-2.5 py-1"
-                    style={{ backgroundColor: colors.primary.dark + "15" }}
-                  >
-                    <FlaskConical size={11} color={colors.primary.dark} />
-                    <Text
-                      className="shrink text-xs font-semibold"
-                      style={{ color: colors.primary.dark }}
-                    >
-                      {protocolName}
-                    </Text>
-                  </View>
-                )}
-
-                <View className="flex-row items-center gap-1">
-                  <Clock size={11} color={colors.inactive} />
-                  <Text className={clsx("text-xs", classes.textMuted)}>{timestamp}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View className="flex-row items-center gap-2">
-              {isUnsynced && (
-                <TouchableOpacity
-                  onPress={() => setCommentModalVisible(true)}
-                  className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
-                  style={{ backgroundColor: colors.surface }}
-                  activeOpacity={0.7}
+            <View className="mt-2 flex-row flex-wrap items-center gap-2">
+              {protocolName && (
+                <View
+                  className="max-w-full flex-row items-center gap-1 rounded-full px-2.5 py-1"
+                  style={{ backgroundColor: colors.primary.dark + "15" }}
                 >
-                  <MessageCircle size={20} color={colors.onSurface} />
-                </TouchableOpacity>
+                  <FlaskConical size={11} color={colors.primary.dark} />
+                  <Text
+                    className="shrink text-xs font-semibold"
+                    style={{ color: colors.primary.dark }}
+                  >
+                    {protocolName}
+                  </Text>
+                </View>
               )}
 
+              <View className="flex-row items-center gap-1">
+                <Clock size={11} color={colors.inactive} />
+                <Text className={clsx("text-xs", classes.textMuted)}>{timestamp}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View className="flex-row items-center gap-2">
+            {isUnsynced && (
               <TouchableOpacity
-                onPress={onClose}
-                className="h-10 w-10 items-center justify-center rounded-full"
+                onPress={() => setCommentModalVisible(true)}
+                className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
                 style={{ backgroundColor: colors.surface }}
                 activeOpacity={0.7}
               >
-                <X size={20} color={colors.onSurface} />
+                <MessageCircle size={20} color={colors.onSurface} />
               </TouchableOpacity>
-            </View>
+            )}
+
+            <TouchableOpacity
+              onPress={onClose}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.surface }}
+              activeOpacity={0.7}
+            >
+              <X size={20} color={colors.onSurface} />
+            </TouchableOpacity>
           </View>
         </View>
 
