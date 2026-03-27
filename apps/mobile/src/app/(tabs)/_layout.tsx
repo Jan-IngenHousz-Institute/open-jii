@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
+import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
 import { useIsOnline } from "~/hooks/use-is-online";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
@@ -25,6 +26,8 @@ export default function TabLayout() {
   useEffect(() => {
     void hadActiveSession().then(setHadSession);
   }, []);
+
+  useAutoReconnect();
 
   const inMeasureTab = segments.includes("measurement-flow");
 
