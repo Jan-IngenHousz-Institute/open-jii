@@ -48,7 +48,7 @@ export function NewProtocolForm() {
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
-    onError: () => {
+    onSettled: () => {
       setIsSubmitting(false);
     },
     onSuccess: (data) => {
@@ -72,7 +72,6 @@ export function NewProtocolForm() {
       router.push(`/${locale}/platform/protocols/${id}`);
     },
     onError: (error) => {
-      if (error instanceof Error) return;
       const message =
         error.status === 409
           ? t("protocols.nameAlreadyExists")

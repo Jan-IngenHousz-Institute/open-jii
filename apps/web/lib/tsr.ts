@@ -44,7 +44,15 @@ export const tsr = initTsrReactQuery(contract, {
   credentials: "include",
 });
 
+type RemapOnError<T> = Omit<T, "onError"> & {
+  [K in Extract<keyof T, "onError">]?: T[K] extends
+    | ((error: infer E, ...args: infer A) => infer R)
+    | undefined
+    ? (error: Exclude<E, Error>, ...args: A) => R
+    : T[K];
+};
+
 export type TsRestMutationOptions<
   TRoute extends AppRoute,
   TKeys extends keyof UseMutationOptions<TRoute, InferClientArgs<typeof tsr>> = "onSuccess" | "onError",
-> = Pick<UseMutationOptions<TRoute, InferClientArgs<typeof tsr>>, TKeys>;
+> = RemapOnError<Pick<UseMutationOptions<TRoute, InferClientArgs<typeof tsr>>, TKeys>>;
