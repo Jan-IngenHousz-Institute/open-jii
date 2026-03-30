@@ -3,6 +3,16 @@ provider "aws" {
   region = "us-east-1"
 }
 
+# Pre-compute scope-down data so both managed rule groups share identical logic.
+# The list is non-empty only when managed_rules_excluded_paths is set, driving
+# the dynamic "scope_down_statement" for_each in each rule.
+locals {
+  managed_rules_scope_down_statement = length(var.managed_rules_excluded_paths) > 0 ? [{
+    single_path = length(var.managed_rules_excluded_paths) == 1 ? [var.managed_rules_excluded_paths[0]] : []
+    multi_paths = length(var.managed_rules_excluded_paths) >= 2 ? var.managed_rules_excluded_paths : []
+  }] : []
+}
+
 # Web Application Firewall (WAF) v2 for comprehensive application-layer protection
 # WAF inspects HTTP/HTTPS requests before they reach the ALB
 # Provides protection against common web exploits and application-layer attacks
@@ -77,14 +87,16 @@ resource "aws_wafv2_web_acl" "main" {
           }
         }
 
-        # Exclude configured paths from this rule group entirely via scope-down
+        # Exclude configured paths from this rule group entirely via scope-down.
+        # Uses local.managed_rules_scope_down_statement so both managed rule groups
+        # share identical scope-down logic without duplication.
         dynamic "scope_down_statement" {
-          for_each = length(var.managed_rules_excluded_paths) > 0 ? [1] : []
+          for_each = local.managed_rules_scope_down_statement
           content {
             not_statement {
               statement {
                 dynamic "byte_match_statement" {
-                  for_each = length(var.managed_rules_excluded_paths) == 1 ? [var.managed_rules_excluded_paths[0]] : []
+                  for_each = scope_down_statement.value.single_path
                   content {
                     search_string         = byte_match_statement.value
                     positional_constraint = "STARTS_WITH"
@@ -99,10 +111,10 @@ resource "aws_wafv2_web_acl" "main" {
                 }
 
                 dynamic "or_statement" {
-                  for_each = length(var.managed_rules_excluded_paths) >= 2 ? [1] : []
+                  for_each = length(scope_down_statement.value.multi_paths) >= 2 ? [1] : []
                   content {
                     dynamic "statement" {
-                      for_each = var.managed_rules_excluded_paths
+                      for_each = scope_down_statement.value.multi_paths
                       content {
                         byte_match_statement {
                           search_string         = statement.value
@@ -150,14 +162,16 @@ resource "aws_wafv2_web_acl" "main" {
         name        = "AWSManagedRulesKnownBadInputsRuleSet"
         vendor_name = "AWS"
 
-        # Exclude configured paths from this rule group entirely via scope-down
+        # Exclude configured paths from this rule group entirely via scope-down.
+        # Uses local.managed_rules_scope_down_statement so both managed rule groups
+        # share identical scope-down logic without duplication.
         dynamic "scope_down_statement" {
-          for_each = length(var.managed_rules_excluded_paths) > 0 ? [1] : []
+          for_each = local.managed_rules_scope_down_statement
           content {
             not_statement {
               statement {
                 dynamic "byte_match_statement" {
-                  for_each = length(var.managed_rules_excluded_paths) == 1 ? [var.managed_rules_excluded_paths[0]] : []
+                  for_each = scope_down_statement.value.single_path
                   content {
                     search_string         = byte_match_statement.value
                     positional_constraint = "STARTS_WITH"
@@ -172,10 +186,10 @@ resource "aws_wafv2_web_acl" "main" {
                 }
 
                 dynamic "or_statement" {
-                  for_each = length(var.managed_rules_excluded_paths) >= 2 ? [1] : []
+                  for_each = length(scope_down_statement.value.multi_paths) >= 2 ? [1] : []
                   content {
                     dynamic "statement" {
-                      for_each = var.managed_rules_excluded_paths
+                      for_each = scope_down_statement.value.multi_paths
                       content {
                         byte_match_statement {
                           search_string         = statement.value
