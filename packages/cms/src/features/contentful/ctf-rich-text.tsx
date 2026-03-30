@@ -18,20 +18,24 @@ export interface ContentfulRichTextInterface {
       block: EmbeddedEntryType[];
     };
   };
+  imageClassName?: string;
 }
 
 // ---- Embedded Entry Renderer ---- //
-export const EmbeddedEntry = (entry: EmbeddedEntryType) => {
+export const EmbeddedEntry = (entry: EmbeddedEntryType & { imageClassName?: string }) => {
   switch (entry?.__typename) {
     case "ComponentRichImage":
-      return <ArticleImage image={entry} />;
+      return <ArticleImage image={entry} imageClassName={entry.imageClassName} />;
     default:
       return null;
   }
 };
 
 // ---- Base Rich Text Options ---- //
-export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInterface): Options => ({
+export const contentfulBaseRichTextOptions = ({
+  links,
+  imageClassName,
+}: ContentfulRichTextInterface): Options => ({
   renderMark: {
     [MARKS.BOLD]: (text) => <strong className="font-semibold">{text}</strong>,
     [MARKS.ITALIC]: (text) => <em className="italic">{text}</em>,
@@ -120,14 +124,14 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
         (item: EmbeddedEntryType) => item?.sys.id === targetId,
       );
       if (!entry) return null;
-      return <EmbeddedEntry {...entry} />;
+      return <EmbeddedEntry {...entry} imageClassName={imageClassName} />;
     },
   },
 });
 
 // ---- Rich Text Component ---- //
-export const CtfRichText = ({ json, links }: ContentfulRichTextInterface) => {
-  const baseOptions = contentfulBaseRichTextOptions({ json, links });
+export const CtfRichText = ({ json, links, imageClassName }: ContentfulRichTextInterface) => {
+  const baseOptions = contentfulBaseRichTextOptions({ json, links, imageClassName });
 
   return (
     <div className="w-full break-words leading-relaxed text-gray-900">
