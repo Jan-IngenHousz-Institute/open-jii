@@ -560,6 +560,8 @@
     "protocolCreated": "Protokoll erfolgreich erstellt",
     "protocolUpdated": "Protokoll erfolgreich aktualisiert",
     "protocolDeleted": "Protokoll erfolgreich gelöscht",
+    "nameAlreadyExists": "Ein Protokoll mit diesem Namen existiert bereits. Bitte wählen Sie einen anderen Namen.",
+    "createError": "Protokoll konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
     "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Protokolle.",
     "protocol": "Protokoll",
     "settings": "Protokolleinstellungen",

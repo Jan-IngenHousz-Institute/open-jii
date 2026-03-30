@@ -48,6 +48,7 @@ export const macroContract = c.router({
     responses: {
       201: zMacro,
       400: zMacroErrorResponse,
+      409: zMacroErrorResponse,
     },
     summary: "Create a new macro",
     description:
