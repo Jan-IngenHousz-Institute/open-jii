@@ -57,7 +57,9 @@ export function NewMacroForm() {
   const addProtocolsMutationRef = useRef<ReturnType<typeof useAddCompatibleProtocol>>(null);
 
   const { mutate: createMacro, isPending } = useMacroCreate({
-    onSuccess: (id: string) => {
+    onSuccess: (data) => {
+      const id = data.body.id;
+      toast({ description: t("macros.macroCreated") });
       // Link selected protocols after macro creation, then redirect
       if (selectedProtocols.length > 0 && addProtocolsMutationRef.current) {
         addProtocolsMutationRef.current
@@ -74,6 +76,11 @@ export function NewMacroForm() {
         return;
       }
       router.push(`/${locale}/platform/macros/${id}`);
+    },
+    onError: (error) => {
+      if (error instanceof Error) return;
+      const message = error.status === 409 ? t("macros.nameAlreadyExists") : t("macros.createError");
+      toast({ description: message, variant: "destructive" });
     },
   });
 
@@ -107,7 +114,6 @@ export function NewMacroForm() {
         code: code,
       },
     });
-    toast({ description: t("macros.macroCreated") });
   }
 
   const selectedProtocolIds = useMemo(

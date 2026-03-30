@@ -11,3 +11,10 @@ export function parseApiError(error: unknown) {
   }
   return undefined;
 }
+
+export function getApiErrorStatus(error: unknown): number | undefined {
+  if (typeof error === "object" && error !== null && "status" in error) {
+    return error.status as number;
+  }
+  return undefined;
+}

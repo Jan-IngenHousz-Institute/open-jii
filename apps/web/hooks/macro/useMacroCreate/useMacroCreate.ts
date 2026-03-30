@@ -1,21 +1,21 @@
-import { tsr } from "../../../lib/tsr";
+import { contract, tsr } from "../../../lib/tsr";
+import type { TsRestMutationOptions } from "../../../lib/tsr";
 
-interface UseMacroCreateOptions {
-  onSuccess?: (id: string) => void;
-  onError?: (error: Error) => void;
-}
+export type UseMacroCreateOptions = TsRestMutationOptions<
+  typeof contract.macros.createMacro,
+  "onSuccess" | "onError"
+>;
 
 export function useMacroCreate(options?: UseMacroCreateOptions) {
   const queryClient = tsr.useQueryClient();
 
   return tsr.macros.createMacro.useMutation({
-    onSuccess: (result) => {
-      // Invalidate and refetch macros list
+    onSuccess: (...args) => {
       void queryClient.invalidateQueries({ queryKey: ["macros"] });
-      options?.onSuccess?.(result.body.id);
+      options?.onSuccess?.(...args);
     },
-    onError: (error) => {
-      options?.onError?.(error as Error);
+    onError: (...args) => {
+      options?.onError?.(...args);
     },
   });
 }

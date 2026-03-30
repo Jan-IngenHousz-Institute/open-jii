@@ -51,8 +51,10 @@ export function NewProtocolForm() {
     onError: () => {
       setIsSubmitting(false);
     },
-    onSuccess: (id: string) => {
+    onSuccess: (data) => {
+      const id = data.body.id;
       toast({ description: t("protocols.protocolCreated") });
+      // Link selected macros after protocol creation, then redirect
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
@@ -68,6 +70,14 @@ export function NewProtocolForm() {
         return;
       }
       router.push(`/${locale}/platform/protocols/${id}`);
+    },
+    onError: (error) => {
+      if (error instanceof Error) return;
+      const message =
+        error.status === 409
+          ? t("protocols.nameAlreadyExists")
+          : t("protocols.createError");
+      toast({ description: message, variant: "destructive" });
     },
   });
 
