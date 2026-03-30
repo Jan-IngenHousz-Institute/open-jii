@@ -47,6 +47,7 @@ export const protocolContract = c.router({
     responses: {
       201: zProtocol,
       400: zProtocolErrorResponse,
+      409: zProtocolErrorResponse,
     },
     summary: "Create a new protocol",
     description: "Creates a new protocol with the given properties",
