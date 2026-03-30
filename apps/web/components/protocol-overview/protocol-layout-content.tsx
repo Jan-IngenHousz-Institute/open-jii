@@ -14,9 +14,15 @@ interface ProtocolLayoutContentProps {
   id: string;
   protocol: Protocol;
   children: React.ReactNode;
+  actions?: React.ReactNode;
 }
 
-export function ProtocolLayoutContent({ id, protocol, children }: ProtocolLayoutContentProps) {
+export function ProtocolLayoutContent({
+  id,
+  protocol,
+  children,
+  actions,
+}: ProtocolLayoutContentProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();
@@ -50,6 +56,7 @@ export function ProtocolLayoutContent({ id, protocol, children }: ProtocolLayout
             <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>
           ) : undefined
         }
+        actions={actions}
       />
       {children}
     </div>

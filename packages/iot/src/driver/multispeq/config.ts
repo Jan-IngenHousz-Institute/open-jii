@@ -42,3 +42,9 @@ export const MULTISPEQ_FRAMING = {
 
 /** Supported MultispeQ transport types */
 export type MultispeqTransportType = "bluetooth-classic" | "usb";
+
+/**
+ * Shared transport-support registry for all device types.
+ * Re-exported for convenience; see core/types.ts for per-device entries.
+ */
+export { DEVICE_TRANSPORT_SUPPORT } from "../../core/types";

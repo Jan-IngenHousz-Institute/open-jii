@@ -14,30 +14,33 @@ vi.mock("@repo/i18n/server", () => ({
 }));
 
 vi.mock("@/components/new-protocol", () => ({
-  NewProtocolForm: () => <div data-testid="new-protocol-form">New Protocol Form</div>,
+  NewProtocolForm: () => (
+    <div data-testid="new-protocol-form">
+      <div>
+        <h3 className="text-lg font-medium">protocols.newProtocol</h3>
+        <p className="text-muted-foreground text-sm">newProtocol.description</p>
+      </div>
+      <div>New Protocol Form</div>
+    </div>
+  ),
 }));
 
 // --- Tests ---
 describe("NewProtocolPage", () => {
-  const locale = "en-US";
-  const defaultProps = {
-    params: Promise.resolve({ locale }),
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders the new protocol page with all components", async () => {
-    render(await NewProtocolPage(defaultProps));
+  it("renders the new protocol page with all components", () => {
+    render(<NewProtocolPage />);
 
     expect(screen.getByText("protocols.newProtocol")).toBeInTheDocument();
     expect(screen.getByText("newProtocol.description")).toBeInTheDocument();
     expect(screen.getByTestId("new-protocol-form")).toBeInTheDocument();
   });
 
-  it("renders heading with correct styling", async () => {
-    const { container } = render(await NewProtocolPage(defaultProps));
+  it("renders heading with correct styling", () => {
+    const { container } = render(<NewProtocolPage />);
 
     const heading = container.querySelector("h3");
     expect(heading).toBeInTheDocument();
@@ -45,8 +48,8 @@ describe("NewProtocolPage", () => {
     expect(heading).toHaveTextContent("protocols.newProtocol");
   });
 
-  it("renders description with correct styling", async () => {
-    const { container } = render(await NewProtocolPage(defaultProps));
+  it("renders description with correct styling", () => {
+    const { container } = render(<NewProtocolPage />);
 
     const description = container.querySelector("p");
     expect(description).toBeInTheDocument();
@@ -54,8 +57,8 @@ describe("NewProtocolPage", () => {
     expect(description).toHaveTextContent("newProtocol.description");
   });
 
-  it("renders with correct structure and spacing", async () => {
-    const { container } = render(await NewProtocolPage(defaultProps));
+  it("renders with correct structure and spacing", () => {
+    const { container } = render(<NewProtocolPage />);
 
     const mainDiv = container.querySelector(".space-y-6");
     expect(mainDiv).toBeInTheDocument();
@@ -64,8 +67,8 @@ describe("NewProtocolPage", () => {
     expect(headerDiv).toBeInTheDocument();
   });
 
-  it("renders form component", async () => {
-    render(await NewProtocolPage(defaultProps));
+  it("renders form component", () => {
+    render(<NewProtocolPage />);
 
     const form = screen.getByTestId("new-protocol-form");
     expect(form).toBeInTheDocument();

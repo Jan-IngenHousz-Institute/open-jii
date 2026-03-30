@@ -600,7 +600,25 @@
     "codePlaceholder": "Protokollcode als JSON eingeben",
     "finalizeSetup": "Protokoll erstellen",
     "compatibleMacros": "Kompatible Makros",
-    "compatibleMacrosDescription": "Optional kompatible Makros für dieses Protokoll auswählen"
+    "compatibleMacrosDescription": "Optional kompatible Makros für dieses Protokoll auswählen",
+    "testerTitle": "Verbinden & Testen",
+    "detailsStepTitle": "Details",
+    "detailsStepDescription": "Geben Sie Informationen zu Ihrem Protokoll ein",
+    "codeStepTitle": "Code & Test",
+    "codeStepDescription": "Schreiben und testen Sie Ihren Protokollcode",
+    "reviewStepTitle": "Überprüfung",
+    "reviewStepDescription": "Überprüfen Sie Ihr Protokoll vor dem Erstellen",
+    "reviewYourProtocol": "Protokoll überprüfen",
+    "reviewAllDetails": "Bitte überprüfen Sie alle Details, bevor Sie Ihr Protokoll erstellen. Sie können zurückgehen, um Änderungen vorzunehmen.",
+    "protocolName": "Protokollname",
+    "protocolCode": "Protokollcode",
+    "sensorFamily": "Sensor-Familie",
+    "noDescription": "Keine Beschreibung vorhanden",
+    "noMacrosAdded": "Keine Makros hinzugefügt",
+    "unsavedChangesTitle": "Ungespeicherte Änderungen",
+    "unsavedChangesMessage": "Sie haben begonnen, ein neues Protokoll zu erstellen. Möchten Sie die Seite wirklich verlassen? Alle Fortschritte gehen verloren.",
+    "unsavedStay": "Auf der Seite bleiben",
+    "unsavedLeave": "Seite verlassen"
   },
   "protocolSettings": {
     "loading": "Protokolleinstellungen werden geladen...",
@@ -629,6 +647,8 @@
     "compatibleMacros": "Kompatible Makros",
     "compatibleMacrosDescription": "Makros, die bekanntermaßen mit diesem Protokoll funktionieren. Diese werden im Flow-Builder empfohlen.",
     "noCompatibleMacros": "Noch keine kompatiblen Makros verknüpft.",
-    "addCompatibleMacro": "Kompatibles Makro suchen und hinzufügen..."
+    "addCompatibleMacro": "Kompatibles Makro suchen und hinzufügen...",
+    "detailsTitle": "Protokolldetails",
+    "testerTitle": "Verbinden & Testen"
   }
 }

@@ -2,62 +2,57 @@
 
 import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { UseFormReturn } from "react-hook-form";
+import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { CreateProtocolRequestBody, Macro } from "@repo/api";
-import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  WizardForm,
 } from "@repo/ui/components";
+import type { WizardStep, WizardStepProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { tsr } from "../../lib/tsr";
-import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
+import { IotProtocolRunner } from "../iot/iot-protocol-runner";
 import ProtocolCodeEditor from "../protocol-code-editor";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
+import { CodeTestStep, codeSchema } from "./steps/code-test-step";
+import { DetailsStep, detailsSchema } from "./steps/details-step";
+import { ReviewStep, reviewSchema } from "./steps/review-step";
 
 export function NewProtocolForm() {
   const router = useRouter();
   const { t } = useTranslation();
   const locale = useLocale();
-  const [isCodeValid, setIsCodeValid] = useState(true);
+  const browserSupport = useIotBrowserSupport();
+
+  const isCodeValidRef = useRef(true);
+  const [hasFormData, setHasFormData] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   // Selected macros (local state before protocol creation)
   const [selectedMacros, setSelectedMacros] = useState<Macro[]>([]);
 
-  // Macro search
-  const [macroSearch, setMacroSearch] = useState("");
-  const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: { search: debouncedMacroSearch || undefined },
-    },
-    queryKey: ["macros", "search", debouncedMacroSearch],
-  });
-  const macroList = macroData?.body;
-
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
+    onError: () => {
+      setIsSubmitting(false);
+    },
     onSuccess: (id: string) => {
-      // Link selected macros after protocol creation, then redirect
+      toast({ description: t("protocols.protocolCreated") });
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
@@ -65,7 +60,7 @@ export function NewProtocolForm() {
             body: { macroIds: selectedMacros.map((m) => m.id) },
           })
           .catch(() => {
-            // Protocol was created successfully, macro linking failed - still redirect
+            // Protocol created successfully, macro linking failed - still redirect
           })
           .finally(() => {
             router.push(`/${locale}/platform/protocols/${id}`);
@@ -76,25 +71,92 @@ export function NewProtocolForm() {
     },
   });
 
-  // Placeholder protocolId for the hook - actual call uses the real ID via mutateAsync
   const addMacrosMutation = useAddCompatibleMacro("");
   addMacrosMutationRef.current = addMacrosMutation;
 
-  const form = useForm<CreateProtocolRequestBody>({
-    resolver: zodResolver(zCreateProtocolRequestBody),
-    defaultValues: {
-      name: "",
-      description: "",
-      code: [{}],
-      family: "multispeq",
-    },
-  });
+  const handleRemoveMacro = (macroId: string) => {
+    setSelectedMacros((prev) => prev.filter((m) => m.id !== macroId));
+    setHasFormData(true);
+  };
 
-  function cancel() {
-    router.back();
-  }
+  // Helper to create DetailsStep with the details card
+  const createDetailsStep = () => {
+    const DetailsCardWithMacros = ({
+      form,
+    }: {
+      form: UseFormReturn<CreateProtocolRequestBody>;
+    }) => (
+      <NewProtocolDetailsCard
+        form={form}
+        selectedMacros={selectedMacros}
+        onAddMacro={(macro: Macro) => {
+          setSelectedMacros((prev) => {
+            if (prev.some((m) => m.id === macro.id)) return prev;
+            setHasFormData(true);
+            return [...prev, macro];
+          });
+        }}
+        onRemoveMacro={handleRemoveMacro}
+      />
+    );
+
+    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => {
+      return <DetailsStep {...props} cards={[DetailsCardWithMacros]} />;
+    };
+    return Component;
+  };
+
+  // Helper to create CodeTestStep with IoT props
+  const createCodeTestStep = () => {
+    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+      <CodeTestStep
+        {...props}
+        browserSupport={browserSupport}
+        setIsCodeValid={(v: boolean) => {
+          isCodeValidRef.current = v;
+        }}
+        ProtocolCodeEditor={ProtocolCodeEditor}
+        IotProtocolRunner={IotProtocolRunner}
+      />
+    );
+    return Component;
+  };
+
+  // Helper to create ReviewStep with macros
+  const createReviewStep = () => {
+    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+      <ReviewStep {...props} selectedMacros={selectedMacros} />
+    );
+    return Component;
+  };
+
+  const steps: WizardStep<CreateProtocolRequestBody>[] = useMemo(
+    () => [
+      {
+        title: t("newProtocol.detailsStepTitle"),
+        description: t("newProtocol.detailsStepDescription"),
+        validationSchema: detailsSchema,
+        component: createDetailsStep(),
+      },
+      {
+        title: t("newProtocol.codeStepTitle"),
+        description: t("newProtocol.codeStepDescription"),
+        validationSchema: codeSchema,
+        component: createCodeTestStep(),
+      },
+      {
+        title: t("newProtocol.reviewStepTitle"),
+        description: t("newProtocol.reviewStepDescription"),
+        validationSchema: reviewSchema,
+        component: createReviewStep(),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, browserSupport, selectedMacros],
+  );
 
   function onSubmit(data: CreateProtocolRequestBody) {
+    setIsSubmitting(true);
     createProtocol({
       body: {
         name: data.name,
@@ -103,134 +165,93 @@ export function NewProtocolForm() {
         family: data.family,
       },
     });
-    toast({ description: t("protocols.protocolCreated") });
   }
 
-  const selectedMacroIds = useMemo(
-    () => new Set(selectedMacros.map((m) => m.id)),
-    [selectedMacros],
-  );
-
-  const availableMacros: Macro[] = useMemo(
-    () => (macroList ?? []).filter((m) => !selectedMacroIds.has(m.id)),
-    [macroList, selectedMacroIds],
-  );
-
-  const handleAddMacro = (macroId: string) => {
-    const macro = macroList?.find((m) => m.id === macroId);
-    if (macro) {
-      setSelectedMacros((prev) => [...prev, macro].sort((a, b) => a.name.localeCompare(b.name)));
-      setMacroSearch("");
+  const handleFormChange = () => {
+    if (!hasFormData) {
+      setHasFormData(true);
     }
   };
 
-  const handleRemoveMacro = (macroId: string) => {
-    setSelectedMacros((prev) => prev.filter((m) => m.id !== macroId));
+  useEffect(() => {
+    if (!hasFormData || isSubmitting) return;
+
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a");
+
+      if (link?.href && !link.target && link.origin === window.location.origin) {
+        e.preventDefault();
+        e.stopPropagation();
+        const pathname = link.pathname + link.search + link.hash;
+        setPendingNavigation(() => () => {
+          router.push(pathname);
+        });
+        setShowDialog(true);
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (showDialog) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleLinkClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [hasFormData, isSubmitting, showDialog, router]);
+
+  const handleCancelNavigation = () => {
+    setShowDialog(false);
+    setPendingNavigation(null);
   };
 
-  const isDisabled = useMemo(() => {
-    return isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid;
-  }, [isPending, form.formState.isDirty, form.formState.isValid, isCodeValid]);
+  const handleConfirmNavigation = () => {
+    setShowDialog(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+    }
+  };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Details row: name/description + family + compatible macros */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-start">
-          <div className="flex-1">
-            <NewProtocolDetailsCard form={form} />
-          </div>
-
-          <div className="w-full space-y-4 md:w-72">
-            {/* Sensor Family */}
-            <FormField
-              control={form.control}
-              name="family"
-              render={({ field }) => (
-                <FormItem>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("newProtocol.selectFamily")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="multispeq">MultispeQ</SelectItem>
-                      <SelectItem value="ambit">Ambit</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Compatible Macros */}
-            <div className="space-y-2">
-              <MacroSearchWithDropdown
-                availableMacros={availableMacros}
-                value=""
-                placeholder={t("newProtocol.compatibleMacros")}
-                loading={!isDebounced}
-                searchValue={macroSearch}
-                onSearchChange={setMacroSearch}
-                onAddMacro={handleAddMacro}
-                isAddingMacro={false}
-              />
-
-              {selectedMacros.length > 0 && (
-                <div className="space-y-2">
-                  {selectedMacros.map((macro) => (
-                    <div
-                      key={macro.id}
-                      className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-                    >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm font-medium">{macro.name}</span>
-                        <span className="text-muted-foreground text-xs">{macro.language}</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => handleRemoveMacro(macro.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Code Editor — full width */}
-        <FormField
-          control={form.control}
-          name="code"
-          render={({ field }) => (
-            <ProtocolCodeEditor
-              value={field.value}
-              onChange={field.onChange}
-              onValidationChange={setIsCodeValid}
-              label=""
-              placeholder={t("newProtocol.codePlaceholder")}
-              error={form.formState.errors.code?.message?.toString()}
-              title={t("newProtocol.codeTitle")}
-            />
-          )}
+    <>
+      <div onChange={handleFormChange} onInput={handleFormChange}>
+        <WizardForm<CreateProtocolRequestBody>
+          steps={steps}
+          defaultValues={{
+            name: "",
+            description: "",
+            code: [{}],
+            family: "generic",
+          }}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting || isPending}
+          showStepIndicator={true}
+          showStepTitles={true}
         />
+      </div>
 
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={cancel}>
-            {t("newProtocol.cancel")}
-          </Button>
-          <Button type="submit" disabled={isDisabled}>
-            {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      <Dialog open={showDialog} onOpenChange={handleCancelNavigation}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("newProtocol.unsavedChangesTitle")}</DialogTitle>
+            <DialogDescription>{t("newProtocol.unsavedChangesMessage")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelNavigation}>
+              {t("newProtocol.unsavedStay")}
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmNavigation}>
+              {t("newProtocol.unsavedLeave")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -58,6 +58,12 @@ export const GENERIC_FRAMING = {
 } as const;
 
 /**
+ * Shared transport-support registry for all device types.
+ * Re-exported for convenience; see core/types.ts for per-device entries.
+ */
+export { DEVICE_TRANSPORT_SUPPORT } from "../../core/types";
+
+/**
  * Driver-level configuration (independent of transport).
  * Pass to the `GenericDeviceDriver` constructor to override defaults.
  */

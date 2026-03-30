@@ -697,6 +697,9 @@ importers:
       '@repo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@repo/iot':
+        specifier: workspace:*
+        version: link:../../packages/iot
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui

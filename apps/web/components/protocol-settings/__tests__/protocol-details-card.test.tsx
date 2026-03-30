@@ -24,6 +24,34 @@ vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
 }));
 
+// Mock useIotBrowserSupport
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => ({ bluetooth: false, serial: false, any: false }),
+}));
+
+// Mock IotProtocolRunner
+vi.mock("../../iot/iot-protocol-runner", () => ({
+  IotProtocolRunner: () => <div data-testid="iot-protocol-runner">IotProtocolRunner</div>,
+}));
+
+// Mock @repo/ui/components — override Collapsible + Resizable so content is always visible
+vi.mock("@repo/ui/components", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
+  return {
+    ...actual,
+    Collapsible: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    CollapsibleContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    CollapsibleTrigger: ({ children }: { children: React.ReactNode }) => (
+      <button type="button">{children}</button>
+    ),
+    ResizablePanelGroup: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="resizable-panel-group">{children}</div>
+    ),
+    ResizablePanel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    ResizableHandle: () => <div data-testid="resizable-handle" />,
+  };
+});
+
 // Mock ProtocolCodeEditor
 vi.mock("../../protocol-code-editor", () => ({
   default: ({
@@ -80,7 +108,7 @@ describe("ProtocolDetailsCard", () => {
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/family/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /code/i })).toBeInTheDocument();
+    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 
   it("should disable submit button when form is pristine", () => {
