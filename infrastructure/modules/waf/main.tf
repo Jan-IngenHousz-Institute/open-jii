@@ -76,6 +76,53 @@ resource "aws_wafv2_web_acl" "main" {
             name = "SizeRestrictions_BODY"
           }
         }
+
+        # Exclude configured paths from this rule group entirely via scope-down
+        dynamic "scope_down_statement" {
+          for_each = length(var.managed_rules_excluded_paths) > 0 ? [1] : []
+          content {
+            not_statement {
+              statement {
+                dynamic "byte_match_statement" {
+                  for_each = length(var.managed_rules_excluded_paths) == 1 ? [var.managed_rules_excluded_paths[0]] : []
+                  content {
+                    search_string         = byte_match_statement.value
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                  }
+                }
+
+                dynamic "or_statement" {
+                  for_each = length(var.managed_rules_excluded_paths) >= 2 ? [1] : []
+                  content {
+                    dynamic "statement" {
+                      for_each = var.managed_rules_excluded_paths
+                      content {
+                        byte_match_statement {
+                          search_string         = statement.value
+                          positional_constraint = "STARTS_WITH"
+                          field_to_match {
+                            uri_path {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "LOWERCASE"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 
@@ -102,6 +149,53 @@ resource "aws_wafv2_web_acl" "main" {
       managed_rule_group_statement {
         name        = "AWSManagedRulesKnownBadInputsRuleSet"
         vendor_name = "AWS"
+
+        # Exclude configured paths from this rule group entirely via scope-down
+        dynamic "scope_down_statement" {
+          for_each = length(var.managed_rules_excluded_paths) > 0 ? [1] : []
+          content {
+            not_statement {
+              statement {
+                dynamic "byte_match_statement" {
+                  for_each = length(var.managed_rules_excluded_paths) == 1 ? [var.managed_rules_excluded_paths[0]] : []
+                  content {
+                    search_string         = byte_match_statement.value
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                  }
+                }
+
+                dynamic "or_statement" {
+                  for_each = length(var.managed_rules_excluded_paths) >= 2 ? [1] : []
+                  content {
+                    dynamic "statement" {
+                      for_each = var.managed_rules_excluded_paths
+                      content {
+                        byte_match_statement {
+                          search_string         = statement.value
+                          positional_constraint = "STARTS_WITH"
+                          field_to_match {
+                            uri_path {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "LOWERCASE"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 
