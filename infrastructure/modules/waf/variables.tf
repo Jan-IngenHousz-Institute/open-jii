@@ -32,6 +32,12 @@ variable "tags" {
   default     = {}
 }
 
+variable "managed_rules_excluded_paths" {
+  description = "List of URI path prefixes to exclude from all managed rule groups via scope-down. Use for trusted proxied origins (e.g. PostHog /ingest) whose payloads would otherwise trigger false positives."
+  type        = list(string)
+  default     = []
+}
+
 variable "large_body_bypass_routes" {
   description = "List of route configurations that should bypass the SizeRestrictions_BODY rule from AWSManagedRulesCommonRuleSet"
   type = list(object({
