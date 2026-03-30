@@ -8,14 +8,35 @@ import {
   parseFile,
 } from "@/components/metadata-table/utils/parse-metadata-import";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
+import { useExperimentMetadata } from "@/hooks/experiment/useExperimentMetadata/useExperimentMetadata";
 import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
-import { ArrowLeft, ClipboardPaste, FileSpreadsheet, Trash2, Upload } from "lucide-react";
+import { useExperimentMetadataDelete } from "@/hooks/experiment/useExperimentMetadataDelete/useExperimentMetadataDelete";
+import { useExperimentMetadataUpdate } from "@/hooks/experiment/useExperimentMetadataUpdate/useExperimentMetadataUpdate";
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  ClipboardPaste,
+  FileSpreadsheet,
+  KeyRound,
+  Loader2,
+  Pencil,
+  Plus,
+  Rows3,
+  TableProperties,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { ExperimentMetadata } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
 import {
   Button,
+  DialogFooter,
+  Input,
   Label,
+  ScrollArea,
   Select,
   SelectContent,
   SelectItem,
@@ -43,6 +64,113 @@ function sanitizeQuestionLabel(label: string): string {
   return s;
 }
 
+type SaveStatus = "idle" | "saving" | "saved";
+
+// ---------------------------------------------------------------------------
+// MetadataCard – one record in the list view (inspired by ExportCard)
+// ---------------------------------------------------------------------------
+type DeleteStatus = "idle" | "deleting" | "deleted";
+
+function MetadataCard({
+  name,
+  identifierColumnId,
+  rowCount,
+  columnNames,
+  updatedAt,
+  onEdit,
+  onDelete,
+  deleteStatus,
+}: {
+  name: string | undefined;
+  identifierColumnId: string | undefined;
+  rowCount: number;
+  columnNames: string[];
+  updatedAt: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  deleteStatus: DeleteStatus;
+}) {
+  const dateStr = new Date(updatedAt).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-lg border border-l-4 border-l-emerald-500 bg-white px-3 py-2.5 transition-all duration-500 dark:border-gray-700 dark:border-l-emerald-500 dark:bg-gray-800",
+        deleteStatus === "deleted" &&
+          "max-h-0 scale-95 overflow-hidden border-transparent !border-l-transparent py-0 opacity-0",
+      )}
+      style={deleteStatus !== "deleted" ? { maxHeight: 200 } : undefined}
+    >
+      <div className="flex-shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
+        <TableProperties className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {name ?? "Untitled metadata"}
+        </p>
+        {columnNames.length > 0 && (
+          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+            {columnNames.join(", ")}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+          <span className="inline-flex items-center gap-1">
+            <Rows3 className="h-3 w-3" />
+            {rowCount} row{rowCount !== 1 ? "s" : ""}
+          </span>
+          {identifierColumnId && (
+            <span className="inline-flex items-center gap-1">
+              <KeyRound className="h-3 w-3" />
+              {identifierColumnId}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {dateStr}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-shrink-0 gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onEdit}
+          disabled={deleteStatus !== "idle"}
+        >
+          <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onDelete}
+          disabled={deleteStatus !== "idle"}
+        >
+          {deleteStatus === "deleted" ? (
+            <Check className="animate-in zoom-in-0 h-4 w-4 text-emerald-500 duration-300" />
+          ) : deleteStatus === "deleting" ? (
+            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+          ) : (
+            <Trash2 className="text-destructive h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MetadataUploadStep
+// ---------------------------------------------------------------------------
 interface MetadataUploadStepProps {
   experimentId: string;
   onBack: () => void;
@@ -52,22 +180,39 @@ interface MetadataUploadStepProps {
 export function MetadataUploadStep({
   experimentId,
   onBack,
-  onUploadSuccess,
+  onUploadSuccess: _onUploadSuccess,
 }: MetadataUploadStepProps) {
   const { t } = useTranslation("experiments");
   const createMutation = useExperimentMetadataCreate();
+  const updateMutation = useExperimentMetadataUpdate();
+  const deleteMutation = useExperimentMetadataDelete();
+  const { data: existingMetadataResponse } = useExperimentMetadata(experimentId);
+  const existingRecords = useMemo(
+    () => existingMetadataResponse?.body ?? [],
+    [existingMetadataResponse?.body],
+  );
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isPasting, setIsPasting] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isDragging, setIsDragging] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<Record<string, DeleteStatus>>({});
+  // Keep snapshots of deleted records so the card stays in the DOM during exit animation
+  const [exitingRecords, setExitingRecords] = useState<Record<string, ExperimentMetadata>>({});
+
+  // "list" = show existing records, "edit" = editing table
+  const [mode, setMode] = useState<"list" | "edit">("list");
+  // When editing an existing record, store its metadataId
+  const [editingMetadataId, setEditingMetadataId] = useState<string | null>(null);
 
   // Table state
   const [columns, setColumns] = useState<MetadataColumn[]>([]);
   const [rows, setRows] = useState<MetadataRow[]>([]);
   const [identifierColumnId, setIdentifierColumnId] = useState<string | null>(null);
   const [experimentQuestionId, setExperimentQuestionId] = useState<string | null>(null);
+  const [metadataName, setMetadataName] = useState("");
 
   // Fetch experiment flow to get question nodes
   const { data: flowData } = useExperimentFlow(experimentId);
@@ -88,6 +233,96 @@ export function MetadataUploadStep({
     setRows(newRows);
     setIdentifierColumnId(null);
     setExperimentQuestionId(null);
+    setMode("edit");
+  }, []);
+
+  const startNewUpload = useCallback(() => {
+    setColumns([]);
+    setRows([]);
+    setIdentifierColumnId(null);
+    setExperimentQuestionId(null);
+    setEditingMetadataId(null);
+    setMetadataName("");
+    setSaveError(null);
+    setImportError(null);
+    setMode("edit");
+  }, []);
+
+  const startEditing = useCallback(
+    (metadataId: string) => {
+      const record = existingRecords.find((r) => r.metadataId === metadataId);
+      if (!record) return;
+      const meta = record.metadata as {
+        name?: string;
+        columns?: MetadataColumn[];
+        rows?: MetadataRow[];
+        identifierColumnId?: string;
+        experimentQuestionId?: string;
+      };
+      setColumns(meta.columns ?? []);
+      setRows(meta.rows ?? []);
+      setIdentifierColumnId(meta.identifierColumnId ?? null);
+      setExperimentQuestionId(meta.experimentQuestionId ?? null);
+      setMetadataName(meta.name ?? "");
+      setEditingMetadataId(metadataId);
+      setSaveError(null);
+      setImportError(null);
+      setMode("edit");
+    },
+    [existingRecords],
+  );
+
+  const handleDelete = useCallback(
+    async (metadataId: string) => {
+      // Snapshot the record so it stays rendered during the exit animation
+      const record = existingRecords.find((r) => r.metadataId === metadataId);
+      if (record) {
+        setExitingRecords((prev) => ({ ...prev, [metadataId]: record }));
+      }
+      setIsDeleting((prev) => ({ ...prev, [metadataId]: "deleting" }));
+      try {
+        await deleteMutation.mutateAsync({
+          params: { id: experimentId, metadataId },
+        });
+        // Show checkmark
+        setIsDeleting((prev) => ({ ...prev, [metadataId]: "deleted" }));
+        // Wait for CSS collapse transition to finish, then clean up
+        await new Promise((r) => setTimeout(r, 600));
+        setExitingRecords((prev) => {
+          const next = { ...prev };
+          delete next[metadataId];
+          return next;
+        });
+        setIsDeleting((prev) => {
+          const next = { ...prev };
+          delete next[metadataId];
+          return next;
+        });
+      } catch {
+        setExitingRecords((prev) => {
+          const next = { ...prev };
+          delete next[metadataId];
+          return next;
+        });
+        setIsDeleting((prev) => {
+          const next = { ...prev };
+          delete next[metadataId];
+          return next;
+        });
+      }
+    },
+    [deleteMutation, experimentId, existingRecords],
+  );
+
+  const backToList = useCallback(() => {
+    setColumns([]);
+    setRows([]);
+    setEditingMetadataId(null);
+    setMetadataName("");
+    setSaveError(null);
+    setImportError(null);
+    setSaveStatus("idle");
+    setMode("list");
   }, []);
 
   const updateCell = useCallback(
@@ -147,6 +382,9 @@ export function MetadataUploadStep({
       try {
         setImportError(null);
         const result = await parseFile(file);
+        // Auto-fill name from filename (without extension)
+        const nameWithoutExt = file.name.replace(/\.[^.]+$/, "");
+        setMetadataName(nameWithoutExt);
         setData(result.columns, result.rows);
       } catch (error) {
         setImportError(error instanceof Error ? error.message : "Failed to import file");
@@ -198,105 +436,213 @@ export function MetadataUploadStep({
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
+    setSaveStatus("saving");
     setSaveError(null);
     try {
-      await createMutation.mutateAsync({
-        params: { id: experimentId },
-        body: {
-          metadata: {
-            columns,
-            rows,
-            identifierColumnId,
-            experimentQuestionId,
-          },
-        },
+      // Remap col_X keys to real column names once at save time so the
+      // stored blob (and downstream pipeline) uses human-readable keys.
+      const colIdToName = new Map(columns.map((c) => [c.id, c.name]));
+      const savedRows = rows.map((row) => {
+        const mapped: MetadataRow = { _id: row._id };
+        for (const [key, value] of Object.entries(row)) {
+          if (key === "_id") continue;
+          mapped[colIdToName.get(key) ?? key] = value;
+        }
+        return mapped;
       });
-      onUploadSuccess();
+      const savedColumns = columns.map((c) => ({ ...c, id: c.name }));
+      const savedIdentifierColumnId = identifierColumnId
+        ? (colIdToName.get(identifierColumnId) ?? identifierColumnId)
+        : null;
+
+      const metadataBody = {
+        metadata: {
+          name: metadataName,
+          columns: savedColumns,
+          rows: savedRows,
+          identifierColumnId: savedIdentifierColumnId,
+          experimentQuestionId,
+        },
+      };
+
+      if (editingMetadataId) {
+        await updateMutation.mutateAsync({
+          params: { id: experimentId, metadataId: editingMetadataId },
+          body: metadataBody,
+        });
+      } else {
+        await createMutation.mutateAsync({
+          params: { id: experimentId },
+          body: metadataBody,
+        });
+      }
+
+      setSaveStatus("saved");
+      setTimeout(() => {
+        backToList();
+      }, 1500);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to save metadata");
-    } finally {
-      setIsSaving(false);
+      setSaveStatus("idle");
     }
   };
 
   const hasData = columns.length > 0;
+  const showList = mode === "list";
 
-  return (
-    <div className="max-w-full space-y-6 overflow-x-scroll">
-      {!hasData ? (
-        <div className="space-y-4">
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            className={cn(
-              "flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8",
-              "hover:border-primary/50 hover:bg-muted/50 transition-colors",
-              isDragging && "border-primary bg-muted/50",
-            )}
-          >
-            <FileSpreadsheet className="text-muted-foreground h-12 w-12" />
-            <div className="text-center">
-              <p className="font-medium">{t("uploadModal.metadata.importPrompt")}</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {t("uploadModal.metadata.supportedFormats")}
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t("uploadModal.metadata.pasteHint", {
-                  shortcut: navigator.platform.includes("Mac") ? "⌘V" : "Ctrl+V",
-                })}
-              </p>
+  // Merge existing records with exiting snapshots so deleted cards stay in the DOM
+  const displayRecords = useMemo(() => {
+    const ids = new Set(existingRecords.map((r) => r.metadataId));
+    const extras = Object.values(exitingRecords).filter((r) => !ids.has(r.metadataId));
+    return [...existingRecords, ...extras];
+  }, [existingRecords, exitingRecords]);
+
+  // -------------------------------------------------------------------------
+  // List view – show existing records + "Add new" button
+  // -------------------------------------------------------------------------
+  if (showList) {
+    return (
+      <div className="flex flex-col gap-4 pt-4">
+        {existingRecords.length === 0 && Object.keys(exitingRecords).length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border bg-gray-50 py-8 dark:bg-gray-900">
+            <div className="bg-muted mb-3 flex h-16 w-16 items-center justify-center rounded-full">
+              <FileSpreadsheet className="text-muted-foreground h-8 w-8" />
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" />
-                {t("uploadModal.metadata.uploadFile")}
-              </Button>
-              <Button variant="outline" onClick={handlePaste} disabled={isPasting}>
-                <ClipboardPaste className="mr-2 h-4 w-4" />
-                {isPasting
-                  ? t("uploadModal.metadata.pasting")
-                  : t("uploadModal.metadata.pasteClipboard")}
-              </Button>
-            </div>
+            <p className="text-muted-foreground text-center text-sm">
+              {t("uploadModal.metadata.noMetadata", {
+                defaultValue: "No metadata uploaded yet.",
+              })}
+            </p>
           </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {existingRecords.length} metadata record
+              {existingRecords.length !== 1 ? "s" : ""}
+            </p>
+            <ScrollArea className="max-h-[320px]">
+              <div className="space-y-2">
+                {displayRecords.map((record) => {
+                  const meta = record.metadata as {
+                    name?: string;
+                    columns?: MetadataColumn[];
+                    rows?: MetadataRow[];
+                    identifierColumnId?: string;
+                    experimentQuestionId?: string;
+                  };
+                  return (
+                    <MetadataCard
+                      key={record.metadataId}
+                      name={meta.name}
+                      identifierColumnId={meta.identifierColumnId}
+                      rowCount={meta.rows?.length ?? 0}
+                      columnNames={(meta.columns ?? []).map((c) => c.name).filter(Boolean)}
+                      updatedAt={record.updatedAt}
+                      onEdit={() => startEditing(record.metadataId)}
+                      onDelete={() => handleDelete(record.metadataId)}
+                      deleteStatus={isDeleting[record.metadataId] ?? "idle"}
+                    />
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </>
+        )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.tsv,.txt,.xlsx,.xls"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+        <DialogFooter className="mt-2 flex items-center justify-between gap-2 sm:justify-between">
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {t("uploadModal.fileUpload.back")}
+          </Button>
+          <Button onClick={startNewUpload} className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t("uploadModal.metadata.addNew", { defaultValue: "Add new" })}
+          </Button>
+        </DialogFooter>
+      </div>
+    );
+  }
 
-          {importError && <p className="text-destructive text-sm">{importError}</p>}
+  // -------------------------------------------------------------------------
+  // Edit view – import + edit table + save
+  // -------------------------------------------------------------------------
+  return (
+    <div className="flex min-w-0 flex-col gap-4 pt-4">
+      {!hasData ? (
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={cn(
+            "flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8",
+            "hover:border-primary/50 hover:bg-muted/50 transition-colors",
+            isDragging && "border-primary bg-muted/50",
+          )}
+        >
+          <FileSpreadsheet className="text-muted-foreground h-12 w-12" />
+          <div className="text-center">
+            <p className="font-medium">{t("uploadModal.metadata.importPrompt")}</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {t("uploadModal.metadata.supportedFormats")}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("uploadModal.metadata.pasteHint", {
+                shortcut: navigator.platform.includes("Mac") ? "⌘V" : "Ctrl+V",
+              })}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" />
+              {t("uploadModal.metadata.uploadFile")}
+            </Button>
+            <Button variant="outline" onClick={handlePaste} disabled={isPasting}>
+              <ClipboardPaste className="mr-2 h-4 w-4" />
+              {isPasting
+                ? t("uploadModal.metadata.pasting")
+                : t("uploadModal.metadata.pasteClipboard")}
+            </Button>
+          </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="metadata-name">
+              {t("uploadModal.metadata.nameLabel", { defaultValue: "Name" })}
+            </Label>
+            <Input
+              id="metadata-name"
+              value={metadataName}
+              onChange={(e) => setMetadataName(e.target.value)}
+              placeholder={t("uploadModal.metadata.namePlaceholder", {
+                defaultValue: "e.g. Winter Wheat Plot Map",
+              })}
+            />
+          </div>
+
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
               {t("uploadModal.metadata.rowCount", { count: rows.length })}
             </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setData([], [])}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("uploadModal.metadata.clearData")}
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setData([], [])}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t("uploadModal.metadata.clearData")}
+            </Button>
           </div>
 
-          <MetadataTable
-            columns={columns}
-            rows={rows}
-            identifierColumnId={identifierColumnId}
-            onUpdateCell={updateCell}
-            onDeleteRow={deleteRow}
-            onDeleteColumn={deleteColumn}
-            onRenameColumn={renameColumn}
-            onSetIdentifierColumn={setIdentifierColumnId}
-            pageSize={10}
-          />
+          <div className="overflow-x-auto">
+            <MetadataTable
+              columns={columns}
+              rows={rows}
+              identifierColumnId={identifierColumnId}
+              onUpdateCell={updateCell}
+              onDeleteRow={deleteRow}
+              onDeleteColumn={deleteColumn}
+              onRenameColumn={renameColumn}
+              onSetIdentifierColumn={setIdentifierColumnId}
+              pageSize={10}
+            />
+          </div>
 
           <div className="grid gap-2">
             <Label htmlFor="experiment-question">
@@ -345,22 +691,49 @@ export function MetadataUploadStep({
         </div>
       )}
 
-      <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t("uploadModal.fileUpload.back")}
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={!hasData || isSaving || !identifierColumnId || !experimentQuestionId}
-        >
-          {isSaving
-            ? t("uploadModal.metadata.savingMetadata", { defaultValue: "Saving..." })
-            : t("uploadModal.metadata.saveMetadata")}
-        </Button>
-      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,.tsv,.txt,.xlsx,.xls"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
+      {importError && <p className="text-destructive text-sm">{importError}</p>}
       {saveError && <p className="text-destructive text-sm">{saveError}</p>}
+
+      <DialogFooter className="mt-2 flex items-center justify-between gap-2 sm:justify-between">
+        <Button variant="outline" onClick={existingRecords.length > 0 ? backToList : onBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {existingRecords.length > 0
+            ? t("uploadModal.metadata.backToList", { defaultValue: "Back to list" })
+            : t("uploadModal.fileUpload.back")}
+        </Button>
+
+        {saveStatus === "saving" ? (
+          <Button disabled className="gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t("uploadModal.metadata.savingMetadata", { defaultValue: "Saving..." })}
+          </Button>
+        ) : saveStatus === "saved" ? (
+          <Button disabled className="gap-2">
+            <Check className="animate-in zoom-in-0 h-4 w-4 duration-300" />
+            {t("uploadModal.metadata.saved", { defaultValue: "Saved" })}
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSave}
+            disabled={
+              !hasData || !metadataName.trim() || !identifierColumnId || !experimentQuestionId
+            }
+            className="gap-2"
+          >
+            {editingMetadataId
+              ? t("uploadModal.metadata.updateMetadata", { defaultValue: "Update metadata" })
+              : t("uploadModal.metadata.saveMetadata")}
+          </Button>
+        )}
+      </DialogFooter>
     </div>
   );
 }

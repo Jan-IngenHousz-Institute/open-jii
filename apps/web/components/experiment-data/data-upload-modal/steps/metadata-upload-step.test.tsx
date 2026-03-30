@@ -11,6 +11,9 @@ const mockParseClipboard = vi.fn();
 const mockParseClipboardText = vi.fn();
 const mockParseFile = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockUpdateMutateAsync = vi.fn();
+const mockDeleteMutateAsync = vi.fn();
+let mockExistingMetadata: unknown[] = [];
 
 vi.mock("@/components/metadata-table", () => ({
   MetadataTable: (props: {
@@ -56,6 +59,22 @@ vi.mock("@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCre
   useExperimentMetadataCreate: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
 }));
 
+vi.mock("@/hooks/experiment/useExperimentMetadataUpdate/useExperimentMetadataUpdate", () => ({
+  useExperimentMetadataUpdate: () => ({ mutateAsync: mockUpdateMutateAsync, isPending: false }),
+}));
+
+vi.mock("@/hooks/experiment/useExperimentMetadataDelete/useExperimentMetadataDelete", () => ({
+  useExperimentMetadataDelete: () => ({ mutateAsync: mockDeleteMutateAsync, isPending: false }),
+}));
+
+vi.mock("@/hooks/experiment/useExperimentMetadata/useExperimentMetadata", () => ({
+  useExperimentMetadata: () => ({
+    data: { body: mockExistingMetadata },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 vi.mock("@repo/i18n/client", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -75,6 +94,20 @@ vi.mock("@repo/ui/components", () => ({
     <button disabled={disabled} onClick={onClick}>
       {children}
     </button>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Input: ({
+    id,
+    value,
+    onChange,
+    placeholder,
+  }: {
+    id?: string;
+    value?: string;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder?: string;
+  }) => (
+    <input id={id} value={value} onChange={onChange} placeholder={placeholder} data-testid={id} />
   ),
   Label: ({ children, ...props }: { children: React.ReactNode; htmlFor?: string }) => (
     <label {...props}>{children}</label>
@@ -105,6 +138,7 @@ vi.mock("@repo/ui/components", () => ({
   ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
+  ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@repo/ui/lib/utils", () => ({
@@ -113,8 +147,16 @@ vi.mock("@repo/ui/lib/utils", () => ({
 
 vi.mock("lucide-react", () => ({
   ArrowLeft: () => <span />,
+  Calendar: () => <span />,
+  Check: () => <span />,
   ClipboardPaste: () => <span />,
   FileSpreadsheet: () => <span />,
+  KeyRound: () => <span />,
+  Loader2: () => <span />,
+  Pencil: () => <span />,
+  Plus: () => <span />,
+  Rows3: () => <span />,
+  TableProperties: () => <span />,
   Trash2: () => <span />,
   Upload: () => <span />,
 }));
@@ -134,6 +176,7 @@ describe("MetadataUploadStep", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFlowData = null;
+    mockExistingMetadata = [];
   });
 
   const renderStep = (props?: Partial<{ onBack: () => void; onUploadSuccess: () => void }>) =>
@@ -144,6 +187,11 @@ describe("MetadataUploadStep", () => {
         onUploadSuccess={props?.onUploadSuccess ?? vi.fn()}
       />,
     );
+
+  /** Click "Add new" to go from list view to edit view */
+  function goToEditView() {
+    fireEvent.click(getButton("uploadModal.metadata.addNew"));
+  }
 
   /** Query a button by its text content, throwing if not found. */
   function getButton(text: string): HTMLButtonElement {
@@ -169,15 +217,17 @@ describe("MetadataUploadStep", () => {
 
   it("is disabled when no data is loaded (empty state)", () => {
     renderStep();
+    goToEditView();
     expect(getSaveButton()).toBeDisabled();
   });
 
   it("renders the import prompt when no data is loaded", () => {
     renderStep();
+    goToEditView();
     expect(screen.getByText("uploadModal.metadata.importPrompt")).toBeInTheDocument();
   });
 
-  it("calls onBack when back button is clicked", () => {
+  it("calls onBack when back button is clicked in list view", () => {
     const onBack = vi.fn();
     renderStep({ onBack });
     fireEvent.click(getButton("uploadModal.fileUpload.back"));
@@ -188,6 +238,7 @@ describe("MetadataUploadStep", () => {
     it("imports data from a file via file input", async () => {
       mockParseFile.mockResolvedValue(sampleData);
       renderStep();
+      goToEditView();
 
       const file = new File(["ID,Name\n1,Test"], "test.csv", { type: "text/csv" });
       fireEvent.change(getFileInput(), { target: { files: [file] } });
@@ -198,9 +249,25 @@ describe("MetadataUploadStep", () => {
       expect(screen.getByTestId("metadata-table")).toBeInTheDocument();
     });
 
+    it("auto-fills metadata name from filename", async () => {
+      mockParseFile.mockResolvedValue(sampleData);
+      renderStep();
+      goToEditView();
+
+      const file = new File(["ID,Name\n1,Test"], "Winter Wheat Plots.csv", { type: "text/csv" });
+      fireEvent.change(getFileInput(), { target: { files: [file] } });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("metadata-table")).toBeInTheDocument();
+      });
+      const nameInput = screen.getByTestId("metadata-name");
+      expect(nameInput).toHaveValue("Winter Wheat Plots");
+    });
+
     it("shows error when file import fails", async () => {
       mockParseFile.mockRejectedValue(new Error("Unsupported file type"));
       renderStep();
+      goToEditView();
 
       const file = new File(["data"], "test.pdf", { type: "application/pdf" });
       fireEvent.change(getFileInput(), { target: { files: [file] } });
@@ -213,6 +280,7 @@ describe("MetadataUploadStep", () => {
     it("shows generic error when file import throws non-Error", async () => {
       mockParseFile.mockRejectedValue("unknown error");
       renderStep();
+      goToEditView();
 
       const file = new File(["data"], "test.csv", { type: "text/csv" });
       fireEvent.change(getFileInput(), { target: { files: [file] } });
@@ -224,6 +292,7 @@ describe("MetadataUploadStep", () => {
 
     it("does nothing when no file is selected", () => {
       renderStep();
+      goToEditView();
       fireEvent.change(getFileInput(), { target: { files: [] } });
       expect(mockParseFile).not.toHaveBeenCalled();
     });
@@ -233,6 +302,7 @@ describe("MetadataUploadStep", () => {
     it("imports data from clipboard via paste button", async () => {
       mockParseClipboard.mockResolvedValue(sampleData);
       renderStep();
+      goToEditView();
 
       fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
 
@@ -245,6 +315,7 @@ describe("MetadataUploadStep", () => {
     it("shows error when clipboard paste fails", async () => {
       mockParseClipboard.mockRejectedValue(new Error("Clipboard access denied"));
       renderStep();
+      goToEditView();
 
       fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
 
@@ -256,6 +327,7 @@ describe("MetadataUploadStep", () => {
     it("shows generic error when clipboard paste throws non-Error", async () => {
       mockParseClipboard.mockRejectedValue("unknown");
       renderStep();
+      goToEditView();
 
       fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
 
@@ -267,6 +339,7 @@ describe("MetadataUploadStep", () => {
     it("handles paste event on document when no data loaded", () => {
       mockParseClipboardText.mockReturnValue(sampleData);
       renderStep();
+      goToEditView();
 
       const event = new Event("paste", { bubbles: true }) as unknown as ClipboardEvent;
       Object.defineProperty(event, "clipboardData", {
@@ -286,6 +359,7 @@ describe("MetadataUploadStep", () => {
         throw new Error("Parse failed");
       });
       renderStep();
+      goToEditView();
 
       const event = new Event("paste", { bubbles: true }) as unknown as ClipboardEvent;
       Object.defineProperty(event, "clipboardData", {
@@ -303,6 +377,7 @@ describe("MetadataUploadStep", () => {
     it("handles file drop", async () => {
       mockParseFile.mockResolvedValue(sampleData);
       renderStep();
+      goToEditView();
 
       const dropZone = getDropZone();
       fireEvent.dragOver(dropZone, { dataTransfer: { files: [] } });
@@ -317,6 +392,7 @@ describe("MetadataUploadStep", () => {
 
     it("handles dragLeave", () => {
       renderStep();
+      goToEditView();
       fireEvent.dragLeave(getDropZone(), { dataTransfer: { files: [] } });
       expect(screen.getByText("uploadModal.metadata.importPrompt")).toBeInTheDocument();
     });
@@ -326,6 +402,7 @@ describe("MetadataUploadStep", () => {
     const loadData = async () => {
       mockParseClipboard.mockResolvedValue(sampleData);
       renderStep();
+      goToEditView();
       fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
       await screen.findByTestId("metadata-table");
     };
@@ -391,9 +468,14 @@ describe("MetadataUploadStep", () => {
 
       const onUploadSuccess = options.onUploadSuccess ?? vi.fn();
       renderStep({ onUploadSuccess });
+      goToEditView();
 
       fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
       await screen.findByTestId("metadata-table");
+
+      // Fill in required metadata name
+      const nameInput = screen.getByTestId("metadata-name");
+      fireEvent.change(nameInput, { target: { value: "Test Metadata" } });
 
       fireEvent.click(screen.getByTestId("set-identifier"));
       fireEvent.click(screen.getByTestId("select-trigger-action"));
@@ -401,8 +483,8 @@ describe("MetadataUploadStep", () => {
       return { onUploadSuccess };
     };
 
-    it("saves metadata and calls onUploadSuccess", async () => {
-      const { onUploadSuccess } = await loadDataAndSave();
+    it("saves metadata with name and remapped columns", async () => {
+      await loadDataAndSave();
 
       fireEvent.click(getSaveButton());
 
@@ -411,15 +493,21 @@ describe("MetadataUploadStep", () => {
           params: { id: "test-experiment" },
           body: {
             metadata: {
-              columns: sampleData.columns,
-              rows: sampleData.rows,
-              identifierColumnId: "col_0",
+              name: "Test Metadata",
+              columns: [
+                { id: "ID", name: "ID", type: "number" },
+                { id: "Name", name: "Name", type: "string" },
+              ],
+              rows: [
+                { _id: "row_0", ID: 1, Name: "Test" },
+                { _id: "row_1", ID: 2, Name: "Test2" },
+              ],
+              identifierColumnId: "ID",
               experimentQuestionId: "test_question",
             },
           },
         });
       });
-      expect(onUploadSuccess).toHaveBeenCalled();
     });
 
     it("shows error when save fails with Error", async () => {
@@ -459,6 +547,7 @@ describe("MetadataUploadStep", () => {
 
       mockParseClipboard.mockResolvedValue(sampleData);
       renderStep();
+      goToEditView();
 
       fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
       await screen.findByTestId("metadata-table");

@@ -796,7 +796,8 @@ def experiment_table_metadata():
     """Metadata for all experiment tables."""
 
     # Pre-compute custom_metadata_schema per experiment from the metadata source.
-    # Each experiment's metadata blob has $.rows — an array of VARIANT objects.
+    # Each experiment's metadata blob has $.rows — an array of VARIANT objects
+    # whose keys are already human-readable (remapped at upload time).
     # We drop internal keys (_id, identifier column) from each row before schema
     # inference so the backend doesn't expand them into duplicate query columns.
     metadata_source = dlt.read(METADATA_SOURCE_TABLE)
