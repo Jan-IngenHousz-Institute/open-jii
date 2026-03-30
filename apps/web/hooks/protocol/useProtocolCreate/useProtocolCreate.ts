@@ -25,6 +25,7 @@ export const useProtocolCreate = (props: UseProtocolCreateOptions = {}) => {
       if (context?.previousProtocols) {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
+      if (error instanceof Error) return;
       props.onError?.(error, variables, context, mutation);
     },
     onSettled: async () => {

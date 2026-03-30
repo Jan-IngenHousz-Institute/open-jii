@@ -78,7 +78,6 @@ export function NewMacroForm() {
       router.push(`/${locale}/platform/macros/${id}`);
     },
     onError: (error) => {
-      if (error instanceof Error) return;
       const message = error.status === 409 ? t("macros.nameAlreadyExists") : t("macros.createError");
       toast({ description: message, variant: "destructive" });
     },

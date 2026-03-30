@@ -14,8 +14,9 @@ export function useMacroCreate(options?: UseMacroCreateOptions) {
       void queryClient.invalidateQueries({ queryKey: ["macros"] });
       options?.onSuccess?.(...args);
     },
-    onError: (...args) => {
-      options?.onError?.(...args);
+    onError: (error, ...rest) => {
+      if (error instanceof Error) return;
+      options?.onError?.(error, ...rest);
     },
   });
 }
