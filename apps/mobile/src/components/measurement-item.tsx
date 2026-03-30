@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { UploadCloud, Trash2, CloudCheck, CloudAlert } from "lucide-react-native";
 import React from "react";
@@ -6,6 +7,15 @@ import type { MeasurementStatus } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/utils/format-time-ago";
+
+const answersTextStyle = cva("mb-1.5 text-base", {
+  variants: {
+    state: {
+      true: "font-medium",
+      false: "font-normal italic",
+    },
+  },
+});
 
 interface MeasurementItemProps {
   id: string;
@@ -34,10 +44,8 @@ export function MeasurementItem({
   const { colors, classes } = useTheme();
   const isSynced = status === "synced";
 
-  const answersText =
-    questions && questions.length > 0
-      ? questions.map((q) => q.question_answer).join(" | ")
-      : "None";
+  const hasAnswers = questions && questions.length > 0;
+  const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
 
   return (
     <Pressable
@@ -45,8 +53,14 @@ export function MeasurementItem({
       onPress={onPress}
     >
       {/* Top: answers */}
-      <Text className={clsx("mb-1.5 text-base font-medium", classes.text)} numberOfLines={1}>
-        {answersText}
+      <Text
+        className={clsx(
+          answersTextStyle({ state: hasAnswers }),
+          hasAnswers ? classes.text : classes.textMuted,
+        )}
+        numberOfLines={1}
+      >
+        {hasAnswers ? answersText : "No questions answered"}
       </Text>
 
       {/* Bottom row: experiment name on left, timestamp + icon on right */}

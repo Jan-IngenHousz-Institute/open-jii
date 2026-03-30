@@ -105,6 +105,7 @@ export function useMeasurementUpload() {
       experimentName,
       experimentId,
       protocolId,
+      protocolName,
       userId,
       macro,
       questions,
@@ -116,6 +117,7 @@ export function useMeasurementUpload() {
       experimentName: string;
       experimentId: string;
       protocolId: string;
+      protocolName: string;
       userId: string;
       macro: { id: string; name: string; filename: string } | null;
       questions: AnswerData[];
@@ -142,7 +144,7 @@ export function useMeasurementUpload() {
         measurementResult: measurementData,
         metadata: {
           experimentName,
-          protocolName: protocolId,
+          protocolName,
           timestamp: measurementData.timestamp,
         },
       };

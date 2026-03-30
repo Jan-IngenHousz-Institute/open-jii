@@ -1160,13 +1160,7 @@ module "opennext_waf" {
   log_retention_days = 30
   enable_bot_control = true
 
-  large_body_bypass_routes = [
-    {
-      search_string         = "/ingest"
-      positional_constraint = "STARTS_WITH"
-      method                = "POST"
-    }
-  ]
+  managed_rules_excluded_paths = ["/ingest"]
 
   tags = {
     Environment = var.environment

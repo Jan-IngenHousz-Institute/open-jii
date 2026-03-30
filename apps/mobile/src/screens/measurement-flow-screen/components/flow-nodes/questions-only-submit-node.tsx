@@ -1,8 +1,10 @@
 import { clsx } from "clsx";
 import { CircleCheckBig } from "lucide-react-native";
-import React, { useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
+import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
+import { MeasurementItem } from "~/hooks/use-all-measurements";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useQuestionsUpload } from "~/hooks/use-questions-upload";
 import { useSession } from "~/hooks/use-session";
@@ -11,6 +13,8 @@ import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
+
+import { AnalysisSummaryCard } from "./analysis-node/analysis-summary-card";
 
 export function QuestionsOnlySubmitNode() {
   const { classes } = useTheme();
@@ -21,12 +25,33 @@ export function QuestionsOnlySubmitNode() {
   const { getCycleAnswers } = useFlowAnswersStore();
   const { isUploading, uploadQuestions } = useQuestionsUpload();
 
-  const timestampRef = useRef<string>(getSyncedLocalISO());
+  const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
+
+  const displayTimestamp = useRef<string>(getSyncedLocalISO()).current;
 
   const experimentName = experiments.find((e) => e.value === experimentId)?.label ?? "Experiment";
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
+
+  const currentMeasurement = useMemo<MeasurementItem>(
+    () => ({
+      key: "current",
+      timestamp: displayTimestamp,
+      experimentName,
+      status: "synced",
+      data: {
+        topic: "",
+        measurementResult: { questions },
+        metadata: {
+          experimentName,
+          protocolName: "",
+          timestamp: displayTimestamp,
+        },
+      },
+    }),
+    [displayTimestamp, experimentName, questions],
+  );
 
   const canUpload = Boolean(experimentId && session?.data?.user?.id);
 
@@ -76,22 +101,12 @@ export function QuestionsOnlySubmitNode() {
         <CircleCheckBig size={16} />
       </View>
 
-      <View className="my-4 gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
-        <Text className={clsx(classes.text)}>
-          <Text className="font-semibold">Experiment: </Text>
-          <Text className={clsx(classes.textMuted)}>{experimentName}</Text>
-        </Text>
-        <Text className={clsx(classes.text)}>
-          <Text className="font-semibold">Answers: </Text>
-          <Text className={clsx(classes.textMuted)}>
-            {questions.length === 0 ? "None" : questions.map((q) => q.question_answer).join(" | ")}
-          </Text>
-        </Text>
-        <Text className={clsx(classes.text)}>
-          <Text className="font-semibold">Date: </Text>
-          <Text className={clsx(classes.textMuted)}>{timestampRef.current}</Text>
-        </Text>
-      </View>
+      <AnalysisSummaryCard
+        experimentName={experimentName}
+        questions={questions}
+        displayTimestamp={displayTimestamp}
+        onPress={() => setQuestionsModalVisible(true)}
+      />
 
       <View className="flex-row gap-4 py-3">
         <Button
@@ -108,6 +123,12 @@ export function QuestionsOnlySubmitNode() {
           style={{ flex: 1, height: 44 }}
         />
       </View>
+
+      <MeasurementQuestionsModal
+        visible={questionsModalVisible}
+        measurement={currentMeasurement}
+        onClose={() => setQuestionsModalVisible(false)}
+      />
     </View>
   );
 }
