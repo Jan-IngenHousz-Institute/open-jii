@@ -28,7 +28,7 @@
     "prism-react-renderer": "^2.4.1",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
-    "swagger-ui-react": "^5.32.0"
+    "swagger-ui-react": "^5.32.1"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.9.2",
