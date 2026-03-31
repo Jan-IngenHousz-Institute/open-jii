@@ -3,10 +3,13 @@ import type { IMultispeqCommandExecutor } from "~/services/multispeq-communicati
 import { createMultispeqCommandExecutor } from "~/services/scan-manager/utils/create-multispeq-command-executor";
 import type { Device } from "~/types/device";
 
+import { MULTISPEQ_CONSOLE } from "@repo/iot";
+
 interface ScannerCommandExecutorStore {
   commandExecutor: IMultispeqCommandExecutor | undefined;
   commandResponse: string | object | undefined;
   isExecuting: boolean;
+  isCancelled: boolean;
   error: Error | undefined;
   isInitializing: boolean;
 
@@ -15,6 +18,9 @@ interface ScannerCommandExecutorStore {
 
   // Execute a command
   executeCommand: (command: string | object) => Promise<string | object | undefined>;
+
+  // Send cancel command (-1+) to stop a running operation on the device
+  cancelCommand: () => Promise<void>;
 
   // Reset state
   reset: () => void;
@@ -27,6 +33,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
   commandExecutor: undefined,
   commandResponse: undefined,
   isExecuting: false,
+  isCancelled: false,
   error: undefined,
   isInitializing: false,
 
@@ -83,10 +90,13 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       throw error;
     }
 
-    set({ isExecuting: true, error: undefined });
+    set({ isExecuting: true, isCancelled: false, error: undefined });
 
     try {
       const result = await commandExecutor.execute(command);
+      if (get().isCancelled) {
+        throw new Error("Measurement cancelled");
+      }
       set({ commandResponse: result, isExecuting: false, error: undefined });
       return result;
     } catch (err) {
@@ -96,8 +106,16 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
     }
   },
 
+  cancelCommand: async () => {
+    set({ isCancelled: true, isExecuting: false });
+    const { commandExecutor } = get();
+    if (commandExecutor) {
+      await commandExecutor.execute(MULTISPEQ_CONSOLE.CANCEL);
+    }
+  },
+
   reset: () => {
-    set({ commandResponse: undefined, error: undefined, isExecuting: false });
+    set({ commandResponse: undefined, error: undefined, isExecuting: false, isCancelled: false });
   },
 
   destroy: async () => {
