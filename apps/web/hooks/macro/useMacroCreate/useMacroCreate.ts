@@ -13,6 +13,7 @@ export type UseMacroCreateOptions = TsRestMutationOptions<
 export function useMacroCreate(options?: UseMacroCreateOptions) {
   const queryClient = tsr.useQueryClient();
   const { t } = useTranslation();
+  
   return route.useMutation({
     ...options,
     onSuccess: (...args) => {
@@ -21,7 +22,10 @@ export function useMacroCreate(options?: UseMacroCreateOptions) {
       options?.onSuccess?.(...args);
     },
     onError: (error, ...rest) => {
-      if (!isContractError(error)) return;
+      if (!isContractError(error)) {
+        toast({ description: t("common.errors.serverError"), variant: "destructive" });
+        return;
+      }
 
       switch(error.status) {
         case 409:

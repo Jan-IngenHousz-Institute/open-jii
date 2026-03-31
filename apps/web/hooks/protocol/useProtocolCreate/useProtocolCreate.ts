@@ -19,7 +19,6 @@ export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
   return route.useMutation({
     ...options,
     onSuccess: (...args) => {
-      console.log("args", args);
       toast({ description: t("protocols.protocolCreated") });
       options.onSuccess?.(...args);
     },
@@ -33,11 +32,13 @@ export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
       return { previousProtocols };
     },
     onError: (error, variables, context, mutation) => {
-      console.log("error", error, t("protocols.nameAlreadyExists"));
       if (context?.previousProtocols) {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
-      if (!isContractError(error)) return;
+      if (!isContractError(error)) {
+        toast({ description: t("common.errors.serverError"), variant: "destructive" });
+        return;
+      }
 
       switch(error.status) {
         case 409:
