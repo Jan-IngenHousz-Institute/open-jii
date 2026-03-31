@@ -1,7 +1,7 @@
 import { initContract, tsRestFetchApi } from "@ts-rest/core";
 import type { AppRoute, ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
-import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
+import type { ErrorResponse, InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
 import { env } from "~/env";
 
 import { experimentContract, macroContract, protocolContract, userContract } from "@repo/api";
@@ -62,22 +62,13 @@ type ContractError<TRoute extends AppRoute> = Extract<
 >;
 
 export function isContractError<TRoute extends AppRoute>(
-  tsrRoute: { useMutation: (options?: UseMutationOptions<TRoute, any>) => any },
-  error: TsRestError<TRoute>,
+  error: ErrorResponse<TRoute>,
 ): error is ContractError<TRoute>;
 export function isContractError<TRoute extends AppRoute>(
-  route: TRoute,
-  error: TsRestError<TRoute>,
-): error is ContractError<TRoute>;
-export function isContractError<TRoute extends AppRoute>(
-  routeOrTsrRoute: TRoute | { useMutation: (options?: UseMutationOptions<TRoute, any>) => any },
-  error: TsRestError<TRoute>,
+  error: ErrorResponse<TRoute>,
 ): error is ContractError<TRoute> {
   if (error instanceof Error) return false;
   if (typeof error !== "object" || error === null || !("status" in error)) return false;
-  if ("responses" in routeOrTsrRoute) {
-    return String((error as { status: number }).status) in routeOrTsrRoute.responses;
-  }
   return typeof (error as { status: unknown }).status === "number";
 }
 
