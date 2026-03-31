@@ -45,23 +45,42 @@ export function MeasurementItem({
   const isSynced = status === "synced";
 
   const hasAnswers = questions && questions.length > 0;
-  const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
+  const firstAnswer = hasAnswers ? questions[0] : null;
+  const remainingText =
+    hasAnswers && questions.length > 1
+      ? questions
+          .slice(1)
+          .map((q) => q.question_answer)
+          .join(" | ")
+      : null;
 
   return (
     <Pressable
       className={clsx("border-t px-4 py-3", classes.card, classes.border)}
       onPress={onPress}
     >
-      {/* Top: answers */}
-      <Text
-        className={clsx(
-          answersTextStyle({ state: hasAnswers }),
-          hasAnswers ? classes.text : classes.textMuted,
+      {/* Top: answers — first answer (plot number) shown bold */}
+      <View className="mb-1.5 flex-row items-center gap-1.5">
+        {firstAnswer ? (
+          <>
+            <Text className={clsx("text-base font-bold", classes.text)} numberOfLines={1}>
+              {firstAnswer.question_answer}
+            </Text>
+            {remainingText && (
+              <Text
+                className={clsx("flex-1 text-base font-normal", classes.textMuted)}
+                numberOfLines={1}
+              >
+                {remainingText}
+              </Text>
+            )}
+          </>
+        ) : (
+          <Text className={clsx("text-base font-normal italic", classes.textMuted)}>
+            No questions answered
+          </Text>
         )}
-        numberOfLines={1}
-      >
-        {hasAnswers ? answersText : "No questions answered"}
-      </Text>
+      </View>
 
       {/* Bottom row: experiment name on left, timestamp + icon on right */}
       <View className="flex-row items-center justify-between">
