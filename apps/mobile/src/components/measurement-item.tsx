@@ -1,6 +1,6 @@
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
-import { UploadCloud, Trash2, CloudCheck, CloudAlert } from "lucide-react-native";
+import { UploadCloud, Trash2, CloudCheck, CloudAlert, MessageCircle } from "lucide-react-native";
 import React from "react";
 import { View, Text, TouchableOpacity, Pressable } from "react-native";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
@@ -28,6 +28,8 @@ interface MeasurementItemProps {
   onDelete?: (id: string) => void;
   /** When true, action buttons (sync/delete) are hidden - e.g. when used inside a swipeable row */
   hideActions?: boolean;
+  /** When true, shows a comment indicator icon */
+  hasComment?: boolean;
 }
 
 export function MeasurementItem({
@@ -40,6 +42,7 @@ export function MeasurementItem({
   onSync,
   onDelete,
   hideActions = false,
+  hasComment = false,
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
   const isSynced = status === "synced";
@@ -102,6 +105,9 @@ export function MeasurementItem({
                 </TouchableOpacity>
               )}
             </View>
+          )}
+          {hasComment && (
+            <MessageCircle size={14} color={colors.onSurface} />
           )}
           <Text className={clsx("shrink-0 text-sm", classes.textMuted)} numberOfLines={1}>
             {formatTimeAgo(timestamp)}
