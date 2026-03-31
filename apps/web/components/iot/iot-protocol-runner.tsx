@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Play } from "lucide-react";
+import { Loader2, Play, StopCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
@@ -8,6 +8,7 @@ import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/use
 
 import type { SensorFamily } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { MULTISPEQ_CONSOLE } from "@repo/iot";
 import { Button } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -93,6 +94,12 @@ export function IotProtocolRunner({
     }
   };
 
+  const handleCancel = async () => {
+    if (!driver || !isConnected) return;
+    await driver.execute(MULTISPEQ_CONSOLE.CANCEL);
+    setIsRunning(false);
+  };
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4">
       <div
@@ -128,27 +135,35 @@ export function IotProtocolRunner({
             onDisconnect={disconnect}
           />
 
-          {/* Run Protocol Button */}
+          {/* Run / Cancel Protocol */}
           {isConnected && (
-            <Button
-              type="button"
-              onClick={handleRunProtocol}
-              disabled={isRunning}
-              size="sm"
-              className="w-full"
-            >
-              {isRunning ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
-                  <span className="truncate">{t("iot.protocolRunner.running")}</span>
-                </>
-              ) : (
-                <>
-                  <Play className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{t("iot.protocolRunner.runProtocol")}</span>
-                </>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={handleRunProtocol}
+                disabled={isRunning}
+                size="sm"
+                className="flex-1"
+              >
+                {isRunning ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
+                    <span className="truncate">{t("iot.protocolRunner.running")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t("iot.protocolRunner.runProtocol")}</span>
+                  </>
+                )}
+              </Button>
+              {isRunning && (
+                <Button type="button" onClick={handleCancel} size="sm" variant="destructive">
+                  <StopCircle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Cancel</span>
+                </Button>
               )}
-            </Button>
+            </div>
           )}
         </div>
 

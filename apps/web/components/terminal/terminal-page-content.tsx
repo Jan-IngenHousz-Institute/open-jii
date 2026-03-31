@@ -6,7 +6,7 @@ import "@xterm/xterm/css/xterm.css";
 import { Circle, Unplug, Usb } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { MULTISPEQ_SERIAL_DEFAULTS } from "@repo/iot";
+import { MULTISPEQ_CONSOLE, MULTISPEQ_SERIAL_DEFAULTS } from "@repo/iot";
 import { WebSerialAdapter } from "@repo/iot/transport/web";
 import { Button } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
@@ -124,6 +124,15 @@ export function TerminalPageContent() {
           inputBufferRef.current = "";
           historyIndexRef.current = -1;
           return;
+        } else if (cmd === "cancel") {
+          const adapter = adapterRef.current;
+          if (adapter) {
+            void adapter.send(MULTISPEQ_CONSOLE.CANCEL + "\r\n").then(() => {
+              writeSent(MULTISPEQ_CONSOLE.CANCEL);
+            });
+          } else {
+            term.writeln("\x1b[31mNot connected.\x1b[0m");
+          }
         } else if (cmd) {
           const adapter = adapterRef.current;
           if (adapter) {
