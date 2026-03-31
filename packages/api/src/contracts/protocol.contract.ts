@@ -101,6 +101,7 @@ export const protocolContract = c.router({
       400: zProtocolErrorResponse,
       403: zProtocolErrorResponse,
       404: zProtocolErrorResponse,
+      409: zProtocolErrorResponse,
     },
     summary: "Add compatible macros to a protocol",
     description: "Links macros as compatible with this protocol (creator only)",
