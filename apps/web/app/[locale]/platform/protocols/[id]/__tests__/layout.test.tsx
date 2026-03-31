@@ -50,8 +50,21 @@ vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
 
 const mockNotFound = vi.fn();
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "test-id" }) as { id: string },
+  useParams: () => ({ id: "test-id", locale: "en" }) as { id: string; locale: string },
+  usePathname: () => "/en/platform/protocols/test-id",
   notFound: () => mockNotFound() as never,
+}));
+
+vi.mock("next/link", () => ({
+  __esModule: true,
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
+vi.mock("lucide-react", () => ({
+  ArrowLeft: () => <span data-testid="arrow-left-icon" />,
+  Play: () => <span data-testid="play-icon" />,
 }));
 
 vi.mock("@repo/auth/client", () => ({
@@ -64,6 +77,7 @@ vi.mock("@repo/i18n", () => ({
   __esModule: true,
   useTranslation: (namespace?: string) => ({
     t: (key: string) => (namespace ? `${namespace}.${key}` : key),
+    i18n: { language: "en" },
   }),
 }));
 
@@ -77,6 +91,17 @@ vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
+const mockBrowserSupport = {
+  bluetooth: true,
+  serial: true,
+  any: true,
+  bluetoothReason: null as string | null,
+  serialReason: null as string | null,
+};
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => mockBrowserSupport,
+}));
+
 vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
 }));
@@ -87,6 +112,7 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
     hasAccess,
     isPending,
     badges,
+    actions,
     onSave,
   }: {
     name: string;
@@ -94,12 +120,14 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
     onSave: (newName: string) => Promise<void>;
     isPending: boolean;
     badges?: React.ReactNode;
+    actions?: React.ReactNode;
   }) => (
     <div data-testid="inline-editable-title">
       <span data-testid="title-name">{name}</span>
       <span data-testid="title-has-access">{String(hasAccess)}</span>
       <span data-testid="title-is-pending">{String(isPending)}</span>
       {badges && <div data-testid="title-badges">{badges}</div>}
+      {actions && <div data-testid="title-actions">{actions}</div>}
       <button data-testid="save-title-btn" onClick={() => onSave("New Title")}>
         Save
       </button>
@@ -116,6 +144,17 @@ vi.mock("@repo/ui/components", () => ({
     <span data-testid="badge" data-variant={variant} className={className}>
       {children}
     </span>
+  ),
+  Button: ({
+    children,
+    asChild,
+    ...rest
+  }: React.ComponentProps<"button"> & { asChild?: boolean; size?: string }) =>
+    asChild ? <>{children}</> : <button {...rest}>{children}</button>,
+  Tooltip: ({ children }: React.PropsWithChildren) => <>{children}</>,
+  TooltipTrigger: ({ children }: React.PropsWithChildren<{ asChild?: boolean }>) => <>{children}</>,
+  TooltipContent: ({ children }: React.PropsWithChildren) => (
+    <div data-testid="tooltip-content">{children}</div>
   ),
 }));
 
@@ -142,6 +181,11 @@ function renderLayout(children: React.ReactNode = <div>Children Content</div>) {
 describe("ProtocolLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockBrowserSupport.bluetooth = true;
+    mockBrowserSupport.serial = true;
+    mockBrowserSupport.any = true;
+    mockBrowserSupport.bluetoothReason = null;
+    mockBrowserSupport.serialReason = null;
     mockUseProtocolUpdate.mockReturnValue({
       mutateAsync: mockMutateAsync,
       isPending: false,

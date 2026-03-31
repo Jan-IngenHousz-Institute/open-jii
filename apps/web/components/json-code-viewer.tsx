@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { FC } from "react";
 
 import { Button } from "@repo/ui/components";
+import { cn } from "@repo/ui/lib/utils";
 
 interface JsonCodeViewerProps {
   value: Record<string, unknown>[] | Record<string, unknown> | string;
@@ -53,7 +54,11 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
   return (
     <div
       data-testid="json-viewer-wrapper"
-      className={`group/viewer relative overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md ${onEditStart ? "cursor-pointer" : ""} ${className}`}
+      className={cn(
+        "group/viewer relative overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md",
+        onEditStart && "cursor-pointer",
+        className,
+      )}
       onClick={onEditStart}
     >
       {/* Hover edit overlay */}

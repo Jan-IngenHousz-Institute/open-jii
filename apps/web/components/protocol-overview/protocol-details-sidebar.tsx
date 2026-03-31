@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
+import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Protocol, SensorFamily } from "@repo/api";
@@ -97,13 +98,16 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="multispeq">MultispeQ</SelectItem>
-              <SelectItem value="ambit">Ambit</SelectItem>
+              {SENSOR_FAMILY_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                  {opt.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         ) : (
           <p className="text-muted-foreground text-sm capitalize">
-            {protocol.family === "multispeq" ? "MultispeQ" : "Ambit"}
+            {getSensorFamilyLabel(protocol.family)}
           </p>
         )}
       </div>

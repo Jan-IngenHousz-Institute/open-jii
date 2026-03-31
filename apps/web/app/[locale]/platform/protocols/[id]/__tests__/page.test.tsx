@@ -56,6 +56,7 @@ vi.mock("@repo/auth/client", () => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (k: string) => k,
+    i18n: { language: "en" },
   }),
 }));
 
@@ -174,6 +175,13 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
   ),
 }));
 
+vi.mock("next/link", () => ({
+  __esModule: true,
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
 vi.mock("lucide-react", () => ({
   Check: ({ className }: { className?: string }) => (
     <span data-testid="check-icon" className={className} />
@@ -186,6 +194,9 @@ vi.mock("lucide-react", () => ({
   ),
   Pencil: ({ className }: { className?: string }) => (
     <span data-testid="pencil-icon" className={className} />
+  ),
+  Play: ({ className }: { className?: string }) => (
+    <span data-testid="play-icon" className={className} />
   ),
   X: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className} />,
 }));
@@ -210,20 +221,25 @@ vi.mock("@repo/ui/components", () => {
     disabled,
     variant,
     size,
+    asChild,
   }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: string;
     size?: string;
-  }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  );
+    asChild?: boolean;
+  }) =>
+    asChild ? (
+      <>{children}</>
+    ) : (
+      <button
+        data-testid="button"
+        data-variant={variant}
+        data-size={size}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+      </button>
+    );
   const Tooltip = ({ children }: { children: React.ReactNode }) => <>{children}</>;
   const TooltipContent = ({ children }: { children: React.ReactNode }) => (
     <span data-testid="tooltip-content">{children}</span>

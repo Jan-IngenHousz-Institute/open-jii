@@ -1,6 +1,6 @@
 // Editor component test file
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -175,19 +175,21 @@ describe("MacroCodeViewer", () => {
     render(<MacroCodeViewer {...defaultProps} value={code} />);
 
     const copyButton = screen.getByTestId("button");
-    fireEvent.click(copyButton);
+    act(() => {
+      fireEvent.click(copyButton);
+    });
 
     expect(mockClipboard.writeText).toHaveBeenCalledWith(code);
     expect(mockClipboard.writeText).toHaveBeenCalledTimes(1);
   });
 
-  it("should change the copy icon to check icon after copying", async () => {
+  it("should change the copy icon to check icon after copying", () => {
     render(<MacroCodeViewer {...defaultProps} />);
 
     const copyButton = screen.getByTestId("button");
 
     // Use jest/vitest act to handle state updates
-    await vi.waitFor(() => {
+    act(() => {
       fireEvent.click(copyButton);
     });
 
@@ -196,7 +198,9 @@ describe("MacroCodeViewer", () => {
     expect(mockClipboard.writeText).toHaveBeenCalled();
 
     // Fast forward time to see the copy icon return
-    vi.advanceTimersByTime(2000);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
     expect(screen.getByTestId("copy-icon")).toBeInTheDocument();
   });
 

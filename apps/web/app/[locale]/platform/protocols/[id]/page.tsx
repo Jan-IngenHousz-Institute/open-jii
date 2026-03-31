@@ -1,22 +1,18 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { JsonCodeViewer } from "@/components/json-code-viewer";
-import ProtocolCodeEditor from "@/components/protocol-code-editor";
 import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-details-sidebar";
-import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
+import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { useCodeAutoSave } from "@/hooks/useCodeAutoSave";
-import { use, useCallback } from "react";
+import { useProtocolCodeAutoSave } from "@/hooks/useProtocolCodeAutoSave";
+import { use } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks";
-
-type ProtocolCode = Record<string, unknown>[] | string | undefined;
 
 interface ProtocolOverviewPageProps {
   params: Promise<{ id: string }>;
@@ -27,24 +23,10 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   const { data, isLoading, error } = useProtocol(id);
   const { t } = useTranslation();
   const { data: session } = useSession();
-  const {
-    mutateAsync: updateProtocol,
-    mutate: saveProtocol,
-    isPending: isUpdating,
-  } = useProtocolUpdate(id);
-
-  const buildPayload = useCallback(
-    (code: ProtocolCode) => ({ params: { id }, body: { code: code as Record<string, unknown>[] } }),
-    [id],
-  );
+  const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
   const { isEditing, editedCode, syncStatus, startEditing, closeEditing, handleChange } =
-    useCodeAutoSave<ProtocolCode, ReturnType<typeof buildPayload>>({
-      saveFn: saveProtocol,
-      buildPayload,
-      toKey: (code) => JSON.stringify(code),
-      isValid: (value) => Array.isArray(value),
-    });
+    useProtocolCodeAutoSave(id);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -91,25 +73,18 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           placeholder={t("protocols.descriptionPlaceholder")}
         />
 
-        {isEditing ? (
-          <ProtocolCodeEditor
-            value={editedCode ?? []}
-            onChange={handleChange}
-            label=""
-            placeholder={t("protocols.codePlaceholder")}
-            title={t("protocols.codeTitle")}
-            headerActions={
-              <CodeEditorHeaderActions syncStatus={syncStatus} onClose={closeEditing} />
-            }
-          />
-        ) : (
-          <JsonCodeViewer
-            value={protocol.code}
-            height="700px"
-            title={t("protocols.codeTitle")}
-            onEditStart={isCreator ? () => startEditing(protocol.code) : undefined}
-          />
-        )}
+        <ProtocolCodePanel
+          code={protocol.code}
+          isCreator={isCreator}
+          isEditing={isEditing}
+          editedCode={editedCode}
+          handleChange={handleChange}
+          syncStatus={syncStatus}
+          closeEditing={closeEditing}
+          startEditing={() => startEditing(protocol.code)}
+          title={t("protocols.codeTitle")}
+          placeholder={t("protocols.codePlaceholder")}
+        />
       </div>
     </div>
   );

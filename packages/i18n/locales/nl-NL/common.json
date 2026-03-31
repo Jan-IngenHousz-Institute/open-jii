@@ -351,7 +351,25 @@
     "codePlaceholder": "Voer protocol code in als JSON",
     "finalizeSetup": "Protocol maken",
     "compatibleMacros": "Compatibele macro's",
-    "compatibleMacrosDescription": "Selecteer optioneel compatibele macro's voor dit protocol"
+    "compatibleMacrosDescription": "Selecteer optioneel compatibele macro's voor dit protocol",
+    "testerTitle": "Verbinden & Testen",
+    "detailsStepTitle": "Details",
+    "detailsStepDescription": "Voer informatie in over je protocol",
+    "codeStepTitle": "Code & Test",
+    "codeStepDescription": "Schrijf en test je protocol code",
+    "reviewStepTitle": "Overzicht",
+    "reviewStepDescription": "Controleer je protocol voordat je het aanmaakt",
+    "reviewYourProtocol": "Controleer je protocol",
+    "reviewAllDetails": "Controleer alle details voordat je je protocol aanmaakt. Je kunt teruggaan om wijzigingen aan te brengen.",
+    "protocolName": "Protocol naam",
+    "protocolCode": "Protocol code",
+    "sensorFamily": "Sensor familie",
+    "noDescription": "Geen beschrijving opgegeven",
+    "noMacrosAdded": "Geen macro's toegevoegd",
+    "unsavedChangesTitle": "Niet-opgeslagen wijzigingen",
+    "unsavedChangesMessage": "Je bent begonnen met het aanmaken van een nieuw protocol. Weet je zeker dat je wilt vertrekken? Alle voortgang gaat verloren.",
+    "unsavedStay": "Op pagina blijven",
+    "unsavedLeave": "Pagina verlaten"
   },
   "protocolSettings": {
     "loading": "Protocol instellingen laden...",
@@ -380,7 +398,9 @@
     "compatibleMacros": "Compatibele macro's",
     "compatibleMacrosDescription": "Macro's waarvan bekend is dat ze werken met dit protocol. Deze worden aanbevolen in de flow builder.",
     "noCompatibleMacros": "Nog geen compatibele macro's gekoppeld.",
-    "addCompatibleMacro": "Zoek en voeg een compatibele macro toe..."
+    "addCompatibleMacro": "Zoek en voeg een compatibele macro toe...",
+    "detailsTitle": "Protocoldetails",
+    "testerTitle": "Verbinden & Testen"
   },
   "experimentDataTable": {
     "noData": "Geen gegevens ontvangen",

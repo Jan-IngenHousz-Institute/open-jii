@@ -13,6 +13,7 @@ interface InlineEditableTitleProps {
   onSave: (newName: string) => Promise<void>;
   isPending?: boolean;
   badges?: ReactNode;
+  actions?: ReactNode;
 }
 
 const titleVariants = cva("text-2xl transition-all duration-300", {
@@ -33,6 +34,7 @@ export function InlineEditableTitle({
   onSave,
   isPending = false,
   badges,
+  actions,
 }: InlineEditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -104,7 +106,12 @@ export function InlineEditableTitle({
         </CardTitle>
       )}
 
-      {badges && <div className="flex items-center gap-2">{badges}</div>}
+      {(badges ?? actions) && (
+        <div className="flex items-center gap-2">
+          {badges}
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

@@ -67,13 +67,18 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     this.bufferLength = 0;
 
     const cleanData = removeLineEnding(fullData);
-    const { data: jsonData, checksum } = extractChecksum(
+
+    // Only extract checksum if the data portion (without last 8 chars) is valid JSON.
+    // Plain text responses like "MultispeQ Ready" don't have checksums.
+    const { data: possibleJson, checksum: possibleChecksum } = extractChecksum(
       cleanData,
       MULTISPEQ_FRAMING.CHECKSUM_LENGTH,
     );
+    const parsed = tryParseJson(possibleJson);
+    const hasChecksum = parsed !== possibleJson; // tryParseJson returns the original string if parsing fails
 
-    // Try to parse as JSON, fall back to raw string
-    const parsedData: unknown = tryParseJson(jsonData);
+    const parsedData = hasChecksum ? parsed : tryParseJson(cleanData);
+    const checksum = hasChecksum ? possibleChecksum : undefined;
 
     // Emit response event
     void this.emitter.emit("receivedReplyFromDevice", {
@@ -117,14 +122,16 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
 
   async getDeviceInfo(): Promise<MultispeqDeviceInfo> {
     // device_info returns JSON with name, version, id, battery, firmware, config
-    const result = await this.execute<MultispeqDeviceInfo>(MULTISPEQ_COMMANDS.DEVICE_INFO);
+    // const result = await this.execute<MultispeqDeviceInfo>(MULTISPEQ_COMMANDS.DEVICE_INFO);
 
-    if (result.success && typeof result.data === "object") {
-      return result.data;
-    }
+    // if (result.success && typeof result.data === "object") {
+    //   return result.data;
+    // }
 
     // Fallback: try battery command alone (older firmware or partial failure)
     const batteryResult = await this.execute<string>(MULTISPEQ_COMMANDS.BATTERY);
+    const helloResult = await this.execute<string>(MULTISPEQ_COMMANDS.HELLO);
+
     const info: MultispeqDeviceInfo = {};
 
     if (batteryResult.success && typeof batteryResult.data === "string") {
@@ -133,6 +140,10 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
       if (!isNaN(battery)) {
         info.device_battery = battery;
       }
+    }
+
+    if (helloResult.success && typeof helloResult.data === "string") {
+      info.device_name = helloResult.data;
     }
 
     return info;

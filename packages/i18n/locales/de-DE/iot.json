@@ -1,0 +1,38 @@
+{
+  "iot": {
+    "protocolRunner": {
+      "connectionType": "Verbindungstyp",
+      "bluetooth": "Bluetooth",
+      "serial": "Seriell",
+      "device": "Gerät",
+      "connected": "Verbunden",
+      "connecting": "Verbinden",
+      "notConnected": "Nicht verbunden",
+      "pairingWithDevice": "Kopplung mit Gerät",
+      "wireless": "Drahtlos",
+      "usb": "USB",
+      "connect": "Verbinden",
+      "disconnect": "Trennen",
+      "unknownDevice": "Unbekanntes Gerät",
+      "version": "Version",
+      "runProtocol": "Protokoll ausführen",
+      "running": "Wird ausgeführt...",
+      "results": "Ergebnisse",
+      "success": "Erfolg",
+      "failed": "Fehlgeschlagen",
+      "passed": "Bestanden",
+      "error": "Fehler",
+      "responseData": "Antwortdaten",
+      "noResultsYet": "Noch keine Ergebnisse",
+      "runProtocolToSeeResults": "Führen Sie ein Protokoll aus, um Ergebnisse zu sehen",
+      "webBluetoothNotSupported": "Web Bluetooth wird in diesem Browser nicht unterstützt",
+      "webSerialNotSupported": "Web Serial wird in diesem Browser nicht unterstützt",
+      "deviceNoBLE": "Dieses Gerät unterstützt kein Bluetooth Low Energy (BLE)",
+      "deviceNoSerial": "Dieses Gerät unterstützt keine seriellen Verbindungen",
+      "testProtocol": "Protokoll testen",
+      "connectToDeviceDescription": "Verbinden Sie sich mit einem Gerät und testen Sie Ihr Protokoll vor dem Speichern",
+      "browserNotSupported": "Ihr Browser unterstützt weder Web Bluetooth noch Web Serial APIs.",
+      "tryDifferentBrowser": "Versuchen Sie Chrome, Edge oder Opera auf dem Desktop."
+    }
+  }
+}

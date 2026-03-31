@@ -158,6 +158,10 @@ export interface WizardFormProps<T extends FieldValues = FieldValues> {
    */
   className?: string;
   /**
+   * Additional classes for the step indicator bar only
+   */
+  stepIndicatorClassName?: string;
+  /**
    * Whether to show step indicators
    */
   showStepIndicator?: boolean;
@@ -181,6 +185,7 @@ export function WizardForm<T extends FieldValues>({
   onSubmit,
   isSubmitting,
   className,
+  stepIndicatorClassName,
   showStepIndicator = true,
   showStepTitles = true,
   formProps = {},
@@ -303,7 +308,7 @@ export function WizardForm<T extends FieldValues>({
     <div className={cn("w-full", className)}>
       {/* Step indicators */}
       {showStepIndicator && (
-        <div className="mb-6">
+        <div className={cn("mb-6", stepIndicatorClassName)}>
           <div className="flex items-start gap-1">
             {activeSteps.map((_step, index) => {
               const isActive = index === currentStepIndex;

@@ -173,8 +173,8 @@ export function RegistrationForm({
           organization: data.organization,
         },
       });
-    } catch (error) {
-      console.error("Registration error:", error);
+    } catch {
+      toast({ description: t("registration.errorMessage") || "Registration failed" });
     } finally {
       setIsPending(false);
     }

@@ -6,10 +6,17 @@
 // ── Core ────────────────────────────────────────────
 export type {
   TransportType,
+  TransportCategory,
   DeviceType,
   Device,
   ConnectionStatus,
   DeviceConnectionInfo,
+  DeviceTransportSupport,
+} from "./core/types";
+export {
+  DEVICE_TRANSPORT_SUPPORT,
+  getDeviceTransportSupport,
+  isTransportSupported,
 } from "./core/types";
 export type { ITransportAdapter, TransportAdapterFactory } from "./transport/interface";
 export type { IDeviceDriver, CommandResult } from "./driver/driver-base";

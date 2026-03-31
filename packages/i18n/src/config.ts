@@ -31,6 +31,7 @@ export const namespaces = [
   "macro",
   "experimentData",
   "experimentVisualizations",
+  "iot",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];
