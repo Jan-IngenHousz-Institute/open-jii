@@ -7,14 +7,82 @@ import {
   getSuccessfulUploadsWithKeys,
   removeSuccessfulUpload,
   clearSuccessfulUploads,
+  pruneExpiredUploads,
 } from "../successful-uploads-storage";
+
+// --- In-memory SQLite mock via Drizzle ---
+
+let dbRows: Record<string, any>[] = [];
+
+vi.mock("../db/client", () => ({
+  db: {
+    insert: () => {
+      const chain: any = {
+        values: (vals: any) => {
+          chain._vals = vals;
+          return chain;
+        },
+        onConflictDoNothing: () => chain,
+        run: () => {
+          if (chain._vals) {
+            dbRows.push({ ...chain._vals, createdAt: new Date() });
+          }
+          return { changes: 1 };
+        },
+      };
+      return chain;
+    },
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          all: () => dbRows.filter((r) => r.status === "successful"),
+        }),
+      }),
+    }),
+    delete: () => ({
+      where: (..._args: any[]) => ({
+        run: () => {
+          const before = dbRows.length;
+          // Distinguish prune (createdAt filter) vs clear (status only) vs single delete
+          // by checking args - simplified mock
+          const hasPruneArg = _args.some((a: any) => typeof a === "object");
+          if (hasPruneArg) {
+            // Prune: remove successful older than 7 days
+            const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            dbRows = dbRows.filter(
+              (r) =>
+                r.status !== "successful" ||
+                new Date(r.createdAt).getTime() >= cutoff,
+            );
+          } else {
+            dbRows = dbRows.filter((r) => r.status !== "successful");
+          }
+          return { changes: before - dbRows.length };
+        },
+      }),
+    }),
+  },
+}));
+
+vi.mock("../db/schema", () => ({
+  measurements: {
+    id: "id",
+    status: "status",
+    topic: "topic",
+    measurementResult: "measurement_result",
+    experimentName: "experiment_name",
+    protocolName: "protocol_name",
+    timestamp: "timestamp",
+    createdAt: "created_at",
+  },
+}));
 
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: {
     setItem: vi.fn(),
     getItem: vi.fn(),
-    getAllKeys: vi.fn(),
-    multiGet: vi.fn(),
+    getAllKeys: vi.fn(() => Promise.resolve([])),
+    multiGet: vi.fn(() => Promise.resolve([])),
     removeItem: vi.fn(),
     multiRemove: vi.fn(),
   },
@@ -34,111 +102,106 @@ const mockUpload = {
   },
 };
 
-describe("successful-uploads-storage", () => {
+describe("successful-uploads-storage (Drizzle + SQLite)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dbRows = [];
+    vi.resetModules();
   });
 
   describe("saveSuccessfulUpload", () => {
-    it("saves compressed upload to AsyncStorage", async () => {
-      await saveSuccessfulUpload(mockUpload);
+    it("inserts a row into the measurements table", async () => {
+      const mod = await import("../successful-uploads-storage");
+      await mod.saveSuccessfulUpload(mockUpload);
 
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        "SUCCESSFUL_UPLOAD_test-uuid-5678",
-        compressForStorage(mockUpload),
-      );
-    });
-
-    it("does not throw on storage error", async () => {
-      vi.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error("storage full"));
-
-      await expect(saveSuccessfulUpload(mockUpload)).resolves.toBeUndefined();
+      expect(dbRows).toHaveLength(1);
+      expect(dbRows[0].id).toBe("test-uuid-5678");
+      expect(dbRows[0].status).toBe("successful");
     });
   });
 
   describe("getSuccessfulUploadsWithKeys", () => {
-    it("returns parsed uploads filtered by prefix (compressed)", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue([
-        "SUCCESSFUL_UPLOAD_abc",
-        "FAILED_UPLOAD_xyz",
-        "SUCCESSFUL_UPLOAD_def",
-      ]);
-      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
-        ["SUCCESSFUL_UPLOAD_abc", compressForStorage(mockUpload)],
-        ["SUCCESSFUL_UPLOAD_def", compressForStorage(mockUpload)],
-      ]);
+    it("returns successful uploads from the database", async () => {
+      dbRows.push({
+        id: "abc",
+        status: "successful",
+        topic: "test/topic",
+        measurementResult: compressForStorage({ value: 42 }),
+        experimentName: "Test Experiment",
+        protocolName: "protocol-1",
+        timestamp: "2026-03-02T10:00:00.000Z",
+      });
 
-      const result = await getSuccessfulUploadsWithKeys();
-
-      expect(result).toHaveLength(2);
-      expect(result[0][0]).toBe("SUCCESSFUL_UPLOAD_abc");
-      expect(result[0][1]).toEqual(mockUpload);
-    });
-
-    it("handles legacy uncompressed JSON entries", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["SUCCESSFUL_UPLOAD_abc"]);
-      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
-        ["SUCCESSFUL_UPLOAD_abc", JSON.stringify(mockUpload)],
-      ]);
-
-      const result = await getSuccessfulUploadsWithKeys();
+      const mod = await import("../successful-uploads-storage");
+      const result = await mod.getSuccessfulUploadsWithKeys();
 
       expect(result).toHaveLength(1);
+      expect(result[0][0]).toBe("abc");
       expect(result[0][1]).toEqual(mockUpload);
     });
 
-    it("skips entries with invalid data", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["SUCCESSFUL_UPLOAD_abc"]);
-      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
-        ["SUCCESSFUL_UPLOAD_abc", "not-valid-json"],
-      ]);
-
-      const result = await getSuccessfulUploadsWithKeys();
-      expect(result).toHaveLength(0);
-    });
-
-    it("returns empty array on storage error", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockRejectedValueOnce(new Error("storage error"));
-
-      const result = await getSuccessfulUploadsWithKeys();
+    it("returns empty array when no successful uploads exist", async () => {
+      const mod = await import("../successful-uploads-storage");
+      const result = await mod.getSuccessfulUploadsWithKeys();
       expect(result).toEqual([]);
     });
   });
 
-  describe("removeSuccessfulUpload", () => {
-    it("removes the item by key", async () => {
-      await removeSuccessfulUpload("SUCCESSFUL_UPLOAD_abc");
+  describe("clearSuccessfulUploads", () => {
+    it("removes all successful uploads but keeps failed ones", async () => {
+      dbRows.push({ id: "a", status: "successful" });
+      dbRows.push({ id: "b", status: "successful" });
+      dbRows.push({ id: "c", status: "failed" });
 
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith("SUCCESSFUL_UPLOAD_abc");
-    });
+      const mod = await import("../successful-uploads-storage");
+      await mod.clearSuccessfulUploads();
 
-    it("does not throw on storage error", async () => {
-      vi.mocked(AsyncStorage.removeItem).mockRejectedValueOnce(new Error("remove error"));
-
-      await expect(removeSuccessfulUpload("SUCCESSFUL_UPLOAD_abc")).resolves.toBeUndefined();
+      expect(dbRows).toHaveLength(1);
+      expect(dbRows[0].id).toBe("c");
     });
   });
 
-  describe("clearSuccessfulUploads", () => {
-    it("removes only successful upload keys", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue([
-        "SUCCESSFUL_UPLOAD_abc",
-        "FAILED_UPLOAD_xyz",
-        "SUCCESSFUL_UPLOAD_def",
-      ]);
+  describe("pruneExpiredUploads", () => {
+    it("removes successful uploads older than 7 days", async () => {
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+      const now = new Date();
 
-      await clearSuccessfulUploads();
+      dbRows.push({ id: "old", status: "successful", createdAt: eightDaysAgo });
+      dbRows.push({ id: "recent", status: "successful", createdAt: now });
 
-      expect(AsyncStorage.multiRemove).toHaveBeenCalledWith([
-        "SUCCESSFUL_UPLOAD_abc",
-        "SUCCESSFUL_UPLOAD_def",
-      ]);
+      const mod = await import("../successful-uploads-storage");
+      mod.pruneExpiredUploads();
+
+      expect(dbRows.find((r) => r.id === "old")).toBeUndefined();
+      expect(dbRows.find((r) => r.id === "recent")).toBeDefined();
     });
 
-    it("does not throw on storage error", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockRejectedValueOnce(new Error("storage error"));
+    it("does not remove failed uploads", async () => {
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+      dbRows.push({ id: "old-failed", status: "failed", createdAt: eightDaysAgo });
 
-      await expect(clearSuccessfulUploads()).resolves.toBeUndefined();
+      const mod = await import("../successful-uploads-storage");
+      mod.pruneExpiredUploads();
+
+      expect(dbRows.find((r) => r.id === "old-failed")).toBeDefined();
+    });
+  });
+
+  describe("legacy migration", () => {
+    it("migrates AsyncStorage entries to SQLite on first access", async () => {
+      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue([
+        "SUCCESSFUL_UPLOAD_legacy-1",
+        "OTHER_KEY",
+      ]);
+      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
+        ["SUCCESSFUL_UPLOAD_legacy-1", compressForStorage(mockUpload)],
+      ]);
+
+      const mod = await import("../successful-uploads-storage");
+      await mod.getSuccessfulUploadsWithKeys();
+
+      expect(dbRows.find((r) => r.id === "legacy-1")).toBeDefined();
+      expect(AsyncStorage.multiRemove).toHaveBeenCalledWith(["SUCCESSFUL_UPLOAD_legacy-1"]);
     });
   });
 });

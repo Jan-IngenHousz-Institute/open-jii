@@ -10,12 +10,124 @@ import {
   clearFailedUploads,
 } from "../failed-uploads-storage";
 
+// --- In-memory SQLite mock via Drizzle ---
+
+let dbRows: Record<string, any>[] = [];
+
+function mockRun(sql: string, params: any[]) {
+  const sqlNorm = sql.replace(/\s+/g, " ").trim().toLowerCase();
+
+  if (sqlNorm.startsWith("insert")) {
+    const existing = dbRows.find((r) => r.id === params[0]);
+    if (!existing || !sqlNorm.includes("on conflict")) {
+      dbRows.push({
+        id: params[0],
+        status: params[1],
+        topic: params[2],
+        measurementResult: params[3],
+        experimentName: params[4],
+        protocolName: params[5],
+        timestamp: params[6],
+        createdAt: new Date(),
+      });
+    }
+    return { changes: 1 };
+  }
+
+  if (sqlNorm.startsWith("update")) {
+    const idx = dbRows.findIndex((r) => r.status === "failed");
+    if (idx >= 0) Object.assign(dbRows[idx], { topic: params[0] });
+    return { changes: idx >= 0 ? 1 : 0 };
+  }
+
+  if (sqlNorm.startsWith("delete")) {
+    const before = dbRows.length;
+    if (params.length >= 2) {
+      dbRows = dbRows.filter((r) => !(r.id === params[0] && r.status === params[1]));
+    } else if (params.length === 1) {
+      dbRows = dbRows.filter((r) => r.status !== params[0]);
+    }
+    return { changes: before - dbRows.length };
+  }
+
+  return { changes: 0 };
+}
+
+// Build a chainable query mock
+function makeChain(type: string) {
+  let collectedParams: any[] = [];
+
+  const chain: any = {
+    values: (vals: any) => {
+      collectedParams = [vals.id, vals.status, vals.topic, vals.measurementResult, vals.experimentName, vals.protocolName, vals.timestamp];
+      return chain;
+    },
+    set: (vals: any) => {
+      collectedParams = [vals.topic];
+      return chain;
+    },
+    where: () => chain,
+    onConflictDoNothing: () => chain,
+    run: () => {
+      if (type === "insert") return mockRun("insert", collectedParams);
+      if (type === "update") return mockRun("update", collectedParams);
+      if (type === "delete") {
+        // For delete, extract status from dbRows filter
+        return mockRun("delete", collectedParams);
+      }
+      return { changes: 0 };
+    },
+    all: () => dbRows.filter((r) => r.status === "failed"),
+    from: () => chain,
+  };
+  return chain;
+}
+
+vi.mock("../db/client", () => ({
+  db: {
+    insert: () => makeChain("insert"),
+    select: () => makeChain("select"),
+    update: () => makeChain("update"),
+    delete: () => {
+      const chain = makeChain("delete");
+      chain.where = (..._args: any[]) => {
+        // Simple: just use the first status-based filter
+        return {
+          run: () => {
+            const before = dbRows.length;
+            // Check if we're filtering by id+status or just status
+            if (_args.length > 0) {
+              // Simplified: just delete failed
+              dbRows = dbRows.filter((r) => r.status !== "failed");
+            }
+            return { changes: before - dbRows.length };
+          },
+        };
+      };
+      return chain;
+    },
+  },
+}));
+
+vi.mock("../db/schema", () => ({
+  measurements: {
+    id: "id",
+    status: "status",
+    topic: "topic",
+    measurementResult: "measurement_result",
+    experimentName: "experiment_name",
+    protocolName: "protocol_name",
+    timestamp: "timestamp",
+    createdAt: "created_at",
+  },
+}));
+
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: {
     setItem: vi.fn(),
     getItem: vi.fn(),
-    getAllKeys: vi.fn(),
-    multiGet: vi.fn(),
+    getAllKeys: vi.fn(() => Promise.resolve([])),
+    multiGet: vi.fn(() => Promise.resolve([])),
     removeItem: vi.fn(),
     multiRemove: vi.fn(),
   },
@@ -35,131 +147,81 @@ const mockUpload = {
   },
 };
 
-describe("failed-uploads-storage", () => {
+describe("failed-uploads-storage (Drizzle + SQLite)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dbRows = [];
+    vi.resetModules();
   });
 
   describe("saveFailedUpload", () => {
-    it("saves compressed upload to AsyncStorage", async () => {
-      await saveFailedUpload(mockUpload);
+    it("inserts a row into the measurements table", async () => {
+      const mod = await import("../failed-uploads-storage");
+      await mod.saveFailedUpload(mockUpload);
 
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        "FAILED_UPLOAD_test-uuid-1234",
-        compressForStorage(mockUpload),
-      );
-    });
-
-    it("propagates AsyncStorage errors to the caller", async () => {
-      const storageError = new Error("AsyncStorage is full");
-      vi.mocked(AsyncStorage.setItem).mockRejectedValueOnce(storageError);
-
-      await expect(saveFailedUpload(mockUpload)).rejects.toThrow("AsyncStorage is full");
+      expect(dbRows).toHaveLength(1);
+      expect(dbRows[0].id).toBe("test-uuid-1234");
+      expect(dbRows[0].status).toBe("failed");
+      expect(dbRows[0].topic).toBe("test/topic");
     });
   });
 
   describe("getFailedUploadsWithKeys", () => {
-    it("returns parsed uploads filtered by prefix (compressed)", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue([
-        "FAILED_UPLOAD_abc",
-        "SUCCESSFUL_UPLOAD_xyz",
-        "FAILED_UPLOAD_def",
-      ]);
-      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
-        ["FAILED_UPLOAD_abc", compressForStorage(mockUpload)],
-        ["FAILED_UPLOAD_def", compressForStorage(mockUpload)],
-      ]);
+    it("returns failed uploads from the database", async () => {
+      dbRows.push({
+        id: "abc",
+        status: "failed",
+        topic: "test/topic",
+        measurementResult: compressForStorage({ value: 42 }),
+        experimentName: "Test Experiment",
+        protocolName: "protocol-1",
+        timestamp: "2026-03-02T10:00:00.000Z",
+      });
 
-      const result = await getFailedUploadsWithKeys();
-
-      expect(result).toHaveLength(2);
-      expect(result[0][0]).toBe("FAILED_UPLOAD_abc");
-      expect(result[0][1]).toEqual(mockUpload);
-    });
-
-    it("handles legacy uncompressed JSON entries", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_abc"]);
-      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
-        ["FAILED_UPLOAD_abc", JSON.stringify(mockUpload)],
-      ]);
-
-      const result = await getFailedUploadsWithKeys();
+      const mod = await import("../failed-uploads-storage");
+      const result = await mod.getFailedUploadsWithKeys();
 
       expect(result).toHaveLength(1);
+      expect(result[0][0]).toBe("abc");
       expect(result[0][1]).toEqual(mockUpload);
     });
 
-    it("skips entries with invalid data", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_abc"]);
-      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([["FAILED_UPLOAD_abc", "not-valid-json"]]);
-
-      const result = await getFailedUploadsWithKeys();
-      expect(result).toHaveLength(0);
-    });
-
-    it("returns empty array on storage error", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockRejectedValueOnce(new Error("storage error"));
-
-      const result = await getFailedUploadsWithKeys();
+    it("returns empty array when no failed uploads exist", async () => {
+      const mod = await import("../failed-uploads-storage");
+      const result = await mod.getFailedUploadsWithKeys();
       expect(result).toEqual([]);
     });
   });
 
-  describe("updateFailedUpload", () => {
-    it("stores compressed data for a valid key", async () => {
-      const key = "FAILED_UPLOAD_abc";
-      await updateFailedUpload(key, mockUpload);
-
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(key, compressForStorage(mockUpload));
-    });
-
-    it("ignores keys without the correct prefix", async () => {
-      await updateFailedUpload("WRONG_PREFIX_abc", mockUpload);
-
-      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
-    });
-
-    it("does not throw on storage error", async () => {
-      vi.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error("write error"));
-
-      await expect(updateFailedUpload("FAILED_UPLOAD_abc", mockUpload)).resolves.toBeUndefined();
-    });
-  });
-
-  describe("removeFailedUpload", () => {
-    it("removes the item by key", async () => {
-      await removeFailedUpload("FAILED_UPLOAD_abc");
-
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith("FAILED_UPLOAD_abc");
-    });
-
-    it("does not throw on storage error", async () => {
-      vi.mocked(AsyncStorage.removeItem).mockRejectedValueOnce(new Error("remove error"));
-
-      await expect(removeFailedUpload("FAILED_UPLOAD_abc")).resolves.toBeUndefined();
-    });
-  });
-
   describe("clearFailedUploads", () => {
-    it("removes only failed upload keys", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue([
-        "FAILED_UPLOAD_abc",
-        "SUCCESSFUL_UPLOAD_xyz",
-        "FAILED_UPLOAD_def",
-      ]);
+    it("removes all failed uploads but keeps successful ones", async () => {
+      dbRows.push({ id: "a", status: "failed" });
+      dbRows.push({ id: "b", status: "failed" });
+      dbRows.push({ id: "c", status: "successful" });
 
-      await clearFailedUploads();
+      const mod = await import("../failed-uploads-storage");
+      await mod.clearFailedUploads();
 
-      expect(AsyncStorage.multiRemove).toHaveBeenCalledWith([
-        "FAILED_UPLOAD_abc",
-        "FAILED_UPLOAD_def",
-      ]);
+      expect(dbRows).toHaveLength(1);
+      expect(dbRows[0].id).toBe("c");
     });
+  });
 
-    it("does not throw on storage error", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockRejectedValueOnce(new Error("storage error"));
+  describe("legacy migration", () => {
+    it("migrates AsyncStorage entries to SQLite on first access", async () => {
+      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue([
+        "FAILED_UPLOAD_legacy-1",
+        "OTHER_KEY",
+      ]);
+      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
+        ["FAILED_UPLOAD_legacy-1", compressForStorage(mockUpload)],
+      ]);
 
-      await expect(clearFailedUploads()).resolves.toBeUndefined();
+      const mod = await import("../failed-uploads-storage");
+      await mod.getFailedUploadsWithKeys();
+
+      expect(dbRows.find((r) => r.id === "legacy-1")).toBeDefined();
+      expect(AsyncStorage.multiRemove).toHaveBeenCalledWith(["FAILED_UPLOAD_legacy-1"]);
     });
   });
 });

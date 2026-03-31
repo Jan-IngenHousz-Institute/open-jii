@@ -1,8 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
 
-const UPLOAD_KEY_PREFIX = "FAILED_UPLOAD_";
+import { db } from "./db/client";
+import { measurements } from "./db/schema";
+
+const LEGACY_KEY_PREFIX = "FAILED_UPLOAD_";
 
 export interface FailedUpload {
   topic: string;
@@ -10,25 +14,91 @@ export interface FailedUpload {
   metadata: { experimentName: string; protocolName: string; timestamp: string };
 }
 
-// Save a single failed upload
-export async function saveFailedUpload(upload: FailedUpload): Promise<void> {
-  const id = uuidv4();
-  const key = `${UPLOAD_KEY_PREFIX}${id}`;
-  await AsyncStorage.setItem(key, compressForStorage(upload));
-}
-
-// Get all failed uploads with their keys
-export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload][]> {
+/** Migrate any remaining AsyncStorage entries to SQLite, then delete them. */
+async function migrateLegacyEntries(): Promise<void> {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
-    const uploadKeys = allKeys.filter((k) => k.startsWith(UPLOAD_KEY_PREFIX));
-    const entries = await AsyncStorage.multiGet(uploadKeys);
+    const legacyKeys = allKeys.filter((k) => k.startsWith(LEGACY_KEY_PREFIX));
+    if (legacyKeys.length === 0) return;
 
-    return entries
-      .map(([key, value]) => {
+    const entries = await AsyncStorage.multiGet(legacyKeys);
+
+    for (const [key, value] of entries) {
+      if (!value) continue;
+      try {
+        const parsed = decompressFromStorage<FailedUpload>(value);
+        if (!isValidFailedUpload(parsed)) continue;
+
+        const id = key.replace(LEGACY_KEY_PREFIX, "");
+        db.insert(measurements)
+          .values({
+            id,
+            status: "failed",
+            topic: parsed.topic,
+            measurementResult: compressForStorage(parsed.measurementResult),
+            experimentName: parsed.metadata.experimentName,
+            protocolName: parsed.metadata.protocolName,
+            timestamp: parsed.metadata.timestamp,
+          })
+          .onConflictDoNothing()
+          .run();
+      } catch {
+        // Skip corrupt entries
+      }
+    }
+
+    await AsyncStorage.multiRemove(legacyKeys);
+    console.log(`[failed-uploads] Migrated ${legacyKeys.length} entries from AsyncStorage`);
+  } catch (err) {
+    console.warn("[failed-uploads] Legacy migration failed:", err);
+  }
+}
+
+let migrationDone = false;
+
+async function ensureMigrated(): Promise<void> {
+  if (migrationDone) return;
+  await migrateLegacyEntries();
+  migrationDone = true;
+}
+
+export async function saveFailedUpload(upload: FailedUpload): Promise<void> {
+  await ensureMigrated();
+  db.insert(measurements)
+    .values({
+      id: uuidv4(),
+      status: "failed",
+      topic: upload.topic,
+      measurementResult: compressForStorage(upload.measurementResult),
+      experimentName: upload.metadata.experimentName,
+      protocolName: upload.metadata.protocolName,
+      timestamp: upload.metadata.timestamp,
+    })
+    .run();
+}
+
+export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload][]> {
+  try {
+    await ensureMigrated();
+    const rows = db
+      .select()
+      .from(measurements)
+      .where(eq(measurements.status, "failed"))
+      .all();
+
+    return rows
+      .map((row) => {
         try {
-          const parsed = value ? decompressFromStorage<FailedUpload>(value) : null;
-          return parsed && isValidFailedUpload(parsed) ? [key, parsed] : null;
+          const upload: FailedUpload = {
+            topic: row.topic,
+            measurementResult: decompressFromStorage(row.measurementResult),
+            metadata: {
+              experimentName: row.experimentName,
+              protocolName: row.protocolName,
+              timestamp: row.timestamp,
+            },
+          };
+          return [row.id, upload] as [string, FailedUpload];
         } catch {
           return null;
         }
@@ -40,31 +110,37 @@ export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload]
   }
 }
 
-// Update a single failed upload by key (e.g. to add/update annotations)
 export async function updateFailedUpload(key: string, data: FailedUpload): Promise<void> {
   try {
-    if (!key.startsWith(UPLOAD_KEY_PREFIX)) return;
-    await AsyncStorage.setItem(key, compressForStorage(data));
+    await ensureMigrated();
+    db.update(measurements)
+      .set({
+        topic: data.topic,
+        measurementResult: compressForStorage(data.measurementResult),
+        experimentName: data.metadata.experimentName,
+        protocolName: data.metadata.protocolName,
+        timestamp: data.metadata.timestamp,
+      })
+      .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
+      .run();
   } catch (error) {
     console.error("Failed to update upload:", error);
   }
 }
 
-// Delete a single upload by key
 export async function removeFailedUpload(key: string): Promise<void> {
   try {
-    await AsyncStorage.removeItem(key);
+    db.delete(measurements)
+      .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
+      .run();
   } catch (error) {
     console.error("Failed to remove upload:", error);
   }
 }
 
-// Clear all uploads
 export async function clearFailedUploads(): Promise<void> {
   try {
-    const allKeys = await AsyncStorage.getAllKeys();
-    const uploadKeys = allKeys.filter((k) => k.startsWith(UPLOAD_KEY_PREFIX));
-    await AsyncStorage.multiRemove(uploadKeys);
+    db.delete(measurements).where(eq(measurements.status, "failed")).run();
   } catch (error) {
     console.error("Failed to clear uploads:", error);
   }
