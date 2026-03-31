@@ -51,6 +51,7 @@ export const colors = {
     inactive: "#757575",
     divider: "#2C2C2C",
     statusBar: "#000000",
+    grayBackground: "#1C2128",
   },
 
   // Theme Colors (light theme)
@@ -66,5 +67,6 @@ export const colors = {
     inactive: "#9E9E9E",
     divider: "#E0E0E0",
     statusBar: "#FFFFFF",
+    grayBackground: "#F6F8FA", // figma gray light
   },
 };

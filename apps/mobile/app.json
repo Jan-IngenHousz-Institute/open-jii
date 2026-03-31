@@ -78,6 +78,14 @@
         {
           "locationWhenInUsePermission": "openJII uses your location to determine your timezone for accurate measurement timestamps."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "openJII uses the camera to scan QR codes during measurements.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "extra": {

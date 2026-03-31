@@ -1,13 +1,15 @@
 import { clsx } from "clsx";
-import { Repeat2, Search, X, Bookmark } from "lucide-react-native";
+import { Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity } from "react-native";
+import { toast } from "sonner-native";
 import { Checkbox } from "~/components/Checkbox";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import { FlowNode } from "../../types";
+import { QRScannerModal } from "./qr-scanner-modal";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
 import { OpenEndedQuestion } from "./question-types/open-ended-question";
@@ -35,6 +37,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
 
   const content = node.content;
   const [searchTerm, setSearchTerm] = useState("");
+  const [qrScannerVisible, setQrScannerVisible] = useState(false);
 
   // Get current answer from store (using node.id as key)
   const answerValue = getAnswer(iterationCount, node.id) ?? "";
@@ -52,13 +55,52 @@ export function QuestionNode({ node }: QuestionNodeProps) {
     advanceWithAnswer(node, value);
   };
 
+  // Handler called when a QR code is scanned — routes by question type
+  const handleQRScanned = (data: string) => {
+    switch (content.kind) {
+      case "multi_choice": {
+        const match = content.options?.find(
+          (opt) => opt.trim().toLowerCase() === data.trim().toLowerCase(),
+        );
+        if (!match) {
+          toast.error("QR doesn't match any options.");
+          return;
+        }
+        handleAnswerChangeAndAdvance(match);
+        toast.success(`"${match}" selected successfully!`);
+        break;
+      }
+      case "open_ended":
+        handleAnswerChange(data);
+        toast.success("QR applied successfully!");
+        break;
+      case "number": {
+        if (data.trim() === "" || isNaN(Number(data))) {
+          toast.error("QR is not a valid number.");
+          return;
+        }
+        handleAnswerChange(data);
+        toast.success("QR applied successfully!");
+        break;
+      }
+      default:
+        handleAnswerChange(data);
+        toast.success("QR applied successfully!");
+    }
+  };
+
   const renderQuestionType = () => {
     switch (content.kind) {
       case "text":
         return <TextQuestion content={content} value={answerValue} onChange={handleAnswerChange} />;
       case "number":
         return (
-          <NumberQuestion content={content} value={answerValue} onChange={handleAnswerChange} />
+          <NumberQuestion
+            content={content}
+            value={answerValue}
+            onChange={handleAnswerChange}
+            onQRPress={() => setQrScannerVisible(true)}
+          />
         );
       case "single_choice":
         return (
@@ -87,7 +129,12 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         );
       case "open_ended":
         return (
-          <OpenEndedQuestion content={content} value={answerValue} onChange={handleAnswerChange} />
+          <OpenEndedQuestion
+            content={content}
+            value={answerValue}
+            onChange={handleAnswerChange}
+            onQRPress={() => setQrScannerVisible(true)}
+          />
         );
       default:
         return (
@@ -103,6 +150,12 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   return (
     <View className={clsx("flex-1 gap-4 rounded-xl px-4 pt-4")}>
       <Text className={clsx("text-lg font-bold", classes.text)}>{content.text}</Text>
+      <QRScannerModal
+        visible={qrScannerVisible}
+        onClose={() => setQrScannerVisible(false)}
+        onScanned={handleQRScanned}
+        showMatchNote={content.kind === "multi_choice"}
+      />
 
       <View className="flex-row items-center gap-4">
         {content.kind === "multi_choice" ? (
@@ -139,6 +192,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
             value={isRememberAnswerEnabled(node.id)}
             text="Remember answer"
             textSize="sm"
+            icon={<Bookmark size={16} color={colors.neutral.black} />}
             onChange={(enabled) => setRememberAnswer(node.id, enabled)}
           />
         )}
@@ -147,9 +201,8 @@ export function QuestionNode({ node }: QuestionNodeProps) {
       {content.kind === "multi_choice" && (
         <View
           className={clsx(
-            "flex-row items-center gap-2 rounded-xl border bg-white px-4",
+            "flex-row items-center gap-2 rounded-xl border pl-4 pr-2",
             classes.border,
-            classes.input,
           )}
         >
           <Search size={20} color={theme.isDark ? colors.dark.inactive : colors.light.inactive} />
@@ -163,9 +216,29 @@ export function QuestionNode({ node }: QuestionNodeProps) {
             onChangeText={setSearchTerm}
           />
 
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm("")}>
-              <X size={20} color={theme.isDark ? colors.dark.inactive : colors.light.inactive} />
+          {searchTerm.length > 0 ? (
+            <TouchableOpacity
+              className="rounded-md p-1"
+              style={{
+                backgroundColor: theme.isDark
+                  ? colors.dark.grayBackground
+                  : colors.light.grayBackground,
+              }}
+              onPress={() => setSearchTerm("")}
+            >
+              <X size={20} color={colors.neutral.black} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              className="rounded-md p-1"
+              onPress={() => setQrScannerVisible(true)}
+              style={{
+                backgroundColor: theme.isDark
+                  ? colors.dark.grayBackground
+                  : colors.light.grayBackground,
+              }}
+            >
+              <ScanQrCode size={20} color={colors.neutral.black} />
             </TouchableOpacity>
           )}
         </View>
