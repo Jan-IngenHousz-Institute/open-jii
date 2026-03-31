@@ -53,6 +53,8 @@ The platform went live with updated mobile and web apps.
 - Resolved mobile lint warnings and formatting issues (#1116)
 - Various CI/CD fixes for mobile release triggers, submit workflows, and EAS build versioning (#1114, #1119, #1133, #1135, #1137, #1139)
 
+**Full Changelog**: https://github.com/Jan-IngenHousz-Institute/open-jii/compare/release/03032026...release/17032026
+
 ---
 
 ## Public Beta — v0.2 (8 December 2025)
