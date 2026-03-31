@@ -1,11 +1,5 @@
 import { initContract, tsRestFetchApi } from "@ts-rest/core";
-import type {
-  AppRoute,
-  ApiFetcherArgs,
-  ClientInferResponses,
-  HTTPStatusCode,
-  SuccessfulHttpStatusCode,
-} from "@ts-rest/core";
+import type { AppRoute, ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
 import { env } from "~/env";
@@ -50,24 +44,31 @@ export const tsr = initTsrReactQuery(contract, {
   credentials: "include",
 });
 
-// Maps the status codes in the route's `responses` to only the non-2xx ones.
-// Intersecting with HTTPStatusCode keeps the result a valid HTTPStatusCode subtype.
-type ErrorStatusOf<TRoute extends AppRoute> = Exclude<
-  keyof TRoute["responses"] & HTTPStatusCode,
-  SuccessfulHttpStatusCode
+type TsRestError<TRoute extends AppRoute> =
+  UseMutationOptions<TRoute, InferClientArgs<typeof tsr>>["onError"] extends
+    ((error: infer E, ...args: any) => any) | undefined
+    ? E
+    : never;
+
+export type ContractError<TRoute extends AppRoute> = Extract<
+  Exclude<TsRestError<TRoute>, Error>,
+  { status: keyof TRoute["responses"] }
 >;
 
-// The union of response shapes that can be thrown as errors for a given route.
-export type ContractErrorResponse<TRoute extends AppRoute> = ClientInferResponses<
-  TRoute,
-  ErrorStatusOf<TRoute>
->;
+export function isContractError<TRoute extends AppRoute>(
+  route: TRoute,
+  error: TsRestError<TRoute>,
+): error is ContractError<TRoute> {
+  if (error instanceof Error) return false;
+  if (typeof error !== "object" || error === null || !("status" in error)) return false;
+  return String((error as { status: number }).status) in route.responses;
+}
 
 type RemapOnError<T, TRoute extends AppRoute> = Omit<T, "onError"> & {
   [K in Extract<keyof T, "onError">]?: T[K] extends
-    | ((error: infer _E, ...args: infer A) => infer R)
+    | ((error: infer E, ...args: infer A) => infer R)
     | undefined
-    ? (error: ContractErrorResponse<TRoute>, ...args: A) => R
+    ? (error: Extract<Exclude<E, Error>, { status: keyof TRoute["responses"] }>, ...args: A) => R
     : T[K];
 };
 
