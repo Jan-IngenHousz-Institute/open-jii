@@ -42,9 +42,7 @@ vi.mock("../db/client", () => ({
             // Prune: remove successful older than 7 days
             const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
             dbRows = dbRows.filter(
-              (r) =>
-                r.status !== "successful" ||
-                new Date(r.createdAt).getTime() >= cutoff,
+              (r) => r.status !== "successful" || new Date(r.createdAt).getTime() >= cutoff,
             );
           } else {
             dbRows = dbRows.filter((r) => r.status !== "successful");

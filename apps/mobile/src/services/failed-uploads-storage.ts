@@ -80,11 +80,7 @@ export async function saveFailedUpload(upload: FailedUpload): Promise<void> {
 export async function getFailedUploadsWithKeys(): Promise<[string, FailedUpload][]> {
   try {
     await ensureMigrated();
-    const rows = db
-      .select()
-      .from(measurements)
-      .where(eq(measurements.status, "failed"))
-      .all();
+    const rows = db.select().from(measurements).where(eq(measurements.status, "failed")).all();
 
     return rows
       .map((row) => {
