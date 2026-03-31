@@ -13,6 +13,13 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+let mockIsInternetReachable = true;
+vi.mock("expo-network", () => ({
+  getNetworkStateAsync: vi.fn(() =>
+    Promise.resolve({ isInternetReachable: mockIsInternetReachable }),
+  ),
+}));
+
 vi.mock("expo-location", () => ({
   requestForegroundPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
   getCurrentPositionAsync: vi.fn(() =>
@@ -79,6 +86,7 @@ describe("time-sync", () => {
     mockRemove.mockClear();
     mockServerUtcMs = Date.now();
     getTimeCallCount = 0;
+    mockIsInternetReachable = true;
 
     // Clean up any leftover state from previous tests
     for (const key of Object.keys(mockAsyncStorage)) {
@@ -561,6 +569,77 @@ describe("time-sync", () => {
       await Promise.all([p1, p2, p3]);
       expect(resolvedCount).toBe(3);
       expect(getTimeSyncState().isSynced).toBe(true);
+    });
+  });
+
+  describe("offline behavior", () => {
+    it("should skip sync entirely when device is offline", async () => {
+      mockIsInternetReachable = false;
+
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      // No sync should have happened — server was never called
+      expect(getTimeCallCount).toBe(0);
+      expect(getTimeSyncState().isSynced).toBe(false);
+    });
+
+    it("should not show any toast when offline", async () => {
+      mockIsInternetReachable = false;
+
+      const { startTimeSync } = await import("./time-sync");
+      const { toast } = await import("sonner-native");
+      (toast.warning as ReturnType<typeof vi.fn>).mockClear();
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+
+    it("should not increment missedPings when offline", async () => {
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+      // Start online with a successful sync
+      mockServerUtcMs = Date.now();
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(getTimeSyncState().missedPings).toBe(0);
+
+      // Go offline and trigger foreground syncs
+      mockIsInternetReachable = false;
+
+      for (let i = 0; i < 5; i++) {
+        await advancePastDebounce();
+        capturedAppStateHandler?.("active");
+        await vi.advanceTimersByTimeAsync(50);
+      }
+
+      // missedPings should still be 0 — offline syncs were skipped, not failed
+      expect(getTimeSyncState().missedPings).toBe(0);
+    });
+
+    it("should sync successfully when connectivity returns", async () => {
+      mockIsInternetReachable = false;
+
+      const { startTimeSync, getTimeSyncState } = await import("./time-sync");
+
+      startTimeSync();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(getTimeSyncState().isSynced).toBe(false);
+
+      // Come back online
+      mockIsInternetReachable = true;
+      mockServerUtcMs = Date.now() + 3000;
+
+      await advancePastDebounce();
+      capturedAppStateHandler?.("active");
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(getTimeSyncState().isSynced).toBe(true);
+      expect(getTimeCallCount).toBe(1);
     });
   });
 });
