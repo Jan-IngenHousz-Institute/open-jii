@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Download, ChevronsLeft, UploadCloud } from "lucide-react-native";
+import { Download, ChevronsLeft, Trash2, UploadCloud } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, FlatList } from "react-native";
 import { toast } from "sonner-native";
@@ -17,7 +17,10 @@ import type {
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
-import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
+import {
+  clearSuccessfulUploads,
+  removeSuccessfulUpload,
+} from "~/services/successful-uploads-storage";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
@@ -126,6 +129,23 @@ export function RecentMeasurementsScreen() {
   };
 
   const unsyncedCount = measurements?.filter((m) => m.status === "unsynced").length ?? 0;
+  const syncedCount = measurements?.filter((m) => m.status === "synced").length ?? 0;
+
+  const handleClearSynced = async () => {
+    const confirmed = await showAlert({
+      title: "Clear synced measurements?",
+      message: `Remove ${syncedCount} synced measurement${syncedCount !== 1 ? "s" : ""} from this device. They are safely stored on the server.`,
+      buttons: [
+        { text: "Cancel", style: "cancel" },
+        { text: "Clear all", style: "destructive" },
+      ],
+    });
+    if (confirmed === "Clear all") {
+      clearSuccessfulUploads();
+      invalidate();
+      toast.success("Synced measurements cleared");
+    }
+  };
 
   const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
     setSelectedMeasurement(measurement);
@@ -143,6 +163,13 @@ export function RecentMeasurementsScreen() {
             isLoading={isExporting}
             isDisabled={!measurements || measurements.length === 0}
             icon={<Download size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+            style={{ borderColor: "transparent", padding: 9 }}
+          />
+          <Button
+            variant="tertiary"
+            onPress={handleClearSynced}
+            isDisabled={syncedCount === 0}
+            icon={<Trash2 size={24} color={colors.primary.dark} strokeWidth={1.4} />}
             style={{ borderColor: "transparent", padding: 9 }}
           />
           <Button
