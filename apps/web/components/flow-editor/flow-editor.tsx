@@ -179,9 +179,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         );
         // Update selected node if it's the same node being changed
         setSelectedNode((prevSelected) =>
-          prevSelected && prevSelected.id === nodeId
-            ? { ...prevSelected, data: newData }
-            : prevSelected,
+          prevSelected?.id === nodeId ? { ...prevSelected, data: newData } : prevSelected,
         );
       },
       [setNodes],

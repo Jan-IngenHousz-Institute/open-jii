@@ -2,6 +2,7 @@ import tzLookup from "@photostructure/tz-lookup";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Debouncer } from "@tanstack/pacer";
 import * as Location from "expo-location";
+import * as Network from "expo-network";
 import { DateTime } from "luxon";
 import { AppState } from "react-native";
 import type { AppStateStatus } from "react-native";
@@ -110,6 +111,12 @@ async function fetchServerTime(): Promise<number> {
 }
 
 async function performSync(isInitial = false): Promise<void> {
+  const networkState = await Network.getNetworkStateAsync();
+  if (!networkState.isInternetReachable) {
+    console.log("[time-sync] Skipping sync — device is offline");
+    return;
+  }
+
   try {
     const timezone = await resolveTimezone();
     const beforeFetch = Date.now();

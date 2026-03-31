@@ -36,7 +36,7 @@
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.12",
-    "turbo": "^2.8.17",
+    "turbo": "^2.8.21",
     "typescript": "catalog:",
     "vitest": "catalog:testing"
   },
