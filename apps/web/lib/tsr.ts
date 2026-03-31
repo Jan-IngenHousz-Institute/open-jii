@@ -63,9 +63,6 @@ type ContractError<TRoute extends AppRoute> = Extract<
 
 export function isContractError<TRoute extends AppRoute>(
   error: ErrorResponse<TRoute>,
-): error is ContractError<TRoute>;
-export function isContractError<TRoute extends AppRoute>(
-  error: ErrorResponse<TRoute>,
 ): error is ContractError<TRoute> {
   if (error instanceof Error) return false;
   if (typeof error !== "object" || error === null || !("status" in error)) return false;
