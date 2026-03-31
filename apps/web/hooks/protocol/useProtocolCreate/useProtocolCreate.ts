@@ -1,11 +1,11 @@
 import type { Protocol } from "@repo/api";
 
 import { contract, tsr } from "../../../lib/tsr";
-import type { TsRestMutationOptions } from "../../../lib/tsr";
+import type { ContractErrorResponse, TsRestMutationOptions } from "../../../lib/tsr";
 
 export type UseProtocolCreateOptions = TsRestMutationOptions<
   typeof contract.protocols.createProtocol,
-  "onSuccess" | "onError"
+  "onSuccess" | "onError" | "onSettled"
 >;
 
 export const useProtocolCreate = (props: UseProtocolCreateOptions = {}) => {
@@ -26,7 +26,8 @@ export const useProtocolCreate = (props: UseProtocolCreateOptions = {}) => {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
       if (error instanceof Error) return;
-      props.onError?.(error, variables, context, mutation);
+      const apiError = error as ContractErrorResponse<typeof contract.protocols.createProtocol>;
+      props.onError?.(apiError, variables, context, mutation);
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
