@@ -1,0 +1,50 @@
+name: Label Prod Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  label_issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2
+
+      - name: Add label to issues
+        uses: peter-evans/label-issue@v1
+        with:
+          issues: |
+            1199
+            1157
+            1211
+            1203
+            1206
+            1205
+            1202
+            1200
+            1184
+            1196
+            1198
+            1197
+            1152
+            1190
+            1153
+            1188
+            1189
+            1185
+            1172
+            1162
+            1159
+            1156
+            1129
+            1158
+            1155
+            1091
+            1115
+            1143
+            1145
+            1112
+          labels: ProdRelease17032026
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
