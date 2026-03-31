@@ -72,9 +72,7 @@ export function pruneExpiredUploads(): void {
       .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
       .run();
     if (result.changes > 0) {
-      console.log(
-        `[successful-uploads] Pruned ${result.changes} uploads older than 7 days`,
-      );
+      console.log(`[successful-uploads] Pruned ${result.changes} uploads older than 7 days`);
     }
   } catch (error) {
     console.warn("[successful-uploads] Prune failed:", error);
@@ -103,11 +101,7 @@ export async function saveSuccessfulUpload(upload: SuccessfulUpload): Promise<vo
 export async function getSuccessfulUploadsWithKeys(): Promise<[string, SuccessfulUpload][]> {
   try {
     await ensureMigrated();
-    const rows = db
-      .select()
-      .from(measurements)
-      .where(eq(measurements.status, "successful"))
-      .all();
+    const rows = db.select().from(measurements).where(eq(measurements.status, "successful")).all();
 
     return rows
       .map((row) => {
@@ -133,7 +127,7 @@ export async function getSuccessfulUploadsWithKeys(): Promise<[string, Successfu
   }
 }
 
-export async function removeSuccessfulUpload(key: string): Promise<void> {
+export function removeSuccessfulUpload(key: string): void {
   try {
     db.delete(measurements)
       .where(and(eq(measurements.id, key), eq(measurements.status, "successful")))
@@ -143,7 +137,7 @@ export async function removeSuccessfulUpload(key: string): Promise<void> {
   }
 }
 
-export async function clearSuccessfulUploads(): Promise<void> {
+export function clearSuccessfulUploads(): void {
   try {
     db.delete(measurements).where(eq(measurements.status, "successful")).run();
   } catch (error) {

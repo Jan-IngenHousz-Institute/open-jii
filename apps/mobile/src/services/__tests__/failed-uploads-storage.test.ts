@@ -2,14 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { compressForStorage } from "~/utils/storage-compression";
 
-import {
-  saveFailedUpload,
-  getFailedUploadsWithKeys,
-  updateFailedUpload,
-  removeFailedUpload,
-  clearFailedUploads,
-} from "../failed-uploads-storage";
-
 // --- In-memory SQLite mock via Drizzle ---
 
 let dbRows: Record<string, any>[] = [];
@@ -59,7 +51,15 @@ function makeChain(type: string) {
 
   const chain: any = {
     values: (vals: any) => {
-      collectedParams = [vals.id, vals.status, vals.topic, vals.measurementResult, vals.experimentName, vals.protocolName, vals.timestamp];
+      collectedParams = [
+        vals.id,
+        vals.status,
+        vals.topic,
+        vals.measurementResult,
+        vals.experimentName,
+        vals.protocolName,
+        vals.timestamp,
+      ];
       return chain;
     },
     set: (vals: any) => {
@@ -196,10 +196,7 @@ describe("failed-uploads-storage (Drizzle + SQLite)", () => {
 
   describe("legacy migration", () => {
     it("migrates AsyncStorage entries to SQLite on first access", async () => {
-      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue([
-        "FAILED_UPLOAD_legacy-1",
-        "OTHER_KEY",
-      ]);
+      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_legacy-1", "OTHER_KEY"]);
       vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
         ["FAILED_UPLOAD_legacy-1", compressForStorage(mockUpload)],
       ]);

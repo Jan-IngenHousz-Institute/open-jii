@@ -2,14 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { compressForStorage } from "~/utils/storage-compression";
 
-import {
-  saveSuccessfulUpload,
-  getSuccessfulUploadsWithKeys,
-  removeSuccessfulUpload,
-  clearSuccessfulUploads,
-  pruneExpiredUploads,
-} from "../successful-uploads-storage";
-
 // --- In-memory SQLite mock via Drizzle ---
 
 let dbRows: Record<string, any>[] = [];

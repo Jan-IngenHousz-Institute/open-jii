@@ -128,7 +128,7 @@ export async function updateFailedUpload(key: string, data: FailedUpload): Promi
   }
 }
 
-export async function removeFailedUpload(key: string): Promise<void> {
+export function removeFailedUpload(key: string): void {
   try {
     db.delete(measurements)
       .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
@@ -138,7 +138,7 @@ export async function removeFailedUpload(key: string): Promise<void> {
   }
 }
 
-export async function clearFailedUploads(): Promise<void> {
+export function clearFailedUploads(): void {
   try {
     db.delete(measurements).where(eq(measurements.status, "failed")).run();
   } catch (error) {
