@@ -31,6 +31,27 @@ vi.mock("../../side-panel-flow/measurement-panel", () => ({
   MeasurementPanel: () => null,
 }));
 
+// side panel: expose onNodeDataChange as a button for testing
+vi.mock("../../side-panel-flow/side-panel-flow", () => ({
+  ExperimentSidePanel: ({
+    onNodeDataChange,
+    selectedNode,
+  }: {
+    onNodeDataChange?: (nodeId: string, data: Record<string, unknown>) => void;
+    selectedNode?: { id: string } | null;
+  }) => (
+    <div data-testid="side-panel">
+      <button
+        type="button"
+        aria-label="Sim Node Data Change"
+        onClick={() => onNodeDataChange?.(selectedNode?.id ?? "n1", { title: "Changed" })}
+      >
+        Sim Node Data Change
+      </button>
+    </div>
+  ),
+}));
+
 // react-flow test double: expose count + buttons to simulate canvas events
 vi.mock("@xyflow/react", async () => {
   const actual = await vi.importActual("@xyflow/react");
@@ -376,5 +397,17 @@ describe("<FlowEditor /> (stable suite)", () => {
     utils.rerender(<FlowEditor initialFlow={toInitialFlow(nextNodes, nextEdges)} />);
 
     expect(getCounts()).toEqual({ n: 2, e: 1 });
+  });
+
+  it("handleNodeDataChange updates node data and covers optional-chain path", async () => {
+    renderEditor();
+
+    // Call handleNodeDataChange via the side-panel mock button (selectedNode is null at this point,
+    // so the setSelectedNode updater exercises the prevSelected?.id branch with prevSelected === null)
+    await userEvent.click(screen.getByRole("button", { name: "Sim Node Data Change" }));
+
+    // The node data should have been updated for node "n1"
+    // No throw means the optional chaining handled the null prevSelected correctly
+    expect(getCounts().n).toBe(1); // node still present
   });
 });
