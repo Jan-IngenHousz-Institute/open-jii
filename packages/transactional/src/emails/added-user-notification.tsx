@@ -10,6 +10,7 @@ import {
   Tailwind,
   Text,
   Hr,
+  Img,
 } from "@react-email/components";
 
 interface AddedUserNotificationProps {
@@ -19,6 +20,7 @@ interface AddedUserNotificationProps {
   actor: string;
   role: string;
   senderName?: string;
+  baseUrl: string;
 }
 
 export const AddedUserNotification = ({
@@ -28,30 +30,37 @@ export const AddedUserNotification = ({
   actor,
   role,
   senderName = "openJII",
+  baseUrl,
 }: AddedUserNotificationProps) => {
   return (
     <Html>
       <Tailwind>
         <Head />
-        <Body className="mx-auto my-auto bg-gray-50 font-sans" style={{ color: "#374151" }}>
-          <Container className="mx-auto my-[40px] w-[580px] rounded-lg border border-solid border-gray-200 bg-white shadow-sm">
-            <Preview>You've been invited to join an openJII experiment</Preview>
+        <Preview>You've been added to an openJII experiment</Preview>
 
-            {/* Header */}
-            <Section className="rounded-t-lg bg-[#005e5e] px-8 py-6">
-              <Text className="m-0 text-center text-[28px] font-bold text-white">{senderName}</Text>
-            </Section>
+        <Body className="bg-[#005E5E]/15 font-sans">
+          {/* Logo (same as OTP) */}
+          <Section className="w-full text-center">
+            <Img
+              src={`${baseUrl}/openJII_logo_RGB_horizontal_yellow.png`}
+              alt="openJII"
+              width={205}
+              className="mx-auto"
+            />
+          </Section>
 
-            {/* Main Content */}
-            <Section className="px-8 py-8">
-              <Text className="mb-4 mt-0 text-center text-[24px] font-semibold text-gray-800">
+          {/* Main Container (same as OTP) */}
+          <Container className="mx-auto w-full max-w-[780px] rounded-xl border border-solid border-[#CDD5DB] bg-white">
+            <Section className="p-10">
+              <Text className="mb-6 mt-0 text-[24px] font-semibold text-gray-800">
                 Welcome to the team!
               </Text>
-              <Text className="mb-6 text-center text-[16px] leading-relaxed text-gray-600">
+
+              <Text className="mb-4 text-[16px] leading-relaxed text-gray-600">
                 <strong>{actor}</strong> has added you as a <strong>{role}</strong> to the
                 experiment <strong>"{experimentName}"</strong>.
               </Text>
-              <Text className="mb-8 text-center text-[16px] leading-relaxed text-gray-600">
+              <Text className="mb-8 text-[16px] leading-relaxed text-gray-600">
                 You can now access the experiment dashboard, collaborate with the team, and
                 contribute to this research project.
               </Text>
@@ -60,7 +69,7 @@ export const AddedUserNotification = ({
                   className="rounded-lg bg-[#005e5e] px-8 py-4 font-semibold text-white no-underline shadow-md transition-colors hover:bg-[#004747]"
                   href={experimentUrl}
                 >
-                  Access Experiment
+                  Access experiment
                 </Button>
               </Section>
               <Hr className="my-6 border-gray-200" />
@@ -94,3 +103,15 @@ export const AddedUserNotification = ({
     </Html>
   );
 };
+
+export default AddedUserNotification;
+
+AddedUserNotification.PreviewProps = {
+  host: "localhost",
+  experimentName: "My Experiment",
+  experimentUrl: "http://localhost:3000/en-US/platform/experiments/123",
+  actor: "Jane Doe",
+  role: "member",
+  senderName: "openJII",
+  baseUrl: "http://localhost:3000",
+} as AddedUserNotificationProps;

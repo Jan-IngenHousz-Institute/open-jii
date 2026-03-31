@@ -8,6 +8,7 @@ export interface RenderAddedUserNotificationParams {
   experimentUrl: string;
   actor: string;
   role: string;
+  baseUrl: string;
 }
 
 export interface RenderedEmail {
@@ -18,14 +19,28 @@ export interface RenderedEmail {
 export async function renderAddedUserNotification(
   params: RenderAddedUserNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, experimentName, experimentUrl, actor, role } = params;
+  const { host, baseUrl, experimentName, experimentUrl, actor, role } = params;
 
   const html = await render(
-    AddedUserNotification({ host, experimentName, experimentUrl, actor, role }),
+    AddedUserNotification({
+      host,
+      experimentName,
+      experimentUrl,
+      actor,
+      role,
+      baseUrl,
+    }),
     {},
   );
   const text = await render(
-    AddedUserNotification({ host, experimentName, experimentUrl, actor, role }),
+    AddedUserNotification({
+      host,
+      experimentName,
+      experimentUrl,
+      actor,
+      role,
+      baseUrl,
+    }),
     {
       plainText: true,
     },

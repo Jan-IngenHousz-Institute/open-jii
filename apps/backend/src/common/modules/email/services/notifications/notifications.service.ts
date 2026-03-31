@@ -34,11 +34,9 @@ export class NotificationsService {
           actor,
         });
 
-        const { host } = new URL(this.emailConfigService.getBaseUrl());
-        const { href: experimentUrl } = new URL(
-          `/platform/experiments/${experimentId}`,
-          this.emailConfigService.getBaseUrl(),
-        );
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
         const transport = createTransport(this.emailConfigService.getServer());
 
         const { html, text } = await renderAddedUserNotification({
@@ -47,6 +45,7 @@ export class NotificationsService {
           experimentUrl,
           actor,
           role,
+          baseUrl,
         });
 
         const result = await transport.sendMail({
@@ -114,7 +113,8 @@ export class NotificationsService {
           projectId: projectIdOld,
         });
 
-        const { host } = new URL(this.emailConfigService.getBaseUrl());
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
         const transport = createTransport(this.emailConfigService.getServer());
 
         const { html, text } = await renderTransferRequestConfirmation({
@@ -122,6 +122,7 @@ export class NotificationsService {
           projectIdOld,
           projectUrlOld,
           userEmail: email,
+          baseUrl,
         });
 
         const result = await transport.sendMail({
@@ -185,17 +186,16 @@ export class NotificationsService {
           experimentId,
         });
 
-        const { host } = new URL(this.emailConfigService.getBaseUrl());
-        const { href: experimentUrl } = new URL(
-          `/platform/experiments/${experimentId}`,
-          this.emailConfigService.getBaseUrl(),
-        );
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
         const transport = createTransport(this.emailConfigService.getServer());
 
         const { html, text } = await renderProjectTransferComplete({
           host,
           experimentName,
           experimentUrl,
+          baseUrl,
         });
 
         const result = await transport.sendMail({

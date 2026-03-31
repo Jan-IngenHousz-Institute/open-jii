@@ -6,6 +6,7 @@ export interface RenderProjectTransferCompleteParams {
   host: string;
   experimentName: string;
   experimentUrl: string;
+  baseUrl: string;
 }
 
 export interface RenderedEmail {
@@ -16,12 +17,18 @@ export interface RenderedEmail {
 export async function renderProjectTransferComplete(
   params: RenderProjectTransferCompleteParams,
 ): Promise<RenderedEmail> {
-  const { host, experimentName, experimentUrl } = params;
+  const { host, experimentName, experimentUrl, baseUrl } = params;
 
-  const html = await render(ProjectTransferComplete({ host, experimentName, experimentUrl }), {});
-  const text = await render(ProjectTransferComplete({ host, experimentName, experimentUrl }), {
-    plainText: true,
-  });
+  const html = await render(
+    ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
+    {},
+  );
+  const text = await render(
+    ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
+    {
+      plainText: true,
+    },
+  );
 
   return { html, text };
 }

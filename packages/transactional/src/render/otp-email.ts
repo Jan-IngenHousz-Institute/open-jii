@@ -6,6 +6,7 @@ export interface RenderOtpEmailParams {
   otp: string;
   senderName: string;
   host: string;
+  baseUrl: string;
 }
 
 export interface RenderedEmail {
@@ -14,10 +15,10 @@ export interface RenderedEmail {
 }
 
 export async function renderOtpEmail(params: RenderOtpEmailParams): Promise<RenderedEmail> {
-  const { otp, senderName, host } = params;
+  const { otp, senderName, host, baseUrl } = params;
 
-  const html = await render(OtpEmail({ otp, senderName, host }), {});
-  const text = await render(OtpEmail({ otp, senderName, host }), {
+  const html = await render(OtpEmail({ otp, senderName, host, baseUrl }), {});
+  const text = await render(OtpEmail({ otp, senderName, host, baseUrl }), {
     plainText: true,
   });
 

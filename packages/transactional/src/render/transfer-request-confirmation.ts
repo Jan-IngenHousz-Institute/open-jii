@@ -7,6 +7,7 @@ export interface RenderTransferRequestConfirmationParams {
   projectIdOld: string;
   projectUrlOld: string;
   userEmail: string;
+  baseUrl: string;
 }
 
 export interface RenderedEmail {
@@ -17,14 +18,14 @@ export interface RenderedEmail {
 export async function renderTransferRequestConfirmation(
   params: RenderTransferRequestConfirmationParams,
 ): Promise<RenderedEmail> {
-  const { host, projectIdOld, projectUrlOld, userEmail } = params;
+  const { host, projectIdOld, projectUrlOld, userEmail, baseUrl } = params;
 
   const html = await render(
-    TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail }),
+    TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
     {},
   );
   const text = await render(
-    TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail }),
+    TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
     {
       plainText: true,
     },
