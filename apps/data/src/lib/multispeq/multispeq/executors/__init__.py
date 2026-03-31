@@ -1,1 +1,0 @@
-# JavaScript, Python, and R macro executors

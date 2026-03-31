@@ -1,9 +1,8 @@
 """
 OpenJII Data Analysis Helpers for Databricks
 
-This package provides helper functions for working with PhotosynQ measurement data
-in Databricks notebooks, making it easy to convert Spark DataFrames to pandas
-and work with nested measurement structures.
+Provides helper functions for reading and transforming data in Databricks
+pipelines, including catalog-aware table reading and set data explosion.
 """
 
 from .helpers import read_table, explode_set_data, get_catalog_name
