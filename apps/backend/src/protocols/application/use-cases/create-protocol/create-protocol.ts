@@ -19,7 +19,10 @@ export class CreateProtocolUseCase {
     });
 
     const existingProtocol = await this.protocolRepository.findByName(data.name);
-    if (existingProtocol.isSuccess() && existingProtocol.value !== null) {
+    if (existingProtocol.isFailure()) {
+      return existingProtocol;
+    }
+    if (existingProtocol.value !== null) {
       return failure(AppError.conflict("A protocol with this name already exists"));
     }
 
