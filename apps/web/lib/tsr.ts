@@ -50,18 +50,35 @@ type TsRestError<TRoute extends AppRoute> =
     ? E
     : never;
 
+export type TsrRoute<T> = T extends {
+  useMutation: (options?: UseMutationOptions<infer TRoute, any>) => any;
+}
+  ? TRoute
+  : never;
+
 type ContractError<TRoute extends AppRoute> = Extract<
   Exclude<TsRestError<TRoute>, Error>,
   { status: keyof TRoute["responses"] }
 >;
 
 export function isContractError<TRoute extends AppRoute>(
+  tsrRoute: { useMutation: (options?: UseMutationOptions<TRoute, any>) => any },
+  error: TsRestError<TRoute>,
+): error is ContractError<TRoute>;
+export function isContractError<TRoute extends AppRoute>(
   route: TRoute,
+  error: TsRestError<TRoute>,
+): error is ContractError<TRoute>;
+export function isContractError<TRoute extends AppRoute>(
+  routeOrTsrRoute: TRoute | { useMutation: (options?: UseMutationOptions<TRoute, any>) => any },
   error: TsRestError<TRoute>,
 ): error is ContractError<TRoute> {
   if (error instanceof Error) return false;
   if (typeof error !== "object" || error === null || !("status" in error)) return false;
-  return String((error as { status: number }).status) in route.responses;
+  if ("responses" in routeOrTsrRoute) {
+    return String((error as { status: number }).status) in routeOrTsrRoute.responses;
+  }
+  return typeof (error as { status: unknown }).status === "number";
 }
 
 type RemapOnError<T, TRoute extends AppRoute> = Omit<T, "onError"> & {
@@ -74,5 +91,5 @@ type RemapOnError<T, TRoute extends AppRoute> = Omit<T, "onError"> & {
 
 export type TsRestMutationOptions<
   TRoute extends AppRoute,
-  TKeys extends keyof UseMutationOptions<TRoute, InferClientArgs<typeof tsr>> = "onSuccess" | "onError",
+  TKeys extends keyof UseMutationOptions<TRoute, InferClientArgs<typeof tsr>>,
 > = RemapOnError<Pick<UseMutationOptions<TRoute, InferClientArgs<typeof tsr>>, TKeys>, TRoute>;
