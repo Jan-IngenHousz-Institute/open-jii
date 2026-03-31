@@ -109,19 +109,6 @@ vi.mock("../db/client", () => ({
   },
 }));
 
-vi.mock("../db/schema", () => ({
-  measurements: {
-    id: "id",
-    status: "status",
-    topic: "topic",
-    measurementResult: "measurement_result",
-    experimentName: "experiment_name",
-    protocolName: "protocol_name",
-    timestamp: "timestamp",
-    createdAt: "created_at",
-  },
-}));
-
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: {
     setItem: vi.fn(),
