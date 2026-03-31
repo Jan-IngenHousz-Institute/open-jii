@@ -50,7 +50,7 @@ type TsRestError<TRoute extends AppRoute> =
     ? E
     : never;
 
-export type ContractError<TRoute extends AppRoute> = Extract<
+type ContractError<TRoute extends AppRoute> = Extract<
   Exclude<TsRestError<TRoute>, Error>,
   { status: keyof TRoute["responses"] }
 >;
