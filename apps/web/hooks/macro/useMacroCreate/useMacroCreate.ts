@@ -1,4 +1,4 @@
-import { contract, tsr } from "../../../lib/tsr";
+import { contract, isContractError, tsr } from "../../../lib/tsr";
 import type { TsRestMutationOptions } from "../../../lib/tsr";
 
 export type UseMacroCreateOptions = TsRestMutationOptions<
@@ -15,7 +15,7 @@ export function useMacroCreate(options?: UseMacroCreateOptions) {
       options?.onSuccess?.(...args);
     },
     onError: (error, ...rest) => {
-      if (error instanceof Error) return;
+      if (!isContractError(contract.macros.createMacro, error)) return;
       options?.onError?.(error, ...rest);
     },
   });
