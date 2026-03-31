@@ -1,3 +1,5 @@
+import { StatusCodes } from "http-status-codes";
+
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
@@ -95,7 +97,7 @@ describe("CreateMacroUseCase", () => {
       expect(listResult.value).toHaveLength(0);
     });
 
-    it("should handle duplicate macro names", async () => {
+    it("should return a 409 conflict error when a macro with the same name already exists", async () => {
       // Arrange - Create a macro with the same name first
       vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
 
@@ -107,6 +109,8 @@ describe("CreateMacroUseCase", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
+      expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
+      expect(result.error.message).toBe("A macro with this name already exists");
     });
   });
 });
