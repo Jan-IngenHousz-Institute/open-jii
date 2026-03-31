@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, ScrollView, StyleSheet } from "react-native";
 import { ConnectionSetup } from "~/components/connection-setup";
 import { useTheme } from "~/hooks/use-theme";
 
@@ -16,11 +16,14 @@ export default function HomeScreen() {
         },
       ]}
     >
-      <View style={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContentContainer}
+      >
         <View style={styles.section}>
           <ConnectionSetup />
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -30,6 +33,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flex: 1,
+  },
+  scrollContentContainer: {
     padding: 16,
   },
   section: {
