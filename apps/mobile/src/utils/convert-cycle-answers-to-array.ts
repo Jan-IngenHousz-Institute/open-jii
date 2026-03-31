@@ -27,15 +27,14 @@ export function convertCycleAnswersToArray(
   }
 
   const rows: AnswerData[] = [];
-  for (const [nodeId, questionAnswer] of Object.entries(cycleAnswers)) {
-    const matchingNode = flowNodes.find((n) => n.id === nodeId);
-    if (!matchingNode) {
-      continue;
-    }
+  for (const node of flowNodes) {
+    if (node.type !== "question") continue;
+    const questionAnswer = cycleAnswers[node.id];
+    if (questionAnswer === undefined) continue;
 
-    const questionText = matchingNode.content?.text ?? "question text";
+    const questionText = node.content?.text ?? "question text";
     rows.push({
-      question_label: matchingNode.name,
+      question_label: node.name,
       question_text: questionText,
       question_answer: questionAnswer,
     });
