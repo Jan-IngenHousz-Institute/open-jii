@@ -46,35 +46,32 @@ export function AnalysisActionBar({
 }: AnalysisActionBarProps) {
   const { classes, colors } = useTheme();
 
-  if (hasScrolled) {
-    return (
-      <View className="w-full items-start py-3">
+  return (
+    <View className="w-full py-3">
+      {hasScrolled && (
         <TouchableOpacity
           onPress={onScrollToTop}
-          className={clsx("-ml-4 h-[44px] flex-row items-center justify-end gap-1 px-4")}
+          className={clsx("-ml-4 mb-2 h-[44px] flex-row items-center justify-end gap-1 px-4")}
           activeOpacity={0.7}
         >
           <ChevronUp size={20} color={colors.onSurface} />
           <Text className={clsx("text-lg font-medium", classes.text)}>Scroll to top</Text>
         </TouchableOpacity>
+      )}
+      <View className="flex-row gap-4">
+        <Button
+          title="Discard & retry"
+          onPress={onRetry}
+          variant="tertiary"
+          style={{ flex: 1, height: 44, borderColor: "transparent" }}
+        />
+        <Button
+          title={isUploading ? "Uploading..." : "Accept data"}
+          onPress={onUpload}
+          disabled={isUploading}
+          style={{ flex: 1, height: 44 }}
+        />
       </View>
-    );
-  }
-
-  return (
-    <View className="flex-row gap-4 py-3">
-      <Button
-        title="Discard & retry"
-        onPress={onRetry}
-        variant="tertiary"
-        style={{ flex: 1, height: 44, borderColor: "transparent" }}
-      />
-      <Button
-        title={isUploading ? "Uploading..." : "Accept data"}
-        onPress={onUpload}
-        disabled={isUploading}
-        style={{ flex: 1, height: 44 }}
-      />
     </View>
   );
 }
