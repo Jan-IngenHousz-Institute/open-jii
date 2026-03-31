@@ -277,13 +277,16 @@ interface PathItem {
   arrayIndex?: number;
 }
 
-export function getPathItem(path: (string | number)[]): PathItem | undefined {
+export function getPathItem(path: (string | number | symbol)[]): PathItem | undefined {
   const item = path.shift();
   if (item === undefined) {
     return undefined;
   }
   if (typeof item === "string") {
     return { item };
+  }
+  if (typeof item !== "number") {
+    return undefined;
   }
   const arrayIndex = item;
   const nextItem = path.shift();

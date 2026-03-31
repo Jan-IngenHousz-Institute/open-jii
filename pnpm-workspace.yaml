@@ -9,7 +9,7 @@ patchedDependencies:
 catalog:
   axios: ^1.13.5
   typescript: ^5.8.3
-  zod: ^3.24.3
+  zod: ^4.0.0
   eslint: ^9.25.1
   prettier: ^3.5.3
   react-hook-form: ^7.56.2
@@ -32,6 +32,11 @@ catalogs:
     "@tanstack/react-query-devtools": ^5.84.1
     "@tanstack/query-async-storage-persister": ^5.83.1
     "@tanstack/react-query-persist-client": ^5.84.1
+  ts-rest:
+    "@ts-rest/core": 3.52.1
+    "@ts-rest/nest": 3.52.1
+    "@ts-rest/open-api": 3.52.1
+    "@ts-rest/react-query": 3.52.1
   testing:
     vitest: ^3.2.4
     jsdom: ^26.0.0

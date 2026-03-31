@@ -1,5 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@repo/typescript-config/react-library.json",
   "compilerOptions": {
     /** Base Options */
     "esModuleInterop": true,
@@ -33,7 +34,7 @@
     "lib": ["ES2022", "dom", "dom.iterable"],
     "jsx": "preserve",
     "rootDir": ".",
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "types": ["vitest/globals"],
     "paths": {
       "@repo/ui/*": ["./src/*"]
     }

@@ -7,7 +7,7 @@ export const zProtocol = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
-  code: z.record(z.unknown()).array(),
+  code: z.record(z.string(), z.unknown()).array(),
   family: zSensorFamily,
   sortOrder: z.number().nullable(),
   createdBy: z.string().uuid(),
@@ -36,7 +36,7 @@ export const zCreateProtocolRequestBody = z.object({
     .min(1, "Name is required")
     .max(255, "Name must be at most 255 characters"),
   description: z.string().optional(),
-  code: z.record(z.unknown()).array(),
+  code: z.record(z.string(), z.unknown()).array(),
   family: zSensorFamily,
 });
 
@@ -48,7 +48,7 @@ export const zUpdateProtocolRequestBody = z.object({
     .max(255, "Name must be at most 255 characters")
     .optional(),
   description: z.string().optional(),
-  code: z.record(z.unknown()).array().optional(),
+  code: z.record(z.string(), z.unknown()).array().optional(),
   family: zSensorFamily.optional(),
 });
 

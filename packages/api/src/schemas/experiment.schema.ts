@@ -1044,7 +1044,7 @@ export const zProjectTransferWebhookPayload = z.object({
     .object({
       name: z.string().min(1).max(255),
       description: z.string().optional(),
-      code: z.record(z.unknown()).array(),
+      code: z.record(z.string(), z.unknown()).array(),
       family: zSensorFamily.default("multispeq"),
       createdBy: z.string().uuid().describe("User ID of protocol creator"),
     })

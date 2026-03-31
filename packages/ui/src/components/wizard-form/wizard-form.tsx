@@ -125,7 +125,7 @@ export interface WizardStep<T extends FieldValues = FieldValues> {
   /**
    * Validation schema for this step
    */
-  validationSchema: z.AnyZodObject;
+  validationSchema: z.ZodObject<any>;
   /**
    * Component to render for this step
    */
@@ -240,7 +240,7 @@ export function WizardForm<T extends FieldValues>({
   const combinedSchema = React.useMemo(() => {
     return z.object(
       steps.reduce<Record<string, z.ZodTypeAny>>((acc, step) => {
-        const schemaShape = step.validationSchema.shape;
+        const schemaShape = step.validationSchema.shape as Record<string, z.ZodTypeAny>;
         return { ...acc, ...schemaShape };
       }, {}),
     );
@@ -267,7 +267,7 @@ export function WizardForm<T extends FieldValues>({
     if (!currentStep) return;
 
     // Get fields relevant to the current step
-    const currentSchemaShape = currentStep.validationSchema.shape;
+    const currentSchemaShape = currentStep.validationSchema.shape as Record<string, z.ZodTypeAny>;
     const fieldsToValidate = Object.keys(currentSchemaShape);
 
     // Validate only the fields for the current step
