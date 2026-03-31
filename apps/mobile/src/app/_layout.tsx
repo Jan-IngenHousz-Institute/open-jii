@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -16,6 +17,9 @@ import { TimeSyncProvider } from "~/components/time-sync-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useTheme } from "~/hooks/use-theme";
 import { PostHogProvider } from "~/providers/PostHogProvider";
+import { db } from "~/services/db/client";
+
+import migrations from "../../drizzle/migrations";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -74,13 +78,18 @@ export default function RootLayout() {
     "Overpass-Black": require("../../assets/fonts/Overpass-Black.ttf"),
   });
 
+  const { success: migrationsReady, error: migrationsError } = useMigrations(db, migrations);
+
   useEffect(() => {
     if (error) {
       console.error(error);
     }
-  }, [error]);
+    if (migrationsError) {
+      console.error("[db] Migration failed:", migrationsError);
+    }
+  }, [error, migrationsError]);
 
-  if (!loaded) {
+  if (!loaded || !migrationsReady) {
     return null;
   }
 

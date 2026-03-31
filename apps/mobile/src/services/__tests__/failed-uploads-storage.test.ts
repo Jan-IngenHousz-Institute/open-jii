@@ -1,111 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { compressForStorage } from "~/utils/storage-compression";
 
-// --- In-memory SQLite mock via Drizzle ---
+import * as schema from "../db/schema";
 
-let dbRows: Record<string, any>[] = [];
+// --- Real in-memory SQLite via better-sqlite3 + Drizzle ---
 
-function mockRun(sql: string, params: any[]) {
-  const sqlNorm = sql.replace(/\s+/g, " ").trim().toLowerCase();
+const migrationSql = readFileSync(
+  resolve(__dirname, "../../../drizzle/0000_outgoing_firebird.sql"),
+  "utf-8",
+);
 
-  if (sqlNorm.startsWith("insert")) {
-    const existing = dbRows.find((r) => r.id === params[0]);
-    if (!existing || !sqlNorm.includes("on conflict")) {
-      dbRows.push({
-        id: params[0],
-        status: params[1],
-        topic: params[2],
-        measurementResult: params[3],
-        experimentName: params[4],
-        protocolName: params[5],
-        timestamp: params[6],
-        createdAt: new Date(),
-      });
-    }
-    return { changes: 1 };
-  }
+let sqlite: ReturnType<typeof Database>;
+let db: ReturnType<typeof drizzle>;
 
-  if (sqlNorm.startsWith("update")) {
-    const idx = dbRows.findIndex((r) => r.status === "failed");
-    if (idx >= 0) Object.assign(dbRows[idx], { topic: params[0] });
-    return { changes: idx >= 0 ? 1 : 0 };
-  }
-
-  if (sqlNorm.startsWith("delete")) {
-    const before = dbRows.length;
-    if (params.length >= 2) {
-      dbRows = dbRows.filter((r) => !(r.id === params[0] && r.status === params[1]));
-    } else if (params.length === 1) {
-      dbRows = dbRows.filter((r) => r.status !== params[0]);
-    }
-    return { changes: before - dbRows.length };
-  }
-
-  return { changes: 0 };
-}
-
-// Build a chainable query mock
-function makeChain(type: string) {
-  let collectedParams: any[] = [];
-
-  const chain: any = {
-    values: (vals: any) => {
-      collectedParams = [
-        vals.id,
-        vals.status,
-        vals.topic,
-        vals.measurementResult,
-        vals.experimentName,
-        vals.protocolName,
-        vals.timestamp,
-      ];
-      return chain;
-    },
-    set: (vals: any) => {
-      collectedParams = [vals.topic];
-      return chain;
-    },
-    where: () => chain,
-    onConflictDoNothing: () => chain,
-    run: () => {
-      if (type === "insert") return mockRun("insert", collectedParams);
-      if (type === "update") return mockRun("update", collectedParams);
-      if (type === "delete") {
-        // For delete, extract status from dbRows filter
-        return mockRun("delete", collectedParams);
-      }
-      return { changes: 0 };
-    },
-    all: () => dbRows.filter((r) => r.status === "failed"),
-    from: () => chain,
-  };
-  return chain;
+function createTestDb() {
+  sqlite = new Database(":memory:");
+  sqlite.exec(migrationSql);
+  db = drizzle(sqlite, { schema });
 }
 
 vi.mock("../db/client", () => ({
-  db: {
-    insert: () => makeChain("insert"),
-    select: () => makeChain("select"),
-    update: () => makeChain("update"),
-    delete: () => {
-      const chain = makeChain("delete");
-      chain.where = (..._args: any[]) => {
-        // Simple: just use the first status-based filter
-        return {
-          run: () => {
-            const before = dbRows.length;
-            // Check if we're filtering by id+status or just status
-            if (_args.length > 0) {
-              // Simplified: just delete failed
-              dbRows = dbRows.filter((r) => r.status !== "failed");
-            }
-            return { changes: before - dbRows.length };
-          },
-        };
-      };
-      return chain;
-    },
+  get db() {
+    return db;
   },
 }));
 
@@ -137,7 +58,7 @@ const mockUpload = {
 describe("failed-uploads-storage (Drizzle + SQLite)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    dbRows = [];
+    createTestDb();
     vi.resetModules();
   });
 
@@ -146,24 +67,31 @@ describe("failed-uploads-storage (Drizzle + SQLite)", () => {
       const mod = await import("../failed-uploads-storage");
       await mod.saveFailedUpload(mockUpload);
 
-      expect(dbRows).toHaveLength(1);
-      expect(dbRows[0].id).toBe("test-uuid-1234");
-      expect(dbRows[0].status).toBe("failed");
-      expect(dbRows[0].topic).toBe("test/topic");
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("test-uuid-1234");
+      expect(rows[0].status).toBe("failed");
+      expect(rows[0].topic).toBe("test/topic");
     });
   });
 
   describe("getFailedUploadsWithKeys", () => {
     it("returns failed uploads from the database", async () => {
-      dbRows.push({
-        id: "abc",
-        status: "failed",
-        topic: "test/topic",
-        measurementResult: compressForStorage({ value: 42 }),
-        experimentName: "Test Experiment",
-        protocolName: "protocol-1",
-        timestamp: "2026-03-02T10:00:00.000Z",
-      });
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "abc",
+          "failed",
+          "test/topic",
+          compressForStorage({ value: 42 }),
+          "Test Experiment",
+          "protocol-1",
+          "2026-03-02T10:00:00.000Z",
+          Date.now(),
+        );
 
       const mod = await import("../failed-uploads-storage");
       const result = await mod.getFailedUploadsWithKeys();
@@ -178,19 +106,64 @@ describe("failed-uploads-storage (Drizzle + SQLite)", () => {
       const result = await mod.getFailedUploadsWithKeys();
       expect(result).toEqual([]);
     });
+
+    it("does not return successful uploads", async () => {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "xyz",
+          "successful",
+          "test/topic",
+          compressForStorage({ value: 42 }),
+          "Test Experiment",
+          "protocol-1",
+          "2026-03-02T10:00:00.000Z",
+          Date.now(),
+        );
+
+      const mod = await import("../failed-uploads-storage");
+      const result = await mod.getFailedUploadsWithKeys();
+      expect(result).toEqual([]);
+    });
   });
 
   describe("clearFailedUploads", () => {
     it("removes all failed uploads but keeps successful ones", async () => {
-      dbRows.push({ id: "a", status: "failed" });
-      dbRows.push({ id: "b", status: "failed" });
-      dbRows.push({ id: "c", status: "successful" });
+      const insert = sqlite.prepare(
+        `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insert.run("a", "failed", "t", "d", "e", "p", "ts", Date.now());
+      insert.run("b", "failed", "t", "d", "e", "p", "ts", Date.now());
+      insert.run("c", "successful", "t", "d", "e", "p", "ts", Date.now());
 
       const mod = await import("../failed-uploads-storage");
-      await mod.clearFailedUploads();
+      mod.clearFailedUploads();
 
-      expect(dbRows).toHaveLength(1);
-      expect(dbRows[0].id).toBe("c");
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("c");
+    });
+  });
+
+  describe("removeFailedUpload", () => {
+    it("removes a single failed upload by key", async () => {
+      const insert = sqlite.prepare(
+        `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insert.run("keep", "failed", "t", "d", "e", "p", "ts", Date.now());
+      insert.run("remove", "failed", "t", "d", "e", "p", "ts", Date.now());
+
+      const mod = await import("../failed-uploads-storage");
+      mod.removeFailedUpload("remove");
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("keep");
     });
   });
 
@@ -204,7 +177,11 @@ describe("failed-uploads-storage (Drizzle + SQLite)", () => {
       const mod = await import("../failed-uploads-storage");
       await mod.getFailedUploadsWithKeys();
 
-      expect(dbRows.find((r) => r.id === "legacy-1")).toBeDefined();
+      const rows = sqlite
+        .prepare("SELECT * FROM measurements WHERE id = 'legacy-1'")
+        .all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe("failed");
       expect(AsyncStorage.multiRemove).toHaveBeenCalledWith(["FAILED_UPLOAD_legacy-1"]);
     });
   });

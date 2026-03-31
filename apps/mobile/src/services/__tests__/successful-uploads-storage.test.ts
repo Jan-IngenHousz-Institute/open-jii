@@ -1,56 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { compressForStorage } from "~/utils/storage-compression";
 
-// --- In-memory SQLite mock via Drizzle ---
+import * as schema from "../db/schema";
 
-let dbRows: Record<string, any>[] = [];
+// --- Real in-memory SQLite via better-sqlite3 + Drizzle ---
+
+const migrationSql = readFileSync(
+  resolve(__dirname, "../../../drizzle/0000_outgoing_firebird.sql"),
+  "utf-8",
+);
+
+let sqlite: ReturnType<typeof Database>;
+let db: ReturnType<typeof drizzle>;
+
+function createTestDb() {
+  sqlite = new Database(":memory:");
+  sqlite.exec(migrationSql);
+  db = drizzle(sqlite, { schema });
+}
 
 vi.mock("../db/client", () => ({
-  db: {
-    insert: () => {
-      const chain: any = {
-        values: (vals: any) => {
-          chain._vals = vals;
-          return chain;
-        },
-        onConflictDoNothing: () => chain,
-        run: () => {
-          if (chain._vals) {
-            dbRows.push({ ...chain._vals, createdAt: new Date() });
-          }
-          return { changes: 1 };
-        },
-      };
-      return chain;
-    },
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          all: () => dbRows.filter((r) => r.status === "successful"),
-        }),
-      }),
-    }),
-    delete: () => ({
-      where: (..._args: any[]) => ({
-        run: () => {
-          const before = dbRows.length;
-          // Distinguish prune (createdAt filter) vs clear (status only) vs single delete
-          // by checking args - simplified mock
-          const hasPruneArg = _args.some((a: any) => typeof a === "object");
-          if (hasPruneArg) {
-            // Prune: remove successful older than 7 days
-            const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-            dbRows = dbRows.filter(
-              (r) => r.status !== "successful" || new Date(r.createdAt).getTime() >= cutoff,
-            );
-          } else {
-            dbRows = dbRows.filter((r) => r.status !== "successful");
-          }
-          return { changes: before - dbRows.length };
-        },
-      }),
-    }),
+  get db() {
+    return db;
   },
 }));
 
@@ -82,7 +58,7 @@ const mockUpload = {
 describe("successful-uploads-storage (Drizzle + SQLite)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    dbRows = [];
+    createTestDb();
     vi.resetModules();
   });
 
@@ -91,23 +67,30 @@ describe("successful-uploads-storage (Drizzle + SQLite)", () => {
       const mod = await import("../successful-uploads-storage");
       await mod.saveSuccessfulUpload(mockUpload);
 
-      expect(dbRows).toHaveLength(1);
-      expect(dbRows[0].id).toBe("test-uuid-5678");
-      expect(dbRows[0].status).toBe("successful");
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("test-uuid-5678");
+      expect(rows[0].status).toBe("successful");
     });
   });
 
   describe("getSuccessfulUploadsWithKeys", () => {
     it("returns successful uploads from the database", async () => {
-      dbRows.push({
-        id: "abc",
-        status: "successful",
-        topic: "test/topic",
-        measurementResult: compressForStorage({ value: 42 }),
-        experimentName: "Test Experiment",
-        protocolName: "protocol-1",
-        timestamp: "2026-03-02T10:00:00.000Z",
-      });
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "abc",
+          "successful",
+          "test/topic",
+          compressForStorage({ value: 42 }),
+          "Test Experiment",
+          "protocol-1",
+          "2026-03-02T10:00:00.000Z",
+          Date.now(),
+        );
 
       const mod = await import("../successful-uploads-storage");
       const result = await mod.getSuccessfulUploadsWithKeys();
@@ -122,45 +105,103 @@ describe("successful-uploads-storage (Drizzle + SQLite)", () => {
       const result = await mod.getSuccessfulUploadsWithKeys();
       expect(result).toEqual([]);
     });
+
+    it("does not return failed uploads", async () => {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "xyz",
+          "failed",
+          "test/topic",
+          compressForStorage({ value: 42 }),
+          "Test Experiment",
+          "protocol-1",
+          "2026-03-02T10:00:00.000Z",
+          Date.now(),
+        );
+
+      const mod = await import("../successful-uploads-storage");
+      const result = await mod.getSuccessfulUploadsWithKeys();
+      expect(result).toEqual([]);
+    });
   });
 
   describe("clearSuccessfulUploads", () => {
     it("removes all successful uploads but keeps failed ones", async () => {
-      dbRows.push({ id: "a", status: "successful" });
-      dbRows.push({ id: "b", status: "successful" });
-      dbRows.push({ id: "c", status: "failed" });
+      const insert = sqlite.prepare(
+        `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insert.run("a", "successful", "t", "d", "e", "p", "ts", Date.now());
+      insert.run("b", "successful", "t", "d", "e", "p", "ts", Date.now());
+      insert.run("c", "failed", "t", "d", "e", "p", "ts", Date.now());
 
       const mod = await import("../successful-uploads-storage");
-      await mod.clearSuccessfulUploads();
+      mod.clearSuccessfulUploads();
 
-      expect(dbRows).toHaveLength(1);
-      expect(dbRows[0].id).toBe("c");
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("c");
+    });
+  });
+
+  describe("removeSuccessfulUpload", () => {
+    it("removes a single successful upload by key", async () => {
+      const insert = sqlite.prepare(
+        `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insert.run("keep", "successful", "t", "d", "e", "p", "ts", Date.now());
+      insert.run("remove", "successful", "t", "d", "e", "p", "ts", Date.now());
+
+      const mod = await import("../successful-uploads-storage");
+      mod.removeSuccessfulUpload("remove");
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("keep");
     });
   });
 
   describe("pruneExpiredUploads", () => {
     it("removes successful uploads older than 7 days", async () => {
-      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
-      const now = new Date();
+      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
 
-      dbRows.push({ id: "old", status: "successful", createdAt: eightDaysAgo });
-      dbRows.push({ id: "recent", status: "successful", createdAt: now });
+      const insert = sqlite.prepare(
+        `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insert.run("old", "successful", "t", "d", "e", "p", "ts", eightDaysAgo);
+      insert.run("recent", "successful", "t", "d", "e", "p", "ts", now);
 
       const mod = await import("../successful-uploads-storage");
       mod.pruneExpiredUploads();
 
-      expect(dbRows.find((r) => r.id === "old")).toBeUndefined();
-      expect(dbRows.find((r) => r.id === "recent")).toBeDefined();
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("recent");
     });
 
     it("does not remove failed uploads", async () => {
-      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
-      dbRows.push({ id: "old-failed", status: "failed", createdAt: eightDaysAgo });
+      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
+
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run("old-failed", "failed", "t", "d", "e", "p", "ts", eightDaysAgo);
 
       const mod = await import("../successful-uploads-storage");
       mod.pruneExpiredUploads();
 
-      expect(dbRows.find((r) => r.id === "old-failed")).toBeDefined();
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("old-failed");
     });
   });
 
@@ -177,7 +218,11 @@ describe("successful-uploads-storage (Drizzle + SQLite)", () => {
       const mod = await import("../successful-uploads-storage");
       await mod.getSuccessfulUploadsWithKeys();
 
-      expect(dbRows.find((r) => r.id === "legacy-1")).toBeDefined();
+      const rows = sqlite
+        .prepare("SELECT * FROM measurements WHERE id = 'legacy-1'")
+        .all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe("successful");
       expect(AsyncStorage.multiRemove).toHaveBeenCalledWith(["SUCCESSFUL_UPLOAD_legacy-1"]);
     });
   });
