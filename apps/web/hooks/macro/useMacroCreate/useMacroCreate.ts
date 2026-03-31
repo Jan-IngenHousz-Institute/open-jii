@@ -1,7 +1,7 @@
 import { toast } from "@repo/ui/hooks";
 import { isContractError, tsr } from "../../../lib/tsr";
 import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
-import { t } from "@repo/i18n";
+import { useTranslation } from "@repo/i18n";
 
 const route = tsr.macros.createMacro;
 
@@ -12,7 +12,7 @@ export type UseMacroCreateOptions = TsRestMutationOptions<
 
 export function useMacroCreate(options?: UseMacroCreateOptions) {
   const queryClient = tsr.useQueryClient();
-
+  const { t } = useTranslation();
   return route.useMutation({
     ...options,
     onSuccess: (...args) => {

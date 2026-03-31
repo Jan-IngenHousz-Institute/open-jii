@@ -3,7 +3,7 @@ import type { Protocol } from "@repo/api";
 import { isContractError, tsr } from "../../../lib/tsr";
 import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
 import { toast } from "@repo/ui/hooks";
-import { t } from "@repo/i18n";
+import { useTranslation } from "@repo/i18n";
 
 const route = tsr.protocols.createProtocol;
 
@@ -13,11 +13,13 @@ export type UseProtocolCreateOptions = TsRestMutationOptions<
 >;
 
 export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
+  const { t } = useTranslation();
   const queryClient = tsr.useQueryClient();
 
   return route.useMutation({
     ...options,
     onSuccess: (...args) => {
+      console.log("args", args);
       toast({ description: t("protocols.protocolCreated") });
       options.onSuccess?.(...args);
     },
@@ -31,6 +33,7 @@ export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
       return { previousProtocols };
     },
     onError: (error, variables, context, mutation) => {
+      console.log("error", error, t("protocols.nameAlreadyExists"));
       if (context?.previousProtocols) {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
