@@ -2,6 +2,8 @@ import type { Protocol } from "@repo/api";
 
 import { isContractError, tsr } from "../../../lib/tsr";
 import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
+import { toast } from "@repo/ui/hooks";
+import { t } from "@repo/i18n";
 
 const route = tsr.protocols.createProtocol;
 
@@ -10,11 +12,15 @@ export type UseProtocolCreateOptions = TsRestMutationOptions<
   "onSuccess" | "onError" | "onSettled"
 >;
 
-export const useProtocolCreate = (props: UseProtocolCreateOptions = {}) => {
+export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
   const queryClient = tsr.useQueryClient();
 
   return route.useMutation({
-    ...props,
+    ...options,
+    onSuccess: (...args) => {
+      toast({ description: t("protocols.protocolCreated") });
+      options.onSuccess?.(...args);
+    },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["protocols"] });
 
@@ -29,13 +35,22 @@ export const useProtocolCreate = (props: UseProtocolCreateOptions = {}) => {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
       if (!isContractError(error)) return;
-      props.onError?.(error, variables, context, mutation);
+
+      switch(error.status) {
+        case 409:
+          toast({ description: t("protocols.nameAlreadyExists"), variant: "destructive" });
+          break;
+        default:
+        case 400:
+          toast({ description: t("protocols.createError"), variant: "destructive" });
+          break;
+      }
+
+      options.onError?.(error, variables, context, mutation);
     },
     onSettled: async (...args) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["protocols"],
-      });
-      props.onSettled?.(...args);
+      await queryClient.invalidateQueries({ queryKey: ["protocols"] });
+      options.onSettled?.(...args);
     },
   });
 };
