@@ -3,13 +3,14 @@ import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import {
   getFailedUploadsWithKeys,
+  markFailedUploadAsSuccessful,
   removeFailedUpload,
   saveFailedUpload as rawSaveFailedUpload,
   updateFailedUpload as rawUpdateFailedUpload,
   FailedUpload,
 } from "~/services/failed-uploads-storage";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
-import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
+import { pruneExpiredUploads } from "~/services/successful-uploads-storage";
 import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
 
 export function useFailedUploads() {
@@ -29,19 +30,14 @@ export function useFailedUploads() {
     for (const { key, data } of uploads) {
       try {
         await sendMqttEvent(data.topic, data.measurementResult);
-        // Save as successful upload before removing from failed
-        await saveSuccessfulUpload({
-          topic: data.topic,
-          measurementResult: data.measurementResult,
-          metadata: data.metadata,
-        });
-        await removeFailedUpload(key);
+        markFailedUploadAsSuccessful(key);
       } catch (error) {
         console.warn(`Failed to upload item with key ${key}:`, error);
         lastError = error;
       }
     }
 
+    pruneExpiredUploads();
     await queryClient.invalidateQueries({ queryKey: ["failedUploads"] });
     await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
     if (lastError) {
@@ -55,18 +51,13 @@ export function useFailedUploads() {
 
     try {
       await sendMqttEvent(item.data.topic, item.data.measurementResult);
-      // Save as successful upload before removing from failed
-      await saveSuccessfulUpload({
-        topic: item.data.topic,
-        measurementResult: item.data.measurementResult,
-        metadata: item.data.metadata,
-      });
-      await removeFailedUpload(key);
+      markFailedUploadAsSuccessful(key);
     } catch (error) {
       console.warn(`Failed to upload item with key ${key}:`, error);
       toast.info("Failed to upload, try again later");
     }
 
+    pruneExpiredUploads();
     await queryClient.invalidateQueries({ queryKey: ["failedUploads"] });
     await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
   };

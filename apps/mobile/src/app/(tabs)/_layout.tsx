@@ -3,6 +3,7 @@ import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
 import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
 import { useIsOnline } from "~/hooks/use-is-online";
@@ -23,6 +24,7 @@ export default function TabLayout() {
   const { session, isLoaded, error } = useSession();
   const { data: online } = useIsOnline();
   const [hadSession, setHadSession] = useState<boolean | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     void hadActiveSession().then(setHadSession);
@@ -31,7 +33,8 @@ export default function TabLayout() {
   useAutoReconnect();
 
   useEffect(() => {
-    void pruneExpiredUploads();
+    pruneExpiredUploads();
+    void queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
   }, []);
 
   const inMeasureTab = segments.includes("measurement-flow");

@@ -124,6 +124,17 @@ export async function updateFailedUpload(key: string, data: FailedUpload): Promi
   }
 }
 
+export function markFailedUploadAsSuccessful(key: string): void {
+  try {
+    db.update(measurements)
+      .set({ status: "successful" })
+      .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
+      .run();
+  } catch (error) {
+    console.error("Failed to mark upload as successful:", error);
+  }
+}
+
 export function removeFailedUpload(key: string): void {
   try {
     db.delete(measurements)

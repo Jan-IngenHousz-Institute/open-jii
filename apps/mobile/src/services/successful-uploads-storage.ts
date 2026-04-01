@@ -5,6 +5,7 @@ import { compressForStorage, decompressFromStorage } from "~/utils/storage-compr
 
 import { db } from "./db/client";
 import { measurements } from "./db/schema";
+import { Duration } from "luxon";
 
 const LEGACY_KEY_PREFIX = "SUCCESSFUL_UPLOAD_";
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -69,11 +70,9 @@ export function pruneExpiredUploads(): void {
     const cutoff = new Date(Date.now() - MAX_AGE_MS);
     const result = db
       .delete(measurements)
-      .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
+      .where(and(eq(measurements.status, "successful"), lt(measurements.timestamp, cutoff.toISOString())))
       .run();
-    if (result.changes > 0) {
-      console.log(`[successful-uploads] Pruned ${result.changes} uploads older than 7 days`);
-    }
+    console.log(`[successful-uploads] Pruned ${result.changes} uploads older than ${Duration.fromMillis(MAX_AGE_MS).as('days')} days`);
   } catch (error) {
     console.warn("[successful-uploads] Prune failed:", error);
   }

@@ -167,6 +167,74 @@ describe("failed-uploads-storage (Drizzle + SQLite)", () => {
     });
   });
 
+  describe("markFailedUploadAsSuccessful", () => {
+    it("updates status from failed to successful", async () => {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run("upload-1", "failed", "t", "d", "e", "p", "ts", Date.now());
+
+      const mod = await import("../failed-uploads-storage");
+      mod.markFailedUploadAsSuccessful("upload-1");
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("upload-1");
+      expect(rows[0].status).toBe("successful");
+    });
+
+    it("does not create a duplicate row", async () => {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run("upload-1", "failed", "t", "d", "e", "p", "ts", Date.now());
+
+      const mod = await import("../failed-uploads-storage");
+      mod.markFailedUploadAsSuccessful("upload-1");
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+    });
+
+    it("does not affect other rows", async () => {
+      const insert = sqlite.prepare(
+        `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insert.run("target", "failed", "t", "d", "e", "p", "ts", Date.now());
+      insert.run("other", "failed", "t", "d", "e", "p", "ts", Date.now());
+
+      const mod = await import("../failed-uploads-storage");
+      mod.markFailedUploadAsSuccessful("target");
+
+      const rows = sqlite.prepare("SELECT * FROM measurements ORDER BY id").all() as any[];
+      expect(rows).toHaveLength(2);
+      expect(rows.find((r: any) => r.id === "target")?.status).toBe("successful");
+      expect(rows.find((r: any) => r.id === "other")?.status).toBe("failed");
+    });
+
+    it("does not update a row that is already successful", async () => {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run("upload-1", "successful", "t", "d", "e", "p", "ts", Date.now());
+
+      const mod = await import("../failed-uploads-storage");
+      // Should be a no-op — WHERE status='failed' won't match
+      mod.markFailedUploadAsSuccessful("upload-1");
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows[0].status).toBe("successful");
+      expect(rows).toHaveLength(1);
+    });
+  });
+
   describe("legacy migration", () => {
     it("migrates AsyncStorage entries to SQLite on first access", async () => {
       vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_legacy-1", "OTHER_KEY"]);

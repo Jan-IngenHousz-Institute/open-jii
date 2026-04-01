@@ -167,16 +167,16 @@ describe("successful-uploads-storage (Drizzle + SQLite)", () => {
   });
 
   describe("pruneExpiredUploads", () => {
-    it("removes successful uploads older than 7 days", async () => {
-      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
-      const now = Date.now();
+    it("removes successful uploads with a timestamp older than 7 days", async () => {
+      const eightDaysAgoIso = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      const oneDayAgoIso = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
 
       const insert = sqlite.prepare(
         `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       );
-      insert.run("old", "successful", "t", "d", "e", "p", "ts", eightDaysAgo);
-      insert.run("recent", "successful", "t", "d", "e", "p", "ts", now);
+      insert.run("old", "successful", "t", "d", "e", "p", eightDaysAgoIso, Date.now());
+      insert.run("recent", "successful", "t", "d", "e", "p", oneDayAgoIso, Date.now());
 
       const mod = await import("../successful-uploads-storage");
       mod.pruneExpiredUploads();
@@ -186,15 +186,15 @@ describe("successful-uploads-storage (Drizzle + SQLite)", () => {
       expect(rows[0].id).toBe("recent");
     });
 
-    it("does not remove failed uploads", async () => {
-      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
+    it("does not remove failed uploads even if their timestamp is old", async () => {
+      const eightDaysAgoIso = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
 
       sqlite
         .prepare(
           `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run("old-failed", "failed", "t", "d", "e", "p", "ts", eightDaysAgo);
+        .run("old-failed", "failed", "t", "d", "e", "p", eightDaysAgoIso, Date.now());
 
       const mod = await import("../successful-uploads-storage");
       mod.pruneExpiredUploads();
@@ -202,6 +202,24 @@ describe("successful-uploads-storage (Drizzle + SQLite)", () => {
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe("old-failed");
+    });
+
+    it("keeps successful uploads whose timestamp is within 7 days", async () => {
+      const sixDaysAgoIso = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
+
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run("within-window", "successful", "t", "d", "e", "p", sixDaysAgoIso, Date.now());
+
+      const mod = await import("../successful-uploads-storage");
+      mod.pruneExpiredUploads();
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe("within-window");
     });
   });
 
