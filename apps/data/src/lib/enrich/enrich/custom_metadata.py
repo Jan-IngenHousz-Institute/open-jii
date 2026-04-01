@@ -53,7 +53,10 @@ def add_custom_metadata_column(df, metadata_df):
                         (acc, x) -> CASE
                             WHEN acc IS NULL THEN x
                             WHEN x IS NULL THEN acc
-                            ELSE object_merge(acc, x)
+                            ELSE parse_json(to_json(map_concat(
+                                cast(acc AS MAP<STRING, VARIANT>),
+                                cast(x AS MAP<STRING, VARIANT>)
+                            )))
                         END
                     )
                     """
