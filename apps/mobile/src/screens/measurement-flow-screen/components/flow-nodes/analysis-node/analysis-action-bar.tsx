@@ -1,4 +1,3 @@
-import { clsx } from "clsx";
 import { ChevronUp } from "lucide-react-native";
 import React, { useCallback, useRef, useState } from "react";
 import {
@@ -6,13 +5,12 @@ import {
   NativeSyntheticEvent,
   ScrollView,
   View,
-  Text,
   TouchableOpacity,
 } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 
-const SCROLL_THRESHOLD = 50;
+const SCROLL_THRESHOLD = 100;
 
 export function useScrollToTop() {
   const scrollViewRef = useRef<ScrollView>(null);
@@ -44,18 +42,19 @@ export function AnalysisActionBar({
   onRetry,
   onUpload,
 }: AnalysisActionBarProps) {
-  const { classes, colors } = useTheme();
+  const { colors } = useTheme();
 
   return (
-    <View className="w-full py-3">
+    <View className="relative w-full py-3">
+      {/* Floating scroll button */}
       {hasScrolled && (
         <TouchableOpacity
           onPress={onScrollToTop}
-          className={clsx("-ml-4 mb-2 h-[44px] flex-row items-center justify-end gap-1 px-4")}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
+          className="absolute -top-20 right-0 h-14 w-14 items-center justify-center rounded-full shadow-md"
+          style={{ backgroundColor: colors.surface }}
         >
           <ChevronUp size={20} color={colors.onSurface} />
-          <Text className={clsx("text-lg font-medium", classes.text)}>Scroll to top</Text>
         </TouchableOpacity>
       )}
       <View className="flex-row gap-4">
