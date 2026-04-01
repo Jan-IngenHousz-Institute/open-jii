@@ -56,7 +56,7 @@ const mockMeasurement = {
 function insertRow(
   id: string,
   status: "failed" | "successful",
-  overrides: Partial<{ topic: string; timestamp: string; createdAt: number }> = {},
+  overrides: Partial<{ topic: string; timestamp: string }> = {},
 ) {
   sqlite
     .prepare(
@@ -71,7 +71,7 @@ function insertRow(
       "Test Experiment",
       "protocol-1",
       overrides.timestamp ?? "2026-03-02T10:00:00.000Z",
-      overrides.createdAt ?? Date.now(),
+      Date.now(),
     );
 }
 
@@ -159,7 +159,7 @@ describe("measurements-storage", () => {
       insertRow("u1", "failed");
 
       const mod = await import("../measurements-storage");
-      await mod.updateMeasurement("u1", {
+      mod.updateMeasurement("u1", {
         ...mockMeasurement,
         topic: "updated/topic",
       });
@@ -173,7 +173,7 @@ describe("measurements-storage", () => {
       insertRow("u2", "successful");
 
       const mod = await import("../measurements-storage");
-      await mod.updateMeasurement("u2", {
+      mod.updateMeasurement("u2", {
         ...mockMeasurement,
         topic: "updated/topic",
       });
@@ -193,7 +193,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "failed");
 
       const mod = await import("../measurements-storage");
-      await mod.markAsSuccessful("m1");
+      mod.markAsSuccessful("m1");
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
@@ -203,7 +203,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "failed");
 
       const mod = await import("../measurements-storage");
-      await mod.markAsSuccessful("m1");
+      mod.markAsSuccessful("m1");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all();
       expect(rows).toHaveLength(1);
@@ -214,7 +214,7 @@ describe("measurements-storage", () => {
       insertRow("other", "failed");
 
       const mod = await import("../measurements-storage");
-      await mod.markAsSuccessful("target");
+      mod.markAsSuccessful("target");
 
       const rows = sqlite.prepare("SELECT * FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("successful");
@@ -225,7 +225,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "successful");
 
       const mod = await import("../measurements-storage");
-      await mod.markAsSuccessful("m1");
+      mod.markAsSuccessful("m1");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
@@ -243,7 +243,7 @@ describe("measurements-storage", () => {
       insertRow("gone", "failed");
 
       const mod = await import("../measurements-storage");
-      await mod.removeMeasurement("gone");
+      mod.removeMeasurement("gone", "failed");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
@@ -255,11 +255,21 @@ describe("measurements-storage", () => {
       insertRow("gone", "successful");
 
       const mod = await import("../measurements-storage");
-      await mod.removeMeasurement("gone");
+      mod.removeMeasurement("gone", "successful");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe("keep");
+    });
+
+    it("does not remove a row with a mismatched status", async () => {
+      insertRow("f1", "failed");
+
+      const mod = await import("../measurements-storage");
+      mod.removeMeasurement("f1", "successful"); // wrong status
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all();
+      expect(rows).toHaveLength(1);
     });
   });
 
@@ -274,7 +284,7 @@ describe("measurements-storage", () => {
       insertRow("s1", "successful");
 
       const mod = await import("../measurements-storage");
-      await mod.clearMeasurements("failed");
+      mod.clearMeasurements("failed");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
@@ -287,7 +297,7 @@ describe("measurements-storage", () => {
       insertRow("s2", "successful");
 
       const mod = await import("../measurements-storage");
-      await mod.clearMeasurements("successful");
+      mod.clearMeasurements("successful");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
@@ -301,14 +311,14 @@ describe("measurements-storage", () => {
 
   describe("pruneExpiredMeasurements", () => {
     it("removes successful rows older than 7 days", async () => {
-      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
-      const oneDayAgo = Date.now() - 1 * 24 * 60 * 60 * 1000;
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
 
-      insertRow("old", "successful", { createdAt: eightDaysAgo });
-      insertRow("recent", "successful", { createdAt: oneDayAgo });
+      insertRow("old", "successful", { timestamp: eightDaysAgo });
+      insertRow("recent", "successful", { timestamp: oneDayAgo });
 
       const mod = await import("../measurements-storage");
-      await mod.pruneExpiredMeasurements();
+      mod.pruneExpiredMeasurements();
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
@@ -316,22 +326,22 @@ describe("measurements-storage", () => {
     });
 
     it("does not remove failed rows even if old", async () => {
-      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
-      insertRow("old-failed", "failed", { createdAt: eightDaysAgo });
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      insertRow("old-failed", "failed", { timestamp: eightDaysAgo });
 
       const mod = await import("../measurements-storage");
-      await mod.pruneExpiredMeasurements();
+      mod.pruneExpiredMeasurements();
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all();
       expect(rows).toHaveLength(1);
     });
 
     it("keeps successful rows within 7 days", async () => {
-      const sixDaysAgo = Date.now() - 6 * 24 * 60 * 60 * 1000;
-      insertRow("within-window", "successful", { createdAt: sixDaysAgo });
+      const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
+      insertRow("within-window", "successful", { timestamp: sixDaysAgo });
 
       const mod = await import("../measurements-storage");
-      await mod.pruneExpiredMeasurements();
+      mod.pruneExpiredMeasurements();
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all();
       expect(rows).toHaveLength(1);
