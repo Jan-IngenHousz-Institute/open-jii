@@ -11,12 +11,12 @@ const {
   mockToastInfo,
 } = vi.hoisted(() => ({
   mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
-  mockMarkAsSuccessful: vi.fn(),
-  mockRemoveMeasurement: vi.fn(),
-  mockSaveMeasurement: vi.fn(),
-  mockUpdateMeasurement: vi.fn(),
+  mockMarkAsSuccessful: vi.fn().mockResolvedValue(undefined),
+  mockRemoveMeasurement: vi.fn().mockResolvedValue(undefined),
+  mockSaveMeasurement: vi.fn().mockResolvedValue(undefined),
+  mockUpdateMeasurement: vi.fn().mockResolvedValue(undefined),
   mockSendMqttEvent: vi.fn(),
-  mockPruneExpiredMeasurements: vi.fn(),
+  mockPruneExpiredMeasurements: vi.fn().mockResolvedValue(undefined),
   mockToastInfo: vi.fn(),
 }));
 
@@ -239,7 +239,7 @@ describe("useMeasurements", () => {
     it("removes a failed measurement and invalidates measurements", async () => {
       const { removeMeasurement } = await mountWithUploads([]);
 
-      removeMeasurement("key-1");
+      await removeMeasurement("key-1");
 
       expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
@@ -248,7 +248,7 @@ describe("useMeasurements", () => {
     it("removes a successful measurement and invalidates measurements", async () => {
       const { removeMeasurement } = await mountWithUploads([]);
 
-      removeMeasurement("key-1");
+      await removeMeasurement("key-1");
 
       expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });

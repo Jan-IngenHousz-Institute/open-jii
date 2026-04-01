@@ -40,6 +40,8 @@ async function migrateLegacyEntries(): Promise<void> {
         if (!isValidMeasurement(parsed)) continue;
 
         const id = key.replace(prefix, "");
+        const parsedDate = new Date(parsed.metadata.timestamp);
+        const createdAt = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
         db.insert(measurements)
           .values({
             id,
@@ -49,7 +51,7 @@ async function migrateLegacyEntries(): Promise<void> {
             experimentName: parsed.metadata.experimentName,
             protocolName: parsed.metadata.protocolName,
             timestamp: parsed.metadata.timestamp,
-            createdAt: new Date(parsed.metadata.timestamp),
+            createdAt,
           })
           .onConflictDoNothing()
           .run();
@@ -122,12 +124,12 @@ export async function getMeasurements(status: MeasurementStatus): Promise<[strin
       })
       .filter(Boolean) as [string, Measurement][];
   } catch (error) {
-    console.error("Failed to fetch measurements:", error);
-    return [];
+    throw error;
   }
 }
 
-export function updateMeasurement(key: string, data: Measurement): void {
+export async function updateMeasurement(key: string, data: Measurement): Promise<void> {
+  await ensureMigrated();
   try {
     db.update(measurements)
       .set({
@@ -144,7 +146,8 @@ export function updateMeasurement(key: string, data: Measurement): void {
   }
 }
 
-export function markAsSuccessful(key: string): void {
+export async function markAsSuccessful(key: string): Promise<void> {
+  await ensureMigrated();
   try {
     db.update(measurements)
       .set({ status: "successful" })
@@ -155,7 +158,8 @@ export function markAsSuccessful(key: string): void {
   }
 }
 
-export function removeMeasurement(key: string): void {
+export async function removeMeasurement(key: string): Promise<void> {
+  await ensureMigrated();
   try {
     db.delete(measurements).where(eq(measurements.id, key)).run();
   } catch (error) {
@@ -163,7 +167,8 @@ export function removeMeasurement(key: string): void {
   }
 }
 
-export function clearMeasurements(status: MeasurementStatus): void {
+export async function clearMeasurements(status: MeasurementStatus): Promise<void> {
+  await ensureMigrated();
   try {
     db.delete(measurements).where(eq(measurements.status, status)).run();
   } catch (error) {
@@ -171,7 +176,8 @@ export function clearMeasurements(status: MeasurementStatus): void {
   }
 }
 
-export function pruneExpiredMeasurements(): void {
+export async function pruneExpiredMeasurements(): Promise<void> {
+  await ensureMigrated();
   try {
     const cutoff = new Date(Date.now() - MAX_AGE_MS);
     const result = db
