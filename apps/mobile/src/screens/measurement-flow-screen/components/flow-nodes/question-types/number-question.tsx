@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
+import { ScanQrCode, X } from "lucide-react-native";
 import React from "react";
-import { View, Text, TextInput } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
 import { QuestionContent } from "../../../types";
@@ -9,9 +10,10 @@ interface NumberQuestionProps {
   content: QuestionContent;
   value: string;
   onChange: (text: string) => void;
+  onQRPress?: () => void;
 }
 
-export function NumberQuestion({ content, value, onChange }: NumberQuestionProps) {
+export function NumberQuestion({ content, value, onChange, onQRPress }: NumberQuestionProps) {
   const theme = useTheme();
   const { classes, colors } = theme;
 
@@ -20,16 +22,60 @@ export function NumberQuestion({ content, value, onChange }: NumberQuestionProps
     onChange(numericValue);
   };
 
+  const handleClear = () => {
+    onChange("");
+  };
+
+  const hasValue = value && value.length > 0;
+
   return (
     <View>
-      <TextInput
-        className={clsx("rounded-lg border p-3 text-base", classes.input, classes.border)}
-        placeholder={content.placeholder ?? "Enter a number..."}
-        placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
-        value={value}
-        onChangeText={handleTextChange}
-        keyboardType="numeric"
-      />
+      <View
+        className={clsx(
+          "flex-row items-center gap-1 rounded-lg border pl-3 pr-2",
+          classes.border,
+          classes.input,
+        )}
+      >
+        <TextInput
+          className="flex-1 text-base"
+          placeholder={content.placeholder ?? "Enter a number..."}
+          placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
+          style={{ color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface }}
+          value={value}
+          onChangeText={handleTextChange}
+          keyboardType="numeric"
+        />
+
+        {/* Right button */}
+        {hasValue ? (
+          <TouchableOpacity
+            className="rounded-md p-1"
+            style={{
+              backgroundColor: theme.isDark
+                ? colors.dark.grayBackground
+                : colors.light.grayBackground,
+            }}
+            onPress={handleClear}
+          >
+            <X size={20} color={colors.neutral.black} />
+          </TouchableOpacity>
+        ) : (
+          onQRPress && (
+            <TouchableOpacity
+              className="rounded-md p-1"
+              style={{
+                backgroundColor: theme.isDark
+                  ? colors.dark.grayBackground
+                  : colors.light.grayBackground,
+              }}
+              onPress={onQRPress}
+            >
+              <ScanQrCode size={20} color={colors.neutral.black} />
+            </TouchableOpacity>
+          )
+        )}
+      </View>
 
       <View className="mt-2">
         {content.min !== undefined && content.max !== undefined && (
