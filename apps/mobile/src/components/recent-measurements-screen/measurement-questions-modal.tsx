@@ -6,7 +6,7 @@ import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import type { MeasurementItem } from "~/hooks/use-all-measurements";
-import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { useMeasurements } from "~/hooks/use-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
@@ -24,7 +24,7 @@ export function MeasurementQuestionsModal({
 }: MeasurementQuestionsModalProps) {
   const { colors, classes } = useTheme();
   const insets = useSafeAreaInsets();
-  const { updateMeasurementComment } = useFailedUploads();
+  const { updateMeasurementComment } = useMeasurements();
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const sheetRef = useRef<BottomSheetModal>(null);
 

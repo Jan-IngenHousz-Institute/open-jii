@@ -18,6 +18,6 @@
     "strictNullChecks": true,
     "noImplicitAny": false
   },
-  "include": ["src", "*.ts", "*.js", "nativewind-env.d.ts"],
+  "include": ["src", "drizzle", "*.ts", "*.js", "nativewind-env.d.ts"],
   "exclude": ["node_modules"]
 }
