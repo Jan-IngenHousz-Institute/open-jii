@@ -46,6 +46,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@swc/core",
+      "better-sqlite3",
       "turbo"
     ],
     "overrides": {
