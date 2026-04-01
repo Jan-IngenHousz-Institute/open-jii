@@ -52,9 +52,11 @@ export function AnalysisActionBar({
           onPress={onScrollToTop}
           activeOpacity={0.8}
           className="absolute -top-20 right-0 h-14 w-14 items-center justify-center rounded-full shadow-md"
-          style={{ backgroundColor: colors.surface }}
+          style={{
+            backgroundColor: `${colors.surface}CC`,
+          }}
         >
-          <ChevronUp size={20} color={colors.onSurface} />
+          <ChevronUp size={20} color={`${colors.onSurface}CC`} />
         </TouchableOpacity>
       )}
       <View className="flex-row gap-4">
