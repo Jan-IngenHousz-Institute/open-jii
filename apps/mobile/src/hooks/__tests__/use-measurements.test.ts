@@ -11,12 +11,12 @@ const {
   mockToastInfo,
 } = vi.hoisted(() => ({
   mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
-  mockMarkAsSuccessful: vi.fn().mockResolvedValue(undefined),
-  mockRemoveMeasurement: vi.fn().mockResolvedValue(undefined),
-  mockSaveMeasurement: vi.fn().mockResolvedValue(undefined),
-  mockUpdateMeasurement: vi.fn().mockResolvedValue(undefined),
+  mockMarkAsSuccessful: vi.fn(),
+  mockRemoveMeasurement: vi.fn(),
+  mockSaveMeasurement: vi.fn(),
+  mockUpdateMeasurement: vi.fn(),
   mockSendMqttEvent: vi.fn(),
-  mockPruneExpiredMeasurements: vi.fn().mockResolvedValue(undefined),
+  mockPruneExpiredMeasurements: vi.fn(),
   mockToastInfo: vi.fn(),
 }));
 
@@ -65,8 +65,6 @@ const mockUpload = {
 async function mountWithUploads(uploads: { key: string; data: any }[]) {
   mockFailedUploads = uploads;
   const { useMeasurements } = await import("../use-measurements");
-  // All hooks are fully mocked above, so this is a plain function call in test context.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   return useMeasurements();
 }
 
@@ -242,18 +240,18 @@ describe("useMeasurements", () => {
     it("removes a failed measurement and invalidates measurements", async () => {
       const { removeMeasurement } = await mountWithUploads([]);
 
-      await removeMeasurement("key-1");
+      removeMeasurement("key-1", "failed");
 
-      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
+      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1", "failed");
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
 
     it("removes a successful measurement and invalidates measurements", async () => {
       const { removeMeasurement } = await mountWithUploads([]);
 
-      await removeMeasurement("key-1");
+      removeMeasurement("key-1", "successful");
 
-      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
+      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1", "successful");
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });

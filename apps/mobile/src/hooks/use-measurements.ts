@@ -30,14 +30,14 @@ export function useMeasurements() {
     for (const { key, data } of failedUploads) {
       try {
         await sendMqttEvent(data.topic, data.measurementResult);
-        await markAsSuccessful(key);
+        markAsSuccessful(key);
       } catch (error) {
         console.warn(`Failed to upload item with key ${key}:`, error);
         lastError = error;
       }
     }
 
-    await pruneExpiredMeasurements();
+    pruneExpiredMeasurements();
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
     if (lastError) {
       throw lastError;
@@ -50,13 +50,13 @@ export function useMeasurements() {
 
     try {
       await sendMqttEvent(item.data.topic, item.data.measurementResult);
-      await markAsSuccessful(key);
+      markAsSuccessful(key);
     } catch (error) {
       console.warn(`Failed to upload item with key ${key}:`, error);
       toast.info("Failed to upload, try again later");
     }
 
-    await pruneExpiredMeasurements();
+    pruneExpiredMeasurements();
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
@@ -65,15 +65,15 @@ export function useMeasurements() {
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
-  const removeMeasurement = async (key: string) => {
-    await removeMeasurementFromStorage(key);
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+  const removeMeasurement = (key: string) => {
+    removeMeasurementFromStorage(key);
+    queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
   const updateMeasurementComment = async (key: string, data: Measurement, commentText: string) => {
     const annotations = buildAnnotationsWithComment(commentText);
     const measurementResult = { ...data.measurementResult, annotations };
-    await updateMeasurement(key, { ...data, measurementResult });
+    updateMeasurement(key, { ...data, measurementResult });
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 

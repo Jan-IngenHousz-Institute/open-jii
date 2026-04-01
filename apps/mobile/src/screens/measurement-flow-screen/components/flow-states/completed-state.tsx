@@ -66,7 +66,7 @@ export function CompletedState() {
         text: status === "synced" ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
-          void (() => {
+          void (async () => {
             removeMeasurement(id);
             invalidate();
           })();
