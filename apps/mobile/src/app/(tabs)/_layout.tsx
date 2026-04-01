@@ -33,7 +33,8 @@ export default function TabLayout() {
   useAutoReconnect();
 
   useEffect(() => {
-    void pruneExpiredUploads();
+    pruneExpiredUploads();
+    void queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
   }, []);
 
   const inMeasureTab = segments.includes("measurement-flow");
