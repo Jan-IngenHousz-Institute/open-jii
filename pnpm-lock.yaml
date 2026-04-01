@@ -29,8 +29,8 @@ catalogs:
       specifier: 15.5.14
       version: 15.5.14
     nodemailer:
-      specifier: 7.0.13
-      version: 7.0.13
+      specifier: 8.0.4
+      version: 8.0.4
     posthog-js:
       specifier: 1.364.1
       version: 1.364.1
@@ -212,7 +212,7 @@ importers:
         version: 4.6.1(@nestjs/common@11.1.17(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.1)(rxjs@7.8.2)
       nodemailer:
         specifier: 'catalog:'
-        version: 7.0.13
+        version: 8.0.4
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
@@ -912,7 +912,7 @@ importers:
         version: 15.0.8(expo@54.0.33)
       nodemailer:
         specifier: 'catalog:'
-        version: 7.0.13
+        version: 8.0.4
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -13960,8 +13960,8 @@ packages:
     resolution: {integrity: sha512-RinNxoz4W1cep1b928fuFhvAQ5ag/+1UlMDV7rbyGthBIgsiEouS4kvRayvvboxii4m8eolKOIBo3OjDqbc+uQ==}
     engines: {node: '>=6'}
 
-  nodemailer@7.0.13:
-    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
+  nodemailer@8.0.4:
+    resolution: {integrity: sha512-k+jf6N8PfQJ0Fe8ZhJlgqU5qJU44Lpvp2yvidH3vp1lPnVQMgi4yEEMPXg5eJS1gFIJTVq1NHBk7Ia9ARdSBdQ==}
     engines: {node: '>=6.0.0'}
 
   nopt@5.0.0:
@@ -34363,7 +34363,7 @@ snapshots:
 
   node-watch@0.7.4: {}
 
-  nodemailer@7.0.13: {}
+  nodemailer@8.0.4: {}
 
   nopt@5.0.0:
     dependencies:
