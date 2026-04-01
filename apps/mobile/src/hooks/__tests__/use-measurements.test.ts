@@ -65,6 +65,8 @@ const mockUpload = {
 async function mountWithUploads(uploads: { key: string; data: any }[]) {
   mockFailedUploads = uploads;
   const { useMeasurements } = await import("../use-measurements");
+  // All hooks are fully mocked above, so this is a plain function call in test context.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   return useMeasurements();
 }
 
@@ -240,18 +242,18 @@ describe("useMeasurements", () => {
     it("removes a failed measurement and invalidates measurements", async () => {
       const { removeMeasurement } = await mountWithUploads([]);
 
-      removeMeasurement("key-1", "failed");
+      removeMeasurement("key-1");
 
-      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1", "failed");
+      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
 
     it("removes a successful measurement and invalidates measurements", async () => {
       const { removeMeasurement } = await mountWithUploads([]);
 
-      removeMeasurement("key-1", "successful");
+      removeMeasurement("key-1");
 
-      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1", "successful");
+      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });
