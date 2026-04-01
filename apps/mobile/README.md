@@ -112,8 +112,7 @@ mobile/
 │   ├── app/              # Expo Router screens & layouts
 │   ├── services/
 │   │   ├── db/           # Database client & schema
-│   │   ├── failed-uploads-storage.ts
-│   │   └── successful-uploads-storage.ts
+│   │   └── measurements-storage.ts
 │   ├── components/
 │   └── ...
 └── ...
