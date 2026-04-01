@@ -8,7 +8,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
@@ -77,7 +77,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const [retryKey, setRetryKey] = useState(0);
 
-  return <MigrationWrapper key={retryKey} onRetry={() => setRetryKey((k) => k + 1)} />;
+  return (
+    <MigrationWrapper key={retryKey} onRetry={() => setRetryKey((k) => k + 1)} />
+  );
 }
 
 function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
@@ -104,13 +106,13 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   if (migrationsError) {
     return (
-      <View className="flex-1 items-center justify-center bg-white p-8">
-        <Text className="mb-3 text-xl font-bold text-[#c0392b]">Database Error</Text>
-        <Text className="mb-8 text-center text-sm text-[#555]">
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Database Error</Text>
+        <Text style={styles.errorMessage}>
           {migrationsError.message ?? "A database migration failed. Please try again."}
         </Text>
-        <Pressable className="rounded-lg bg-[#c0392b] px-8 py-3" onPress={onRetry}>
-          <Text className="text-base font-semibold text-white">Retry</Text>
+        <Pressable style={styles.retryButton} onPress={onRetry}>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </Pressable>
       </View>
     );
@@ -128,6 +130,39 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
     </PostHogProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  errorContainer: {
+    alignItems: "center",
+    backgroundColor: "#fff",
+    flex: 1,
+    justifyContent: "center",
+    padding: 32,
+  },
+  errorMessage: {
+    color: "#555",
+    fontSize: 14,
+    marginBottom: 32,
+    textAlign: "center",
+  },
+  errorTitle: {
+    color: "#c0392b",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  retryButton: {
+    backgroundColor: "#c0392b",
+    borderRadius: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+})
 
 function RootLayoutContent() {
   const theme = useTheme();
