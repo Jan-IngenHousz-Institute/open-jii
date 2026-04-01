@@ -1,7 +1,7 @@
 import { render as reactEmailRender } from "@react-email/components";
 import { render as emailmdRender } from "emailmd";
 
-import { AddedUserNotification } from "../emails/added-user-notification";
+import { Email } from "../emails/email.js";
 import { getCmsEmail, interpolate } from "../lib/contentful";
 
 export interface RenderAddedUserNotificationParams {
@@ -25,44 +25,28 @@ export async function renderAddedUserNotification(
 
   const emailData = await getCmsEmail("added-user-notification");
 
-  if (emailData) {
-    const markdown = interpolate(emailData.content, {
+  if (!emailData) throw new Error("[transactional] CMS email 'added-user-notification' not found");
+
+  const markdown = interpolate(emailData.content, {
+    host,
+    baseUrl,
+    experimentName,
+    experimentUrl,
+    actor,
+    role,
+  });
+  const { html: fullHtml, text } = emailmdRender(markdown);
+  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
+  const cmsContent = bodyMatch?.[1] ?? fullHtml;
+
+  const html = await reactEmailRender(
+    Email({
       host,
       baseUrl,
-      experimentName,
-      experimentUrl,
-      actor,
-      role,
-    });
-    const { html: fullHtml, text } = emailmdRender(markdown);
-    const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
-    const cmsContent = bodyMatch?.[1] ?? fullHtml;
-
-    const html = await reactEmailRender(
-      AddedUserNotification({
-        host,
-        experimentName,
-        experimentUrl,
-        actor,
-        role,
-        baseUrl,
-        cmsContent,
-        cmsPreview: emailData.preview,
-      }),
-      {},
-    );
-
-    return { html, text };
-  }
-
-  // Fallback: static React Email template when CMS is unavailable
-  const html = await reactEmailRender(
-    AddedUserNotification({ host, experimentName, experimentUrl, actor, role, baseUrl }),
+      cmsContent,
+      cmsPreview: emailData.preview,
+    }),
     {},
-  );
-  const text = await reactEmailRender(
-    AddedUserNotification({ host, experimentName, experimentUrl, actor, role, baseUrl }),
-    { plainText: true },
   );
 
   return { html, text };

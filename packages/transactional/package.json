@@ -3,21 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "exports": {
-    "./emails/added-user-notification": {
-      "types": "./dist/emails/added-user-notification.d.ts",
-      "default": "./dist/emails/added-user-notification.js"
+    "./emails/email": {
+      "types": "./dist/emails/email.d.ts",
+      "default": "./dist/emails/email.js"
     },
     "./emails/verification-request": {
       "types": "./dist/emails/verification-request.d.ts",
       "default": "./dist/emails/verification-request.js"
-    },
-    "./emails/otp-email": {
-      "types": "./dist/emails/otp-email.d.ts",
-      "default": "./dist/emails/otp-email.js"
-    },
-    "./emails/transfer-request-confirmation": {
-      "types": "./dist/emails/transfer-request-confirmation.d.ts",
-      "default": "./dist/emails/transfer-request-confirmation.js"
     },
     "./render/otp-email": {
       "types": "./dist/render/otp-email.d.ts",
@@ -34,10 +26,6 @@
     "./render/transfer-request-confirmation": {
       "types": "./dist/render/transfer-request-confirmation.d.ts",
       "default": "./dist/render/transfer-request-confirmation.js"
-    },
-    "./emails/project-transfer-complete": {
-      "types": "./dist/emails/project-transfer-complete.d.ts",
-      "default": "./dist/emails/project-transfer-complete.js"
     },
     "./render/project-transfer-complete": {
       "types": "./dist/render/project-transfer-complete.d.ts",

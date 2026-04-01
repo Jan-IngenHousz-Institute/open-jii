@@ -1,7 +1,7 @@
 import { render as reactEmailRender } from "@react-email/components";
 import { render as emailmdRender } from "emailmd";
 
-import { TransferRequestConfirmation } from "../emails/transfer-request-confirmation";
+import { Email } from "../emails/email.js";
 import { getCmsEmail, interpolate } from "../lib/contentful";
 
 export interface RenderTransferRequestConfirmationParams {
@@ -24,42 +24,28 @@ export async function renderTransferRequestConfirmation(
 
   const emailData = await getCmsEmail("transfer-request-confirmation");
 
-  if (emailData) {
-    const markdown = interpolate(emailData.content, {
+  if (!emailData)
+    throw new Error("[transactional] CMS email 'transfer-request-confirmation' not found");
+
+  const markdown = interpolate(emailData.content, {
+    host,
+    baseUrl,
+    projectIdOld,
+    projectUrlOld,
+    userEmail,
+  });
+  const { html: fullHtml, text } = emailmdRender(markdown);
+  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
+  const cmsContent = bodyMatch?.[1] ?? fullHtml;
+
+  const html = await reactEmailRender(
+    Email({
       host,
       baseUrl,
-      projectIdOld,
-      projectUrlOld,
-      userEmail,
-    });
-    const { html: fullHtml, text } = emailmdRender(markdown);
-    const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
-    const cmsContent = bodyMatch?.[1] ?? fullHtml;
-
-    const html = await reactEmailRender(
-      TransferRequestConfirmation({
-        host,
-        projectIdOld,
-        projectUrlOld,
-        userEmail,
-        baseUrl,
-        cmsContent,
-        cmsPreview: emailData.preview,
-      }),
-      {},
-    );
-
-    return { html, text };
-  }
-
-  // Fallback: static React Email template when CMS is unavailable
-  const html = await reactEmailRender(
-    TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
+      cmsContent,
+      cmsPreview: emailData.preview,
+    }),
     {},
-  );
-  const text = await reactEmailRender(
-    TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
-    { plainText: true },
   );
 
   return { html, text };

@@ -1,7 +1,7 @@
 import { render as reactEmailRender } from "@react-email/components";
 import { render as emailmdRender } from "emailmd";
 
-import { ProjectTransferComplete } from "../emails/project-transfer-complete";
+import { Email } from "../emails/email.js";
 import { getCmsEmail, interpolate } from "../lib/contentful";
 
 export interface RenderProjectTransferCompleteParams {
@@ -23,40 +23,27 @@ export async function renderProjectTransferComplete(
 
   const emailData = await getCmsEmail("project-transfer-complete");
 
-  if (emailData) {
-    const markdown = interpolate(emailData.content, {
+  if (!emailData)
+    throw new Error("[transactional] CMS email 'project-transfer-complete' not found");
+
+  const markdown = interpolate(emailData.content, {
+    host,
+    baseUrl,
+    experimentName,
+    experimentUrl,
+  });
+  const { html: fullHtml, text } = emailmdRender(markdown);
+  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
+  const cmsContent = bodyMatch?.[1] ?? fullHtml;
+
+  const html = await reactEmailRender(
+    Email({
       host,
       baseUrl,
-      experimentName,
-      experimentUrl,
-    });
-    const { html: fullHtml, text } = emailmdRender(markdown);
-    const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
-    const cmsContent = bodyMatch?.[1] ?? fullHtml;
-
-    const html = await reactEmailRender(
-      ProjectTransferComplete({
-        host,
-        experimentName,
-        experimentUrl,
-        baseUrl,
-        cmsContent,
-        cmsPreview: emailData.preview,
-      }),
-      {},
-    );
-
-    return { html, text };
-  }
-
-  // Fallback: static React Email template when CMS is unavailable
-  const html = await reactEmailRender(
-    ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
+      cmsContent,
+      cmsPreview: emailData.preview,
+    }),
     {},
-  );
-  const text = await reactEmailRender(
-    ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
-    { plainText: true },
   );
 
   return { html, text };

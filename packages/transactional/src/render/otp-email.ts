@@ -1,7 +1,7 @@
 import { render as reactEmailRender } from "@react-email/components";
 import { render as emailmdRender } from "emailmd";
 
-import { OtpEmail } from "../emails/otp-email";
+import { Email } from "../emails/email.js";
 import { getCmsEmail, interpolate } from "../lib/contentful";
 
 export interface RenderOtpEmailParams {
@@ -21,25 +21,17 @@ export async function renderOtpEmail(params: RenderOtpEmailParams): Promise<Rend
 
   const emailData = await getCmsEmail("otp-email");
 
-  if (emailData) {
-    const markdown = interpolate(emailData.content, { otp, senderName, host, baseUrl });
-    const { html: fullHtml, text } = emailmdRender(markdown);
-    const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
-    const cmsContent = bodyMatch?.[1] ?? fullHtml;
+  if (!emailData) throw new Error("[transactional] CMS email 'otp-email' not found");
 
-    const html = await reactEmailRender(
-      OtpEmail({ otp, senderName, host, baseUrl, cmsContent, cmsPreview: emailData.preview }),
-      {},
-    );
+  const markdown = interpolate(emailData.content, { otp, senderName, host, baseUrl });
+  const { html: fullHtml, text } = emailmdRender(markdown);
+  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
+  const cmsContent = bodyMatch?.[1] ?? fullHtml;
 
-    return { html, text };
-  }
-
-  // Fallback: static React Email template when CMS is unavailable
-  const html = await reactEmailRender(OtpEmail({ otp, senderName, host, baseUrl }), {});
-  const text = await reactEmailRender(OtpEmail({ otp, senderName, host, baseUrl }), {
-    plainText: true,
-  });
+  const html = await reactEmailRender(
+    Email({ senderName, host, baseUrl, cmsContent, cmsPreview: emailData.preview }),
+    {},
+  );
 
   return { html, text };
 }
