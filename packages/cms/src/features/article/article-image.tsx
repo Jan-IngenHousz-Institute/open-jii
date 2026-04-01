@@ -3,13 +3,14 @@
 import { useContentfulInspectorMode } from "@contentful/live-preview/react";
 import type { ReactElement } from "react";
 
-import { cva } from "@repo/ui/lib/utils";
+import { cn, cva } from "@repo/ui/lib/utils";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
 import { CtfImage } from "../contentful";
 
 interface ArticleImageProps {
   image: ComponentRichImage;
+  imageClassName?: string;
 }
 
 const wrapperVariants = cva("flex", {
@@ -28,7 +29,7 @@ const imageVariants = cva("rounded-2xl", {
   variants: {
     fullWidth: {
       true: "md:w-screen md:max-w-[calc(100vw-40px)] md:shrink-0",
-      false: "mt-4 -mb-2",
+      false: "my-4",
     },
   },
   defaultVariants: {
@@ -36,7 +37,7 @@ const imageVariants = cva("rounded-2xl", {
   },
 });
 
-export const ArticleImage = ({ image }: ArticleImageProps): ReactElement | null => {
+export const ArticleImage = ({ image, imageClassName }: ArticleImageProps): ReactElement | null => {
   const inspectorProps = useContentfulInspectorMode({
     entryId: image.sys.id,
   });
@@ -51,7 +52,7 @@ export const ArticleImage = ({ image }: ArticleImageProps): ReactElement | null 
       >
         <CtfImage
           nextImageProps={{
-            className: imageVariants({ fullWidth: image.fullWidth }),
+            className: cn(imageVariants({ fullWidth: image.fullWidth }), imageClassName),
           }}
           {...image.image}
         />
