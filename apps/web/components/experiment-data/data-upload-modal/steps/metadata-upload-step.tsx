@@ -116,7 +116,9 @@ function MetadataCard({
         </p>
         {columnNames.length > 0 && (
           <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-            {columnNames.join(", ")}
+            {columnNames.length <= 5
+              ? columnNames.join(", ")
+              : `${columnNames.slice(0, 4).join(", ")} and ${columnNames.length - 4} more`}
           </p>
         )}
 
@@ -455,9 +457,20 @@ export function MetadataUploadStep({
         ? (colIdToName.get(identifierColumnId) ?? identifierColumnId)
         : null;
 
+      // Auto-name untitled metadata
+      let finalName = metadataName.trim();
+      if (!finalName) {
+        const untitledCount = existingRecords.filter((r) => {
+          const n = (r.metadata as { name?: string }).name ?? "";
+          return /^Untitled Metadata(\s\d+)?$/.test(n);
+        }).length;
+        finalName =
+          untitledCount === 0 ? "Untitled Metadata" : `Untitled Metadata ${untitledCount + 1}`;
+      }
+
       const metadataBody = {
         metadata: {
-          name: metadataName,
+          name: finalName,
           columns: savedColumns,
           rows: savedRows,
           identifierColumnId: savedIdentifierColumnId,
@@ -723,9 +736,7 @@ export function MetadataUploadStep({
         ) : (
           <Button
             onClick={handleSave}
-            disabled={
-              !hasData || !metadataName.trim() || !identifierColumnId || !experimentQuestionId
-            }
+            disabled={!hasData || !identifierColumnId || !experimentQuestionId}
             className="gap-2"
           >
             {editingMetadataId

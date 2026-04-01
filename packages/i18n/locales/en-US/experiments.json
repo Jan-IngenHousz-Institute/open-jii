@@ -286,7 +286,7 @@
     },
     "metadata": {
       "title": "Import Metadata",
-      "description": "Import plot or plant metadata from a CSV/Excel file or paste from clipboard",
+      "description": "Attach custom metadata to your experiment data. Metadata columns are joined to each measurement row by a shared identifier and appear alongside sensor readings in the Data tab and exports on the next processing interval.",
       "importPrompt": "Import your metadata",
       "supportedFormats": "Supports CSV, TSV, and Excel files (.xlsx, .xls)",
       "pasteHint": "Tip: You can also paste directly with {{shortcut}}",

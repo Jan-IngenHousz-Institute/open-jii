@@ -43,11 +43,18 @@ def add_custom_metadata_column(df, metadata_df):
                     aggregate(
                         transform(
                             _meta_records,
-                            meta -> filter(
-                                cast(variant_get(meta, '$.rows', 'VARIANT') as ARRAY<VARIANT>),
-                                r -> variant_get(r, concat('$.', variant_get(meta, '$.identifierColumnId', 'STRING')), 'STRING')
-                                     = variant_get(questions_data, concat('$.', variant_get(meta, '$.experimentQuestionId', 'STRING')), 'STRING')
-                            )[0]
+                            meta -> (
+                                SELECT parse_json(to_json(map_filter(
+                                    cast(matched AS MAP<STRING, VARIANT>),
+                                    (k, v) -> k != '_id'
+                                              AND k != variant_get(meta, '$.identifierColumnId', 'STRING')
+                                )))
+                                FROM (SELECT filter(
+                                    cast(variant_get(meta, '$.rows', 'VARIANT') as ARRAY<VARIANT>),
+                                    r -> variant_get(r, concat('$.', variant_get(meta, '$.identifierColumnId', 'STRING')), 'STRING')
+                                         = variant_get(questions_data, concat('$.', variant_get(meta, '$.experimentQuestionId', 'STRING')), 'STRING')
+                                )[0] AS matched)
+                            )
                         ),
                         cast(null as variant),
                         (acc, x) -> CASE
