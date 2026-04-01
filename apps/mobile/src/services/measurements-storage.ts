@@ -58,13 +58,8 @@ async function migrateLegacyEntries(): Promise<void> {
       }
     }
 
-      await AsyncStorage.multiRemove(legacyKeys);
-      console.log(
-        `[measurements] Migrated ${legacyKeys.length} ${status} entries from AsyncStorage`,
-      );
-    }
-  } catch (err) {
-    console.warn("[measurements] Legacy migration failed:", err);
+    await AsyncStorage.multiRemove(legacyKeys);
+    console.log(`[measurements] Migrated ${legacyKeys.length} ${status} entries from AsyncStorage`);
   }
 }
 
@@ -107,7 +102,7 @@ export async function getMeasurements(status: MeasurementStatus): Promise<[strin
   try {
     await ensureMigrated();
     const rows = db.select().from(measurements).where(eq(measurements.status, status)).all();
-    console.log("DB rows:", rows.length);
+
     return rows
       .map((row) => {
         try {
@@ -181,12 +176,7 @@ export function pruneExpiredMeasurements(): void {
     const cutoff = new Date(Date.now() - MAX_AGE_MS);
     const result = db
       .delete(measurements)
-      .where(
-        and(
-          eq(measurements.status, "successful"),
-          lt(measurements.timestamp, cutoff.toISOString()),
-        ),
-      )
+      .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
       .run();
     console.log(
       `[measurements] Pruned ${result.changes} successful uploads older than ${Duration.fromMillis(MAX_AGE_MS).as("days")} days`,
