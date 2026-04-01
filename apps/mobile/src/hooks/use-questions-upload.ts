@@ -1,15 +1,12 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
-import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { useMeasurements } from "~/hooks/use-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
-import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
 export function useQuestionsUpload() {
-  const queryClient = useQueryClient();
-  const { saveFailedUpload } = useFailedUploads();
+  const { saveMeasurement } = useMeasurements();
 
   const { loading: isUploading, execute: uploadQuestions } = useAsyncCallback(
     async ({
@@ -51,8 +48,7 @@ export function useQuestionsUpload() {
       try {
         await sendMqttEvent(topic, payload);
         toast.success("Answers uploaded!");
-        await saveSuccessfulUpload(failedUploadData);
-        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+        await saveMeasurement(failedUploadData, "successful");
         return;
       } catch (uploadError) {
         console.error("Upload failed:", uploadError);
@@ -60,8 +56,7 @@ export function useQuestionsUpload() {
       }
 
       try {
-        await saveFailedUpload(failedUploadData);
-        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+        await saveMeasurement(failedUploadData, "failed");
       } catch (storageError) {
         console.error("Failed to save answers to local storage:", storageError);
         toast.error(

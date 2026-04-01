@@ -10,7 +10,7 @@ import { useIsOnline } from "~/hooks/use-is-online";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { hadActiveSession } from "~/services/session-persistence";
-import { pruneExpiredUploads } from "~/services/successful-uploads-storage";
+import { pruneExpiredMeasurements } from "~/services/measurements-storage";
 import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
@@ -33,7 +33,7 @@ export default function TabLayout() {
   useAutoReconnect();
 
   useEffect(() => {
-    pruneExpiredUploads();
+    pruneExpiredMeasurements();
     void queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
   }, []);
 

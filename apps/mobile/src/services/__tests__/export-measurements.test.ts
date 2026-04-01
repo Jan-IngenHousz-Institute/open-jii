@@ -19,12 +19,8 @@ vi.mock("expo-sharing", () => ({
   shareAsync: vi.fn(),
 }));
 
-vi.mock("~/services/failed-uploads-storage", () => ({
-  getFailedUploadsWithKeys: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock("~/services/successful-uploads-storage", () => ({
-  getSuccessfulUploadsWithKeys: vi.fn().mockResolvedValue([]),
+vi.mock("~/services/measurements-storage", () => ({
+  getMeasurements: vi.fn().mockResolvedValue([]),
 }));
 
 const mockMeasurement = {

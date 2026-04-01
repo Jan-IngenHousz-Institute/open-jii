@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFailedUploadsWithKeys } from "~/services/failed-uploads-storage";
-import { getSuccessfulUploadsWithKeys } from "~/services/successful-uploads-storage";
+import { getMeasurements } from "~/services/measurements-storage";
 
 export type MeasurementStatus = "synced" | "unsynced";
 
@@ -26,11 +25,11 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   const queryClient = useQueryClient();
 
   const { data: allMeasurements = [] } = useQuery({
-    queryKey: ["allMeasurements"],
+    queryKey: ["measurements"],
     queryFn: async () => {
       const [failedEntries, successfulEntries] = await Promise.all([
-        getFailedUploadsWithKeys(),
-        getSuccessfulUploadsWithKeys(),
+        getMeasurements("failed"),
+        getMeasurements("successful"),
       ]);
 
       const unsynced: MeasurementItem[] = failedEntries.map(([key, data]) => ({
@@ -71,7 +70,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+    queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
   return {
