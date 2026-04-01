@@ -2,6 +2,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
+import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -22,6 +23,11 @@ import { db } from "~/services/db/client";
 import migrations from "../../drizzle/migrations";
 
 SplashScreen.preventAutoHideAsync();
+
+function DrizzleDevTools() {
+  useDrizzleStudio(db.$client);
+  return null;
+}
 
 function RootLayoutNav() {
   const theme = useTheme();
@@ -113,6 +119,7 @@ function RootLayoutContent() {
             <PythonMacroProvider>
               <BottomSheetModalProvider>
                 <StatusBar style={theme.isDark ? "light" : "dark"} />
+                {__DEV__ && <DrizzleDevTools />}
                 <RootLayoutNav />
                 <Toaster />
                 <AlertDialog />

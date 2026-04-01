@@ -123,6 +123,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "catalog:",
     "expo-dev-client": "~6.0.20",
+    "expo-drizzle-studio-plugin": "^0.2.1",
     "typescript": "catalog:",
     "vitest": "catalog:testing"
   },
