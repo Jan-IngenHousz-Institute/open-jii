@@ -6,7 +6,8 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
@@ -68,6 +69,14 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [retryKey, setRetryKey] = useState(0);
+
+  return (
+    <MigrationWrapper key={retryKey} onRetry={() => setRetryKey((k) => k + 1)} />
+  );
+}
+
+function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
     "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
@@ -89,6 +98,20 @@ export default function RootLayout() {
     }
   }, [error, migrationsError]);
 
+  if (migrationsError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Database Error</Text>
+        <Text style={styles.errorMessage}>
+          {migrationsError.message ?? "A database migration failed. Please try again."}
+        </Text>
+        <Pressable style={styles.retryButton} onPress={onRetry}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (!loaded || !migrationsReady) {
     return null;
   }
@@ -101,6 +124,39 @@ export default function RootLayout() {
     </PostHogProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  errorContainer: {
+    alignItems: "center",
+    backgroundColor: "#fff",
+    flex: 1,
+    justifyContent: "center",
+    padding: 32,
+  },
+  errorMessage: {
+    color: "#555",
+    fontSize: 14,
+    marginBottom: 32,
+    textAlign: "center",
+  },
+  errorTitle: {
+    color: "#c0392b",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  retryButton: {
+    backgroundColor: "#c0392b",
+    borderRadius: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+})
 
 function RootLayoutContent() {
   const theme = useTheme();
