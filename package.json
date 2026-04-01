@@ -26,7 +26,6 @@
     "db:generate": "turbo --filter database db:generate",
     "db:studio": "turbo --filter database db:studio",
     "db:setup": "turbo db:setup",
-    "postinstall": "pnpm lint:ws",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
     "dev:fb": "turbo run dev --filter=backend --filter=web"
@@ -45,6 +44,11 @@
     "node": ">=22"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "better-sqlite3",
+      "turbo"
+    ],
     "overrides": {
       "react": "catalog:react19",
       "react-dom": "catalog:react19"
