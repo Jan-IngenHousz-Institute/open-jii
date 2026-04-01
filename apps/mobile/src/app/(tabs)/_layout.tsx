@@ -35,7 +35,7 @@ export default function TabLayout() {
   useEffect(() => {
     void pruneExpiredMeasurements();
     void queryClient.invalidateQueries({ queryKey: ["measurements"] });
-  }, []);
+  }, [queryClient]);
 
   const inMeasureTab = segments.includes("measurement-flow");
 

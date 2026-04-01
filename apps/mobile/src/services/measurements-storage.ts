@@ -101,31 +101,27 @@ export async function saveMeasurement(
 }
 
 export async function getMeasurements(status: MeasurementStatus): Promise<[string, Measurement][]> {
-  try {
-    await ensureMigrated();
-    const rows = db.select().from(measurements).where(eq(measurements.status, status)).all();
+  await ensureMigrated();
+  const rows = db.select().from(measurements).where(eq(measurements.status, status)).all();
 
-    return rows
-      .map((row) => {
-        try {
-          const measurement: Measurement = {
-            topic: row.topic,
-            measurementResult: decompressFromStorage(row.measurementResult),
-            metadata: {
-              experimentName: row.experimentName,
-              protocolName: row.protocolName,
-              timestamp: row.timestamp,
-            },
-          };
-          return [row.id, measurement] as [string, Measurement];
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean) as [string, Measurement][];
-  } catch (error) {
-    throw error;
-  }
+  return rows
+    .map((row) => {
+      try {
+        const measurement: Measurement = {
+          topic: row.topic,
+          measurementResult: decompressFromStorage(row.measurementResult),
+          metadata: {
+            experimentName: row.experimentName,
+            protocolName: row.protocolName,
+            timestamp: row.timestamp,
+          },
+        };
+        return [row.id, measurement] as [string, Measurement];
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean) as [string, Measurement][];
 }
 
 export async function updateMeasurement(key: string, data: Measurement): Promise<void> {
