@@ -96,7 +96,7 @@ export function RecentMeasurementsScreen() {
         text: status === "synced" ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
-          void (async () => {
+          void (() => {
             removeMeasurement(id);
             invalidate();
           })();

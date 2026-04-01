@@ -243,7 +243,7 @@ describe("measurements-storage", () => {
       insertRow("gone", "failed");
 
       const mod = await import("../measurements-storage");
-      mod.removeMeasurement("gone", "failed");
+      mod.removeMeasurement("gone");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
@@ -255,21 +255,11 @@ describe("measurements-storage", () => {
       insertRow("gone", "successful");
 
       const mod = await import("../measurements-storage");
-      mod.removeMeasurement("gone", "successful");
+      mod.removeMeasurement("gone");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe("keep");
-    });
-
-    it("does not remove a row with a mismatched status", async () => {
-      insertRow("f1", "failed");
-
-      const mod = await import("../measurements-storage");
-      mod.removeMeasurement("f1", "successful"); // wrong status
-
-      const rows = sqlite.prepare("SELECT * FROM measurements").all();
-      expect(rows).toHaveLength(1);
     });
   });
 
