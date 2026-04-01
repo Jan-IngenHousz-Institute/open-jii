@@ -101,12 +101,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   if (!tables || tables.length === 0) {
     return (
       <div className="space-y-8">
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between gap-6">
           <div>
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
             <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-3">
             <Button variant="outline" onClick={openMetadataUpload} disabled={!hasAccess}>
               {hasMetadata ? (
                 <Pencil className="mr-2 h-4 w-4" />
@@ -150,12 +150,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
+      <div className="flex items-center justify-between gap-6">
         <div>
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
           <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-3">
           <Button variant="outline" onClick={openMetadataUpload} disabled={!hasAccess}>
             {hasMetadata ? (
               <Pencil className="mr-2 h-4 w-4" />

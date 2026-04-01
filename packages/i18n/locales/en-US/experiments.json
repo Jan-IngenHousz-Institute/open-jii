@@ -297,6 +297,8 @@
       "rowCount_other": "{{count}} rows imported",
       "replaceData": "Replace Data",
       "clearData": "Clear Data",
+      "columnsTruncated_one": "{{columns}} and {{count}} more",
+      "columnsTruncated_other": "{{columns}} and {{count}} more",
       "saveMetadata": "Save Metadata",
       "savingMetadata": "Saving..."
     },

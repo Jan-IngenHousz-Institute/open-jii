@@ -90,6 +90,7 @@ function MetadataCard({
   onDelete: () => void;
   deleteStatus: DeleteStatus;
 }) {
+  const { t } = useTranslation("experiments");
   const dateStr = new Date(updatedAt).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -118,7 +119,10 @@ function MetadataCard({
           <p className="truncate text-xs text-gray-500 dark:text-gray-400">
             {columnNames.length <= 5
               ? columnNames.join(", ")
-              : `${columnNames.slice(0, 4).join(", ")} and ${columnNames.length - 4} more`}
+              : t("uploadModal.metadata.columnsTruncated", {
+                  columns: columnNames.slice(0, 4).join(", "),
+                  count: columnNames.length - 4,
+                })}
           </p>
         )}
 
