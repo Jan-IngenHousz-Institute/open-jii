@@ -47,6 +47,8 @@
   "scripts": {
     "build": "tsc --build --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "debug:cms": "node --env-file=.env --input-type=module <<< \"import { getCmsEmails } from './dist/lib/contentful.js'; getCmsEmails().then(e => console.log(JSON.stringify(e, null, 2))).catch(err => console.error(err))\"",
+    "test:render": "pnpm build && node --env-file=.env scripts/test-render.mjs",
     "dev": "tsc --watch & email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
     "email:dev": "email dev --dir src/emails -p 3001 & sleep 1 && pnpm start:mailcatcher",
     "export": "email export",
@@ -57,6 +59,8 @@
   },
   "dependencies": {
     "@react-email/components": "^0.3.3",
+    "@repo/cms": "workspace:*",
+    "emailmd": "^0.1.4",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

@@ -5,6 +5,10 @@
     "rootDir": "src",
     "module": "NodeNext",
     "target": "ES2020",
+    "paths": {
+      "@repo/cms/client": ["../cms/dist/client.d.ts"],
+      "@repo/cms/lib/*": ["../cms/dist/lib/*"]
+    },
     "declaration": true,
     "declarationMap": true,
     "esModuleInterop": true,

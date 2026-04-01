@@ -105,6 +105,13 @@ export type AssetCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type AssetCursorCollection = {
+  __typename?: "AssetCursorCollection";
+  items: Array<Maybe<Asset>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type AssetFilter = {
   AND?: InputMaybe<Array<InputMaybe<AssetFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<AssetFilter>>>;
@@ -177,17 +184,29 @@ export type AssetFilter = {
 export type AssetLinkingCollections = {
   __typename?: "AssetLinkingCollections";
   componentAuthorCollection?: Maybe<ComponentAuthorCollection>;
+  componentAuthorCursorCollection?: Maybe<ComponentAuthorCursorCollection>;
   componentFeatureCollection?: Maybe<ComponentFeatureCollection>;
+  componentFeatureCursorCollection?: Maybe<ComponentFeatureCursorCollection>;
   componentPartnerCollection?: Maybe<ComponentPartnerCollection>;
+  componentPartnerCursorCollection?: Maybe<ComponentPartnerCursorCollection>;
   componentRichImageCollection?: Maybe<ComponentRichImageCollection>;
+  componentRichImageCursorCollection?: Maybe<ComponentRichImageCursorCollection>;
   componentSeoCollection?: Maybe<ComponentSeoCollection>;
+  componentSeoCursorCollection?: Maybe<ComponentSeoCursorCollection>;
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageAboutCollection?: Maybe<PageAboutCollection>;
+  pageAboutCursorCollection?: Maybe<PageAboutCursorCollection>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
+  pageBlogPostCursorCollection?: Maybe<PageBlogPostCursorCollection>;
   pageHomeFeaturesCollection?: Maybe<PageHomeFeaturesCollection>;
+  pageHomeFeaturesCursorCollection?: Maybe<PageHomeFeaturesCursorCollection>;
   pageHomeHeroCollection?: Maybe<PageHomeHeroCollection>;
+  pageHomeHeroCursorCollection?: Maybe<PageHomeHeroCursorCollection>;
   pageHomeMissionCollection?: Maybe<PageHomeMissionCollection>;
+  pageHomeMissionCursorCollection?: Maybe<PageHomeMissionCursorCollection>;
   pageHomePartnersCollection?: Maybe<PageHomePartnersCollection>;
+  pageHomePartnersCursorCollection?: Maybe<PageHomePartnersCursorCollection>;
 };
 
 export type AssetLinkingCollectionsComponentAuthorCollectionArgs = {
@@ -195,6 +214,15 @@ export type AssetLinkingCollectionsComponentAuthorCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsComponentAuthorCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -206,11 +234,29 @@ export type AssetLinkingCollectionsComponentFeatureCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type AssetLinkingCollectionsComponentFeatureCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type AssetLinkingCollectionsComponentPartnerCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsComponentPartnerCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -222,11 +268,29 @@ export type AssetLinkingCollectionsComponentRichImageCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type AssetLinkingCollectionsComponentRichImageCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type AssetLinkingCollectionsComponentSeoCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsComponentSeoCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -238,11 +302,29 @@ export type AssetLinkingCollectionsEntryCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type AssetLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type AssetLinkingCollectionsPageAboutCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsPageAboutCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -254,11 +336,29 @@ export type AssetLinkingCollectionsPageBlogPostCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type AssetLinkingCollectionsPageBlogPostCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type AssetLinkingCollectionsPageHomeFeaturesCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsPageHomeFeaturesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -270,6 +370,15 @@ export type AssetLinkingCollectionsPageHomeHeroCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type AssetLinkingCollectionsPageHomeHeroCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type AssetLinkingCollectionsPageHomeMissionCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -278,11 +387,29 @@ export type AssetLinkingCollectionsPageHomeMissionCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type AssetLinkingCollectionsPageHomeMissionCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type AssetLinkingCollectionsPageHomePartnersCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsPageHomePartnersCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -361,6 +488,13 @@ export type ComponentAuthorCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type ComponentAuthorCursorCollection = {
+  __typename?: "ComponentAuthorCursorCollection";
+  items: Array<Maybe<ComponentAuthor>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type ComponentAuthorFilter = {
   AND?: InputMaybe<Array<InputMaybe<ComponentAuthorFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<ComponentAuthorFilter>>>;
@@ -393,7 +527,9 @@ export type ComponentAuthorFilter = {
 export type ComponentAuthorLinkingCollections = {
   __typename?: "ComponentAuthorLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
+  pageBlogPostCursorCollection?: Maybe<PageBlogPostCursorCollection>;
 };
 
 export type ComponentAuthorLinkingCollectionsEntryCollectionArgs = {
@@ -401,6 +537,15 @@ export type ComponentAuthorLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentAuthorLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -415,7 +560,38 @@ export type ComponentAuthorLinkingCollectionsPageBlogPostCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type ComponentAuthorLinkingCollectionsPageBlogPostCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentAuthorLinkingCollectionsPageBlogPostCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export enum ComponentAuthorLinkingCollectionsPageBlogPostCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedDateAsc = "publishedDate_ASC",
+  PublishedDateDesc = "publishedDate_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentAuthorLinkingCollectionsPageBlogPostCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   PublishedDateAsc = "publishedDate_ASC",
@@ -495,6 +671,13 @@ export type ComponentButtonCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type ComponentButtonCursorCollection = {
+  __typename?: "ComponentButtonCursorCollection";
+  items: Array<Maybe<ComponentButton>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type ComponentButtonFilter = {
   AND?: InputMaybe<Array<InputMaybe<ComponentButtonFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<ComponentButtonFilter>>>;
@@ -526,8 +709,11 @@ export type ComponentButtonFilter = {
 export type ComponentButtonLinkingCollections = {
   __typename?: "ComponentButtonLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   footerCollection?: Maybe<FooterCollection>;
+  footerCursorCollection?: Maybe<FooterCursorCollection>;
   pageHomeHeroCollection?: Maybe<PageHomeHeroCollection>;
+  pageHomeHeroCursorCollection?: Maybe<PageHomeHeroCursorCollection>;
 };
 
 export type ComponentButtonLinkingCollectionsEntryCollectionArgs = {
@@ -538,12 +724,33 @@ export type ComponentButtonLinkingCollectionsEntryCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type ComponentButtonLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type ComponentButtonLinkingCollectionsFooterCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   order?: InputMaybe<Array<InputMaybe<ComponentButtonLinkingCollectionsFooterCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentButtonLinkingCollectionsFooterCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsFooterCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -558,7 +765,44 @@ export type ComponentButtonLinkingCollectionsPageHomeHeroCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type ComponentButtonLinkingCollectionsPageHomeHeroCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsPageHomeHeroCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export enum ComponentButtonLinkingCollectionsFooterCollectionOrder {
+  BadgeAsc = "badge_ASC",
+  BadgeDesc = "badge_DESC",
+  BrandAsc = "brand_ASC",
+  BrandDesc = "brand_DESC",
+  CopyrightAsc = "copyright_ASC",
+  CopyrightDesc = "copyright_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  MenuTitleAsc = "menuTitle_ASC",
+  MenuTitleDesc = "menuTitle_DESC",
+  SupportTitleAsc = "supportTitle_ASC",
+  SupportTitleDesc = "supportTitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentButtonLinkingCollectionsFooterCursorCollectionOrder {
   BadgeAsc = "badge_ASC",
   BadgeDesc = "badge_DESC",
   BrandAsc = "brand_ASC",
@@ -602,6 +846,25 @@ export enum ComponentButtonLinkingCollectionsPageHomeHeroCollectionOrder {
   TitleDesc = "title_DESC",
 }
 
+export enum ComponentButtonLinkingCollectionsPageHomeHeroCursorCollectionOrder {
+  BadgeAsc = "badge_ASC",
+  BadgeDesc = "badge_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
 export enum ComponentButtonOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
@@ -617,6 +880,168 @@ export enum ComponentButtonOrder {
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
   UrlAsc = "url_ASC",
   UrlDesc = "url_DESC",
+}
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentEmail) */
+export type ComponentEmail = Entry &
+  _Node & {
+    __typename?: "ComponentEmail";
+    _id: Scalars["ID"]["output"];
+    content?: Maybe<Scalars["String"]["output"]>;
+    contentfulMetadata: ContentfulMetadata;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<ComponentEmailLinkingCollections>;
+    preview?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentEmail) */
+export type ComponentEmailContentArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentEmail) */
+export type ComponentEmailInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentEmail) */
+export type ComponentEmailLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentEmail) */
+export type ComponentEmailPreviewArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentEmailCollection = {
+  __typename?: "ComponentEmailCollection";
+  items: Array<Maybe<ComponentEmail>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type ComponentEmailCursorCollection = {
+  __typename?: "ComponentEmailCursorCollection";
+  items: Array<Maybe<ComponentEmail>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export type ComponentEmailFilter = {
+  AND?: InputMaybe<Array<InputMaybe<ComponentEmailFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<ComponentEmailFilter>>>;
+  content?: InputMaybe<Scalars["String"]["input"]>;
+  content_contains?: InputMaybe<Scalars["String"]["input"]>;
+  content_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  content_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  content_not?: InputMaybe<Scalars["String"]["input"]>;
+  content_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  content_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  preview?: InputMaybe<Scalars["String"]["input"]>;
+  preview_contains?: InputMaybe<Scalars["String"]["input"]>;
+  preview_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  preview_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  preview_not?: InputMaybe<Scalars["String"]["input"]>;
+  preview_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  preview_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+};
+
+export type ComponentEmailLinkingCollections = {
+  __typename?: "ComponentEmailLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
+  pageEmailsCollection?: Maybe<PageEmailsCollection>;
+  pageEmailsCursorCollection?: Maybe<PageEmailsCursorCollection>;
+};
+
+export type ComponentEmailLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentEmailLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentEmailLinkingCollectionsPageEmailsCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentEmailLinkingCollectionsPageEmailsCollectionOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentEmailLinkingCollectionsPageEmailsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentEmailLinkingCollectionsPageEmailsCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export enum ComponentEmailLinkingCollectionsPageEmailsCollectionOrder {
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
+export enum ComponentEmailLinkingCollectionsPageEmailsCursorCollectionOrder {
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
+export enum ComponentEmailOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PreviewAsc = "preview_ASC",
+  PreviewDesc = "preview_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
 }
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFaqQuestion) */
@@ -711,6 +1136,13 @@ export type ComponentFaqQuestionCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type ComponentFaqQuestionCursorCollection = {
+  __typename?: "ComponentFaqQuestionCursorCollection";
+  items: Array<Maybe<ComponentFaqQuestion>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type ComponentFaqQuestionFilter = {
   AND?: InputMaybe<Array<InputMaybe<ComponentFaqQuestionFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<ComponentFaqQuestionFilter>>>;
@@ -738,7 +1170,9 @@ export type ComponentFaqQuestionFilter = {
 export type ComponentFaqQuestionLinkingCollections = {
   __typename?: "ComponentFaqQuestionLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageFaqCollection?: Maybe<PageFaqCollection>;
+  pageFaqCursorCollection?: Maybe<PageFaqCursorCollection>;
 };
 
 export type ComponentFaqQuestionLinkingCollectionsEntryCollectionArgs = {
@@ -746,6 +1180,15 @@ export type ComponentFaqQuestionLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentFaqQuestionLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -760,7 +1203,40 @@ export type ComponentFaqQuestionLinkingCollectionsPageFaqCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type ComponentFaqQuestionLinkingCollectionsPageFaqCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentFaqQuestionLinkingCollectionsPageFaqCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export enum ComponentFaqQuestionLinkingCollectionsPageFaqCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  IntroAsc = "intro_ASC",
+  IntroDesc = "intro_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentFaqQuestionLinkingCollectionsPageFaqCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   IntroAsc = "intro_ASC",
@@ -848,6 +1324,13 @@ export type ComponentFeatureCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type ComponentFeatureCursorCollection = {
+  __typename?: "ComponentFeatureCursorCollection";
+  items: Array<Maybe<ComponentFeature>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type ComponentFeatureFilter = {
   AND?: InputMaybe<Array<InputMaybe<ComponentFeatureFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<ComponentFeatureFilter>>>;
@@ -880,7 +1363,9 @@ export type ComponentFeatureFilter = {
 export type ComponentFeatureLinkingCollections = {
   __typename?: "ComponentFeatureLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageHomeFeaturesCollection?: Maybe<PageHomeFeaturesCollection>;
+  pageHomeFeaturesCursorCollection?: Maybe<PageHomeFeaturesCursorCollection>;
 };
 
 export type ComponentFeatureLinkingCollectionsEntryCollectionArgs = {
@@ -888,6 +1373,15 @@ export type ComponentFeatureLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentFeatureLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -902,7 +1396,36 @@ export type ComponentFeatureLinkingCollectionsPageHomeFeaturesCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type ComponentFeatureLinkingCollectionsPageHomeFeaturesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentFeatureLinkingCollectionsPageHomeFeaturesCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export enum ComponentFeatureLinkingCollectionsPageHomeFeaturesCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentFeatureLinkingCollectionsPageHomeFeaturesCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   SubtitleAsc = "subtitle_ASC",
@@ -988,6 +1511,13 @@ export type ComponentPartnerCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type ComponentPartnerCursorCollection = {
+  __typename?: "ComponentPartnerCursorCollection";
+  items: Array<Maybe<ComponentPartner>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type ComponentPartnerFilter = {
   AND?: InputMaybe<Array<InputMaybe<ComponentPartnerFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<ComponentPartnerFilter>>>;
@@ -1020,7 +1550,9 @@ export type ComponentPartnerFilter = {
 export type ComponentPartnerLinkingCollections = {
   __typename?: "ComponentPartnerLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageHomePartnersCollection?: Maybe<PageHomePartnersCollection>;
+  pageHomePartnersCursorCollection?: Maybe<PageHomePartnersCursorCollection>;
 };
 
 export type ComponentPartnerLinkingCollectionsEntryCollectionArgs = {
@@ -1028,6 +1560,15 @@ export type ComponentPartnerLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentPartnerLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -1042,7 +1583,36 @@ export type ComponentPartnerLinkingCollectionsPageHomePartnersCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type ComponentPartnerLinkingCollectionsPageHomePartnersCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentPartnerLinkingCollectionsPageHomePartnersCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export enum ComponentPartnerLinkingCollectionsPageHomePartnersCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentPartnerLinkingCollectionsPageHomePartnersCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   SubtitleAsc = "subtitle_ASC",
@@ -1128,6 +1698,13 @@ export type ComponentRichImageCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type ComponentRichImageCursorCollection = {
+  __typename?: "ComponentRichImageCursorCollection";
+  items: Array<Maybe<ComponentRichImage>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type ComponentRichImageFilter = {
   AND?: InputMaybe<Array<InputMaybe<ComponentRichImageFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<ComponentRichImageFilter>>>;
@@ -1156,6 +1733,7 @@ export type ComponentRichImageFilter = {
 export type ComponentRichImageLinkingCollections = {
   __typename?: "ComponentRichImageLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type ComponentRichImageLinkingCollectionsEntryCollectionArgs = {
@@ -1163,6 +1741,15 @@ export type ComponentRichImageLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentRichImageLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -1197,6 +1784,7 @@ export type ComponentSeo = Entry &
     pageDescription?: Maybe<Scalars["String"]["output"]>;
     pageTitle?: Maybe<Scalars["String"]["output"]>;
     shareImagesCollection?: Maybe<AssetCollection>;
+    shareImagesCursorCollection?: Maybe<AssetCursorCollection>;
     sys: Sys;
   };
 
@@ -1250,12 +1838,29 @@ export type ComponentSeoShareImagesCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentSeo) */
+export type ComponentSeoShareImagesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type ComponentSeoCollection = {
   __typename?: "ComponentSeoCollection";
   items: Array<Maybe<ComponentSeo>>;
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
+};
+
+export type ComponentSeoCursorCollection = {
+  __typename?: "ComponentSeoCursorCollection";
+  items: Array<Maybe<ComponentSeo>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
 };
 
 export type ComponentSeoFilter = {
@@ -1303,8 +1908,11 @@ export type ComponentSeoFilter = {
 export type ComponentSeoLinkingCollections = {
   __typename?: "ComponentSeoLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
+  pageBlogPostCursorCollection?: Maybe<PageBlogPostCursorCollection>;
   pageLandingCollection?: Maybe<PageLandingCollection>;
+  pageLandingCursorCollection?: Maybe<PageLandingCursorCollection>;
 };
 
 export type ComponentSeoLinkingCollectionsEntryCollectionArgs = {
@@ -1312,6 +1920,15 @@ export type ComponentSeoLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentSeoLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -1324,12 +1941,36 @@ export type ComponentSeoLinkingCollectionsPageBlogPostCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type ComponentSeoLinkingCollectionsPageBlogPostCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentSeoLinkingCollectionsPageBlogPostCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type ComponentSeoLinkingCollectionsPageLandingCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   order?: InputMaybe<Array<InputMaybe<ComponentSeoLinkingCollectionsPageLandingCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentSeoLinkingCollectionsPageLandingCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentSeoLinkingCollectionsPageLandingCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -1352,7 +1993,39 @@ export enum ComponentSeoLinkingCollectionsPageBlogPostCollectionOrder {
   TitleDesc = "title_DESC",
 }
 
+export enum ComponentSeoLinkingCollectionsPageBlogPostCursorCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedDateAsc = "publishedDate_ASC",
+  PublishedDateDesc = "publishedDate_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
 export enum ComponentSeoLinkingCollectionsPageLandingCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
+export enum ComponentSeoLinkingCollectionsPageLandingCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
@@ -1428,6 +2101,12 @@ export type ContentfulTag = {
   name?: Maybe<Scalars["String"]["output"]>;
 };
 
+export type CursorPages = {
+  __typename?: "CursorPages";
+  next?: Maybe<Scalars["String"]["output"]>;
+  prev?: Maybe<Scalars["String"]["output"]>;
+};
+
 export type Entry = {
   contentfulMetadata: ContentfulMetadata;
   sys: Sys;
@@ -1439,6 +2118,13 @@ export type EntryCollection = {
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
+};
+
+export type EntryCursorCollection = {
+  __typename?: "EntryCursorCollection";
+  items: Array<Maybe<Entry>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
 };
 
 export type EntryFilter = {
@@ -1471,8 +2157,10 @@ export type Footer = Entry &
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<FooterLinkingCollections>;
     menuButtonsCollection?: Maybe<FooterMenuButtonsCollection>;
+    menuButtonsCursorCollection?: Maybe<FooterMenuButtonsCursorCollection>;
     menuTitle?: Maybe<Scalars["String"]["output"]>;
     supportButtonsCollection?: Maybe<FooterSupportButtonsCollection>;
+    supportButtonsCursorCollection?: Maybe<FooterSupportButtonsCursorCollection>;
     supportTitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
@@ -1519,6 +2207,18 @@ export type FooterMenuButtonsCollectionArgs = {
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterMenuButtonsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<FooterMenuButtonsCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
 export type FooterMenuTitleArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -1531,6 +2231,18 @@ export type FooterSupportButtonsCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<FooterSupportButtonsCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterSupportButtonsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<FooterSupportButtonsCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentButtonFilter>;
 };
@@ -1553,6 +2265,13 @@ export type FooterCollection = {
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
+};
+
+export type FooterCursorCollection = {
+  __typename?: "FooterCursorCollection";
+  items: Array<Maybe<Footer>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
 };
 
 export type FooterFilter = {
@@ -1618,6 +2337,7 @@ export type FooterFilter = {
 export type FooterLinkingCollections = {
   __typename?: "FooterLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type FooterLinkingCollectionsEntryCollectionArgs = {
@@ -1625,6 +2345,15 @@ export type FooterLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type FooterLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -1637,6 +2366,30 @@ export type FooterMenuButtonsCollection = {
 };
 
 export enum FooterMenuButtonsCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  LabelAsc = "label_ASC",
+  LabelDesc = "label_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
+}
+
+export type FooterMenuButtonsCursorCollection = {
+  __typename?: "FooterMenuButtonsCursorCollection";
+  items: Array<Maybe<ComponentButton>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum FooterMenuButtonsCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   LabelAsc = "label_ASC",
@@ -1687,6 +2440,30 @@ export type FooterSupportButtonsCollection = {
 };
 
 export enum FooterSupportButtonsCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  LabelAsc = "label_ASC",
+  LabelDesc = "label_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
+}
+
+export type FooterSupportButtonsCursorCollection = {
+  __typename?: "FooterSupportButtonsCursorCollection";
+  items: Array<Maybe<ComponentButton>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum FooterSupportButtonsCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   LabelAsc = "label_ASC",
@@ -1843,6 +2620,13 @@ export type LandingMetadataCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type LandingMetadataCursorCollection = {
+  __typename?: "LandingMetadataCursorCollection";
+  items: Array<Maybe<LandingMetadata>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type LandingMetadataFilter = {
   AND?: InputMaybe<Array<InputMaybe<LandingMetadataFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<LandingMetadataFilter>>>;
@@ -1874,6 +2658,7 @@ export type LandingMetadataFilter = {
 export type LandingMetadataLinkingCollections = {
   __typename?: "LandingMetadataLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type LandingMetadataLinkingCollectionsEntryCollectionArgs = {
@@ -1881,6 +2666,15 @@ export type LandingMetadataLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type LandingMetadataLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -1965,6 +2759,13 @@ export type PageAboutCollection = {
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
+};
+
+export type PageAboutCursorCollection = {
+  __typename?: "PageAboutCursorCollection";
+  items: Array<Maybe<PageAbout>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
 };
 
 export type PageAboutDescription = {
@@ -2057,6 +2858,7 @@ export type PageAboutFilter = {
 export type PageAboutLinkingCollections = {
   __typename?: "PageAboutLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageAboutLinkingCollectionsEntryCollectionArgs = {
@@ -2064,6 +2866,15 @@ export type PageAboutLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageAboutLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -2099,6 +2910,7 @@ export type PageBlogPost = Entry &
     linkedFrom?: Maybe<PageBlogPostLinkingCollections>;
     publishedDate?: Maybe<Scalars["DateTime"]["output"]>;
     relatedBlogPostsCollection?: Maybe<PageBlogPostRelatedBlogPostsCollection>;
+    relatedBlogPostsCursorCollection?: Maybe<PageBlogPostRelatedBlogPostsCursorCollection>;
     seoFields?: Maybe<ComponentSeo>;
     shortDescription?: Maybe<Scalars["String"]["output"]>;
     slug?: Maybe<Scalars["String"]["output"]>;
@@ -2151,6 +2963,18 @@ export type PageBlogPostRelatedBlogPostsCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageBlogPostRelatedBlogPostsCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageBlogPostFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageBlogPost) */
+export type PageBlogPostRelatedBlogPostsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageBlogPostRelatedBlogPostsCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageBlogPostFilter>;
 };
@@ -2237,6 +3061,13 @@ export type PageBlogPostContentResourcesInline = ResourceLink & {
   sys: ResourceSys;
 };
 
+export type PageBlogPostCursorCollection = {
+  __typename?: "PageBlogPostCursorCollection";
+  items: Array<Maybe<PageBlogPost>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type PageBlogPostFilter = {
   AND?: InputMaybe<Array<InputMaybe<PageBlogPostFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<PageBlogPostFilter>>>;
@@ -2294,8 +3125,11 @@ export type PageBlogPostFilter = {
 export type PageBlogPostLinkingCollections = {
   __typename?: "PageBlogPostLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
+  pageBlogPostCursorCollection?: Maybe<PageBlogPostCursorCollection>;
   pageLandingCollection?: Maybe<PageLandingCollection>;
+  pageLandingCursorCollection?: Maybe<PageLandingCursorCollection>;
 };
 
 export type PageBlogPostLinkingCollectionsEntryCollectionArgs = {
@@ -2303,6 +3137,15 @@ export type PageBlogPostLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageBlogPostLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -2315,12 +3158,36 @@ export type PageBlogPostLinkingCollectionsPageBlogPostCollectionArgs = {
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
+export type PageBlogPostLinkingCollectionsPageBlogPostCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<PageBlogPostLinkingCollectionsPageBlogPostCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
 export type PageBlogPostLinkingCollectionsPageLandingCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   order?: InputMaybe<Array<InputMaybe<PageBlogPostLinkingCollectionsPageLandingCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageBlogPostLinkingCollectionsPageLandingCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<PageBlogPostLinkingCollectionsPageLandingCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -2343,7 +3210,39 @@ export enum PageBlogPostLinkingCollectionsPageBlogPostCollectionOrder {
   TitleDesc = "title_DESC",
 }
 
+export enum PageBlogPostLinkingCollectionsPageBlogPostCursorCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedDateAsc = "publishedDate_ASC",
+  PublishedDateDesc = "publishedDate_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
 export enum PageBlogPostLinkingCollectionsPageLandingCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
+export enum PageBlogPostLinkingCollectionsPageLandingCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
@@ -2384,6 +3283,32 @@ export type PageBlogPostRelatedBlogPostsCollection = {
 };
 
 export enum PageBlogPostRelatedBlogPostsCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedDateAsc = "publishedDate_ASC",
+  PublishedDateDesc = "publishedDate_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export type PageBlogPostRelatedBlogPostsCursorCollection = {
+  __typename?: "PageBlogPostRelatedBlogPostsCursorCollection";
+  items: Array<Maybe<PageBlogPost>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum PageBlogPostRelatedBlogPostsCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   PublishedDateAsc = "publishedDate_ASC",
@@ -2508,6 +3433,13 @@ export type PageCookiePolicyContentResourcesInline = ResourceLink & {
   sys: ResourceSys;
 };
 
+export type PageCookiePolicyCursorCollection = {
+  __typename?: "PageCookiePolicyCursorCollection";
+  items: Array<Maybe<PageCookiePolicy>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type PageCookiePolicyFilter = {
   AND?: InputMaybe<Array<InputMaybe<PageCookiePolicyFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<PageCookiePolicyFilter>>>;
@@ -2549,6 +3481,7 @@ export type PageCookiePolicyFilter = {
 export type PageCookiePolicyLinkingCollections = {
   __typename?: "PageCookiePolicyLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageCookiePolicyLinkingCollectionsEntryCollectionArgs = {
@@ -2556,6 +3489,15 @@ export type PageCookiePolicyLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageCookiePolicyLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -2578,6 +3520,149 @@ export enum PageCookiePolicyOrder {
   TitleDesc = "title_DESC",
 }
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
+export type PageEmails = Entry &
+  _Node & {
+    __typename?: "PageEmails";
+    _id: Scalars["ID"]["output"];
+    contentfulMetadata: ContentfulMetadata;
+    emailsCollection?: Maybe<PageEmailsEmailsCollection>;
+    emailsCursorCollection?: Maybe<PageEmailsEmailsCursorCollection>;
+    linkedFrom?: Maybe<PageEmailsLinkingCollections>;
+    sys: Sys;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
+export type PageEmailsEmailsCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageEmailsEmailsCollectionOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentEmailFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
+export type PageEmailsEmailsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageEmailsEmailsCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentEmailFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
+export type PageEmailsLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type PageEmailsCollection = {
+  __typename?: "PageEmailsCollection";
+  items: Array<Maybe<PageEmails>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type PageEmailsCursorCollection = {
+  __typename?: "PageEmailsCursorCollection";
+  items: Array<Maybe<PageEmails>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export type PageEmailsEmailsCollection = {
+  __typename?: "PageEmailsEmailsCollection";
+  items: Array<Maybe<ComponentEmail>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export enum PageEmailsEmailsCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PreviewAsc = "preview_ASC",
+  PreviewDesc = "preview_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
+export type PageEmailsEmailsCursorCollection = {
+  __typename?: "PageEmailsEmailsCursorCollection";
+  items: Array<Maybe<ComponentEmail>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum PageEmailsEmailsCursorCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PreviewAsc = "preview_ASC",
+  PreviewDesc = "preview_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
+export type PageEmailsFilter = {
+  AND?: InputMaybe<Array<InputMaybe<PageEmailsFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<PageEmailsFilter>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  emails?: InputMaybe<CfComponentEmailNestedFilter>;
+  emailsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  sys?: InputMaybe<SysFilter>;
+};
+
+export type PageEmailsLinkingCollections = {
+  __typename?: "PageEmailsLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
+};
+
+export type PageEmailsLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageEmailsLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export enum PageEmailsOrder {
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
 export type PageFaq = Entry &
   _Node & {
@@ -2590,6 +3675,7 @@ export type PageFaq = Entry &
     pageDescription?: Maybe<Scalars["String"]["output"]>;
     pageTitle?: Maybe<Scalars["String"]["output"]>;
     questionsCollection?: Maybe<PageFaqQuestionsCollection>;
+    questionsCursorCollection?: Maybe<PageFaqQuestionsCursorCollection>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
   };
@@ -2635,6 +3721,18 @@ export type PageFaqQuestionsCollectionArgs = {
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqQuestionsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageFaqQuestionsCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentFaqQuestionFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
 export type PageFaqTitleArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -2646,6 +3744,13 @@ export type PageFaqCollection = {
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
+};
+
+export type PageFaqCursorCollection = {
+  __typename?: "PageFaqCursorCollection";
+  items: Array<Maybe<PageFaq>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
 };
 
 export type PageFaqFilter = {
@@ -2695,6 +3800,7 @@ export type PageFaqFilter = {
 export type PageFaqLinkingCollections = {
   __typename?: "PageFaqLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageFaqLinkingCollectionsEntryCollectionArgs = {
@@ -2702,6 +3808,15 @@ export type PageFaqLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageFaqLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -2749,6 +3864,28 @@ export enum PageFaqQuestionsCollectionOrder {
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
 }
 
+export type PageFaqQuestionsCursorCollection = {
+  __typename?: "PageFaqQuestionsCursorCollection";
+  items: Array<Maybe<ComponentFaqQuestion>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum PageFaqQuestionsCursorCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  QuestionAsc = "question_ASC",
+  QuestionDesc = "question_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
 export type PageHomeFeatures = Entry &
   _Node & {
@@ -2756,6 +3893,7 @@ export type PageHomeFeatures = Entry &
     _id: Scalars["ID"]["output"];
     contentfulMetadata: ContentfulMetadata;
     featuresCollection?: Maybe<PageHomeFeaturesFeaturesCollection>;
+    featuresCursorCollection?: Maybe<PageHomeFeaturesFeaturesCursorCollection>;
     image?: Maybe<Asset>;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageHomeFeaturesLinkingCollections>;
@@ -2771,6 +3909,18 @@ export type PageHomeFeaturesFeaturesCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageHomeFeaturesFeaturesCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentFeatureFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
+export type PageHomeFeaturesFeaturesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomeFeaturesFeaturesCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentFeatureFilter>;
 };
@@ -2813,6 +3963,13 @@ export type PageHomeFeaturesCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type PageHomeFeaturesCursorCollection = {
+  __typename?: "PageHomeFeaturesCursorCollection";
+  items: Array<Maybe<PageHomeFeatures>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type PageHomeFeaturesFeaturesCollection = {
   __typename?: "PageHomeFeaturesFeaturesCollection";
   items: Array<Maybe<ComponentFeature>>;
@@ -2822,6 +3979,30 @@ export type PageHomeFeaturesFeaturesCollection = {
 };
 
 export enum PageHomeFeaturesFeaturesCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export type PageHomeFeaturesFeaturesCursorCollection = {
+  __typename?: "PageHomeFeaturesFeaturesCursorCollection";
+  items: Array<Maybe<ComponentFeature>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum PageHomeFeaturesFeaturesCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   SubtitleAsc = "subtitle_ASC",
@@ -2872,6 +4053,7 @@ export type PageHomeFeaturesFilter = {
 export type PageHomeFeaturesLinkingCollections = {
   __typename?: "PageHomeFeaturesLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageHomeFeaturesLinkingCollectionsEntryCollectionArgs = {
@@ -2879,6 +4061,15 @@ export type PageHomeFeaturesLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageHomeFeaturesLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -2906,6 +4097,7 @@ export type PageHomeHero = Entry &
     _id: Scalars["ID"]["output"];
     badge?: Maybe<Scalars["String"]["output"]>;
     buttonsCollection?: Maybe<PageHomeHeroButtonsCollection>;
+    buttonsCursorCollection?: Maybe<PageHomeHeroButtonsCursorCollection>;
     contentfulMetadata: ContentfulMetadata;
     image?: Maybe<Asset>;
     internalName?: Maybe<Scalars["String"]["output"]>;
@@ -2928,6 +4120,18 @@ export type PageHomeHeroButtonsCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageHomeHeroButtonsCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeHero) */
+export type PageHomeHeroButtonsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomeHeroButtonsCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentButtonFilter>;
 };
@@ -2987,12 +4191,43 @@ export enum PageHomeHeroButtonsCollectionOrder {
   UrlDesc = "url_DESC",
 }
 
+export type PageHomeHeroButtonsCursorCollection = {
+  __typename?: "PageHomeHeroButtonsCursorCollection";
+  items: Array<Maybe<ComponentButton>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum PageHomeHeroButtonsCursorCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  LabelAsc = "label_ASC",
+  LabelDesc = "label_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
+}
+
 export type PageHomeHeroCollection = {
   __typename?: "PageHomeHeroCollection";
   items: Array<Maybe<PageHomeHero>>;
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
+};
+
+export type PageHomeHeroCursorCollection = {
+  __typename?: "PageHomeHeroCursorCollection";
+  items: Array<Maybe<PageHomeHero>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
 };
 
 export type PageHomeHeroFilter = {
@@ -3036,6 +4271,7 @@ export type PageHomeHeroFilter = {
 export type PageHomeHeroLinkingCollections = {
   __typename?: "PageHomeHeroLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageHomeHeroLinkingCollectionsEntryCollectionArgs = {
@@ -3043,6 +4279,15 @@ export type PageHomeHeroLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageHomeHeroLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3074,6 +4319,7 @@ export type PageHomeMission = Entry &
     contentfulMetadata: ContentfulMetadata;
     image?: Maybe<Asset>;
     imagesCollection?: Maybe<AssetCollection>;
+    imagesCursorCollection?: Maybe<AssetCursorCollection>;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageHomeMissionLinkingCollections>;
     mission?: Maybe<PageHomeMissionMission>;
@@ -3101,6 +4347,16 @@ export type PageHomeMissionImagesCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeMission) */
+export type PageHomeMissionImagesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3189,6 +4445,13 @@ export type PageHomeMissionCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type PageHomeMissionCursorCollection = {
+  __typename?: "PageHomeMissionCursorCollection";
+  items: Array<Maybe<PageHomeMission>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type PageHomeMissionFilter = {
   AND?: InputMaybe<Array<InputMaybe<PageHomeMissionFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<PageHomeMissionFilter>>>;
@@ -3228,6 +4491,7 @@ export type PageHomeMissionFilter = {
 export type PageHomeMissionLinkingCollections = {
   __typename?: "PageHomeMissionLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageHomeMissionLinkingCollectionsEntryCollectionArgs = {
@@ -3235,6 +4499,15 @@ export type PageHomeMissionLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageHomeMissionLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3310,9 +4583,11 @@ export type PageHomePartners = Entry &
     _id: Scalars["ID"]["output"];
     contentfulMetadata: ContentfulMetadata;
     imagesCollection?: Maybe<AssetCollection>;
+    imagesCursorCollection?: Maybe<AssetCursorCollection>;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageHomePartnersLinkingCollections>;
     partnersCollection?: Maybe<PageHomePartnersPartnersCollection>;
+    partnersCursorCollection?: Maybe<PageHomePartnersPartnersCursorCollection>;
     subtitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
@@ -3324,6 +4599,16 @@ export type PageHomePartnersImagesCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomePartners) */
+export type PageHomePartnersImagesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3350,6 +4635,18 @@ export type PageHomePartnersPartnersCollectionArgs = {
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomePartners) */
+export type PageHomePartnersPartnersCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomePartnersPartnersCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentPartnerFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomePartners) */
 export type PageHomePartnersSubtitleArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -3367,6 +4664,13 @@ export type PageHomePartnersCollection = {
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
+};
+
+export type PageHomePartnersCursorCollection = {
+  __typename?: "PageHomePartnersCursorCollection";
+  items: Array<Maybe<PageHomePartners>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
 };
 
 export type PageHomePartnersFilter = {
@@ -3403,6 +4707,7 @@ export type PageHomePartnersFilter = {
 export type PageHomePartnersLinkingCollections = {
   __typename?: "PageHomePartnersLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageHomePartnersLinkingCollectionsEntryCollectionArgs = {
@@ -3410,6 +4715,15 @@ export type PageHomePartnersLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageHomePartnersLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3439,6 +4753,30 @@ export type PageHomePartnersPartnersCollection = {
 };
 
 export enum PageHomePartnersPartnersCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
+}
+
+export type PageHomePartnersPartnersCursorCollection = {
+  __typename?: "PageHomePartnersPartnersCursorCollection";
+  items: Array<Maybe<ComponentPartner>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum PageHomePartnersPartnersCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   SubtitleAsc = "subtitle_ASC",
@@ -3503,6 +4841,13 @@ export type PageLandingCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type PageLandingCursorCollection = {
+  __typename?: "PageLandingCursorCollection";
+  items: Array<Maybe<PageLanding>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type PageLandingFilter = {
   AND?: InputMaybe<Array<InputMaybe<PageLandingFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<PageLandingFilter>>>;
@@ -3524,6 +4869,7 @@ export type PageLandingFilter = {
 export type PageLandingLinkingCollections = {
   __typename?: "PageLandingLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageLandingLinkingCollectionsEntryCollectionArgs = {
@@ -3531,6 +4877,15 @@ export type PageLandingLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageLandingLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3653,6 +5008,13 @@ export type PagePoliciesContentResourcesInline = ResourceLink & {
   sys: ResourceSys;
 };
 
+export type PagePoliciesCursorCollection = {
+  __typename?: "PagePoliciesCursorCollection";
+  items: Array<Maybe<PagePolicies>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type PagePoliciesFilter = {
   AND?: InputMaybe<Array<InputMaybe<PagePoliciesFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<PagePoliciesFilter>>>;
@@ -3694,6 +5056,7 @@ export type PagePoliciesFilter = {
 export type PagePoliciesLinkingCollections = {
   __typename?: "PagePoliciesLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PagePoliciesLinkingCollectionsEntryCollectionArgs = {
@@ -3701,6 +5064,15 @@ export type PagePoliciesLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PagePoliciesLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3829,6 +5201,13 @@ export type PageTermsAndConditionsContentResourcesInline = ResourceLink & {
   sys: ResourceSys;
 };
 
+export type PageTermsAndConditionsCursorCollection = {
+  __typename?: "PageTermsAndConditionsCursorCollection";
+  items: Array<Maybe<PageTermsAndConditions>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
 export type PageTermsAndConditionsFilter = {
   AND?: InputMaybe<Array<InputMaybe<PageTermsAndConditionsFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<PageTermsAndConditionsFilter>>>;
@@ -3870,6 +5249,7 @@ export type PageTermsAndConditionsFilter = {
 export type PageTermsAndConditionsLinkingCollections = {
   __typename?: "PageTermsAndConditionsLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
 };
 
 export type PageTermsAndConditionsLinkingCollectionsEntryCollectionArgs = {
@@ -3877,6 +5257,15 @@ export type PageTermsAndConditionsLinkingCollectionsEntryCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageTermsAndConditionsLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
@@ -3905,47 +5294,75 @@ export type Query = {
   _nodes: Array<Maybe<_Node>>;
   asset?: Maybe<Asset>;
   assetCollection?: Maybe<AssetCollection>;
+  assetCursorCollection?: Maybe<AssetCursorCollection>;
   componentAuthor?: Maybe<ComponentAuthor>;
   componentAuthorCollection?: Maybe<ComponentAuthorCollection>;
+  componentAuthorCursorCollection?: Maybe<ComponentAuthorCursorCollection>;
   componentButton?: Maybe<ComponentButton>;
   componentButtonCollection?: Maybe<ComponentButtonCollection>;
+  componentButtonCursorCollection?: Maybe<ComponentButtonCursorCollection>;
+  componentEmail?: Maybe<ComponentEmail>;
+  componentEmailCollection?: Maybe<ComponentEmailCollection>;
+  componentEmailCursorCollection?: Maybe<ComponentEmailCursorCollection>;
   componentFaqQuestion?: Maybe<ComponentFaqQuestion>;
   componentFaqQuestionCollection?: Maybe<ComponentFaqQuestionCollection>;
+  componentFaqQuestionCursorCollection?: Maybe<ComponentFaqQuestionCursorCollection>;
   componentFeature?: Maybe<ComponentFeature>;
   componentFeatureCollection?: Maybe<ComponentFeatureCollection>;
+  componentFeatureCursorCollection?: Maybe<ComponentFeatureCursorCollection>;
   componentPartner?: Maybe<ComponentPartner>;
   componentPartnerCollection?: Maybe<ComponentPartnerCollection>;
+  componentPartnerCursorCollection?: Maybe<ComponentPartnerCursorCollection>;
   componentRichImage?: Maybe<ComponentRichImage>;
   componentRichImageCollection?: Maybe<ComponentRichImageCollection>;
+  componentRichImageCursorCollection?: Maybe<ComponentRichImageCursorCollection>;
   componentSeo?: Maybe<ComponentSeo>;
   componentSeoCollection?: Maybe<ComponentSeoCollection>;
+  componentSeoCursorCollection?: Maybe<ComponentSeoCursorCollection>;
   entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
   footer?: Maybe<Footer>;
   footerCollection?: Maybe<FooterCollection>;
+  footerCursorCollection?: Maybe<FooterCursorCollection>;
   landingMetadata?: Maybe<LandingMetadata>;
   landingMetadataCollection?: Maybe<LandingMetadataCollection>;
+  landingMetadataCursorCollection?: Maybe<LandingMetadataCursorCollection>;
   pageAbout?: Maybe<PageAbout>;
   pageAboutCollection?: Maybe<PageAboutCollection>;
+  pageAboutCursorCollection?: Maybe<PageAboutCursorCollection>;
   pageBlogPost?: Maybe<PageBlogPost>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
+  pageBlogPostCursorCollection?: Maybe<PageBlogPostCursorCollection>;
   pageCookiePolicy?: Maybe<PageCookiePolicy>;
   pageCookiePolicyCollection?: Maybe<PageCookiePolicyCollection>;
+  pageCookiePolicyCursorCollection?: Maybe<PageCookiePolicyCursorCollection>;
+  pageEmails?: Maybe<PageEmails>;
+  pageEmailsCollection?: Maybe<PageEmailsCollection>;
+  pageEmailsCursorCollection?: Maybe<PageEmailsCursorCollection>;
   pageFaq?: Maybe<PageFaq>;
   pageFaqCollection?: Maybe<PageFaqCollection>;
+  pageFaqCursorCollection?: Maybe<PageFaqCursorCollection>;
   pageHomeFeatures?: Maybe<PageHomeFeatures>;
   pageHomeFeaturesCollection?: Maybe<PageHomeFeaturesCollection>;
+  pageHomeFeaturesCursorCollection?: Maybe<PageHomeFeaturesCursorCollection>;
   pageHomeHero?: Maybe<PageHomeHero>;
   pageHomeHeroCollection?: Maybe<PageHomeHeroCollection>;
+  pageHomeHeroCursorCollection?: Maybe<PageHomeHeroCursorCollection>;
   pageHomeMission?: Maybe<PageHomeMission>;
   pageHomeMissionCollection?: Maybe<PageHomeMissionCollection>;
+  pageHomeMissionCursorCollection?: Maybe<PageHomeMissionCursorCollection>;
   pageHomePartners?: Maybe<PageHomePartners>;
   pageHomePartnersCollection?: Maybe<PageHomePartnersCollection>;
+  pageHomePartnersCursorCollection?: Maybe<PageHomePartnersCursorCollection>;
   pageLanding?: Maybe<PageLanding>;
   pageLandingCollection?: Maybe<PageLandingCollection>;
+  pageLandingCursorCollection?: Maybe<PageLandingCursorCollection>;
   pagePolicies?: Maybe<PagePolicies>;
   pagePoliciesCollection?: Maybe<PagePoliciesCollection>;
+  pagePoliciesCursorCollection?: Maybe<PagePoliciesCursorCollection>;
   pageTermsAndConditions?: Maybe<PageTermsAndConditions>;
   pageTermsAndConditionsCollection?: Maybe<PageTermsAndConditionsCollection>;
+  pageTermsAndConditionsCursorCollection?: Maybe<PageTermsAndConditionsCursorCollection>;
 };
 
 export type Query_NodeArgs = {
@@ -3979,6 +5396,17 @@ export type QueryAssetCollectionArgs = {
   where?: InputMaybe<AssetFilter>;
 };
 
+export type QueryAssetCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<AssetOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<AssetFilter>;
+};
+
 export type QueryComponentAuthorArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -3992,6 +5420,17 @@ export type QueryComponentAuthorCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<ComponentAuthorOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentAuthorFilter>;
+};
+
+export type QueryComponentAuthorCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentAuthorOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentAuthorFilter>;
 };
@@ -4013,6 +5452,45 @@ export type QueryComponentButtonCollectionArgs = {
   where?: InputMaybe<ComponentButtonFilter>;
 };
 
+export type QueryComponentButtonCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentButtonOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+export type QueryComponentEmailArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryComponentEmailCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentEmailOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentEmailFilter>;
+};
+
+export type QueryComponentEmailCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentEmailOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentEmailFilter>;
+};
+
 export type QueryComponentFaqQuestionArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4026,6 +5504,17 @@ export type QueryComponentFaqQuestionCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<ComponentFaqQuestionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentFaqQuestionFilter>;
+};
+
+export type QueryComponentFaqQuestionCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentFaqQuestionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentFaqQuestionFilter>;
 };
@@ -4047,6 +5536,17 @@ export type QueryComponentFeatureCollectionArgs = {
   where?: InputMaybe<ComponentFeatureFilter>;
 };
 
+export type QueryComponentFeatureCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentFeatureOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentFeatureFilter>;
+};
+
 export type QueryComponentPartnerArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4060,6 +5560,17 @@ export type QueryComponentPartnerCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<ComponentPartnerOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentPartnerFilter>;
+};
+
+export type QueryComponentPartnerCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentPartnerOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentPartnerFilter>;
 };
@@ -4081,6 +5592,17 @@ export type QueryComponentRichImageCollectionArgs = {
   where?: InputMaybe<ComponentRichImageFilter>;
 };
 
+export type QueryComponentRichImageCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentRichImageOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentRichImageFilter>;
+};
+
 export type QueryComponentSeoArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4098,12 +5620,34 @@ export type QueryComponentSeoCollectionArgs = {
   where?: InputMaybe<ComponentSeoFilter>;
 };
 
+export type QueryComponentSeoCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentSeoOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentSeoFilter>;
+};
+
 export type QueryEntryCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   order?: InputMaybe<Array<InputMaybe<EntryOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<EntryFilter>;
+};
+
+export type QueryEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<EntryOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<EntryFilter>;
 };
@@ -4125,6 +5669,17 @@ export type QueryFooterCollectionArgs = {
   where?: InputMaybe<FooterFilter>;
 };
 
+export type QueryFooterCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<FooterOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<FooterFilter>;
+};
+
 export type QueryLandingMetadataArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4138,6 +5693,17 @@ export type QueryLandingMetadataCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<LandingMetadataOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<LandingMetadataFilter>;
+};
+
+export type QueryLandingMetadataCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<LandingMetadataOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<LandingMetadataFilter>;
 };
@@ -4159,6 +5725,17 @@ export type QueryPageAboutCollectionArgs = {
   where?: InputMaybe<PageAboutFilter>;
 };
 
+export type QueryPageAboutCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageAboutOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageAboutFilter>;
+};
+
 export type QueryPageBlogPostArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4172,6 +5749,17 @@ export type QueryPageBlogPostCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageBlogPostOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageBlogPostFilter>;
+};
+
+export type QueryPageBlogPostCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageBlogPostOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageBlogPostFilter>;
 };
@@ -4193,6 +5781,45 @@ export type QueryPageCookiePolicyCollectionArgs = {
   where?: InputMaybe<PageCookiePolicyFilter>;
 };
 
+export type QueryPageCookiePolicyCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageCookiePolicyOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageCookiePolicyFilter>;
+};
+
+export type QueryPageEmailsArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryPageEmailsCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageEmailsOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageEmailsFilter>;
+};
+
+export type QueryPageEmailsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageEmailsOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageEmailsFilter>;
+};
+
 export type QueryPageFaqArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4206,6 +5833,17 @@ export type QueryPageFaqCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageFaqOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageFaqFilter>;
+};
+
+export type QueryPageFaqCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageFaqOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageFaqFilter>;
 };
@@ -4227,6 +5865,17 @@ export type QueryPageHomeFeaturesCollectionArgs = {
   where?: InputMaybe<PageHomeFeaturesFilter>;
 };
 
+export type QueryPageHomeFeaturesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomeFeaturesOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageHomeFeaturesFilter>;
+};
+
 export type QueryPageHomeHeroArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4240,6 +5889,17 @@ export type QueryPageHomeHeroCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageHomeHeroOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageHomeHeroFilter>;
+};
+
+export type QueryPageHomeHeroCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomeHeroOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageHomeHeroFilter>;
 };
@@ -4261,6 +5921,17 @@ export type QueryPageHomeMissionCollectionArgs = {
   where?: InputMaybe<PageHomeMissionFilter>;
 };
 
+export type QueryPageHomeMissionCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomeMissionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageHomeMissionFilter>;
+};
+
 export type QueryPageHomePartnersArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4274,6 +5945,17 @@ export type QueryPageHomePartnersCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageHomePartnersOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageHomePartnersFilter>;
+};
+
+export type QueryPageHomePartnersCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomePartnersOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageHomePartnersFilter>;
 };
@@ -4295,6 +5977,17 @@ export type QueryPageLandingCollectionArgs = {
   where?: InputMaybe<PageLandingFilter>;
 };
 
+export type QueryPageLandingCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageLandingOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageLandingFilter>;
+};
+
 export type QueryPagePoliciesArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4312,6 +6005,17 @@ export type QueryPagePoliciesCollectionArgs = {
   where?: InputMaybe<PagePoliciesFilter>;
 };
 
+export type QueryPagePoliciesCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PagePoliciesOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PagePoliciesFilter>;
+};
+
 export type QueryPageTermsAndConditionsArgs = {
   id: Scalars["String"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
@@ -4325,6 +6029,17 @@ export type QueryPageTermsAndConditionsCollectionArgs = {
   order?: InputMaybe<Array<InputMaybe<PageTermsAndConditionsOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageTermsAndConditionsFilter>;
+};
+
+export type QueryPageTermsAndConditionsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageTermsAndConditionsOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageTermsAndConditionsFilter>;
 };
@@ -4463,6 +6178,34 @@ export type CfComponentButtonNestedFilter = {
   url_not?: InputMaybe<Scalars["String"]["input"]>;
   url_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   url_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type CfComponentEmailNestedFilter = {
+  AND?: InputMaybe<Array<InputMaybe<CfComponentEmailNestedFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<CfComponentEmailNestedFilter>>>;
+  content?: InputMaybe<Scalars["String"]["input"]>;
+  content_contains?: InputMaybe<Scalars["String"]["input"]>;
+  content_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  content_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  content_not?: InputMaybe<Scalars["String"]["input"]>;
+  content_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  content_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  preview?: InputMaybe<Scalars["String"]["input"]>;
+  preview_contains?: InputMaybe<Scalars["String"]["input"]>;
+  preview_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  preview_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  preview_not?: InputMaybe<Scalars["String"]["input"]>;
+  preview_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  preview_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
 };
 
 export type CfComponentFaqQuestionNestedFilter = {
@@ -4737,6 +6480,7 @@ export type PageAboutFieldsFragment = {
         block: Array<
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
@@ -4747,6 +6491,7 @@ export type PageAboutFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -4846,6 +6591,7 @@ export type PageBlogPostFieldsFragment = {
         block: Array<
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
@@ -4856,6 +6602,7 @@ export type PageBlogPostFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -4922,6 +6669,7 @@ export type PageCookiePolicyFieldsFragment = {
         block: Array<
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
@@ -4932,6 +6680,7 @@ export type PageCookiePolicyFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -4957,6 +6706,36 @@ export type PageCookiePolicyQuery = {
   pageCookiePolicyCollection?: {
     __typename?: "PageCookiePolicyCollection";
     items: Array<({ __typename?: "PageCookiePolicy" } & PageCookiePolicyFieldsFragment) | null>;
+  } | null;
+};
+
+export type ComponentEmailFieldsFragment = {
+  __typename: "ComponentEmail";
+  internalName?: string | null;
+  preview?: string | null;
+  content?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+};
+
+export type PageEmailsFieldsFragment = {
+  __typename: "PageEmails";
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  emailsCollection?: {
+    __typename?: "PageEmailsEmailsCollection";
+    items: Array<({ __typename?: "ComponentEmail" } & ComponentEmailFieldsFragment) | null>;
+  } | null;
+};
+
+export type PageEmailsQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type PageEmailsQuery = {
+  __typename?: "Query";
+  pageEmailsCollection?: {
+    __typename?: "PageEmailsCollection";
+    items: Array<({ __typename?: "PageEmails" } & PageEmailsFieldsFragment) | null>;
   } | null;
 };
 
@@ -5109,6 +6888,7 @@ export type PageHomeMissionFieldsFragment = {
         block: Array<
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
@@ -5119,6 +6899,7 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -5142,6 +6923,7 @@ export type PageHomeMissionFieldsFragment = {
         block: Array<
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
@@ -5152,6 +6934,7 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -5277,6 +7060,7 @@ export type PagePoliciesFieldsFragment = {
         block: Array<
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
@@ -5287,6 +7071,7 @@ export type PagePoliciesFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -5332,6 +7117,7 @@ export type PageTermsAndConditionsFieldsFragment = {
         block: Array<
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
@@ -5342,6 +7128,7 @@ export type PageTermsAndConditionsFieldsFragment = {
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
@@ -5419,7 +7206,7 @@ export type SitemapPagesQueryVariables = Exact<{
 
 export type SitemapPagesQuery = { __typename?: "Query" } & SitemapPagesFieldsFragment;
 
-export const ButtonFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const ButtonFieldsFragmentDoc = gql`
   fragment ButtonFields on ComponentButton {
     __typename
     sys {
@@ -5431,7 +7218,7 @@ export const ButtonFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     url
   }
 `;
-export const FooterFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const FooterFieldsFragmentDoc = gql`
   fragment FooterFields on Footer {
     __typename
     sys {
@@ -5458,7 +7245,7 @@ export const FooterFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const LandingMetadataFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const LandingMetadataFieldsFragmentDoc = gql`
   fragment LandingMetadataFields on LandingMetadata {
     __typename
     sys {
@@ -5471,7 +7258,7 @@ export const LandingMetadataFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     description
   }
 `;
-export const ImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const ImageFieldsFragmentDoc = gql`
   fragment ImageFields on Asset {
     __typename
     sys {
@@ -5485,7 +7272,7 @@ export const ImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     contentType
   }
 `;
-export const RichImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const RichImageFieldsFragmentDoc = gql`
   fragment RichImageFields on ComponentRichImage {
     __typename
     internalName
@@ -5499,7 +7286,7 @@ export const RichImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     fullWidth
   }
 `;
-export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageAboutFieldsFragmentDoc = gql`
   fragment PageAboutFields on PageAbout {
     __typename
     sys {
@@ -5526,7 +7313,7 @@ export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const SeoFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const SeoFieldsFragmentDoc = gql`
   fragment SeoFields on ComponentSeo {
     __typename
     pageTitle
@@ -5541,7 +7328,7 @@ export const SeoFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const AuthorFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const AuthorFieldsFragmentDoc = gql`
   fragment AuthorFields on ComponentAuthor {
     __typename
     sys {
@@ -5554,7 +7341,7 @@ export const AuthorFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const ReferencePageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const ReferencePageBlogPostFieldsFragmentDoc = gql`
   fragment ReferencePageBlogPostFields on PageBlogPost {
     __typename
     sys {
@@ -5573,7 +7360,7 @@ export const ReferencePageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gq
     }
   }
 `;
-export const PageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageBlogPostFieldsFragmentDoc = gql`
   fragment PageBlogPostFields on PageBlogPost {
     __typename
     sys {
@@ -5611,7 +7398,7 @@ export const PageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PageCookiePolicyFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageCookiePolicyFieldsFragmentDoc = gql`
   fragment PageCookiePolicyFields on PageCookiePolicy {
     __typename
     sys {
@@ -5635,7 +7422,35 @@ export const PageCookiePolicyFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const FaqQuestionFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const ComponentEmailFieldsFragmentDoc = gql`
+  fragment ComponentEmailFields on ComponentEmail {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    internalName
+    preview
+    content
+  }
+`;
+export const PageEmailsFieldsFragmentDoc = gql`
+  fragment PageEmailsFields on PageEmails {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    emailsCollection {
+      items {
+        ...ComponentEmailFields
+      }
+    }
+  }
+`;
+export const FaqQuestionFieldsFragmentDoc = gql`
   fragment FaqQuestionFields on ComponentFaqQuestion {
     __typename
     sys {
@@ -5649,7 +7464,7 @@ export const FaqQuestionFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PageFaqFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageFaqFieldsFragmentDoc = gql`
   fragment PageFaqFields on PageFaq {
     __typename
     sys {
@@ -5669,7 +7484,7 @@ export const PageFaqFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const FeatureFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const FeatureFieldsFragmentDoc = gql`
   fragment FeatureFields on ComponentFeature {
     __typename
     sys {
@@ -5684,7 +7499,7 @@ export const FeatureFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PageHomeFeaturesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageHomeFeaturesFieldsFragmentDoc = gql`
   fragment PageHomeFeaturesFields on PageHomeFeatures {
     __typename
     sys {
@@ -5705,7 +7520,7 @@ export const PageHomeFeaturesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PageHomeHeroFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageHomeHeroFieldsFragmentDoc = gql`
   fragment PageHomeHeroFields on PageHomeHero {
     __typename
     sys {
@@ -5733,7 +7548,7 @@ export const PageHomeHeroFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PageHomeMissionFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageHomeMissionFieldsFragmentDoc = gql`
   fragment PageHomeMissionFields on PageHomeMission {
     __typename
     sys {
@@ -5780,7 +7595,7 @@ export const PageHomeMissionFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PartnerFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PartnerFieldsFragmentDoc = gql`
   fragment PartnerFields on ComponentPartner {
     __typename
     sys {
@@ -5795,7 +7610,7 @@ export const PartnerFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     url
   }
 `;
-export const PageHomePartnersFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageHomePartnersFieldsFragmentDoc = gql`
   fragment PageHomePartnersFields on PageHomePartners {
     __typename
     sys {
@@ -5817,7 +7632,7 @@ export const PageHomePartnersFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PageLandingFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageLandingFieldsFragmentDoc = gql`
   fragment PageLandingFields on PageLanding {
     __typename
     sys {
@@ -5833,7 +7648,7 @@ export const PageLandingFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PagePoliciesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PagePoliciesFieldsFragmentDoc = gql`
   fragment PagePoliciesFields on PagePolicies {
     __typename
     sys {
@@ -5857,7 +7672,7 @@ export const PagePoliciesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const PageTermsAndConditionsFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const PageTermsAndConditionsFieldsFragmentDoc = gql`
   fragment PageTermsAndConditionsFields on PageTermsAndConditions {
     __typename
     sys {
@@ -5881,7 +7696,7 @@ export const PageTermsAndConditionsFieldsFragmentDoc: ReturnType<typeof gql> = g
     }
   }
 `;
-export const SitemapPagesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+export const SitemapPagesFieldsFragmentDoc = gql`
   fragment sitemapPagesFields on Query {
     pageBlogPostCollection(limit: 100, locale: $locale) {
       items {
@@ -5900,7 +7715,7 @@ export const SitemapPagesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const FooterDocument: ReturnType<typeof gql> = gql`
+export const FooterDocument = gql`
   query footer($locale: String, $preview: Boolean) {
     footerCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -5911,7 +7726,7 @@ export const FooterDocument: ReturnType<typeof gql> = gql`
   ${FooterFieldsFragmentDoc}
   ${ButtonFieldsFragmentDoc}
 `;
-export const LandingMetadataDocument: ReturnType<typeof gql> = gql`
+export const LandingMetadataDocument = gql`
   query landingMetadata($locale: String, $preview: Boolean) {
     landingMetadataCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -5921,7 +7736,7 @@ export const LandingMetadataDocument: ReturnType<typeof gql> = gql`
   }
   ${LandingMetadataFieldsFragmentDoc}
 `;
-export const PageAboutDocument: ReturnType<typeof gql> = gql`
+export const PageAboutDocument = gql`
   query pageAbout($locale: String, $preview: Boolean) {
     pageAboutCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -5933,7 +7748,7 @@ export const PageAboutDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
-export const PageBlogDocument: ReturnType<typeof gql> = gql`
+export const PageBlogDocument = gql`
   query pageBlog(
     $locale: String
     $preview: Boolean
@@ -5966,7 +7781,7 @@ export const PageBlogDocument: ReturnType<typeof gql> = gql`
   ${PageBlogPostFieldsFragmentDoc}
   ${RichImageFieldsFragmentDoc}
 `;
-export const PageBlogDetailDocument: ReturnType<typeof gql> = gql`
+export const PageBlogDetailDocument = gql`
   query pageBlogDetail($slug: String!, $locale: String, $preview: Boolean) {
     pageBlogPostCollection(limit: 1, where: { slug: $slug }, locale: $locale, preview: $preview) {
       items {
@@ -5987,7 +7802,7 @@ export const PageBlogDetailDocument: ReturnType<typeof gql> = gql`
   ${ReferencePageBlogPostFieldsFragmentDoc}
   ${PageLandingFieldsFragmentDoc}
 `;
-export const PageBlogPostDocument: ReturnType<typeof gql> = gql`
+export const PageBlogPostDocument = gql`
   query pageBlogPost($slug: String!, $locale: String, $preview: Boolean) {
     pageBlogPostCollection(limit: 1, where: { slug: $slug }, locale: $locale, preview: $preview) {
       items {
@@ -6002,7 +7817,7 @@ export const PageBlogPostDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ReferencePageBlogPostFieldsFragmentDoc}
 `;
-export const PageBlogPostCollectionDocument: ReturnType<typeof gql> = gql`
+export const PageBlogPostCollectionDocument = gql`
   query pageBlogPostCollection(
     $locale: String
     $preview: Boolean
@@ -6029,7 +7844,7 @@ export const PageBlogPostCollectionDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ReferencePageBlogPostFieldsFragmentDoc}
 `;
-export const PageCookiePolicyDocument: ReturnType<typeof gql> = gql`
+export const PageCookiePolicyDocument = gql`
   query pageCookiePolicy($locale: String, $preview: Boolean) {
     pageCookiePolicyCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6041,7 +7856,18 @@ export const PageCookiePolicyDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
-export const PageFaqDocument: ReturnType<typeof gql> = gql`
+export const PageEmailsDocument = gql`
+  query pageEmails($locale: String, $preview: Boolean) {
+    pageEmailsCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageEmailsFields
+      }
+    }
+  }
+  ${PageEmailsFieldsFragmentDoc}
+  ${ComponentEmailFieldsFragmentDoc}
+`;
+export const PageFaqDocument = gql`
   query pageFaq($locale: String, $preview: Boolean) {
     pageFaqCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6052,7 +7878,7 @@ export const PageFaqDocument: ReturnType<typeof gql> = gql`
   ${PageFaqFieldsFragmentDoc}
   ${FaqQuestionFieldsFragmentDoc}
 `;
-export const PageHomeDocument: ReturnType<typeof gql> = gql`
+export const PageHomeDocument = gql`
   query pageHome($locale: String, $preview: Boolean) {
     pageHomeHeroCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6097,7 +7923,7 @@ export const PageHomeDocument: ReturnType<typeof gql> = gql`
   ${FooterFieldsFragmentDoc}
   ${LandingMetadataFieldsFragmentDoc}
 `;
-export const PageHomeFeaturesDocument: ReturnType<typeof gql> = gql`
+export const PageHomeFeaturesDocument = gql`
   query pageHomeFeatures($locale: String, $preview: Boolean) {
     pageHomeFeaturesCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6109,7 +7935,7 @@ export const PageHomeFeaturesDocument: ReturnType<typeof gql> = gql`
   ${FeatureFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
-export const PageHomeHeroDocument: ReturnType<typeof gql> = gql`
+export const PageHomeHeroDocument = gql`
   query pageHomeHero($locale: String, $preview: Boolean) {
     pageHomeHeroCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6120,7 +7946,7 @@ export const PageHomeHeroDocument: ReturnType<typeof gql> = gql`
   ${PageHomeHeroFieldsFragmentDoc}
   ${ButtonFieldsFragmentDoc}
 `;
-export const PageHomeMissionDocument: ReturnType<typeof gql> = gql`
+export const PageHomeMissionDocument = gql`
   query pageHomeMission($locale: String, $preview: Boolean) {
     pageHomeMissionCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6132,7 +7958,7 @@ export const PageHomeMissionDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
-export const PageHomePartnersDocument: ReturnType<typeof gql> = gql`
+export const PageHomePartnersDocument = gql`
   query pageHomePartners($locale: String, $preview: Boolean) {
     pageHomePartnersCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6144,7 +7970,7 @@ export const PageHomePartnersDocument: ReturnType<typeof gql> = gql`
   ${PartnerFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
-export const PageLandingDocument: ReturnType<typeof gql> = gql`
+export const PageLandingDocument = gql`
   query pageLanding($locale: String, $preview: Boolean) {
     pageLandingCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6158,7 +7984,7 @@ export const PageLandingDocument: ReturnType<typeof gql> = gql`
   ${ReferencePageBlogPostFieldsFragmentDoc}
   ${AuthorFieldsFragmentDoc}
 `;
-export const PageLandingCollectionDocument: ReturnType<typeof gql> = gql`
+export const PageLandingCollectionDocument = gql`
   query pageLandingCollection($locale: String, $preview: Boolean) {
     pageLandingCollection(limit: 100, locale: $locale, preview: $preview) {
       items {
@@ -6172,7 +7998,7 @@ export const PageLandingCollectionDocument: ReturnType<typeof gql> = gql`
   ${ReferencePageBlogPostFieldsFragmentDoc}
   ${AuthorFieldsFragmentDoc}
 `;
-export const PagePoliciesDocument: ReturnType<typeof gql> = gql`
+export const PagePoliciesDocument = gql`
   query pagePolicies($locale: String, $preview: Boolean) {
     pagePoliciesCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6184,7 +8010,7 @@ export const PagePoliciesDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
-export const PageTermsAndConditionsDocument: ReturnType<typeof gql> = gql`
+export const PageTermsAndConditionsDocument = gql`
   query pageTermsAndConditions($locale: String, $preview: Boolean) {
     pageTermsAndConditionsCollection(limit: 1, locale: $locale, preview: $preview) {
       items {
@@ -6196,7 +8022,7 @@ export const PageTermsAndConditionsDocument: ReturnType<typeof gql> = gql`
   ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
 `;
-export const SitemapPagesDocument: ReturnType<typeof gql> = gql`
+export const SitemapPagesDocument = gql`
   query sitemapPages($locale: String!) {
     ...sitemapPagesFields
   }
@@ -6355,6 +8181,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageCookiePolicy",
+        "query",
+        variables,
+      );
+    },
+    pageEmails(
+      variables?: PageEmailsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageEmailsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageEmailsQuery>({
+            document: PageEmailsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageEmails",
         "query",
         variables,
       );

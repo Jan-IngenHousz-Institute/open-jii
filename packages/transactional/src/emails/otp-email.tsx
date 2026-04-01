@@ -16,14 +16,25 @@ interface OtpEmailProps {
   senderName: string;
   host: string;
   baseUrl: string;
+  /** HTML from emailmd — when present, replaces the static container body */
+  cmsContent?: string;
+  /** Preview text from CMS — when present, overrides the static preview */
+  cmsPreview?: string;
 }
 
-export const OtpEmail = ({ otp, senderName, host, baseUrl }: OtpEmailProps) => {
+export const OtpEmail = ({
+  otp,
+  senderName,
+  host,
+  baseUrl,
+  cmsContent,
+  cmsPreview,
+}: OtpEmailProps) => {
   return (
     <Html>
       <Tailwind>
         <Head />
-        <Preview>Your login code is {otp}</Preview>
+        <Preview>{cmsPreview ?? `Your login code is ${otp}`}</Preview>
 
         <Body className="bg-[#005E5E]/15 font-sans">
           <Section className="w-full text-center">
@@ -35,29 +46,36 @@ export const OtpEmail = ({ otp, senderName, host, baseUrl }: OtpEmailProps) => {
             />
           </Section>
 
-          <Container className="mx-auto w-full max-w-[780px] rounded-xl border border-solid border-[#CDD5DB] bg-white">
-            <Preview>Your login code is {otp}</Preview>
-
-            {/* Main Content */}
-            <Section className="p-10">
-              <Text className="mb-4 mt-0 text-[24px] font-semibold text-gray-800">
-                Your login code
-              </Text>
-              <Text className="mb-8 text-[16px] leading-relaxed text-gray-600">
-                Enter the following code to sign in to your openJII account. This code will expire
-                in 5 minutes.
-              </Text>
-              <Section className="my-[32px] rounded border border-solid border-gray-200 bg-gray-50 p-[24px] text-center">
-                <Text className="m-0 text-[32px] font-bold tracking-widest text-gray-900">
-                  {otp}
-                </Text>
-              </Section>
-              <Hr className="my-6 border-gray-200" />
-              <Text className="mb-0 mt-6 text-[14px] leading-relaxed text-gray-500">
-                If you didn't request this code, you can safely ignore this email. Your account
-                remains secure.
-              </Text>
-            </Section>
+          <Container className="mx-auto w-full">
+            {cmsContent ? (
+              <>
+                {/* CMS-driven body rendered via emailmd */}
+                <div dangerouslySetInnerHTML={{ __html: cmsContent }} />
+              </>
+            ) : (
+              <>
+                {/* Main Content — static fallback for local dev preview */}
+                <Section className="p-10">
+                  <Text className="mb-4 mt-0 text-[24px] font-semibold text-gray-800">
+                    Your login code
+                  </Text>
+                  <Text className="mb-8 text-[16px] leading-relaxed text-gray-600">
+                    Enter the following code to sign in to your openJII account. This code will
+                    expire in 5 minutes.
+                  </Text>
+                  <Section className="my-[32px] rounded border border-solid border-gray-200 bg-gray-50 p-[24px] text-center">
+                    <Text className="m-0 text-[32px] font-bold tracking-widest text-gray-900">
+                      {otp}
+                    </Text>
+                  </Section>
+                  <Hr className="my-6 border-gray-200" />
+                  <Text className="mb-0 mt-6 text-[14px] leading-relaxed text-gray-500">
+                    If you didn't request this code, you can safely ignore this email. Your account
+                    remains secure.
+                  </Text>
+                </Section>
+              </>
+            )}
 
             {/* Footer */}
             <Section className="rounded-b-lg border-t border-gray-100 bg-gray-50 px-8 py-4">

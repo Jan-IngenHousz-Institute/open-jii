@@ -1,0 +1,33 @@
+fragment ComponentEmailFields on ComponentEmail {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  preview
+  content
+}
+
+fragment PageEmailsFields on PageEmails {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  emailsCollection {
+    items {
+      ...ComponentEmailFields
+    }
+  }
+}
+
+query pageEmails($locale: String, $preview: Boolean) {
+  pageEmailsCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageEmailsFields
+    }
+  }
+}
