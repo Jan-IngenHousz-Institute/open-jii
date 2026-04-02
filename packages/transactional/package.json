@@ -37,7 +37,7 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "test:render": "pnpm build && node --env-file=.env scripts/test-render.mjs",
     "dev": "tsc --watch & email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
-    "email:dev": "email dev --dir src/emails -p 3001 & sleep 1 && pnpm start:mailcatcher",
+    "email:dev": "email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
     "export": "email export",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
