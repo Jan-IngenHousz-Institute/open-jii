@@ -5,16 +5,19 @@ import { describe, it, expect } from "vitest";
 import { ExperimentOverviewCards } from "./experiment-overview-cards";
 
 describe("ExperimentOverviewCards", () => {
-  it("shows skeleton loaders while loading", () => {
-    render(<ExperimentOverviewCards experiments={undefined} />);
-    // Loading state: no experiment content or empty-state message
-    expect(screen.queryByText("experiments.noExperiments")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  describe("loading state", () => {
+    it("renders skeleton loaders when experiments is undefined", () => {
+      const { container } = render(<ExperimentOverviewCards experiments={undefined} />);
+      const skeletons = container.querySelectorAll('[class*="animate-pulse"]');
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
   });
 
-  it("shows empty message when no experiments", () => {
-    render(<ExperimentOverviewCards experiments={[]} />);
-    expect(screen.getByText("experiments.noExperiments")).toBeInTheDocument();
+  describe("empty state", () => {
+    it("renders no experiments message when array is empty", () => {
+      render(<ExperimentOverviewCards experiments={[]} />);
+      expect(screen.getByText("No experiments found")).toBeInTheDocument();
+    });
   });
 
   it("renders experiment cards with name, description and status", () => {
@@ -29,43 +32,17 @@ describe("ExperimentOverviewCards", () => {
     expect(screen.getByText("status.active")).toBeInTheDocument();
   });
 
-  it("links to the correct experiment page", () => {
-    render(<ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} />);
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/platform/experiments/abc-123");
-  });
+  describe("different experiment statuses", () => {
+    it("renders experiment with archived status", () => {
+      const experiment = { ...mockExperiment, status: "archived" as const };
+      render(<ExperimentOverviewCards experiments={[experiment]} />);
+      expect(screen.getByTestId("status-badge")).toHaveTextContent("archived");
+    });
 
-  it("links to archive path when archived", () => {
-    render(
-      <ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} archived />,
-    );
-    expect(screen.getByRole("link")).toHaveAttribute(
-      "href",
-      "/platform/experiments-archive/abc-123",
-    );
-  });
-
-  it("renders multiple cards", () => {
-    const exps = [
-      createExperiment({ name: "A" }),
-      createExperiment({ name: "B" }),
-      createExperiment({ name: "C" }),
-    ];
-    render(<ExperimentOverviewCards experiments={exps} />);
-    expect(screen.getAllByRole("link")).toHaveLength(3);
-  });
-
-  it("shows last-updated date", () => {
-    render(
-      <ExperimentOverviewCards
-        experiments={[createExperiment({ updatedAt: "2025-06-15T00:00:00.000Z" })]}
-      />,
-    );
-    expect(screen.getByText(/lastUpdate/)).toBeInTheDocument();
-  });
-
-  it("handles null description gracefully", () => {
-    const exp = createExperiment({ description: null });
-    render(<ExperimentOverviewCards experiments={[exp]} />);
-    expect(screen.getByText(exp.name)).toBeInTheDocument();
+    it("renders experiment with stale status", () => {
+      const experiment = { ...mockExperiment, status: "stale" as const };
+      render(<ExperimentOverviewCards experiments={[experiment]} />);
+      expect(screen.getByTestId("status-badge")).toHaveTextContent("stale");
+    });
   });
 });

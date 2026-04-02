@@ -1,9 +1,7 @@
-import { createExperimentDataTable } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
-
-import { contract, ExperimentTableName } from "@repo/api";
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import React from "react";
+import { describe, it, expect, vi } from "vitest";
 
 import { ExperimentMeasurements } from "./experiment-measurements";
 
@@ -36,53 +34,71 @@ vi.mock("~/util/date", () => ({
 }));
 
 describe("ExperimentMeasurements", () => {
-  it("renders loading then empty state when no measurements", async () => {
-    mountMeasurements([]);
+  it("renders loading state", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: null,
+      isLoading: true,
+      error: null,
+    });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    // Initially shows loading
     expect(screen.getByText("measurements.latestMeasurements")).toBeInTheDocument();
-
-    // Eventually shows empty
-    await waitFor(() => {
-      expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
-    });
+    const loadingElement = document.querySelector(".animate-pulse");
+    expect(loadingElement).toBeInTheDocument();
   });
 
-  it("renders empty state when API errors", async () => {
-    mountTables();
-    server.mount(contract.experiments.getExperimentData, { status: 500 });
+  it("renders empty state when no measurements", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: [],
+      isLoading: false,
+      error: null,
+    });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    await waitFor(() => {
-      expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
-    });
+    expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
   });
 
-  it("renders table with measurement data", async () => {
-    mountMeasurements([
-      { device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" },
-      { device_id: "device-2", processed_timestamp: "2023-01-16T14:45:00Z" },
-    ]);
+  it("renders empty state when error occurs", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: null,
+      isLoading: false,
+      error: new Error("Failed to fetch"),
+    });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    await waitFor(() => {
-      expect(screen.getByText("device-1")).toBeInTheDocument();
+    expect(screen.getByText("measurements.noMeasurements")).toBeInTheDocument();
+  });
+
+  it("renders table with measurement data", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: [
+        { device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" },
+        { device_id: "device-2", processed_timestamp: "2023-01-16T14:45:00Z" },
+      ],
+      isLoading: false,
+      error: null,
     });
+
+    render(<ExperimentMeasurements experimentId="exp-123" />);
 
     expect(screen.getByText("measurements.latestMeasurements")).toBeInTheDocument();
     expect(screen.getByText("measurements.deviceId")).toBeInTheDocument();
     expect(screen.getByText("measurements.lastProcessed")).toBeInTheDocument();
+    expect(screen.getByText("device-1")).toBeInTheDocument();
     expect(screen.getByText("device-2")).toBeInTheDocument();
     expect(screen.getByText("2023-01-15")).toBeInTheDocument();
     expect(screen.getByText("2023-01-16")).toBeInTheDocument();
   });
 
-  it("renders see all link pointing to experiment data page", async () => {
-    mountMeasurements([{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }]);
+  it("renders see all link for non-archived experiments", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: [{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }],
+      isLoading: false,
+      error: null,
+    });
 
     render(<ExperimentMeasurements experimentId="exp-456" isArchived={false} />);
 
@@ -91,8 +107,12 @@ describe("ExperimentMeasurements", () => {
     expect(screen.getByText("measurements.seeAll")).toBeInTheDocument();
   });
 
-  it("uses experiments-archive path when archived", async () => {
-    mountMeasurements([{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }]);
+  it("renders see all link for archived experiments", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: [{ device_id: "device-1", processed_timestamp: "2023-01-15T10:30:00Z" }],
+      isLoading: false,
+      error: null,
+    });
 
     render(<ExperimentMeasurements experimentId="exp-789" isArchived={true} />);
 
@@ -100,34 +120,35 @@ describe("ExperimentMeasurements", () => {
     expect(link).toHaveAttribute("href", "/en-US/platform/experiments-archive/exp-789/data");
   });
 
-  it("shows dash for null device_id", async () => {
-    mountMeasurements([{ device_id: null, processed_timestamp: "2023-01-15T10:30:00Z" }]);
+  it("handles null device_id", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: [{ device_id: null, processed_timestamp: "2023-01-15T10:30:00Z" }],
+      isLoading: false,
+      error: null,
+    });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    await waitFor(() => {
-      expect(screen.getByText("—")).toBeInTheDocument();
-    });
-  });
-
-  it("shows dash for null timestamp", async () => {
-    mountMeasurements([{ device_id: "device-1", processed_timestamp: null }]);
-
-    render(<ExperimentMeasurements experimentId="exp-123" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("device-1")).toBeInTheDocument();
-    });
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
-  it("renders numeric device_id as string", async () => {
-    mountMeasurements([{ device_id: 12345, processed_timestamp: "2023-01-15T10:30:00Z" }]);
+  it("handles null timestamp", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: [{ device_id: "device-1", processed_timestamp: null }],
+      isLoading: false,
+      error: null,
+    });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);
 
-    await waitFor(() => {
-      expect(screen.getByText("12345")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("handles numeric device_id", () => {
+    useExperimentDataSpy.mockReturnValue({
+      tableRows: [{ device_id: 12345, processed_timestamp: "2023-01-15T10:30:00Z" }],
+      isLoading: false,
+      error: null,
     });
 
     render(<ExperimentMeasurements experimentId="exp-123" />);

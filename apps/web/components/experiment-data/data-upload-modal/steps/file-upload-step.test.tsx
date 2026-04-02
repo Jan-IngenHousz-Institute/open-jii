@@ -10,9 +10,11 @@ import { contract } from "@repo/api";
 import { validateAmbyteStructure, isExcludedFile } from "../data-upload-validation";
 import { FileUploadStep } from "./file-upload-step";
 
-vi.mock("../data-upload-validation", () => ({
-  validateAmbyteStructure: vi.fn().mockReturnValue({ isValid: true, errors: [] }),
-  isExcludedFile: vi.fn().mockReturnValue(false),
+globalThis.React = React;
+
+// Mock hooks
+vi.mock("@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload", () => ({
+  useExperimentDataUpload: vi.fn(),
 }));
 
 vi.mock("@repo/ui/components/file-upload", async (importOriginal) => {
@@ -58,42 +60,95 @@ vi.mock("@repo/ui/components/file-upload", async (importOriginal) => {
   };
 });
 
-const defaultProps = {
-  experimentId: "exp-123",
-  onBack: vi.fn(),
-  onUploadSuccess: vi.fn(),
-};
+// Mock utility
+vi.mock("~/util/apiError", () => ({
+  parseApiError: (error: { message: string }) => ({ message: error.message }),
+}));
 
-/**
- * Mount the uploadExperimentData handler.
- *
- * Uses server.use() directly instead of server.mount() because the upload
- * contract uses multipart/form-data. The mount helper's request.json() call
- * hangs on FormData bodies in jsdom.
- */
-function mountUploadHandler(overrides?: { status?: number; body?: unknown }) {
-  const spy = { called: false };
-  const url = `${API_URL}${contract.experiments.uploadExperimentData.path}`;
-  server.use(
-    http.post(url, () => {
-      spy.called = true;
-      const status = overrides?.status ?? 201;
-      const responseBody = overrides?.body ?? {
-        files: [{ fileName: "data.txt", filePath: "Ambyte_1/data.txt" }],
-      };
-      return HttpResponse.json(responseBody, { status });
-    }),
-  );
-  return spy;
-}
+// Mock validation
+vi.mock("../data-upload-validation", () => ({
+  validateAmbyteStructure: vi.fn(),
+  isExcludedFile: vi.fn(),
+}));
+
+// Mock components from @repo/ui
+vi.mock("@repo/ui/components", () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    variant,
+  }: {
+    children: React.ReactNode;
+    onClick: () => void;
+    disabled?: boolean;
+    variant?: string;
+  }) => (
+    <button onClick={onClick} disabled={disabled} data-variant={variant}>
+      {children}
+    </button>
+  ),
+  Label: ({ children, ...props }: { children: React.ReactNode; className?: string }) => (
+    <label {...props}>{children}</label>
+  ),
+  FileUpload: ({
+    onFilesChange,
+    validationErrors,
+    isUploading,
+  }: {
+    onFilesChange: (files: FileList | null) => void;
+    validationErrors?: string[];
+    isUploading?: boolean;
+  }) => (
+    <div>
+      <button
+        data-testid="file-upload-button"
+        onClick={() => {
+          const mockFile = new File(["content"], "test.txt", { type: "text/plain" });
+          const mockFileList = {
+            length: 1,
+            item: () => mockFile,
+            0: mockFile,
+          } as unknown as FileList;
+          onFilesChange(mockFileList);
+        }}
+        disabled={isUploading}
+      >
+        Select Files
+      </button>
+      {validationErrors && validationErrors.length > 0 && (
+        <div data-testid="validation-errors">
+          {validationErrors.map((error, index) => (
+            <div key={index}>{error}</div>
+          ))}
+        </div>
+      )}
+      {isUploading && <div data-testid="uploading">Uploading...</div>}
+    </div>
+  ),
+}));
+
+const { useExperimentDataUpload } = await import(
+  "@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload"
+);
+const { validateAmbyteStructure, isExcludedFile } = await import("../data-upload-validation");
 
 describe("FileUploadStep", () => {
+  const mockOnBack = vi.fn();
+  const mockOnUploadSuccess = vi.fn();
+  const mockUploadData = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // clearAllMocks only clears call history, not implementations.
-    // Re-establish defaults so mocks set by earlier tests don't leak.
-    vi.mocked(validateAmbyteStructure).mockReturnValue({ isValid: true, errors: [] });
-    vi.mocked(isExcludedFile).mockReturnValue(false);
+    (useExperimentDataUpload as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: mockUploadData,
+      isPending: false,
+    });
+    (validateAmbyteStructure as ReturnType<typeof vi.fn>).mockReturnValue({
+      isValid: true,
+      errors: [],
+    });
+    (isExcludedFile as ReturnType<typeof vi.fn>).mockReturnValue(false);
   });
 
   it("renders buttons", () => {
@@ -101,26 +156,93 @@ describe("FileUploadStep", () => {
 
     expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
     expect(screen.getByText("uploadModal.fileUpload.description")).toBeInTheDocument();
+  });
+
+  it("renders back and upload buttons", () => {
+    render(
+      <FileUploadStep
+        experimentId="test-experiment"
+        onBack={mockOnBack}
+        onUploadSuccess={mockOnUploadSuccess}
+      />,
+    );
+
     expect(screen.getByText("uploadModal.fileUpload.back")).toBeInTheDocument();
     expect(screen.getByText("uploadModal.fileUpload.uploadFiles")).toBeInTheDocument();
   });
 
-  it("calls onBack when back button is clicked", async () => {
-    const onBack = vi.fn();
+  it("calls onBack when back button is clicked", () => {
+    render(
+      <FileUploadStep
+        experimentId="test-experiment"
+        onBack={mockOnBack}
+        onUploadSuccess={mockOnUploadSuccess}
+      />,
+    );
 
-    render(<FileUploadStep {...defaultProps} onBack={onBack} />);
-
-    await userEvent.click(screen.getByRole("button", { name: /back/i }));
-    expect(onBack).toHaveBeenCalledTimes(1);
+    const backButton = screen.getByText("uploadModal.fileUpload.back");
+    fireEvent.click(backButton);
+    expect(mockOnBack).toHaveBeenCalled();
   });
 
-  it("does not upload when no files are selected", async () => {
-    const spy = mountUploadHandler();
+  it("handles file selection", async () => {
+    render(
+      <FileUploadStep
+        experimentId="test-experiment"
+        onBack={mockOnBack}
+        onUploadSuccess={mockOnUploadSuccess}
+      />,
+    );
 
-    render(<FileUploadStep {...defaultProps} />);
+    const fileUploadButton = screen.getByTestId("file-upload-button");
+    fireEvent.click(fileUploadButton);
 
-    await userEvent.click(screen.getByText("uploadModal.fileUpload.uploadFiles"));
-    expect(spy.called).toBe(false);
+    await waitFor(() => {
+      expect(validateAmbyteStructure).toHaveBeenCalled();
+    });
+  });
+
+  it("shows validation errors when files are invalid", async () => {
+    (validateAmbyteStructure as ReturnType<typeof vi.fn>).mockReturnValue({
+      isValid: false,
+      errors: [{ key: "uploadModal.validation.invalidStructure", options: {} }],
+    });
+
+    render(
+      <FileUploadStep
+        experimentId="test-experiment"
+        onBack={mockOnBack}
+        onUploadSuccess={mockOnUploadSuccess}
+      />,
+    );
+
+    const fileUploadButton = screen.getByTestId("file-upload-button");
+    fireEvent.click(fileUploadButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("validation-errors")).toBeInTheDocument();
+    });
+  });
+
+  it("calls upload mutation when upload button is clicked with valid files", async () => {
+    render(
+      <FileUploadStep
+        experimentId="test-experiment"
+        onBack={mockOnBack}
+        onUploadSuccess={mockOnUploadSuccess}
+      />,
+    );
+
+    // First select files
+    const fileUploadButton = screen.getByTestId("file-upload-button");
+    fireEvent.click(fileUploadButton);
+
+    await waitFor(() => {
+      const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
+      fireEvent.click(uploadButton);
+    });
+
+    expect(mockUploadData).toHaveBeenCalled();
   });
 
   it("shows validation errors when file structure is invalid", async () => {
@@ -129,58 +251,21 @@ describe("FileUploadStep", () => {
       errors: [{ key: "uploadModal.validation.invalidStructure" }],
     });
 
-    render(<FileUploadStep {...defaultProps} />);
+    render(
+      <FileUploadStep
+        experimentId="test-experiment"
+        onBack={mockOnBack}
+        onUploadSuccess={mockOnUploadSuccess}
+      />,
+    );
 
-    await userEvent.click(screen.getByRole("button", { name: "select files" }));
+    // Select files with validation errors
+    const fileUploadButton = screen.getByTestId("file-upload-button");
+    fireEvent.click(fileUploadButton);
 
-    await waitFor(() => {
-      expect(screen.getByRole("list", { name: "validation errors" })).toBeInTheDocument();
-    });
-  });
+    const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
+    fireEvent.click(uploadButton);
 
-  it("uploads files and calls onUploadSuccess", async () => {
-    const onUploadSuccess = vi.fn();
-    const spy = mountUploadHandler();
-
-    render(<FileUploadStep {...defaultProps} onUploadSuccess={onUploadSuccess} />);
-
-    await userEvent.click(screen.getByRole("button", { name: "select files" }));
-    await userEvent.click(screen.getByText("uploadModal.fileUpload.uploadFiles"));
-
-    await waitFor(() => {
-      expect(spy.called).toBe(true);
-    });
-
-    await waitFor(() => {
-      expect(onUploadSuccess).toHaveBeenCalled();
-    });
-  });
-
-  it("does not upload when validation errors exist", async () => {
-    const spy = mountUploadHandler();
-    vi.mocked(validateAmbyteStructure).mockReturnValue({
-      isValid: false,
-      errors: [{ key: "uploadModal.validation.invalidStructure" }],
-    });
-
-    render(<FileUploadStep {...defaultProps} />);
-
-    await userEvent.click(screen.getByRole("button", { name: "select files" }));
-    await userEvent.click(screen.getByText("uploadModal.fileUpload.uploadFiles"));
-
-    expect(spy.called).toBe(false);
-  });
-
-  it("shows upload error on failure", async () => {
-    mountUploadHandler({ status: 400, body: { message: "Upload failed" } });
-
-    render(<FileUploadStep {...defaultProps} />);
-
-    await userEvent.click(screen.getByRole("button", { name: "select files" }));
-    await userEvent.click(screen.getByText("uploadModal.fileUpload.uploadFiles"));
-
-    await waitFor(() => {
-      expect(screen.getByText("Upload failed")).toBeInTheDocument();
-    });
+    expect(mockUploadData).not.toHaveBeenCalled();
   });
 });

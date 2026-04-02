@@ -1,5 +1,6 @@
 // apps/web/components/__tests__/experiment-side-panel.test.tsx
-import { render, screen, userEvent } from "@/test/test-utils";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Edge, Node } from "@xyflow/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -11,6 +12,25 @@ interface QuestionSpec {
   required: boolean;
   validationMessage?: string;
 }
+
+// ---------- Mocks ----------
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (k: string) =>
+      ({
+        "sidePanelFlow.nodePanel": "Panel",
+        "sidePanelFlow.label": "Label",
+        "sidePanelFlow.labelPlaceholder": "Enter node label...",
+        "sidePanelFlow.nodeProperties": "Node properties",
+        "sidePanelFlow.startNode": "Start node",
+        "sidePanelFlow.startNodeLimit": "Only one start node allowed",
+        "flow.questionTooltip.title": "Data Column Name",
+        "flow.questionTooltip.description":
+          "This label will become a column in your data analysis:",
+        "flow.questionTooltip.defaultColumnName": "question_name",
+      })[k] ?? k,
+  }),
+}));
 
 // Stub child panels so we can trigger onChange easily
 vi.mock("../instruction-panel", () => ({
@@ -160,6 +180,7 @@ vi.mock("../edge-panel", () => {
   return { EdgeSidePanel };
 });
 
+// ---------- Helpers ----------
 type NodeData = Record<string, unknown>;
 const makeNode = (id: string, data: NodeData = {}): Node => ({
   id,
@@ -195,52 +216,49 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof ExperimentSi
   return { ...utils, props };
 }
 
+// ---------- Tests ----------
 describe("<ExperimentSidePanel />", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("shows header with capitalized node type and label input", () => {
     renderPanel({ nodeType: "INSTRUCTION", nodeTitle: "Hello" });
-    expect(screen.queryByText(/Instruction.*sidePanelFlow\.nodePanel/)).toBeTruthy();
+    expect(screen.queryByText(/Instruction Panel$/)).toBeTruthy();
 
-    const input = screen.getByPlaceholderText<HTMLInputElement>("sidePanelFlow.labelPlaceholder");
+    const input = screen.getByPlaceholderText<HTMLInputElement>("Enter node label...");
     expect(input.value).toBe("Hello");
   });
 
   it("calls onClose when clicking backdrop and the top-right close button", async () => {
-    const user = userEvent.setup();
     const { props } = renderPanel({ nodeType: "INSTRUCTION" });
 
-    await user.click(screen.getByLabelText("Close side panel backdrop"));
+    await userEvent.click(screen.getByLabelText("Close side panel backdrop"));
     expect(props.onClose).toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: /×/i }));
+    await userEvent.click(screen.getByRole("button", { name: /×/i }));
     expect(props.onClose).toHaveBeenCalledTimes(2);
   });
 
   it("updates title via input and calls onTitleChange", async () => {
-    const user = userEvent.setup();
     const { props } = renderPanel({ nodeTitle: "" });
 
-    const input = screen.getByPlaceholderText("sidePanelFlow.labelPlaceholder");
-    await user.type(input, "A");
+    const input = screen.getByPlaceholderText("Enter node label...");
+    await userEvent.type(input, "A");
 
     expect(props.onTitleChange).toHaveBeenCalled();
     expect(props.onTitleChange).toHaveBeenLastCalledWith("A");
   });
 
   it("disables title input and prevents callback when isDisabled", async () => {
-    const user = userEvent.setup();
     const { props } = renderPanel({ isDisabled: true });
 
-    const input = screen.getByPlaceholderText("sidePanelFlow.labelPlaceholder");
+    const input = screen.getByPlaceholderText("Enter node label...");
     expect((input as HTMLInputElement).disabled).toBe(true);
 
-    await user.type(input, "X");
+    await userEvent.type(input, "X");
     expect(props.onTitleChange).not.toHaveBeenCalled();
   });
 
   it("renders Start Node toggle, respects single-start constraint, and updates node data", async () => {
-    const user = userEvent.setup();
     // First render: another node is already start → toggle must be disabled
     const n1 = makeNode("n1", { isStartNode: false, isEndNode: false });
     const n2 = makeNode("n2", { isStartNode: true, isEndNode: false });
@@ -253,7 +271,7 @@ describe("<ExperimentSidePanel />", () => {
 
     const disabledCb = screen.getByRole("checkbox");
     expect((disabledCb as HTMLInputElement).disabled).toBe(true);
-    await user.click(disabledCb);
+    await userEvent.click(disabledCb);
     expect(first.props.onNodeDataChange).not.toHaveBeenCalled();
 
     // Clean up the first render before the second one
@@ -268,7 +286,7 @@ describe("<ExperimentSidePanel />", () => {
 
     const enabledCb = screen.getByRole("checkbox");
     expect((enabledCb as HTMLInputElement).disabled).toBe(false);
-    await user.click(enabledCb);
+    await userEvent.click(enabledCb);
 
     expect(second.props.onNodeDataChange).toHaveBeenCalledWith("n1", {
       isStartNode: true,
@@ -277,7 +295,6 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("InstructionPanel: passes description and propagates onChange via onNodeDataChange", async () => {
-    const user = userEvent.setup();
     const node = makeNode("ni", {
       description: "Initial",
       isStartNode: false,
@@ -292,7 +309,7 @@ describe("<ExperimentSidePanel />", () => {
     expect(screen.queryByText("InstructionPanel")).toBeTruthy();
     expect(screen.getByTestId("instr-value").textContent).toBe("Initial");
 
-    await user.click(screen.getByRole("button", { name: /Apply Instruction Change/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Apply Instruction Change/i }));
 
     expect(props.onNodeDataChange).toHaveBeenCalledWith("ni", {
       ...node.data,
@@ -301,7 +318,6 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("QuestionPanel: if stepSpecification invalid, defaults to TEXT spec using nodeTitle; onChange wires back", async () => {
-    const user = userEvent.setup();
     const invalidNode = makeNode("nq", { stepSpecification: 42 });
 
     const first = renderPanel({
@@ -328,7 +344,7 @@ describe("<ExperimentSidePanel />", () => {
     });
 
     const applyBtn = screen.getByRole("button", { name: /Apply Question Change/i });
-    await user.click(applyBtn);
+    await userEvent.click(applyBtn);
 
     expect(second.props.onNodeDataChange).toHaveBeenCalledWith("nq", {
       stepSpecification: { answerType: "SELECT", required: false, options: ["A", "B"] },
@@ -336,7 +352,6 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("MeasurementPanel: propagates protocol change via onNodeDataChange", async () => {
-    const user = userEvent.setup();
     const node = makeNode("nm", { protocolId: "proto-1" });
 
     const { props } = renderPanel({
@@ -347,7 +362,7 @@ describe("<ExperimentSidePanel />", () => {
     expect(screen.queryByText("MeasurementPanel")).toBeTruthy();
     expect(screen.getByTestId("mp-protocol").textContent).toBe("proto-1");
 
-    await user.click(screen.getByRole("button", { name: /Apply Measurement Change/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Apply Measurement Change/i }));
     expect(props.onNodeDataChange).toHaveBeenCalledWith("nm", {
       ...node.data,
       protocolId: "proto-2",
@@ -355,7 +370,6 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("AnalysisPanel: propagates macroId change via onNodeDataChange", async () => {
-    const user = userEvent.setup();
     const node = makeNode("na", { macroId: "macro-original" });
 
     const { props } = renderPanel({
@@ -366,7 +380,7 @@ describe("<ExperimentSidePanel />", () => {
     expect(screen.queryByText("AnalysisPanel")).toBeTruthy();
     expect(screen.getByTestId("ap-macro").textContent).toBe("macro-original");
 
-    await user.click(screen.getByRole("button", { name: /Apply Analysis Change/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Apply Analysis Change/i }));
     expect(props.onNodeDataChange).toHaveBeenCalledWith("na", {
       ...node.data,
       macroId: "macro-updated",
@@ -374,7 +388,6 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("EdgeSidePanel opens when selectedEdge is provided and wires update/delete", async () => {
-    const user = userEvent.setup();
     const { props } = renderPanel({
       selectedEdge: { id: "e1", source: "n1", target: "n2", data: {} as Edge } as Edge,
     });
@@ -382,13 +395,13 @@ describe("<ExperimentSidePanel />", () => {
     expect(screen.queryByTestId("edge-panel")).toBeTruthy();
     expect(screen.getByTestId("edge-id").textContent).toBe("e1");
 
-    await user.click(screen.getByRole("button", { name: /Update Edge/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Update Edge/i }));
     expect(props.onEdgeUpdate).toHaveBeenCalledWith("e1", { label: "updated" });
 
-    await user.click(screen.getByRole("button", { name: /Delete Edge/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Delete Edge/i }));
     expect(props.onEdgeDelete).toHaveBeenCalledWith("e1");
 
-    await user.click(screen.getByRole("button", { name: /Close Edge Panel/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Close Edge Panel/i }));
     expect(props.onClose).toHaveBeenCalled();
   });
 
@@ -428,7 +441,6 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("does not call callbacks when panel is disabled", async () => {
-    const user = userEvent.setup();
     const node = makeNode("nd", {
       description: "D",
       stepSpecification: { answerType: "TEXT", required: false },
@@ -445,13 +457,13 @@ describe("<ExperimentSidePanel />", () => {
       selectedEdge: { id: "e2", source: "nA", target: "nB", data: {} as Edge } as Edge,
     });
 
-    const input = screen.getByPlaceholderText("sidePanelFlow.labelPlaceholder");
+    const input = screen.getByPlaceholderText("Enter node label...");
     expect((input as HTMLInputElement).disabled).toBe(true);
-    await user.type(input, "X");
+    await userEvent.type(input, "X");
 
     const qpBtn = screen.getByRole("button", { name: /Apply Question Change/i });
     expect((qpBtn as HTMLButtonElement).disabled).toBe(true);
-    await user.click(qpBtn);
+    await userEvent.click(qpBtn);
 
     const upd = screen.getByRole("button", { name: /Update Edge/i });
     const del = screen.getByRole("button", { name: /Delete Edge/i });

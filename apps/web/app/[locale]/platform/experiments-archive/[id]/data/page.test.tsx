@@ -1,14 +1,63 @@
-import { createExperiment, createExperimentTable } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
+import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import "@testing-library/jest-dom";
+import { render, screen } from "@testing-library/react";
 import { notFound } from "next/navigation";
-import { use } from "react";
+import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
+import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
-import { contract, ExperimentTableName } from "@repo/api";
+import { ExperimentTableName } from "@repo/api";
 
 import ExperimentDataPage from "./page";
 
+globalThis.React = React;
+
+// Mock env
+vi.mock("~/env", () => ({
+  env: {
+    NEXT_PUBLIC_DOCS_URL: "http://localhost:3010",
+  },
+}));
+
+// Mock next/link
+vi.mock("next/link", () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
+// Mock react.use to return a params-like object { id, locale }
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return {
+    ...actual,
+    use: vi.fn().mockReturnValue({ id: "test-experiment-id" }),
+  };
+});
+
+// Mock useExperiment hook
+vi.mock("@/hooks/experiment/useExperiment/useExperiment", () => ({
+  useExperiment: vi.fn(),
+}));
+
+// Mock translation hook
+vi.mock("@repo/i18n/client", () => ({
+  useTranslation: () => ({ t: (k: string) => k }),
+}));
+
+// Mock useLocale hook
+vi.mock("~/hooks/useLocale", () => ({
+  useLocale: () => "en-US",
+}));
+
+// Mock useExperimentTables hook
+vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
+  useExperimentTables: vi.fn(),
+}));
+
+// Mock ExperimentDataTable component
 vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ExperimentDataTable: ({
     experimentId,
@@ -62,6 +111,7 @@ vi.mock("@repo/ui/components/skeleton", async () => {
   };
 });
 
+// Mock DataUploadModal component
 vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () => ({
   DataUploadModal: ({
     experimentId,
@@ -81,11 +131,10 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
   ),
 }));
 
-const EXP_ID = "test-experiment-id";
-const PARAMS = Promise.resolve({ id: EXP_ID, locale: "en-US" });
-
-const archivedExperiment = createExperiment({ id: EXP_ID, status: "archived" });
-const activeExperiment = createExperiment({ id: EXP_ID, status: "active" });
+// Mock next/navigation notFound
+vi.mock("next/navigation", () => ({
+  notFound: vi.fn(),
+}));
 
 const mockTablesData = [
   createExperimentTable({
@@ -101,140 +150,245 @@ const mockTablesData = [
   }),
 ];
 
-function mountDefaults() {
-  server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
-  server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(use).mockReturnValue({ id: EXP_ID });
-
-  vi.spyOn(console, "error").mockImplementation(() => {
-    /* no-op */
-  });
+  vi.mocked(useExperimentTables).mockReturnValue({
+    tables: mockTablesData,
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useExperimentTables>);
 });
-
 describe("<ExperimentDataPage />", () => {
-  it("shows loading skeleton when data is loading", () => {
-    server.mount(contract.experiments.getExperiment, { delay: "infinite" });
-    server.mount(contract.experiments.getExperimentTables, { delay: "infinite" });
+  it("shows loading when experiment is loading", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
 
     const skeletons = screen.getAllByTestId("skeleton");
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it("renders ErrorDisplay when there is an error loading experiment", async () => {
-    server.mount(contract.experiments.getExperiment, { status: 500 });
-    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+  it("shows loading when tables are loading", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    vi.mocked(useExperimentTables).mockReturnValue({
+      tables: [],
+      isLoading: true,
+      error: null,
+    } as unknown as ReturnType<typeof useExperimentTables>);
 
-    await waitFor(() => {
-      expect(screen.getByText("failedToLoad")).toBeInTheDocument();
-    });
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    const skeletons = screen.getAllByTestId("skeleton");
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it("renders ErrorDisplay when there is an error loading tables", async () => {
-    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
-    server.mount(contract.experiments.getExperimentTables, { status: 500 });
+  it("renders ErrorDisplay when there is an error loading experiment", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("fail"),
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText("failedToLoad")).toBeInTheDocument();
-    });
+    expect(screen.getByText("failedToLoad")).toBeInTheDocument();
+    expect(screen.getByText("fail")).toBeInTheDocument();
   });
 
-  it("calls notFound when experiment is not archived", async () => {
-    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
-    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+  it("renders ErrorDisplay when there is an error loading tables", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    vi.mocked(useExperimentTables).mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: new Error("tables fail"),
+    } as unknown as ReturnType<typeof useExperimentTables>);
 
-    await waitFor(() => {
-      expect(vi.mocked(notFound)).toHaveBeenCalled();
-    });
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    expect(screen.getByText("failedToLoad")).toBeInTheDocument();
+    expect(screen.getByText("tables fail")).toBeInTheDocument();
   });
 
-  it("renders data page with upload button and tabs when experiment is archived", async () => {
-    mountDefaults();
+  it("shows notFound text when experiment data is missing", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText("experimentData.title")).toBeInTheDocument();
+    expect(screen.getByText("notFound")).toBeInTheDocument();
+  });
+
+  it("calls notFound when experiment is not archived", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "active" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    // Make notFound throw so render will surface it
+    vi.mocked(notFound).mockImplementation(() => {
+      throw new Error("notFound");
     });
 
+    expect(() =>
+      render(
+        <ExperimentDataPage
+          params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+        />,
+      ),
+    ).toThrow("notFound");
+  });
+
+  it("renders data page with upload button and tabs when experiment is archived", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    // Check page title and description
+    expect(screen.getByText("experimentData.title")).toBeInTheDocument();
     expect(screen.getByText("experimentData.description")).toBeInTheDocument();
 
+    // Check upload button is rendered and disabled
     const uploadButton = screen.getByRole("button", { name: /experimentData.uploadData/i });
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toBeDisabled();
 
+    // Check tabs are rendered
     expect(screen.getByTestId("nav-tabs")).toBeInTheDocument();
     expect(screen.getByTestId("nav-tabs-list")).toBeInTheDocument();
   });
 
-  it("renders tab triggers with table names and row counts", async () => {
-    mountDefaults();
+  it("renders tab triggers with table names and row counts", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
 
-    await waitFor(() => {
-      expect(screen.getByTestId("nav-tab-trigger-measurements")).toBeInTheDocument();
-    });
-
+    expect(screen.getByTestId("nav-tab-trigger-measurements")).toBeInTheDocument();
     expect(screen.getByText("Measurements (100)")).toBeInTheDocument();
     expect(screen.getByTestId("nav-tab-trigger-device")).toBeInTheDocument();
     expect(screen.getByText("Device (1)")).toBeInTheDocument();
   });
 
-  it("renders tab content with ExperimentDataTable for each table", async () => {
-    mountDefaults();
+  it("renders tab content with ExperimentDataTable for each table", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("nav-tab-content-measurements")).toBeInTheDocument();
-    });
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
 
     const tabContent1 = screen.getByTestId("nav-tab-content-measurements");
+    expect(tabContent1).toBeInTheDocument();
     const dataTable1 = tabContent1.querySelector('[data-testid="experiment-data-table"]');
-    expect(dataTable1).toHaveAttribute("data-experiment-id", EXP_ID);
+    expect(dataTable1).toHaveAttribute("data-experiment-id", "test-experiment-id");
     expect(dataTable1).toHaveAttribute("data-table-name", "measurements");
     expect(dataTable1).toHaveAttribute("data-default-sort-column", "timestamp");
 
     const tabContent2 = screen.getByTestId("nav-tab-content-device");
+    expect(tabContent2).toBeInTheDocument();
     const dataTable2 = tabContent2.querySelector('[data-testid="experiment-data-table"]');
-    expect(dataTable2).toHaveAttribute("data-experiment-id", EXP_ID);
+    expect(dataTable2).toHaveAttribute("data-experiment-id", "test-experiment-id");
     expect(dataTable2).toHaveAttribute("data-table-name", ExperimentTableName.DEVICE);
   });
 
-  it("shows no data message when tables array is empty", async () => {
-    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
-    server.mount(contract.experiments.getExperimentTables, { body: [] });
+  it("shows no data message when tables array is empty", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    vi.mocked(useExperimentTables).mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperimentTables>);
 
-    await waitFor(() => {
-      expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
-    });
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    expect(screen.getByText("experimentData.noData")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.readMore")).toBeInTheDocument();
   });
 
-  it("renders the upload modal as closed initially", async () => {
-    mountDefaults();
+  it("opens and closes the upload modal when button is clicked", () => {
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
 
-    render(<ExperimentDataPage params={PARAMS} />);
+    render(
+      <ExperimentDataPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
 
-    await waitFor(() => {
-      expect(screen.getByTestId("data-upload-modal")).toBeInTheDocument();
-    });
-
+    // Modal should be closed initially
     const modal = screen.getByTestId("data-upload-modal");
     expect(modal).toHaveAttribute("data-open", "false");
-    expect(modal).toHaveAttribute("data-experiment-id", EXP_ID);
+
+    expect(modal).toHaveAttribute("data-experiment-id", "test-experiment-id");
   });
 });

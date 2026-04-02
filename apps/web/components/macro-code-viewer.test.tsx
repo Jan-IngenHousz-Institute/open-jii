@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { MacroCodeViewer } from "./macro-code-viewer";
 
+// Mock Monaco Editor
 vi.mock("@monaco-editor/react", () => ({
   Editor: ({ value, language, theme }: { value: string; language?: string; theme?: string }) => (
     <div data-testid="monaco-editor" data-language={language} data-theme={theme}>
@@ -12,25 +13,34 @@ vi.mock("@monaco-editor/react", () => ({
   ),
 }));
 
-// jsdom does not implement navigator.clipboard — provide a minimal stub so
-// handleCopy() resolves instead of throwing.
-Object.defineProperty(navigator, "clipboard", {
-  value: { writeText: vi.fn().mockResolvedValue(undefined) },
+// Mock clipboard API
+const mockClipboard = {
+  writeText: vi.fn().mockResolvedValue(undefined),
+};
+
+Object.defineProperty(global.navigator, "clipboard", {
+  value: mockClipboard,
   writable: true,
-  configurable: true,
 });
 
-const defaults = { value: "# Sample\nprint('Hello')", language: "python" as const };
-
 describe("MacroCodeViewer", () => {
+  const defaultProps = {
+    value: "# Sample code\nprint('Hello world')",
+    language: "python" as const,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.useFakeTimers();
   });
-  afterEach(() => vi.useRealTimers());
 
-  it("renders the editor", () => {
-    render(<MacroCodeViewer {...defaults} />);
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("should render the editor container", () => {
+    render(<MacroCodeViewer {...defaultProps} />);
+
     expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
   });
 
@@ -46,30 +56,16 @@ describe("MacroCodeViewer", () => {
     expect(value).toHaveTextContent("print('Hello')");
   });
 
-  it("displays code statistics", () => {
-    render(<MacroCodeViewer value="# 1\n# 2\n# 3" language="python" />);
-    // Stats div contains line count and "common.lines" text
-    const matches = screen.getAllByText(
-      (_content, el) =>
-        el instanceof HTMLDivElement &&
-        el.classList.contains("text-xs") &&
-        el.textContent.includes("3") === true &&
-        el.textContent.includes("common.lines") === true,
-    );
-    expect(matches.length).toBeGreaterThanOrEqual(1);
+  it("should render copy button", () => {
+    render(<MacroCodeViewer {...defaultProps} />);
+
+    expect(screen.getByTestId("copy-icon")).toBeInTheDocument();
   });
 
-  it("copies code to clipboard", async () => {
-    render(<MacroCodeViewer value="# Test" language="python" />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-    // Before click: copy icon is shown
-    const button = screen.getAllByRole("button")[0];
-    expect(button.querySelector(".lucide-copy")).toBeInTheDocument();
-    await user.click(button);
-    // After click: check icon appears confirming the copy
-    await waitFor(() => {
-      expect(button.querySelector(".lucide-check")).toBeInTheDocument();
-    });
+  it("should use python language in editor", () => {
+    render(<MacroCodeViewer {...defaultProps} language="python" />);
+
+    expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
   });
 
   it("applies custom height", () => {

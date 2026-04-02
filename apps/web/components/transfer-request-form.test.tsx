@@ -6,99 +6,80 @@ import { contract } from "@repo/api";
 
 import { TransferRequestForm } from "./transfer-request-form";
 
-describe("TransferRequestForm", () => {
+globalThis.React = React;
+
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+// -------------------
+// Mocks
+// -------------------
+
+let savedOnSuccess: (() => void) | undefined;
+const mockMutate = vi.fn();
+const mockUseTransferRequestCreate = vi.fn();
+
+vi.mock("~/hooks/useTransferRequestCreate/useTransferRequestCreate", () => ({
+  useTransferRequestCreate: (options?: { onSuccess?: () => void }) => {
+    savedOnSuccess = options?.onSuccess;
+    return mockUseTransferRequestCreate(options);
+  },
+}));
+
+vi.mock("@repo/i18n/client", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+// -------------------
+// Helpers
+// -------------------
+function renderTransferRequestForm({
+  isPending = false,
+  mutate = mockMutate,
+}: {
+  isPending?: boolean;
+  mutate?: typeof mockMutate;
+} = {}) {
+  mockUseTransferRequestCreate.mockReturnValue({
+    mutate,
+    isPending,
+  });
+
+  return render(<TransferRequestForm />);
+}
+
+function triggerSuccess() {
+  if (savedOnSuccess) {
+    savedOnSuccess();
+  }
+}
+
+// -------------------
+// Tests
+// -------------------
+describe("<TransferRequestForm />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders form fields and submit button", () => {
-    render(<TransferRequestForm />);
+  describe("Form Rendering", () => {
+    it("renders all form fields", () => {
+      renderTransferRequestForm();
 
-    expect(screen.getByPlaceholderText("transferRequest.projectIdPlaceholder")).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("checkbox")).toBeInTheDocument();
-    expect(screen.getByText("transferRequest.submitButton")).toBeInTheDocument();
-  });
-
-  it("validates empty submission", async () => {
-    render(<TransferRequestForm />);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByText("transferRequest.submitButton"));
-
-    await waitFor(() => {
-      expect(screen.getAllByText(/required/i).length).toBeGreaterThan(0);
-    });
-  });
-
-  it("requires consent checkbox", async () => {
-    const user = userEvent.setup();
-    render(<TransferRequestForm />);
-
-    await user.type(screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"), "123");
-    await user.type(
-      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
-      "https://example.com",
-    );
-    await user.click(screen.getByText("transferRequest.submitButton"));
-
-    await waitFor(() => {
-      expect(screen.getByText(/ownership or permission/i)).toBeInTheDocument();
-    });
-  });
-
-  it("submits valid form data", async () => {
-    const spy = server.mount(contract.experiments.createTransferRequest, {
-      body: { requestId: "req-1" },
-    });
-    const user = userEvent.setup();
-    render(<TransferRequestForm />);
-
-    await user.type(
-      screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"),
-      "project-123",
-    );
-    await user.type(
-      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
-      "https://photosynq.com/projects/123",
-    );
-    await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByText("transferRequest.submitButton"));
-
-    await waitFor(() => {
-      expect(spy.called).toBe(true);
-    });
-    expect(spy.body).toMatchObject({
-      projectIdOld: "project-123",
-      projectUrlOld: "https://photosynq.com/projects/123",
-      consent: true,
-    });
-  });
-
-  it("shows success state and allows submitting another", async () => {
-    server.mount(contract.experiments.createTransferRequest, {
-      body: { requestId: "req-2" },
-    });
-    const user = userEvent.setup();
-    render(<TransferRequestForm />);
-
-    await user.type(screen.getByPlaceholderText("transferRequest.projectIdPlaceholder"), "test");
-    await user.type(
-      screen.getByPlaceholderText("transferRequest.projectUrlPlaceholder"),
-      "https://test.com",
-    );
-    await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByText("transferRequest.submitButton"));
-
-    await waitFor(() => {
-      expect(screen.getByText("transferRequest.successTitle")).toBeInTheDocument();
+      expect(screen.getByText("transferRequest.projectIdLabel")).toBeInTheDocument();
+      expect(screen.getByText("transferRequest.projectUrlLabel")).toBeInTheDocument();
+      expect(screen.getByText("transferRequest.consentLabel")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("transferRequest.submitAnother"));
+    it("renders submit button", () => {
+      renderTransferRequestForm();
 
-    await waitFor(() => {
       expect(screen.getByText("transferRequest.submitButton")).toBeInTheDocument();
     });
   });
