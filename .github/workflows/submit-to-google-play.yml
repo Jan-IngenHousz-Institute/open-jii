@@ -75,9 +75,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build workspace dependencies
-        run: pnpm turbo run build --filter=mobile...
-
       - name: Set app version from release
         working-directory: apps/mobile
         run: |
