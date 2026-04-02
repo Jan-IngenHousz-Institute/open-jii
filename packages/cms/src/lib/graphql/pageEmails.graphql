@@ -17,6 +17,7 @@ fragment PageEmailsFields on PageEmails {
     publishedAt
     environmentId
   }
+  internalName
   emailsCollection {
     items {
       ...ComponentEmailFields

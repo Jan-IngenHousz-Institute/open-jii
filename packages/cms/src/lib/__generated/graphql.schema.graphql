@@ -509,6 +509,8 @@ type ComponentEmailLinkingCollections {
 }
 
 enum ComponentEmailLinkingCollectionsPageEmailsCollectionOrder {
+  internalName_ASC
+  internalName_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -520,6 +522,8 @@ enum ComponentEmailLinkingCollectionsPageEmailsCollectionOrder {
 }
 
 enum ComponentEmailLinkingCollectionsPageEmailsCursorCollectionOrder {
+  internalName_ASC
+  internalName_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -2234,6 +2238,7 @@ type PageEmails implements Entry & _Node {
   contentfulMetadata: ContentfulMetadata!
   emailsCollection(limit: Int = 100, locale: String, order: [PageEmailsEmailsCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentEmailFilter): PageEmailsEmailsCollection
   emailsCursorCollection(limit: Int = 100, locale: String, order: [PageEmailsEmailsCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentEmailFilter): PageEmailsEmailsCursorCollection
+  internalName(locale: String, useFallbackLocale: Boolean): String
   linkedFrom(allowedLocales: [String]): PageEmailsLinkingCollections
   sys: Sys!
 }
@@ -2300,6 +2305,13 @@ input PageEmailsFilter {
   contentfulMetadata: ContentfulMetadataFilter
   emails: cfComponentEmailNestedFilter
   emailsCollection_exists: Boolean
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
   sys: SysFilter
 }
 
@@ -2309,6 +2321,8 @@ type PageEmailsLinkingCollections {
 }
 
 enum PageEmailsOrder {
+  internalName_ASC
+  internalName_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC

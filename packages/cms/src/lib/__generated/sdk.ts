@@ -1008,6 +1008,8 @@ export type ComponentEmailLinkingCollectionsPageEmailsCursorCollectionArgs = {
 };
 
 export enum ComponentEmailLinkingCollectionsPageEmailsCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -1019,6 +1021,8 @@ export enum ComponentEmailLinkingCollectionsPageEmailsCollectionOrder {
 }
 
 export enum ComponentEmailLinkingCollectionsPageEmailsCursorCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -3528,6 +3532,7 @@ export type PageEmails = Entry &
     contentfulMetadata: ContentfulMetadata;
     emailsCollection?: Maybe<PageEmailsEmailsCollection>;
     emailsCursorCollection?: Maybe<PageEmailsEmailsCursorCollection>;
+    internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageEmailsLinkingCollections>;
     sys: Sys;
   };
@@ -3553,6 +3558,12 @@ export type PageEmailsEmailsCursorCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentEmailFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
+export type PageEmailsInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageEmails) */
@@ -3626,6 +3637,13 @@ export type PageEmailsFilter = {
   contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
   emails?: InputMaybe<CfComponentEmailNestedFilter>;
   emailsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
 };
 
@@ -3653,6 +3671,8 @@ export type PageEmailsLinkingCollectionsEntryCursorCollectionArgs = {
 };
 
 export enum PageEmailsOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -6719,6 +6739,7 @@ export type ComponentEmailFieldsFragment = {
 
 export type PageEmailsFieldsFragment = {
   __typename: "PageEmails";
+  internalName?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
   emailsCollection?: {
     __typename?: "PageEmailsEmailsCollection";
@@ -7443,6 +7464,7 @@ export const PageEmailsFieldsFragmentDoc = gql`
       publishedAt
       environmentId
     }
+    internalName
     emailsCollection {
       items {
         ...ComponentEmailFields
