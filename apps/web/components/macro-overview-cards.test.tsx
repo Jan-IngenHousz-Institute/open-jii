@@ -133,7 +133,7 @@ describe("<MacroOverviewCards />", () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it("shows empty message when no macros", () => {
+  it("renders 'no macros' message when macros array is empty", () => {
     render(<MacroOverviewCards macros={[]} isLoading={false} />);
     expect(screen.getByText("No macros found")).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();

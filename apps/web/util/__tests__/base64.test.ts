@@ -70,6 +70,7 @@ return output`;
 
       expect(result).toBe("");
 
+      // Restore original functions
       global.btoa = originalBtoa;
     });
   });

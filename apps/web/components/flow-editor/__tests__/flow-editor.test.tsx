@@ -1,19 +1,32 @@
 // apps/web/components/__tests__/flow-editor.test.tsx
-import { render, screen, userEvent } from "@/test/test-utils";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type * as xyflowReact from "@xyflow/react";
 import React, { createRef } from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Spy on ensureOneStartNode from the real module (no full mock)
 import * as nodeUtils from "../../react-flow/node-utils";
+/* -------------------- Import the component AFTER mocks -------------------- */
 import { FlowEditor } from "../flow-editor";
 import type { FlowEditorHandle } from "../flow-editor";
 
-// useDebounce — pragmatic mock (timer utility)
+// Keep React on global for JSX in some deps
+globalThis.React = React;
+
+/* -------------------- Light mocks -------------------- */
+
+// i18n
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({ t: (k: string) => k }),
+}));
+
+// debounce hook used by some panels/components
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
 
+// measurement panel (avoid pulling search hooks, etc.)
 vi.mock("../../side-panel-flow/measurement-panel", () => ({
   MeasurementPanel: () => null,
 }));
@@ -89,6 +102,7 @@ vi.mock("@xyflow/react", async () => {
   return { ...(actual as xyflowReact.Node), ReactFlow };
 });
 
+// legend (keep tiny)
 vi.mock("../legend-flow", () => ({
   LegendFlow: ({ overlay }: { overlay?: boolean }) => (
     <div data-testid={overlay ? "legend-overlay" : "legend"} />
@@ -192,6 +206,8 @@ vi.mock("../flow-mapper", () => {
   };
 });
 
+/* -------------------- Helpers -------------------- */
+/** Robustly read an integer from a test id */
 const readCount = (testId: string): number => {
   const el = screen.getByTestId(testId);
   const n = Number.parseInt(el.textContent, 10);
@@ -251,7 +267,12 @@ function renderEditor(
   return { ...utils, props, ref };
 }
 
+/* -------------------- Tests -------------------- */
 describe("<FlowEditor /> (stable suite)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders and getFlowData() via ref returns ids", () => {
     const { ref } = renderEditor({}, true);
 
@@ -284,43 +305,38 @@ describe("<FlowEditor /> (stable suite)", () => {
 
   it("fullscreen toggle changes aria-label", async () => {
     renderEditor();
-    const user = userEvent.setup();
 
     const btn = screen.getByRole("button", { name: /Enter fullscreen/i });
-    await user.click(btn);
+    await userEvent.click(btn);
     expect(screen.getByRole("button", { name: /Exit fullscreen/i })).toBeTruthy();
   });
 
   it("connect adds an edge when enabled", async () => {
     renderEditor();
-    const user = userEvent.setup();
     const before = getCounts();
     expect(before.e).toBe(1);
 
-    await user.click(screen.getByRole("button", { name: "Sim Connect" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sim Connect" }));
     const after = getCounts();
     expect(after.e).toBe(2);
   });
 
   it("pane click is wired (no throw)", async () => {
     renderEditor();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Sim Pane Click" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sim Pane Click" }));
   });
 
   it("calls onDirtyChange(true) after first change", async () => {
     const { props } = renderEditor();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Sim Connect" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sim Connect" }));
     expect(props.onDirtyChange).toHaveBeenCalledWith(true);
   });
 
   it("disabled mode prevents connect and disables interactivity flags", async () => {
     renderEditor({ isDisabled: true });
-    const user = userEvent.setup();
 
     const before = getCounts();
-    await user.click(screen.getByRole("button", { name: "Sim Connect" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sim Connect" }));
     const after = getCounts();
     expect(after.e).toBe(before.e);
 

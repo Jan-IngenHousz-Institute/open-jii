@@ -8,7 +8,9 @@ import type { MacroFilter } from "~/hooks/macro/useMacros/useMacros";
 
 import { ListMacros } from "./list-macros";
 
-const mockUseMacros = vi.fn();
+// Mock the hooks
+vi.mock("~/hooks/macro/useMacros/useMacros");
+const mockUseMacros = vi.mocked(useMacros);
 
 // Mock the translation hook
 vi.mock("@repo/i18n", () => ({
@@ -17,10 +19,17 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-vi.mock("~/components/macro-overview-cards", () => ({
-  MacroOverviewCards: (props: { macros?: unknown[]; isLoading: boolean }) => (
-    <div data-testid="macro-cards" data-loading={props.isLoading}>
-      {props.macros?.length ?? 0} macros
+// Mock the MacroOverviewCards component
+vi.mock("./macro-overview-cards", () => ({
+  MacroOverviewCards: ({
+    macros,
+    isLoading,
+  }: {
+    macros: Record<string, unknown>[];
+    isLoading: boolean;
+  }) => (
+    <div data-testid="macro-overview-cards">
+      {isLoading ? "Loading..." : `${macros.length || 0} macros`}
     </div>
   ),
 }));

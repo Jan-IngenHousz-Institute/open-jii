@@ -4,8 +4,6 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
-
 import MacroLayout from "../layout";
 
 // Global React for JSX in mocks
@@ -111,12 +109,6 @@ const defaultSession = {
 // -------------------
 // Helpers
 // -------------------
-function mountMacro(overrides: Parameters<typeof createMacro>[0] = {}) {
-  const macro = createMacro({ id: "test-macro-id", ...overrides });
-  server.mount(contract.macros.getMacro, { body: macro });
-  return macro;
-}
-
 function renderLayout({
   macroId = "test-macro-id",
   macroData = defaultMacro,
@@ -142,6 +134,9 @@ function renderLayout({
   return render(<MacroLayout>{children}</MacroLayout>);
 }
 
+// -------------------
+// Tests
+// -------------------
 describe("<MacroLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

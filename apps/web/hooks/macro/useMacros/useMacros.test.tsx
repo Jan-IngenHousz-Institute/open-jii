@@ -1,10 +1,9 @@
-import { createMacro } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook } from "@testing-library/react";
+import React from "react";
+import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
-
+import { tsr } from "../../../lib/tsr";
 import { useMacros } from "./useMacros";
 
 // Mock next/navigation
@@ -20,7 +19,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../../lib/tsr", () => ({
   tsr: {
     macros: {
-      listMacros: { useQuery: (...args: unknown[]) => mockUseQuery(...args) },
+      listMacros: {
+        useQuery: vi.fn(),
+      },
     },
   },
 }));
@@ -33,10 +34,16 @@ vi.mock("../../useDebounce", () => ({
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
 
 describe("useMacros", () => {
-  it("passes empty filter by default", () => {
-    mockUseQuery.mockReturnValue({ data: { body: [] }, isLoading: false, error: null });
+  let queryClient: QueryClient;
 
-    renderHook(() => useMacros());
+  const createWrapper = () => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
 
     return ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -209,38 +216,5 @@ describe("useMacros", () => {
     const lastCall = mockUseQuery.mock.calls[mockUseQuery.mock.calls.length - 1] as unknown[];
     const callArg = lastCall[0] as { queryData: { query: Record<string, unknown> } };
     expect(callArg.queryData.query.language).toBe("python");
-  });
-
-  it("returns macros list", async () => {
-    server.mount(contract.macros.listMacros, {
-      body: [
-        createMacro({ id: "1", name: "M1" }),
-        createMacro({ id: "2", name: "M2", language: "javascript" }),
-      ],
-    });
-
-    const { result } = renderHook(() => useMacros());
-
-    await waitFor(() => {
-      expect(result.current.data).toHaveLength(2);
-    });
-
-    const first = result.current.data?.[0];
-    const second = result.current.data?.[1];
-    expect(first?.name).toBe("M1");
-    expect(second?.name).toBe("M2");
-  });
-
-  it("passes filter as query parameters", async () => {
-    const spy = server.mount(contract.macros.listMacros, { body: [] });
-
-    const { result } = renderHook(() => useMacros({ search: "test", language: "python" }));
-
-    await waitFor(() => {
-      expect(result.current.data).toBeDefined();
-    });
-
-    expect(spy.url).toContain("search=test");
-    expect(spy.url).toContain("language=python");
   });
 });

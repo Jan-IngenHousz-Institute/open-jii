@@ -4,6 +4,8 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import type { UserProfile } from "@repo/api";
+
 import { MemberList } from "./current-members-list";
 
 globalThis.React = React;
@@ -102,30 +104,36 @@ describe("<MemberList />", () => {
     vi.clearAllMocks();
   });
 
-  it("shows empty state when no members are provided", () => {
-    render(
-      <MemberList onRemoveMember={vi.fn()} isRemovingMember={false} removingMemberId={null} />,
+  it("renders empty state when no membersWithUserInfo and no members", () => {
+    renderWithProvider(
+      <MemberList
+        onRemoveMember={() => {
+          /* No op */
+        }}
+        isRemovingMember={false}
+        removingMemberId={null}
+      />,
     );
 
     expect(screen.getByText("experimentSettings.noMembersYet")).toBeInTheDocument();
     expect(screen.getByText("experimentSettings.addCollaborators")).toBeInTheDocument();
   });
 
-  it("renders member from raw members + users props", async () => {
+  it("converts members + users to membersWithUserInfo and calls onRemoveMember", () => {
     const onRemove = vi.fn();
-    const user = userEvent.setup();
+    const user: StrictUserProfile = mkUser({
+      userId: "user-2",
+      id: "user-2",
+      firstName: "Grace",
+      lastName: "Hopper",
+      email: "grace@example.com",
+    });
+    const member: StrictMember = mkMember({ userId: "user-2", role: "member" });
 
-    render(
+    renderWithProvider(
       <MemberList
-        members={[{ userId: "user-2", role: "member" }]}
-        users={[
-          createUserProfile({
-            userId: "user-2",
-            firstName: "Grace",
-            lastName: "Hopper",
-            email: "grace@example.com",
-          }),
-        ]}
+        members={[member]}
+        users={[user]}
         onRemoveMember={onRemove}
         isRemovingMember={false}
         removingMemberId={null}
@@ -134,32 +142,40 @@ describe("<MemberList />", () => {
       />,
     );
 
+    // Name + email present
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     expect(screen.getByText("grace@example.com")).toBeInTheDocument();
     expect(screen.getByText("experimentSettings.roleMember")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("experimentSettings.remove"));
+    const selectTrigger = screen.getByRole("combobox");
+    expect(selectTrigger).toBeInTheDocument();
+    fireEvent.click(selectTrigger);
 
+    // Find and click the remove option in the dropdown
+    const removeOption = screen.getByText("experimentSettings.remove");
+    fireEvent.click(removeOption);
     expect(onRemove).toHaveBeenCalledWith("user-2");
   });
 
-  it("shows fallback text when member has no email", () => {
-    render(
+  it("uses provided membersWithUserInfo as-is, shows key for no email, and disables last admin removal", () => {
+    const onRemove = vi.fn();
+
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
           {
             role: "admin",
             joinedAt: "2023-01-02T00:00:00.000Z",
-            user: createUserProfile({
+            user: mkUser({
               userId: "user-3",
+              id: "user-3",
               firstName: "Katherine",
               lastName: "Johnson",
               email: null,
             }),
           },
         ]}
-        onRemoveMember={vi.fn()}
+        onRemoveMember={onRemove}
         isRemovingMember={false}
         removingMemberId={null}
         adminCount={1}
@@ -170,56 +186,35 @@ describe("<MemberList />", () => {
     );
 
     expect(screen.getByText("Katherine Johnson")).toBeInTheDocument();
+
+    // No email -> i18n key
     expect(screen.getByText("experimentSettings.noEmail")).toBeInTheDocument();
-  });
 
-  it("disables remove option for the last admin", async () => {
-    const onRemove = vi.fn();
-    const user = userEvent.setup();
+    expect(screen.getByText("experimentSettings.roleAdmin")).toBeInTheDocument();
 
-    render(
-      <MemberList
-        membersWithUserInfo={[
-          {
-            role: "admin",
-            joinedAt: "2023-01-02T00:00:00.000Z",
-            user: createUserProfile({ userId: "user-3" }),
-          },
-        ]}
-        onRemoveMember={onRemove}
-        isRemovingMember={false}
-        removingMemberId={null}
-        adminCount={1}
-        experimentId="exp-1"
-        currentUserRole="admin"
-        currentUserId="current-user"
-      />,
-    );
+    // Check that the Select component is present
+    const selectTrigger = screen.getByRole("combobox");
+    expect(selectTrigger).toBeInTheDocument();
+    fireEvent.click(selectTrigger);
 
-    await user.click(screen.getByRole("combobox"));
-
+    // The remove option should be disabled for the last admin
     const removeOption = screen.getByText("experimentSettings.remove");
     expect(removeOption.closest('[role="option"]')).toHaveAttribute("data-disabled");
+
+    // Ensure remove was not called
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it("only disables remove for the member currently being removed", async () => {
+  it("disables the remove button only for the member currently being removed", () => {
     const onRemove = vi.fn();
-    const user = userEvent.setup();
+    const u1 = mkUser({ userId: "u1", id: "u1", firstName: "First", lastName: "User" });
+    const u2 = mkUser({ userId: "u2", id: "u2", firstName: "Second", lastName: "User" });
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
-          {
-            role: "member",
-            joinedAt: "2024-01-01T00:00:00.000Z",
-            user: createUserProfile({ userId: "u1", firstName: "First" }),
-          },
-          {
-            role: "member",
-            joinedAt: "2024-01-02T00:00:00.000Z",
-            user: createUserProfile({ userId: "u2", firstName: "Second" }),
-          },
+          { role: "member", joinedAt: "2024-01-01T00:00:00.000Z", user: u1 },
+          { role: "member", joinedAt: "2024-01-02T00:00:00.000Z", user: u2 },
         ]}
         onRemoveMember={onRemove}
         isRemovingMember={true}
@@ -231,27 +226,32 @@ describe("<MemberList />", () => {
       />,
     );
 
+    // There are 2 combobox elements (Select components), one for each member
     const selectTriggers = screen.getAllByRole("combobox");
     expect(selectTriggers).toHaveLength(2);
 
-    await user.click(selectTriggers[0]);
-    await user.click(screen.getAllByText("experimentSettings.remove")[0]);
+    // Open the first member's dropdown and click remove
+    fireEvent.click(selectTriggers[0]);
+    const removeOptions = screen.getAllByText("experimentSettings.remove");
 
+    // First member's remove option should not be disabled
+    fireEvent.click(removeOptions[0]);
     expect(onRemove).toHaveBeenCalledWith("u1");
   });
 
-  it("asks for confirmation before current user leaves the experiment", async () => {
+  it("shows leave confirmation dialog when current user tries to leave", () => {
     const onRemove = vi.fn();
-    const user = userEvent.setup();
+    const currentUser = mkUser({
+      userId: "current-user",
+      id: "current-user",
+      firstName: "Current",
+      lastName: "User",
+    });
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
-          {
-            role: "member",
-            joinedAt: "2024-01-01T00:00:00.000Z",
-            user: createUserProfile({ userId: "current-user" }),
-          },
+          { role: "member", joinedAt: "2024-01-01T00:00:00.000Z", user: currentUser },
         ]}
         onRemoveMember={onRemove}
         isRemovingMember={false}
@@ -263,28 +263,36 @@ describe("<MemberList />", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("experimentSettings.leave"));
+    // Open dropdown and select leave
+    const selectTrigger = screen.getByRole("combobox");
+    fireEvent.click(selectTrigger);
 
+    const leaveOption = screen.getByText("experimentSettings.leave");
+    fireEvent.click(leaveOption);
+
+    // Should show leave confirmation dialog
     expect(screen.getByText("experimentSettings.confirmLeaveTitle")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "experimentSettings.confirmLeave" }));
+    // Confirm leave
+    const confirmButton = screen.getByRole("button", { name: "experimentSettings.confirmLeave" });
+    fireEvent.click(confirmButton);
 
     expect(onRemove).toHaveBeenCalledWith("current-user");
   });
 
-  it("warns that the last admin cannot leave", async () => {
+  it("shows last admin warning when last admin tries to leave", () => {
     const onRemove = vi.fn();
-    const user = userEvent.setup();
+    const adminUser = mkUser({
+      userId: "admin-user",
+      id: "admin-user",
+      firstName: "Admin",
+      lastName: "User",
+    });
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
-          {
-            role: "admin",
-            joinedAt: "2024-01-01T00:00:00.000Z",
-            user: createUserProfile({ userId: "admin-user" }),
-          },
+          { role: "admin", joinedAt: "2024-01-01T00:00:00.000Z", user: adminUser },
         ]}
         onRemoveMember={onRemove}
         isRemovingMember={false}
@@ -296,34 +304,45 @@ describe("<MemberList />", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("experimentSettings.leave"));
+    // Open dropdown and select leave
+    const selectTrigger = screen.getByRole("combobox");
+    fireEvent.click(selectTrigger);
 
+    const leaveOption = screen.getByText("experimentSettings.leave");
+    fireEvent.click(leaveOption);
+
+    // Should show last admin warning dialog
     expect(screen.getByText("experimentSettings.cannotLeaveAsLastAdmin")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "common.ok" }));
+    // Close dialog
+    const closeButton = screen.getByRole("button", { name: "common.ok" });
+    fireEvent.click(closeButton);
 
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it("asks for confirmation when admin demotes themselves to member", async () => {
-    const user = userEvent.setup();
+  it("shows demote confirmation dialog when admin demotes themselves", () => {
+    const onRemove = vi.fn();
+    const adminUser = mkUser({
+      userId: "admin-user",
+      id: "admin-user",
+      firstName: "Admin",
+      lastName: "User",
+    });
+    const otherAdmin = mkUser({
+      userId: "other-admin",
+      id: "other-admin",
+      firstName: "Other",
+      lastName: "Admin",
+    });
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
-          {
-            role: "admin",
-            joinedAt: "2024-01-01T00:00:00.000Z",
-            user: createUserProfile({ userId: "admin-user" }),
-          },
-          {
-            role: "admin",
-            joinedAt: "2024-01-02T00:00:00.000Z",
-            user: createUserProfile({ userId: "other-admin" }),
-          },
+          { role: "admin", joinedAt: "2024-01-01T00:00:00.000Z", user: adminUser },
+          { role: "admin", joinedAt: "2024-01-02T00:00:00.000Z", user: otherAdmin },
         ]}
-        onRemoveMember={vi.fn()}
+        onRemoveMember={onRemove}
         isRemovingMember={false}
         removingMemberId={null}
         adminCount={2}
@@ -333,32 +352,41 @@ describe("<MemberList />", () => {
       />,
     );
 
+    // Open dropdown for current admin user
     const selectTriggers = screen.getAllByRole("combobox");
-    await user.click(selectTriggers[0]);
+    fireEvent.click(selectTriggers[0]);
 
-    const dropdownMemberOption = screen
-      .getAllByText("experimentSettings.roleMember")
-      .find((el) => el.closest('[role="option"]') !== null);
-    if (dropdownMemberOption) await user.click(dropdownMemberOption);
+    // Select member role (demote) - need to find it in the portal/dropdown content
+    const memberOptions = screen.getAllByText("experimentSettings.roleMember");
+    // Click the one that's inside the dropdown (not the trigger)
+    const dropdownMemberOption = memberOptions.find((el) => el.closest('[role="option"]') !== null);
+    if (dropdownMemberOption) {
+      fireEvent.click(dropdownMemberOption);
+    }
 
+    // Should show demote confirmation dialog
     expect(screen.getByText("experimentSettings.confirmDemoteTitle")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "common.cancel" }));
+    // Cancel demotion
+    const cancelButton = screen.getByRole("button", { name: "common.cancel" });
+    fireEvent.click(cancelButton);
   });
 
-  it("warns that the last admin cannot demote themselves", async () => {
-    const user = userEvent.setup();
+  it("shows last admin warning when last admin tries to demote themselves", () => {
+    const onRemove = vi.fn();
+    const adminUser = mkUser({
+      userId: "admin-user",
+      id: "admin-user",
+      firstName: "Admin",
+      lastName: "User",
+    });
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
-          {
-            role: "admin",
-            joinedAt: "2024-01-01T00:00:00.000Z",
-            user: createUserProfile({ userId: "admin-user" }),
-          },
+          { role: "admin", joinedAt: "2024-01-01T00:00:00.000Z", user: adminUser },
         ]}
-        onRemoveMember={vi.fn()}
+        onRemoveMember={onRemove}
         isRemovingMember={false}
         removingMemberId={null}
         adminCount={1}
@@ -368,19 +396,30 @@ describe("<MemberList />", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox"));
+    // Open dropdown
+    const selectTrigger = screen.getByRole("combobox");
+    fireEvent.click(selectTrigger);
 
-    const dropdownMemberOption = screen
-      .getAllByText("experimentSettings.roleMember")
-      .find((el) => el.closest('[role="option"]') !== null);
-    if (dropdownMemberOption) await user.click(dropdownMemberOption);
+    // Try to select member role (demote)
+    const memberOptions = screen.getAllByText("experimentSettings.roleMember");
+    const dropdownMemberOption = memberOptions.find((el) => el.closest('[role="option"]') !== null);
+    if (dropdownMemberOption) {
+      fireEvent.click(dropdownMemberOption);
+    }
 
+    // Should show last admin warning
     expect(screen.getByText("experimentSettings.cannotDemoteAsLastAdmin")).toBeInTheDocument();
   });
 
-  it("promotes another member to admin via onUpdateMemberRole", async () => {
+  it("allows admin to change another member's role from member to admin", () => {
+    const onRemove = vi.fn();
     const onUpdateRole = vi.fn();
-    const user = userEvent.setup();
+    const memberUser = mkUser({
+      userId: "member-user",
+      id: "member-user",
+      firstName: "Member",
+      lastName: "User",
+    });
 
     act(() => {
       renderWithProvider(
@@ -417,18 +456,19 @@ describe("<MemberList />", () => {
     expect(onUpdateRole).toHaveBeenCalledWith("member-user", "admin");
   });
 
-  it("removes another member without confirmation dialog", async () => {
+  it("allows admin to remove another member directly", () => {
     const onRemove = vi.fn();
-    const user = userEvent.setup();
+    const memberUser = mkUser({
+      userId: "member-user",
+      id: "member-user",
+      firstName: "Member",
+      lastName: "User",
+    });
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
-          {
-            role: "member",
-            joinedAt: "2024-01-01T00:00:00.000Z",
-            user: createUserProfile({ userId: "member-user" }),
-          },
+          { role: "member", joinedAt: "2024-01-01T00:00:00.000Z", user: memberUser },
         ]}
         onRemoveMember={onRemove}
         isRemovingMember={false}
@@ -440,9 +480,15 @@ describe("<MemberList />", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("experimentSettings.remove"));
+    // Open dropdown
+    const selectTrigger = screen.getByRole("combobox");
+    fireEvent.click(selectTrigger);
 
+    // Click remove
+    const removeOption = screen.getByText("experimentSettings.remove");
+    fireEvent.click(removeOption);
+
+    // Should call onRemoveMember directly without confirmation
     expect(onRemove).toHaveBeenCalledWith("member-user");
   });
 });

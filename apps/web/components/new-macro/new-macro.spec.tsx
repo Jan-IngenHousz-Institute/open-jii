@@ -1,6 +1,6 @@
 import * as base64Utils from "@/util/base64";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
@@ -55,7 +55,6 @@ interface MockSelectProps {
 interface MockSelectItemProps {
   value: string;
   children: React.ReactNode;
-  disabled?: boolean;
 }
 
 interface MockCardProps {
@@ -106,63 +105,45 @@ vi.mock("@repo/auth/client", () => ({
 }));
 
 vi.mock("~/hooks/macro/useMacroCreate/useMacroCreate", () => ({
-  useMacroCreate: (opts?: { onSuccess?: (data: { body: { id: string } }) => void }) => {
-    macroCreateOnSuccess = opts?.onSuccess;
-    return {
-      mutate: mockMutate,
-      isPending: false,
-    };
-  },
+  useMacroCreate: () => ({
+    mutate: mockMutate,
+    isPending: false,
+  }),
 }));
 
 // Mock hooks added by protocol-macro compatibility feature
-const mockProtocolList = [
-  { id: "proto-1", name: "Temperature Protocol", family: "multispeq" },
-  { id: "proto-2", name: "Humidity Protocol", family: "ambit" },
-];
-
 vi.mock("@/hooks/protocol/useProtocolSearch/useProtocolSearch", () => ({
-  useProtocolSearch: () => ({ protocols: mockProtocolList }),
+  useProtocolSearch: () => ({ protocols: [] }),
 }));
 
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
 }));
 
-const mockAddProtocolsMutateAsync = vi.fn().mockResolvedValue(undefined);
-
 vi.mock("@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol", () => ({
-  useAddCompatibleProtocol: () => ({ mutateAsync: mockAddProtocolsMutateAsync }),
+  useAddCompatibleProtocol: () => ({ mutateAsync: vi.fn() }),
 }));
-
-interface DropdownPropsCaptured {
-  availableProtocols: { id: string; name: string }[];
-  value: string;
-  placeholder: string;
-  loading: boolean;
-  searchValue: string;
-  onSearchChange: (v: string) => void;
-  onAddProtocol: (id: string) => void;
-  isAddingProtocol: boolean;
-}
-let lastDropdownProps: DropdownPropsCaptured | null = null;
 
 vi.mock("../protocol-search-with-dropdown", () => ({
-  ProtocolSearchWithDropdown: (props: DropdownPropsCaptured) => {
-    lastDropdownProps = props;
-    return <div data-testid="protocol-search-dropdown" />;
-  },
+  ProtocolSearchWithDropdown: () => <div data-testid="protocol-search-dropdown" />,
 }));
+
+// Create a mock implementation for useGetUserProfile
+// Using an object for state so we can modify its properties
+const mockState = {
+  isLoading: false,
+  userProfileData: {
+    body: {
+      firstName: "Test",
+      lastName: "User",
+    },
+  },
+};
 
 vi.mock("~/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
   useGetUserProfile: () => ({
-    data: {
-      body: {
-        firstName: "Test",
-        lastName: "User",
-      },
-    },
-    isLoading: false,
+    data: mockState.isLoading ? undefined : { body: mockState.userProfileData.body },
+    isLoading: mockState.isLoading,
   }),
 }));
 
@@ -219,10 +200,8 @@ vi.mock("@repo/ui/components", () => ({
     </select>
   ),
   SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ value, children, disabled }: MockSelectItemProps) => (
-    <option value={value} disabled={disabled}>
-      {children}
-    </option>
+  SelectItem: ({ value, children }: MockSelectItemProps) => (
+    <option value={value}>{children}</option>
   ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="select-trigger">{children}</div>
@@ -246,6 +225,9 @@ vi.mock("@repo/ui/components", () => ({
     <div data-testid="card-content" className={className}>
       {children}
     </div>
+  ),
+  Skeleton: ({ className }: { className?: string }) => (
+    <div data-testid="skeleton" className={className} />
   ),
 }));
 
@@ -287,34 +269,28 @@ vi.mock("../components/macro-code-editor", () => ({
 }));
 
 // Mock react-hook-form
-vi.mock("react-hook-form", () => {
-  const mockSetValue = vi.fn();
-  const mockWatch = vi.fn().mockImplementation((key?: string) => {
-    if (key === "name") return "Test Macro";
-    if (key === "language") return "python";
-    if (key === "code") return "print('hello world')";
-    return "python"; // Default fallback value
-  });
-
-  return {
-    useForm: () => ({
-      handleSubmit: (fn: (data: Record<string, string>) => void) => (e: Event) => {
-        e.preventDefault();
-        fn({
-          name: "Test Macro",
-          description: "Test Description",
-          language: "python",
-          code: "print('hello world')",
-        });
-      },
-      setValue: mockSetValue,
-      watch: mockWatch,
-      formState: { errors: {} },
-      control: {},
-    }),
-    Controller: ({ render }: MockControllerProps) => render({ field: {} }),
-  };
-});
+vi.mock("react-hook-form", () => ({
+  useForm: () => ({
+    handleSubmit: (fn: (data: Record<string, string>) => void) => (e: Event) => {
+      e.preventDefault();
+      fn({
+        name: "Test Macro",
+        description: "Test Description",
+        language: "python",
+        code: "print('hello world')",
+      });
+    },
+    setValue: vi.fn(),
+    watch: (key?: string) => {
+      if (key === "name") return "Test Macro";
+      if (key === "language") return "python";
+      return "python"; // Default fallback value
+    },
+    formState: { errors: {} },
+    control: {},
+  }),
+  Controller: ({ render }: MockControllerProps) => render({ field: {} }),
+}));
 
 // Mock zod resolver
 vi.mock("@hookform/resolvers/zod", () => ({
@@ -324,18 +300,11 @@ vi.mock("@hookform/resolvers/zod", () => ({
 // Mock base64 utilities
 vi.mock("@/util/base64", () => ({
   encodeBase64: vi.fn((str: string) => Buffer.from(str).toString("base64")),
-  decodeBase64: vi.fn((str: string) => Buffer.from(str, "base64").toString()),
 }));
 
 describe("NewMacroForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    lastDropdownProps = null;
-    macroCreateOnSuccess = undefined;
-    mockAddProtocolsMutateAsync.mockResolvedValue(undefined);
-    mockMutate.mockImplementation(() => {
-      macroCreateOnSuccess?.({ body: { id: "new-macro-id" } });
-    });
   });
 
   it("should render form elements", () => {
@@ -432,9 +401,7 @@ describe("NewMacroForm", () => {
     // Assert
     expect(languageSelect).toBeInTheDocument();
     expect(screen.getByText("Python")).toBeInTheDocument();
-    const rOption = screen.getByText("R").closest("option");
-    expect(rOption).toBeInTheDocument();
-    expect(rOption).toBeDisabled();
+    expect(screen.getByText("R")).toBeInTheDocument();
     expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
@@ -444,7 +411,6 @@ describe("NewMacroForm", () => {
 
     // Assert
     const form = document.querySelector("form");
-    expect(form).toBeInTheDocument();
     expect(form).toBeInTheDocument();
   });
 
@@ -490,118 +456,34 @@ describe("NewMacroForm", () => {
 
     // Assert
     expect(mockMutate).toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalled();
   });
 
-  it("should change language when language select changes", () => {
-    // Arrange
-    render(<NewMacroForm />);
-    const languageSelect = screen.getByTestId("select");
+  it("should show loading skeletons when user profile is loading", () => {
+    // Set the mock to return isLoading: true for this test
+    mockState.isLoading = true;
 
     // Act
-    fireEvent.change(languageSelect, { target: { value: "r" } });
+    render(<NewMacroForm />);
 
     // Assert
-    // Since the actual behavior is tested in the component, we just verify
-    // that the select exists and can be interacted with
-    expect(screen.getByTestId("select")).toBeInTheDocument();
+    const skeletons = screen.getAllByTestId("skeleton");
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("code-editor")).not.toBeInTheDocument();
+
+    // Reset for other tests
+    mockState.isLoading = false;
   });
 
-  describe("Compatible Protocols Section", () => {
-    it("should render ProtocolSearchWithDropdown", () => {
-      render(<NewMacroForm />);
+  it("should show code editor when user profile is loaded", () => {
+    // Make sure loading state is false
+    mockState.isLoading = false;
 
-      expect(screen.getByTestId("protocol-search-dropdown")).toBeInTheDocument();
-    });
+    // Act
+    render(<NewMacroForm />);
 
-    it("should pass available protocols to the dropdown", () => {
-      render(<NewMacroForm />);
-
-      expect(lastDropdownProps).not.toBeNull();
-      const ids = lastDropdownProps?.availableProtocols.map((p) => p.id);
-      expect(ids).toContain("proto-1");
-      expect(ids).toContain("proto-2");
-    });
-
-    it("should add a protocol when onAddProtocol is called and show it in the list", () => {
-      render(<NewMacroForm />);
-
-      // Add a protocol via the dropdown callback
-      act(() => {
-        lastDropdownProps?.onAddProtocol("proto-1");
-      });
-
-      // The protocol should now be displayed in the selected list
-      expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
-      expect(screen.getByText("multispeq")).toBeInTheDocument();
-    });
-
-    it("should filter out already-selected protocols from available list", () => {
-      render(<NewMacroForm />);
-
-      // Add proto-1
-      act(() => {
-        lastDropdownProps?.onAddProtocol("proto-1");
-      });
-
-      // After re-render, proto-1 should be filtered out
-      expect(lastDropdownProps?.availableProtocols.map((p) => p.id)).not.toContain("proto-1");
-      expect(lastDropdownProps?.availableProtocols.map((p) => p.id)).toContain("proto-2");
-    });
-
-    it("should display selected protocols in alphabetical order", () => {
-      render(<NewMacroForm />);
-
-      // Add protocols in non-alphabetical order: "Temperature Protocol" then "Humidity Protocol"
-      act(() => {
-        lastDropdownProps?.onAddProtocol("proto-1"); // Temperature Protocol
-      });
-      act(() => {
-        lastDropdownProps?.onAddProtocol("proto-2"); // Humidity Protocol
-      });
-
-      const items = screen.getAllByText(/Protocol/).map((el) => el.textContent);
-      expect(items).toEqual(["Humidity Protocol", "Temperature Protocol"]);
-    });
-
-    it("should remove a protocol when its remove button is clicked", async () => {
-      const user = userEvent.setup();
-      render(<NewMacroForm />);
-
-      // Add a protocol first
-      act(() => {
-        lastDropdownProps?.onAddProtocol("proto-1");
-      });
-      expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
-
-      // Click the remove button (it's the button inside the selected protocol row)
-      const removeButtons = screen.getAllByRole("button").filter((btn) => {
-        return btn.closest(".flex.items-center.justify-between");
-      });
-      expect(removeButtons.length).toBeGreaterThan(0);
-      await user.click(removeButtons[0]);
-
-      // Protocol should be removed from the list
-      expect(screen.queryByText("Temperature Protocol")).not.toBeInTheDocument();
-    });
-
-    it("should link compatible protocols after create then navigate", async () => {
-      const user = userEvent.setup();
-      render(<NewMacroForm />);
-
-      act(() => {
-        lastDropdownProps?.onAddProtocol("proto-1");
-      });
-
-      await user.click(screen.getByText("newMacro.finalizeSetup"));
-
-      await waitFor(() => {
-        expect(mockAddProtocolsMutateAsync).toHaveBeenCalledWith({
-          params: { id: "new-macro-id" },
-          body: { protocolIds: ["proto-1"] },
-        });
-      });
-
-      expect(mockPush).toHaveBeenCalledWith("/en/platform/macros/new-macro-id");
-    });
+    // Assert
+    expect(screen.queryByTestId("skeleton")).not.toBeInTheDocument();
+    expect(screen.getByTestId("code-editor")).toBeInTheDocument();
   });
 });

@@ -100,60 +100,185 @@ vi.mock("@/util/base64", () => ({
 
 // Mock macro update hook
 vi.mock("../../hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
-  useMacroUpdate: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useMacroUpdate: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }));
 
-const defaultProps = {
-  macroId: "test-macro-id",
-  initialName: "Test Macro",
-  initialDescription: "A description",
-  initialLanguage: "python" as const,
-  initialCode: btoa("print('Hello')"),
-};
+// Mock UI components
+vi.mock("@repo/ui/components", () => ({
+  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
+  CardHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="card-header">{children}</div>
+  ),
+  CardTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2 data-testid="card-title">{children}</h2>
+  ),
+  CardDescription: ({ children }: { children: React.ReactNode }) => (
+    <p data-testid="card-description">{children}</p>
+  ),
+  CardContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="card-content">{children}</div>
+  ),
+  Form: ({ children }: { children: React.ReactNode }) => <div data-testid="form">{children}</div>,
+  FormControl: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="form-control">{children}</div>
+  ),
+  FormField: ({ render }: MockFormFieldProps) => {
+    const mockField = {
+      value: "print('Hello World')",
+      onChange: vi.fn(),
+    };
+    return <div data-testid="form-field">{render({ field: mockField })}</div>;
+  },
+  FormItem: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="form-item">{children}</div>
+  ),
+  FormLabel: ({ children }: { children: React.ReactNode }) => (
+    <label data-testid="form-label">{children}</label>
+  ),
+  FormMessage: () => <div data-testid="form-message" />,
+  Input: ({ placeholder, ...props }: { placeholder?: string; [key: string]: unknown }) => (
+    <input data-testid="input" placeholder={placeholder} {...props} />
+  ),
+  RichTextarea: ({ placeholder, value, onChange }: MockRichTextareaProps) => (
+    <textarea
+      data-testid="rich-textarea"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  ),
+  Select: ({ children, onValueChange, defaultValue }: MockSelectProps) => (
+    <select
+      data-testid="select"
+      onChange={(e) => onValueChange(e.target.value)}
+      value={defaultValue}
+    >
+      {children}
+    </select>
+  ),
+  SelectContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="select-content">{children}</div>
+  ),
+  SelectItem: ({
+    value,
+    children,
+    disabled,
+  }: {
+    value: string;
+    children: React.ReactNode;
+    disabled?: boolean;
+  }) => (
+    <option data-testid="select-item" value={value} disabled={disabled}>
+      {children}
+    </option>
+  ),
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="select-trigger">{children}</div>
+  ),
+  SelectValue: () => <div data-testid="select-value" />,
+  Button: ({ children, disabled, type, ...props }: MockButtonProps) => (
+    <button data-testid="button" disabled={disabled} type={type} {...props}>
+      {children}
+    </button>
+  ),
+}));
+
+// Mock toast
+vi.mock("@repo/ui/hooks", () => ({
+  toast: vi.fn(),
+}));
+
+// Mock i18n
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
 
 describe("MacroDetailsCard", () => {
-  beforeEach(() => vi.clearAllMocks());
+  const mockMacro = {
+    id: "test-macro-id",
+    name: "Test Macro",
+    description: "Test Description",
+    language: "python" as const,
+    metadata: {
+      code: btoa("print('Hello World')"),
+    },
+  };
 
-  it("renders card with title and description", async () => {
+  const defaultProps = {
+    macroId: mockMacro.id,
+    initialName: mockMacro.name,
+    initialDescription: mockMacro.description,
+    initialLanguage: mockMacro.language,
+    initialCode: mockMacro.metadata.code,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should render card structure", () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByText("macroSettings.generalSettings")).toBeInTheDocument();
-    });
+
+    expect(screen.getByTestId("card")).toBeInTheDocument();
+    expect(screen.getByTestId("card-header")).toBeInTheDocument();
+    expect(screen.getByTestId("card-title")).toBeInTheDocument();
+    expect(screen.getByTestId("card-description")).toBeInTheDocument();
+    expect(screen.getByTestId("card-content")).toBeInTheDocument();
+  });
+
+  it("should render card titles", () => {
+    render(<MacroDetailsCard {...defaultProps} />);
+
+    expect(screen.getByText("macroSettings.generalSettings")).toBeInTheDocument();
     expect(screen.getByText("macroSettings.generalDescription")).toBeInTheDocument();
   });
 
-  it("renders form labels for name, description, and language", async () => {
+  it("should render form fields", () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByText("macroSettings.name")).toBeInTheDocument();
-    });
+
+    expect(screen.getByTestId("form")).toBeInTheDocument();
+    expect(screen.getAllByTestId("form-field")).toHaveLength(4); // name, description, language, code
+    expect(screen.getAllByTestId("form-label")).toHaveLength(3); // name, description, language (code has separate label)
+  });
+
+  it("should render form field labels", () => {
+    render(<MacroDetailsCard {...defaultProps} />);
+
+    expect(screen.getByText("macroSettings.name")).toBeInTheDocument();
     expect(screen.getByText("macroSettings.description")).toBeInTheDocument();
     expect(screen.getByText("macroSettings.language")).toBeInTheDocument();
   });
 
-  it("renders language options", async () => {
+  it("should render input fields", () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getAllByText("Python").length).toBeGreaterThanOrEqual(1);
-    });
+
+    expect(screen.getByTestId("input")).toBeInTheDocument();
+    expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
+    expect(screen.getByTestId("select")).toBeInTheDocument();
+  });
+
+  it("should render language options", () => {
+    render(<MacroDetailsCard {...defaultProps} />);
+
+    expect(screen.getByText("Python")).toBeInTheDocument();
+    const rOption = screen.getByText("R").closest("option");
+    expect(rOption).toBeInTheDocument();
+    expect(rOption).toBeDisabled();
     expect(screen.getByText("JavaScript")).toBeInTheDocument();
   });
 
-  it("renders the MacroCodeEditor with decoded initial code", async () => {
+  it("should render submit button", () => {
     render(<MacroDetailsCard {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
-    });
-    expect(screen.getByTestId("editor-value")).toHaveTextContent("print('Hello')");
-    expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
-  });
 
-  it("renders a save button", async () => {
-    render(<MacroDetailsCard {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /macroSettings.save/i })).toBeInTheDocument();
-    });
-    expect(screen.getByRole("button", { name: /macroSettings.save/i })).not.toBeDisabled();
+    const button = screen.getByTestId("button");
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveTextContent("macroSettings.save");
+    expect(button).not.toBeDisabled();
   });
 
   it("should render MacroCodeEditor", () => {
