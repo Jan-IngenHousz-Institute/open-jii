@@ -179,13 +179,9 @@ describe("MetadataUploadStep", () => {
     mockExistingMetadata = [];
   });
 
-  const renderStep = (props?: Partial<{ onBack: () => void; onUploadSuccess: () => void }>) =>
+  const renderStep = (props?: Partial<{ onClose: () => void }>) =>
     render(
-      <MetadataUploadStep
-        experimentId="test-experiment"
-        onBack={props?.onBack ?? vi.fn()}
-        onUploadSuccess={props?.onUploadSuccess ?? vi.fn()}
-      />,
+      <MetadataUploadStep experimentId="test-experiment" onClose={props?.onClose ?? vi.fn()} />,
     );
 
   /** Click "Add new" to go from list view to edit view */
@@ -227,11 +223,11 @@ describe("MetadataUploadStep", () => {
     expect(screen.getByText("uploadModal.metadata.importPrompt")).toBeInTheDocument();
   });
 
-  it("calls onBack when back button is clicked in list view", () => {
-    const onBack = vi.fn();
-    renderStep({ onBack });
+  it("calls onClose when back button is clicked in list view", () => {
+    const onClose = vi.fn();
+    renderStep({ onClose });
     fireEvent.click(getButton("uploadModal.fileUpload.back"));
-    expect(onBack).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
   });
 
   describe("file import", () => {
@@ -455,10 +451,10 @@ describe("MetadataUploadStep", () => {
   describe("save metadata", () => {
     const loadDataAndSave = async (
       options: {
-        onUploadSuccess?: () => void;
+        onClose?: () => void;
         mutateError?: Error | string;
       } = {},
-    ): Promise<{ onUploadSuccess: () => void }> => {
+    ): Promise<{ onClose: () => void }> => {
       mockParseClipboard.mockResolvedValue(sampleData);
       mockMutateAsync.mockImplementation(
         options.mutateError
@@ -466,8 +462,8 @@ describe("MetadataUploadStep", () => {
           : () => Promise.resolve({}),
       );
 
-      const onUploadSuccess = options.onUploadSuccess ?? vi.fn();
-      renderStep({ onUploadSuccess });
+      const onClose = options.onClose ?? vi.fn();
+      renderStep({ onClose });
       goToEditView();
 
       fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
@@ -480,7 +476,7 @@ describe("MetadataUploadStep", () => {
       fireEvent.click(screen.getByTestId("set-identifier"));
       fireEvent.click(screen.getByTestId("select-trigger-action"));
 
-      return { onUploadSuccess };
+      return { onClose };
     };
 
     it("saves metadata with name and remapped columns", async () => {

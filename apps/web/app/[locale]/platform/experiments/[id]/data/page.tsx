@@ -7,8 +7,8 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
 import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
-import type { UploadStep } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
+import { MetadataUploadModal } from "~/components/experiment-data/metadata-upload-modal/metadata-upload-modal";
 import { env } from "~/env";
 import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentMetadata } from "~/hooks/experiment/useExperimentMetadata/useExperimentMetadata";
@@ -34,19 +34,17 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
-  const [uploadModalStep, setUploadModalStep] = React.useState<UploadStep>("selection");
+  const [metadataModalOpen, setMetadataModalOpen] = React.useState(false);
 
   // Check if metadata already exists for this experiment
   const { data: metadataResponse } = useExperimentMetadata(id);
   const hasMetadata = metadataResponse?.body != null && metadataResponse.body.length > 0;
 
   const openMetadataUpload = () => {
-    setUploadModalStep("metadata-upload");
-    setUploadModalOpen(true);
+    setMetadataModalOpen(true);
   };
 
   const openSensorDataUpload = () => {
-    setUploadModalStep("file-upload");
     setUploadModalOpen(true);
   };
 
@@ -142,7 +140,11 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           experimentId={id}
           open={uploadModalOpen}
           onOpenChange={setUploadModalOpen}
-          initialStep={uploadModalStep}
+        />
+        <MetadataUploadModal
+          experimentId={id}
+          open={metadataModalOpen}
+          onOpenChange={setMetadataModalOpen}
         />
       </div>
     );
@@ -195,11 +197,11 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         ))}
       </NavTabs>
 
-      <DataUploadModal
+      <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
+      <MetadataUploadModal
         experimentId={id}
-        open={uploadModalOpen}
-        onOpenChange={setUploadModalOpen}
-        initialStep={uploadModalStep}
+        open={metadataModalOpen}
+        onOpenChange={setMetadataModalOpen}
       />
     </div>
   );

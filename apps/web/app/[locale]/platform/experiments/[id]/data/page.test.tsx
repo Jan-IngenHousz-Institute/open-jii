@@ -67,14 +67,26 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
   DataUploadModal: ({
     open,
     onOpenChange,
-    initialStep,
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    initialStep?: string;
   }) => (
-    <div data-testid="data-upload-modal" data-open={open} data-initial-step={initialStep}>
+    <div data-testid="data-upload-modal" data-open={open}>
       <button onClick={() => onOpenChange(false)}>Close Modal</button>
+    </div>
+  ),
+}));
+
+vi.mock("~/components/experiment-data/metadata-upload-modal/metadata-upload-modal", () => ({
+  MetadataUploadModal: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => (
+    <div data-testid="metadata-upload-modal" data-open={open}>
+      <button onClick={() => onOpenChange(false)}>Close Metadata Modal</button>
     </div>
   ),
 }));
@@ -410,7 +422,7 @@ describe("ExperimentDataPage", () => {
       const mainDiv = container.querySelector(".space-y-8");
       expect(mainDiv).toBeInTheDocument();
 
-      const headerDiv = container.querySelector(".flex.items-start.justify-between");
+      const headerDiv = container.querySelector(".flex.items-center.justify-between");
       expect(headerDiv).toBeInTheDocument();
     });
   });
@@ -515,7 +527,7 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("opens upload modal with metadata-upload step when clicking metadata button", async () => {
+  it("opens metadata upload modal when clicking metadata button", async () => {
     mockUseExperimentAccess.mockReturnValue({
       ...mockExperimentData,
       data: {
@@ -535,13 +547,12 @@ describe("ExperimentDataPage", () => {
     });
 
     await waitFor(() => {
-      const modal = screen.getByTestId("data-upload-modal");
+      const modal = screen.getByTestId("metadata-upload-modal");
       expect(modal).toHaveAttribute("data-open", "true");
-      expect(modal).toHaveAttribute("data-initial-step", "metadata-upload");
     });
   });
 
-  it("opens upload modal with file-upload step when clicking sensor data button", async () => {
+  it("opens data upload modal when clicking sensor data button", async () => {
     mockUseExperimentAccess.mockReturnValue({
       ...mockExperimentData,
       data: {
@@ -563,7 +574,6 @@ describe("ExperimentDataPage", () => {
     await waitFor(() => {
       const modal = screen.getByTestId("data-upload-modal");
       expect(modal).toHaveAttribute("data-open", "true");
-      expect(modal).toHaveAttribute("data-initial-step", "file-upload");
     });
   });
 
@@ -609,9 +619,8 @@ describe("ExperimentDataPage", () => {
     });
 
     await waitFor(() => {
-      const modal = screen.getByTestId("data-upload-modal");
+      const modal = screen.getByTestId("metadata-upload-modal");
       expect(modal).toHaveAttribute("data-open", "true");
-      expect(modal).toHaveAttribute("data-initial-step", "metadata-upload");
     });
   });
 
@@ -641,7 +650,6 @@ describe("ExperimentDataPage", () => {
     await waitFor(() => {
       const modal = screen.getByTestId("data-upload-modal");
       expect(modal).toHaveAttribute("data-open", "true");
-      expect(modal).toHaveAttribute("data-initial-step", "file-upload");
     });
   });
 });

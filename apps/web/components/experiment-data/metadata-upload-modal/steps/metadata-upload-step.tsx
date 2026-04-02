@@ -179,15 +179,10 @@ function MetadataCard({
 // ---------------------------------------------------------------------------
 interface MetadataUploadStepProps {
   experimentId: string;
-  onBack: () => void;
-  onUploadSuccess: () => void;
+  onClose: () => void;
 }
 
-export function MetadataUploadStep({
-  experimentId,
-  onBack,
-  onUploadSuccess: _onUploadSuccess,
-}: MetadataUploadStepProps) {
+export function MetadataUploadStep({ experimentId, onClose }: MetadataUploadStepProps) {
   const { t } = useTranslation("experiments");
   const createMutation = useExperimentMetadataCreate();
   const updateMutation = useExperimentMetadataUpdate();
@@ -567,7 +562,7 @@ export function MetadataUploadStep({
         )}
 
         <DialogFooter className="mt-2 flex items-center justify-between gap-2 sm:justify-between">
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onClick={onClose}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t("uploadModal.fileUpload.back")}
           </Button>
@@ -720,7 +715,7 @@ export function MetadataUploadStep({
       {saveError && <p className="text-destructive text-sm">{saveError}</p>}
 
       <DialogFooter className="mt-2 flex items-center justify-between gap-2 sm:justify-between">
-        <Button variant="outline" onClick={existingRecords.length > 0 ? backToList : onBack}>
+        <Button variant="outline" onClick={existingRecords.length > 0 ? backToList : onClose}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           {existingRecords.length > 0
             ? t("uploadModal.metadata.backToList", { defaultValue: "Back to list" })
