@@ -43,6 +43,8 @@ export async function getCmsEmail(
 
 /**
  * Replaces `{{variableName}}` placeholders in a markdown string.
+ * If a variable is not found in the `vars` object, the original `{{variableName}}`
+ * placeholder is preserved in the output.
  */
 export function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? `{{${key}}}`);
