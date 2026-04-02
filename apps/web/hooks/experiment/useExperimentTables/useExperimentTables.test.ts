@@ -1,20 +1,34 @@
-import { createExperimentTable } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
-
-import { contract } from "@repo/api";
+import { tsr } from "@/lib/tsr";
+import { renderHook } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { useExperimentTables } from "./useExperimentTables";
 
+// Mock the tsr module
+vi.mock("@/lib/tsr", () => ({
+  tsr: {
+    experiments: {
+      getExperimentTables: {
+        useQuery: vi.fn(),
+      },
+    },
+  },
+}));
+
+const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
+
 describe("useExperimentTables", () => {
-  it("returns empty tables by default", async () => {
-    server.mount(contract.experiments.getExperimentTables, { body: [] });
+  const mockExperimentId = "test-experiment-id";
 
-    const { result } = renderHook(() => useExperimentTables("exp-1"));
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    await waitFor(() => {
-      expect(result.current.tables).toBeDefined();
+  it("should call useQuery with correct parameters", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: { body: [] },
+      isLoading: false,
+      error: null,
     });
     mockTsr.experiments.getExperimentTables.useQuery = mockUseQuery;
 
@@ -134,22 +148,19 @@ describe("useExperimentTables", () => {
         totalRows: 500,
         defaultSortColumn: "timestamp",
         errorColumn: "error_info",
-      }),
-      createExperimentTable({
-        name: "table2",
-        displayName: "Table 2",
-        totalRows: 100,
-        defaultSortColumn: "id",
-      }),
+      },
     ];
 
-    server.mount(contract.experiments.getExperimentTables, { body: mockTables });
+    const mockReturnValue = {
+      data: { body: mockTablesWithMetadata },
+      isLoading: false,
+      error: null,
+    };
 
-    const { result } = renderHook(() => useExperimentTables("exp-1"));
+    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
+    mockTsr.experiments.getExperimentTables.useQuery = mockUseQuery;
 
-    await waitFor(() => {
-      expect(result.current.tables).toHaveLength(2);
-    });
+    const { result } = renderHook(() => useExperimentTables(mockExperimentId));
 
     expect(result.current.tables).toEqual(mockTablesWithMetadata);
     expect(result.current.tables?.[0].identifier).toBe("measurements");

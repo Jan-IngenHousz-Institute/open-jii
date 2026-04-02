@@ -6,9 +6,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { toast } from "@repo/ui/hooks";
 
-import { contract } from "@repo/api";
-import { useSession } from "@repo/auth/client";
-
 import ProtocolLayout from "../layout";
 
 // Global React for JSX in mocks
@@ -197,7 +194,11 @@ describe("ProtocolLayout", () => {
 
   describe("Loading State", () => {
     it("should display loading message when data is loading", () => {
-      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      mockUseProtocol.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+      });
 
       renderLayout();
 
@@ -239,9 +240,7 @@ describe("ProtocolLayout", () => {
 
       renderLayout();
 
-      await waitFor(() => {
-        expect(vi.mocked(notFound)).toHaveBeenCalled();
-      });
+      expect(mockNotFound).toHaveBeenCalled();
     });
 
     it("should call notFound for 400 errors (invalid UUID)", () => {
@@ -253,9 +252,7 @@ describe("ProtocolLayout", () => {
 
       renderLayout();
 
-      await waitFor(() => {
-        expect(vi.mocked(notFound)).toHaveBeenCalled();
-      });
+      expect(mockNotFound).toHaveBeenCalled();
     });
 
     it("should display error display for 500 errors", () => {
@@ -268,7 +265,7 @@ describe("ProtocolLayout", () => {
       renderLayout();
 
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(vi.mocked(notFound)).not.toHaveBeenCalled();
+      expect(mockNotFound).not.toHaveBeenCalled();
     });
 
     it("should display error heading and description for non-404/400 errors", () => {

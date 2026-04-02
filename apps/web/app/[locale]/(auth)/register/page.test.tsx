@@ -1,17 +1,40 @@
-import { createSession } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
-import { redirect } from "next/navigation";
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { auth } from "~/app/actions/auth";
 
-import RegisterPage from "./page";
+import UserRegistrationPage from "./page";
+
+globalThis.React = React;
+
+// --- Mocks ---
+const mockAuth = vi.fn();
+vi.mock("~/app/actions/auth", () => ({
+  auth: (): unknown => mockAuth(),
+}));
+
+const mockRedirect = vi.fn();
+vi.mock("next/navigation", () => ({
+  redirect: (url: string): void => {
+    mockRedirect(url);
+    throw new Error("NEXT_REDIRECT");
+  },
+}));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: () => <nav aria-label="main navigation" />,
+  UnifiedNavbar: ({ locale, session }: { locale: string; session: unknown }) => (
+    <div data-testid="unified-navbar">
+      Navbar - {locale} - {session ? "with session" : "no session"}
+    </div>
+  ),
 }));
+
 vi.mock("~/components/auth/auth-hero-section", () => ({
-  AuthHeroSection: () => <section aria-label="auth hero" />,
+  AuthHeroSection: ({ locale }: { locale: string }) => (
+    <div data-testid="auth-hero-section">Hero {locale}</div>
+  ),
 }));
+
 vi.mock("~/components/auth/registration-form", () => ({
   RegistrationForm: ({
     callbackUrl,
@@ -27,25 +50,59 @@ vi.mock("~/components/auth/registration-form", () => ({
     </div>
   ),
 }));
+
 vi.mock("~/components/auth/terms-and-conditions-dialog", () => ({
-  TermsAndConditionsDialog: () => Promise.resolve({ terms: [] }),
+  TermsAndConditionsDialog: ({ locale }: { locale: string }) =>
+    Promise.resolve({ locale, content: "Terms content" }),
 }));
 
-describe("RegisterPage", () => {
-  const props = {
-    params: Promise.resolve({ locale: "en-US" }),
+// --- Tests ---
+describe("UserRegistrationPage", () => {
+  const locale = "en-US";
+  const defaultProps = {
+    params: Promise.resolve({ locale }),
     searchParams: Promise.resolve({}),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue(createSession({ user: { registered: false } }));
+    mockAuth.mockResolvedValue({ user: { id: "123", registered: false } });
   });
 
-  it("redirects to login when unauthenticated", async () => {
-    vi.mocked(auth).mockResolvedValue(null);
-    await RegisterPage(props).catch(() => undefined);
-    expect(redirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
+  it("passes the correct locale to components", async () => {
+    render(await UserRegistrationPage(defaultProps));
+
+    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("en-US");
+    expect(screen.getByTestId("auth-hero-section")).toHaveTextContent("en-US");
+  });
+
+  it("passes callbackUrl to RegistrationForm when provided", async () => {
+    const props = {
+      ...defaultProps,
+      searchParams: Promise.resolve({ callbackUrl: "/platform" }),
+    };
+
+    render(await UserRegistrationPage(props));
+
+    expect(screen.getByTestId("registration-form")).toHaveTextContent("/platform");
+  });
+
+  it("passes termsData to RegistrationForm", async () => {
+    render(await UserRegistrationPage(defaultProps));
+
+    expect(screen.getByTestId("registration-form")).toHaveTextContent("with terms");
+  });
+
+  it("redirects to signin if no user session", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    try {
+      await UserRegistrationPage(defaultProps);
+    } catch {
+      // Expected to throw NEXT_REDIRECT
+    }
+
+    expect(mockRedirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
   });
 
   it("redirects to platform if user already registered", async () => {

@@ -50,17 +50,26 @@ vi.mock("@repo/ui/components", () => ({
   RichTextarea: (props: any) => <textarea data-testid="rich-textarea" {...props} />,
 }));
 
-const defaults: CreateMacroRequestBody = {
-  name: "",
-  description: "",
-  language: "python",
-  code: "",
-};
+// Mock i18n
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
 
-const setup = () =>
-  renderWithForm<CreateMacroRequestBody>((form) => <NewMacroDetailsCard form={form} />, {
-    useFormProps: { defaultValues: defaults },
+// Test wrapper component that provides form context
+function TestWrapper({ children }: { children: React.ReactNode }) {
+  const form = useForm<CreateMacroRequestBody>({
+    defaultValues: {
+      name: "",
+      description: "",
+      language: "python",
+      code: "",
+    },
   });
+
+  return React.cloneElement(children as React.ReactElement, { form });
+}
 
 describe("NewMacroDetailsCard", () => {
   it("should render all form fields", () => {
@@ -91,16 +100,41 @@ describe("NewMacroDetailsCard", () => {
     );
   });
 
-  it("renders input and textarea", () => {
-    setup();
-    // Both the name <input> and the RichTextarea mock <textarea> have role="textbox"
-    expect(screen.getAllByRole("textbox")).toHaveLength(2);
-    // RichTextarea mock renders a <textarea>
+  it("should render input components", () => {
+    render(
+      <TestWrapper>
+        <NewMacroDetailsCard form={undefined as any} />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByTestId("input")).toBeInTheDocument();
     expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
   });
 
-  it("renders description placeholder", () => {
-    setup();
-    expect(screen.getByPlaceholderText("newMacro.description")).toBeInTheDocument();
+  // Tests for language selection have been removed as the language selector
+  // has been moved to the code editor section
+
+  it("should have correct placeholder text", () => {
+    render(
+      <TestWrapper>
+        <NewMacroDetailsCard form={undefined as any} />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByTestId("rich-textarea")).toHaveAttribute(
+      "placeholder",
+      "newMacro.description",
+    );
+  });
+
+  it("should render form validation messages", () => {
+    render(
+      <TestWrapper>
+        <NewMacroDetailsCard form={undefined as any} />
+      </TestWrapper>,
+    );
+
+    const formMessages = screen.getAllByTestId("form-message");
+    expect(formMessages).toHaveLength(2); // One for each field (name, description)
   });
 });

@@ -1,7 +1,17 @@
-import { render, screen } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import NewProtocolPage from "./page";
+
+globalThis.React = React;
+
+// --- Mocks ---
+vi.mock("@repo/i18n/server", () => ({
+  __esModule: true,
+  default: vi.fn(() => Promise.resolve({ t: (key: string) => key })),
+}));
 
 vi.mock("@/components/new-protocol", () => ({
   NewProtocolForm: () => (
@@ -15,8 +25,7 @@ vi.mock("@/components/new-protocol", () => ({
   ),
 }));
 
-const defaultProps = { params: Promise.resolve({ locale: "en-US" }) };
-
+// --- Tests ---
 describe("NewProtocolPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();

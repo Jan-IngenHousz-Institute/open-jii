@@ -142,7 +142,7 @@ describe("<ProtocolOverviewCards />", () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it("shows empty message when no protocols", () => {
+  it("renders 'no protocols' message when protocols array is empty", () => {
     render(<ProtocolOverviewCards protocols={[]} />);
     expect(screen.getByText("No protocols found")).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();

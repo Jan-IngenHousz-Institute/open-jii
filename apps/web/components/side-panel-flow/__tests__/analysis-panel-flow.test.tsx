@@ -1,16 +1,39 @@
-import { createMacro } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { http, HttpResponse } from "msw";
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
 
+// Keep React on global for JSX in some deps
+globalThis.React = React;
+
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+// Mock scrollIntoView
 Element.prototype.scrollIntoView = vi.fn();
 
-// useDebounce — pragmatic mock (timer utility)
+// Minimal i18n mock (keeps labels predictable)
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (k: string) => k,
+  }),
+}));
+
+// Mock useLocale hook
+vi.mock("@/hooks/useLocale", () => ({
+  useLocale: () => "en-US",
+}));
+
+// Mock useDebounce hook
 vi.mock("@/hooks/useDebounce", () => ({
-  useDebounce: (value: string, _delay: number) => [value, true],
+  useDebounce: (value: string, _delay: number) => [value, true], // Return [debouncedValue, isDebounced]
 }));
 
 // Mock useProtocol (used by AnalysisPanel to fetch upstream protocol name)
@@ -25,19 +48,22 @@ vi.mock("@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacro
 
 // Mock data
 const mockMacros = [
-  createMacro({
+  {
+    id: "macro-1",
     name: "Plot Temperature",
     description: "Visualize temperature data",
     language: "python",
     createdByName: "John Doe",
-  }),
-  createMacro({
+  },
+  {
+    id: "macro-2",
     name: "Plot Humidity",
     description: "Visualize humidity data",
     language: "r",
     createdByName: "Jane Smith",
-  }),
-  createMacro({
+  },
+  {
+    id: "macro-3",
     name: "Statistical Analysis",
     description: "Perform statistical analysis on data",
     language: "javascript",
@@ -64,16 +90,7 @@ vi.mock("../../../lib/tsr", () => ({
 
 describe("<AnalysisPanel />", () => {
   beforeEach(() => {
-    server.use(
-      http.get("http://localhost:3020/api/v1/macros", ({ request }) => {
-        const url = new URL(request.url);
-        const search = url.searchParams.get("search");
-        const filtered = search
-          ? mockMacros.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()))
-          : mockMacros;
-        return HttpResponse.json(filtered);
-      }),
-    );
+    vi.clearAllMocks();
   });
 
   const openDropdown = async (): Promise<HTMLButtonElement> => {
@@ -106,16 +123,17 @@ describe("<AnalysisPanel />", () => {
     const search = screen.getByPlaceholderText("experiments.searchMacros");
     await userEvent.type(search, "humidity");
 
-    // Wait for React Query to return filtered results
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /Plot Humidity/i })).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: /Plot Temperature/i })).not.toBeInTheDocument();
-    });
+    // Wait for debounce delay
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    // Expect the filtered option to be present and others (like temperature) to be absent
+    expect(screen.getByRole("heading", { name: /Plot Humidity/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Plot Temperature/i })).not.toBeInTheDocument();
 
     // Select it - click the macro item itself
     const macroItem = screen.getByRole("option", { name: /Plot Humidity/i });
     await userEvent.click(macroItem);
-    expect(onChange).toHaveBeenCalledWith(mockMacros[1].id);
+    expect(onChange).toHaveBeenCalledWith("macro-2");
 
     // Popover should be closed (search input disappears)
     expect(screen.queryByPlaceholderText("experiments.searchMacros")).not.toBeInTheDocument();

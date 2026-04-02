@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { toast } from "@repo/ui/hooks";
 
-import { contract } from "@repo/api";
+import MacroOverviewPage from "../page";
 
 globalThis.React = React;
 
