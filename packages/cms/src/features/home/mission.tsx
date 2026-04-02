@@ -85,6 +85,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
               >
                 <CtfRichText
                   json={currentMission.about.json as Document}
+                  imageClassName="-mb-2"
                   links={
                     currentMission.about.links as {
                       entries: {
