@@ -1,12 +1,37 @@
-import { server } from "@/test/msw/server";
-import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import "@testing-library/jest-dom";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { contract } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
 
 import { DataExportModal } from "../data-export-modal";
 
+globalThis.React = React;
+
+// Mock the hooks
+const mockInitiateExport = vi.fn();
+let capturedOnSuccess: (() => void) | undefined;
+
+vi.mock("~/hooks/experiment/useInitiateExport/useInitiateExport", () => ({
+  useInitiateExport: (options: { onSuccess?: () => void } = {}) => {
+    capturedOnSuccess = options.onSuccess;
+    return {
+      mutate: mockInitiateExport,
+      isPending: false,
+    };
+  },
+}));
+
+vi.mock("~/util/apiError", () => ({
+  parseApiError: (error: { body?: { message?: string } }) => error.body,
+}));
+
+// Track toast calls
+const mockToast = vi.hoisted(() => vi.fn());
+vi.mock("@repo/ui/hooks", () => ({
+  toast: mockToast,
+}));
+
+// Mock the step component
 vi.mock("../steps/export-list-step", () => ({
   ExportListStep: ({
     onCreateExport,
@@ -19,11 +44,13 @@ vi.mock("../steps/export-list-step", () => ({
     onClose: () => void;
     creationStatus: string;
   }) => (
-    <div>
-      <p>{creationStatus}</p>
-      <button onClick={() => onCreateExport("csv")}>Create CSV Export</button>
-      <button data-testid="step-close" onClick={onClose}>
-        Close Step
+    <div data-testid="export-list-step">
+      <span data-testid="creation-status">{creationStatus}</span>
+      <button onClick={() => onCreateExport("csv")} data-testid="create-csv-button">
+        Create CSV Export
+      </button>
+      <button onClick={onClose} data-testid="close-button">
+        Close
       </button>
     </div>
   ),
@@ -43,119 +70,149 @@ function mountExportHandlers(initiateOverrides?: {
 }
 
 describe("DataExportModal", () => {
-  const onOpenChange = vi.fn();
+  const mockOnOpenChange = vi.fn();
   const defaultProps = {
     experimentId: "test-experiment-123",
     tableName: "raw_data",
     open: true,
-    onOpenChange,
+    onOpenChange: mockOnOpenChange,
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    capturedOnSuccess = undefined;
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("renders modal with title when open", () => {
-    render(<DataExportModal {...defaultProps} />);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  const renderModal = (props = {}) => {
+    render(<DataExportModal {...defaultProps} {...props} />);
+  };
+
+  it("renders modal when open", () => {
+    renderModal();
+    expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByText("experimentData.exportModal.title")).toBeInTheDocument();
   });
 
   it("does not render modal when closed", () => {
-    render(<DataExportModal {...defaultProps} open={false} />);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    renderModal({ open: false });
+    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
   });
 
-  it("shows idle creationStatus initially", () => {
-    render(<DataExportModal {...defaultProps} />);
-    expect(screen.getByText("idle")).toBeInTheDocument();
+  it("always shows export list step", () => {
+    renderModal();
+    expect(screen.getByTestId("export-list-step")).toBeInTheDocument();
   });
 
-  it("sets creationStatus to creating then success on export", async () => {
-    const spy = mountExportHandlers();
+  it("passes idle creationStatus initially", () => {
+    renderModal();
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
+  });
 
-    render(<DataExportModal {...defaultProps} />);
+  it("sets creationStatus to creating when export is initiated", () => {
+    renderModal();
 
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Create CSV Export" }));
+    fireEvent.click(screen.getByTestId("create-csv-button"));
 
-    // synchronously), so the status has already transitioned through
-    // "creating" → "success".
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("creating");
+  });
+
+  it("calls initiateExport with correct params when format is selected", () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+
+    expect(mockInitiateExport).toHaveBeenCalledWith(
+      {
+        params: { id: "test-experiment-123" },
+        body: {
+          tableName: "raw_data",
+          format: "csv",
+        },
+      },
+      expect.objectContaining({
+        onError: expect.any(Function) as unknown,
+      }),
+    );
+  });
+
+  it("sets creationStatus to success and shows toast after successful export", async () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+
+    capturedOnSuccess?.();
+
     await waitFor(() => {
-      expect(screen.getByText("success")).toBeInTheDocument();
+      expect(screen.getByTestId("creation-status")).toHaveTextContent("success");
     });
-
-    expect(spy.callCount).toBe(1);
-    expect(spy.body).toEqual({ tableName: "raw_data", format: "csv" });
-    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+    expect(mockToast).toHaveBeenCalledWith({
       description: "experimentData.exportModal.creationSuccess",
     });
   });
 
-  it("resets creationStatus to idle after success delay", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mountExportHandlers();
+  it("resets creationStatus to idle after success delay", () => {
+    vi.useFakeTimers();
 
-    render(<DataExportModal {...defaultProps} />);
+    renderModal();
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-    await user.click(screen.getByRole("button", { name: "Create CSV Export" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("success")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(screen.getByTestId("create-csv-button"));
     });
+
+    act(() => {
+      capturedOnSuccess?.();
+    });
+
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("success");
 
     act(() => {
       vi.advanceTimersByTime(2000);
     });
 
-    expect(screen.getByText("idle")).toBeInTheDocument();
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
   });
 
-  it("shows error toast on failure and resets to idle", async () => {
-    mountExportHandlers({
-      status: 400,
-      body: { message: "Something went wrong" },
+  it("resets creationStatus to idle and shows error toast on failure", () => {
+    mockInitiateExport.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_params: unknown, options?: { onError?: (err: any) => void }) => {
+        options?.onError?.({ body: { message: "Something went wrong" } });
+      },
+    );
+
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-csv-button"));
+
+    // Error callback fires synchronously in the mock, resetting status to idle
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
+    expect(mockToast).toHaveBeenCalledWith({
+      description: "Something went wrong",
+      variant: "destructive",
     });
-
-    render(<DataExportModal {...defaultProps} />);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Create CSV Export" }));
-
-    await waitFor(() => {
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        description: "Something went wrong",
-        variant: "destructive",
-      });
-    });
-
-    expect(screen.getByText("idle")).toBeInTheDocument();
   });
 
-  it("closes modal when close button is clicked", async () => {
-    render(<DataExportModal {...defaultProps} />);
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("step-close"));
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+  it("closes modal when close button is clicked", () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("close-button"));
+
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("resets creationStatus when modal closes and reopens", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mountExportHandlers();
+  it("resets creationStatus when modal closes and reopens", () => {
+    vi.useFakeTimers();
 
     const { rerender } = render(<DataExportModal {...defaultProps} open={true} />);
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-    await user.click(screen.getByRole("button", { name: "Create CSV Export" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("success")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(screen.getByTestId("create-csv-button"));
     });
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("creating");
 
     rerender(<DataExportModal {...defaultProps} open={false} />);
     act(() => {
@@ -163,6 +220,11 @@ describe("DataExportModal", () => {
     });
 
     rerender(<DataExportModal {...defaultProps} open={true} />);
-    expect(screen.getByText("idle")).toBeInTheDocument();
+    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
+  });
+
+  it("renders dialog header correctly", () => {
+    renderModal();
+    expect(screen.getByTestId("dialog-header")).toBeInTheDocument();
   });
 });

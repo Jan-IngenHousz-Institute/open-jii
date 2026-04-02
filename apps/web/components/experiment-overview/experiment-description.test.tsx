@@ -1,11 +1,33 @@
-import { createExperiment } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
-
-import { contract } from "@repo/api";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ExperimentDescription } from "./experiment-description";
+
+globalThis.React = React;
+
+// ---------- Mocks ----------
+const mutateAsyncMock = vi.fn();
+
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+vi.mock("@repo/ui/hooks", () => ({
+  toast: vi.fn(),
+}));
+
+vi.mock("@/hooks/experiment/useExperimentUpdate/useExperimentUpdate", () => ({
+  useExperimentUpdate: () => ({
+    mutateAsync: mutateAsyncMock,
+    isPending: false,
+  }),
+}));
 
 vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
   const actual = await importOriginal();
@@ -44,6 +66,7 @@ function renderComponent(
     isArchived?: boolean;
   } = {},
 ) {
+  const queryClient = new QueryClient();
   const defaultProps = {
     experimentId: props.experimentId ?? "exp-123",
     description: props.description ?? "Short description",
@@ -51,10 +74,18 @@ function renderComponent(
     isArchived: props.isArchived ?? false,
   };
 
-  return render(<ExperimentDescription {...defaultProps} />);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ExperimentDescription {...defaultProps} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("ExperimentDescription", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders description text", () => {
     renderComponent({ description: "Test description" });
     expect(screen.getByText("Test description")).toBeInTheDocument();
@@ -67,13 +98,14 @@ describe("ExperimentDescription", () => {
 
   it("does not show expand button for short descriptions", () => {
     renderComponent({ description: "Short text" });
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("icon-chevron-down")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("icon-chevron-up")).not.toBeInTheDocument();
   });
 
   it("shows expand button for long descriptions", () => {
     const longDescription = "a".repeat(800);
     renderComponent({ description: longDescription });
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-chevron-down")).toBeInTheDocument();
   });
 
   it("toggles between expand and collapse", async () => {
@@ -82,11 +114,13 @@ describe("ExperimentDescription", () => {
     renderComponent({ description: longDescription });
 
     const expandButton = screen.getByRole("button");
-    await user.click(expandButton);
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-chevron-down")).toBeInTheDocument();
 
     await user.click(expandButton);
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-chevron-up")).toBeInTheDocument();
+
+    await user.click(expandButton);
+    expect(screen.getByTestId("icon-chevron-down")).toBeInTheDocument();
   });
 
   it("enters edit mode when clicked with access and not archived", async () => {
@@ -99,8 +133,8 @@ describe("ExperimentDescription", () => {
     }
 
     expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "common.save" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "common.cancel" })).toBeInTheDocument();
+    expect(screen.getByTestId("icon-check")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-x")).toBeInTheDocument();
   });
 
   it("does not enter edit mode when archived", async () => {
@@ -140,7 +174,7 @@ describe("ExperimentDescription", () => {
     await user.clear(textarea);
     await user.type(textarea, "Changed text");
 
-    const cancelButton = screen.getByRole("button", { name: "common.cancel" });
+    const cancelButton = screen.getByTestId("icon-x");
     await user.click(cancelButton);
 
     expect(screen.queryByTestId("rich-textarea")).not.toBeInTheDocument();
@@ -148,9 +182,6 @@ describe("ExperimentDescription", () => {
   });
 
   it("saves description successfully", async () => {
-    const spy = server.mount(contract.experiments.updateExperiment, {
-      body: createExperiment({ id: "exp-456" }),
-    });
     const user = userEvent.setup();
     renderComponent({ experimentId: "exp-456", description: "Old desc", hasAccess: true });
 
@@ -163,7 +194,7 @@ describe("ExperimentDescription", () => {
     await user.clear(textarea);
     await user.type(textarea, "New desc");
 
-    const saveButton = screen.getByRole("button", { name: "common.save" });
+    const saveButton = screen.getByTestId("icon-check");
     await user.click(saveButton);
 
     await waitFor(() => expect(spy.called).toBe(true));
@@ -172,9 +203,6 @@ describe("ExperimentDescription", () => {
   });
 
   it("does not save if description unchanged", async () => {
-    const spy = server.mount(contract.experiments.updateExperiment, {
-      body: createExperiment(),
-    });
     const user = userEvent.setup();
     renderComponent({ description: "Same text", hasAccess: true });
 
@@ -183,9 +211,9 @@ describe("ExperimentDescription", () => {
       await user.click(descriptionContainer);
     }
 
-    const saveButton = screen.getByRole("button", { name: "common.save" });
+    const saveButton = screen.getByTestId("icon-check");
     await user.click(saveButton);
 
-    expect(spy.called).toBe(false);
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
 });

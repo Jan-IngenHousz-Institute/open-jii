@@ -10,7 +10,7 @@ describe("ProtocolOverviewCards", () => {
     expect(document.querySelectorAll("[class*=animate]").length).toBeGreaterThan(0);
   });
 
-  it("shows empty message when no protocols", () => {
+  it("renders 'no protocols' message when protocols array is empty", () => {
     render(<ProtocolOverviewCards protocols={[]} />);
     expect(screen.getByText("protocols.noProtocols")).toBeInTheDocument();
   });

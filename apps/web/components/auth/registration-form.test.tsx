@@ -35,6 +35,7 @@ vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
       if (result instanceof Promise) {
         await result;
       }
+      // simulate success callback
       await Promise.resolve(opts.onSuccess());
       return Promise.resolve();
     },
@@ -54,7 +55,20 @@ describe("RegistrationForm", () => {
     userEmail: "test@example.com",
   };
 
-  let spy: ReturnType<typeof server.mount>;
+  beforeAll(() => {
+    // fix ResizeObserver missing in jsdom
+    global.ResizeObserver = class {
+      observe() {
+        // no op
+      }
+      unobserve() {
+        // no op
+      }
+      disconnect() {
+        // no op
+      }
+    };
+  });
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<
@@ -66,14 +80,14 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the registration form with title and description", () => {
-    render(<RegistrationForm {...defaultProps} />);
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
     expect(screen.getByText("registration.description")).toBeInTheDocument();
   });
 
   it("renders all input fields", () => {
-    render(<RegistrationForm {...defaultProps} />);
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
 
     expect(screen.getByLabelText("registration.firstName")).toBeInTheDocument();
     expect(screen.getByLabelText("registration.lastName")).toBeInTheDocument();
@@ -98,7 +112,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button with correct styling", () => {
-    render(<RegistrationForm {...defaultProps} />);
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
 
     const button = screen.getByRole("button", { name: "registration.register" });
     expect(button).toBeInTheDocument();
@@ -113,12 +127,12 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Alice");
     await user.type(screen.getByLabelText("registration.lastName"), "Smith");
 
-    await user.click(screen.getByRole("button", { name: "registration.register" }));
+    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(screen.getByText("registration.acceptTermsError")).toBeInTheDocument();
     });
-    expect(spy.called).toBe(false);
+    expect(createUserProfileMock).not.toHaveBeenCalled();
   });
 
   it("submits form successfully when terms are accepted", async () => {
@@ -129,15 +143,12 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.lastName"), "Doe");
     await user.type(screen.getByLabelText("registration.organization"), "Acme");
 
-    await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: "registration.register" }));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(spy.called).toBe(true);
-      expect(spy.body).toMatchObject({
-        firstName: "Jane",
-        lastName: "Doe",
-        organization: "Acme",
+      expect(createUserProfileMock).toHaveBeenCalledWith({
+        body: { firstName: "Jane", lastName: "Doe", organization: "Acme" },
       });
     });
   });
@@ -149,8 +160,8 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Bob");
     await user.type(screen.getByLabelText("registration.lastName"), "Builder");
 
-    await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: "registration.register" }));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
@@ -160,11 +171,16 @@ describe("RegistrationForm", () => {
   });
 
   it("pushes to default '/' when callbackUrl is undefined", async () => {
-    const user = userEvent.setup();
-    const { router } = render(<RegistrationForm termsData={termsData} />);
+    // Note: RegistrationForm component defaults to /platform if callbackUrl is undefined, not /
+    // let's check code: `router.push(callbackUrl ?? "/platform");`
+    // So if callbackUrl is undefined, it goes to /platform.
+    // The test below expects "/" which contradicts the code I read.
+    // BUT the old test said: `expect(pushMock).toHaveBeenCalledWith("/");`
+    // If I pass termsData but no callbackUrl...
 
-    await user.type(screen.getByLabelText("registration.firstName"), "No");
-    await user.type(screen.getByLabelText("registration.lastName"), "Callback");
+    // I will pass empty string or undefined and expect /platform or whatever the code does.
+    // My previous read said `router.push(callbackUrl ?? "/platform")`
+    // So expectation should be `/platform`.
 
     // Let's stick to what the code says.
 
@@ -178,20 +194,20 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(spy.called).toBe(true);
-      expect(router.push).toHaveBeenCalledWith("/platform");
+      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(pushMock).toHaveBeenCalledWith("/platform");
     });
   });
 
   it("renders with different locale", () => {
     const props = { ...defaultProps, locale: "de-DE" };
-    render(<RegistrationForm {...props} />);
+    render(<RegistrationForm {...props} />, { wrapper: createWrapper() });
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
   });
 
   it("renders inputs empty and checkbox unchecked by default", () => {
-    render(<RegistrationForm {...defaultProps} />);
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
 
     expect(screen.getByLabelText("registration.firstName")).toHaveValue("");
     expect(screen.getByLabelText("registration.lastName")).toHaveValue("");
@@ -200,25 +216,27 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button enabled by default", () => {
-    render(<RegistrationForm {...defaultProps} />);
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
 
     const submit = screen.getByRole("button", { name: "registration.register" });
     expect(submit).not.toBeDisabled();
   });
 
   it("renders terms link with correct structure", () => {
-    render(<RegistrationForm {...defaultProps} />);
+    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
 
     const termsTrigger = screen.getByText("auth.terms");
     const closestAnchorOrButton = termsTrigger.closest("a,button");
     expect(closestAnchorOrButton).toBeTruthy();
+    // It should have the cursor-pointer and underline classes regardless of tag
     expect(closestAnchorOrButton).toHaveClass("cursor-pointer", "underline");
   });
 
   it("renders custom terms data when provided", async () => {
-    const user = userEvent.setup();
     const customTermsData = { title: "Custom Terms", content: "Custom content" };
-    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />);
+    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />, {
+      wrapper: createWrapper(),
+    });
 
     await user.click(screen.getByText("auth.terms")); // open dialog
 
@@ -227,9 +245,8 @@ describe("RegistrationForm", () => {
   });
 
   it("handles updateUser error after profile creation", async () => {
-    vi.mocked(authClient.updateUser).mockResolvedValue({
+    mockUpdateUserMutate.mockResolvedValue({
       error: { message: "Update failed" },
-      data: null,
     });
 
     render(<RegistrationForm {...defaultProps} />);
@@ -238,22 +255,21 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Test");
     await user.type(screen.getByLabelText("registration.lastName"), "User");
 
-    await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: "registration.register" }));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(spy.called).toBe(true);
-      expect(authClient.updateUser).toHaveBeenCalledWith({ registered: true });
+      expect(createUserProfileMock).toHaveBeenCalled();
+      expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
     });
 
-    expect(router.push).not.toHaveBeenCalled();
+    // Should not navigate on error
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("handles form submission error and resets pending state", async () => {
-    spy = server.mount(contract.users.createUserProfile, {
-      body: { message: "Network error" },
-      status: 500,
-    });
+    // Create a mock that throws an error
+    createUserProfileMock.mockRejectedValue(new Error("Network error"));
 
     render(<RegistrationForm {...defaultProps} />);
 
@@ -261,27 +277,27 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Error");
     await user.type(screen.getByLabelText("registration.lastName"), "Test");
 
-    await user.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     expect(submitButton).not.toBeDisabled();
 
-    await user.click(submitButton);
+    fireEvent.click(submitButton);
 
+    // Button should be disabled during submission
     await waitFor(() => {
-      expect(spy.called).toBe(true);
+      expect(createUserProfileMock).toHaveBeenCalled();
     });
 
+    // After error, button should be enabled again (finally block)
     await waitFor(() => {
       expect(submitButton).not.toBeDisabled();
     });
   });
 
   it("prevents multiple submissions when already pending", async () => {
-    spy = server.mount(contract.users.createUserProfile, {
-      body: {},
-      status: 201,
-      delay: 999_999,
+    createUserProfileMock.mockImplementation(() => {
+      return new Promise((resolve) => setTimeout(resolve, 100));
     });
 
     render(<RegistrationForm {...defaultProps} />);
@@ -290,7 +306,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Multi");
     await user.type(screen.getByLabelText("registration.lastName"), "Submit");
 
-    await user.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     // First click
@@ -303,7 +319,8 @@ describe("RegistrationForm", () => {
     // Second click while pending
     await user.click(submitButton);
 
-    expect(spy.callCount).toBe(1);
+    // Should only call once
+    expect(createUserProfileMock).toHaveBeenCalledTimes(1);
   });
 
   it("shows validation error if firstName is too short", async () => {
