@@ -46,6 +46,8 @@
   },
   "dependencies": {
     "@react-email/components": "^0.3.3",
+    "@repo/cms": "workspace:*",
+    "emailmd": "^0.1.4",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
