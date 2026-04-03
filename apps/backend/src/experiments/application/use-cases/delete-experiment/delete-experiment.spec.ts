@@ -17,6 +17,7 @@ describe("DeleteExperimentUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(DeleteExperimentUseCase);
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
