@@ -1,5 +1,5 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useScannerCommandExecutorStore } from "~/stores/use-scanner-command-executor-store";
@@ -39,7 +39,24 @@ export function useConnectedDevice() {
     queryKey: ["connected-device"],
     queryFn: getConnectedDevice,
     networkMode: "always",
+    // Poll so we catch disconnects even when the native
+    // onDeviceDisconnected event doesn't fire (common on Android
+    // when the device is simply powered off).
+    refetchInterval: 3000,
   });
+
+  // When polling detects a disconnect that the native listener missed,
+  // clean up the command executor so the measurement page shows the
+  // reconnect prompt instead of letting the user attempt a scan.
+  const prevDeviceRef = useRef(data);
+  useEffect(() => {
+    const prev = prevDeviceRef.current;
+    prevDeviceRef.current = data;
+
+    if (prev && !data) {
+      void useScannerCommandExecutorStore.getState().setDevice(undefined);
+    }
+  }, [data]);
 
   return { data, isLoading, error };
 }

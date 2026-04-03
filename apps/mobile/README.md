@@ -66,15 +66,55 @@ This uses the `preview` profile in your `eas.json` and creates a local build.
 
 ---
 
+## 🗄️ Local Database (Drizzle + Expo SQLite)
+
+The app uses [Drizzle ORM](https://orm.drizzle.team/) with [Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/) for on-device storage (measurement uploads). The schema is defined in `src/services/db/schema.ts` and migrations are managed by Drizzle Kit.
+
+### How it works
+
+- **Schema** — `src/services/db/schema.ts` defines the `measurements` table.
+- **Client** — `src/services/db/client.ts` opens the SQLite database and exports the Drizzle instance.
+- **Migrations** — generated SQL files in `drizzle/` are bundled into the app via `babel-plugin-inline-import`. On startup, `useMigrations()` in `_layout.tsx` runs any pending migrations before the app renders.
+- **Legacy migration** — on first access, any entries in AsyncStorage (from the previous storage implementation) are transparently migrated into SQLite and then deleted.
+
+### Modifying the schema
+
+1. Edit the schema in `src/services/db/schema.ts`.
+2. Generate a new migration:
+   ```bash
+   npx drizzle-kit generate
+   ```
+3. Update `drizzle/migrations.ts` to import the new `.sql` file (drizzle-kit regenerates this, but verify it).
+4. Rebuild and test — `useMigrations()` will automatically apply the new migration on next app launch.
+
+### Bundler configuration
+
+The following config changes enable SQL migration bundling:
+
+- **`babel.config.js`** — `babel-plugin-inline-import` with `[".sql"]` extensions
+- **`metro.config.js`** — `.sql` added to `sourceExts`
+- **`drizzle.config.ts`** — `dialect: "sqlite"`, `driver: "expo"`
+- **`declarations.d.ts`** — `declare module "*.sql"` for TypeScript
+
+---
+
 ## 📂 Project Structure
 
 ```
 mobile/
 ├── index.ts
 ├── package.json
-├── app/
-├── assets/
-├── components/
+├── drizzle/              # Generated SQL migrations
+│   ├── migrations.ts     # Migration index (bundled into app)
+│   └── *.sql             # Individual migration files
+├── drizzle.config.ts     # Drizzle Kit config
+├── src/
+│   ├── app/              # Expo Router screens & layouts
+│   ├── services/
+│   │   ├── db/           # Database client & schema
+│   │   └── measurements-storage.ts
+│   ├── components/
+│   └── ...
 └── ...
 ```
 
