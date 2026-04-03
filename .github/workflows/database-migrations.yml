@@ -172,6 +172,7 @@ jobs:
           severity: CRITICAL,HIGH
           vuln-type: os,library
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Push image to Amazon ECR
         run: |

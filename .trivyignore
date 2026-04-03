@@ -1,0 +1,4 @@
+# CVE-2026-33671: picomatch ReDoS in system npm installation (usr/local/lib/node_modules/npm)
+# This is bundled with the Node.js Docker image's npm CLI, not in the app's runtime.
+# The app runs as `node dist/main` and never invokes npm at runtime.
+CVE-2026-33671

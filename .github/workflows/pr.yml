@@ -85,6 +85,7 @@ jobs:
           severity: CRITICAL
           scanners: vuln,license
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
   docker_build_check:
     name: Docker Build Check (Backend)
@@ -120,6 +121,7 @@ jobs:
           severity: CRITICAL,HIGH
           vuln-type: os,library
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
   tofu:
     name: OpenTofu (Plan)
