@@ -974,6 +974,14 @@ locals {
       ]
       resource = "*"
     }
+
+    # ── Inspector v2: service-linked role creation (first-time enablement) ──
+    inspector2-slr = {
+      actions = [
+        "iam:CreateServiceLinkedRole",
+      ]
+      resource = "arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2"
+    }
   }
 
   # Combine all service permissions into comprehensive policy statements
