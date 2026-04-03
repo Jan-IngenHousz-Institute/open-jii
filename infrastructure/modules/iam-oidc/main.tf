@@ -960,6 +960,20 @@ locals {
       ]
       resource = "*"
     }
+
+    # ── Inspector v2: account-level enablement (Terraform) ──
+    inspector2 = {
+      actions = [
+        # Enable/disable scanning (create, update, destroy)
+        "inspector2:Enable",
+        "inspector2:Disable",
+        # Read current account status (plan/refresh)
+        "inspector2:BatchGetAccountStatus",
+        # Provider reads during plan
+        "inspector2:ListAccountPermissions",
+      ]
+      resource = "*"
+    }
   }
 
   # Combine all service permissions into comprehensive policy statements
