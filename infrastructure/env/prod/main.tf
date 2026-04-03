@@ -1923,3 +1923,8 @@ module "grafana_dashboard" {
 
   depends_on = [module.managed_grafana_workspace]
 }
+
+module "aws_inspector" {
+  source         = "../../modules/inspector"
+  resource_types = ["ECR", "LAMBDA", "LAMBDA_CODE"]
+}
