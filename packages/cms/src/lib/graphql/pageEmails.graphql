@@ -10,25 +10,10 @@ fragment ComponentEmailFields on ComponentEmail {
   content
 }
 
-fragment PageEmailsFields on PageEmails {
-  __typename
-  sys {
-    id
-    publishedAt
-    environmentId
-  }
-  internalName
-  emailsCollection {
+query componentEmailByName($internalName: String!) {
+  componentEmailCollection(limit: 1, where: { internalName: $internalName }) {
     items {
       ...ComponentEmailFields
-    }
-  }
-}
-
-query pageEmails($locale: String, $preview: Boolean) {
-  pageEmailsCollection(limit: 1, locale: $locale, preview: $preview) {
-    items {
-      ...PageEmailsFields
     }
   }
 }

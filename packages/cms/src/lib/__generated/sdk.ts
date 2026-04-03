@@ -6737,26 +6737,15 @@ export type ComponentEmailFieldsFragment = {
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
 };
 
-export type PageEmailsFieldsFragment = {
-  __typename: "PageEmails";
-  internalName?: string | null;
-  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  emailsCollection?: {
-    __typename?: "PageEmailsEmailsCollection";
-    items: Array<({ __typename?: "ComponentEmail" } & ComponentEmailFieldsFragment) | null>;
-  } | null;
-};
-
-export type PageEmailsQueryVariables = Exact<{
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+export type ComponentEmailByNameQueryVariables = Exact<{
+  internalName: Scalars["String"]["input"];
 }>;
 
-export type PageEmailsQuery = {
+export type ComponentEmailByNameQuery = {
   __typename?: "Query";
-  pageEmailsCollection?: {
-    __typename?: "PageEmailsCollection";
-    items: Array<({ __typename?: "PageEmails" } & PageEmailsFieldsFragment) | null>;
+  componentEmailCollection?: {
+    __typename?: "ComponentEmailCollection";
+    items: Array<({ __typename?: "ComponentEmail" } & ComponentEmailFieldsFragment) | null>;
   } | null;
 };
 
@@ -7265,6 +7254,7 @@ export const FooterFieldsFragmentDoc = gql`
       }
     }
   }
+  ${ButtonFieldsFragmentDoc}
 `;
 export const LandingMetadataFieldsFragmentDoc = gql`
   fragment LandingMetadataFields on LandingMetadata {
@@ -7306,6 +7296,7 @@ export const RichImageFieldsFragmentDoc = gql`
     caption
     fullWidth
   }
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageAboutFieldsFragmentDoc = gql`
   fragment PageAboutFields on PageAbout {
@@ -7333,6 +7324,8 @@ export const PageAboutFieldsFragmentDoc = gql`
       ...ImageFields
     }
   }
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const SeoFieldsFragmentDoc = gql`
   fragment SeoFields on ComponentSeo {
@@ -7348,6 +7341,7 @@ export const SeoFieldsFragmentDoc = gql`
       }
     }
   }
+  ${ImageFieldsFragmentDoc}
 `;
 export const AuthorFieldsFragmentDoc = gql`
   fragment AuthorFields on ComponentAuthor {
@@ -7361,6 +7355,7 @@ export const AuthorFieldsFragmentDoc = gql`
       ...ImageFields
     }
   }
+  ${ImageFieldsFragmentDoc}
 `;
 export const ReferencePageBlogPostFieldsFragmentDoc = gql`
   fragment ReferencePageBlogPostFields on PageBlogPost {
@@ -7380,6 +7375,8 @@ export const ReferencePageBlogPostFieldsFragmentDoc = gql`
       ...ImageFields
     }
   }
+  ${AuthorFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageBlogPostFieldsFragmentDoc = gql`
   fragment PageBlogPostFields on PageBlogPost {
@@ -7418,6 +7415,11 @@ export const PageBlogPostFieldsFragmentDoc = gql`
       }
     }
   }
+  ${SeoFieldsFragmentDoc}
+  ${AuthorFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+  ${ReferencePageBlogPostFieldsFragmentDoc}
 `;
 export const PageCookiePolicyFieldsFragmentDoc = gql`
   fragment PageCookiePolicyFields on PageCookiePolicy {
@@ -7442,6 +7444,7 @@ export const PageCookiePolicyFieldsFragmentDoc = gql`
       }
     }
   }
+  ${RichImageFieldsFragmentDoc}
 `;
 export const ComponentEmailFieldsFragmentDoc = gql`
   fragment ComponentEmailFields on ComponentEmail {
@@ -7454,22 +7457,6 @@ export const ComponentEmailFieldsFragmentDoc = gql`
     internalName
     preview
     content
-  }
-`;
-export const PageEmailsFieldsFragmentDoc = gql`
-  fragment PageEmailsFields on PageEmails {
-    __typename
-    sys {
-      id
-      publishedAt
-      environmentId
-    }
-    internalName
-    emailsCollection {
-      items {
-        ...ComponentEmailFields
-      }
-    }
   }
 `;
 export const FaqQuestionFieldsFragmentDoc = gql`
@@ -7505,6 +7492,7 @@ export const PageFaqFieldsFragmentDoc = gql`
       }
     }
   }
+  ${FaqQuestionFieldsFragmentDoc}
 `;
 export const FeatureFieldsFragmentDoc = gql`
   fragment FeatureFields on ComponentFeature {
@@ -7520,6 +7508,7 @@ export const FeatureFieldsFragmentDoc = gql`
       ...ImageFields
     }
   }
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageHomeFeaturesFieldsFragmentDoc = gql`
   fragment PageHomeFeaturesFields on PageHomeFeatures {
@@ -7541,6 +7530,8 @@ export const PageHomeFeaturesFieldsFragmentDoc = gql`
       ...ImageFields
     }
   }
+  ${FeatureFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageHomeHeroFieldsFragmentDoc = gql`
   fragment PageHomeHeroFields on PageHomeHero {
@@ -7569,6 +7560,7 @@ export const PageHomeHeroFieldsFragmentDoc = gql`
       }
     }
   }
+  ${ButtonFieldsFragmentDoc}
 `;
 export const PageHomeMissionFieldsFragmentDoc = gql`
   fragment PageHomeMissionFields on PageHomeMission {
@@ -7616,6 +7608,8 @@ export const PageHomeMissionFieldsFragmentDoc = gql`
       }
     }
   }
+  ${RichImageFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PartnerFieldsFragmentDoc = gql`
   fragment PartnerFields on ComponentPartner {
@@ -7631,6 +7625,7 @@ export const PartnerFieldsFragmentDoc = gql`
     subtitle
     url
   }
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageHomePartnersFieldsFragmentDoc = gql`
   fragment PageHomePartnersFields on PageHomePartners {
@@ -7653,6 +7648,8 @@ export const PageHomePartnersFieldsFragmentDoc = gql`
       }
     }
   }
+  ${PartnerFieldsFragmentDoc}
+  ${ImageFieldsFragmentDoc}
 `;
 export const PageLandingFieldsFragmentDoc = gql`
   fragment PageLandingFields on PageLanding {
@@ -7669,6 +7666,8 @@ export const PageLandingFieldsFragmentDoc = gql`
       ...ReferencePageBlogPostFields
     }
   }
+  ${SeoFieldsFragmentDoc}
+  ${ReferencePageBlogPostFieldsFragmentDoc}
 `;
 export const PagePoliciesFieldsFragmentDoc = gql`
   fragment PagePoliciesFields on PagePolicies {
@@ -7693,6 +7692,7 @@ export const PagePoliciesFieldsFragmentDoc = gql`
       }
     }
   }
+  ${RichImageFieldsFragmentDoc}
 `;
 export const PageTermsAndConditionsFieldsFragmentDoc = gql`
   fragment PageTermsAndConditionsFields on PageTermsAndConditions {
@@ -7717,6 +7717,7 @@ export const PageTermsAndConditionsFieldsFragmentDoc = gql`
       }
     }
   }
+  ${RichImageFieldsFragmentDoc}
 `;
 export const SitemapPagesFieldsFragmentDoc = gql`
   fragment sitemapPagesFields on Query {
@@ -7746,7 +7747,6 @@ export const FooterDocument = gql`
     }
   }
   ${FooterFieldsFragmentDoc}
-  ${ButtonFieldsFragmentDoc}
 `;
 export const LandingMetadataDocument = gql`
   query landingMetadata($locale: String, $preview: Boolean) {
@@ -7767,8 +7767,6 @@ export const PageAboutDocument = gql`
     }
   }
   ${PageAboutFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
 `;
 export const PageBlogDocument = gql`
   query pageBlog(
@@ -7796,12 +7794,7 @@ export const PageBlogDocument = gql`
     }
   }
   ${PageLandingFieldsFragmentDoc}
-  ${SeoFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
-  ${ReferencePageBlogPostFieldsFragmentDoc}
-  ${AuthorFieldsFragmentDoc}
   ${PageBlogPostFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
 `;
 export const PageBlogDetailDocument = gql`
   query pageBlogDetail($slug: String!, $locale: String, $preview: Boolean) {
@@ -7817,11 +7810,6 @@ export const PageBlogDetailDocument = gql`
     }
   }
   ${PageBlogPostFieldsFragmentDoc}
-  ${SeoFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
-  ${AuthorFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ReferencePageBlogPostFieldsFragmentDoc}
   ${PageLandingFieldsFragmentDoc}
 `;
 export const PageBlogPostDocument = gql`
@@ -7833,11 +7821,6 @@ export const PageBlogPostDocument = gql`
     }
   }
   ${PageBlogPostFieldsFragmentDoc}
-  ${SeoFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
-  ${AuthorFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ReferencePageBlogPostFieldsFragmentDoc}
 `;
 export const PageBlogPostCollectionDocument = gql`
   query pageBlogPostCollection(
@@ -7860,11 +7843,6 @@ export const PageBlogPostCollectionDocument = gql`
     }
   }
   ${PageBlogPostFieldsFragmentDoc}
-  ${SeoFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
-  ${AuthorFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ReferencePageBlogPostFieldsFragmentDoc}
 `;
 export const PageCookiePolicyDocument = gql`
   query pageCookiePolicy($locale: String, $preview: Boolean) {
@@ -7875,18 +7853,15 @@ export const PageCookiePolicyDocument = gql`
     }
   }
   ${PageCookiePolicyFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
 `;
-export const PageEmailsDocument = gql`
-  query pageEmails($locale: String, $preview: Boolean) {
-    pageEmailsCollection(limit: 1, locale: $locale, preview: $preview) {
+export const ComponentEmailByNameDocument = gql`
+  query componentEmailByName($internalName: String!) {
+    componentEmailCollection(limit: 1, where: { internalName: $internalName }) {
       items {
-        ...PageEmailsFields
+        ...ComponentEmailFields
       }
     }
   }
-  ${PageEmailsFieldsFragmentDoc}
   ${ComponentEmailFieldsFragmentDoc}
 `;
 export const PageFaqDocument = gql`
@@ -7898,7 +7873,6 @@ export const PageFaqDocument = gql`
     }
   }
   ${PageFaqFieldsFragmentDoc}
-  ${FaqQuestionFieldsFragmentDoc}
 `;
 export const PageHomeDocument = gql`
   query pageHome($locale: String, $preview: Boolean) {
@@ -7934,14 +7908,9 @@ export const PageHomeDocument = gql`
     }
   }
   ${PageHomeHeroFieldsFragmentDoc}
-  ${ButtonFieldsFragmentDoc}
   ${PageHomeMissionFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
   ${PageHomeFeaturesFieldsFragmentDoc}
-  ${FeatureFieldsFragmentDoc}
   ${PageHomePartnersFieldsFragmentDoc}
-  ${PartnerFieldsFragmentDoc}
   ${FooterFieldsFragmentDoc}
   ${LandingMetadataFieldsFragmentDoc}
 `;
@@ -7954,8 +7923,6 @@ export const PageHomeFeaturesDocument = gql`
     }
   }
   ${PageHomeFeaturesFieldsFragmentDoc}
-  ${FeatureFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
 `;
 export const PageHomeHeroDocument = gql`
   query pageHomeHero($locale: String, $preview: Boolean) {
@@ -7966,7 +7933,6 @@ export const PageHomeHeroDocument = gql`
     }
   }
   ${PageHomeHeroFieldsFragmentDoc}
-  ${ButtonFieldsFragmentDoc}
 `;
 export const PageHomeMissionDocument = gql`
   query pageHomeMission($locale: String, $preview: Boolean) {
@@ -7977,8 +7943,6 @@ export const PageHomeMissionDocument = gql`
     }
   }
   ${PageHomeMissionFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
 `;
 export const PageHomePartnersDocument = gql`
   query pageHomePartners($locale: String, $preview: Boolean) {
@@ -7989,8 +7953,6 @@ export const PageHomePartnersDocument = gql`
     }
   }
   ${PageHomePartnersFieldsFragmentDoc}
-  ${PartnerFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
 `;
 export const PageLandingDocument = gql`
   query pageLanding($locale: String, $preview: Boolean) {
@@ -8001,10 +7963,6 @@ export const PageLandingDocument = gql`
     }
   }
   ${PageLandingFieldsFragmentDoc}
-  ${SeoFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
-  ${ReferencePageBlogPostFieldsFragmentDoc}
-  ${AuthorFieldsFragmentDoc}
 `;
 export const PageLandingCollectionDocument = gql`
   query pageLandingCollection($locale: String, $preview: Boolean) {
@@ -8015,10 +7973,6 @@ export const PageLandingCollectionDocument = gql`
     }
   }
   ${PageLandingFieldsFragmentDoc}
-  ${SeoFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
-  ${ReferencePageBlogPostFieldsFragmentDoc}
-  ${AuthorFieldsFragmentDoc}
 `;
 export const PagePoliciesDocument = gql`
   query pagePolicies($locale: String, $preview: Boolean) {
@@ -8029,8 +7983,6 @@ export const PagePoliciesDocument = gql`
     }
   }
   ${PagePoliciesFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
 `;
 export const PageTermsAndConditionsDocument = gql`
   query pageTermsAndConditions($locale: String, $preview: Boolean) {
@@ -8041,8 +7993,6 @@ export const PageTermsAndConditionsDocument = gql`
     }
   }
   ${PageTermsAndConditionsFieldsFragmentDoc}
-  ${RichImageFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
 `;
 export const SitemapPagesDocument = gql`
   query sitemapPages($locale: String!) {
@@ -8207,20 +8157,20 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
-    pageEmails(
-      variables?: PageEmailsQueryVariables,
+    componentEmailByName(
+      variables: ComponentEmailByNameQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<PageEmailsQuery> {
+    ): Promise<ComponentEmailByNameQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<PageEmailsQuery>({
-            document: PageEmailsDocument,
+          client.request<ComponentEmailByNameQuery>({
+            document: ComponentEmailByNameDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "pageEmails",
+        "componentEmailByName",
         "query",
         variables,
       );

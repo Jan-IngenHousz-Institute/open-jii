@@ -91,11 +91,3 @@ export const VerificationRequest = ({ url, host, senderName }: VerificationReque
     </Html>
   );
 };
-
-export default VerificationRequest;
-
-VerificationRequest.PreviewProps = {
-  url: "http://localhost:3000/auth/verify?token=abc123",
-  host: "localhost",
-  senderName: "openJII",
-} as VerificationRequestProps;

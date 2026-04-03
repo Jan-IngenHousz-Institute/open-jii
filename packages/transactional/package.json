@@ -48,7 +48,8 @@
     "@react-email/components": "^0.3.3",
     "@repo/cms": "workspace:*",
     "emailmd": "^0.1.4",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "sanitize-html": "^2.17.2"
   },
   "devDependencies": {
     "@react-email/preview-server": "5.2.8",
@@ -56,6 +57,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:react19",
+    "@types/sanitize-html": "^2.16.1",
     "eslint": "catalog:",
     "react": "catalog:react19",
     "react-email": "5.2.8",
