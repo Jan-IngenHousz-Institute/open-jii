@@ -114,6 +114,31 @@ export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookRes
 export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
 export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
 
+// --- Deletion Check Schemas ---
+export const zBlockingExperiment = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  status: z.string(),
+});
+
+export const zDeletionCheckResponse = z.object({
+  canDelete: z.boolean(),
+  blockingExperiments: z.array(zBlockingExperiment),
+});
+
+export const zBulkTransferAdminBody = z.object({
+  email: z.string().email().describe("Email of the user to transfer admin rights to"),
+});
+
+export const zBulkTransferAdminResponse = z.object({
+  transferred: z.number().describe("Number of experiments transferred"),
+});
+
+export type BlockingExperiment = z.infer<typeof zBlockingExperiment>;
+export type DeletionCheckResponse = z.infer<typeof zDeletionCheckResponse>;
+export type BulkTransferAdminBody = z.infer<typeof zBulkTransferAdminBody>;
+export type BulkTransferAdminResponse = z.infer<typeof zBulkTransferAdminResponse>;
+
 // --- Invitation Schemas ---
 export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);
 export const zInvitationResourceType = z.enum(["platform", "experiment"]);

@@ -50,15 +50,6 @@ export class UpdateExperimentMemberRoleUseCase {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
-        if (experiment.status === "archived") {
-          this.logger.warn({
-            msg: "Experiment is archived",
-            operation: "update-experiment-member-role",
-            experimentId,
-          });
-          return failure(AppError.forbidden("Cannot update member roles in archived experiments"));
-        }
-
         if (!isAdmin) {
           this.logger.warn({
             msg: "User attempted to update member roles without admin privileges",

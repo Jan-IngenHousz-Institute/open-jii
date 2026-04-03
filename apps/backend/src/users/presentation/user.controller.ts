@@ -8,8 +8,10 @@ import { contract } from "@repo/api";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { BulkTransferAdminUseCase } from "../application/use-cases/bulk-transfer-admin/bulk-transfer-admin";
 import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
 import { DeleteUserUseCase } from "../application/use-cases/delete-user/delete-user";
+import { GetDeletionCheckUseCase } from "../application/use-cases/get-deletion-check/get-deletion-check";
 import { GetUserProfileUseCase } from "../application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
@@ -19,11 +21,13 @@ export class UserController {
   private readonly logger = new Logger(UserController.name);
 
   constructor(
+    private readonly bulkTransferAdminUseCase: BulkTransferAdminUseCase,
     private readonly createUserProfileUseCase: CreateUserProfileUseCase,
-    private readonly searchUsersUseCase: SearchUsersUseCase,
+    private readonly deleteUserUseCase: DeleteUserUseCase,
+    private readonly getDeletionCheckUseCase: GetDeletionCheckUseCase,
     private readonly getUserUseCase: GetUserUseCase,
     private readonly getUserProfileUseCase: GetUserProfileUseCase,
-    private readonly deleteUserUseCase: DeleteUserUseCase,
+    private readonly searchUsersUseCase: SearchUsersUseCase,
   ) {}
 
   @TsRestHandler(contract.users.deleteUser)
@@ -41,6 +45,38 @@ export class UserController {
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.users.getDeletionCheck)
+  getDeletionCheck() {
+    return tsRestHandler(contract.users.getDeletionCheck, async ({ params }) => {
+      const result = await this.getDeletionCheckUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK,
+          body: result.value,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.users.bulkTransferAdmin)
+  bulkTransferAdmin() {
+    return tsRestHandler(contract.users.bulkTransferAdmin, async ({ params, body }) => {
+      const result = await this.bulkTransferAdminUseCase.execute(params.id, body.email);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK,
+          body: result.value,
         };
       }
 

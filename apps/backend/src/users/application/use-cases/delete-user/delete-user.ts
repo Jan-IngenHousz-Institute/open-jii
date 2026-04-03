@@ -38,51 +38,54 @@ export class DeleteUserUseCase {
       }
 
       // Check if user is the only admin of any experiments
-      const adminCheckResult = await this.userRepository.isOnlyAdminOfAnyExperiments(id);
+      const adminCheckResult = await this.userRepository.getExperimentsWhereOnlyAdmin(id);
 
-      return adminCheckResult.chain(async (isOnlyAdmin: boolean) => {
-        if (isOnlyAdmin) {
-          this.logger.warn({
-            msg: "Cannot delete user - only admin of experiments",
-            errorCode: ErrorCodes.USER_IS_ONLY_ADMIN,
+      return adminCheckResult.chain(
+        async (blockingExperiments: { id: string; name: string; status: string }[]) => {
+          if (blockingExperiments.length > 0) {
+            this.logger.warn({
+              msg: "Cannot delete user - only admin of experiments",
+              errorCode: ErrorCodes.USER_IS_ONLY_ADMIN,
+              operation: "deleteUser",
+              userId: id,
+              blockingExperiments: blockingExperiments.map((e) => e.id),
+            });
+            return failure(
+              AppError.forbidden(
+                `Cannot delete account - you are the only admin of one or more experiments. Please transfer admin rights before deleting.`,
+              ),
+            );
+          }
+
+          // Soft delete
+          this.logger.log({
+            msg: "Soft-deleting user",
             operation: "deleteUser",
             userId: id,
           });
-          return failure(
-            AppError.forbidden(
-              `Cannot delete account - you are the only admin of one or more experiments. Please assign other admins before deleting.`,
-            ),
-          );
-        }
+          const deleteResult = await this.userRepository.delete(id);
 
-        // Soft delete
-        this.logger.log({
-          msg: "Soft-deleting user",
-          operation: "deleteUser",
-          userId: id,
-        });
-        const deleteResult = await this.userRepository.delete(id);
+          if (deleteResult.isFailure()) {
+            return deleteResult;
+          }
 
-        if (deleteResult.isFailure()) {
-          return deleteResult;
-        }
+          this.logger.log({
+            msg: "User soft-deleted successfully",
+            operation: "deleteUser",
+            userId: id,
+            status: "success",
+          });
 
-        this.logger.log({
-          msg: "User soft-deleted successfully",
-          operation: "deleteUser",
-          userId: id,
-          status: "success",
-        });
+          this.logger.log({
+            msg: "User deletion completed",
+            operation: "deleteUser",
+            userId: id,
+            status: "success",
+          });
 
-        this.logger.log({
-          msg: "User deletion completed",
-          operation: "deleteUser",
-          userId: id,
-          status: "success",
-        });
-
-        return success(undefined);
-      });
+          return success(undefined);
+        },
+      );
     });
   }
 }
