@@ -48,6 +48,7 @@ export const macroContract = c.router({
     responses: {
       201: zMacro,
       400: zMacroErrorResponse,
+      409: zMacroErrorResponse,
     },
     summary: "Create a new macro",
     description:
@@ -103,6 +104,7 @@ export const macroContract = c.router({
       400: zMacroErrorResponse,
       403: zMacroErrorResponse,
       404: zMacroErrorResponse,
+      409: zMacroErrorResponse,
     },
     summary: "Add compatible protocols to a macro",
     description: "Links protocols as compatible with this macro (creator only)",

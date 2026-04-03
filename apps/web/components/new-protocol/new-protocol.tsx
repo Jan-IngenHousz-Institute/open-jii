@@ -48,11 +48,12 @@ export function NewProtocolForm() {
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
-    onError: () => {
+    onSettled: () => {
       setIsSubmitting(false);
     },
-    onSuccess: (id: string) => {
-      toast({ description: t("protocols.protocolCreated") });
+    onSuccess: (data) => {
+      const id = data.body.id;
+      // Link selected macros after protocol creation, then redirect
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({

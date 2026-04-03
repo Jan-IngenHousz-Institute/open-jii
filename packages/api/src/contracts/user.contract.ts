@@ -55,6 +55,7 @@ export const userContract = c.router({
     responses: {
       201: zCreateUserProfileResponse,
       400: zErrorResponse,
+      409: zErrorResponse,
     },
     summary: "Create user profile",
     description: "Creates user profile and sets the user as registered",

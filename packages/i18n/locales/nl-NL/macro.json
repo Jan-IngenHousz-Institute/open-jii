@@ -16,6 +16,8 @@
     "macroCreated": "Macro succesvol aangemaakt",
     "macroUpdated": "Macro succesvol bijgewerkt",
     "macroDeleted": "Macro succesvol verwijderd",
+    "nameAlreadyExists": "Er bestaat al een macro met deze naam. Kies een andere naam.",
+    "createError": "Aanmaken van macro mislukt. Probeer het opnieuw.",
     "listDescription": "Bekijk en beheer uw code-macro's voor gegevensverwerking.",
     "manageMacroDescription": "Bekijk en beheer de details en instellingen van uw macro.",
     "settings": "Macro-instellingen",

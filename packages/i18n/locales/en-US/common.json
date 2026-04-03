@@ -674,6 +674,8 @@
     "protocolCreated": "Protocol created successfully",
     "protocolUpdated": "Protocol updated successfully",
     "protocolDeleted": "Protocol deleted successfully",
+    "nameAlreadyExists": "A protocol with this name already exists. Please choose a different name.",
+    "createError": "Failed to create protocol. Please try again.",
     "listDescription": "This page will show a list of existing protocols.",
     "protocol": "Protocol",
     "settings": "Protocol Settings",

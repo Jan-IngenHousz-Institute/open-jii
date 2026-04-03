@@ -1,21 +1,41 @@
-import { tsr } from "../../../lib/tsr";
+import { toast } from "@repo/ui/hooks";
+import { isContractError, tsr } from "../../../lib/tsr";
+import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
+import { useTranslation } from "@repo/i18n";
 
-interface UseMacroCreateOptions {
-  onSuccess?: (id: string) => void;
-  onError?: (error: Error) => void;
-}
+const route = tsr.macros.createMacro;
+
+export type UseMacroCreateOptions = TsRestMutationOptions<
+  TsrRoute<typeof route>,
+  "onSuccess" | "onError"
+>;
 
 export function useMacroCreate(options?: UseMacroCreateOptions) {
   const queryClient = tsr.useQueryClient();
-
-  return tsr.macros.createMacro.useMutation({
-    onSuccess: (result) => {
-      // Invalidate and refetch macros list
+  const { t } = useTranslation();
+  
+  return route.useMutation({
+    ...options,
+    onSuccess: (...args) => {
       void queryClient.invalidateQueries({ queryKey: ["macros"] });
-      options?.onSuccess?.(result.body.id);
+      toast({ description: t("macros.macroCreated") });
+      options?.onSuccess?.(...args);
     },
-    onError: (error) => {
-      options?.onError?.(error as Error);
+    onError: (error, ...rest) => {
+      if (!isContractError(error)) {
+        toast({ description: t("common.errors.serverError"), variant: "destructive" });
+        return;
+      }
+
+      switch(error.status) {
+        case 409:
+          toast({ description: t("macros.nameAlreadyExists"), variant: "destructive" });
+          break;
+        default:
+        case 400:
+          toast({ description: t("macros.createError"), variant: "destructive" });
+          break;
+      }
     },
   });
 }
