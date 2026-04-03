@@ -12,6 +12,9 @@ inputs:
     description: "Skip coverage upload (e.g., for Dependabot PRs)"
     required: false
     default: "false"
+  macro-sb-test-key:
+    description: "AES key for decrypting macro-sandbox test scripts"
+    required: false
 
 runs:
   using: "composite"
@@ -19,6 +22,8 @@ runs:
     - name: Run Tests
       id: run-tests
       shell: bash
+      env:
+        MACRO_SB_TEST_KEY: ${{ inputs.macro-sb-test-key }}
       run: |
         echo "🧪 Testing affected packages"
 
@@ -32,9 +37,8 @@ runs:
 
         echo "Running: $TEST_CMD"
 
-        OUTPUT=$(eval "$TEST_CMD" 2>&1)
-        EXIT_CODE=$?
-        echo "$OUTPUT"
+        eval "$TEST_CMD" 2>&1 | tee test-output.txt
+        EXIT_CODE=${PIPESTATUS[0]}
 
         COVERAGE_FILES=$(find apps tooling packages -maxdepth 2 -name "coverage.json" -type f 2>/dev/null)
 
