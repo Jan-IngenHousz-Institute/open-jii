@@ -11,7 +11,7 @@ describe("MacroOverviewCards", () => {
     expect(document.querySelectorAll("[class*=animate]").length).toBeGreaterThan(0);
   });
 
-  it("renders 'no macros' message when macros array is empty", () => {
+  it("shows empty message when no macros", () => {
     render(<MacroOverviewCards macros={[]} isLoading={false} />);
     expect(screen.getByText("macros.noMacros")).toBeInTheDocument();
   });

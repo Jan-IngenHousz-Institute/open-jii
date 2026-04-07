@@ -4,6 +4,8 @@ import { describe, it, expect } from "vitest";
 
 import { Form } from "@repo/ui/components/form";
 
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+
 import { RegistrationFields } from "./registration-fields";
 import type { Registration } from "./registration-form";
 

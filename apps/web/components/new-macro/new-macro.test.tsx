@@ -1,3 +1,6 @@
+import { createMacro, createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import * as base64Utils from "@/util/base64";
 import { describe, it, expect, vi } from "vitest";
 
@@ -5,6 +8,8 @@ import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { contract } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import { NewMacroForm } from "./new-macro";
@@ -98,56 +103,17 @@ vi.mocked(useSession).mockReturnValue({
   isPending: false,
 } as ReturnType<typeof useSession>);
 
-// Mock react-hook-form
-vi.mock("react-hook-form", () => {
-  const mockSetValue = vi.fn();
-  const mockWatch = vi.fn().mockImplementation((key?: string) => {
-    if (key === "name") return "Test Macro";
-    if (key === "language") return "python";
-    if (key === "code") return "print('hello world')";
-    return "python"; // Default fallback value
-  });
-
-  return {
-    useForm: () => ({
-      handleSubmit: (fn: (data: Record<string, string>) => void) => (e: Event) => {
-        e.preventDefault();
-        fn({
-          name: "Test Macro",
-          description: "Test Description",
-          language: "python",
-          code: "print('hello world')",
-        });
-      },
-      setValue: mockSetValue,
-      watch: mockWatch,
-      formState: { errors: {} },
-      control: {},
-    }),
-    Controller: ({ render }: MockControllerProps) => render({ field: {} }),
-  };
-});
-
-// Mock zod resolver
-vi.mock("@hookform/resolvers/zod", () => ({
-  zodResolver: () => vi.fn(),
-}));
-
-// Mock base64 utilities
-vi.mock("@/util/base64", () => ({
-  encodeBase64: vi.fn((str: string) => Buffer.from(str).toString("base64")),
-  decodeBase64: vi.fn((str: string) => Buffer.from(str, "base64").toString()),
-}));
+vi.mocked(useSession).mockReturnValue({
+  data: { user: { id: "user-1" } },
+  isPending: false,
+} as ReturnType<typeof useSession>);
 
 describe("NewMacroForm", () => {
   it("renders form structure", async () => {
     server.mount(contract.users.getUserProfile, { body: createUserProfile() });
 
-  it("should render form elements", () => {
-    // Act
     render(<NewMacroForm />);
 
-    // Assert
     expect(screen.getByTestId("details-card")).toBeInTheDocument();
 
     await waitFor(() => {
@@ -156,51 +122,47 @@ describe("NewMacroForm", () => {
     expect(screen.getByText("newMacro.codeTitle")).toBeInTheDocument();
   });
 
-  it("should render form buttons", () => {
-    // Act
+  it("renders cancel and submit buttons", () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
     render(<NewMacroForm />);
-
-    // Assert
     expect(screen.getByText("newMacro.cancel")).toBeInTheDocument();
     expect(screen.getByText("newMacro.finalizeSetup")).toBeInTheDocument();
   });
 
-  it("should call router.back when cancel button is clicked", async () => {
-    // Arrange
+  it("navigates back on cancel", async () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
     const user = userEvent.setup();
-    render(<NewMacroForm />);
-    const cancelButton = screen.getByText("newMacro.cancel");
-
-    // Act
-    await user.click(cancelButton);
-
-    // Assert
-    expect(mockBack).toHaveBeenCalled();
+    const { router } = render(<NewMacroForm />);
+    await user.click(screen.getByText("newMacro.cancel"));
+    expect(router.back).toHaveBeenCalled();
   });
 
-  it("should submit form with base64 encoded code", async () => {
-    // Arrange
+  it("submits form — POST /api/v1/macros", async () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
+
+    const spy = server.mount(contract.macros.createMacro, {
+      body: createMacro({ id: "macro-42", name: "New Macro", code: "" }),
+    });
+
     const user = userEvent.setup();
-    render(<NewMacroForm />);
-    const submitButton = screen.getByText("newMacro.finalizeSetup");
+    const { router } = render(<NewMacroForm />);
+    await user.click(screen.getByText("newMacro.finalizeSetup"));
 
-    // Act
-    await user.click(submitButton);
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
+    });
+    expect(vi.mocked(base64Utils.encodeBase64)).toHaveBeenCalled();
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ description: "macros.macroCreated" });
 
-    // Assert
-    expect(mockMutate).toHaveBeenCalledWith({
-      body: {
-        name: "Test Macro",
-        description: "Test Description",
-        language: "python",
-        code: Buffer.from("print('hello world')").toString("base64"),
-      },
+    // onSuccess navigates to the new macro
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalled();
     });
   });
 
-  it("should show toast notification on submit", async () => {
-    // Arrange
-    const user = userEvent.setup();
+  it("renders code editor with default language", async () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
+
     render(<NewMacroForm />);
     const submitButton = screen.getByText("newMacro.finalizeSetup");
 

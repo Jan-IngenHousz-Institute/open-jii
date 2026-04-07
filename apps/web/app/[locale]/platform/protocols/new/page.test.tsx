@@ -1,7 +1,5 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
 
 import NewProtocolPage from "./page";
 

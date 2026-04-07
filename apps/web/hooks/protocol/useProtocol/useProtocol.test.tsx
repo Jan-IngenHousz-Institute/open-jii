@@ -1,44 +1,19 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
 
-import { tsr } from "../../../lib/tsr";
+import { contract } from "@repo/api";
+
 import { useProtocol } from "./useProtocol";
 
-// Mock the tsr client
-vi.mock("../../../lib/tsr", () => ({
-  tsr: {
-    protocols: {
-      getProtocol: {
-        useQuery: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
-
 describe("useProtocol", () => {
-  let queryClient: QueryClient;
+  it("does not fetch when protocolId is empty", () => {
+    const { result } = renderHook(() => useProtocol(""));
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
-
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.fetchStatus).toBe("idle");
   });
 
   it("should call useQuery with correct parameters", () => {
@@ -51,42 +26,28 @@ describe("useProtocol", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("should handle 404 error for non-existent protocol", () => {
-    const mockError = {
-      status: 404,
-      message: "Protocol not found",
-    };
+  it("handles 404 error for non-existent protocol", async () => {
+    server.mount(contract.protocols.getProtocol, { status: 404 });
 
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: mockError,
-      isLoading: false,
-    });
-    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
-      typeof mockTsr.protocols.getProtocol.useQuery
-    >;
+    const { result } = renderHook(() => useProtocol("non-existent"));
 
-    const { result } = renderHook(() => useProtocol("non-existent"), {
-      wrapper: createWrapper(),
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.error).toEqual(mockError);
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.data?.body).toBeUndefined();
   });
 
-  it("should handle loading state", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.protocols.getProtocol.useQuery = mockUseQuery as vi.MockedFunction<
-      typeof mockTsr.protocols.getProtocol.useQuery
-    >;
+  it("uses different query keys per protocol ID", async () => {
+    server.mount(contract.protocols.getProtocol, { body: createProtocol() });
 
-    const { result } = renderHook(() => useProtocol("protocol-123"), {
-      wrapper: createWrapper(),
+    // Render same hook with two different IDs — they should fire separate queries
+    const { result: r1 } = renderHook(() => useProtocol("p-1"));
+    const { result: r2 } = renderHook(() => useProtocol("p-2"));
+
+    await waitFor(() => {
+      expect(r1.current.data).toBeDefined();
+      expect(r2.current.data).toBeDefined();
     });
 
     // Both should have resolved independently

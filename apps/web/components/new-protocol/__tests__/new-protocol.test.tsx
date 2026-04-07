@@ -226,7 +226,7 @@ describe("NewProtocolForm", () => {
     });
 
     it("should handle code editor changes", async () => {
-      await goToStep2();
+      const user = await goToStep2();
 
       const codeEditor = screen.getByTestId("code-editor");
       const newCode = JSON.stringify([{ averages: 2 }]);

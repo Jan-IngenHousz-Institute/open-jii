@@ -1,9 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, expect, it } from "vitest";
 
-import { tsr } from "../../../lib/tsr";
+import { contract } from "@repo/api";
+
 import { useMacros } from "./useMacros";
 
 describe("useMacros", () => {

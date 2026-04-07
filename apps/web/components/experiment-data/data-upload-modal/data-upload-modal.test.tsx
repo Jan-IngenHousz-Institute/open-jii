@@ -3,8 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataUploadModal } from "./data-upload-modal";
 
-globalThis.React = React;
-
 // Mock the step components
 vi.mock("./steps/file-upload-step", () => ({
   FileUploadStep: ({
@@ -35,27 +33,6 @@ vi.mock("./steps/success-step", () => ({
   ),
 }));
 
-// Mock translation
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-content">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
 describe("DataUploadModal", () => {
   const mockOnOpenChange = vi.fn();
 
@@ -82,7 +59,7 @@ describe("DataUploadModal", () => {
 
   it("does not render modal when closed", () => {
     renderModal(false);
-    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("starts with file upload step", () => {
@@ -92,6 +69,7 @@ describe("DataUploadModal", () => {
   });
 
   it("transitions to success step when upload succeeds", async () => {
+    const user = userEvent.setup();
     renderModal();
 
     await user.click(screen.getByTestId("upload-success"));
@@ -126,6 +104,8 @@ describe("DataUploadModal", () => {
   it("closes modal from success step", async () => {
     const user = userEvent.setup();
     renderModal();
+
+    await user.click(screen.getByTestId("upload-success"));
 
     await waitFor(() => {
       expect(screen.getByTestId("success-step")).toBeInTheDocument();
@@ -166,7 +146,7 @@ describe("DataUploadModal", () => {
     rerender(
       <DataUploadModal
         experimentId="test-experiment"
-        open={true}
+        open={false}
         onOpenChange={mockOnOpenChange}
       />,
     );
@@ -177,15 +157,13 @@ describe("DataUploadModal", () => {
     });
 
     // Reopen modal
-    act(() => {
-      rerender(
-        <DataUploadModal
-          experimentId="test-experiment"
-          open={true}
-          onOpenChange={mockOnOpenChange}
-        />,
-      );
-    });
+    rerender(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={true}
+        onOpenChange={mockOnOpenChange}
+      />,
+    );
 
     // Should be back to sensor selection
     expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
@@ -197,7 +175,7 @@ describe("DataUploadModal", () => {
 
     // The dialog component should be able to trigger onOpenChange
     // This would be handled by the Dialog component internally
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("calls onOpenChange when dialog requests to close", () => {
