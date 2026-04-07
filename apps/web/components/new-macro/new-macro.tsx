@@ -74,7 +74,7 @@ export function NewMacroForm() {
         return;
       }
       router.push(`/${locale}/platform/macros/${id}`);
-    }
+    },
   });
 
   // Placeholder macroId for the hook - actual call uses real ID via mutateAsync
