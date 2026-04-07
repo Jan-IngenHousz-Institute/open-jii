@@ -33,8 +33,14 @@ export function RecentMeasurementsScreen() {
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
-  const { uploadAll, isUploading, uploadOne, removeMeasurement, clearSyncedMeasurements, updateMeasurementComment } =
-    useMeasurements();
+  const {
+    uploadAll,
+    isUploading,
+    uploadOne,
+    removeMeasurement,
+    clearSyncedMeasurements,
+    updateMeasurementComment,
+  } = useMeasurements();
 
   const handleSyncAll = () => {
     showAlert(
