@@ -35,7 +35,7 @@ module "flow_logs" {
   tags = local.common_tags
 }
 
-# --- Uncomment after bootstrapping ECR images (./scripts/bootstrap-macro-sandbox-ecr.sh) ---
+# --- Uncomment after bootstrapping ECR images (deploy-macro-sandbox.yml → push-bootstrap-images) ---
 # module "lambda" {
 #   source = "../macro-lambda"
 #
