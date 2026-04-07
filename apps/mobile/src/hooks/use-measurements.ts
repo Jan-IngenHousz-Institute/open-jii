@@ -31,14 +31,14 @@ export function useMeasurements() {
     for (const { key, data } of failedUploads) {
       try {
         await sendMqttEvent(data.topic, data.measurementResult);
-        markAsSuccessful(key);
+        await markAsSuccessful(key);
       } catch (error) {
         console.warn(`Failed to upload item with key ${key}:`, error);
         lastError = error;
       }
     }
 
-    pruneExpiredMeasurements();
+    await pruneExpiredMeasurements();
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
     if (lastError) {
       throw lastError;
@@ -51,13 +51,13 @@ export function useMeasurements() {
 
     try {
       await sendMqttEvent(item.data.topic, item.data.measurementResult);
-      markAsSuccessful(key);
+      await markAsSuccessful(key);
     } catch (error) {
       console.warn(`Failed to upload item with key ${key}:`, error);
       toast.info("Failed to upload, try again later");
     }
 
-    pruneExpiredMeasurements();
+    await pruneExpiredMeasurements();
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
@@ -66,20 +66,20 @@ export function useMeasurements() {
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
-  const removeMeasurement = (key: string) => {
-    removeMeasurementFromStorage(key);
-    queryClient.invalidateQueries({ queryKey: ["measurements"] });
+  const removeMeasurement = async (key: string) => {
+    await removeMeasurementFromStorage(key);
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
-  const clearSyncedMeasurements = () => {
-    clearMeasurements("successful");
-    queryClient.invalidateQueries({ queryKey: ["measurements"] });
+  const clearSyncedMeasurements = async () => {
+    await clearMeasurements("successful");
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
   const updateMeasurementComment = async (key: string, data: Measurement, commentText: string) => {
     const annotations = buildAnnotationsWithComment(commentText);
     const measurementResult = { ...data.measurementResult, annotations };
-    updateMeasurement(key, { ...data, measurementResult });
+    await updateMeasurement(key, { ...data, measurementResult });
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
