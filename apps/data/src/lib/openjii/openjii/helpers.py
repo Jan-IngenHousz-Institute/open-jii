@@ -211,8 +211,9 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
     
     # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT)
+    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT, VOID → STRING)
     def normalize_schema(schema):
-        return schema.replace("OBJECT<", "STRUCT<") if schema else None
+        return schema.replace("OBJECT<", "STRUCT<").replace("VOID", "STRING") if schema else None
     
     macro_schema = normalize_schema(metadata["macro_schema"])
     questions_schema = normalize_schema(metadata["questions_schema"])
