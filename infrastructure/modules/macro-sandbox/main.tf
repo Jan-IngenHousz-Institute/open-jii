@@ -15,8 +15,9 @@ module "ecr" {
   image_tag_mutability = var.image_tag_mutability
   force_delete         = var.force_delete
 
-  create_repository_policy = false
-  ci_cd_role_arn           = var.ci_cd_role_arn
+  create_repository_policy  = true
+  create_ecs_pull_statement = false
+  ci_cd_role_arn            = var.ci_cd_role_arn
 
   tags = merge(local.common_tags, {
     Language = each.key
@@ -34,26 +35,27 @@ module "flow_logs" {
   tags = local.common_tags
 }
 
-module "lambda" {
-  source = "../macro-lambda"
-
-  environment         = var.environment
-  isolated_subnet_ids = var.isolated_subnet_ids
-  lambda_sg_id        = var.lambda_sg_id
-
-  languages = {
-    for k, v in var.languages : k => {
-      memory             = v.memory
-      timeout            = v.timeout
-      ecr_repository_url = module.ecr[k].repository_url
-      ecr_repository_arn = module.ecr[k].repository_arn
-    }
-  }
-
-  flow_log_group_name = module.flow_logs.log_group_name
-  log_retention_days  = var.log_retention_days
-
-  reserved_concurrent_executions = var.reserved_concurrent_executions
-
-  tags = local.common_tags
-}
+# --- Uncomment after bootstrapping ECR images (./scripts/bootstrap-macro-sandbox-ecr.sh) ---
+# module "lambda" {
+#   source = "../macro-lambda"
+#
+#   environment         = var.environment
+#   isolated_subnet_ids = var.isolated_subnet_ids
+#   lambda_sg_id        = var.lambda_sg_id
+#
+#   languages = {
+#     for k, v in var.languages : k => {
+#       memory             = v.memory
+#       timeout            = v.timeout
+#       ecr_repository_url = module.ecr[k].repository_url
+#       ecr_repository_arn = module.ecr[k].repository_arn
+#     }
+#   }
+#
+#   flow_log_group_name = module.flow_logs.log_group_name
+#   log_retention_days  = var.log_retention_days
+#
+#   reserved_concurrent_executions = var.reserved_concurrent_executions
+#
+#   tags = local.common_tags
+# }

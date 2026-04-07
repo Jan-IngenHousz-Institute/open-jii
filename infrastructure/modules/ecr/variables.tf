@@ -82,3 +82,9 @@ variable "create_repository_policy" {
   type        = bool
   default     = true
 }
+
+variable "create_ecs_pull_statement" {
+  description = "Whether to include the ECS pull statement in the repo policy. Set to false for non-ECS repos (e.g., Lambda)."
+  type        = bool
+  default     = true
+}

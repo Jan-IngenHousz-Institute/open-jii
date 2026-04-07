@@ -46,7 +46,7 @@ resource "aws_ecr_repository_policy" "this" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = concat(
-      [
+      var.create_ecs_pull_statement ? [
         {
           Sid    = "AllowECSPull",
           Effect = "Allow",
@@ -70,7 +70,7 @@ resource "aws_ecr_repository_policy" "this" {
             }
           }
         }
-      ],
+      ] : [],
       var.ci_cd_role_arn != null ? [
         {
           Sid    = "AllowCICDPush",
