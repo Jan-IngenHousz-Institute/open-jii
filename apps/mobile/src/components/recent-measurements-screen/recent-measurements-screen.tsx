@@ -1,11 +1,12 @@
 import { clsx } from "clsx";
 import { ChevronsLeft, UploadCloud, Trash2 } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View, Text, FlatList, Pressable } from "react-native";
 import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
+import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
@@ -15,6 +16,7 @@ import type {
   MeasurementItem as MeasurementItemType,
 } from "~/hooks/use-all-measurements";
 import { useMeasurements } from "~/hooks/use-measurements";
+import { useMultiTapAction } from "~/hooks/use-multi-tap-action";
 import { useTheme } from "~/hooks/use-theme";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
@@ -137,13 +139,19 @@ export function RecentMeasurementsScreen() {
   const unsyncedCount = measurements?.filter((m) => m.status === "unsynced").length ?? 0;
   const syncedCount = measurements?.filter((m) => m.status === "synced").length ?? 0;
 
+  const handleExportTap = useMultiTapAction(() => {
+    void exportMeasurementsToFile().catch(() => {
+      toast.error("Export failed. Please try again.");
+    });
+  });
+
   const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
     setSelectedMeasurement(measurement);
   };
 
   return (
     <View className={clsx("flex-1", classes.background)}>
-      <View className="flex-row items-center justify-between p-4">
+      <Pressable className="flex-row items-center justify-between p-4" onPress={handleExportTap}>
         <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
 
         <View className="flex-row gap-3">
@@ -163,7 +171,7 @@ export function RecentMeasurementsScreen() {
             style={{ borderColor: "transparent", padding: 9 }}
           />
         </View>
-      </View>
+      </Pressable>
       {measurements && measurements.length > 0 && (
         <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />
