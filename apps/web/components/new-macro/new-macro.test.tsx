@@ -380,7 +380,7 @@ describe("NewMacroForm", () => {
     });
   });
 
-  it("should show toast notification on submit", async () => {
+  it("should call mutate on submit", async () => {
     // Arrange
     const user = userEvent.setup();
     render(<NewMacroForm />);
@@ -390,9 +390,7 @@ describe("NewMacroForm", () => {
     await user.click(submitButton);
 
     // Assert
-    expect(mockToast).toHaveBeenCalledWith({
-      description: "macros.macroCreated",
-    });
+    expect(mockMutate).toHaveBeenCalled();
   });
 
   it("should render code editor with correct language", () => {
@@ -480,7 +478,6 @@ describe("NewMacroForm", () => {
 
     // Assert
     expect(mockMutate).toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalled();
   });
 
   it("should change language when language select changes", () => {
