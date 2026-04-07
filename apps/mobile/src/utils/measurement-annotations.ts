@@ -14,16 +14,20 @@ export function getCommentFromMeasurementResult(
   return comment?.content?.text ?? "";
 }
 
-/** Build annotations array with a single comment (replaces any existing comment). */
-export function buildAnnotationsWithComment(text: string): {
-  type: string;
-  content: { text: string; flagType: null };
-}[] {
-  if (!text.trim()) return [];
-  return [
-    {
-      type: "comment",
-      content: { text: text.trim(), flagType: null },
-    },
-  ];
+/** Build annotations array from optional comment text and/or flag type. */
+export function buildAnnotations(
+  commentText?: string,
+  flagType?: string | null,
+): { type: string; content: { text: string; flagType: string | null } }[] {
+  const annotations: { type: string; content: { text: string; flagType: string | null } }[] = [];
+
+  if (commentText?.trim()) {
+    annotations.push({ type: "comment", content: { text: commentText.trim(), flagType: null } });
+  }
+
+  if (flagType) {
+    annotations.push({ type: "flag", content: { text: "", flagType } });
+  }
+
+  return annotations;
 }
