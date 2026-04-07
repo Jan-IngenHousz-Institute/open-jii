@@ -8,8 +8,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
-import { notFound, useParams, usePathname } from "next/navigation";
-import { render, screen, userEvent } from "@/test/test-utils";
 
 import ProtocolLayout from "../layout";
 

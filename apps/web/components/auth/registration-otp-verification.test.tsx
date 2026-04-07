@@ -6,8 +6,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Form } from "@repo/ui/components";
 import type * as UIComponents from "@repo/ui/components";
 
-import { render, screen, userEvent } from "@/test/test-utils";
-
 import type { Registration } from "./registration-form";
 import { RegistrationOtpVerification } from "./registration-otp-verification";
 
