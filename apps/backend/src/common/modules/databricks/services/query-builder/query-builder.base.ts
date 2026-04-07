@@ -33,21 +33,22 @@ export abstract class BaseQueryBuilder {
   }
 
   /**
-   * Transform VARIANT schema from schema_of_variant_agg() to from_json() compatible schema.
-   * Replaces OBJECT<...> with STRUCT<...> for DDL compatibility.
+   * Transform a VARIANT schema string from schema_of_variant_agg() into one that from_json() accepts.
+   *
+   * - OBJECT< → STRUCT<: schema_of_variant_agg uses Spark's VARIANT DDL (OBJECT); from_json wants STRUCT.
+   * - VOID → STRING: schema_of_variant_agg emits VOID for fields that exist on the JSON but are
+   *   null across every aggregated row, and from_json rejects VOID inside a STRUCT. Coercing to
+   *   STRING is safe — those fields parse back as null.
    *
    * Example:
-   * Input:  "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>>"
-   * Output: "STRUCT<phi2: DOUBLE, messages: STRUCT<text: STRING>>"
+   *   Input:  "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>, dead: VOID>"
+   *   Output: "STRUCT<phi2: DOUBLE, messages: STRUCT<text: STRING>, dead: STRING>"
    */
   transformSchemaForFromJson(variantSchema: string): string {
-    if (!variantSchema) {
-      return "";
-    }
-
-    // Replace all occurrences of OBJECT with STRUCT
-    // This handles nested OBJECT types as well
-    return variantSchema.replace(/OBJECT</g, "STRUCT<");
+    if (!variantSchema) return "";
+    // ": VOID" is unambiguous as a type token: DDL field identifiers can't contain
+    // ":" or spaces, so this only matches the type position, never a field name.
+    return variantSchema.replaceAll("OBJECT<", "STRUCT<").replaceAll(": VOID", ": STRING");
   }
 }
 
