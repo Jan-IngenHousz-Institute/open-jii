@@ -6,7 +6,10 @@ import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
 
 const route = tsr.macros.createMacro;
 
-export type UseMacroCreateOptions = TsRestMutationOptions<TsrRoute<typeof route>, "onSuccess" | "onError">;
+export type UseMacroCreateOptions = TsRestMutationOptions<
+  TsrRoute<typeof route>,
+  "onSuccess" | "onError"
+>;
 
 export function useMacroCreate(options?: UseMacroCreateOptions) {
   const queryClient = tsr.useQueryClient();

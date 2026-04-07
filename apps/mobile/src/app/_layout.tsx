@@ -129,7 +129,6 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-
 function RootLayoutContent() {
   const theme = useTheme();
 
