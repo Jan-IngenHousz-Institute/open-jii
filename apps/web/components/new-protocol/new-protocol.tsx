@@ -21,7 +21,6 @@ import {
   WizardForm,
 } from "@repo/ui/components";
 import type { WizardStep, WizardStepProps } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
 
 import { IotProtocolRunner } from "../iot/iot-protocol-runner";
 import ProtocolCodeEditor from "../protocol-code-editor";

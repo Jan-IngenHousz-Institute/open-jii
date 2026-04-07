@@ -30,7 +30,6 @@ import {
   SelectValue,
   Skeleton,
 } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
 
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";
