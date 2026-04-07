@@ -168,6 +168,12 @@ locals {
         "lambda:GetFunctionConcurrency",
         # Code signing (Terraform provider reads)
         "lambda:GetFunctionCodeSigningConfig",
+        # Layer management (Terraform provider reads layer metadata before attaching)
+        "lambda:GetLayerVersion",
+        "lambda:GetLayerVersionPolicy",
+        "lambda:ListLayers",
+        "lambda:ListLayerVersions",
+        "lambda:PublishLayerVersion",
       ]
       resource = "*"
     }
