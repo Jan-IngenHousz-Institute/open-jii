@@ -155,7 +155,6 @@ vi.mock("@repo/i18n", () => ({
 
 vi.mock("@repo/ui/hooks");
 
-
 vi.mock("@repo/ui/components", () => ({
   Form: ({ children, ...props }: MockFormProps) => <div {...props}>{children}</div>,
   Button: ({ children, onClick, type, disabled, ...props }: MockButtonProps) => (
