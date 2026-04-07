@@ -41,7 +41,7 @@ vi.mock("~/utils/get-multispeq-mqtt-topic", () => ({
 }));
 
 vi.mock("~/utils/measurement-annotations", () => ({
-  buildAnnotationsWithComment: (c: string) => [{ comment: c }],
+  buildAnnotations: (c?: string) => (c ? [{ comment: c }] : []),
 }));
 
 vi.mock("sonner-native", () => ({

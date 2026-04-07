@@ -7,7 +7,7 @@ import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { compressSample } from "~/utils/compress-sample";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
-import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
+import { buildAnnotations } from "~/utils/measurement-annotations";
 
 interface MacroInfo {
   id: string;
@@ -45,7 +45,7 @@ function prepareMeasurementForUpload({
   }
 
   const macros: MacroInfo[] = macro ? [macro] : [];
-  const annotations = commentText ? buildAnnotationsWithComment(commentText) : [];
+  const annotations = buildAnnotations(commentText);
 
   const payload = {
     questions,
