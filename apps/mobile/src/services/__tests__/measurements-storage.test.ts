@@ -409,6 +409,28 @@ describe("measurements-storage", () => {
       expect(AsyncStorage.multiRemove).not.toHaveBeenCalled();
     });
 
+    it("migrates a legacy entry with an invalid timestamp, omitting createdAt", async () => {
+      const invalidTimestampMeasurement = {
+        ...mockMeasurement,
+        metadata: { ...mockMeasurement.metadata, timestamp: "not-a-date" },
+      };
+
+      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_legacy-bad-ts"]);
+      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
+        ["FAILED_UPLOAD_legacy-bad-ts", compressForStorage(invalidTimestampMeasurement)],
+      ]);
+
+      const mod = await import("../measurements-storage");
+      await mod.getMeasurements("failed");
+
+      const rows = sqlite
+        .prepare("SELECT * FROM measurements WHERE id = 'legacy-bad-ts'")
+        .all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe("failed");
+      expect(AsyncStorage.multiRemove).toHaveBeenCalledWith(["FAILED_UPLOAD_legacy-bad-ts"]);
+    });
+
     it("runs migration exactly once regardless of how many functions are called", async () => {
       vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_once"]);
       vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
