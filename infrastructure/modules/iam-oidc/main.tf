@@ -960,6 +960,28 @@ locals {
       ]
       resource = "*"
     }
+
+    # ── Inspector v2: account-level enablement (Terraform) ──
+    inspector2 = {
+      actions = [
+        # Enable/disable scanning (create, update, destroy)
+        "inspector2:Enable",
+        "inspector2:Disable",
+        # Read current account status (plan/refresh)
+        "inspector2:BatchGetAccountStatus",
+        # Provider reads during plan
+        "inspector2:ListAccountPermissions",
+      ]
+      resource = "*"
+    }
+
+    # ── Inspector v2: service-linked role creation (first-time enablement) ──
+    inspector2-slr = {
+      actions = [
+        "iam:CreateServiceLinkedRole",
+      ]
+      resource = "arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2"
+    }
   }
 
   # Combine all service permissions into comprehensive policy statements
