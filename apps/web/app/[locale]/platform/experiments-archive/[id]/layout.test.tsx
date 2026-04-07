@@ -125,8 +125,8 @@ describe("<ExperimentLayout />", () => {
         expect(screen.getByText("overview")).toBeInTheDocument();
       });
 
-      const links = screen.getAllByRole("link");
-      const hrefs = links.map((l) => l.getAttribute("href"));
+      const tabs = screen.getAllByRole("tab");
+      const hrefs = tabs.map((t) => t.getAttribute("href"));
 
       expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id");
       expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/data");
@@ -205,8 +205,8 @@ describe("<ExperimentLayout />", () => {
         expect(screen.getByText("overview")).toBeInTheDocument();
       });
 
-      const links = screen.getAllByRole("link");
-      const hrefs = links.map((l) => l.getAttribute("href"));
+      const tabs = screen.getAllByRole("tab");
+      const hrefs = tabs.map((t) => t.getAttribute("href"));
 
       expect(hrefs).toContain("/de/platform/experiments-archive/test-id");
       expect(hrefs).toContain("/de/platform/experiments-archive/test-id/data");

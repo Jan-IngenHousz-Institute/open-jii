@@ -1,22 +1,13 @@
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import React from "react";
+import { use } from "react";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import ProtocolOverviewPage from "../page";
 
-globalThis.React = React;
-
-// Mock React's use function to resolve the params promise synchronously
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "proto-1" }),
-  };
-});
+import { render, screen, userEvent } from "@/test/test-utils";
 
 // --------------------
 // Mocks
@@ -47,22 +38,7 @@ vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
   useProtocolUpdate: () => mockUseProtocolUpdate(),
 }));
 
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({
-    data: { user: { id: "user-123" } },
-  }),
-}));
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-    i18n: { language: "en" },
-  }),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
@@ -175,31 +151,7 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
   ),
 }));
 
-vi.mock("next/link", () => ({
-  __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
 
-vi.mock("lucide-react", () => ({
-  Check: ({ className }: { className?: string }) => (
-    <span data-testid="check-icon" className={className} />
-  ),
-  Circle: ({ className }: { className?: string }) => (
-    <span data-testid="circle-icon" className={className} />
-  ),
-  Loader2: ({ className }: { className?: string }) => (
-    <span data-testid="loader2-icon" className={className} />
-  ),
-  Pencil: ({ className }: { className?: string }) => (
-    <span data-testid="pencil-icon" className={className} />
-  ),
-  Play: ({ className }: { className?: string }) => (
-    <span data-testid="play-icon" className={className} />
-  ),
-  X: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className} />,
-}));
 
 vi.mock("@repo/ui/components", () => {
   const Card = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -283,6 +235,12 @@ const mockProtocol = {
 describe("ProtocolOverviewPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    vi.mocked(use).mockReturnValue({ id: "proto-1" });
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-123" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
 
     mockUseProtocolUpdate.mockReturnValue({
       mutateAsync: mockMutateAsync,
@@ -446,7 +404,7 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByTestId("description-content")).toHaveTextContent("");
   });
 
-  it("should call toast with success message when description save succeeds", () => {
+  it("should call toast with success message when description save succeeds", async () => {
     mockMutateAsync.mockImplementation((_data: unknown, opts: { onSuccess?: () => void }) => {
       opts.onSuccess?.();
       return Promise.resolve();
@@ -460,9 +418,8 @@ describe("ProtocolOverviewPage", () => {
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
-    act(() => {
-      fireEvent.click(screen.getByTestId("description-save-btn"));
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("description-save-btn"));
 
     expect(mockMutateAsync).toHaveBeenCalledWith(
       { params: { id: "proto-1" }, body: { description: "updated description" } },
@@ -474,7 +431,7 @@ describe("ProtocolOverviewPage", () => {
     expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
   });
 
-  it("should call toast with destructive variant when description save fails", () => {
+  it("should call toast with destructive variant when description save fails", async () => {
     mockMutateAsync.mockImplementation(
       (_data: unknown, opts: { onError?: (err: unknown) => void }) => {
         opts.onError?.("save failed");
@@ -490,9 +447,8 @@ describe("ProtocolOverviewPage", () => {
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
-    act(() => {
-      fireEvent.click(screen.getByTestId("description-save-btn"));
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("description-save-btn"));
 
     expect(toast).toHaveBeenCalledWith({
       description: "save failed",
@@ -500,7 +456,7 @@ describe("ProtocolOverviewPage", () => {
     });
   });
 
-  it("should switch to ProtocolCodeEditor when creator clicks edit button", () => {
+  it("should switch to ProtocolCodeEditor when creator clicks edit button", async () => {
     mockUseProtocol.mockReturnValue({
       data: { body: { ...mockProtocol, createdBy: "user-123" } },
       isLoading: false,
@@ -512,7 +468,8 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
     expect(screen.queryByTestId("protocol-code-editor")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /common\.edit/i }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /common\.edit/i }));
 
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
     expect(screen.queryByTestId("json-viewer")).not.toBeInTheDocument();

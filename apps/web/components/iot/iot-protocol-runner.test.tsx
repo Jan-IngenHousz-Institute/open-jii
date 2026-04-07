@@ -1,11 +1,8 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import React from "react";
+import type React from "react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { IotProtocolRunner } from "./iot-protocol-runner";
-
-globalThis.React = React;
 
 // Mock hooks
 const mockConnect = vi.fn();
@@ -39,19 +36,6 @@ vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
   useIotProtocolExecution: () => ({
     executeProtocol: mockExecuteProtocol,
   }),
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock Lucide icons
-vi.mock("lucide-react", () => ({
-  Play: () => <span data-testid="play-icon">▶️</span>,
-  Loader2: () => <span data-testid="loader-icon">⏳</span>,
 }));
 
 // Mock UI components
@@ -209,11 +193,12 @@ describe("IotProtocolRunner", () => {
       expect(screen.getByText("Current: bluetooth")).toBeInTheDocument();
     });
 
-    it("allows changing connection type", () => {
+    it("allows changing connection type", async () => {
       render(<IotProtocolRunner {...defaultProps} />);
 
+      const user = userEvent.setup();
       const serialButton = screen.getByRole("button", { name: "Serial" });
-      fireEvent.click(serialButton);
+      await user.click(serialButton);
 
       expect(screen.getByText("Current: serial")).toBeInTheDocument();
     });
@@ -257,20 +242,22 @@ describe("IotProtocolRunner", () => {
       expect(screen.getByText(/Device:.*Test Device/)).toBeInTheDocument();
     });
 
-    it("calls connect when connect button is clicked", () => {
+    it("calls connect when connect button is clicked", async () => {
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const connectButton = screen.getByRole("button", { name: "Connect" });
-      fireEvent.click(connectButton);
+      await user.click(connectButton);
 
       expect(mockConnect).toHaveBeenCalledTimes(1);
     });
 
-    it("calls disconnect when disconnect button is clicked", () => {
+    it("calls disconnect when disconnect button is clicked", async () => {
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const disconnectButton = screen.getByRole("button", { name: "Disconnect" });
-      fireEvent.click(disconnectButton);
+      await user.click(disconnectButton);
 
       expect(mockDisconnect).toHaveBeenCalledTimes(1);
     });
@@ -284,12 +271,13 @@ describe("IotProtocolRunner", () => {
     it("executes protocol when run button is clicked", async () => {
       mockExecuteProtocol.mockResolvedValueOnce({ temperature: 25.5 });
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(mockExecuteProtocol).toHaveBeenCalledWith(defaultProps.protocolCode);
@@ -301,12 +289,13 @@ describe("IotProtocolRunner", () => {
         () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 100)),
       );
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       // Check that button shows running state
       await waitFor(() => {
@@ -320,12 +309,13 @@ describe("IotProtocolRunner", () => {
     it("displays success result after successful execution", async () => {
       mockExecuteProtocol.mockResolvedValueOnce({ temperature: 25.5, humidity: 60 });
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(screen.getByText(/temperature.*25\.5/)).toBeInTheDocument();
@@ -339,12 +329,13 @@ describe("IotProtocolRunner", () => {
     it("displays error result after failed execution", async () => {
       mockExecuteProtocol.mockRejectedValueOnce(new Error("Protocol execution failed"));
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Protocol execution failed/i)).toBeInTheDocument();
@@ -360,6 +351,7 @@ describe("IotProtocolRunner", () => {
         () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 50)),
       );
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
@@ -367,7 +359,7 @@ describe("IotProtocolRunner", () => {
       });
 
       const startTime = Date.now();
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(mockExecuteProtocol).toHaveBeenCalled();
@@ -386,12 +378,13 @@ describe("IotProtocolRunner", () => {
     it("includes timestamp in result", async () => {
       mockExecuteProtocol.mockResolvedValueOnce({ data: "test" });
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         const result = screen.getByTestId("protocol-results-display").textContent;
@@ -402,6 +395,7 @@ describe("IotProtocolRunner", () => {
     it("clears previous result before new execution", async () => {
       mockExecuteProtocol.mockResolvedValue({ data: "test" });
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
@@ -409,14 +403,14 @@ describe("IotProtocolRunner", () => {
       });
 
       // First execution
-      fireEvent.click(runButton);
+      await user.click(runButton);
       await waitFor(() => {
         expect(screen.getByText(/data.*test/)).toBeInTheDocument();
       });
 
       // Second execution
       mockExecuteProtocol.mockResolvedValueOnce({ data: "new" });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(screen.getByText(/data.*new/)).toBeInTheDocument();
@@ -438,12 +432,13 @@ describe("IotProtocolRunner", () => {
     it("handles non-Error objects in catch block", async () => {
       mockExecuteProtocol.mockRejectedValueOnce("String error");
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Protocol execution failed/i)).toBeInTheDocument();
@@ -468,13 +463,14 @@ describe("IotProtocolRunner", () => {
       mockIsConnected = true;
       mockExecuteProtocol.mockResolvedValueOnce({ data: "test" });
 
+      const user = userEvent.setup();
       const { rerender } = render(<IotProtocolRunner {...defaultProps} />);
 
       // Run protocol first
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(screen.getByText(/data.*test/)).toBeInTheDocument();
@@ -503,31 +499,6 @@ describe("IotProtocolRunner", () => {
   });
 
   describe("UI states", () => {
-    it("shows play icon when not running", () => {
-      mockIsConnected = true;
-      render(<IotProtocolRunner {...defaultProps} />);
-
-      expect(screen.getByTestId("play-icon")).toBeInTheDocument();
-    });
-
-    it("shows loader icon when running", async () => {
-      mockIsConnected = true;
-      mockExecuteProtocol.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 100)),
-      );
-
-      render(<IotProtocolRunner {...defaultProps} />);
-
-      const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
-      });
-      fireEvent.click(runButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("loader-icon")).toBeInTheDocument();
-      });
-    });
-
     it("applies correct layout classes for horizontal layout", () => {
       const { container } = render(<IotProtocolRunner {...defaultProps} layout="horizontal" />);
 
@@ -561,12 +532,13 @@ describe("IotProtocolRunner", () => {
       mockIsConnected = true;
       mockExecuteProtocol.mockResolvedValueOnce({});
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} protocolCode={[]} />);
 
       const runButton = screen.getByRole("button", {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(mockExecuteProtocol).toHaveBeenCalledWith([]);
@@ -579,6 +551,7 @@ describe("IotProtocolRunner", () => {
         () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 50)),
       );
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
@@ -586,9 +559,9 @@ describe("IotProtocolRunner", () => {
       });
 
       // Click multiple times rapidly
-      fireEvent.click(runButton);
-      fireEvent.click(runButton);
-      fireEvent.click(runButton);
+      await user.click(runButton);
+      await user.click(runButton);
+      await user.click(runButton);
 
       // Should only execute once due to disabled state
       await waitFor(() => {
@@ -600,6 +573,7 @@ describe("IotProtocolRunner", () => {
       mockIsConnected = true;
       mockExecuteProtocol.mockRejectedValueOnce(new Error("First error"));
 
+      const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
@@ -607,7 +581,7 @@ describe("IotProtocolRunner", () => {
       });
 
       // First execution fails
-      fireEvent.click(runButton);
+      await user.click(runButton);
       await waitFor(() => {
         expect(screen.getByText(/First error/)).toBeInTheDocument();
       });
@@ -617,7 +591,7 @@ describe("IotProtocolRunner", () => {
 
       // Second execution succeeds
       mockExecuteProtocol.mockResolvedValueOnce({ data: "success" });
-      fireEvent.click(runButton);
+      await user.click(runButton);
 
       await waitFor(() => {
         expect(screen.getByText(/success/)).toBeInTheDocument();

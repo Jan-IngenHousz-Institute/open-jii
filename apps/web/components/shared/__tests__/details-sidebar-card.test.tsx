@@ -1,12 +1,7 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { DetailsSidebarCard } from "../details-sidebar-card";
-
-globalThis.React = React;
 
 // ---------- Mocks ----------
 vi.mock("lucide-react", () => ({

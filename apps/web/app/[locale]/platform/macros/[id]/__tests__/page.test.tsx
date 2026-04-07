@@ -1,22 +1,13 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import React from "react";
+import { use } from "react";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import MacroOverviewPage from "../page";
 
-globalThis.React = React;
-
-// Mock React's use function to resolve the params promise synchronously
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-macro-id" }),
-  };
-});
+import { render, screen, userEvent } from "@/test/test-utils";
 
 // --------------------
 // Hook mocks
@@ -44,17 +35,7 @@ vi.mock("@/hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
   useMacroUpdate: () => mockUseMacroUpdate(),
 }));
 
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({
-    data: { user: { id: "creator-id" } },
-  }),
-}));
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
 
 vi.mock("@/util/base64", () => ({
   decodeBase64: (s: string) => {
@@ -172,24 +153,7 @@ vi.mock("@/components/macro-code-editor", () => ({
   ),
 }));
 
-vi.mock("lucide-react", () => ({
-  Check: ({ className }: { className?: string }) => (
-    <span data-testid="check-icon" className={className} />
-  ),
-  Circle: ({ className }: { className?: string }) => (
-    <span data-testid="circle-icon" className={className} />
-  ),
-  CodeIcon: ({ className }: { className?: string }) => (
-    <span data-testid="code-icon" className={className} />
-  ),
-  Loader2: ({ className }: { className?: string }) => (
-    <span data-testid="loader-icon" className={className} />
-  ),
-  Pencil: ({ className }: { className?: string }) => (
-    <span data-testid="pencil-icon" className={className} />
-  ),
-  X: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className} />,
-}));
+
 
 vi.mock("@repo/ui/components", () => {
   const Card = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -242,10 +206,6 @@ vi.mock("@repo/ui/components", () => {
   };
 });
 
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
-
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
@@ -277,6 +237,11 @@ describe("MacroOverviewPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(use).mockReturnValue({ id: "test-macro-id" });
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "creator-id" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
     mockUseMacroUpdate.mockReturnValue({
       mutateAsync: mockMutateAsync,
       mutate: mockMutate,
@@ -413,13 +378,6 @@ describe("MacroOverviewPage", () => {
     });
 
     it("should pass hasAccess=false to InlineEditableDescription when user is not creator", () => {
-      // Re-mock session with a different user id
-      vi.doMock("@repo/auth/client", () => ({
-        useSession: () => ({
-          data: { user: { id: "different-user-id" } },
-        }),
-      }));
-
       const macroOwnedByOther = { ...mockMacroData, createdBy: "another-user" };
       mockUseMacro.mockReturnValue({
         data: macroOwnedByOther,
@@ -429,7 +387,7 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      // The current session user is "creator-id" (from top-level mock), macro.createdBy is "another-user"
+      // The current session user is "creator-id" (from beforeEach), macro.createdBy is "another-user"
       expect(screen.getByTestId("inline-editable-description")).toHaveAttribute(
         "data-has-access",
         "false",
@@ -522,7 +480,8 @@ describe("MacroOverviewPage", () => {
   });
 
   describe("Code Section — edit mode", () => {
-    it("should switch to edit mode when edit trigger is clicked", () => {
+    it("should switch to edit mode when edit trigger is clicked", async () => {
+      const user = userEvent.setup();
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -531,14 +490,14 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      const editTrigger = screen.getByText("common.edit");
-      fireEvent.click(editTrigger);
+      await user.click(screen.getByText("common.edit"));
 
       expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
       expect(screen.queryByTestId("macro-code-viewer")).not.toBeInTheDocument();
     });
 
-    it("should show editor actions in edit mode", () => {
+    it("should show editor actions in edit mode", async () => {
+      const user = userEvent.setup();
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -547,13 +506,14 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      fireEvent.click(screen.getByText("common.edit"));
+      await user.click(screen.getByText("common.edit"));
 
       expect(screen.getByTestId("editor-actions")).toBeInTheDocument();
-      expect(screen.getByTestId("x-icon")).toBeInTheDocument();
+      expect(screen.getByTestId("button-ghost")).toBeInTheDocument();
     });
 
-    it("should hide edit trigger in edit mode", () => {
+    it("should hide edit trigger in edit mode", async () => {
+      const user = userEvent.setup();
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -562,12 +522,13 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      fireEvent.click(screen.getByText("common.edit"));
+      await user.click(screen.getByText("common.edit"));
 
       expect(screen.queryByTestId("viewer-edit-trigger")).not.toBeInTheDocument();
     });
 
-    it("should initialize the editor with decoded macro code", () => {
+    it("should initialize the editor with decoded macro code", async () => {
+      const user = userEvent.setup();
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -576,13 +537,14 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      fireEvent.click(screen.getByText("common.edit"));
+      await user.click(screen.getByText("common.edit"));
 
       expect(screen.getByTestId("editor-value")).toHaveTextContent("print('Hello, World!')");
       expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
     });
 
-    it("should return to view mode when close button is clicked", () => {
+    it("should return to view mode when close button is clicked", async () => {
+      const user = userEvent.setup();
       mockUseMacro.mockReturnValue({
         data: mockMacroData,
         isLoading: false,
@@ -591,13 +553,11 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      fireEvent.click(screen.getByText("common.edit"));
+      await user.click(screen.getByText("common.edit"));
       expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
 
       // Click the close (X) button rendered in headerActions
-      const closeButton = screen.getByTestId("x-icon").closest("button");
-      expect(closeButton).toBeInTheDocument();
-      if (closeButton) fireEvent.click(closeButton);
+      await user.click(screen.getByTestId("button-ghost"));
 
       expect(screen.queryByTestId("macro-code-editor")).not.toBeInTheDocument();
       expect(screen.getByTestId("macro-code-viewer")).toBeInTheDocument();
@@ -708,7 +668,8 @@ describe("MacroOverviewPage", () => {
   });
 
   describe("handleDescriptionSave", () => {
-    it("should show success toast when description save succeeds", () => {
+    it("should show success toast when description save succeeds", async () => {
+      const user = userEvent.setup();
       mockMutateAsync.mockImplementation(
         (_payload: unknown, options: { onSuccess?: () => void }) => {
           options.onSuccess?.();
@@ -723,9 +684,7 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      act(() => {
-        fireEvent.click(screen.getByTestId("description-save-btn"));
-      });
+      await user.click(screen.getByTestId("description-save-btn"));
 
       expect(mockMutateAsync).toHaveBeenCalledWith(
         { params: { id: "test-macro-id" }, body: { description: "new description" } },
@@ -737,7 +696,8 @@ describe("MacroOverviewPage", () => {
       expect(toast).toHaveBeenCalledWith({ description: "macros.macroUpdated" });
     });
 
-    it("should show destructive toast when description save fails", () => {
+    it("should show destructive toast when description save fails", async () => {
+      const user = userEvent.setup();
       mockMutateAsync.mockImplementation(
         (_payload: unknown, options: { onError?: (err: unknown) => void }) => {
           options.onError?.("save failed");
@@ -752,9 +712,7 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      act(() => {
-        fireEvent.click(screen.getByTestId("description-save-btn"));
-      });
+      await user.click(screen.getByTestId("description-save-btn"));
 
       expect(toast).toHaveBeenCalledWith({
         description: "save failed",
@@ -774,7 +732,8 @@ describe("MacroOverviewPage", () => {
 
       render(<MacroOverviewPage params={mockParams} />);
 
-      expect(screen.getByTestId("code-icon")).toBeInTheDocument();
+      const container = screen.getByText("macros.codeNotAvailable").parentElement;
+      expect(container?.querySelector("svg")).toBeInTheDocument();
       expect(screen.getByText("macros.codeNotAvailable")).toBeInTheDocument();
     });
   });

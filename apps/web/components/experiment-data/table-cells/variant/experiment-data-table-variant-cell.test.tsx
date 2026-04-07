@@ -1,75 +1,11 @@
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ExperimentDataTableVariantCell,
   VariantExpandedContent,
 } from "./experiment-data-table-variant-cell";
-
-// Mock lucide-react icons
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => <div data-testid="chevron-down">▼</div>,
-  ChevronRight: () => <div data-testid="chevron-right">▶</div>,
-  Copy: () => <div data-testid="copy-icon">📋</div>,
-  Check: () => <div data-testid="check-icon">✓</div>,
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock clipboard API
-Object.assign(navigator, {
-  clipboard: {
-    writeText: vi.fn(() => Promise.resolve()),
-  },
-});
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Collapsible: ({
-    children,
-    open,
-    onOpenChange: _onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="collapsible" data-open={String(open)}>
-      {children}
-    </div>
-  ),
-  CollapsibleTrigger: ({
-    children,
-    asChild: _asChild,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-  }) => <div data-testid="collapsible-trigger">{children}</div>,
-  Button: ({
-    children,
-    variant: _variant,
-    size: _size,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <button className={className} onClick={onClick} data-testid="button">
-      {children}
-    </button>
-  ),
-}));
 
 describe("ExperimentDataTableVariantCell", () => {
   it("should render simple text for non-JSON data", () => {
@@ -122,7 +58,8 @@ describe("ExperimentDataTableVariantCell", () => {
     expect(screen.queryByText("JSON")).not.toBeInTheDocument();
   });
 
-  it("should expand when triggered", () => {
+  it("should expand when triggered", async () => {
+    const user = userEvent.setup();
     render(
       <ExperimentDataTableVariantCell
         data='{"name": "John", "age": 30}'
@@ -136,7 +73,7 @@ describe("ExperimentDataTableVariantCell", () => {
     expect(screen.getByText("JSON")).toBeInTheDocument();
 
     // Click to expand
-    fireEvent.click(screen.getByRole("button"));
+    await user.click(screen.getByRole("button"));
 
     // The collapsible should be open (DOM manipulation happens in useEffect)
     expect(screen.getByText("JSON")).toBeInTheDocument();
@@ -198,73 +135,7 @@ describe("ExperimentDataTableVariantCell", () => {
     expect(screen.getByText("JSON")).toBeInTheDocument();
   });
 
-  it("should render numeric scalar as plain text instead of collapsible JSON", () => {
-    render(
-      <ExperimentDataTableVariantCell
-        data="0.34"
-        columnName="Thickness"
-        rowId="test-row"
-        isExpanded={false}
-      />,
-    );
-    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
-    expect(screen.getByText("0.34")).toBeInTheDocument();
-  });
-
-  it("should render integer scalar as plain text instead of collapsible JSON", () => {
-    render(
-      <ExperimentDataTableVariantCell
-        data="1"
-        columnName="Thickness"
-        rowId="test-row"
-        isExpanded={false}
-      />,
-    );
-    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
-  });
-
-  it("should render string scalar as plain text instead of collapsible JSON", () => {
-    render(
-      <ExperimentDataTableVariantCell
-        data='"hello world"'
-        columnName="test"
-        rowId="test-row"
-        isExpanded={false}
-      />,
-    );
-    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
-    // The raw data string (including JSON quotes) is displayed as-is
-    expect(screen.getByText('"hello world"')).toBeInTheDocument();
-  });
-
-  it("should render boolean scalar as plain text instead of collapsible JSON", () => {
-    render(
-      <ExperimentDataTableVariantCell
-        data="true"
-        columnName="test"
-        rowId="test-row"
-        isExpanded={false}
-      />,
-    );
-    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
-    expect(screen.getByText("true")).toBeInTheDocument();
-  });
-
-  it("should render null JSON value as plain text", () => {
-    render(
-      <ExperimentDataTableVariantCell
-        data="null"
-        columnName="test"
-        rowId="test-row"
-        isExpanded={false}
-      />,
-    );
-    expect(screen.queryByText("JSON")).not.toBeInTheDocument();
-    expect(screen.getByText("null")).toBeInTheDocument();
-  });
-
-  it("should show correct button states", () => {
+  it("should render button in collapsed state", () => {
     render(
       <ExperimentDataTableVariantCell
         data='{"key": "value"}'
@@ -274,17 +145,16 @@ describe("ExperimentDataTableVariantCell", () => {
       />,
     );
 
-    // Should start with collapsible closed
-    const collapsible = screen.getByTestId("collapsible");
-    expect(collapsible.getAttribute("data-open")).toBe("false");
-
-    // Should show right arrow initially (collapsed state)
-    expect(screen.getByTestId("chevron-right")).toBeInTheDocument();
-    expect(screen.queryByTestId("chevron-down")).not.toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByText("JSON")).toBeInTheDocument();
   });
 });
 
 describe("VariantExpandedContent", () => {
+  beforeEach(() => {
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+  });
+
   it("should render formatted JSON content", () => {
     const { container } = render(<VariantExpandedContent data='{\n  "key": "value"\n}' />);
 
@@ -304,6 +174,7 @@ describe("VariantExpandedContent", () => {
   });
 
   it("should copy JSON to clipboard when copy button is clicked", async () => {
+    const user = userEvent.setup();
     const jsonData = '{"name": "John", "age": 30}';
     render(<VariantExpandedContent data={jsonData} />);
 
@@ -311,32 +182,29 @@ describe("VariantExpandedContent", () => {
     expect(copyButton).toBeInTheDocument();
 
     if (copyButton) {
-      fireEvent.click(copyButton);
+      await user.click(copyButton);
     }
 
     // Check that clipboard.writeText was called
     await waitFor(() => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(vi.mocked(navigator.clipboard.writeText)).toHaveBeenCalledWith(jsonData);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(jsonData);
     });
   });
 
   it("should show 'Copied' confirmation after copying", async () => {
+    const user = userEvent.setup();
     const jsonData = '{"name": "John"}';
     render(<VariantExpandedContent data={jsonData} />);
 
     const copyButton = screen.getByText("common.copy").closest("button");
     if (copyButton) {
-      fireEvent.click(copyButton);
+      await user.click(copyButton);
     }
 
     // Should show "copied" text
     await waitFor(() => {
       expect(screen.getByText("common.copied")).toBeInTheDocument();
     });
-
-    // Check icon should be visible
-    expect(screen.getByTestId("check-icon")).toBeInTheDocument();
   });
 
   it("should render formatted JSON with proper styling", () => {

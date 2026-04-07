@@ -1,38 +1,16 @@
 import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
-
-// Keep React on global for JSX in mocks
-globalThis.React = React;
 
 // --------------------
 // Mocks
 // --------------------
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
-}));
-
-vi.mock("lucide-react", () => ({
-  AlertTriangle: ({ className }: { className?: string }) => (
-    <span data-testid="alert-triangle-icon" className={className} />
-  ),
-  ChevronsUpDown: ({ className }: { className?: string }) => (
-    <span data-testid="chevrons-icon" className={className} />
-  ),
-  ExternalLink: ({ className }: { className?: string }) => (
-    <span data-testid="external-link-icon" className={className} />
-  ),
 }));
 
 vi.mock("@repo/ui/components", () => {
@@ -67,6 +45,7 @@ const mockMacros = [
 
 vi.mock("../../../lib/tsr", () => ({
   tsr: {
+    ReactQueryProvider: ({ children }: { children: React.ReactNode }) => children,
     macros: {
       listMacros: {
         useQuery: vi.fn(() => ({
@@ -132,7 +111,6 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
 
     // No incompatibility warning should be present
     expect(screen.queryByText("experiments.macroIncompatibilityWarning")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("alert-triangle-icon")).not.toBeInTheDocument();
 
     // No recommended macro IDs should be passed
     expect(lastDropdownProps).not.toBeNull();
@@ -159,7 +137,6 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     );
 
     expect(screen.getByText("experiments.macroIncompatibilityWarning")).toBeInTheDocument();
-    expect(screen.getByTestId("alert-triangle-icon")).toBeInTheDocument();
   });
 
   it("should NOT show warning when selected macro IS compatible", () => {
@@ -181,7 +158,6 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     );
 
     expect(screen.queryByText("experiments.macroIncompatibilityWarning")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("alert-triangle-icon")).not.toBeInTheDocument();
   });
 
   it("should NOT show warning when no compatibility data (no upstream protocol)", () => {

@@ -1,15 +1,12 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
+import { notFound, useParams, usePathname } from "next/navigation";
+import { render, screen, userEvent } from "@/test/test-utils";
 
 import ProtocolLayout from "../layout";
-
-// Global React for JSX in mocks
-globalThis.React = React;
 
 // -------------------
 // Mocks
@@ -48,39 +45,6 @@ vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
   useProtocolUpdate: () => mockUseProtocolUpdate(),
 }));
 
-const mockNotFound = vi.fn();
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "test-id", locale: "en" }) as { id: string; locale: string },
-  usePathname: () => "/en/platform/protocols/test-id",
-  notFound: () => mockNotFound() as never,
-}));
-
-vi.mock("next/link", () => ({
-  __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
-
-vi.mock("lucide-react", () => ({
-  ArrowLeft: () => <span data-testid="arrow-left-icon" />,
-  Play: () => <span data-testid="play-icon" />,
-}));
-
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({
-    data: { user: { id: "user-123" } },
-  }),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  __esModule: true,
-  useTranslation: (namespace?: string) => ({
-    t: (key: string) => (namespace ? `${namespace}.${key}` : key),
-    i18n: { language: "en" },
-  }),
-}));
-
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
     <div data-testid="error-display">{String(error)}</div>
@@ -100,10 +64,6 @@ const mockBrowserSupport = {
 };
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
 }));
 
 vi.mock("@/components/shared/inline-editable-title", () => ({
@@ -181,6 +141,12 @@ function renderLayout(children: React.ReactNode = <div>Children Content</div>) {
 describe("ProtocolLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useParams).mockReturnValue({ id: "test-id", locale: "en" });
+    vi.mocked(usePathname).mockReturnValue("/en/platform/protocols/test-id");
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-123" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
     mockBrowserSupport.bluetooth = true;
     mockBrowserSupport.serial = true;
     mockBrowserSupport.any = true;
@@ -240,7 +206,7 @@ describe("ProtocolLayout", () => {
 
       renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      expect(notFound).toHaveBeenCalled();
     });
 
     it("should call notFound for 400 errors (invalid UUID)", () => {
@@ -252,7 +218,7 @@ describe("ProtocolLayout", () => {
 
       renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      expect(notFound).toHaveBeenCalled();
     });
 
     it("should display error display for 500 errors", () => {
@@ -265,7 +231,7 @@ describe("ProtocolLayout", () => {
       renderLayout();
 
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
+      expect(notFound).not.toHaveBeenCalled();
     });
 
     it("should display error heading and description for non-404/400 errors", () => {
@@ -277,7 +243,7 @@ describe("ProtocolLayout", () => {
 
       renderLayout();
 
-      expect(screen.getByText("common.errors.error")).toBeInTheDocument();
+      expect(screen.getByText("errors.error")).toBeInTheDocument();
       expect(screen.getByText("protocols.notFoundDescription")).toBeInTheDocument();
     });
 
@@ -385,7 +351,7 @@ describe("ProtocolLayout", () => {
       renderLayout();
 
       const badges = screen.getAllByTestId("badge");
-      const preferredBadge = badges.find((b) => b.textContent === "common.common.preferred");
+      const preferredBadge = badges.find((b) => b.textContent === "common.preferred");
       expect(preferredBadge).toBeInTheDocument();
     });
 
@@ -399,7 +365,7 @@ describe("ProtocolLayout", () => {
       renderLayout();
 
       const badges = screen.queryAllByTestId("badge");
-      const preferredBadge = badges.find((b) => b.textContent === "common.common.preferred");
+      const preferredBadge = badges.find((b) => b.textContent === "common.preferred");
       expect(preferredBadge).toBeUndefined();
     });
 
@@ -425,10 +391,11 @@ describe("ProtocolLayout", () => {
         isLoading: false,
         error: null,
       });
+      const user = userEvent.setup();
       renderLayout();
 
       const saveBtn = screen.getByTestId("save-title-btn");
-      await userEvent.click(saveBtn);
+      await user.click(saveBtn);
 
       expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
     });
@@ -445,10 +412,11 @@ describe("ProtocolLayout", () => {
         isLoading: false,
         error: null,
       });
+      const user = userEvent.setup();
       renderLayout();
 
       const saveBtn = screen.getByTestId("save-title-btn");
-      await userEvent.click(saveBtn);
+      await user.click(saveBtn);
 
       expect(toast).toHaveBeenCalledWith({
         description: expect.any(String) as unknown,

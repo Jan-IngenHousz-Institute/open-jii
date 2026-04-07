@@ -56,28 +56,16 @@ describe("<TransferRequestLayout />", () => {
       const tabs = screen.getAllByRole("tab");
       expect(tabs).toHaveLength(2);
 
-      expect(within(tabs[0]).getByRole("link")).toHaveAttribute(
-        "href",
-        "/en/platform/transfer-request",
-      );
-      expect(within(tabs[1]).getByRole("link")).toHaveAttribute(
-        "href",
-        "/en/platform/transfer-request/history",
-      );
+      expect(tabs[0]).toHaveAttribute("href", "/en/platform/transfer-request");
+      expect(tabs[1]).toHaveAttribute("href", "/en/platform/transfer-request/history");
     });
 
     it("generates correct links for different locale", () => {
       renderTransferRequestLayout({ locale: "de" });
 
       const tabs = screen.getAllByRole("tab");
-      expect(within(tabs[0]).getByRole("link")).toHaveAttribute(
-        "href",
-        "/de/platform/transfer-request",
-      );
-      expect(within(tabs[1]).getByRole("link")).toHaveAttribute(
-        "href",
-        "/de/platform/transfer-request/history",
-      );
+      expect(tabs[0]).toHaveAttribute("href", "/de/platform/transfer-request");
+      expect(tabs[1]).toHaveAttribute("href", "/de/platform/transfer-request/history");
     });
   });
 

@@ -1,12 +1,8 @@
 // JsonCodeViewer component test file
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import { render, screen, fireEvent } from "@/test/test-utils";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { JsonCodeViewer } from "./json-code-viewer";
-
-globalThis.React = React;
 
 // Mock Monaco Editor (default export)
 vi.mock("@monaco-editor/react", () => ({

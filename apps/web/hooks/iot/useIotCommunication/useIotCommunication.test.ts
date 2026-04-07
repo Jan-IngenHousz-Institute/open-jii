@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom/vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { useIotCommunication } from "./useIotCommunication";

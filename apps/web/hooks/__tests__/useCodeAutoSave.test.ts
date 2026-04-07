@@ -1,15 +1,8 @@
-import "@testing-library/jest-dom/vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "@/test/test-utils";
+import { toast } from "@repo/ui/hooks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { useCodeAutoSave } from "../useCodeAutoSave";
-
-// ---------- Mocks ----------
-const mockToast = vi.fn();
-vi.mock("@repo/ui/hooks", () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  toast: (...args: unknown[]) => mockToast(...args),
-}));
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown): { message: string } | undefined => {
@@ -217,7 +210,7 @@ describe("useCodeAutoSave", () => {
       });
 
       expect(result.current.syncStatus).toBe("unsynced");
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         description: "Save failed",
         variant: "destructive",
       });
