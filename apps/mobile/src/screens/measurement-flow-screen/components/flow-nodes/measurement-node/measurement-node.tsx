@@ -61,6 +61,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     navigateToQuestionFromOverview(flowStepIndex);
   };
 
+  const handleCancelMeasurement = () => {
+    void cancelCommand();
+    resetScan();
+  };
+
   const handleStartScan = async () => {
     if (!device) {
       toast.error("Not connected to sensor");
@@ -133,10 +138,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
             <Button
               title="Cancel Measurement"
-              onPress={() => {
-                void cancelCommand();
-                resetScan();
-              }}
+              onPress={handleCancelMeasurement}
               style={{ height: 44 }}
             />
           </View>
