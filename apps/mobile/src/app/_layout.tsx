@@ -77,9 +77,7 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const [retryKey, setRetryKey] = useState(0);
 
-  return (
-    <MigrationWrapper key={retryKey} onRetry={() => setRetryKey((k) => k + 1)} />
-  );
+  return <MigrationWrapper key={retryKey} onRetry={() => setRetryKey((k) => k + 1)} />;
 }
 
 function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
@@ -162,7 +160,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-})
+});
 
 function RootLayoutContent() {
   const theme = useTheme();

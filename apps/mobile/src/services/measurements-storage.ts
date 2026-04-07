@@ -1,11 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { eq, and, lt } from "drizzle-orm";
+import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
 
 import { db } from "./db/client";
 import { measurements } from "./db/schema";
-import { Duration } from "luxon";
 
 const LEGACY_PREFIXES = [
   { prefix: "FAILED_UPLOAD_", status: "failed" as const },
@@ -80,7 +80,10 @@ async function ensureMigrated(): Promise<void> {
   await migrationPromise;
 }
 
-export async function saveMeasurement(upload: Measurement, status: MeasurementStatus): Promise<void> {
+export async function saveMeasurement(
+  upload: Measurement,
+  status: MeasurementStatus,
+): Promise<void> {
   await ensureMigrated();
   db.insert(measurements)
     .values({
@@ -154,9 +157,7 @@ export function markAsSuccessful(key: string): void {
 
 export function removeMeasurement(key: string): void {
   try {
-    db.delete(measurements)
-      .where(eq(measurements.id, key))
-      .run();
+    db.delete(measurements).where(eq(measurements.id, key)).run();
   } catch (error) {
     console.error("Failed to remove measurement:", error);
   }
@@ -173,10 +174,13 @@ export function clearMeasurements(status: MeasurementStatus): void {
 export function pruneExpiredMeasurements(): void {
   try {
     const cutoff = new Date(Date.now() - MAX_AGE_MS);
-    const result = db.delete(measurements)
+    const result = db
+      .delete(measurements)
       .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
       .run();
-    console.log(`[measurements] Pruned ${result.changes} successful uploads older than ${Duration.fromMillis(MAX_AGE_MS).as('days')} days`);
+    console.log(
+      `[measurements] Pruned ${result.changes} successful uploads older than ${Duration.fromMillis(MAX_AGE_MS).as("days")} days`,
+    );
   } catch (error) {
     console.warn("[measurements] Prune failed:", error);
   }
