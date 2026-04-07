@@ -1,19 +1,12 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import React from "react";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { Form } from "@repo/ui/components";
 
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+
 import { RegistrationFields } from "./registration-fields";
 import type { Registration } from "./registration-form";
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 const termsData = {
   title: "Terms and Conditions",
@@ -107,9 +100,10 @@ describe("RegistrationFields", () => {
   });
 
   it("opens terms dialog when trigger is clicked", async () => {
+    const user = userEvent.setup();
     render(<Wrapper />);
 
-    fireEvent.click(screen.getByText("auth.terms"));
+    await user.click(screen.getByText("auth.terms"));
 
     await waitFor(() => {
       expect(screen.getByText("Terms and Conditions")).toBeInTheDocument();

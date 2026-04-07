@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi } from "vitest";
 
@@ -7,16 +7,10 @@ import { Form } from "@repo/ui/components";
 
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
 // Mock tsr (macro search API)
 vi.mock("../../lib/tsr", () => ({
   tsr: {
+    ReactQueryProvider: ({ children }: { children: React.ReactNode }) => children,
     macros: {
       listMacros: {
         useQuery: () => ({ data: { body: [] }, isLoading: false, error: null }),

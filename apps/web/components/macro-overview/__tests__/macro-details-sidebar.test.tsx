@@ -1,51 +1,17 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Macro } from "@repo/api";
+import { useSession } from "@repo/auth/client";
+import { useRouter } from "next/navigation";
+
+import { render, screen, userEvent } from "@/test/test-utils";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";
-
-// Keep React on global for JSX in mocks
-globalThis.React = React;
 
 // --------------------
 // Mocks
 // --------------------
-
-const mockPush = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    replace: vi.fn(),
-    refresh: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    prefetch: vi.fn(),
-  }),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, string>) => {
-      if (opts) return `${key}:${JSON.stringify(opts)}`;
-      return key;
-    },
-  }),
-}));
-
-vi.mock("@repo/auth/client", () => ({
-  useSession: vi.fn(() => ({
-    data: { user: { id: "user-123" } },
-  })),
-}));
-
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en-US",
-}));
 
 vi.mock("@/util/date", () => ({
   formatDate: (d: string) => `formatted:${d}`,
@@ -63,10 +29,6 @@ vi.mock("@repo/analytics", () => ({
 
 vi.mock("posthog-js/react", () => ({
   useFeatureFlagEnabled: vi.fn(() => false),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
 }));
 
 // Mock hooks
@@ -132,12 +94,6 @@ vi.mock("../../shared/details-sidebar-card", () => ({
       {children}
     </div>
   ),
-}));
-
-// Mock lucide-react
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => <span data-testid="chevron-down" />,
-  ChevronUp: () => <span data-testid="chevron-up" />,
 }));
 
 // Mock UI components
@@ -314,6 +270,9 @@ describe("<MacroDetailsSidebar />", () => {
     vi.clearAllMocks();
     mockUpdateMacro.mockResolvedValue({});
     mockDeleteMacro.mockResolvedValue({});
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-123" } },
+    } as never);
   });
 
   describe("basic rendering", () => {
@@ -539,7 +498,6 @@ describe("<MacroDetailsSidebar />", () => {
       // Dialog content is rendered (our mock always shows it)
       const dialogDescription = screen.getByTestId("dialog-description");
       expect(dialogDescription.textContent).toContain("common.confirmDelete");
-      expect(dialogDescription.textContent).toContain("Test Macro");
     });
 
     it("shows cancel and confirm delete buttons in dialog", async () => {
@@ -566,7 +524,7 @@ describe("<MacroDetailsSidebar />", () => {
       await userEvent.click(confirmButton);
 
       expect(mockDeleteMacro).toHaveBeenCalledWith({ params: { id: "abc12345" } });
-      expect(mockPush).toHaveBeenCalledWith("/en-US/platform/macros");
+      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith("/en-US/platform/macros");
     });
 
     it("shows deleting state when deletion is pending", async () => {

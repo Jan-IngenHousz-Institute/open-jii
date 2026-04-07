@@ -1,20 +1,14 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import type React from "react";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { Form } from "@repo/ui/components";
 import type * as UIComponents from "@repo/ui/components";
 
+import { render, screen, userEvent } from "@/test/test-utils";
+
 import type { Registration } from "./registration-form";
 import { RegistrationOtpVerification } from "./registration-otp-verification";
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 const mockSignInEmailMutate = vi.fn();
 vi.mock("~/hooks/auth", () => ({
@@ -112,11 +106,12 @@ describe("RegistrationOtpVerification", () => {
     expect(screen.getByText("alice@example.com")).toBeInTheDocument();
   });
 
-  it("calls onEditEmail when edit button is clicked", () => {
+  it("calls onEditEmail when edit button is clicked", async () => {
+    const user = userEvent.setup();
     const onEditEmail = vi.fn();
     render(<Wrapper onEditEmail={onEditEmail} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /edit email/i }));
+    await user.click(screen.getByRole("button", { name: /edit email/i }));
 
     expect(onEditEmail).toHaveBeenCalledTimes(1);
   });
@@ -129,12 +124,13 @@ describe("RegistrationOtpVerification", () => {
     }
   });
 
-  it("calls onComplete when 6 digits are entered", () => {
+  it("calls onComplete when 6 digits are entered", async () => {
+    const user = userEvent.setup();
     const onComplete = vi.fn();
     render(<Wrapper onComplete={onComplete} />);
 
     const otpInput = screen.getByRole("textbox", { name: /otp input/i });
-    fireEvent.change(otpInput, { target: { value: "123456" } });
+    await user.type(otpInput, "123456");
 
     expect(onComplete).toHaveBeenCalledTimes(1);
   });

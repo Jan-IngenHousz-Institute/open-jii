@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom/vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import type { IDeviceDriver } from "@repo/iot";

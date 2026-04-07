@@ -1,28 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import { useSession } from "@repo/auth/client";
+import { render, screen, userEvent } from "@/test/test-utils";
+import { useParams, notFound } from "next/navigation";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import MacroLayout from "../layout";
 
-// Global React for JSX in mocks
-globalThis.React = React;
-
 // -------------------
 // Mocks
 // -------------------
-const mockUseParams = vi.fn();
-const mockNotFound = vi.fn();
 const mockUseMacro = vi.fn();
 const mockUseMacroUpdate = vi.fn();
-const mockUseSession = vi.fn();
 const mockMutateAsync = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useParams: () => mockUseParams(),
-  notFound: () => mockNotFound(),
-}));
 
 vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
   useMacro: () => mockUseMacro(),
@@ -30,17 +20,6 @@ vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
 
 vi.mock("@/hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
   useMacroUpdate: () => mockUseMacroUpdate(),
-}));
-
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => mockUseSession(),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  __esModule: true,
-  useTranslation: (_ns?: string) => ({
-    t: (key: string) => key,
-  }),
 }));
 
 vi.mock("@/components/error-display", () => ({
@@ -126,10 +105,10 @@ function renderLayout({
   isUpdating?: boolean;
   children?: React.ReactNode;
 } = {}) {
-  mockUseParams.mockReturnValue({ id: macroId });
+  vi.mocked(useParams).mockReturnValue({ id: macroId } as any);
   mockUseMacro.mockReturnValue({ isLoading, error, data: macroData });
   mockUseMacroUpdate.mockReturnValue({ mutateAsync: mockMutateAsync, isPending: isUpdating });
-  mockUseSession.mockReturnValue(session);
+  vi.mocked(useSession).mockReturnValue(session as any);
 
   return render(<MacroLayout>{children}</MacroLayout>);
 }
@@ -170,7 +149,7 @@ describe("<MacroLayout />", () => {
         error: { status: 404, message: "Not Found" },
       });
 
-      expect(mockNotFound).toHaveBeenCalled();
+      expect(vi.mocked(notFound)).toHaveBeenCalled();
     });
 
     it("calls notFound for 400 errors (invalid UUID)", () => {
@@ -179,7 +158,7 @@ describe("<MacroLayout />", () => {
         error: { status: 400, message: "Bad Request" },
       });
 
-      expect(mockNotFound).toHaveBeenCalled();
+      expect(vi.mocked(notFound)).toHaveBeenCalled();
     });
 
     it("renders error display for 500 server errors", () => {
@@ -191,7 +170,7 @@ describe("<MacroLayout />", () => {
       expect(screen.getByText("errors.error")).toBeInTheDocument();
       expect(screen.getByText("errors.resourceNotFoundMessage")).toBeInTheDocument();
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
+      expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
     it("renders error display for 403 forbidden errors", () => {
@@ -202,7 +181,7 @@ describe("<MacroLayout />", () => {
 
       expect(screen.getByText("errors.error")).toBeInTheDocument();
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
+      expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
     it("does not render children when an error is present", () => {
@@ -313,10 +292,11 @@ describe("<MacroLayout />", () => {
   });
 
   describe("Title Save Handler", () => {
-    it("calls useMacroUpdate mutateAsync when title is saved", () => {
+    it("calls useMacroUpdate mutateAsync when title is saved", async () => {
+      const user = userEvent.setup();
       renderLayout();
 
-      fireEvent.click(screen.getByTestId("title-save-btn"));
+      await user.click(screen.getByTestId("title-save-btn"));
 
       expect(mockMutateAsync).toHaveBeenCalledWith(
         {
@@ -330,10 +310,11 @@ describe("<MacroLayout />", () => {
       );
     });
 
-    it("uses the macro id from useParams when calling update", () => {
+    it("uses the macro id from useParams when calling update", async () => {
+      const user = userEvent.setup();
       renderLayout({ macroId: "custom-macro-id" });
 
-      fireEvent.click(screen.getByTestId("title-save-btn"));
+      await user.click(screen.getByTestId("title-save-btn"));
 
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -1,8 +1,7 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { render, screen, userEvent } from "@/test/test-utils";
 
 import { useAddCompatibleMacro } from "../../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 // Import mocked hooks for test configuration
@@ -11,47 +10,12 @@ import { useRemoveCompatibleMacro } from "../../../hooks/protocol/useRemoveCompa
 import { tsr } from "../../../lib/tsr";
 import { ProtocolCompatibleMacrosCard } from "../protocol-compatible-macros-card";
 
-// Keep React on global for JSX in mocks
-globalThis.React = React;
-
 // --------------------
 // Mocks
 // --------------------
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en-US",
-}));
-
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
-}));
-
-vi.mock("lucide-react", () => ({
-  X: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className} />,
-  ExternalLink: ({ className }: { className?: string }) => (
-    <span data-testid="external-link-icon" className={className} />
-  ),
-  FileCode2: ({ className }: { className?: string }) => (
-    <span data-testid="file-code2-icon" className={className} />
-  ),
-}));
-
-vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-    ...rest
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
 }));
 
 vi.mock("@repo/ui/components", () => {
@@ -109,6 +73,7 @@ vi.mock("../../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMac
 
 vi.mock("../../../lib/tsr", () => ({
   tsr: {
+    ReactQueryProvider: ({ children }: { children: React.ReactNode }) => children,
     macros: {
       listMacros: {
         useQuery: vi.fn(() => ({

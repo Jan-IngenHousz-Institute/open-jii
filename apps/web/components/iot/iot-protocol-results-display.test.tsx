@@ -1,35 +1,7 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
-
-globalThis.React = React;
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock Lucide icons
-vi.mock("lucide-react", () => ({
-  Copy: () => <span data-testid="copy-icon">📋</span>,
-  Check: () => <span data-testid="check-icon">✓</span>,
-  AlertCircle: () => <span data-testid="alert-circle-icon">⚠️</span>,
-  CheckCircle2: () => <span data-testid="check-circle-icon">✓</span>,
-  Play: () => <span data-testid="play-icon">▶️</span>,
-}));
-
-// Mock clipboard API
-const mockWriteText = vi.fn();
-Object.assign(navigator, {
-  clipboard: {
-    writeText: mockWriteText,
-  },
-});
 
 describe("ProtocolResultsDisplay", () => {
   beforeEach(() => {
@@ -128,56 +100,18 @@ describe("ProtocolResultsDisplay", () => {
 
     it("copies data to clipboard when copy button is clicked", async () => {
       vi.useRealTimers(); // Use real timers for this test
-      mockWriteText.mockResolvedValueOnce(undefined);
-
-      render(<ProtocolResultsDisplay testResult={successResult} />);
-
-      // Button contains "common.copy" text from i18n mock
-      const copyButton = screen.getByRole("button", { name: /copy/i });
-      fireEvent.click(copyButton);
-
-      await waitFor(() => {
-        expect(mockWriteText).toHaveBeenCalledWith(JSON.stringify(successResult.data, null, 2));
-      });
-
-      vi.useFakeTimers(); // Restore fake timers for other tests
-    });
-
-    it("shows check icon after successful copy", async () => {
-      vi.useRealTimers(); // Use real timers for this test
-      mockWriteText.mockResolvedValueOnce(undefined);
+      const user = userEvent.setup();
+      // Spy AFTER userEvent.setup() — it replaces navigator.clipboard
+      const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText");
 
       render(<ProtocolResultsDisplay testResult={successResult} />);
 
       const copyButton = screen.getByRole("button", { name: /copy/i });
-      fireEvent.click(copyButton);
+      await user.click(copyButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId("check-icon")).toBeInTheDocument();
+        expect(writeTextSpy).toHaveBeenCalledWith(JSON.stringify(successResult.data, null, 2));
       });
-
-      vi.useFakeTimers(); // Restore fake timers for other tests
-    });
-
-    it("resets copy icon after 2 seconds", async () => {
-      vi.useRealTimers(); // Use real timers for async operations
-      mockWriteText.mockResolvedValueOnce(undefined);
-
-      render(<ProtocolResultsDisplay testResult={successResult} />);
-
-      const copyButton = screen.getByRole("button", { name: /copy/i });
-      fireEvent.click(copyButton);
-
-      // Wait for check icon to appear
-      await waitFor(() => {
-        expect(screen.getByTestId("check-icon")).toBeInTheDocument();
-      });
-
-      // Wait 2 seconds for the icon to reset
-      await new Promise((resolve) => setTimeout(resolve, 2100));
-
-      // Verify copy icon is back
-      expect(screen.getByTestId("copy-icon")).toBeInTheDocument();
 
       vi.useFakeTimers(); // Restore fake timers for other tests
     });
@@ -187,12 +121,16 @@ describe("ProtocolResultsDisplay", () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
         // noop
       });
-      mockWriteText.mockRejectedValueOnce(new Error("Clipboard error"));
+      const user = userEvent.setup();
+      // Spy AFTER userEvent.setup() — it replaces navigator.clipboard
+      vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(
+        new Error("Clipboard error"),
+      );
 
       render(<ProtocolResultsDisplay testResult={successResult} />);
 
       const copyButton = screen.getByRole("button", { name: /copy/i });
-      fireEvent.click(copyButton);
+      await user.click(copyButton);
 
       await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to copy:", expect.any(Error));

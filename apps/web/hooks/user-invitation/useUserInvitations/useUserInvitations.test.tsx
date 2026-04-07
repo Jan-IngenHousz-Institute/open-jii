@@ -36,7 +36,7 @@ describe("useUserInvitations", () => {
       expect(spy.called).toBe(true);
     });
 
-    expect(spy.query).toMatchObject({
+    expect(spy.calls[0].query).toMatchObject({
       resourceType: "experiment",
       resourceId: "exp-123",
     });

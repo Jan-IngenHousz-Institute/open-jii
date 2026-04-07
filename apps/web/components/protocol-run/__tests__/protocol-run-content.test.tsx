@@ -1,19 +1,15 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { useSession } from "@repo/auth/client";
+
+import { render, screen } from "@/test/test-utils";
 
 import { ProtocolRunContent } from "../protocol-run-content";
 
 // --------------------
 // Mocks
 // --------------------
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
 
 vi.mock("@repo/ui/lib/utils", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
@@ -61,9 +57,6 @@ vi.mock("../../../hooks/useCodeAutoSave", () => ({
 }));
 
 let mockSession: { user: { id: string } } | null = null;
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({ data: mockSession }),
-}));
 
 vi.mock("../../protocol-code-editor", () => ({
   __esModule: true,
@@ -94,16 +87,16 @@ vi.mock("../../iot/iot-protocol-runner", () => ({
   IotProtocolRunner: () => <div data-testid="iot-runner" />,
 }));
 
-vi.mock("lucide-react", () => ({
-  MonitorX: () => <span data-testid="monitor-x" />,
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  useIsMobile: () => false,
-  useIsTablet: () => false,
-  useIsLgTablet: () => false,
-  useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
-}));
+vi.mock("@repo/ui/hooks", async (importOriginal) => {
+  const original = await importOriginal<Record<string, unknown>>();
+  return {
+    ...original,
+    useIsMobile: () => false,
+    useIsTablet: () => false,
+    useIsLgTablet: () => false,
+    useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
+  };
+});
 
 vi.mock("@repo/ui/components", () => ({
   ResizablePanelGroup: ({ children }: { children: React.ReactNode }) => (
@@ -137,6 +130,7 @@ describe("<ProtocolRunContent />", () => {
       serialReason: null,
     };
     mockSession = null;
+    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     mockAutoSave = {
       editedCode: null,
       syncStatus: "synced",
@@ -177,7 +171,7 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should show browser not supported message when no support", () => {
-    mockBrowserSupport = { bluetooth: false, serial: false, any: false };
+    mockBrowserSupport = { bluetooth: false, serial: false, any: false, bluetoothReason: null, serialReason: null };
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -191,6 +185,7 @@ describe("<ProtocolRunContent />", () => {
 
   it("should show edit trigger for creators in read-only mode", () => {
     mockSession = { user: { id: "user-1" } };
+    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -203,6 +198,7 @@ describe("<ProtocolRunContent />", () => {
 
   it("should not show edit trigger for non-creators", () => {
     mockSession = { user: { id: "other-user" } };
+    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,
@@ -215,6 +211,7 @@ describe("<ProtocolRunContent />", () => {
 
   it("should show code editor with header actions when editing", () => {
     mockSession = { user: { id: "user-1" } };
+    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     mockAutoSave = { ...mockAutoSave, isEditing: true, editedCode: [{ averages: 1 }] };
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
@@ -230,6 +227,7 @@ describe("<ProtocolRunContent />", () => {
 
   it("should not show a separate save button", () => {
     mockSession = { user: { id: "user-1" } };
+    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     mockAutoSave = { ...mockAutoSave, isEditing: true };
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },

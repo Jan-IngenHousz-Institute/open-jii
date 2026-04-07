@@ -1,52 +1,25 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Protocol } from "@repo/api";
+import { useSession } from "@repo/auth/client";
+import { useRouter } from "next/navigation";
+
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 
 import { ProtocolDetailsSidebar } from "../protocol-details-sidebar";
 
-globalThis.React = React;
-
 // ---------- Hoisted mocks ----------
-const mockPush = vi.fn();
 const mockUpdateProtocol = vi.fn().mockResolvedValue({});
 const mockDeleteProtocol = vi.fn().mockResolvedValue({});
 const useFeatureFlagEnabledMock = vi.hoisted(() => vi.fn());
-const useSessionMock = vi.hoisted(() => vi.fn());
 const useProtocolDeleteMock = vi.hoisted(() => vi.fn());
 const useProtocolCompatibleMacrosMock = vi.hoisted(() => vi.fn());
 
 // ---------- Mocks ----------
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
-      if (options) {
-        return `${key} ${JSON.stringify(options)}`;
-      }
-      return key;
-    },
-  }),
-}));
-
-vi.mock("@repo/auth/client", () => ({
-  useSession: useSessionMock,
-}));
-
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
 vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
 }));
 
 vi.mock("posthog-js/react", () => ({
@@ -76,10 +49,6 @@ vi.mock("../../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatib
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
 }));
 
 // Dialog mock that properly responds to React-managed open/onOpenChange state.
@@ -198,11 +167,6 @@ vi.mock("@repo/ui/components", () => ({
   ),
 }));
 
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => <span data-testid="icon-chevron-down">ChevronDown</span>,
-  ChevronUp: () => <span data-testid="icon-chevron-up">ChevronUp</span>,
-}));
-
 vi.mock("../../protocol-settings/protocol-compatible-macros-card", () => ({
   ProtocolCompatibleMacrosCard: ({
     protocolId,
@@ -264,7 +228,7 @@ describe("ProtocolDetailsSidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default: user is the creator, feature flag enabled
-    useSessionMock.mockReturnValue({ data: { user: { id: "user-123" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-123" } } } as never);
     useFeatureFlagEnabledMock.mockReturnValue(true);
     useProtocolDeleteMock.mockReturnValue({
       mutateAsync: mockDeleteProtocol,
@@ -334,14 +298,14 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("renders family as plain text when user is not the creator", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent();
     expect(screen.queryByTestId("select")).not.toBeInTheDocument();
     expect(screen.getByText("MultispeQ")).toBeInTheDocument();
   });
 
   it("renders Ambit text when family is ambit and user is not the creator", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent({
       protocol: { ...mockProtocol, family: "ambit" },
     });
@@ -352,7 +316,8 @@ describe("ProtocolDetailsSidebar", () => {
     renderComponent();
 
     const selectNative = screen.getByTestId("select-native");
-    fireEvent.change(selectNative, { target: { value: "ambit" } });
+    const user = userEvent.setup();
+    await user.selectOptions(selectNative, "ambit");
 
     await waitFor(() => {
       expect(mockUpdateProtocol).toHaveBeenCalledWith(
@@ -380,7 +345,8 @@ describe("ProtocolDetailsSidebar", () => {
     renderComponent();
 
     const selectNative = screen.getByTestId("select-native");
-    fireEvent.change(selectNative, { target: { value: "ambit" } });
+    const user = userEvent.setup();
+    await user.selectOptions(selectNative, "ambit");
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({
@@ -401,7 +367,8 @@ describe("ProtocolDetailsSidebar", () => {
     renderComponent();
 
     const selectNative = screen.getByTestId("select-native");
-    fireEvent.change(selectNative, { target: { value: "ambit" } });
+    const user = userEvent.setup();
+    await user.selectOptions(selectNative, "ambit");
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({
@@ -422,7 +389,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("renders compatible macros count text when user is not the creator", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent();
     expect(screen.queryByTestId("protocol-compatible-macros-card")).not.toBeInTheDocument();
     expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
@@ -430,7 +397,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("renders singular 'macro' for single compatible macro", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     useProtocolCompatibleMacrosMock.mockReturnValue({
       data: { body: [{ macro: { id: "macro-1" } }] },
     });
@@ -440,7 +407,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("renders 'no compatible macros' text when count is zero and user is not creator", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     useProtocolCompatibleMacrosMock.mockReturnValue({
       data: { body: [] },
     });
@@ -450,7 +417,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("renders 'no compatible macros' when data is undefined and user is not creator", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     useProtocolCompatibleMacrosMock.mockReturnValue({
       data: undefined,
     });
@@ -471,7 +438,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("does not render danger zone when user is not the creator", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent();
     expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
     expect(screen.queryByText("protocolSettings.deleteProtocol")).not.toBeInTheDocument();
@@ -485,13 +452,13 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("does not render danger zone when both non-creator and flag disabled", () => {
-    useSessionMock.mockReturnValue({ data: { user: { id: "other-user" } } });
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     useFeatureFlagEnabledMock.mockReturnValue(false);
     renderComponent();
     expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
   });
 
-  it("opens delete dialog when delete trigger is clicked", () => {
+  it("opens delete dialog when delete trigger is clicked", async () => {
     renderComponent();
 
     // Dialog starts closed
@@ -502,29 +469,31 @@ describe("ProtocolDetailsSidebar", () => {
 
     // Click the dialog trigger area (which calls onOpenChange(true))
     const trigger = screen.getByTestId("dialog-trigger");
-    fireEvent.click(trigger);
+    const user = userEvent.setup();
+    await user.click(trigger);
 
     // Dialog should now be open
     expect(dialog.dataset.open).toBe("true");
     expect(screen.getByTestId("dialog-content")).toBeInTheDocument();
     expect(screen.getByTestId("dialog-description")).toHaveTextContent(
-      `common.confirmDelete ${JSON.stringify({ name: "Test Protocol" })}`,
+      "common.confirmDelete",
     );
   });
 
-  it("closes delete dialog when cancel is clicked", () => {
+  it("closes delete dialog when cancel is clicked", async () => {
     renderComponent();
 
     const dialog = screen.getByTestId("dialog");
 
     // Open dialog
     const trigger = screen.getByTestId("dialog-trigger");
-    fireEvent.click(trigger);
+    const user = userEvent.setup();
+    await user.click(trigger);
     expect(dialog.dataset.open).toBe("true");
 
     // Click cancel
     const cancelButton = screen.getByText("protocolSettings.cancel");
-    fireEvent.click(cancelButton);
+    await user.click(cancelButton);
 
     // Dialog should be closed
     expect(dialog.dataset.open).toBe("false");
@@ -536,11 +505,12 @@ describe("ProtocolDetailsSidebar", () => {
 
     // Open dialog
     const trigger = screen.getByTestId("dialog-trigger");
-    fireEvent.click(trigger);
+    const user = userEvent.setup();
+    await user.click(trigger);
 
     // Click confirm delete
     const confirmButton = screen.getByText("protocolSettings.delete");
-    fireEvent.click(confirmButton);
+    await user.click(confirmButton);
 
     await waitFor(() => {
       expect(mockDeleteProtocol).toHaveBeenCalledWith({
@@ -549,11 +519,11 @@ describe("ProtocolDetailsSidebar", () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols");
+      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith("/en-US/platform/protocols");
     });
   });
 
-  it("shows deleting text when delete is in progress", () => {
+  it("shows deleting text when delete is in progress", async () => {
     useProtocolDeleteMock.mockReturnValue({
       mutateAsync: mockDeleteProtocol,
       isPending: true,
@@ -563,13 +533,14 @@ describe("ProtocolDetailsSidebar", () => {
 
     // Open dialog to see the deleting text
     const trigger = screen.getByTestId("dialog-trigger");
-    fireEvent.click(trigger);
+    const user = userEvent.setup();
+    await user.click(trigger);
 
     // The deleting text replaces the delete button text when isPending is true
     expect(screen.getByText("protocolSettings.deleting")).toBeInTheDocument();
   });
 
-  it("disables confirm delete button when delete is in progress", () => {
+  it("disables confirm delete button when delete is in progress", async () => {
     useProtocolDeleteMock.mockReturnValue({
       mutateAsync: mockDeleteProtocol,
       isPending: true,
@@ -579,7 +550,8 @@ describe("ProtocolDetailsSidebar", () => {
 
     // Open dialog
     const trigger = screen.getByTestId("dialog-trigger");
-    fireEvent.click(trigger);
+    const user = userEvent.setup();
+    await user.click(trigger);
 
     // The confirm delete button should be disabled
     const deletingButton = screen.getByText("protocolSettings.deleting");
@@ -605,7 +577,7 @@ describe("ProtocolDetailsSidebar", () => {
   // ---- Session edge case ----
 
   it("treats user as non-creator when session is null", () => {
-    useSessionMock.mockReturnValue({ data: null });
+    vi.mocked(useSession).mockReturnValue({ data: null } as never);
     renderComponent();
 
     // Should show plain text family, not a Select

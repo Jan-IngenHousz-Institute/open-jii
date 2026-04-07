@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom/vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook } from "@/test/test-utils";
 import { describe, expect, it, afterEach } from "vitest";
 
 import { useIotBrowserSupport } from "./useIotBrowserSupport";

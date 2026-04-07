@@ -1,32 +1,12 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { EntityLayoutShell } from "../entity-layout-shell";
 
-globalThis.React = React;
-
 // ---------- Mocks ----------
-const mockNotFound = vi.fn();
-vi.mock("next/navigation", () => ({
-  notFound: (): void => {
-    mockNotFound();
-  },
-}));
+import { notFound } from "next/navigation";
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "common.loading": "Loading...",
-        "errors.error": "Error",
-        "errors.resourceNotFoundMessage": "The requested resource could not be found.",
-      };
-      return translations[key] ?? key;
-    },
-  }),
-}));
+const mockNotFound = vi.mocked(notFound);
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title?: string }) => (
@@ -78,14 +58,14 @@ describe("EntityLayoutShell", () => {
   // ---------- Loading state ----------
   it("shows loading message when isLoading is true", () => {
     renderComponent({ isLoading: true });
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("common.loading")).toBeInTheDocument();
     expect(screen.queryByTestId("children-content")).not.toBeInTheDocument();
   });
 
   it("shows custom loadingMessage when provided", () => {
     renderComponent({ isLoading: true, loadingMessage: "Fetching data..." });
     expect(screen.getByText("Fetching data...")).toBeInTheDocument();
-    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    expect(screen.queryByText("common.loading")).not.toBeInTheDocument();
   });
 
   // ---------- Error states ----------
@@ -102,7 +82,7 @@ describe("EntityLayoutShell", () => {
   it("shows ErrorDisplay for 500 error", () => {
     renderComponent({ error: { status: 500 } });
     expect(screen.getByTestId("error-display")).toBeInTheDocument();
-    expect(screen.getByText("Error")).toBeInTheDocument();
+    expect(screen.getByText("errors.error")).toBeInTheDocument();
     expect(mockNotFound).not.toHaveBeenCalled();
   });
 
@@ -116,7 +96,7 @@ describe("EntityLayoutShell", () => {
 
   it("shows default error description when not provided", () => {
     renderComponent({ error: { status: 500 } });
-    expect(screen.getByText("The requested resource could not be found.")).toBeInTheDocument();
+    expect(screen.getByText("errors.resourceNotFoundMessage")).toBeInTheDocument();
   });
 
   // ---------- No data state ----------

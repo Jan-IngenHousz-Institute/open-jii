@@ -209,7 +209,8 @@ export function createExperimentTable(
 ): ExperimentTableMetadata {
   tableSeq++;
   return {
-    name: `table_${tableSeq}`,
+    identifier: `table_${tableSeq}`,
+    tableType: "static",
     displayName: `Table ${tableSeq}`,
     totalRows: 100,
     defaultSortColumn: undefined,

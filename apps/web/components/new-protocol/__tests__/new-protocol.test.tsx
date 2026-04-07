@@ -1,37 +1,7 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { render, screen, userEvent, fireEvent, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { NewProtocolForm } from "../new-protocol";
-
-globalThis.React = React;
-
-// Mock window.matchMedia (not available in jsdom)
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
-
-// Mock next/navigation
-const mockPush = vi.fn();
-const mockBack = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    back: mockBack,
-  }),
-}));
 
 // Mock hooks
 vi.mock("@/hooks/protocol/useProtocolCreate/useProtocolCreate", () => ({
@@ -43,10 +13,6 @@ vi.mock("@/hooks/protocol/useProtocolCreate/useProtocolCreate", () => ({
   })),
 }));
 
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
 // Mock tsr (used by the details card for macro search)
 const mockMacroList = [
   { id: "macro-1", name: "SPAD Macro", language: "python" },
@@ -55,6 +21,7 @@ const mockMacroList = [
 
 vi.mock("../../../lib/tsr", () => ({
   tsr: {
+    ReactQueryProvider: ({ children }: { children: React.ReactNode }) => children,
     macros: {
       listMacros: {
         useQuery: vi.fn(() => ({
@@ -94,14 +61,7 @@ vi.mock("../../macro-search-with-dropdown", () => ({
   },
 }));
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock toast
+// Supplement global @repo/ui/hooks mock with hooks needed by CodeTesterLayout (step 2)
 vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
   useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
@@ -235,6 +195,7 @@ describe("NewProtocolForm", () => {
 
   describe("Step 2 - Code & Test", () => {
     const goToStep2 = async () => {
+      const user = userEvent.setup();
       render(<NewProtocolForm />);
 
       // Fill in required name field
@@ -243,12 +204,13 @@ describe("NewProtocolForm", () => {
 
       // Click next to go to step 2
       const nextButton = screen.getByRole("button", { name: /next/i });
-      await userEvent.click(nextButton);
+      await user.click(nextButton);
 
       // Wait for step 2 to render
       await waitFor(() => {
         expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
       });
+      return user;
     };
 
     it("should show code editor and IoT tester on step 2", async () => {
@@ -266,7 +228,7 @@ describe("NewProtocolForm", () => {
     });
 
     it("should handle code editor changes", async () => {
-      await goToStep2();
+      const user = await goToStep2();
 
       const codeEditor = screen.getByTestId("code-editor");
       const newCode = JSON.stringify([{ averages: 2 }]);
@@ -284,10 +246,10 @@ describe("NewProtocolForm", () => {
     });
 
     it("should navigate back to step 1 when back is clicked", async () => {
-      await goToStep2();
+      const user = await goToStep2();
 
       const backButton = screen.getByRole("button", { name: /back/i });
-      await userEvent.click(backButton);
+      await user.click(backButton);
 
       await waitFor(() => {
         expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
@@ -297,6 +259,7 @@ describe("NewProtocolForm", () => {
 
   describe("Step 3 - Review", () => {
     const goToStep3 = async () => {
+      const user = userEvent.setup();
       render(<NewProtocolForm />);
 
       // Fill in required name field
@@ -305,7 +268,7 @@ describe("NewProtocolForm", () => {
 
       // Step 1 → Step 2
       const nextButton1 = screen.getByRole("button", { name: /next/i });
-      await userEvent.click(nextButton1);
+      await user.click(nextButton1);
 
       await waitFor(() => {
         expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
@@ -313,11 +276,12 @@ describe("NewProtocolForm", () => {
 
       // Step 2 → Step 3
       const nextButton2 = screen.getByRole("button", { name: /next/i });
-      await userEvent.click(nextButton2);
+      await user.click(nextButton2);
 
       await waitFor(() => {
         expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
       });
+      return user;
     };
 
     it("should show review content on step 3", async () => {
@@ -349,10 +313,10 @@ describe("NewProtocolForm", () => {
     });
 
     it("should navigate back to step 2 when back is clicked", async () => {
-      await goToStep3();
+      const user = await goToStep3();
 
       const backButton = screen.getByRole("button", { name: /back/i });
-      await userEvent.click(backButton);
+      await user.click(backButton);
 
       await waitFor(() => {
         expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();

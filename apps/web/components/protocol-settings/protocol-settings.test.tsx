@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ProtocolSettings } from "./protocol-settings";
@@ -9,14 +9,6 @@ const useProtocolMock = vi.hoisted(() => vi.fn());
 // Mock useProtocol hook
 vi.mock("../../hooks/protocol/useProtocol/useProtocol", () => ({
   useProtocol: useProtocolMock,
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: "en-US" },
-  }),
 }));
 
 // Mock child components to isolate ProtocolSettings logic

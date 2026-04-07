@@ -1,29 +1,18 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { toast } from "@repo/ui/hooks";
+
+import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 
 import { ProtocolDetailsCard } from "./protocol-details-card";
 
 // Hoisted mocks
 const useProtocolUpdateMock = vi.hoisted(() => vi.fn());
-const toastMock = vi.hoisted(() => vi.fn());
 const useIotBrowserSupportMock = vi.hoisted(() => vi.fn());
 
 // Mock the hooks
 vi.mock("../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
   useProtocolUpdate: useProtocolUpdateMock,
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock toast
-vi.mock("@repo/ui/hooks", () => ({
-  toast: toastMock,
 }));
 
 // Mock useIotBrowserSupport
@@ -194,7 +183,7 @@ describe("ProtocolDetailsCard", () => {
     await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(toastMock).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         description: "protocols.protocolUpdated",
       });
     });
