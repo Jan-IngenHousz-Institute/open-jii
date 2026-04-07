@@ -100,7 +100,14 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       set({ commandResponse: result, isExecuting: false, error: undefined });
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      // If cancelCommand preempted this execute() the underlying executor
+      // rejects with a "superseded" error — surface the user-facing reason
+      // instead so callers see a coherent cancellation message.
+      const error = get().isCancelled
+        ? new Error("Measurement cancelled")
+        : err instanceof Error
+          ? err
+          : new Error(String(err));
       set({ error, isExecuting: false });
       throw error;
     }
@@ -109,8 +116,16 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
   cancelCommand: async () => {
     set({ isCancelled: true, isExecuting: false });
     const { commandExecutor } = get();
-    if (commandExecutor) {
+    if (!commandExecutor) {
+      return;
+    }
+    try {
       await commandExecutor.execute(MULTISPEQ_CONSOLE.CANCEL);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error("Failed to send cancel command", error);
+      set({ error });
+      throw error;
     }
   },
 
