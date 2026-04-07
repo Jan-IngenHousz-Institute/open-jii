@@ -92,18 +92,18 @@ describe("GET /api/enable-draft", () => {
 
   describe("in development mode", () => {
     beforeEach(() => {
+      vi.resetModules();
       vi.doMock("~/env", () => ({
         env: { NODE_ENV: "development" },
       }));
     });
 
-    it("skips path validation and enables draft mode", async () => {
-      // Re-import with development env
+    it("skips path validation and enables draft mode even with empty path", async () => {
+      // Re-import so the module picks up the development env mock
       const { GET: devGET } = await import("../route");
 
-      const request = createMockRequest(
-        "https://example.com/api/enable-draft?path=%2Fen-US%2Fabout",
-      );
+      // Use empty path — in production this would return 400
+      const request = createMockRequest("https://example.com/api/enable-draft?path=");
 
       await expect(devGET(request)).rejects.toThrow("NEXT_REDIRECT");
 
