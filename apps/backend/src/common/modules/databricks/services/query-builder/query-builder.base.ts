@@ -46,7 +46,9 @@ export abstract class BaseQueryBuilder {
    */
   transformSchemaForFromJson(variantSchema: string): string {
     if (!variantSchema) return "";
-    return variantSchema.replace(/OBJECT</g, "STRUCT<").replace(/\bVOID\b/g, "STRING");
+    // ": VOID" is unambiguous as a type token: DDL field identifiers can't contain
+    // ":" or spaces, so this only matches the type position, never a field name.
+    return variantSchema.replaceAll("OBJECT<", "STRUCT<").replaceAll(": VOID", ": STRING");
   }
 }
 

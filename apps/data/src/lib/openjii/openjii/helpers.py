@@ -210,10 +210,14 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     spark = SparkSession.builder.getOrCreate()
     metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
     
-    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT)
-    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT, VOID → STRING)
+    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT, VOID → STRING).
+    # VOID is matched only after ": " so we hit the type position and not a field identifier
+    # that happens to contain the substring (e.g. "avoid"). DDL identifiers can't contain ":"
+    # or spaces, so ": VOID" is unambiguous.
     def normalize_schema(schema):
-        return schema.replace("OBJECT<", "STRUCT<").replace("VOID", "STRING") if schema else None
+        if not schema:
+            return None
+        return schema.replace("OBJECT<", "STRUCT<").replace(": VOID", ": STRING")
     
     macro_schema = normalize_schema(metadata["macro_schema"])
     questions_schema = normalize_schema(metadata["questions_schema"])
