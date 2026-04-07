@@ -64,6 +64,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
       ];
 
@@ -120,7 +121,7 @@ describe("ExperimentDataRepository", () => {
         experimentId,
         columns: undefined,
         variants: undefined,
-        exceptColumns: ["experiment_id", "questions_data"],
+        exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
         orderBy: undefined,
         orderDirection: "ASC",
         limit: 5,
@@ -163,6 +164,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 100,
           macroSchema: null,
           questionsSchema: "STRUCT<q1: STRING, q2: INT>",
+          customMetadataSchema: null,
         },
       ];
 
@@ -211,7 +213,7 @@ describe("ExperimentDataRepository", () => {
         experimentId,
         columns: ["id", "value"],
         variants: [{ columnName: "questions_data", schema: "STRUCT<q1: STRING, q2: INT>" }],
-        exceptColumns: ["experiment_id"],
+        exceptColumns: ["experiment_id", "custom_metadata"],
         orderBy: undefined,
         orderDirection: "ASC",
         limit: undefined,
@@ -227,6 +229,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 50,
           macroSchema: "STRUCT<output: STRING>",
           questionsSchema: "STRUCT<q1: STRING>",
+          customMetadataSchema: null,
         },
       ];
 
@@ -266,6 +269,7 @@ describe("ExperimentDataRepository", () => {
           "macro_name",
           "macro_filename",
           "date",
+          "custom_metadata",
         ],
         orderBy: undefined,
         orderDirection: "ASC",
@@ -282,6 +286,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 50,
           macroSchema: null,
           questionsSchema: "STRUCT<q1: STRING>",
+          customMetadataSchema: null,
         },
       ];
 
@@ -319,6 +324,7 @@ describe("ExperimentDataRepository", () => {
           "macro_filename",
           "date",
           "macro_output",
+          "custom_metadata",
         ],
         orderBy: undefined,
         orderDirection: "ASC",
@@ -335,6 +341,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
       ];
 
@@ -361,7 +368,7 @@ describe("ExperimentDataRepository", () => {
         experimentId,
         columns: undefined,
         variants: undefined,
-        exceptColumns: ["experiment_id", "questions_data"],
+        exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
         orderBy: undefined,
         orderDirection: "ASC",
         limit: 5,
@@ -377,6 +384,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 10,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
       ];
 
@@ -422,6 +430,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
       ];
 
@@ -459,6 +468,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 10,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
       ];
 
@@ -500,6 +510,7 @@ describe("ExperimentDataRepository", () => {
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
       ];
 
@@ -524,6 +535,34 @@ describe("ExperimentDataRepository", () => {
       expect(result.isSuccess()).toBe(false);
       if (result.isFailure()) {
         expect(result.error).toBe(error);
+      }
+    });
+
+    it("should return failure when table config is not found for unknown static table", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "unknown_table",
+          tableType: "static",
+          rowCount: 10,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "unknown_table",
+      });
+
+      expect(result.isSuccess()).toBe(false);
+      if (result.isFailure()) {
+        expect(result.error.code).toBe("UNKNOWN_TABLE_CONFIG");
       }
     });
   });

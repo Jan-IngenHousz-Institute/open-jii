@@ -187,11 +187,12 @@ describe("DatabricksAdapter", () => {
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
           { name: "macro_schema", type_name: "string", type_text: "string" },
           { name: "questions_schema", type_name: "string", type_text: "string" },
+          { name: "custom_metadata_schema", type_name: "string", type_text: "string" },
         ],
         rows: [
-          ["raw_data", "static", "100", null, null],
-          ["device", "static", "50", null, null],
-          ["some_macro_id", "macro", "25", '{"col1":"int"}', '{"q1":"text"}'],
+          ["raw_data", "static", "100", null, null, null],
+          ["device", "static", "50", null, null, null],
+          ["some_macro_id", "macro", "25", '{"col1":"int"}', '{"q1":"text"}', '{"plot":"string"}'],
         ],
         totalRows: 3,
         truncated: false,
@@ -239,6 +240,7 @@ describe("DatabricksAdapter", () => {
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
         {
           identifier: "device",
@@ -246,6 +248,7 @@ describe("DatabricksAdapter", () => {
           rowCount: 50,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
         {
           identifier: "some_macro_id",
@@ -253,6 +256,7 @@ describe("DatabricksAdapter", () => {
           rowCount: 25,
           macroSchema: '{"col1":"int"}',
           questionsSchema: '{"q1":"text"}',
+          customMetadataSchema: '{"plot":"string"}',
         },
       ]);
     });
@@ -265,8 +269,9 @@ describe("DatabricksAdapter", () => {
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
           { name: "macro_schema", type_name: "string", type_text: "string" },
           { name: "questions_schema", type_name: "string", type_text: "string" },
+          { name: "custom_metadata_schema", type_name: "string", type_text: "string" },
         ],
-        rows: [["device", "static", "50", null, null]],
+        rows: [["device", "static", "50", null, null, null]],
         totalRows: 1,
         truncated: false,
       };
@@ -315,6 +320,7 @@ describe("DatabricksAdapter", () => {
           rowCount: 50,
           macroSchema: null,
           questionsSchema: null,
+          customMetadataSchema: null,
         },
       ]);
     });
