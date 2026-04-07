@@ -1,10 +1,9 @@
 import { render, screen } from "@/test/test-utils";
+// ---------- Mocks ----------
+import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { EntityLayoutShell } from "../entity-layout-shell";
-
-// ---------- Mocks ----------
-import { notFound } from "next/navigation";
 
 const mockNotFound = vi.mocked(notFound);
 

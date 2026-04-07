@@ -1,5 +1,5 @@
-import type React from "react";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import type React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { IotProtocolRunner } from "./iot-protocol-runner";

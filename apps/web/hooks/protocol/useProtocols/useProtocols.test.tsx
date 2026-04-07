@@ -10,10 +10,7 @@ import { useProtocols } from "./useProtocols";
 describe("useProtocols", () => {
   it("returns protocols list", async () => {
     server.mount(contract.protocols.listProtocols, {
-      body: [
-        createProtocol({ id: "p-1", name: "P1" }),
-        createProtocol({ id: "p-2", name: "P2" }),
-      ],
+      body: [createProtocol({ id: "p-1", name: "P1" }), createProtocol({ id: "p-2", name: "P2" })],
     });
 
     const { result } = renderHook(() => useProtocols());

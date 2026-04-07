@@ -1,11 +1,10 @@
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Protocol } from "@repo/api";
 import { useSession } from "@repo/auth/client";
-import { useRouter } from "next/navigation";
-
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 
 import { ProtocolDetailsSidebar } from "../protocol-details-sidebar";
 
@@ -475,9 +474,7 @@ describe("ProtocolDetailsSidebar", () => {
     // Dialog should now be open
     expect(dialog.dataset.open).toBe("true");
     expect(screen.getByTestId("dialog-content")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog-description")).toHaveTextContent(
-      "common.confirmDelete",
-    );
+    expect(screen.getByTestId("dialog-description")).toHaveTextContent("common.confirmDelete");
   });
 
   it("closes delete dialog when cancel is clicked", async () => {
@@ -519,7 +516,9 @@ describe("ProtocolDetailsSidebar", () => {
     });
 
     await waitFor(() => {
-      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith("/en-US/platform/protocols");
+      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith(
+        "/en-US/platform/protocols",
+      );
     });
   });
 

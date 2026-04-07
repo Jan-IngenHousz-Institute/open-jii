@@ -87,7 +87,11 @@ const mockTablesData = [
     totalRows: 100,
     defaultSortColumn: "timestamp",
   }),
-  createExperimentTable({ identifier: ExperimentTableName.DEVICE, displayName: "Device", totalRows: 1 }),
+  createExperimentTable({
+    identifier: ExperimentTableName.DEVICE,
+    displayName: "Device",
+    totalRows: 1,
+  }),
 ];
 
 function mountDefaults() {

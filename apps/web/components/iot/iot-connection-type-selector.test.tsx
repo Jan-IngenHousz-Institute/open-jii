@@ -35,7 +35,6 @@ describe("ConnectionTypeSelector", () => {
       expect(screen.getByText("iot.protocolRunner.bluetooth")).toBeInTheDocument();
       expect(screen.getByText("iot.protocolRunner.serial")).toBeInTheDocument();
     });
-
   });
 
   describe("user interactions", () => {

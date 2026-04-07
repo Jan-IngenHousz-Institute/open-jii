@@ -1,8 +1,7 @@
+import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { toast } from "@repo/ui/hooks";
-
-import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 
 import { ProtocolDetailsCard } from "./protocol-details-card";
 

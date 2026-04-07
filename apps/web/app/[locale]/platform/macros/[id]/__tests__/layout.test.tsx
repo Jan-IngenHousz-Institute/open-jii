@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { useSession } from "@repo/auth/client";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { useParams, notFound } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { useSession } from "@repo/auth/client";
 
 import MacroLayout from "../layout";
 

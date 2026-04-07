@@ -1,3 +1,4 @@
+import { render, screen, userEvent } from "@/test/test-utils";
 import { use } from "react";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -6,8 +7,6 @@ import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import ProtocolOverviewPage from "../page";
-
-import { render, screen, userEvent } from "@/test/test-utils";
 
 // --------------------
 // Mocks
@@ -37,8 +36,6 @@ const mockUseProtocolUpdate = vi.fn<() => MockProtocolUpdateReturn>();
 vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
   useProtocolUpdate: () => mockUseProtocolUpdate(),
 }));
-
-
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
@@ -150,8 +147,6 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
     </div>
   ),
 }));
-
-
 
 vi.mock("@repo/ui/components", () => {
   const Card = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (

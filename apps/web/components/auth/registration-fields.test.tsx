@@ -1,9 +1,8 @@
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { Form } from "@repo/ui/components";
-
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 
 import { RegistrationFields } from "./registration-fields";
 import type { Registration } from "./registration-form";

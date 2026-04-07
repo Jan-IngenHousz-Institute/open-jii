@@ -1,10 +1,10 @@
+import { render, screen, userEvent } from "@/test/test-utils";
+import { notFound, useParams, usePathname } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
-import { notFound, useParams, usePathname } from "next/navigation";
-import { render, screen, userEvent } from "@/test/test-utils";
 
 import ProtocolLayout from "../layout";
 
