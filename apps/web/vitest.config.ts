@@ -30,6 +30,7 @@ const webConfig = defineConfig({
         // Web-specific exclusions (extends base config)
         ".next/**", // Next.js build artifacts
         ".releaserc.js", // Semantic release configuration
+        "proxy.ts", // Next.js proxy (middleware) — thin routing layer
       ],
     },
   },
