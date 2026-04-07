@@ -1,7 +1,7 @@
 import { initContract, tsRestFetchApi } from "@ts-rest/core";
-import type { AppRoute, ApiFetcherArgs } from "@ts-rest/core";
+import type { AppRoute, ApiFetcherArgs, ErrorHttpStatusCode } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
-import type { ErrorResponse, InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
+import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
 import { env } from "~/env";
 
 import { experimentContract, macroContract, protocolContract, userContract } from "@repo/api";
@@ -44,36 +44,40 @@ export const tsr = initTsrReactQuery(contract, {
   credentials: "include",
 });
 
-type TsRestError<TRoute extends AppRoute> =
-  UseMutationOptions<TRoute, InferClientArgs<typeof tsr>>["onError"] extends
-    ((error: infer E, ...args: any) => any) | undefined
-    ? E
-    : never;
-
 export type TsrRoute<T> = T extends {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useMutation: (options?: UseMutationOptions<infer TRoute, any>) => any;
 }
   ? TRoute
   : never;
 
-type ContractError<TRoute extends AppRoute> = Extract<
-  Exclude<TsRestError<TRoute>, Error>,
-  { status: keyof TRoute["responses"] }
->;
+export type ContractError<TRoute extends AppRoute> = keyof TRoute["responses"] &
+  ErrorHttpStatusCode extends infer K
+  ? K extends keyof TRoute["responses"] & ErrorHttpStatusCode
+    ? {
+        status: K;
+        body: TRoute["responses"][K] extends { _output: infer O } ? O : unknown;
+        headers: Headers;
+      }
+    : never
+  : never;
 
-export function isContractError<TRoute extends AppRoute>(
-  error: ErrorResponse<TRoute>,
-): error is ContractError<TRoute> {
-  if (error instanceof Error) return false;
-  if (typeof error !== "object" || error === null || !("status" in error)) return false;
-  return typeof (error as { status: unknown }).status === "number";
+export function getContractError<T>(
+  _route: T,
+  error: unknown,
+): ContractError<TsrRoute<T>> | undefined {
+  if (error instanceof Error) return undefined;
+  if (typeof error !== "object" || error === null || !("status" in error)) return undefined;
+  if (typeof (error as { status: unknown }).status !== "number") return undefined;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+  return error as any;
 }
 
 type RemapOnError<T, TRoute extends AppRoute> = Omit<T, "onError"> & {
   [K in Extract<keyof T, "onError">]?: T[K] extends
-    | ((error: infer E, ...args: infer A) => infer R)
+    | ((error: never, ...args: infer A) => infer R)
     | undefined
-    ? (error: Extract<Exclude<E, Error>, { status: keyof TRoute["responses"] }>, ...args: A) => R
+    ? (error: ContractError<TRoute>, ...args: A) => R
     : T[K];
 };
 

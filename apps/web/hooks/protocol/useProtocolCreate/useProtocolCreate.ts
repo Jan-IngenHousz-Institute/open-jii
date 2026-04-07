@@ -1,9 +1,9 @@
 import type { Protocol } from "@repo/api";
-
-import { isContractError, tsr } from "../../../lib/tsr";
-import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
-import { toast } from "@repo/ui/hooks";
 import { useTranslation } from "@repo/i18n";
+import { toast } from "@repo/ui/hooks";
+
+import { getContractError, tsr } from "../../../lib/tsr";
+import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
 
 const route = tsr.protocols.createProtocol;
 
@@ -35,22 +35,24 @@ export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
       if (context?.previousProtocols) {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
-      if (!isContractError(error)) {
+
+      const contractError = getContractError(route, error);
+
+      if (!contractError) {
         toast({ description: t("common.errors.serverError"), variant: "destructive" });
         return;
       }
 
-      switch(error.status) {
+      switch (contractError.status) {
         case 409:
           toast({ description: t("protocols.nameAlreadyExists"), variant: "destructive" });
           break;
         default:
-        case 400:
           toast({ description: t("protocols.createError"), variant: "destructive" });
           break;
       }
 
-      options.onError?.(error, variables, context, mutation);
+      options.onError?.(contractError, variables, context, mutation);
     },
     onSettled: async (...args) => {
       await queryClient.invalidateQueries({ queryKey: ["protocols"] });
