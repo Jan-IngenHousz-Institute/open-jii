@@ -74,10 +74,7 @@ export function NewMacroForm() {
         return;
       }
       router.push(`/${locale}/platform/macros/${id}`);
-    },
-    onError: (error) => {
-      console.log(error.status);
-    },
+    }
   });
 
   // Placeholder macroId for the hook - actual call uses real ID via mutateAsync
