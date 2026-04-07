@@ -93,6 +93,7 @@ The IAM role includes permissions for the following AWS services and operations:
 - **Disable scanning**: `inspector2:Disable`
 - **Read current account status** (plan/refresh): `inspector2:BatchGetAccountStatus`
 - **Provider reads during plan**: `inspector2:ListAccountPermissions`
+- **Service-linked role creation** (first-time enablement): `iam:CreateServiceLinkedRole` - Limited to the AWS Inspector v2 service-linked role ARN (`arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2`)
 
 These permissions allow Terraform/OpenTofu to enable and manage AWS Inspector v2 for vulnerability scanning of ECR images and Lambda functions. All actions apply to resource scope `*` (account-level enablement).
 
