@@ -10,8 +10,8 @@ const setMock = vi.fn();
 const redirectMock = vi.fn();
 
 vi.mock("next/headers", () => ({
-  draftMode: vi.fn(async () => ({ enable: enableMock })),
-  cookies: vi.fn(async () => ({ get: getMock, set: setMock })),
+  draftMode: vi.fn(() => ({ enable: enableMock })),
+  cookies: vi.fn(() => ({ get: getMock, set: setMock })),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -91,7 +91,7 @@ describe("GET /api/enable-draft", () => {
   });
 
   describe("in development mode", () => {
-    beforeEach(async () => {
+    beforeEach(() => {
       vi.doMock("~/env", () => ({
         env: { NODE_ENV: "development" },
       }));
