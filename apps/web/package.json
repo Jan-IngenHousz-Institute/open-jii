@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "next dev",
+    "build": "next build --webpack",
     "build:opennext": "pnpm dlx @opennextjs/aws@latest build",
     "clean": "git clean -xdf .cache .next .turbo node_modules .open-next",
     "start": "next start",
