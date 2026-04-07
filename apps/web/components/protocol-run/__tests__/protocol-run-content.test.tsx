@@ -1,9 +1,8 @@
+import { render, screen } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { useSession } from "@repo/auth/client";
-
-import { render, screen } from "@/test/test-utils";
 
 import { ProtocolRunContent } from "../protocol-run-content";
 
@@ -171,7 +170,13 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should show browser not supported message when no support", () => {
-    mockBrowserSupport = { bluetooth: false, serial: false, any: false, bluetoothReason: null, serialReason: null };
+    mockBrowserSupport = {
+      bluetooth: false,
+      serial: false,
+      any: false,
+      bluetoothReason: null,
+      serialReason: null,
+    };
     mockUseProtocol.mockReturnValue({
       data: { body: mockProtocol },
       isLoading: false,

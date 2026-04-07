@@ -1,6 +1,7 @@
 import { renderHook, act } from "@/test/test-utils";
-import { toast } from "@repo/ui/hooks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+import { toast } from "@repo/ui/hooks";
 
 import { useCodeAutoSave } from "../useCodeAutoSave";
 

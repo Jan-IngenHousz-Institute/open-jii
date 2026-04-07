@@ -1,3 +1,4 @@
+import { render, screen, userEvent } from "@/test/test-utils";
 import { use } from "react";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -6,8 +7,6 @@ import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import MacroOverviewPage from "../page";
-
-import { render, screen, userEvent } from "@/test/test-utils";
 
 // --------------------
 // Hook mocks
@@ -34,8 +33,6 @@ const mockUseMacroUpdate = vi.fn(() => ({
 vi.mock("@/hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
   useMacroUpdate: () => mockUseMacroUpdate(),
 }));
-
-
 
 vi.mock("@/util/base64", () => ({
   decodeBase64: (s: string) => {
@@ -152,8 +149,6 @@ vi.mock("@/components/macro-code-editor", () => ({
     </div>
   ),
 }));
-
-
 
 vi.mock("@repo/ui/components", () => {
   const Card = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (

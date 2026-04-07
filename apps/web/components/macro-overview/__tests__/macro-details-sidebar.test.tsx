@@ -1,11 +1,10 @@
+import { render, screen, userEvent } from "@/test/test-utils";
+import { useRouter } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Macro } from "@repo/api";
 import { useSession } from "@repo/auth/client";
-import { useRouter } from "next/navigation";
-
-import { render, screen, userEvent } from "@/test/test-utils";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";
 
@@ -524,7 +523,9 @@ describe("<MacroDetailsSidebar />", () => {
       await userEvent.click(confirmButton);
 
       expect(mockDeleteMacro).toHaveBeenCalledWith({ params: { id: "abc12345" } });
-      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith("/en-US/platform/macros");
+      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith(
+        "/en-US/platform/macros",
+      );
     });
 
     it("shows deleting state when deletion is pending", async () => {

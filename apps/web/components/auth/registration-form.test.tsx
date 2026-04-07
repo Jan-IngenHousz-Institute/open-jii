@@ -1,9 +1,8 @@
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
-
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 
 import { RegistrationForm } from "../auth/registration-form";
 
@@ -88,7 +87,9 @@ describe("RegistrationForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<typeof useRouter>);
+    vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<
+      typeof useRouter
+    >);
     mockUpdateUserMutate.mockResolvedValue({});
     mockSendOtpMutate.mockResolvedValue({});
     mockVerifyOtpMutate.mockResolvedValue({});

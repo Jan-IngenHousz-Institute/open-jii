@@ -147,7 +147,6 @@ describe("DeviceStatusCard", () => {
       const button = screen.getByRole("button");
       expect(button).toBeDisabled();
     });
-
   });
 
   describe("error handling", () => {
@@ -169,7 +168,6 @@ describe("DeviceStatusCard", () => {
       render(<DeviceStatusCard {...defaultProps} />);
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
-
   });
 
   describe("button variants", () => {

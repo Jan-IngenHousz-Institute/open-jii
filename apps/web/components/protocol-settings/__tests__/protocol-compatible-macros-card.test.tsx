@@ -1,7 +1,6 @@
+import { render, screen, userEvent } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import { render, screen, userEvent } from "@/test/test-utils";
 
 import { useAddCompatibleMacro } from "../../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 // Import mocked hooks for test configuration
