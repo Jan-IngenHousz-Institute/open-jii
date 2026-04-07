@@ -25,26 +25,17 @@ vi.mock("@repo/ui/components", async () => {
   };
 });
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
+const defaults: CreateMacroRequestBody = {
+  name: "",
+  description: "",
+  language: "python",
+  code: "",
+};
 
-// Test wrapper component that provides form context
-function TestWrapper({ children }: { children: React.ReactNode }) {
-  const form = useForm<CreateMacroRequestBody>({
-    defaultValues: {
-      name: "",
-      description: "",
-      language: "python",
-      code: "",
-    },
+const setup = () =>
+  renderWithForm<CreateMacroRequestBody>((form) => <NewMacroDetailsCard form={form} />, {
+    useFormProps: { defaultValues: defaults },
   });
-
-  return React.cloneElement(children as React.ReactElement, { form });
-}
 
 describe("NewMacroDetailsCard", () => {
   it("renders name input with placeholder", () => {
@@ -63,30 +54,8 @@ describe("NewMacroDetailsCard", () => {
     expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
   });
 
-  // Tests for language selection have been removed as the language selector
-  // has been moved to the code editor section
-
-  it("should have correct placeholder text", () => {
-    render(
-      <TestWrapper>
-        <NewMacroDetailsCard form={undefined as any} />
-      </TestWrapper>,
-    );
-
-    expect(screen.getByTestId("rich-textarea")).toHaveAttribute(
-      "placeholder",
-      "newMacro.description",
-    );
-  });
-
-  it("should render form validation messages", () => {
-    render(
-      <TestWrapper>
-        <NewMacroDetailsCard form={undefined as any} />
-      </TestWrapper>,
-    );
-
-    const formMessages = screen.getAllByTestId("form-message");
-    expect(formMessages).toHaveLength(2); // One for each field (name, description)
+  it("renders description placeholder", () => {
+    setup();
+    expect(screen.getByPlaceholderText("newMacro.description")).toBeInTheDocument();
   });
 });

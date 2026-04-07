@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api";
 import { authClient } from "@repo/auth/client";
 
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
@@ -127,7 +129,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Alice");
     await user.type(screen.getByLabelText("registration.lastName"), "Smith");
 
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(screen.getByText("registration.acceptTermsError")).toBeInTheDocument();
@@ -143,8 +145,8 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.lastName"), "Doe");
     await user.type(screen.getByLabelText("registration.organization"), "Acme");
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalledWith({
@@ -160,8 +162,8 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Bob");
     await user.type(screen.getByLabelText("registration.lastName"), "Builder");
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
@@ -233,6 +235,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders custom terms data when provided", async () => {
+    const user = userEvent.setup();
     const customTermsData = { title: "Custom Terms", content: "Custom content" };
     render(<RegistrationForm {...defaultProps} termsData={customTermsData} />, {
       wrapper: createWrapper(),
@@ -255,8 +258,8 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Test");
     await user.type(screen.getByLabelText("registration.lastName"), "User");
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
@@ -277,12 +280,12 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Error");
     await user.type(screen.getByLabelText("registration.lastName"), "Test");
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     expect(submitButton).not.toBeDisabled();
 
-    fireEvent.click(submitButton);
+    await user.click(submitButton);
 
     // Button should be disabled during submission
     await waitFor(() => {
@@ -306,7 +309,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Multi");
     await user.type(screen.getByLabelText("registration.lastName"), "Submit");
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     // First click

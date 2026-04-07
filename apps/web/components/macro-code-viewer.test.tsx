@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { MacroCodeViewer } from "./macro-code-viewer";
 
-// Mock Monaco Editor
 vi.mock("@monaco-editor/react", () => ({
   Editor: ({ value, language, theme }: { value: string; language?: string; theme?: string }) => (
     <div data-testid="monaco-editor" data-language={language} data-theme={theme}>
@@ -13,34 +12,25 @@ vi.mock("@monaco-editor/react", () => ({
   ),
 }));
 
-// Mock clipboard API
-const mockClipboard = {
-  writeText: vi.fn().mockResolvedValue(undefined),
-};
-
-Object.defineProperty(global.navigator, "clipboard", {
-  value: mockClipboard,
+// jsdom does not implement navigator.clipboard — provide a minimal stub so
+// handleCopy() resolves instead of throwing.
+Object.defineProperty(navigator, "clipboard", {
+  value: { writeText: vi.fn().mockResolvedValue(undefined) },
   writable: true,
+  configurable: true,
 });
 
-describe("MacroCodeViewer", () => {
-  const defaultProps = {
-    value: "# Sample code\nprint('Hello world')",
-    language: "python" as const,
-  };
+const defaults = { value: "# Sample\nprint('Hello')", language: "python" as const };
 
+describe("MacroCodeViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
+  afterEach(() => vi.useRealTimers());
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("should render the editor container", () => {
-    render(<MacroCodeViewer {...defaultProps} />);
-
+  it("renders the editor", () => {
+    render(<MacroCodeViewer {...defaults} />);
     expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
   });
 

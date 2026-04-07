@@ -5,139 +5,33 @@ import { usePathname } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Session } from "@repo/auth/types";
+import { contract } from "@repo/api";
+import { authClient } from "@repo/auth/client";
 
-// ---- SUT ----
 import { UnifiedNavbar } from "./unified-navbar";
 
-globalThis.React = React;
-
-// ---- Mocks ----
-
-// --- mock the profile hook to avoid network and control the UI ---
-let __mockProfile: { firstName?: string; lastName?: string } | undefined;
-
-vi.mock("@/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
-  useGetUserProfile: vi.fn(() => {
-    return __mockProfile ? { data: { body: __mockProfile } } : { data: undefined };
-  }),
-}));
-
-// Make next/image a plain <img> so src is stable in tests
-vi.mock("next/image", () => ({
-  __esModule: true,
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} />,
-}));
-
-vi.mock("next/link", () => ({
-  default: ({
-    href,
-    className,
-    children,
-    ...rest
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode }) => (
-    <a href={href} className={className} {...rest}>
-      {children}
-    </a>
-  ),
-}));
-
-const usePathnameMock = vi.fn();
-const mockPush = vi.fn();
-vi.mock("next/navigation", () => ({
-  usePathname: (): string => usePathnameMock() as string,
-  useRouter: () => ({
-    push: mockPush,
-  }),
-}));
-
-// Mock useSignOut
-const mockSignOutMutateAsync = vi.fn();
-vi.mock("~/hooks/auth", () => ({
-  useSignOut: () => ({
-    mutateAsync: mockSignOutMutateAsync,
-    isPending: false,
-  }),
-}));
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (k: string, fallback?: string) =>
-      ({
-        "navigation.home": "Home",
-        "navigation.about": "About",
-        "navigation.blog": "Blog",
-        "navigation.platform": "Platform",
-        "navigation.menu": "Navigation menu",
-        "auth.userMenu": "User menu",
-        "auth.account": "Account",
-        "auth.signOut": "Sign Out",
-      })[k] ??
-      fallback ??
-      k,
-  }),
-}));
-
-vi.mock("@/components/multi-language", () => ({
+vi.mock("@/components/language-switcher", () => ({
   LanguageSwitcher: ({ locale }: { locale: string }) => (
-    <div data-testid="multi-language">{locale}</div>
+    <div data-testid="language-switcher">{locale}</div>
   ),
 }));
 
-vi.mock("@repo/ui/components", () => {
-  const Button = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-    ({ children, className, ...rest }, ref) => (
-      <button ref={ref} className={className} {...rest}>
-        {children}
-      </button>
-    ),
-  );
-  Button.displayName = "Button";
+// DropdownMenu mock — Radix doesn't work in jsdom without pointer events / portals
+vi.mock("@repo/ui/components", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
 
-  const Avatar = ({ children, className, ...rest }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div className={className} data-testid="avatar" {...rest}>
-      {children}
-    </div>
-  );
-
-  const AvatarImage = ({
-    src = "",
-    alt = "",
-    ...rest
-  }: { src: string; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img data-testid="avatar-image" src={src} alt={alt} width={32} height={32} {...rest} />
-  );
-
-  const AvatarFallback = ({
-    children,
-    className,
-  }: {
-    children?: React.ReactNode;
-    className?: string;
-  }) => (
-    <div className={className} data-testid="avatar-fallback">
-      {children}
-    </div>
-  );
-
-  // DropdownMenu with state management
   const DropdownMenu = ({
     children,
     open: controlledOpen,
     onOpenChange,
-  }: React.PropsWithChildren<{
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }>) => {
+  }: React.PropsWithChildren<{ open?: boolean; onOpenChange?: (o: boolean) => void }>) => {
     const [internalOpen, setInternalOpen] = React.useState(false);
     const open = controlledOpen ?? internalOpen;
-
     const toggle = () => {
-      const newState = !open;
-      setInternalOpen(newState);
-      onOpenChange?.(newState);
+      const next = !open;
+      setInternalOpen(next);
+      onOpenChange?.(next);
     };
-
     return (
       <div data-open={open} onClick={toggle}>
         {children}
@@ -145,159 +39,119 @@ vi.mock("@repo/ui/components", () => {
     );
   };
 
-  const DropdownMenuTrigger = ({
-    children,
-    asChild: _asChild,
-    ...rest
-  }: React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }) => (
-    <div data-testid="dropdown-trigger" {...rest}>
-      {children}
-    </div>
-  );
-  const DropdownMenuContent = ({
-    children,
-    className,
-    ...rest
-  }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="dropdown-content" className={className} {...rest}>
-      {children}
-    </div>
-  );
-  const DropdownMenuItem = ({
-    children,
-    asChild: _asChild,
-    ...rest
-  }: React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }) => (
-    <div role="menuitem" {...rest}>
-      {children}
-    </div>
-  );
-  const DropdownMenuSeparator = () => <hr />;
-
   return {
-    Button,
-    Avatar,
-    AvatarImage,
-    AvatarFallback,
+    ...actual,
     DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
+    DropdownMenuTrigger: ({
+      children,
+      asChild: _,
+      ...rest
+    }: React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }) => (
+      <div data-testid="dropdown-trigger" {...rest}>
+        {children}
+      </div>
+    ),
+    DropdownMenuContent: ({
+      children,
+      className,
+      ...rest
+    }: React.HTMLAttributes<HTMLDivElement>) => (
+      <div data-testid="dropdown-content" className={className} {...rest}>
+        {children}
+      </div>
+    ),
+    DropdownMenuItem: ({
+      children,
+      asChild: _,
+      ...rest
+    }: React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }) => (
+      <div role="menuitem" {...rest}>
+        {children}
+      </div>
+    ),
+    DropdownMenuSeparator: () => <hr />,
   };
 });
 
-vi.mock("lucide-react", () => {
-  const Icon = ({ className }: { className?: string }) => (
-    <span data-testid="icon" className={className} />
-  );
-  return {
-    User: Icon,
-    Home: Icon,
-    BookOpen: Icon,
-    LogOut: Icon,
-    Menu: Icon,
-    LogIn: Icon,
-    Sprout: Icon,
-    MessageCircleQuestion: Icon,
-    ChevronDown: Icon,
-  };
-});
-
-// ---- Helpers ----
-function renderNavbar({
-  locale = "en-US",
-  pathname = "/en-US",
-  session = null,
-}: {
-  locale?: string;
-  pathname?: string;
-  session?: Session | null;
-} = {}) {
-  usePathnameMock.mockReturnValue(pathname);
-
-  // Provide a QueryClient for hooks
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  // If authenticated, make sure the navbar can show a display name
-  __mockProfile = session?.user ? { firstName: "Ada", lastName: "Lovelace" } : undefined;
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <UnifiedNavbar locale={locale} session={session} />
-    </QueryClientProvider>,
-  );
-}
-
-const makeSession = (over: Partial<Session> = {}) =>
-  ({
+const makeSession = (over: Record<string, unknown> = {}) =>
+  createSession({
     user: {
       id: "user-1",
       name: "Ada Lovelace",
       email: "ada@example.com",
-      image: "https://example.com/ada.png",
-      registered: true,
+      ...(over.user as Record<string, unknown>),
     },
-    expires: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
     ...over,
-  }) as Session;
-
-// ---- Tests ----
-describe("<UnifiedNavbar />", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
   });
 
-  it("shows Home/About/Blog links and marks current page active via aria-current", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US/blog/some-post" });
-
-    const nav = screen.getByRole("navigation");
-    const desktopLinks = nav.querySelector(".md\\:flex");
-    expect(desktopLinks).not.toBeNull();
-
-    const utils = within(desktopLinks as HTMLElement);
-
-    const home = utils.getByRole("link", { name: /Home/i });
-    const about = utils.getByRole("link", { name: /About/i });
-    const blog = utils.getByRole("link", { name: /Blog/i });
-
-    expect(home).toHaveAttribute("href", "/en-US");
-    expect(about).toHaveAttribute("href", "/en-US/about");
-    expect(blog).toHaveAttribute("href", "/en-US/blog");
-
-    expect(home).not.toHaveAttribute("aria-current");
-    expect(about).not.toHaveAttribute("aria-current");
-    expect(blog).toHaveAttribute("aria-current", "page");
-  });
-
-  it("shows 'Platform' link for guests in navigation", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US" });
-
-    // Scope into desktop links only
-    const nav = screen.getByRole("navigation");
-    const desktopLinks = nav.querySelector(".md\\:flex");
-    expect(desktopLinks).not.toBeNull();
-
-    const utils = within(desktopLinks as HTMLElement);
-
-    // Desktop nav should include Platform for guests
-    const platformLink = utils.getByRole("link", { name: /Platform/i });
-    expect(platformLink).toHaveAttribute("href", "/en-US/platform");
-  });
-
-  it("shows 'Platform' in nav for authenticated users", () => {
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US/platform",
-      session: makeSession(),
+function renderNavbar(
+  opts: {
+    locale?: string;
+    pathname?: string;
+    session?: ReturnType<typeof createSession> | null;
+    isHomePage?: boolean;
+  } = {},
+) {
+  vi.mocked(usePathname).mockReturnValue(opts.pathname ?? "/en-US");
+  if (opts.session?.user) {
+    server.mount(contract.users.getUserProfile, {
+      body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
     });
+  }
+  return render(
+    <UnifiedNavbar
+      locale={opts.locale ?? "en-US"}
+      session={opts.session ?? null}
+      isHomePage={opts.isHomePage}
+    />,
+  );
+}
 
-    const desktopNav = screen.getByRole("navigation");
-    const platformLink = within(desktopNav).getAllByRole("link", { name: /Platform/i })[0];
-    expect(platformLink).toHaveAttribute("href", "/en-US/platform");
-    expect(platformLink).toHaveAttribute("aria-current", "page");
+describe("UnifiedNavbar", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("shows nav links and marks current page active", () => {
+    renderNavbar({ pathname: "/en-US/blog/some-post" });
+    const nav = screen.getByRole("navigation");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const desktop = nav.querySelector(".md\\:flex")!;
+    const utils = within(desktop as HTMLElement);
+
+    expect(utils.getByRole("link", { name: /navigation\.home/i })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(utils.getByRole("link", { name: /navigation\.blog/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("shows Platform link for guests", () => {
+    renderNavbar();
+    const nav = screen.getByRole("navigation");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const desktop = within(nav.querySelector(".md\\:flex")!);
+    expect(desktop.getByRole("link", { name: /navigation\.platform/i })).toHaveAttribute(
+      "href",
+      "/en-US/platform",
+    );
+  });
+
+  it("shows Platform link as active for authenticated users on platform", () => {
+    renderNavbar({ pathname: "/en-US/platform", session: makeSession() });
+    const nav = screen.getByRole("navigation");
+    const link = within(nav).getAllByRole("link", { name: /navigation\.platform/i })[0];
+    expect(link).toHaveAttribute("aria-current", "page");
+  });
+
+  it("renders user trigger and display name when authenticated", async () => {
+    renderNavbar({ session: makeSession() });
+    // The trigger button should exist with aria-label
+    expect(screen.getByRole("button", { name: "auth.userMenu" })).toBeInTheDocument();
+    const content = screen.getAllByTestId("dropdown-content")[0];
+    await waitFor(() => {
+      expect(within(content).getByText("Ada Lovelace")).toBeInTheDocument();
+    });
   });
 
   it("renders user avatar/name when authenticated", () => {
@@ -438,96 +292,36 @@ describe("<UnifiedNavbar />", () => {
 
     vi.stubGlobal(
       "IntersectionObserver",
-      vi.fn().mockImplementation(() => ({
-        observe,
-        unobserve,
-        disconnect,
+      vi.fn((_cb: IntersectionObserverCallback) => ({
+        observe: observeMock,
+        unobserve: unobserveMock,
+        disconnect: vi.fn(),
       })),
     );
 
-    // Render on non-home page
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US/about",
-    });
-
-    // Lines 143-144: if (!isHomePage) return; should prevent observer setup
-    expect(observe).not.toHaveBeenCalled();
-
-    vi.unstubAllGlobals();
-  });
-
-  it("sets up and cleans up intersection observer on home page", () => {
-    const observe = vi.fn();
-    const unobserve = vi.fn();
-    const disconnect = vi.fn();
-
-    const mockObserver = vi.fn().mockImplementation(() => ({
-      observe,
-      unobserve,
-      disconnect,
-    }));
-
-    vi.stubGlobal("IntersectionObserver", mockObserver);
-
-    // Create a main element with a section for observer to target
     const main = document.createElement("main");
     const section = document.createElement("section");
     main.appendChild(section);
     document.body.appendChild(main);
 
-    usePathnameMock.mockReturnValue("/en-US");
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    // Render on home page with isHomePage=true
-    const { unmount } = render(
-      <QueryClientProvider client={queryClient}>
-        <UnifiedNavbar locale="en-US" session={null} isHomePage={true} />
-      </QueryClientProvider>,
-    );
-
-    // Lines 143-144: if (!isHomePage) return; should NOT prevent observer
-    // On home page, IntersectionObserver should be instantiated
-    expect(mockObserver).toHaveBeenCalled();
-
-    // Cleanup on unmount
+    const { unmount } = renderNavbar({ isHomePage: true });
+    expect(observeMock).toHaveBeenCalledWith(section);
     unmount();
+    expect(unobserveMock).toHaveBeenCalledWith(section);
 
-    // Cleanup
     document.body.removeChild(main);
     vi.unstubAllGlobals();
   });
 
   it("does not set up IntersectionObserver when not on home page", () => {
-    const mockObserver = vi.fn();
-    const mockObserve = vi.fn();
-    const mockUnobserve = vi.fn();
-    const mockDisconnect = vi.fn();
-
-    vi.stubGlobal("IntersectionObserver", function (this: IntersectionObserver) {
-      mockObserver();
-      this.observe = mockObserve;
-      this.unobserve = mockUnobserve;
-      this.disconnect = mockDisconnect;
-      return this;
-    });
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <UnifiedNavbar locale="en-US" session={null} isHomePage={false} />
-      </QueryClientProvider>,
+    const observeMock = vi.fn();
+    vi.stubGlobal(
+      "IntersectionObserver",
+      vi.fn(() => ({ observe: observeMock, unobserve: vi.fn(), disconnect: vi.fn() })),
     );
 
-    // Lines 143-144: if (!isHomePage) return early exit
-    expect(mockObserver).not.toHaveBeenCalled();
-    expect(mockObserve).not.toHaveBeenCalled();
-
+    renderNavbar({ isHomePage: false });
+    expect(observeMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 });

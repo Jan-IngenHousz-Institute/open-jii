@@ -8,6 +8,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
+import { notFound, useParams, usePathname } from "next/navigation";
+import { render, screen, userEvent } from "@/test/test-utils";
 
 import ProtocolLayout from "../layout";
 
@@ -104,6 +106,12 @@ function renderLayout({
 describe("ProtocolLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useParams).mockReturnValue({ id: "test-id", locale: "en" });
+    vi.mocked(usePathname).mockReturnValue("/en/platform/protocols/test-id");
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-123" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
     mockBrowserSupport.bluetooth = true;
     mockBrowserSupport.serial = true;
     mockBrowserSupport.any = true;
@@ -139,14 +147,14 @@ describe("ProtocolLayout", () => {
       server.mount(contract.protocols.getProtocol, { status: 404 });
       renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      expect(notFound).toHaveBeenCalled();
     });
 
     it("should call notFound for 400 errors (invalid UUID)", async () => {
       server.mount(contract.protocols.getProtocol, { status: 400 });
       renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      expect(notFound).toHaveBeenCalled();
     });
 
     it("should display error display for 500 errors", async () => {
