@@ -32,6 +32,7 @@ async function migrateLegacyEntries(): Promise<void> {
     if (legacyKeys.length === 0) continue;
 
     const entries = await AsyncStorage.multiGet(legacyKeys);
+    const migratedKeys: string[] = [];
 
     for (const [key, value] of entries) {
       if (!value) continue;
@@ -40,6 +41,9 @@ async function migrateLegacyEntries(): Promise<void> {
         if (!isValidMeasurement(parsed)) continue;
 
         const id = key.replace(prefix, "");
+        const createdAtDate = new Date(parsed.metadata.timestamp);
+        const createdAt = isFinite(createdAtDate.getTime()) ? { createdAt: createdAtDate } : {};
+
         db.insert(measurements)
           .values({
             id,
@@ -49,16 +53,18 @@ async function migrateLegacyEntries(): Promise<void> {
             experimentName: parsed.metadata.experimentName,
             protocolName: parsed.metadata.protocolName,
             timestamp: parsed.metadata.timestamp,
-            createdAt: new Date(parsed.metadata.timestamp),
+            ...createdAt,
           })
           .onConflictDoNothing()
           .run();
+
+        migratedKeys.push(key);
       } catch {
         // Skip corrupt entries
       }
     }
 
-    await AsyncStorage.multiRemove(legacyKeys);
+    await AsyncStorage.multiRemove(migratedKeys);
     console.log(`[measurements] Migrated ${legacyKeys.length} ${status} entries from AsyncStorage`);
   }
 }
@@ -123,7 +129,7 @@ export async function getMeasurements(status: MeasurementStatus): Promise<[strin
       .filter(Boolean) as [string, Measurement][];
   } catch (error) {
     console.error("Failed to fetch measurements:", error);
-    return [];
+    throw error;
   }
 }
 

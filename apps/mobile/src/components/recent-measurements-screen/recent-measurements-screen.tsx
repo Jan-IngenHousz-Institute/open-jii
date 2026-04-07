@@ -6,7 +6,6 @@ import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
-import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
@@ -18,6 +17,7 @@ import type {
 import { useMeasurements } from "~/hooks/use-measurements";
 import { useMultiTapAction } from "~/hooks/use-multi-tap-action";
 import { useTheme } from "~/hooks/use-theme";
+import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
@@ -124,8 +124,13 @@ export function RecentMeasurementsScreen() {
           text: "Delete",
           variant: "danger",
           onPress: () => {
-            clearSyncedMeasurements();
-            invalidate();
+            clearSyncedMeasurements()
+              .then(() => {
+                invalidate();
+              })
+              .catch(() => {
+                toast.error("Failed to delete synced measurements");
+              });
           },
         },
         {
