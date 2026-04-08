@@ -404,6 +404,25 @@ module "databricks_catalog" {
   depends_on = [module.node_service_principal]
 }
 
+resource "databricks_grants" "centrum_schema" {
+  provider = databricks.workspace
+  schema   = "${module.databricks_catalog.catalog_name}.centrum"
+
+  grant {
+    principal = module.node_service_principal.service_principal_application_id
+    privileges = [
+      "USE_SCHEMA",
+      "CREATE_TABLE",
+      "CREATE_MATERIALIZED_VIEW",
+      "CREATE_VOLUME",
+      "SELECT",
+      "MODIFY",
+    ]
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
 module "centrum_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -451,7 +470,7 @@ module "centrum_pipeline" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.node_cluster_policy]
+  depends_on = [module.node_cluster_policy, databricks_grants.centrum_schema]
 }
 
 module "pipeline_scheduler" {
@@ -666,7 +685,7 @@ module "data_downloads_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_imports_volume" {
@@ -688,7 +707,7 @@ module "data_imports_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_legacy_volume" {
@@ -710,7 +729,7 @@ module "data_legacy_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -754,7 +773,7 @@ module "openjii_project_transfer_requests_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "experiment_annotations_table" {
@@ -791,7 +810,7 @@ module "experiment_annotations_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "experiment_export_metadata_table" {
@@ -828,7 +847,43 @@ module "experiment_export_metadata_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "experiment_custom_metadata_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_custom_metadata"
+  table_type   = "MANAGED"
+  comment      = "User-uploaded custom metadata attached to experiments (1:N). Each record holds an opaque JSON blob as a VARIANT column."
+
+  columns = [
+    { name = "metadata_id", type = "STRING", nullable = false },
+    { name = "experiment_id", type = "STRING", nullable = false },
+    { name = "metadata", type = "VARIANT" },
+    { name = "created_by", type = "STRING", nullable = false },
+    { name = "created_at", type = "TIMESTAMP", nullable = false },
+    { name = "updated_at", type = "TIMESTAMP", nullable = false },
+  ]
+
+  properties = {
+    "delta.feature.variantType-preview" = "supported"
+  }
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_export_job" {

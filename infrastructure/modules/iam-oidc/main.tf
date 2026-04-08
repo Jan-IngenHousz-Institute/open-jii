@@ -168,6 +168,12 @@ locals {
         "lambda:GetFunctionConcurrency",
         # Code signing (Terraform provider reads)
         "lambda:GetFunctionCodeSigningConfig",
+        # Layer management (Terraform provider reads layer metadata before attaching)
+        "lambda:GetLayerVersion",
+        "lambda:GetLayerVersionPolicy",
+        "lambda:ListLayers",
+        "lambda:ListLayerVersions",
+        "lambda:PublishLayerVersion",
       ]
       resource = "*"
     }
@@ -973,6 +979,14 @@ locals {
         "inspector2:ListAccountPermissions",
       ]
       resource = "*"
+    }
+
+    # ── Inspector v2: service-linked role creation (first-time enablement) ──
+    inspector2-slr = {
+      actions = [
+        "iam:CreateServiceLinkedRole",
+      ]
+      resource = "arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2"
     }
   }
 

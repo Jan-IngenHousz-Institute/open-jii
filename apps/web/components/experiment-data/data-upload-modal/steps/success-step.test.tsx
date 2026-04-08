@@ -85,4 +85,10 @@ describe("SuccessStep", () => {
     const container = screen.getByText("uploadModal.success.title").closest("div");
     expect(container).toBeInTheDocument();
   });
+
+  it("renders metadata-specific title and description when isMetadata is true", () => {
+    render(<SuccessStep onClose={mockOnClose} isMetadata={true} />);
+    expect(screen.getByText("uploadModal.success.metadataTitle")).toBeInTheDocument();
+    expect(screen.getByText("uploadModal.success.metadataDescription")).toBeInTheDocument();
+  });
 });
