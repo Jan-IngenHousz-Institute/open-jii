@@ -23,17 +23,17 @@ runs:
         echo "🧪 Testing affected packages"
 
         AFFECTED_APPS='${{ inputs.affected_apps }}'
-        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+        mapfile -t APPS < <(jq -r '.[]' <<<"$AFFECTED_APPS")
 
-        TEST_CMD="pnpm turbo run test"
+        TEST_ARGS=()
         for APP in "${APPS[@]}"; do
-          TEST_CMD="$TEST_CMD --filter=$APP"
+          TEST_ARGS+=("--filter=$APP")
         done
 
-        echo "Running: $TEST_CMD"
+        echo "Running: pnpm turbo run test ${TEST_ARGS[*]}"
 
         TEST_LOG="$(mktemp)"
-        eval "$TEST_CMD" 2>&1 | tee "$TEST_LOG"
+        pnpm turbo run test "${TEST_ARGS[@]}" 2>&1 | tee "$TEST_LOG"
         EXIT_CODE=${PIPESTATUS[0]}
 
         if [ $EXIT_CODE -ne 0 ]; then
@@ -42,10 +42,9 @@ runs:
           echo "🔎 Running each affected app test individually to pinpoint failures"
           FAILED_APPS=()
           for APP in "${APPS[@]}"; do
-            APP_CMD="pnpm turbo run test --filter=$APP"
             echo ""
-            echo "▶️ Running: $APP_CMD"
-            if eval "$APP_CMD"; then
+            echo "▶️ Running: pnpm turbo run test --filter=$APP"
+            if pnpm turbo run test "--filter=$APP"; then
               echo "✅ Passed: $APP"
             else
               echo "❌ Failed: $APP"
@@ -57,11 +56,10 @@ runs:
             echo ""
             echo "🧵 Re-running failed app(s) with full logging/debug output"
             for FAILED_APP in "${FAILED_APPS[@]}"; do
-              DEBUG_CMD="pnpm turbo run test --filter=$FAILED_APP --output-logs=full --summarize"
               echo ""
               echo "🐛 Debug run for $FAILED_APP"
-              echo "▶️ Running: $DEBUG_CMD"
-              if eval "$DEBUG_CMD"; then
+              echo "▶️ Running: pnpm turbo run test --filter=$FAILED_APP --output-logs=full --summarize"
+              if pnpm turbo run test "--filter=$FAILED_APP" --output-logs=full --summarize; then
                 echo "✅ Debug run passed: $FAILED_APP"
               else
                 echo "❌ Debug run failed: $FAILED_APP"
