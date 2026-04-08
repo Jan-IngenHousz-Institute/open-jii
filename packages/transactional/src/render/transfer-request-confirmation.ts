@@ -1,6 +1,6 @@
 import { render as reactEmailRender } from "@react-email/components";
 
-import { Email } from "../emails/email.js";
+import { Email } from "../emails/email";
 import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderTransferRequestConfirmationParams {

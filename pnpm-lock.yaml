@@ -1171,7 +1171,7 @@ importers:
     dependencies:
       '@contentful/rich-text-react-renderer':
         specifier: 16.0.2
-        version: 16.0.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        version: 16.0.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@contentful/rich-text-types':
         specifier: 17.0.1
         version: 17.0.1

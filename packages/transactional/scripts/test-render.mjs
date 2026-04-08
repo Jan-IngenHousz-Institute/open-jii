@@ -7,7 +7,6 @@
  */
 import { writeFileSync } from "fs";
 
-import { getCmsEmail } from "../dist/lib/contentful.js";
 import { renderAddedUserNotification } from "../dist/render/added-user-notification.js";
 import { renderOtpEmail } from "../dist/render/otp-email.js";
 import { renderProjectTransferComplete } from "../dist/render/project-transfer-complete.js";
