@@ -661,6 +661,9 @@ importers:
       '@types/webpack-env':
         specifier: ^1.18.8
         version: 1.18.8
+      '@vitest/coverage-v8':
+        specifier: catalog:testing
+        version: 3.2.4(vitest@3.2.4)
       '@vitest/ui':
         specifier: catalog:testing
         version: 3.2.4(vitest@3.2.4)
