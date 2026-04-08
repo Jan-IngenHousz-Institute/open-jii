@@ -35,12 +35,21 @@ vi.mock("next/navigation", () => ({
 
 // Mock hooks
 vi.mock("@/hooks/protocol/useProtocolCreate/useProtocolCreate", () => ({
-  useProtocolCreate: vi.fn(({ onSuccess }: { onSuccess: (id: string) => void }) => ({
-    mutate: vi.fn((_data) => {
-      onSuccess("new-protocol-id");
+  useProtocolCreate: vi.fn(
+    ({
+      onSuccess,
+      onSettled,
+    }: {
+      onSuccess: (data: { body: { id: string } }) => void;
+      onSettled?: () => void;
+    }) => ({
+      mutate: vi.fn(() => {
+        onSuccess({ body: { id: "new-protocol-id" } });
+        onSettled?.();
+      }),
+      isPending: false,
     }),
-    isPending: false,
-  })),
+  ),
 }));
 
 vi.mock("@/hooks/useLocale", () => ({
@@ -71,8 +80,10 @@ vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
 }));
 
+const mockAddMacrosMutateAsync = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro", () => ({
-  useAddCompatibleMacro: () => ({ mutateAsync: vi.fn() }),
+  useAddCompatibleMacro: () => ({ mutateAsync: mockAddMacrosMutateAsync }),
 }));
 
 interface DropdownPropsCaptured {
@@ -160,6 +171,7 @@ describe("NewProtocolForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lastDropdownProps = null;
+    mockAddMacrosMutateAsync.mockResolvedValue(undefined);
   });
 
   describe("Step 1 - Details", () => {
@@ -357,6 +369,41 @@ describe("NewProtocolForm", () => {
       await waitFor(() => {
         expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
       });
+    });
+
+    it("should link compatible macros after create then navigate", async () => {
+      const user = userEvent.setup();
+      render(<NewProtocolForm />);
+
+      act(() => {
+        lastDropdownProps?.onAddMacro("macro-1");
+      });
+
+      const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
+
+      await user.click(screen.getByRole("button", { name: /next/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /next/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /finalizeSetup/i }));
+
+      await waitFor(() => {
+        expect(mockAddMacrosMutateAsync).toHaveBeenCalledWith({
+          params: { id: "new-protocol-id" },
+          body: { macroIds: ["macro-1"] },
+        });
+      });
+
+      expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols/new-protocol-id");
     });
   });
 });

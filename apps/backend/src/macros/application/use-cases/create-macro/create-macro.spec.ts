@@ -112,5 +112,16 @@ describe("CreateMacroUseCase", () => {
       expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
       expect(result.error.message).toBe("A macro with this name already exists");
     });
+
+    it("should return internal error when create returns no rows", async () => {
+      vi.spyOn(macroRepository, "findByName").mockResolvedValue(success(null));
+      vi.spyOn(macroRepository, "create").mockResolvedValue(success([]));
+
+      const result = await useCase.execute(mockRequest, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Failed to create macro");
+    });
   });
 });

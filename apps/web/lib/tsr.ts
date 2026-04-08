@@ -1,28 +1,12 @@
-import { initContract, tsRestFetchApi } from "@ts-rest/core";
-import type { AppRoute, ApiFetcherArgs, ErrorHttpStatusCode } from "@ts-rest/core";
+import { initContract } from "@ts-rest/core";
+import type { AppRoute, ErrorHttpStatusCode } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
 import { env } from "~/env";
 
 import { experimentContract, macroContract, protocolContract, userContract } from "@repo/api";
 
-const customApiFetcher = async (args: ApiFetcherArgs) => {
-  const enhancedHeaders = {
-    ...args.headers,
-  };
-
-  const response = await tsRestFetchApi({
-    ...args,
-    headers: enhancedHeaders,
-  });
-
-  if (response.status >= 400) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
-    throw response;
-  }
-
-  return response;
-};
+import { tsrCustomApiFetcher } from "./tsr-custom-fetch";
 
 // Initialize the main contract
 const c = initContract();
@@ -40,7 +24,7 @@ export const tsr = initTsrReactQuery(contract, {
   baseHeaders: {
     "x-app-source": "ts-rest",
   },
-  api: customApiFetcher,
+  api: tsrCustomApiFetcher,
   credentials: "include",
 });
 

@@ -1,7 +1,8 @@
 import { StatusCodes } from "http-status-codes";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { CreateProtocolUseCase } from "./create-protocol";
 
 describe("CreateProtocolUseCase", () => {
@@ -66,5 +67,17 @@ describe("CreateProtocolUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(result.error.message).toBe("A protocol with this name already exists");
+  });
+
+  it("should return internal error when create returns no rows", async () => {
+    const protocolRepository = testApp.module.get(ProtocolRepository);
+    vi.spyOn(protocolRepository, "findByName").mockResolvedValue(success(null));
+    vi.spyOn(protocolRepository, "create").mockResolvedValue(success([]));
+
+    const result = await useCase.execute(protocolData, testUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toBe("Failed to create protocol");
   });
 });

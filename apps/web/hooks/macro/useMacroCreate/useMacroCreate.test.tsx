@@ -5,6 +5,8 @@ import { renderHook } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
+import { toast } from "@repo/ui/hooks";
+
 import { useMacroCreate } from "./useMacroCreate";
 
 vi.mock("@/lib/tsr", () => ({
@@ -29,6 +31,7 @@ vi.mock("@repo/ui/hooks", () => ({
 
 const mockTsr = tsr;
 const mockGetContractError = vi.mocked(getContractError);
+const mockToast = vi.mocked(toast);
 
 describe("useMacroCreate", () => {
   let queryClient: QueryClient;
@@ -137,6 +140,55 @@ describe("useMacroCreate", () => {
       onError?.({});
 
       expect(mockOnError).toHaveBeenCalledWith(contractError);
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "macros.nameAlreadyExists",
+        variant: "destructive",
+      });
+    });
+
+    it("shows createError toast for non-409 contract errors", () => {
+      let onError: ((error: unknown) => void) | undefined;
+
+      (mockTsr.macros.createMacro.useMutation as unknown) = vi.fn(
+        (opts: { onError: (error: unknown) => void }) => {
+          onError = opts.onError;
+          return {};
+        },
+      );
+
+      const contractError = { status: 422, body: {}, headers: new Headers() };
+      mockGetContractError.mockReturnValue(contractError as never);
+
+      renderHook(() => useMacroCreate(), { wrapper: createWrapper() });
+
+      onError?.(contractError);
+
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "macros.createError",
+        variant: "destructive",
+      });
+    });
+
+    it("shows server error toast when getContractError returns undefined", () => {
+      let onError: ((error: unknown) => void) | undefined;
+
+      (mockTsr.macros.createMacro.useMutation as unknown) = vi.fn(
+        (opts: { onError: (error: unknown) => void }) => {
+          onError = opts.onError;
+          return {};
+        },
+      );
+
+      mockGetContractError.mockReturnValue(undefined);
+
+      renderHook(() => useMacroCreate(), { wrapper: createWrapper() });
+
+      onError?.(new Error("network"));
+
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "common.errors.serverError",
+        variant: "destructive",
+      });
     });
 
     it("should not call onError option when error is not a contract error", () => {
