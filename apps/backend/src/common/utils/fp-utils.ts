@@ -276,27 +276,36 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
 
   const message = error instanceof Error ? error.message : String(error);
 
+  // Also check the cause chain — drizzle-orm 0.45+ wraps native postgres errors
+  const cause = error instanceof Error ? error.cause : undefined;
+  const causeMessage =
+    cause instanceof Error ? cause.message : typeof cause === "string" ? cause : "";
+  // Postgres error code 23505 = unique_violation
+  const causeCode =
+    cause != null && typeof cause === "object" && "code" in cause
+      ? String((cause as Record<string, unknown>).code)
+      : "";
+  const fullMessage = `${message} ${causeMessage}`.toLowerCase();
+
   // Check for common database error patterns
   if (
-    message.toLowerCase().includes("not found") ||
-    message.toLowerCase().includes("no rows") ||
-    message.toLowerCase().includes("does not exist")
+    fullMessage.includes("not found") ||
+    fullMessage.includes("no rows") ||
+    fullMessage.includes("does not exist")
   ) {
     return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
   }
 
   if (
-    message.toLowerCase().includes("duplicate") ||
-    message.toLowerCase().includes("unique constraint") ||
-    message.toLowerCase().includes("already exists")
+    fullMessage.includes("duplicate") ||
+    fullMessage.includes("unique constraint") ||
+    fullMessage.includes("already exists") ||
+    causeCode === "23505"
   ) {
     return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
   }
 
-  if (
-    message.toLowerCase().includes("foreign key") ||
-    message.toLowerCase().includes("reference")
-  ) {
+  if (fullMessage.includes("foreign key") || fullMessage.includes("reference")) {
     return AppError.badRequest(message, "REPOSITORY_REFERENCE");
   }
 
