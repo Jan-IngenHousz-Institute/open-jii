@@ -1,6 +1,6 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
-import type { ContentfulConfig } from "./lib/types.js";
+import type { ContentfulConfig } from "./lib/types";
 
 const endpointOverride = process.env.CONTENTFUL_GRAPHQL_ENDPOINT;
 const productionEndpoint = "https://graphql.contentful.com/content/v1/spaces";
