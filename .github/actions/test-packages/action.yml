@@ -65,7 +65,7 @@ runs:
                 echo "❌ Debug run failed: $FAILED_APP"
               fi
             done
-          done
+          fi
 
           echo ""
           echo "📄 Last 200 lines from the original failed run:"
