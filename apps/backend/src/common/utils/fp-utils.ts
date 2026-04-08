@@ -62,6 +62,7 @@ enum CauseMessageCheck {
   DUPLICATE = "duplicate",
   UNIQUE_CONSTRAINT = "unique constraint",
   ALREADY_EXISTS = "already exists",
+  CONFLICT = "conflict",
   FOREIGN_KEY = "foreign key",
   REFERENCE = "reference",
 }
@@ -81,13 +82,15 @@ function getCauseMessage(error: unknown): string {
   const cause = error instanceof Error ? error.cause : undefined;
   const causeMessage =
     cause instanceof Error ? cause.message : typeof cause === "string" ? cause : "";
-  return `${message} ${causeMessage}`.toLowerCase();
+  return causeMessage ? `${message} ${causeMessage}` : message;
 }
 
-function mapErrorMessage(error: unknown): { causeCode: CauseCode | undefined; causeMessage: string } {
+function mapErrorMessage(error: unknown): { causeCode: CauseCode | undefined; causeMessage: string; causeMessageLower: string } {
+  const causeMessage = getCauseMessage(error);
   return {
     causeCode: getCauseCode(error),
-    causeMessage: getCauseMessage(error)
+    causeMessage,
+    causeMessageLower: causeMessage.toLowerCase(),
   }
 }
 
@@ -314,27 +317,28 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   if (error instanceof AppError) {
     return error;
   }
-  const { causeCode, causeMessage } = mapErrorMessage(error);
+  const { causeCode, causeMessage, causeMessageLower } = mapErrorMessage(error);
 
   // Check for common database error patterns
   if (
-    causeMessage.includes(CauseMessageCheck.NOT_FOUND) ||
-    causeMessage.includes(CauseMessageCheck.NO_ROWS) ||
-    causeMessage.includes(CauseMessageCheck.DOES_NOT_EXIST)
+    causeMessageLower.includes(CauseMessageCheck.NOT_FOUND) ||
+    causeMessageLower.includes(CauseMessageCheck.NO_ROWS) ||
+    causeMessageLower.includes(CauseMessageCheck.DOES_NOT_EXIST)
   ) {
     return AppError.notFound(causeMessage, "REPOSITORY_NOT_FOUND");
   }
 
   if (
-    causeMessage.includes(CauseMessageCheck.DUPLICATE) ||
-    causeMessage.includes(CauseMessageCheck.UNIQUE_CONSTRAINT) ||
-    causeMessage.includes(CauseMessageCheck.ALREADY_EXISTS) ||
+    causeMessageLower.includes(CauseMessageCheck.DUPLICATE) ||
+    causeMessageLower.includes(CauseMessageCheck.UNIQUE_CONSTRAINT) ||
+    causeMessageLower.includes(CauseMessageCheck.ALREADY_EXISTS) ||
+    causeMessageLower.includes(CauseMessageCheck.CONFLICT) ||
     causeCode === CauseCode.UNIQUE_VIOLATION
   ) {
     return AppError.conflict(causeMessage, "REPOSITORY_DUPLICATE");
   }
 
-  if (causeMessage.includes(CauseMessageCheck.FOREIGN_KEY) || causeMessage.includes(CauseMessageCheck.REFERENCE)) {
+  if (causeMessageLower.includes(CauseMessageCheck.FOREIGN_KEY) || causeMessageLower.includes(CauseMessageCheck.REFERENCE)) {
     return AppError.badRequest(causeMessage, "REPOSITORY_REFERENCE");
   }
 
