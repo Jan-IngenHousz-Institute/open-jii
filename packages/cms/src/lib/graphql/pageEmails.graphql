@@ -6,8 +6,18 @@ fragment ComponentEmailFields on ComponentEmail {
     environmentId
   }
   internalName
+  availableVariables
   preview
-  content
+  content {
+    json
+    links {
+      entries {
+        block {
+          ...ButtonFields
+        }
+      }
+    }
+  }
 }
 
 query componentEmailByName($internalName: String!) {

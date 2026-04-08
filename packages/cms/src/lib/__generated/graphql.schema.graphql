@@ -452,7 +452,8 @@ enum ComponentButtonOrder {
 """
 type ComponentEmail implements Entry & _Node {
   _id: ID!
-  content(locale: String, useFallbackLocale: Boolean): String
+  availableVariables(locale: String, useFallbackLocale: Boolean): String
+  content(locale: String, useFallbackLocale: Boolean): ComponentEmailContent
   contentfulMetadata: ContentfulMetadata!
   internalName(locale: String, useFallbackLocale: Boolean): String
   linkedFrom(allowedLocales: [String]): ComponentEmailLinkingCollections
@@ -467,6 +468,46 @@ type ComponentEmailCollection {
   total: Int!
 }
 
+type ComponentEmailContent {
+  json: JSON!
+  links: ComponentEmailContentLinks!
+}
+
+type ComponentEmailContentAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type ComponentEmailContentEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type ComponentEmailContentLinks {
+  assets: ComponentEmailContentAssets!
+  entries: ComponentEmailContentEntries!
+  resources: ComponentEmailContentResources!
+}
+
+type ComponentEmailContentResources {
+  block: [ComponentEmailContentResourcesBlock!]!
+  hyperlink: [ComponentEmailContentResourcesHyperlink!]!
+  inline: [ComponentEmailContentResourcesInline!]!
+}
+
+type ComponentEmailContentResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentEmailContentResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentEmailContentResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
 type ComponentEmailCursorCollection {
   items: [ComponentEmail]!
   limit: Int!
@@ -476,13 +517,16 @@ type ComponentEmailCursorCollection {
 input ComponentEmailFilter {
   AND: [ComponentEmailFilter]
   OR: [ComponentEmailFilter]
-  content: String
+  availableVariables: String
+  availableVariables_contains: String
+  availableVariables_exists: Boolean
+  availableVariables_in: [String]
+  availableVariables_not: String
+  availableVariables_not_contains: String
+  availableVariables_not_in: [String]
   content_contains: String
   content_exists: Boolean
-  content_in: [String]
-  content_not: String
   content_not_contains: String
-  content_not_in: [String]
   contentfulMetadata: ContentfulMetadataFilter
   internalName: String
   internalName_contains: String
@@ -3584,13 +3628,16 @@ input cfComponentButtonNestedFilter {
 input cfComponentEmailNestedFilter {
   AND: [cfComponentEmailNestedFilter]
   OR: [cfComponentEmailNestedFilter]
-  content: String
+  availableVariables: String
+  availableVariables_contains: String
+  availableVariables_exists: Boolean
+  availableVariables_in: [String]
+  availableVariables_not: String
+  availableVariables_not_contains: String
+  availableVariables_not_in: [String]
   content_contains: String
   content_exists: Boolean
-  content_in: [String]
-  content_not: String
   content_not_contains: String
-  content_not_in: [String]
   contentfulMetadata: ContentfulMetadataFilter
   internalName: String
   internalName_contains: String

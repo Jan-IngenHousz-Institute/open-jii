@@ -6,10 +6,19 @@
  * and writes the HTML output to /tmp/email-*.html so you can open them in a browser.
  */
 import { writeFileSync } from "fs";
-import { renderOtpEmail } from "../dist/render/otp-email.js";
+
+import { getCmsEmail } from "../dist/lib/contentful.js";
 import { renderAddedUserNotification } from "../dist/render/added-user-notification.js";
+import { renderOtpEmail } from "../dist/render/otp-email.js";
 import { renderProjectTransferComplete } from "../dist/render/project-transfer-complete.js";
 import { renderTransferRequestConfirmation } from "../dist/render/transfer-request-confirmation.js";
+
+function withPreview(html, preview) {
+  return (
+    `<p style="font-family:sans-serif;padding:8px 16px;"><strong>Preview:</strong> ${preview}</p>\n` +
+    html
+  );
+}
 
 async function main() {
   console.log("Rendering otp-email...");
@@ -19,7 +28,7 @@ async function main() {
     host: "localhost",
     baseUrl: "http://localhost:3000",
   });
-  writeFileSync("/tmp/email-otp.html", otp.html);
+  writeFileSync("/tmp/email-otp.html", withPreview(otp.html, otp.preview));
   console.log("  → /tmp/email-otp.html");
 
   console.log("Rendering added-user-notification...");
@@ -31,7 +40,7 @@ async function main() {
     actor: "Jane Doe",
     role: "member",
   });
-  writeFileSync("/tmp/email-added-user.html", addedUser.html);
+  writeFileSync("/tmp/email-added-user.html", withPreview(addedUser.html, addedUser.preview));
   console.log("  → /tmp/email-added-user.html");
 
   console.log("Rendering project-transfer-complete...");
@@ -41,7 +50,10 @@ async function main() {
     experimentName: "My Experiment",
     experimentUrl: "http://localhost:3000/en-US/platform/experiments/123",
   });
-  writeFileSync("/tmp/email-transfer-complete.html", transferComplete.html);
+  writeFileSync(
+    "/tmp/email-transfer-complete.html",
+    withPreview(transferComplete.html, transferComplete.preview),
+  );
   console.log("  → /tmp/email-transfer-complete.html");
 
   console.log("Rendering transfer-request-confirmation...");
@@ -52,7 +64,10 @@ async function main() {
     projectUrlOld: "https://photosynq.org/projects/12345",
     userEmail: "researcher@example.com",
   });
-  writeFileSync("/tmp/email-transfer-request.html", transferRequest.html);
+  writeFileSync(
+    "/tmp/email-transfer-request.html",
+    withPreview(transferRequest.html, transferRequest.preview),
+  );
   console.log("  → /tmp/email-transfer-request.html");
 
   console.log("\nDone. Open with:");

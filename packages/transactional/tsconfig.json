@@ -7,6 +7,7 @@
     "target": "ES2020",
     "paths": {
       "@repo/cms/client": ["../cms/dist/client"],
+      "@repo/cms/contentful": ["../cms/dist/features/contentful/index"],
       "@repo/cms/lib/*": ["../cms/dist/lib/*"]
     },
     "declaration": true,

@@ -1,8 +1,7 @@
 import { render as reactEmailRender } from "@react-email/components";
-import { render as emailmdRender } from "emailmd";
 
 import { Email } from "../emails/email.js";
-import { getCmsEmail, interpolate } from "../lib/contentful";
+import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderOtpEmailParams {
   otp: string;
@@ -14,24 +13,37 @@ export interface RenderOtpEmailParams {
 export interface RenderedEmail {
   html: string;
   text: string;
+  preview: string;
 }
 
 export async function renderOtpEmail(params: RenderOtpEmailParams): Promise<RenderedEmail> {
   const { otp, senderName, host, baseUrl } = params;
 
-  const emailData = await getCmsEmail("otp-email");
+  const emailData = await getCmsEmail("otp-email", { otp, senderName, host, baseUrl });
 
   if (!emailData) throw new Error("[transactional] CMS email 'otp-email' not found");
 
-  const markdown = interpolate(emailData.content, { otp, senderName, host, baseUrl });
-  const { html: fullHtml, text } = emailmdRender(markdown);
-  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
-  const cmsContent = bodyMatch?.[1] ?? fullHtml;
-
   const html = await reactEmailRender(
-    Email({ senderName, host, baseUrl, cmsContent, cmsPreview: emailData.preview }),
+    Email({
+      senderName,
+      host,
+      baseUrl,
+      cmsPreview: emailData.preview,
+      cmsContent: emailData.content,
+    }),
     {},
   );
 
-  return { html, text };
+  const text = await reactEmailRender(
+    Email({
+      senderName,
+      host,
+      baseUrl,
+      cmsPreview: emailData.preview,
+      cmsContent: emailData.content,
+    }),
+    { plainText: true },
+  );
+
+  return { html, text, preview: emailData.preview };
 }

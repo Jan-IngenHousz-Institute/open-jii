@@ -45,11 +45,11 @@
     "start:mailcatcher": "docker compose -f docker-compose.yml up mailcatcher"
   },
   "dependencies": {
+    "@contentful/rich-text-react-renderer": "16.0.2",
+    "@contentful/rich-text-types": "17.0.1",
     "@react-email/components": "^0.3.3",
     "@repo/cms": "workspace:*",
-    "emailmd": "^0.1.4",
-    "qrcode": "^1.5.4",
-    "sanitize-html": "^2.17.2"
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@react-email/preview-server": "5.2.8",
@@ -57,7 +57,6 @@
     "@repo/typescript-config": "workspace:*",
     "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:react19",
-    "@types/sanitize-html": "^2.16.1",
     "eslint": "catalog:",
     "react": "catalog:react19",
     "react-email": "5.2.8",

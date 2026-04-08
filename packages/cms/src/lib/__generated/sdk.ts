@@ -887,13 +887,20 @@ export type ComponentEmail = Entry &
   _Node & {
     __typename?: "ComponentEmail";
     _id: Scalars["ID"]["output"];
-    content?: Maybe<Scalars["String"]["output"]>;
+    availableVariables?: Maybe<Scalars["String"]["output"]>;
+    content?: Maybe<ComponentEmailContent>;
     contentfulMetadata: ContentfulMetadata;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<ComponentEmailLinkingCollections>;
     preview?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
   };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentEmail) */
+export type ComponentEmailAvailableVariablesArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentEmail) */
 export type ComponentEmailContentArgs = {
@@ -926,6 +933,54 @@ export type ComponentEmailCollection = {
   total: Scalars["Int"]["output"];
 };
 
+export type ComponentEmailContent = {
+  __typename?: "ComponentEmailContent";
+  json: Scalars["JSON"]["output"];
+  links: ComponentEmailContentLinks;
+};
+
+export type ComponentEmailContentAssets = {
+  __typename?: "ComponentEmailContentAssets";
+  block: Array<Maybe<Asset>>;
+  hyperlink: Array<Maybe<Asset>>;
+};
+
+export type ComponentEmailContentEntries = {
+  __typename?: "ComponentEmailContentEntries";
+  block: Array<Maybe<Entry>>;
+  hyperlink: Array<Maybe<Entry>>;
+  inline: Array<Maybe<Entry>>;
+};
+
+export type ComponentEmailContentLinks = {
+  __typename?: "ComponentEmailContentLinks";
+  assets: ComponentEmailContentAssets;
+  entries: ComponentEmailContentEntries;
+  resources: ComponentEmailContentResources;
+};
+
+export type ComponentEmailContentResources = {
+  __typename?: "ComponentEmailContentResources";
+  block: Array<ComponentEmailContentResourcesBlock>;
+  hyperlink: Array<ComponentEmailContentResourcesHyperlink>;
+  inline: Array<ComponentEmailContentResourcesInline>;
+};
+
+export type ComponentEmailContentResourcesBlock = ResourceLink & {
+  __typename?: "ComponentEmailContentResourcesBlock";
+  sys: ResourceSys;
+};
+
+export type ComponentEmailContentResourcesHyperlink = ResourceLink & {
+  __typename?: "ComponentEmailContentResourcesHyperlink";
+  sys: ResourceSys;
+};
+
+export type ComponentEmailContentResourcesInline = ResourceLink & {
+  __typename?: "ComponentEmailContentResourcesInline";
+  sys: ResourceSys;
+};
+
 export type ComponentEmailCursorCollection = {
   __typename?: "ComponentEmailCursorCollection";
   items: Array<Maybe<ComponentEmail>>;
@@ -936,13 +991,16 @@ export type ComponentEmailCursorCollection = {
 export type ComponentEmailFilter = {
   AND?: InputMaybe<Array<InputMaybe<ComponentEmailFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<ComponentEmailFilter>>>;
-  content?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_contains?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  availableVariables_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  availableVariables_not?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   content_contains?: InputMaybe<Scalars["String"]["input"]>;
   content_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  content_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  content_not?: InputMaybe<Scalars["String"]["input"]>;
   content_not_contains?: InputMaybe<Scalars["String"]["input"]>;
-  content_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
   internalName?: InputMaybe<Scalars["String"]["input"]>;
   internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
@@ -6203,13 +6261,16 @@ export type CfComponentButtonNestedFilter = {
 export type CfComponentEmailNestedFilter = {
   AND?: InputMaybe<Array<InputMaybe<CfComponentEmailNestedFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<CfComponentEmailNestedFilter>>>;
-  content?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_contains?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  availableVariables_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  availableVariables_not?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  availableVariables_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   content_contains?: InputMaybe<Scalars["String"]["input"]>;
   content_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
-  content_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
-  content_not?: InputMaybe<Scalars["String"]["input"]>;
   content_not_contains?: InputMaybe<Scalars["String"]["input"]>;
-  content_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
   internalName?: InputMaybe<Scalars["String"]["input"]>;
   internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
@@ -6732,9 +6793,44 @@ export type PageCookiePolicyQuery = {
 export type ComponentEmailFieldsFragment = {
   __typename: "ComponentEmail";
   internalName?: string | null;
+  availableVariables?: string | null;
   preview?: string | null;
-  content?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  content?: {
+    __typename?: "ComponentEmailContent";
+    json: any;
+    links: {
+      __typename?: "ComponentEmailContentLinks";
+      entries: {
+        __typename?: "ComponentEmailContentEntries";
+        block: Array<
+          | { __typename?: "ComponentAuthor" }
+          | ({ __typename?: "ComponentButton" } & ButtonFieldsFragment)
+          | { __typename?: "ComponentEmail" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentRichImage" }
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
 };
 
 export type ComponentEmailByNameQueryVariables = Exact<{
@@ -7455,9 +7551,20 @@ export const ComponentEmailFieldsFragmentDoc = gql`
       environmentId
     }
     internalName
+    availableVariables
     preview
-    content
+    content {
+      json
+      links {
+        entries {
+          block {
+            ...ButtonFields
+          }
+        }
+      }
+    }
   }
+  ${ButtonFieldsFragmentDoc}
 `;
 export const FaqQuestionFieldsFragmentDoc = gql`
   fragment FaqQuestionFields on ComponentFaqQuestion {

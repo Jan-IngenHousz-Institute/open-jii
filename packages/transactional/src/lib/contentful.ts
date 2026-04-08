@@ -1,33 +1,59 @@
+import type { Document } from "@contentful/rich-text-types";
+
 import { createContentfulClient } from "@repo/cms/client";
+
+import type { EmailRichTextInterface } from "../components/ctf-rich-text";
 
 export interface CmsEmail {
   internalName: string;
   preview: string;
-  content: string;
+  content: EmailRichTextInterface;
 }
 
-export async function getCmsEmail(internalName: string): Promise<CmsEmail | null> {
+export async function getCmsEmail(
+  internalName: string,
+  variables?: Record<string, string>,
+): Promise<CmsEmail | null> {
   const { client } = createContentfulClient();
   const data = await client.componentEmailByName({ internalName });
 
   const item = data.componentEmailCollection?.items[0];
-  if (!item?.internalName || !item.preview || !item.content) {
+  if (!item?.internalName || !item.preview || !item.content?.json) {
     console.warn(`[transactional/cms] No CMS email found for "${internalName}".`);
     return null;
   }
 
+  const rawLinks = item.content.links as CmsEmail["content"]["links"];
+
+  const preview = variables ? interpolate(item.preview, variables) : item.preview;
+  const json = variables
+    ? interpolate(item.content.json as Document, variables)
+    : (item.content.json as Document);
+
+  const links = variables && rawLinks ? interpolate(rawLinks, variables) : rawLinks;
+
   return {
     internalName: item.internalName,
-    preview: item.preview,
-    content: item.content,
+    preview,
+    content: {
+      json,
+      links,
+    },
   };
-}
 
-/**
- * Replaces `{{variableName}}` placeholders in a markdown string.
- * If a variable is not found in the `vars` object, the original `{{variableName}}`
- * placeholder is preserved in the output.
- */
-export function interpolate(template: string, vars: Record<string, string>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? `{{${key}}}`);
+  /**
+   * Replaces `{{variableName}}` placeholders in contentful fields.
+   * If a variable is not found in the `vars` object, the original `{{variableName}}`
+   * placeholder is preserved in the output.
+   */
+  function interpolate<T>(value: T, vars: Record<string, string>): T {
+    return JSON.parse(
+      JSON.stringify(value, (_key, val: unknown) => {
+        if (typeof val === "string") {
+          return val.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? `{{${k}}}`);
+        }
+        return val;
+      }),
+    ) as T;
+  }
 }

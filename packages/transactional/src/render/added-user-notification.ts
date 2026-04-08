@@ -1,8 +1,7 @@
 import { render as reactEmailRender } from "@react-email/components";
-import { render as emailmdRender } from "emailmd";
 
 import { Email } from "../emails/email.js";
-import { getCmsEmail, interpolate } from "../lib/contentful";
+import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderAddedUserNotificationParams {
   host: string;
@@ -16,6 +15,7 @@ export interface RenderAddedUserNotificationParams {
 export interface RenderedEmail {
   html: string;
   text: string;
+  preview: string;
 }
 
 export async function renderAddedUserNotification(
@@ -23,11 +23,7 @@ export async function renderAddedUserNotification(
 ): Promise<RenderedEmail> {
   const { host, baseUrl, experimentName, experimentUrl, actor, role } = params;
 
-  const emailData = await getCmsEmail("added-user-notification");
-
-  if (!emailData) throw new Error("[transactional] CMS email 'added-user-notification' not found");
-
-  const markdown = interpolate(emailData.content, {
+  const emailData = await getCmsEmail("added-user-notification", {
     host,
     baseUrl,
     experimentName,
@@ -35,19 +31,28 @@ export async function renderAddedUserNotification(
     actor,
     role,
   });
-  const { html: fullHtml, text } = emailmdRender(markdown);
-  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(fullHtml);
-  const cmsContent = bodyMatch?.[1] ?? fullHtml;
+
+  if (!emailData) throw new Error("[transactional] CMS email 'added-user-notification' not found");
 
   const html = await reactEmailRender(
     Email({
       host,
       baseUrl,
-      cmsContent,
       cmsPreview: emailData.preview,
+      cmsContent: emailData.content,
     }),
     {},
   );
 
-  return { html, text };
+  const text = await reactEmailRender(
+    Email({
+      host,
+      baseUrl,
+      cmsPreview: emailData.preview,
+      cmsContent: emailData.content,
+    }),
+    { plainText: true },
+  );
+
+  return { html, text, preview: emailData.preview };
 }
