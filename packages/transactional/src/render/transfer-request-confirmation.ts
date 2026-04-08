@@ -1,4 +1,4 @@
-import { render as reactEmailRender } from "@react-email/components";
+import { render } from "@react-email/components";
 
 import { Email } from "../emails/email";
 import { getCmsEmail } from "../lib/contentful";
@@ -33,7 +33,7 @@ export async function renderTransferRequestConfirmation(
   if (!emailData)
     throw new Error("[transactional] CMS email 'transfer-request-confirmation' not found");
 
-  const html = await reactEmailRender(
+  const html = await render(
     Email({
       host,
       baseUrl,
@@ -43,7 +43,7 @@ export async function renderTransferRequestConfirmation(
     {},
   );
 
-  const text = await reactEmailRender(
+  const text = await render(
     Email({
       host,
       baseUrl,

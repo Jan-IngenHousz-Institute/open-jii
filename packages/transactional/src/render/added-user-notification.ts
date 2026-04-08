@@ -1,4 +1,4 @@
-import { render as reactEmailRender } from "@react-email/components";
+import { render } from "@react-email/components";
 
 import { Email } from "../emails/email";
 import { getCmsEmail } from "../lib/contentful";
@@ -34,7 +34,7 @@ export async function renderAddedUserNotification(
 
   if (!emailData) throw new Error("[transactional] CMS email 'added-user-notification' not found");
 
-  const html = await reactEmailRender(
+  const html = await render(
     Email({
       host,
       baseUrl,
@@ -44,7 +44,7 @@ export async function renderAddedUserNotification(
     {},
   );
 
-  const text = await reactEmailRender(
+  const text = await render(
     Email({
       host,
       baseUrl,

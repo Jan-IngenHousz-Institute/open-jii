@@ -1,4 +1,4 @@
-import { render as reactEmailRender } from "@react-email/components";
+import { render } from "@react-email/components";
 
 import { Email } from "../emails/email";
 import { getCmsEmail } from "../lib/contentful";
@@ -23,7 +23,7 @@ export async function renderOtpEmail(params: RenderOtpEmailParams): Promise<Rend
 
   if (!emailData) throw new Error("[transactional] CMS email 'otp-email' not found");
 
-  const html = await reactEmailRender(
+  const html = await render(
     Email({
       senderName,
       host,
@@ -34,7 +34,7 @@ export async function renderOtpEmail(params: RenderOtpEmailParams): Promise<Rend
     {},
   );
 
-  const text = await reactEmailRender(
+  const text = await render(
     Email({
       senderName,
       host,
