@@ -40,7 +40,7 @@ describe("ProtocolController – createProtocol", () => {
     const protocolData = {
       name: "Test Protocol",
       description: "A test protocol description",
-      code: JSON.stringify([{ steps: [{ name: "Step 1", action: "test" }] }]),
+      code: [{ steps: [{ name: "Step 1", action: "test" }] }],
       family: "multispeq",
     };
 

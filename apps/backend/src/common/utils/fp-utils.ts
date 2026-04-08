@@ -287,7 +287,9 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
 
   if (
     message.toLowerCase().includes("duplicate") ||
-    message.toLowerCase().includes("unique constraint")
+    message.toLowerCase().includes("unique constraint") ||
+    message.toLowerCase().includes("already exists") ||
+    message.toLowerCase().includes("conflict")
   ) {
     return AppError.conflict(message, "REPOSITORY_DUPLICATE");
   }
