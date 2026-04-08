@@ -72,7 +72,17 @@ runs:
           tail -n 200 "$TEST_LOG"
         fi
 
-        COVERAGE_FILES=$(find apps tooling packages -maxdepth 2 -name "coverage.json" -type f 2>/dev/null)
+        SEARCH_ROOTS=()
+        for d in apps tooling packages; do
+          [ -d "$d" ] && SEARCH_ROOTS+=("$d")
+        done
+
+        if [ ${#SEARCH_ROOTS[@]} -eq 0 ]; then
+          COVERAGE_FILES=""
+        else
+          # Do not fail the workflow if one search root is inaccessible/missing.
+          COVERAGE_FILES=$(find "${SEARCH_ROOTS[@]}" -maxdepth 2 -name "coverage.json" -type f 2>/dev/null || true)
+        fi
 
         if [ -z "$COVERAGE_FILES" ]; then
           echo "⚠️ No coverage files were generated; skipping Codecov upload"
