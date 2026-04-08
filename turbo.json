@@ -62,6 +62,20 @@
     "test": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*", "$TURBO_ROOT$/vitest.config.ts"],
+      "outputs": [],
+      "env": [
+        "DATABRICKS_WEBHOOK_API_KEY_ID",
+        "DATABRICKS_WEBHOOK_SECRET",
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_CREDENTIALS"
+      ]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "$TURBO_ROOT$/vitest.config.ts"],
       "outputs": ["coverage/**", "coverage.json"],
       "env": [
         "DATABRICKS_WEBHOOK_API_KEY_ID",
