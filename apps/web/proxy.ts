@@ -25,8 +25,8 @@ function handleI18nRouting(request: NextRequest) {
   return null;
 }
 
-// New middleware function that only handles i18n routing
-export function middleware(request: NextRequest) {
+// Proxy function that handles i18n routing
+export function proxy(request: NextRequest) {
   // Handle i18n routing
   const i18nResponse = handleI18nRouting(request);
   if (i18nResponse) {
