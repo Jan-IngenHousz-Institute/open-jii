@@ -32,9 +32,47 @@ runs:
 
         echo "Running: $TEST_CMD"
 
-        OUTPUT=$(eval "$TEST_CMD" 2>&1)
-        EXIT_CODE=$?
-        echo "$OUTPUT"
+        TEST_LOG="$(mktemp)"
+        eval "$TEST_CMD" 2>&1 | tee "$TEST_LOG"
+        EXIT_CODE=${PIPESTATUS[0]}
+
+        if [ $EXIT_CODE -ne 0 ]; then
+          echo ""
+          echo "❌ Test command failed (exit code: $EXIT_CODE)"
+          echo "🔎 Running each affected app test individually to pinpoint failures"
+          FAILED_APPS=()
+          for APP in "${APPS[@]}"; do
+            APP_CMD="pnpm turbo run test --filter=$APP"
+            echo ""
+            echo "▶️ Running: $APP_CMD"
+            if eval "$APP_CMD"; then
+              echo "✅ Passed: $APP"
+            else
+              echo "❌ Failed: $APP"
+              FAILED_APPS+=("$APP")
+            fi
+          done
+
+          if [ ${#FAILED_APPS[@]} -gt 0 ]; then
+            echo ""
+            echo "🧵 Re-running failed app(s) with full logging/debug output"
+            for FAILED_APP in "${FAILED_APPS[@]}"; do
+              DEBUG_CMD="pnpm turbo run test --filter=$FAILED_APP --output-logs=full --summarize"
+              echo ""
+              echo "🐛 Debug run for $FAILED_APP"
+              echo "▶️ Running: $DEBUG_CMD"
+              if eval "$DEBUG_CMD"; then
+                echo "✅ Debug run passed: $FAILED_APP"
+              else
+                echo "❌ Debug run failed: $FAILED_APP"
+              fi
+            done
+          done
+
+          echo ""
+          echo "📄 Last 200 lines from the original failed run:"
+          tail -n 200 "$TEST_LOG"
+        fi
 
         COVERAGE_FILES=$(find apps tooling packages -maxdepth 2 -name "coverage.json" -type f 2>/dev/null)
 
