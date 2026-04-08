@@ -6,12 +6,4 @@ export default [
     ignores: ["dist/**"],
   },
   ...baseConfig,
-  {
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: "./tsconfig.eslint.json",
-      },
-    },
-  },
 ];

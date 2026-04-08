@@ -5,11 +5,6 @@
     "rootDir": "src",
     "module": "NodeNext",
     "target": "ES2020",
-    "paths": {
-      "@repo/cms/client": ["../cms/dist/client"],
-      "@repo/cms/contentful": ["../cms/dist/features/contentful/index"],
-      "@repo/cms/lib/*": ["../cms/dist/lib/*"]
-    },
     "declaration": true,
     "declarationMap": true,
     "esModuleInterop": true,
@@ -25,6 +20,5 @@
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
   },
-  "include": ["src/**/*"],
-  "references": [{ "path": "../cms" }]
+  "include": ["src/**/*"]
 }
