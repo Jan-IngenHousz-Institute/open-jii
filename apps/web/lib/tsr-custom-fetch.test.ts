@@ -1,11 +1,12 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
+import type * as TsRestCore from "@ts-rest/core";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { tsrCustomApiFetcher } from "./tsr-custom-fetch";
 
 vi.mock("@ts-rest/core", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@ts-rest/core")>();
+  const actual = await importOriginal<typeof TsRestCore>();
   return {
     ...actual,
     tsRestFetchApi: vi.fn(),

@@ -116,7 +116,9 @@ describe("useProtocolCreate", () => {
         },
       );
 
-      renderHook(() => useProtocolCreate({ onSuccess: mockOnSuccess }), { wrapper: createWrapper() });
+      renderHook(() => useProtocolCreate({ onSuccess: mockOnSuccess }), {
+        wrapper: createWrapper(),
+      });
 
       const result = { body: { id: "proto-1" } };
       onSuccess?.(result);
@@ -304,7 +306,9 @@ describe("useProtocolCreate", () => {
         },
       );
 
-      renderHook(() => useProtocolCreate({ onSettled: mockOnSettled }), { wrapper: createWrapper() });
+      renderHook(() => useProtocolCreate({ onSettled: mockOnSettled }), {
+        wrapper: createWrapper(),
+      });
 
       await onSettled?.();
 
