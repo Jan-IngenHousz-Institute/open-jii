@@ -69,7 +69,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders all input fields", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByLabelText("registration.firstName")).toBeInTheDocument();
     expect(screen.getByLabelText("registration.lastName")).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the terms and conditions section", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByText("auth.termsPrefix")).toBeInTheDocument();
     const trigger = screen.getByText("auth.terms");
@@ -94,7 +94,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button with correct styling", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const button = screen.getByRole("button", { name: "registration.register" });
     expect(button).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("RegistrationForm", () => {
   });
 
   it("shows validation error if terms are not accepted", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Alice");
@@ -118,7 +118,7 @@ describe("RegistrationForm", () => {
   });
 
   it("submits form successfully when terms are accepted", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Jane");
@@ -135,8 +135,8 @@ describe("RegistrationForm", () => {
     });
   });
 
-  it("calls handleRegister and pushes router after success", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+  it("calls updateUser and pushes router after successful registration", async () => {
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Bob");
@@ -147,10 +147,6 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
-      // handleRegisterMock check might be legacy if component only uses hooks?
-      // Check component: it uses useCreateUserProfile -> onSuccess -> useUpdateUser.
-      // It does NOT use handleRegister. It uses updateUser
-      // expect(handleRegisterMock).toHaveBeenCalled(); // REMOVE this expectation if component doesn't use it
       expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
       expect(pushMock).toHaveBeenCalledWith("/dashboard");
     });
@@ -170,9 +166,7 @@ describe("RegistrationForm", () => {
 
     // Let's stick to what the code says.
 
-    render(<RegistrationForm termsData={termsData} userEmail="test@example.com" />, {
-      wrapper: createWrapper(),
-    });
+    render(<RegistrationForm termsData={termsData} userEmail="test@example.com" />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "No");
@@ -189,13 +183,13 @@ describe("RegistrationForm", () => {
 
   it("renders with different locale", () => {
     const props = { ...defaultProps, locale: "de-DE" };
-    render(<RegistrationForm {...props} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...props} />);
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
   });
 
   it("renders inputs empty and checkbox unchecked by default", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByLabelText("registration.firstName")).toHaveValue("");
     expect(screen.getByLabelText("registration.lastName")).toHaveValue("");
@@ -204,14 +198,14 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button enabled by default", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const submit = screen.getByRole("button", { name: "registration.register" });
     expect(submit).not.toBeDisabled();
   });
 
   it("renders terms link with correct structure", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const termsTrigger = screen.getByText("auth.terms");
     const closestAnchorOrButton = termsTrigger.closest("a,button");
@@ -223,9 +217,7 @@ describe("RegistrationForm", () => {
   it("renders custom terms data when provided", async () => {
     const user = userEvent.setup();
     const customTermsData = { title: "Custom Terms", content: "Custom content" };
-    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />, {
-      wrapper: createWrapper(),
-    });
+    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />);
 
     await user.click(screen.getByText("auth.terms")); // open dialog
 
@@ -238,7 +230,7 @@ describe("RegistrationForm", () => {
       error: { message: "Update failed" },
     });
 
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Test");
@@ -260,7 +252,7 @@ describe("RegistrationForm", () => {
     // Create a mock that throws an error
     createUserProfileMock.mockRejectedValue(new Error("Network error"));
 
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Error");
@@ -289,7 +281,7 @@ describe("RegistrationForm", () => {
       return new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Multi");
@@ -313,7 +305,7 @@ describe("RegistrationForm", () => {
   });
 
   it("shows validation error if firstName is too short", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "A");
@@ -328,7 +320,7 @@ describe("RegistrationForm", () => {
   });
 
   it("shows validation error if lastName is too short", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Alice");
@@ -343,9 +335,7 @@ describe("RegistrationForm", () => {
   });
 
   it("shows email field when userEmail is not a valid email", () => {
-    render(<RegistrationForm termsData={termsData} userEmail="not-an-email" />, {
-      wrapper: createWrapper(),
-    });
+    render(<RegistrationForm termsData={termsData} userEmail="not-an-email" />);
 
     expect(screen.getByLabelText("registration.email")).toBeInTheDocument();
     expect(
@@ -355,14 +345,14 @@ describe("RegistrationForm", () => {
 
   describe("emailOnly mode", () => {
     it("renders emailOnly title and description", () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       expect(screen.getByText("registration.emailOnlyTitle")).toBeInTheDocument();
       expect(screen.getByText("registration.emailOnlyDescription")).toBeInTheDocument();
     });
 
     it("does not render name, organization, or terms fields", () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       expect(screen.queryByLabelText("registration.firstName")).not.toBeInTheDocument();
       expect(screen.queryByLabelText("registration.lastName")).not.toBeInTheDocument();
@@ -372,7 +362,7 @@ describe("RegistrationForm", () => {
 
     it("shows validation error for empty email", async () => {
       const user = userEvent.setup();
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       await user.click(
         screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
@@ -385,9 +375,7 @@ describe("RegistrationForm", () => {
 
     it("shows validation error for invalid email format", async () => {
       const user = userEvent.setup();
-      render(<RegistrationForm termsData={termsData} emailOnly />, {
-        wrapper: createWrapper(),
-      });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       await user.type(screen.getByLabelText("registration.email"), "notanemail");
 
@@ -404,7 +392,7 @@ describe("RegistrationForm", () => {
 
     it("transitions to OTP step after submitting a valid email", async () => {
       const user = userEvent.setup();
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       await user.type(screen.getByLabelText("registration.email"), "user@example.com");
       await user.click(
@@ -421,7 +409,7 @@ describe("RegistrationForm", () => {
       mockSendOtpMutate.mockResolvedValue({ error: { message: "Too many requests" } });
 
       const user = userEvent.setup();
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       await user.type(screen.getByLabelText("registration.email"), "user@example.com");
       await user.click(
@@ -435,7 +423,7 @@ describe("RegistrationForm", () => {
     });
 
     it("returns to email form when edit email button is clicked", async () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       const user = userEvent.setup();
       await user.type(screen.getByLabelText("registration.email"), "user@example.com");
