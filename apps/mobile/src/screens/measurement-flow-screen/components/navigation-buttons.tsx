@@ -72,20 +72,10 @@ export function NavigationButtons() {
   }
 
   // yes_no and multi_choice auto-advance on tap, no Next button needed, unless the question is optional
-  // then we show the Next button so that users can choose to skip it.
-  // Also show Next when a question is pre-filled (auto-increment/remember) on repeat iterations
-  // so the user can confirm instead of auto-advancing.
-  const { isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore.getState();
-  const { iterationCount } = useMeasurementFlowStore.getState();
-  const isPrefilled =
-    currentNode?.type === "question" &&
-    iterationCount > 0 &&
-    (isAutoincrementEnabled(currentNode.id) || isRememberAnswerEnabled(currentNode.id));
-
+  // then we show the Next button so that users can choose to skip it
   const isAutoAdvanceQuestion =
     currentNode?.type === "question" &&
-    (currentNode.content.kind === "yes_no" || currentNode.content.kind === "multi_choice") &&
-    !isPrefilled;
+    (currentNode.content.kind === "yes_no" || currentNode.content.kind === "multi_choice");
 
   const handleBackPress = () => {
     previousStep();
