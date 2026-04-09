@@ -8,15 +8,15 @@ import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
-import { FlowNode } from "../../types";
-import { QRScannerModal } from "./qr-scanner-modal";
+import { FlowNode } from "../../../types";
+import { QRScannerModal } from "../qr-scanner-modal";
+import { advanceWithAnswer } from "../utils/advance-with-answer";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
 import { OpenEndedQuestion } from "./question-types/open-ended-question";
 import { SingleChoiceQuestion } from "./question-types/single-choice-question";
 import { TextQuestion } from "./question-types/text-question";
 import { YesNoQuestion } from "./question-types/yes-no-question";
-import { advanceWithAnswer } from "./utils/advance-with-answer";
 
 interface QuestionNodeProps {
   node: FlowNode;
