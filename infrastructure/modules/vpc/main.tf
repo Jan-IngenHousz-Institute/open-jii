@@ -195,7 +195,7 @@ resource "aws_security_group" "macro_sandbox_lambda" {
   count = var.create_macro_sandbox_resources ? 1 : 0
 
   name        = "${var.environment}-macro-sandbox-lambda-sg"
-  description = "Lambda macro execution — no inbound, HTTPS to VPC endpoints only"
+  description = "Lambda macro execution - no inbound, HTTPS to VPC endpoints only"
   vpc_id      = aws_vpc.this.id
 
   tags = merge(var.tags, {
@@ -226,7 +226,7 @@ resource "aws_security_group" "macro_sandbox_vpc_endpoints" {
   count = var.create_macro_sandbox_resources ? 1 : 0
 
   name        = "${var.environment}-macro-sandbox-vpc-endpoints-sg"
-  description = "SG for VPC endpoints in isolated subnets — only accepts traffic from macro-sandbox Lambda"
+  description = "SG for VPC endpoints in isolated subnets - only accepts traffic from macro-sandbox Lambda"
   vpc_id      = aws_vpc.this.id
 
   tags = merge(var.tags, {
