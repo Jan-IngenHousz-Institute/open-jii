@@ -148,7 +148,7 @@ describe("BaseNode", () => {
   });
 
   it("applies styles when selected", () => {
-    const { container } = render(
+    render(
       <BaseNode
         nodes={[node]}
         onNodeDelete={() => null}
@@ -158,14 +158,14 @@ describe("BaseNode", () => {
       />,
     );
 
-    const wrapper = container.querySelector(".text-card-foreground");
+    const wrapper = document.querySelector(".text-card-foreground");
     expect(wrapper).toHaveClass("!border-jii-dark-green");
     expect(wrapper).toHaveClass("!bg-jii-dark-green/10");
     expect(wrapper?.className).toMatch(/border/);
   });
 
   it("applies styles when dragging", () => {
-    const { container } = render(
+    render(
       <BaseNode
         nodes={[node]}
         onNodeDelete={() => null}
@@ -175,7 +175,7 @@ describe("BaseNode", () => {
       />,
     );
 
-    const wrapper = container.querySelector(".text-card-foreground");
+    const wrapper = document.querySelector(".text-card-foreground");
     expect(wrapper).toHaveClass("!border-jii-dark-green");
     expect(wrapper).toHaveClass("!bg-jii-dark-green/10");
     expect(wrapper?.className).toMatch(/border/);

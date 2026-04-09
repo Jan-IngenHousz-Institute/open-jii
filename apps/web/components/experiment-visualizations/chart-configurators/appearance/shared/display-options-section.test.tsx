@@ -34,9 +34,9 @@ describe("DisplayOptionsSection", () => {
     });
 
     it("should render Eye icon", () => {
-      const { container } = renderDisplayOptions();
+      renderDisplayOptions();
 
-      const icon = container.querySelector("svg");
+      const icon = document.querySelector("svg");
       expect(icon).toBeInTheDocument();
     });
 

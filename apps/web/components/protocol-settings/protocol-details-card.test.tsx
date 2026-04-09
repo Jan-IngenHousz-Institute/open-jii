@@ -1,18 +1,15 @@
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
 import { toast } from "@repo/ui/hooks";
 
 import { ProtocolDetailsCard } from "./protocol-details-card";
 
 // Hoisted mocks
-const useProtocolUpdateMock = vi.hoisted(() => vi.fn());
 const useIotBrowserSupportMock = vi.hoisted(() => vi.fn());
-
-// Mock the hooks
-vi.mock("../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
-  useProtocolUpdate: useProtocolUpdateMock,
-}));
 
 // Mock useIotBrowserSupport
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
@@ -95,9 +92,8 @@ describe("ProtocolDetailsCard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    useProtocolUpdateMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue({}),
-      isPending: false,
+    server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "test-protocol-id", name: "Updated Name" }),
     });
     useIotBrowserSupportMock.mockReturnValue({
       bluetooth: false,
@@ -143,10 +139,8 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should call updateProtocol mutation on submit", async () => {
-    const mockMutateAsync = vi.fn().mockResolvedValue({});
-    useProtocolUpdateMock.mockReturnValue({
-      mutateAsync: mockMutateAsync,
-      isPending: false,
+    const spy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "test-protocol-id" }),
     });
 
     render(<ProtocolDetailsCard {...defaultProps} />);
@@ -159,14 +153,13 @@ describe("ProtocolDetailsCard", () => {
     await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({
-        params: { id: "test-protocol-id" },
-        body: {
-          name: "Updated Name",
-          description: "<p>Test Description</p>", // Quill wraps content in HTML
-          code: defaultProps.initialCode,
-          family: defaultProps.initialFamily,
-        },
+      expect(spy.called).toBe(true);
+      expect(spy.params).toMatchObject({ id: "test-protocol-id" });
+      expect(spy.body).toMatchObject({
+        name: "Updated Name",
+        description: "<p>Test Description</p>", // Quill wraps content in HTML
+        code: defaultProps.initialCode,
+        family: defaultProps.initialFamily,
       });
     });
   });
@@ -196,7 +189,7 @@ describe("ProtocolDetailsCard", () => {
     await userEvent.type(nameInput, "Updated Name");
 
     const codeEditor = screen.getByTestId("code-editor");
-    // Use fireEvent for JSON strings with curly braces
+    // fireEvent: userEvent.type interprets curly braces as special keys
     fireEvent.input(codeEditor, { target: { value: "{ invalid json" } });
 
     await waitFor(() => {
@@ -205,16 +198,24 @@ describe("ProtocolDetailsCard", () => {
     });
   });
 
-  it("should show loading state during update", () => {
-    useProtocolUpdateMock.mockReturnValue({
-      mutateAsync: vi.fn(),
-      isPending: true,
+  it("should show loading state during update", async () => {
+    server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol(),
+      delay: 999_999,
     });
 
     render(<ProtocolDetailsCard {...defaultProps} />);
 
+    const nameInput = screen.getByLabelText(/name/i);
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Updated Name");
+
     const submitButton = screen.getByRole("button", { name: /save/i });
-    expect(submitButton).toBeDisabled();
+    await userEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(submitButton).toBeDisabled();
+    });
   });
 
   it.skip("should update description field", async () => {
@@ -235,7 +236,7 @@ describe("ProtocolDetailsCard", () => {
     const codeEditor = screen.getByTestId("code-editor");
     const newCode = JSON.stringify([{ averages: 2 }]);
 
-    // Use fireEvent for JSON strings with curly braces
+    // fireEvent: userEvent.type interprets curly braces as special keys
     fireEvent.input(codeEditor, { target: { value: newCode } });
 
     expect(codeEditor).toHaveValue(newCode);

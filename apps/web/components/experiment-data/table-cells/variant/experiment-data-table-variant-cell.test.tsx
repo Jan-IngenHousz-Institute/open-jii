@@ -232,9 +232,9 @@ describe("VariantExpandedContent", () => {
     }
     const formatted = JSON.stringify(largeObject, null, 2);
 
-    const { container } = render(<VariantExpandedContent data={formatted} />);
+    render(<VariantExpandedContent data={formatted} />);
 
-    const codeBlock = container.querySelector("pre");
+    const codeBlock = document.querySelector("pre");
     expect(codeBlock).toBeTruthy();
     expect(codeBlock?.classList.contains("overflow-x-auto")).toBe(true);
     expect(codeBlock?.classList.contains("overflow-y-auto")).toBe(true);

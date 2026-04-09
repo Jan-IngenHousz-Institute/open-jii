@@ -187,7 +187,7 @@ describe("StructExpandedContent", () => {
   });
 
   it("should handle empty struct", () => {
-    const { container } = render(<StructExpandedContent data="{}" />);
-    expect(container.querySelector(".w-full")).toBeInTheDocument();
+    render(<StructExpandedContent data="{}" />);
+    expect(document.querySelector(".w-full")).toBeInTheDocument();
   });
 });

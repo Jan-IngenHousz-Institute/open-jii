@@ -57,9 +57,9 @@ describe("<TransferRequestPage />", () => {
 
   describe("Layout Structure", () => {
     it("renders important notes in a highlighted box", async () => {
-      const { container } = await renderTransferRequestPage();
+      await renderTransferRequestPage();
 
-      const noteBox = container.querySelector('[class*="bg-surface-light"]');
+      const noteBox = document.querySelector('[class*="bg-surface-light"]');
       expect(noteBox).toBeInTheDocument();
     });
 

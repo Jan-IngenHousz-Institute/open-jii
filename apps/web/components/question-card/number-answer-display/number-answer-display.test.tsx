@@ -15,8 +15,8 @@ describe("NumberAnswerDisplay", () => {
   });
 
   it("displays the number icon", () => {
-    const { container } = render(<NumberAnswerDisplay />);
-    const svg = container.querySelector("svg");
+    render(<NumberAnswerDisplay />);
+    const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
 

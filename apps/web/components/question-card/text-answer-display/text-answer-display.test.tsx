@@ -15,8 +15,8 @@ describe("TextAnswerDisplay", () => {
   });
 
   it("displays the edit icon", () => {
-    const { container } = render(<TextAnswerDisplay />);
-    const svg = container.querySelector("svg");
+    render(<TextAnswerDisplay />);
+    const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
 

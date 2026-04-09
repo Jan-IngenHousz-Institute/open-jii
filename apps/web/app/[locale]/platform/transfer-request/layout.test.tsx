@@ -114,9 +114,9 @@ describe("<TransferRequestLayout />", () => {
 
   describe("Layout Structure", () => {
     it("renders within a Card component", () => {
-      const { container } = renderTransferRequestLayout();
+      renderTransferRequestLayout();
 
-      expect(container.querySelector('[class*="space-y-6"]')).toBeInTheDocument();
+      expect(document.querySelector('[class*="space-y-6"]')).toBeInTheDocument();
     });
 
     it("renders NavTabs component", () => {

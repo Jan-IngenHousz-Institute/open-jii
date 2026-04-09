@@ -1,45 +1,14 @@
+import { createMacro, createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, fireEvent, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+
 import { NewProtocolForm } from "../new-protocol";
-
-// Mock hooks
-vi.mock("@/hooks/protocol/useProtocolCreate/useProtocolCreate", () => ({
-  useProtocolCreate: vi.fn(({ onSuccess }: { onSuccess: (id: string) => void }) => ({
-    mutate: vi.fn((_data) => {
-      onSuccess("new-protocol-id");
-    }),
-    isPending: false,
-  })),
-}));
-
-// Mock tsr (used by the details card for macro search)
-const mockMacroList = [
-  { id: "macro-1", name: "SPAD Macro", language: "python" },
-  { id: "macro-2", name: "Fluorescence Macro", language: "python" },
-];
-
-vi.mock("../../../lib/tsr", () => ({
-  tsr: {
-    ReactQueryProvider: ({ children }: { children: React.ReactNode }) => children,
-    macros: {
-      listMacros: {
-        useQuery: vi.fn(() => ({
-          data: { body: mockMacroList },
-          isLoading: false,
-          error: null,
-        })),
-      },
-    },
-  },
-}));
 
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
-}));
-
-vi.mock("@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro", () => ({
-  useAddCompatibleMacro: () => ({ mutateAsync: vi.fn() }),
 }));
 
 interface DropdownPropsCaptured {
@@ -120,6 +89,17 @@ describe("NewProtocolForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lastDropdownProps = null;
+
+    server.mount(contract.macros.listMacros, {
+      body: [
+        createMacro({ id: "macro-1", name: "SPAD Macro", language: "python" }),
+        createMacro({ id: "macro-2", name: "Fluorescence Macro", language: "python" }),
+      ],
+    });
+    server.mount(contract.protocols.createProtocol, {
+      body: createProtocol({ id: "new-protocol-id", name: "Test Protocol" }),
+    });
+    server.mount(contract.protocols.addCompatibleMacros, { body: [] });
   });
 
   describe("Step 1 - Details", () => {
@@ -162,34 +142,48 @@ describe("NewProtocolForm", () => {
       expect(backButton).toBeDisabled();
     });
 
-    it("should pass available macros to the dropdown", () => {
+    it("should pass available macros to the dropdown", async () => {
       render(<NewProtocolForm />);
 
-      expect(lastDropdownProps).not.toBeNull();
-      const ids = lastDropdownProps?.availableMacros.map((m) => m.id);
-      expect(ids).toContain("macro-1");
-      expect(ids).toContain("macro-2");
+      await waitFor(() => {
+        expect(lastDropdownProps).not.toBeNull();
+        const ids = lastDropdownProps?.availableMacros.map((m) => m.id);
+        expect(ids).toContain("macro-1");
+        expect(ids).toContain("macro-2");
+      });
     });
 
-    it("should add a macro when onAddMacro is called", () => {
+    it("should add a macro when onAddMacro is called", async () => {
       render(<NewProtocolForm />);
+
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
+      });
 
       act(() => {
         lastDropdownProps?.onAddMacro("macro-1");
       });
 
-      expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
+      });
     });
 
-    it("should filter out already-selected macros from available list", () => {
+    it("should filter out already-selected macros from available list", async () => {
       render(<NewProtocolForm />);
+
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
+      });
 
       act(() => {
         lastDropdownProps?.onAddMacro("macro-1");
       });
 
-      expect(lastDropdownProps?.availableMacros.map((m) => m.id)).not.toContain("macro-1");
-      expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-2");
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).not.toContain("macro-1");
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-2");
+      });
     });
   });
 
@@ -200,6 +194,7 @@ describe("NewProtocolForm", () => {
 
       // Fill in required name field
       const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      // fireEvent: controlled component (react-hook-form FormField) - userEvent.type fires per-character
       fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
       // Click next to go to step 2
@@ -233,6 +228,7 @@ describe("NewProtocolForm", () => {
       const codeEditor = screen.getByTestId("code-editor");
       const newCode = JSON.stringify([{ averages: 2 }]);
 
+      // fireEvent: userEvent.type interprets curly braces as special keys
       fireEvent.change(codeEditor, { target: { value: newCode } });
 
       expect(codeEditor).toHaveValue(newCode);
@@ -264,6 +260,7 @@ describe("NewProtocolForm", () => {
 
       // Fill in required name field
       const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      // fireEvent: controlled component (react-hook-form FormField) - userEvent.type fires per-character
       fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
       // Step 1 → Step 2

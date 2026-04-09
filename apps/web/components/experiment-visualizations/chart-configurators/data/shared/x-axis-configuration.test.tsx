@@ -272,9 +272,9 @@ describe("XAxisConfiguration", () => {
 
   describe("Layout", () => {
     it("should render fields in a grid layout", () => {
-      const { container } = renderXAxisConfig();
+      renderXAxisConfig();
 
-      const grid = container.querySelector(".grid");
+      const grid = document.querySelector(".grid");
       expect(grid).toBeInTheDocument();
     });
 

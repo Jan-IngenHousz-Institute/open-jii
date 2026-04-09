@@ -1,7 +1,10 @@
-import { render, screen } from "@/test/test-utils";
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 
 import { ProtocolRunContent } from "../protocol-run-content";
@@ -12,21 +15,6 @@ import { ProtocolRunContent } from "../protocol-run-content";
 
 vi.mock("@repo/ui/lib/utils", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
-}));
-
-interface MockProtocolReturn {
-  data: { body: Record<string, unknown> } | undefined;
-  isLoading: boolean;
-}
-
-const mockUseProtocol = vi.fn<() => MockProtocolReturn>();
-vi.mock("../../../hooks/protocol/useProtocol/useProtocol", () => ({
-  useProtocol: () => mockUseProtocol(),
-}));
-
-const mockSaveProtocol = vi.fn();
-vi.mock("../../../hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
-  useProtocolUpdate: () => ({ mutate: mockSaveProtocol }),
 }));
 
 let mockBrowserSupport = {
@@ -97,30 +85,36 @@ vi.mock("@repo/ui/hooks", async (importOriginal) => {
   };
 });
 
-vi.mock("@repo/ui/components", () => ({
-  ResizablePanelGroup: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="panel-group">{children}</div>
-  ),
-  ResizablePanel: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="panel">{children}</div>
-  ),
-  ResizableHandle: () => <div data-testid="panel-handle" />,
-}));
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    ResizablePanelGroup: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="panel-group">{children}</div>
+    ),
+    ResizablePanel: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="panel">{children}</div>
+    ),
+    ResizableHandle: () => <div data-testid="panel-handle" />,
+  };
+});
 
 // --------------------
 // Tests
 // --------------------
 describe("<ProtocolRunContent />", () => {
-  const mockProtocol = {
+  const mockProtocol = createProtocol({
     id: "proto-1",
     name: "Test Protocol",
     code: [{ averages: 1 }],
     family: "multispeq",
     createdBy: "user-1",
-  };
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
     mockBrowserSupport = {
       bluetooth: true,
       serial: true,
@@ -141,35 +135,34 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should show loading state", () => {
-    mockUseProtocol.mockReturnValue({ data: undefined, isLoading: true });
+    server.mount(contract.protocols.getProtocol, { delay: 999_999 });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
     expect(screen.getByText("common.loading")).toBeInTheDocument();
   });
 
-  it("should show not found when no data", () => {
-    mockUseProtocol.mockReturnValue({ data: undefined, isLoading: false });
+  it("should show not found when no data", async () => {
+    server.mount(contract.protocols.getProtocol, { status: 404 });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(screen.getByText("protocols.notFound")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("protocols.notFound")).toBeInTheDocument();
+    });
   });
 
-  it("should render read-only json viewer and IoT runner by default", () => {
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
-
+  it("should render read-only json viewer and IoT runner by default", async () => {
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
+    });
     expect(screen.queryByTestId("code-editor")).not.toBeInTheDocument();
     expect(screen.getByTestId("iot-runner")).toBeInTheDocument();
   });
 
-  it("should show browser not supported message when no support", () => {
+  it("should show browser not supported message when no support", async () => {
     mockBrowserSupport = {
       bluetooth: false,
       serial: false,
@@ -177,70 +170,62 @@ describe("<ProtocolRunContent />", () => {
       bluetoothReason: null,
       serialReason: null,
     };
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(screen.getByText("iot.protocolRunner.browserNotSupported")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("iot.protocolRunner.browserNotSupported")).toBeInTheDocument();
+    });
     expect(screen.queryByTestId("iot-runner")).not.toBeInTheDocument();
   });
 
-  it("should show edit trigger for creators in read-only mode", () => {
+  it("should show edit trigger for creators in read-only mode", async () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(screen.getByTestId("edit-trigger")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("edit-trigger")).toBeInTheDocument();
+    });
   });
 
-  it("should not show edit trigger for non-creators", () => {
+  it("should not show edit trigger for non-creators", async () => {
     mockSession = { user: { id: "other-user" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
+    await waitFor(() => {
+      expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
+    });
     expect(screen.queryByTestId("edit-trigger")).not.toBeInTheDocument();
   });
 
-  it("should show code editor with header actions when editing", () => {
+  it("should show code editor with header actions when editing", async () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     mockAutoSave = { ...mockAutoSave, isEditing: true, editedCode: [{ averages: 1 }] };
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    });
     expect(screen.getByTestId("editor-header-actions")).toBeInTheDocument();
     expect(screen.queryByTestId("json-viewer")).not.toBeInTheDocument();
   });
 
-  it("should not show a separate save button", () => {
+  it("should not show a separate save button", async () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     mockAutoSave = { ...mockAutoSave, isEditing: true };
-    mockUseProtocol.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
+    await waitFor(() => {
+      expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    });
     expect(screen.queryByText("common.save")).not.toBeInTheDocument();
   });
 });

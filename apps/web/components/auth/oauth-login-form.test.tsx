@@ -40,8 +40,8 @@ describe("OAuthLoginForm", () => {
     });
 
     it("renders GitHub SVG icon", () => {
-      const { container } = render(<OAuthLoginForm provider={github} callbackUrl="/platform" />);
-      expect(container.querySelector('svg[viewBox="0 0 24 24"]')).toBeInTheDocument();
+      render(<OAuthLoginForm provider={github} callbackUrl="/platform" />);
+      expect(document.querySelector('svg[viewBox="0 0 24 24"]')).toBeInTheDocument();
     });
   });
 
@@ -65,8 +65,8 @@ describe("OAuthLoginForm", () => {
     });
 
     it("renders ORCID SVG icon with green fill", () => {
-      const { container } = render(<OAuthLoginForm provider={orcid} callbackUrl="/platform" />);
-      expect(container.querySelector('path[fill="#A6CE39"]')).toBeInTheDocument();
+      render(<OAuthLoginForm provider={orcid} callbackUrl="/platform" />);
+      expect(document.querySelector('path[fill="#A6CE39"]')).toBeInTheDocument();
     });
   });
 

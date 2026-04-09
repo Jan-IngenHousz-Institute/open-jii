@@ -9,6 +9,7 @@ import type * as UIComponents from "@repo/ui/components";
 import type { Registration } from "./registration-form";
 import { RegistrationOtpVerification } from "./registration-otp-verification";
 
+// useSignInEmail — pragmatic mock (uses authClient, not ts-rest)
 const mockSignInEmailMutate = vi.fn();
 vi.mock("~/hooks/auth", () => ({
   useSignInEmail: () => ({

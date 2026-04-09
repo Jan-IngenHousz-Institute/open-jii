@@ -6,8 +6,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
 
-Element.prototype.scrollIntoView = vi.fn();
-
 // useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
