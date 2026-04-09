@@ -9,16 +9,9 @@ import {
 } from "./helpers.js";
 import type { TestCase } from "./helpers.js";
 
-// ── Data ─────────────────────────────────────────────────────
-
 const samples = loadTestData("samples.json");
 const intensive = loadTestData("intensive.json");
 const security = loadTestData("security.json");
-
-// ── Samples ──────────────────────────────────────────────────
-// Basic and complex macros across all three runtimes.
-// These are "happy path" tests: real macro scripts that should
-// execute successfully and return structured output.
 
 describe("samples", () => {
   for (const testCase of samples) {
@@ -31,19 +24,11 @@ describe("samples", () => {
       it(label, { timeout: (tc.timeout + 30) * 1000 }, async () => {
         const { response, status } = await invokeLambda(tc);
 
-        // Lambda RIE should always return 200
         expect(status).toBe(200);
-
-        // Response must have the standard envelope
         assertValidEnvelope(response);
-
-        // Samples must succeed
         expect(response.status).toBe("success");
-
-        // Every item should produce a result
         expect(response.results).toHaveLength(tc.items.length);
 
-        // Each result should be successful with output
         for (let i = 0; i < response.results.length; i++) {
           const result = response.results[i];
           expect(result).toHaveProperty("id");
@@ -51,7 +36,6 @@ describe("samples", () => {
           expect(result.output).toBeDefined();
           expect(typeof result.output).toBe("object");
 
-          // Verify expected output values (from snapshots)
           if (tc.expect.output?.[i]) {
             expect(result.output).toEqual(tc.expect.output[i]);
           }
@@ -61,12 +45,7 @@ describe("samples", () => {
   }
 });
 
-// ── Intensive ────────────────────────────────────────────────
-// Each test case has a single item with a complex script.
-// This suite multiplies items to create load, verifying the
-// Lambdas handle batches gracefully.
-
-/** Duplicate the single item in a test case to create a batch of `count` items. */
+/** Duplicate the single item in a test case to create a batch. */
 function multiplyItems(tc: TestCase, count: number): TestCase {
   const baseItem = tc.items[0];
   return {
@@ -108,8 +87,7 @@ describe("intensive", () => {
             expect(result.success).toBe(true);
             expect(result.output).toBeDefined();
 
-            // All multiplied items should produce the same output as the base
-            if (base.expect.output?.[0]) {
+              if (base.expect.output?.[0]) {
               expect(result.output).toEqual(base.expect.output[0]);
             }
           }
@@ -119,22 +97,7 @@ describe("intensive", () => {
   }
 });
 
-// ── Security ─────────────────────────────────────────────────
-// Sandbox escape and exploit probes. Every test case attempts
-// to break out of the sandboxed execution environment.
-//
-// Expected behavior:
-//   - The Lambda MUST return a valid response (200 + envelope)
-//   - The exploit MUST NOT crash the container
-//   - Each result item should either:
-//     (a) fail with an error (sandbox blocked the attempt), OR
-//     (b) succeed with benign output (the exploit was neutralized)
-//
-// The key assertion: the container remains responsive after every
-// exploit attempt. If an exploit kills the container, subsequent
-// tests will fail to connect — which is itself a signal.
-
-// Group by language for better reporting
+// Group security tests by language
 const byLanguage = new Map<string, typeof security>();
 for (const tc of security) {
   for (const lang of targetLanguages(tc)) {
@@ -152,15 +115,9 @@ describe("security", () => {
             timeoutMs: (tc.timeout + 30) * 1000,
           });
 
-          // Container must return a valid HTTP response
           expect(status).toBe(200);
-
-          // Response must have the standard envelope
           assertValidEnvelope(response);
 
-          // Assert expected outcome (two levels)
-          //   expect.success → response.status
-          //   expect.error   → at least one item has success=false or "error" key
           if (tc.expect.success) {
             expect(response.status, "Expected response success").toBe("success");
           } else {

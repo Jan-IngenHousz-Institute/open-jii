@@ -59,14 +59,12 @@ if (macroResult !== undefined) {
 `;
 
 // 4. CREATE CONTEXT ONCE
-// SECURITY: Minimal sandbox - no Date, performance, setTimeout, setInterval, process, require
-// Use Object.create(null) to create objects without prototype chain
+// Minimal sandbox: no Date, performance, setTimeout, process, require, eval
 const sandbox = {
   json: Object.create(null),
   input_data: Object.create(null),
   output: Object.create(null),
-  console: { log: () => {} }, // Mute logs inside user script
-  // Explicitly block timing and system access:
+  console: { log: () => {} },
   Date: undefined,
   performance: undefined,
   setTimeout: undefined,
@@ -119,7 +117,7 @@ const script = new vm.Script(wrappedCode);
 
 let results = [];
 
-// 5. EXECUTION LOOP - Reuse same context
+// 5. EXECUTION LOOP
 for (const item of batchItems) {
   sandbox.json = Object.create(null);
   sandbox.input_data = Object.create(null);
@@ -129,7 +127,6 @@ for (const item of batchItems) {
   Object.assign(sandbox.input_data, item.data);
 
   try {
-    // 1s timeout per item
     script.runInContext(context, { timeout: 1000, displayErrors: false });
     results.push({
       id: item.id,

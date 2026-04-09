@@ -1,20 +1,12 @@
-// ── Data loading ─────────────────────────────────────────────
+// Data loading
 import { createDecipheriv } from "crypto";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
-// ============================================================
-// Integration Test Helpers — Lambda HTTP Client
-// ============================================================
-// Language-agnostic test helpers for invoking Lambda functions
-// through the RIE (Runtime Interface Emulator) HTTP API.
-// ============================================================
-
-/** Lambda invoke endpoint template. RIE exposes this on each container's port. */
 const INVOKE_PATH = "/2015-03-31/functions/function/invocations";
 
-/** Port mapping per language — reads from env vars set by .env.test, falls back to dev defaults */
+/** Port mapping per language (from .env.test, falling back to dev defaults) */
 export const PORTS: Record<string, number> = {
   python: Number(process.env.PYTHON_PORT ?? 9001),
   javascript: Number(process.env.JAVASCRIPT_PORT ?? 9002),
@@ -28,19 +20,15 @@ export function baseUrl(language: string): string {
   return `http://localhost:${port}`;
 }
 
-// ── Types ────────────────────────────────────────────────────
+// Types
 
-/** Expected outcome for a test case */
 export interface TestExpectation {
-  /** true = response.status must be "success"; false = must be "error" */
   success: boolean;
-  /** true = at least one item has success=false or an "error" key */
   error: boolean;
-  /** Per-item expected output (parallel to items array). Derived from snapshots. */
   output?: Record<string, unknown>[];
 }
 
-/** Shape of a single test case from the generated JSON data files */
+/** A single test case from the generated JSON data files. */
 export interface TestCase {
   name: string;
   language: string;
@@ -51,7 +39,7 @@ export interface TestCase {
   expect: TestExpectation;
 }
 
-/** A single result item returned by the Lambda */
+/** A single result item returned by the Lambda. */
 export interface ResultItem {
   id: string;
   success: boolean;
@@ -59,19 +47,16 @@ export interface ResultItem {
   error?: string;
 }
 
-/** Lambda response envelope */
+/** Lambda response envelope. */
 export interface LambdaResponse {
   status: "success" | "error";
   results: ResultItem[];
   errors?: string[];
 }
 
-// ── Invocation ───────────────────────────────────────────────
+// Invocation
 
-/**
- * Invoke a Lambda function with the given test case payload.
- * Strips `name` and `language` (test-only fields) before sending.
- */
+/** Invoke a Lambda with the given test case payload. */
 export async function invokeLambda(
   testCase: TestCase,
   options?: { timeoutMs?: number },
@@ -111,9 +96,9 @@ export async function invokeLambda(
   }
 }
 
-// ── Route helpers ────────────────────────────────────────────
+// Route helpers
 
-/** Languages a test case targets — `"all"` maps to every runtime */
+/** Languages a test case targets -- "all" maps to every runtime. */
 export function targetLanguages(testCase: TestCase): string[] {
   if (testCase.language === "all") {
     return Object.keys(PORTS);
@@ -121,17 +106,14 @@ export function targetLanguages(testCase: TestCase): string[] {
   return [testCase.language];
 }
 
-/**
- * Create a copy of a test case targeting a specific language.
- * Used when `language: "all"` should fan out to each runtime.
- */
+/** Create a copy of a test case retargeted to a specific language. */
 export function withLanguage(testCase: TestCase, language: string): TestCase {
   return { ...testCase, language };
 }
 
-// ── Assertions ───────────────────────────────────────────────
+// Assertions
 
-/** Assert the response has the standard envelope shape */
+/** Assert the response has the standard envelope shape. */
 export function assertValidEnvelope(response: LambdaResponse): void {
   if (typeof response !== "object") {
     throw new Error("Response is not an object");

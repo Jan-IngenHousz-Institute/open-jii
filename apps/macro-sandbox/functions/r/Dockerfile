@@ -1,17 +1,5 @@
-# ============================================================
-# Lambda Function: R Macro Sandbox
-# ============================================================
-# Build context: apps/macro-sandbox/
-#   docker build -f functions/r/Dockerfile -t macro-sandbox-r .
-#
-# Uses a custom container image with R and a shell-based Lambda
-# Runtime API bootstrap (no official AWS Lambda R runtime exists).
-#
-# The bootstrap implements the Lambda Runtime API:
-#   GET  /invocation/next     → receive event
-#   POST /invocation/{id}/response → return result
-#   POST /invocation/{id}/error    → return error
-# ============================================================
+# R macro sandbox Lambda
+# Uses a custom Runtime API bootstrap (no official AWS Lambda R runtime).
 
 FROM debian:bookworm-slim
 
@@ -27,20 +15,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV LAMBDA_TASK_ROOT=/var/task
 WORKDIR /var/task
 
-# Lambda Runtime API bootstrap (shell script)
 COPY functions/r/bootstrap /var/runtime/bootstrap
 RUN chmod +x /var/runtime/bootstrap
 
-# Lambda handler (processes events, invokes wrapper)
 COPY functions/r/handler.R /var/task/handler.R
 
 # Wrapper and helpers
 COPY lib/wrappers/wrapper.R /var/task/wrappers/wrapper.R
 COPY lib/helpers/helpers.R /var/task/src/helpers/helpers.R
 
-# Lambda Runtime Interface Emulator (RIE) for local testing.
-# In real Lambda, AWS_LAMBDA_RUNTIME_API is set — bootstrap runs directly.
-# Locally, RIE provides the Runtime API on port 8080.
+# RIE for local testing
 ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
 RUN chmod +x /usr/local/bin/aws-lambda-rie
 

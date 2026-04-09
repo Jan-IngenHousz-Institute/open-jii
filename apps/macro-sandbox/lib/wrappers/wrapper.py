@@ -63,7 +63,7 @@ except Exception as e:
     sys.exit(0)
 
 class SafeModule:
-    """Wrapper that intercepts ALL attribute access (including dot notation) to block introspection"""
+    """Blocks introspection on wrapped modules."""
     BLOCKED_ATTRS = {
         '__globals__', '__code__', '__builtins__', '__dict__', 
         '__class__', '__bases__', '__subclasses__', '__init__',
@@ -75,34 +75,26 @@ class SafeModule:
         object.__setattr__(self, '_name', getattr(module, '__name__', 'SafeModule'))
     
     def __getattribute__(self, name):
-        # Get the actual module (bypassing our own __getattribute__)
         module = object.__getattribute__(self, '_module')
         
-        # Block dangerous introspection attributes
         if name in object.__getattribute__(self, 'BLOCKED_ATTRS'):
             raise AttributeError(f"access to '{name}' is restricted")
         
-        # Block all other dunder attributes except safe ones
         if name.startswith('__') and name.endswith('__'):
             if name not in {'__name__', '__doc__'}:
                 raise AttributeError(f"access to '{name}' is restricted")
         
-        # Get the attribute from the wrapped module
         attr = getattr(module, name)
         
-        # Recursively wrap submodules to prevent bypass
         if isinstance(attr, types.ModuleType):
             return SafeModule(attr)
         
-        # Wrap functions and methods to block __globals__ access
         if isinstance(attr, (types.FunctionType, types.MethodType, types.BuiltinFunctionType)):
             return SafeCallable(attr)
         
-        # For classes, wrap them to prevent __init__.__globals__ access
         if isinstance(attr, type):
             return SafeClass(attr)
         
-        # Return primitives and safe objects as-is
         return attr
     
     def __setattr__(self, name, value):
@@ -113,7 +105,7 @@ class SafeModule:
         return f"<SafeModule({getattr(module, '__name__', 'unknown')})>"
 
 class SafeCallable:
-    """Wrapper for functions/methods to block __globals__ and other introspection"""
+    """Blocks __globals__ and other introspection on wrapped callables."""
     BLOCKED_ATTRS = {
         '__globals__', '__code__', '__builtins__', '__dict__',
         '__closure__', '__class__', '__func__', '__self__'
@@ -145,7 +137,7 @@ class SafeCallable:
         return f"<SafeCallable({func.__name__ if hasattr(func, '__name__') else 'unknown'})>"
 
 class SafeClass:
-    """Wrapper for classes to prevent access to __init__.__globals__ and similar"""
+    """Blocks __init__.__globals__ and similar on wrapped classes."""
     BLOCKED_ATTRS = {
         '__globals__', '__code__', '__builtins__', '__dict__',
         '__bases__', '__subclasses__', '__init__', '__class__'
@@ -178,18 +170,13 @@ class SafeClass:
         return f"<SafeClass({cls.__name__ if hasattr(cls, '__name__') else 'unknown'})>"
 
 class SafeInstance:
-    """Proxy for objects returned by SafeClass to block introspection on instances.
-    
-    Blocks dangerous dunders (__init__, __class__, __globals__, __dict__, etc.)
-    while delegating safe operational dunders and normal attribute access.
-    """
+    """Blocks introspection on instances while forwarding safe dunders."""
     BLOCKED_ATTRS = {
         '__globals__', '__code__', '__builtins__', '__dict__',
         '__class__', '__bases__', '__subclasses__', '__init__',
         '__loader__', '__spec__', '__package__', '__func__',
         '__self__', '__closure__',
     }
-    # Operational dunders that must be forwarded for objects like DataFrames
     SAFE_DUNDERS = {
         '__name__', '__doc__', '__str__', '__repr__', '__call__',
         '__len__', '__length_hint__',
@@ -231,7 +218,7 @@ class SafeInstance:
         obj = object.__getattribute__(self, '_obj')
         attr = getattr(obj, name)
         
-        # Wrap bound methods so their __globals__ can't be accessed
+        # Wrap bound methods to prevent __globals__ access
         if callable(attr) and isinstance(attr, types.MethodType):
             return SafeCallable(attr)
         
@@ -244,7 +231,7 @@ class SafeInstance:
         obj = object.__getattribute__(self, '_obj')
         setattr(obj, name, value)
     
-    # Delegate core protocols directly to avoid infinite recursion
+    # Delegate core protocols to avoid infinite recursion
     def __len__(self):
         return len(object.__getattribute__(self, '_obj'))
     
@@ -292,8 +279,8 @@ for item in batch_items:
             "StopIteration": StopIteration, "AssertionError": AssertionError,
             "NameError": NameError,
         },
-        "json": row_data, 
-        "output": {}, 
+        "json": row_data,
+        "output": {},
         "MathROUND": MathROUND,
         "MathMEAN": MathMEAN,
         "MathMAX": MathMAX, 
@@ -309,14 +296,13 @@ for item in batch_items:
     }
     
     try:
-        # EXECUTE WITH TIMEOUT
-        # Set a 1-second CPU/Wall clock alarm for this specific execution
+        # 1s per-item timeout via SIGALRM
         signal.signal(signal.SIGALRM, lambda signum, frame: (_ for _ in ()).throw(TimeoutError("Script execution timed out")))
-        signal.alarm(1) # 1 second
+        signal.alarm(1)
 
         exec(compiled_code, scope)
         
-        signal.alarm(0) # Disable alarm on success
+        signal.alarm(0)
 
         results.append({
             "id": row_id,
@@ -324,7 +310,7 @@ for item in batch_items:
             "output": scope.get("output", {})
         })
     except Exception as e:
-        signal.alarm(0) # Ensure alarm is disabled
+        signal.alarm(0)
 
         err_msg = "".join(traceback.format_exception_only(type(e), e)).strip()
         results.append({

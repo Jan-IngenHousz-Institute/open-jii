@@ -1,12 +1,6 @@
 #!/bin/sh
-# ============================================================
-# Lambda Runtime API Bootstrap for R
-# ============================================================
-# Implements the Lambda Runtime API contract:
-#   https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
-#
-# Loop: poll for events → run Rscript handler → post response
-# ============================================================
+# Lambda Runtime API bootstrap for R.
+# Polls for events, runs Rscript handler, posts response.
 
 set -eu
 
@@ -29,21 +23,16 @@ while true; do
   printf '%s' "$EVENT" > "$EVENT_FILE"
 
   # 3. Run R handler
-  # Capture exit code without letting set -e abort the bootstrap.
-  # The || assignment ensures the line always succeeds for set -e,
-  # while EXIT_CODE gets the real Rscript exit code.
   EXIT_CODE=0
   RESPONSE=$(Rscript /var/task/handler.R "$EVENT_FILE" 2>/tmp/handler_stderr.log) || EXIT_CODE=$?
 
   # 4. Clean up event file
   rm -f "$EVENT_FILE"
 
-  # If the handler was killed by a signal (segfault=139, SIGKILL=137, SIGABRT=134),
-  # exit the bootstrap so Lambda replaces this execution environment with a fresh one.
-  # Continuing after a signal-kill risks corrupted memory or zombie processes.
+  # Signal kills (segfault=139, SIGKILL=137) -> force cold start.
   if [ "$EXIT_CODE" -ge 128 ]; then
     SIGNAL=$((EXIT_CODE - 128))
-    echo "FATAL: Rscript killed by signal $SIGNAL (exit code $EXIT_CODE) — forcing cold start" >&2
+    echo "FATAL: Rscript killed by signal $SIGNAL (exit $EXIT_CODE) - forcing cold start" >&2
     curl -sS -X POST \
       "${RUNTIME_API}/invocation/${REQUEST_ID}/error" \
       -H "Content-Type: application/json" \
@@ -67,6 +56,6 @@ while true; do
       -d "$ERROR_JSON"
   fi
 
-  # 6. Clean up /tmp from this invocation (rm -rf for directories)
+  # 6. Clean up
   rm -rf /tmp/macro_* /tmp/handler_stderr.log
 done

@@ -1,14 +1,4 @@
-# R Helper Functions for openJII MultispeQ Data Processing
-#
-# This file provides R equivalents of the JavaScript/Python helper functions
-# used in MultispeQ macro processing. These functions are made available to
-# R macros during execution.
-#
-# Key Features:
-# - Array manipulation functions (ArrayNth, ArrayRange, ArrayZip, etc.)
-# - Mathematical functions (statistics, regression, transformations)
-# - Protocol handling functions
-# - Messaging functions for macro output
+# R helper functions for MultispeQ macro processing.
 
 # Array manipulation functions
 

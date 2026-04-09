@@ -1,17 +1,4 @@
-"""
-Python Helper Functions for openJII MultispeQ Data Processing
-
-This module provides Python equivalents of the JavaScript helper functions
-used in MultispeQ macro processing. These functions are made available to
-Python macros during execution.
-
-Key Features:
-- Array manipulation functions (ArrayNth, ArrayRange, ArrayZip, etc.)
-- Mathematical functions (statistics, regression, transformations)
-- Protocol handling functions
-- Messaging functions for macro output
-- Advanced mathematical operations
-"""
+"""Python helper functions for MultispeQ macro processing."""
 
 import math
 import json

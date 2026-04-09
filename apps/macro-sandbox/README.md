@@ -4,27 +4,21 @@ Sandboxed execution environment for running user-authored plant science macros (
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Caller (backend / CLI)                              │
-│  POST event { script, items[], timeout }             │
-└──────────────┬───────────────────────────────────────┘
-               │
-       ┌───────▼───────┐
-       │  Lambda (RIE)  │
-       │  handler.{py,  │
-       │    js, R}       │
-       └───────┬────────┘
-               │  subprocess
-       ┌───────▼────────┐
-       │  wrapper.{py,  │
-       │    js, R}       │       ← runs user script per item
-       └───────┬────────┘
-               │  imports
-       ┌───────▼────────┐
-       │  helpers.{py,  │
-       │    js, R}       │       ← MathMEAN, ArrayNth, etc.
-       └────────────────┘
+```mermaid
+flowchart TD
+    caller["Caller (backend / CLI)<br/>POST { script, items[], timeout }"]
+    handler["handler.{py, js, R}"]
+    wrapper["wrapper.{py, js, R}"]
+    helpers["helpers.{py, js, R}"]
+
+    caller -->|invoke| handler
+    handler -->|subprocess| wrapper
+    wrapper -->|imports| helpers
+
+    style caller fill:#1a1a2e,stroke:#e0e0e0,color:#e0e0e0
+    style handler fill:#16213e,stroke:#e0e0e0,color:#e0e0e0
+    style wrapper fill:#0f3460,stroke:#e0e0e0,color:#e0e0e0
+    style helpers fill:#533483,stroke:#e0e0e0,color:#e0e0e0
 ```
 
 Each invocation:
@@ -52,7 +46,7 @@ There are **two levels** of timeout enforcement:
 | **Per-item** | 1 s     | Wrapper (hardcoded)   | Each item in the `items[]` array gets at most 1 second of execution time. Not configurable by caller. |
 | **Handler**  | 10–60 s | `timeout` event field | Total wall-clock time for the subprocess (wrapper + all items). Defaults to 10 s if omitted.          |
 
-The per-item timeout prevents a single bad item from consuming the entire handler budget. If one item times out, processing continues to the next item — the timed-out item is recorded with `success: false` and an error message. The handler-level timeout is a hard ceiling on the entire invocation.
+The per-item timeout prevents a single bad item from consuming the entire handler budget. If one item times out, processing continues to the next item - the timed-out item is recorded with `success: false` and an error message. The handler-level timeout is a hard ceiling on the entire invocation.
 
 ## Event Schema
 
@@ -197,9 +191,9 @@ pnpm test:down    # stop & remove containers
 
 | Suite       | Description                                                |
 | ----------- | ---------------------------------------------------------- |
-| `samples`   | Standard macros — validates output matches expected values |
-| `intensive` | Heavier workloads — large datasets, complex computations   |
-| `security`  | Sandbox escape attempts — verifies isolation               |
+| `samples`   | Standard macros - validates output matches expected values |
+| `intensive` | Heavier workloads - large datasets, complex computations   |
+| `security`  | Sandbox escape attempts - verifies isolation               |
 
 ### Adding Test Cases
 

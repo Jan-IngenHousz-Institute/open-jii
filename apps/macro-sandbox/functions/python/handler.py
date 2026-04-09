@@ -1,27 +1,3 @@
-"""
-Lambda handler for Python macro execution.
-
-Event schema:
-{
-    "script": "base64-encoded python script",
-    "items": [
-        {"id": "item-1", "data": {"trace_1": [1, 2, 3], ...}},
-        {"id": "item-2", "data": {"trace_1": [4, 5, 6], ...}}
-    ],
-    "timeout": 10,
-    "protocol_id": "proto-123"
-}
-
-Response schema (matches wrapper output):
-{
-    "status": "success",
-    "results": [
-        {"id": "item-1", "success": true, "output": {...}},
-        {"id": "item-2", "success": true, "output": {...}}
-    ]
-}
-"""
-
 import json
 import base64
 import subprocess
@@ -31,7 +7,7 @@ import tempfile
 
 # Limits
 MAX_SCRIPT_SIZE = 1 * 1024 * 1024  # 1MB
-MAX_OUTPUT_SIZE = 10 * 1024 * 1024  # 10MB — prevent OOM from runaway wrapper output
+MAX_OUTPUT_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_ITEM_COUNT = 1000
 MAX_TIMEOUT = 60
 DEFAULT_TIMEOUT = 10
@@ -40,12 +16,7 @@ WRAPPER_PATH = "/var/task/wrappers/wrapper.py"
 
 
 def _cleanup_stale_tmp():
-    """Remove leftover macro temp dirs from previous invocations.
-
-    On warm starts, /tmp persists. If a prior invocation crashed hard
-    (OOM, SIGKILL) before finally could run, stale files remain.
-    Clean them at the START of every invocation for defense-in-depth.
-    """
+    """Remove leftover macro temp dirs from crashed prior invocations (warm-start safety)."""
     import glob
     for d in glob.glob("/tmp/macro_*"):
         shutil.rmtree(d, ignore_errors=True)
@@ -55,7 +26,7 @@ def handler(event, context):
     try:
         return _execute(event)
     except Exception as e:
-        # Never leak internal details to caller
+    # Never leak internal details to caller
         return {
             "status": "error",
             "results": [],
@@ -64,7 +35,6 @@ def handler(event, context):
 
 
 def _execute(event):
-    # Clean up stale temp dirs from any prior crashed invocation
     _cleanup_stale_tmp()
 
     # Validate script
@@ -113,8 +83,7 @@ def _execute(event):
         ) as f:
             json.dump(items, f)
 
-        # Execute wrapper as subprocess
-        # Minimal environment — no AWS credentials, no Lambda internals
+        # Run wrapper in a subprocess with a stripped environment.
         result = subprocess.run(
             ["python3", WRAPPER_PATH, script_path, input_path],
             capture_output=True,

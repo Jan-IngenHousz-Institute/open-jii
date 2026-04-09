@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Extract a compiled test case into a generate/ directory for editing.
- * This is the reverse of generate.ts — it decodes the base64 script and
+ * This is the reverse of generate.ts - it decodes the base64 script and
  * writes macro.{py,js,R}, input.json, expectations.json, and output.json.
  *
  * Usage:
@@ -87,7 +87,7 @@ function main() {
 
     // Check if already extracted
     if (existsSync(dir)) {
-      console.log(`${YELLOW}generate/${dirName}/${RESET} already exists — skipping extraction.`);
+      console.log(`${YELLOW}generate/${dirName}/${RESET} already exists - skipping extraction.`);
     } else {
       mkdirSync(dir, { recursive: true });
 

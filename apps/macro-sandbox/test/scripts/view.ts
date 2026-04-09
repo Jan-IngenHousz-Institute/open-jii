@@ -41,7 +41,7 @@ function jsonHighlight(text: string): string {
     .replace(/: (\d+\.?\d*)/g, `: ${YELLOW}$1${RESET}`);
 }
 
-// ── Script syntax highlighting ───────────────────────────────
+// Script syntax highlighting
 
 const PY_KEYWORDS =
   /\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|None|True|False)\b/g;
@@ -94,7 +94,7 @@ function highlightLine(line: string, language: string): string {
   );
 }
 
-// ── Types ────────────────────────────────────────────────────
+// Types
 
 interface TestEntry {
   name: string;
@@ -106,7 +106,7 @@ interface TestEntry {
   expect: { success: boolean; error: boolean; output?: Record<string, unknown>[] };
 }
 
-// ── Load compiled JSON entries ───────────────────────────────
+// Load compiled JSON entries
 
 function loadAll(): Map<string, { dataset: string; entry: TestEntry }> {
   const map = new Map<string, { dataset: string; entry: TestEntry }>();
@@ -121,7 +121,7 @@ function loadAll(): Map<string, { dataset: string; entry: TestEntry }> {
   return map;
 }
 
-// ── List ─────────────────────────────────────────────────────
+// List
 
 function listAll() {
   const all = loadAll();
@@ -147,7 +147,7 @@ function listAll() {
   console.log(`\n${DIM}Usage: pnpm test:view <name>${RESET}\n`);
 }
 
-// ── View ─────────────────────────────────────────────────────
+// View
 
 function view(name: string, dataset: string, entry: TestEntry) {
   const color = dataset === "security" ? RED : dataset === "intensive" ? YELLOW : GREEN;
@@ -192,8 +192,6 @@ function view(name: string, dataset: string, entry: TestEntry) {
 
   console.log();
 }
-
-// ── main ─────────────────────────────────────────────────────
 
 function main() {
   const name = process.argv[2];

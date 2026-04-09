@@ -1,15 +1,3 @@
-/**
- * Lambda handler for JavaScript macro execution.
- *
- * Event schema:
- * {
- *   "script": "base64-encoded JS script",
- *   "items": [{"id": "item-1", "data": {...}}, ...],
- *   "timeout": 10,
- *   "protocol_id": "proto-123"
- * }
- */
-
 const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -23,11 +11,7 @@ const DEFAULT_TIMEOUT = 10;
 
 const WRAPPER_PATH = "/var/task/wrappers/wrapper.js";
 
-/**
- * Clean up stale macro temp dirs from previous invocations.
- * On warm starts, /tmp persists. If a prior invocation crashed
- * (OOM, SIGKILL) before finally could run, stale files remain.
- */
+// Warm-start cleanup: remove leftover temp dirs from crashed invocations.
 function cleanupStaleTmp() {
   try {
     const tmpBase = os.tmpdir();
@@ -37,7 +21,7 @@ function cleanupStaleTmp() {
       }
     }
   } catch {
-    // Best-effort cleanup — don't fail the invocation
+    // best-effort
   }
 }
 
@@ -45,16 +29,13 @@ exports.handler = async (event) => {
   let tmpdir;
 
   try {
-    // Clean up stale temp dirs from any prior crashed invocation
     cleanupStaleTmp();
     // Validate script
     if (!event.script) {
       return { status: "error", results: [], errors: ["Missing 'script' field"] };
     }
 
-    // Validate base64 encoding — Node's Buffer.from silently ignores
-    // invalid characters, so detect corruption via round-trip check.
-    // (Python and R throw on invalid base64; Node does not.)
+    // Node's Buffer.from silently ignores invalid base64 chars; round-trip check catches corruption.
     const scriptBytes = Buffer.from(event.script, "base64");
     if (scriptBytes.toString("base64") !== event.script) {
       return { status: "error", results: [], errors: ["Invalid base64 in 'script'"] };
@@ -87,8 +68,7 @@ exports.handler = async (event) => {
     fs.writeFileSync(scriptPath, scriptContent, { mode: 0o600 });
     fs.writeFileSync(inputPath, JSON.stringify(items), { mode: 0o600 });
 
-    // Execute wrapper as subprocess
-    // Minimal environment — no AWS credentials, no Lambda internals
+    // Run wrapper in a subprocess with a stripped environment.
     const result = await new Promise((resolve) => {
       execFile(
         "node",
@@ -104,7 +84,6 @@ exports.handler = async (event) => {
         },
         (error, stdout, stderr) => {
           if (error && error.killed) {
-            // Distinguish maxBuffer exceeded (output too large) from timeout kill
             const isMaxBuffer = error.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER";
             resolve({
               status: "error",

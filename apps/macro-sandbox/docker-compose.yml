@@ -1,21 +1,5 @@
-# ============================================================
-# Local Development — Lambda Runtime Interface Emulator
-# ============================================================
-# Runs all three macro-sandbox Lambda functions locally.
-# Each exposes the Lambda invoke endpoint on a different port.
-#
-# Usage:
-#   docker compose up --build        # start all three
-#   docker compose up --build python  # start python only
-#
-# Invoke:
-#   curl -XPOST http://localhost:9001/2015-03-31/functions/function/invocations \
-#     -d @test/event.json
-#
-# The AWS Lambda base images (Python, Node.js) include the RIE.
-# The R image uses a custom entry.sh that starts the RIE when
-# AWS_LAMBDA_RUNTIME_API is not set (i.e. running locally).
-# ============================================================
+# Local dev: runs all three Lambda containers via RIE.
+# Ports: python=9001, javascript=9002, r=9003
 
 services:
   python:

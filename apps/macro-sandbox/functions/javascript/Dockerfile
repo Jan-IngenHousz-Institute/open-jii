@@ -1,9 +1,4 @@
-# ============================================================
-# Lambda Function: JavaScript Macro Sandbox
-# ============================================================
-# Build context: apps/macro-sandbox/
-#   docker build -f functions/javascript/Dockerfile -t macro-sandbox-js .
-# ============================================================
+# JavaScript macro sandbox Lambda
 
 FROM public.ecr.aws/lambda/nodejs:24
 

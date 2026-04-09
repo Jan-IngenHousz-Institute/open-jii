@@ -14,7 +14,7 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GENERATE_DIR = join(__dirname, "..", "data", "generate");
 
-// ── ANSI helpers ─────────────────────────────────────────────
+// ANSI helpers
 
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
@@ -28,7 +28,7 @@ function header(label: string) {
   console.log(`\n${CYAN}${BOLD}── ${label} ${"─".repeat(Math.max(0, 60 - label.length))}${RESET}`);
 }
 
-// ── readline helpers ─────────────────────────────────────────
+// readline helpers
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 
@@ -69,36 +69,34 @@ async function askNumber(prompt: string, fallback: number): Promise<number> {
   return n;
 }
 
-// ── macro templates ──────────────────────────────────────────
+// macro templates
 
 const TEMPLATES: Record<string, string> = {
   python: `\
 # Available globals:
-#   json    — item data (dict)
-#   output  — result dict (write your outputs here)
-#   np      — numpy
-#   pd      — pandas
-#   scipy   — scipy
+#   json    - item data (dict)
+#   output  - result dict (write your outputs here)
+#   np      - numpy
+#   pd      - pandas
+#   scipy   - scipy
 
 output['result'] = json.get('value', 0)
 `,
   javascript: `\
 // Available globals:
-//   json    — item data (object)
-//   output  — result object (write your outputs here)
+//   json    - item data (object)
+//   output  - result object (write your outputs here)
 
 output.result = json.value || 0;
 `,
   r: `\
 # Available globals:
-#   json    — item data (list)
-#   output  — result list (write your outputs here)
+#   json    - item data (list)
+#   output  - result list (write your outputs here)
 
 output$result <- json$value
 `,
 };
-
-// ── main ─────────────────────────────────────────────────────
 
 async function main() {
   header("New macro-sandbox test case");
@@ -145,7 +143,7 @@ async function main() {
 
   rl.close();
 
-  // ── create files ─────────────────────────────────────────
+  // Create files
 
   const dir = join(GENERATE_DIR, name);
   mkdirSync(dir, { recursive: true });

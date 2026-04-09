@@ -4,10 +4,10 @@
  * the persistent JSON files (samples.json, intensive.json, security.json).
  *
  * Each generate/<dir>/ must contain:
- *   - macro.{py,js,R}      — the script to execute
- *   - input.json            — array of { id, data } items
- *   - expectations.json     — { dataset, success, error, timeout?, name?, protocol_id? }
- *   - output.json           — (optional) expected per-item output
+ *   - macro.{py,js,R}      - the script to execute
+ *   - input.json            - array of { id, data } items
+ *   - expectations.json     - { dataset, success, error, timeout?, name?, protocol_id? }
+ *   - output.json           - (optional) expected per-item output
  *
  * Matching is by (name + language). Existing entries are replaced in-place;
  * new entries are appended. If generate/ is empty the JSONs are untouched.
@@ -21,14 +21,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { basename, dirname, extname, join } from "path";
 import { fileURLToPath } from "url";
 
-// ── Paths ────────────────────────────────────────────────────
+// Paths
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, "..", "data");
 const GENERATE_DIR = join(DATA_DIR, "generate");
 
 mkdirSync(DATA_DIR, { recursive: true });
 
-// ── ANSI helpers ─────────────────────────────────────────────
+// ANSI helpers
 
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
@@ -43,7 +43,7 @@ function header(label: string) {
   console.log(`\n${CYAN}${BOLD}── ${label} ${"─".repeat(Math.max(0, 60 - label.length))}${RESET}`);
 }
 
-// ── Types ────────────────────────────────────────────────────
+// Types
 
 type Dataset = "samples" | "intensive" | "security";
 
@@ -70,7 +70,7 @@ interface TestCase {
   };
 }
 
-// ── Helpers ──────────────────────────────────────────────────
+// Helpers
 
 const LANG_MAP: Record<string, string> = {
   ".py": "python",
@@ -94,7 +94,7 @@ function tcKey(tc: TestCase): string {
   return `${tc.name}\0${tc.language}`;
 }
 
-// ── Build entry from generate/ directory ─────────────────────
+// Build entry from generate/ directory
 
 function processGenerateDir(dirPath: string): { dataset: Dataset; entry: TestCase } | null {
   const dirName = basename(dirPath);
@@ -108,21 +108,21 @@ function processGenerateDir(dirPath: string): { dataset: Dataset; entry: TestCas
     return null;
   })();
   if (!macro) {
-    console.warn(`  ${YELLOW}⚠${RESET} ${dirName}: no macro.{py,js,R} — ${DIM}skipping${RESET}`);
+    console.warn(`  ${YELLOW}⚠${RESET} ${dirName}: no macro.{py,js,R} - ${DIM}skipping${RESET}`);
     return null;
   }
 
   const expectations = readJSON<Expectations>(join(dirPath, "expectations.json"));
   if (!expectations?.dataset) {
     console.warn(
-      `  ${YELLOW}⚠${RESET} ${dirName}: missing expectations.json or dataset — ${DIM}skipping${RESET}`,
+      `  ${YELLOW}⚠${RESET} ${dirName}: missing expectations.json or dataset - ${DIM}skipping${RESET}`,
     );
     return null;
   }
 
   const items = readJSON<TestCase["items"]>(join(dirPath, "input.json"));
   if (!items) {
-    console.warn(`  ${YELLOW}⚠${RESET} ${dirName}: no input.json — ${DIM}skipping${RESET}`);
+    console.warn(`  ${YELLOW}⚠${RESET} ${dirName}: no input.json - ${DIM}skipping${RESET}`);
     return null;
   }
 
@@ -156,7 +156,7 @@ function processGenerateDir(dirPath: string): { dataset: Dataset; entry: TestCas
   return { dataset: expectations.dataset, entry };
 }
 
-// ── Main ─────────────────────────────────────────────────────
+// Main
 
 function main() {
   header("Merging generate/ into test data");
@@ -176,7 +176,7 @@ function main() {
 
   // 2. Process generate/ directories
   if (!existsSync(GENERATE_DIR)) {
-    console.log(`\n  ${DIM}No generate/ directory — nothing to merge.${RESET}\n`);
+    console.log(`\n  ${DIM}No generate/ directory - nothing to merge.${RESET}\n`);
     return;
   }
 
@@ -188,7 +188,7 @@ function main() {
     .sort();
 
   if (dirs.length === 0) {
-    console.log(`\n  ${DIM}generate/ is empty — nothing to merge.${RESET}\n`);
+    console.log(`\n  ${DIM}generate/ is empty - nothing to merge.${RESET}\n`);
     return;
   }
 
