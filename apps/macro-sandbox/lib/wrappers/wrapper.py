@@ -309,6 +309,8 @@ for item in batch_items:
             "success": True,
             "output": scope.get("output", {})
         })
+    except MemoryError:
+        raise
     except Exception as e:
         signal.alarm(0)
 
