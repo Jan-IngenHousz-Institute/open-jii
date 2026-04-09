@@ -326,12 +326,12 @@ function MathLOG(value) {
  */
 
 function MathMAX(values) {
-  var max = false;
+  var max = null;
   if (values && Array.isArray(values)) {
     for (var i = 0; i < values.length; i++) {
       if (!Number(values[i]) && values[i] !== null && values[i] != 0)
         return parseFloat(Number(values[i]));
-      if (!max) max = Number(values[i]);
+      if (max === null) max = Number(values[i]);
       else if (Number(values[i]) > max) max = Number(values[i]);
     }
   }
@@ -419,12 +419,12 @@ function MathMEDIAN(values) {
  */
 
 function MathMIN(values) {
-  var min = false;
+  var min = null;
   if (values && Array.isArray(values)) {
     for (var i = 0; i < values.length; i++) {
       if (!Number(values[i]) && values[i] !== null && values[i] != 0)
         return parseFloat(Number(values[i]));
-      if (!min) min = Number(values[i]);
+      if (min === null) min = Number(values[i]);
       else if (Number(values[i]) < min) min = Number(values[i]);
     }
   }

@@ -113,7 +113,19 @@ try {
   process.exit(0);
 }
 
-const script = new vm.Script(wrappedCode);
+let script;
+try {
+  script = new vm.Script(wrappedCode);
+} catch (e) {
+  console.log(
+    JSON.stringify({
+      status: "error",
+      results: [],
+      errors: [`Script compilation failed: ${e.message}`],
+    }),
+  );
+  process.exit(0);
+}
 
 let results = [];
 

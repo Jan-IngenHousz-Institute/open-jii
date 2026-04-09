@@ -118,7 +118,7 @@ ArrayZip <- function(x, y) {
 #' @return List with regression statistics
 MathLINREG <- function(x, y) {
   if (!is.vector(x) || !is.vector(y) || length(x) != length(y) || length(x) < 2) {
-    return(list(slope = NA, intercept = NA, r_squared = NA))
+    return(FALSE)
   }
   
   # Remove NA values
@@ -127,16 +127,26 @@ MathLINREG <- function(x, y) {
   y <- y[complete_cases]
   
   if (length(x) < 2) {
-    return(list(slope = NA, intercept = NA, r_squared = NA))
+    return(FALSE)
   }
   
-  # Perform linear regression
-  model <- lm(y ~ x)
+  xn <- length(x)
+  xSum <- sum(x)
+  ySum <- sum(y)
+  xxSum <- sum(x * x)
+  xySum <- sum(x * y)
+  yySum <- sum(y * y)
+  
+  m <- (xn * xySum - xSum * ySum) / (xn * xxSum - xSum * xSum)
+  b <- (ySum - m * xSum) / xn
+  r <- (xySum - (1 / xn) * xSum * ySum) /
+    sqrt((xxSum - (1 / xn) * xSum^2) * (yySum - (1 / xn) * ySum^2))
   
   return(list(
-    slope = as.numeric(coef(model)[2]),
-    intercept = as.numeric(coef(model)[1]),
-    r_squared = summary(model)$r.squared
+    m = m,
+    b = b,
+    r = r,
+    r2 = r * r
   ))
 }
 
@@ -572,22 +582,40 @@ MathMULTREG <- function(input_raw) {
 #' @return List with regression results
 MathPOLYREG <- function(input_raw, degree) {
   if (!is.matrix(input_raw) && !is.data.frame(input_raw)) {
-    return(list(coefficients = numeric(0), r_squared = NA))
+    return(NULL)
   }
   
   if (ncol(input_raw) < 2 || nrow(input_raw) < degree + 1) {
-    return(list(coefficients = numeric(0), r_squared = NA))
+    return(NULL)
   }
   
-  x <- input_raw[, 1]
-  y <- input_raw[, 2]
+  # Build transformed matrix like JS: [x^1, x^2, ..., x^degree, y]
+  transformed <- matrix(0, nrow = nrow(input_raw), ncol = degree + 1)
+  for (j in 1:degree) {
+    transformed[, j] <- input_raw[, 1]^j
+  }
+  transformed[, degree + 1] <- input_raw[, 2]
   
-  # Perform polynomial regression
-  model <- lm(y ~ poly(x, degree, raw = TRUE))
+  polyReg <- MathMULTREG(transformed)
+  slopes <- polyReg$slopes
+  
+  # Calculate fitted points and error
+  points <- list()
+  yError <- 0
+  for (i in 1:nrow(input_raw)) {
+    yHat <- 0
+    for (j in 0:degree) {
+      yHat <- yHat + input_raw[i, 1]^j * slopes[j + 1]
+    }
+    points[[i]] <- c(input_raw[i, 1], yHat)
+    yError <- yError + (yHat - input_raw[i, 2])^2
+  }
+  yError <- yError / (nrow(input_raw) - 1)
   
   return(list(
-    coefficients = as.numeric(coef(model)),
-    r_squared = summary(model)$r.squared
+    points = points,
+    slopes = slopes,
+    error = yError
   ))
 }
 
@@ -596,56 +624,90 @@ MathPOLYREG <- function(input_raw, degree) {
 #' @return List with regression results
 MathEXPINVREG <- function(input_raw) {
   if (!is.matrix(input_raw) && !is.data.frame(input_raw)) {
-    return(list(coefficients = numeric(0), r_squared = NA))
+    return(NULL)
   }
   
   if (ncol(input_raw) < 2 || nrow(input_raw) < 4) {
-    return(list(coefficients = numeric(0), r_squared = NA))
+    return(NULL)
   }
   
-  x <- input_raw[, 1]
   y <- input_raw[, 2]
   
-  # Remove NA values
-  complete_cases <- complete.cases(x, y)
-  x <- x[complete_cases]
-  y <- y[complete_cases]
-  
-  if (length(x) < 4) {
-    return(list(coefficients = numeric(0), r_squared = NA))
+  # Trapezoidal Riemann sum (matches JS algorithm)
+  riemann <- 0
+  riemannSq <- 0
+  for (i in 1:(length(y) - 1)) {
+    tmp <- (y[i] + y[i + 1]) / 2
+    riemann <- riemann + tmp
+    tmp <- (y[i]^2 + y[i + 1]^2) / 2
+    riemannSq <- riemannSq + tmp
   }
   
-  # Estimate asymptote (Y0) as the last few values
-  n <- length(y)
-  y0_est <- mean(y[max(1, n-2):n])
+  asymptote <- (riemannSq - (riemann * (y[1] + y[length(y)])) / 2) /
+    (riemann - (length(y) * (y[1] + y[length(y)])) / 2)
   
-  # Initial parameter estimates
-  a_est <- y[1] - y0_est
-  t_est <- mean(x) / 2
+  # Transform: ln(Y - asymptote)
+  input_transformed <- input_raw
+  for (i in 1:nrow(input_raw)) {
+    tmp <- input_raw[i, 2] - asymptote
+    if (tmp < 0) tmp <- -tmp
+    input_transformed[i, 2] <- log(tmp)
+  }
   
-  # Non-linear least squares fitting
-  tryCatch({
-    # Fit exponential decay model
-    model <- nls(y ~ y0 + a * exp(-x/t), 
-                 start = list(y0 = y0_est, a = a_est, t = t_est),
-                 control = nls.control(maxiter = 200))
+  constants <- c(0.5)
+  t2 <- 50
+  t2_old <- NA
+  t_val <- NA
+  A <- NA
+  linReg <- NULL
+  
+  for (iter in 1:10) {
+    if (t2 < 2) {
+      t_val <- -999999
+      A <- 0
+      break
+    }
     
-    coefficients <- coef(model)
-    fitted_values <- fitted(model)
+    t2_old <- t2
+    end_idx <- min(t2, nrow(input_transformed))
+    linReg <- MathMULTREG(input_transformed[1:end_idx, , drop = FALSE])
     
-    # Calculate R-squared
-    ss_res <- sum((y - fitted_values)^2)
-    ss_tot <- sum((y - mean(y))^2)
-    r_squared <- 1 - (ss_res / ss_tot)
+    t2 <- round((-1 / linReg$slopes[2]) * constants[1])
+    if (iter == 10) {
+      t2 <- if (t2 > t2_old) t2 else t2_old
+      end_idx <- min(t2, nrow(input_transformed))
+      linReg <- MathMULTREG(input_transformed[1:end_idx, , drop = FALSE])
+    }
     
-    return(list(
-      coefficients = as.numeric(coefficients),
-      r_squared = r_squared,
-      fitted = fitted_values
-    ))
-  }, error = function(e) {
-    return(list(coefficients = numeric(0), r_squared = NA))
-  })
+    t_val <- linReg$slopes[2]
+    A <- exp(linReg$slopes[1])
+  }
+  
+  # Calculate fitted points
+  points <- list()
+  for (i in 1:nrow(input_raw)) {
+    points[[i]] <- c(input_raw[i, 1], A * exp(input_raw[i, 1] * t_val) + asymptote)
+  }
+  
+  # Calculate error
+  yError <- 0
+  for (i in 1:nrow(input_raw)) {
+    yError <- yError + (A * exp(input_raw[i, 1] * t_val) - input_raw[i, 2] + asymptote)^2
+  }
+  yError <- yError / (nrow(input_raw) - 1)
+  
+  lifetime <- -1 / t_val
+  slope <- -1 * A * t_val
+  
+  return(list(
+    points = points,
+    results = c(A, t_val),
+    error = yError,
+    asymptote = asymptote,
+    rsquared = if (!is.null(linReg)) linReg$rsquared else NA,
+    lifetime = lifetime,
+    slope = slope
+  ))
 }
 
 #' Transform trace data
@@ -695,27 +757,34 @@ TransformTrace <- function(fn, a1, a2 = NULL) {
     
     # Smoothing functions
     "ma" = {
-      # Simple moving average (window size 3)
+      # Moving average (window 3) with end-padding to match JS
       n <- length(a1)
       if (n < 3) return(a1)
+      # Pad one element on each side
+      padded <- c(a1[1], a1, a1[n])
       result <- numeric(n)
-      result[1] <- mean(a1[1:2], na.rm = TRUE)
-      for (i in 2:(n-1)) {
-        result[i] <- mean(a1[(i-1):(i+1)], na.rm = TRUE)
+      for (i in 1:n) {
+        result[i] <- (padded[i] + padded[i + 1] + padded[i + 2]) / 3
       }
-      result[n] <- mean(a1[(n-1):n], na.rm = TRUE)
       result
     },
     "sgf" = {
-      # Simplified Savitzky-Golay filter (3-point)
+      # 7-point Savitzky-Golay filter with 3-element end-padding to match JS
       n <- length(a1)
-      if (n < 3) return(a1)
+      if (n < 7) return(a1)
+      # Pad 3 elements on each side
+      padded <- c(a1[3], a1[2], a1[1], a1, a1[n], a1[n - 1], a1[n - 2])
       result <- numeric(n)
-      result[1] <- a1[1]
-      for (i in 2:(n-1)) {
-        result[i] <- (a1[i-1] + 2*a1[i] + a1[i+1]) / 4
+      for (i in 1:n) {
+        j <- i + 3  # offset into padded array
+        result[i] <- (-2 * padded[j - 3] +
+                       3 * padded[j - 2] +
+                       6 * padded[j - 1] +
+                       7 * padded[j] +
+                       6 * padded[j + 1] +
+                       3 * padded[j + 2] +
+                      -2 * padded[j + 3]) / 21
       }
-      result[n] <- a1[n]
       result
     },
     

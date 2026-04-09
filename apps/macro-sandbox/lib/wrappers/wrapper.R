@@ -11,6 +11,17 @@ user_script_path <- args[1]
 input_data_path <- args[2]
 output_file_path <- args[3]  # Optional: write JSON here instead of stdout
 
+# Helper: emit error JSON to output file (Lambda) or stdout (local), then exit.
+emit_error_and_exit <- function(msg) {
+  json <- toJSON(list(status = "error", results = list(), errors = list(msg)), auto_unbox = TRUE)
+  if (!is.na(output_file_path) && nchar(output_file_path) > 0) {
+    writeLines(json, output_file_path)
+  } else {
+    cat(json)
+  }
+  quit(status = 0)
+}
+
 # Load Helpers
 # Get the directory of this wrapper script
 wrapper_script <- commandArgs(trailingOnly = FALSE)
@@ -25,8 +36,7 @@ if (length(file_arg) > 0) {
 helpers_path <- file.path(wrapper_dir, "../src/helpers/helpers.R")
 
 if (!file.exists(helpers_path)) {
-  cat(toJSON(list(status = "error", results = list(), errors = list(paste0("Helpers file not found at: ", helpers_path))), auto_unbox = TRUE))
-  quit(status = 0)
+  emit_error_and_exit(paste0("Helpers file not found at: ", helpers_path))
 }
 # Create an isolated parent env for sandbox scopes.
 # Macros get standard R functions (sd, lm, optim, ...) but can't
@@ -37,8 +47,7 @@ lockEnvironment(sandbox_parent)
 
 # 2. READ INPUT BATCH
 if (!file.exists(input_data_path)) {
-  cat(toJSON(list(status = "error", results = list(), errors = list("Input file not found")), auto_unbox = TRUE))
-  quit(status = 0)
+  emit_error_and_exit("Input file not found")
 }
 
 # Read JSON batch
@@ -65,6 +74,9 @@ wrapped_code <- paste0(
   "  output <- c(output, macro_result)\n",
   "}\n"
 )
+
+# Parse once before the loop
+parsed_code <- parse(text = wrapped_code)
 
 # 4. EXECUTION LOOP
 for (item in batch_items) {
@@ -172,7 +184,7 @@ for (item in batch_items) {
     setTimeLimit(cpu = 1.0, elapsed = 1.0, transient = TRUE)
     on.exit(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE))
     
-    eval(parse(text = wrapped_code), envir = run_env)
+    eval(parsed_code, envir = run_env)
     
     # Success
     # Convert output env back to a list for JSON.
