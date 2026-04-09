@@ -29,6 +29,7 @@ describe("QuestionCard", () => {
     render(<QuestionCard stepSpecification={defaultSpec} onUpdateText={mockOnUpdateText} />);
 
     const input = screen.getByPlaceholderText("questionCard.placeholder");
+    // fireEvent: controlled component without state wrapper - userEvent.type fires per-character
     fireEvent.change(input, { target: { value: "New question" } });
 
     expect(mockOnUpdateText).toHaveBeenCalledWith("New question");

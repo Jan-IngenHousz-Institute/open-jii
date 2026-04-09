@@ -393,13 +393,13 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("shows tooltip with column name preview for QUESTION nodes", () => {
-    const { container } = renderPanel({
+    renderPanel({
       nodeType: "QUESTION",
       nodeTitle: "My Question Label!",
     });
 
     // Check that the info icon SVG is present for QUESTION nodes
-    const infoIcon = container.querySelector("svg.lucide-info");
+    const infoIcon = document.querySelector("svg.lucide-info");
     expect(infoIcon).toBeTruthy();
     expect(infoIcon).toHaveClass("lucide-info");
 
@@ -408,24 +408,24 @@ describe("<ExperimentSidePanel />", () => {
   });
 
   it("shows info icon for QUESTION nodes with empty title", () => {
-    const { container } = renderPanel({
+    renderPanel({
       nodeType: "QUESTION",
       nodeTitle: "",
     });
 
-    const infoIcon = container.querySelector("svg.lucide-info");
+    const infoIcon = document.querySelector("svg.lucide-info");
     expect(infoIcon).toBeTruthy();
     expect(infoIcon).toHaveClass("lucide-info");
   });
 
   it("does not show info icon for non-QUESTION nodes", () => {
-    const { container } = renderPanel({
+    renderPanel({
       nodeType: "INSTRUCTION",
       nodeTitle: "Test",
     });
 
     // Should not have the info icon
-    const infoIcon = container.querySelector("svg.lucide-info");
+    const infoIcon = document.querySelector("svg.lucide-info");
     expect(infoIcon).toBeFalsy();
   });
 

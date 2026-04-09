@@ -1,23 +1,13 @@
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { CreateProtocolRequestBody } from "@repo/api";
+import { contract } from "@repo/api";
 import { Form } from "@repo/ui/components";
 
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
-
-// Mock tsr (macro search API)
-vi.mock("../../lib/tsr", () => ({
-  tsr: {
-    ReactQueryProvider: ({ children }: { children: React.ReactNode }) => children,
-    macros: {
-      listMacros: {
-        useQuery: () => ({ data: { body: [] }, isLoading: false, error: null }),
-      },
-    },
-  },
-}));
 
 // Mock MacroSearchWithDropdown
 vi.mock("../macro-search-with-dropdown", () => ({
@@ -77,6 +67,10 @@ const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocol
 };
 
 describe("NewProtocolDetailsCard", () => {
+  beforeEach(() => {
+    server.mount(contract.macros.listMacros, { body: [] });
+  });
+
   it("should render name input with label", () => {
     render(<TestWrapper />);
 

@@ -6,9 +6,9 @@ import { MacroOverviewCards } from "./macro-overview-cards";
 
 describe("MacroOverviewCards", () => {
   it("shows loading skeletons when loading", () => {
-    const { container } = render(<MacroOverviewCards macros={undefined} isLoading={true} />);
+    render(<MacroOverviewCards macros={undefined} isLoading={true} />);
     // Skeleton renders as animated divs
-    expect(container.querySelectorAll("[class*=animate]").length).toBeGreaterThan(0);
+    expect(document.querySelectorAll("[class*=animate]").length).toBeGreaterThan(0);
   });
 
   it("shows empty message when no macros", () => {

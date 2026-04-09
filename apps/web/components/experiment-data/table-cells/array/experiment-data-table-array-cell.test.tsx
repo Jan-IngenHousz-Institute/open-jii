@@ -202,8 +202,8 @@ describe("ArrayExpandedContent", () => {
   });
 
   it("should return empty content for empty array", () => {
-    const { container } = render(<ArrayExpandedContent data="[]" />);
-    expect(container.querySelector(".w-full")).toBeInTheDocument();
+    render(<ArrayExpandedContent data="[]" />);
+    expect(document.querySelector(".w-full")).toBeInTheDocument();
   });
 
   it("should render array content when valid data is provided", () => {
@@ -212,10 +212,10 @@ describe("ArrayExpandedContent", () => {
       { question_label: "question2", question_text: "What is your age?" },
     ]);
 
-    const { container } = render(<ArrayExpandedContent data={data} />);
+    render(<ArrayExpandedContent data={data} />);
 
     // Verify content is rendered
-    expect(container.querySelector(".w-full")).toBeInTheDocument();
+    expect(document.querySelector(".w-full")).toBeInTheDocument();
   });
 });
 

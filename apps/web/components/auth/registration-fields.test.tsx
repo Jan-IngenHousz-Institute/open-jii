@@ -1,6 +1,6 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { Form } from "@repo/ui/components";
 
@@ -48,21 +48,6 @@ function Wrapper({
 }
 
 describe("RegistrationFields", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.ResizeObserver = class {
-      observe() {
-        // Mock implementation
-      }
-      unobserve() {
-        // Mock implementation
-      }
-      disconnect() {
-        // Mock implementation
-      }
-    };
-  });
-
   it("renders first name, last name, and organization fields", () => {
     render(<Wrapper />);
 

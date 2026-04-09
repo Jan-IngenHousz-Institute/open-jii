@@ -15,8 +15,8 @@ describe("BooleanAnswerDisplay", () => {
   });
 
   it("displays the checkmark icon", () => {
-    const { container } = render(<BooleanAnswerDisplay />);
-    const svg = container.querySelector("svg");
+    render(<BooleanAnswerDisplay />);
+    const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
 

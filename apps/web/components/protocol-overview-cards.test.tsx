@@ -6,8 +6,8 @@ import { ProtocolOverviewCards } from "./protocol-overview-cards";
 
 describe("ProtocolOverviewCards", () => {
   it("shows loading skeletons when undefined", () => {
-    const { container } = render(<ProtocolOverviewCards protocols={undefined} />);
-    expect(container.querySelectorAll("[class*=animate]").length).toBeGreaterThan(0);
+    render(<ProtocolOverviewCards protocols={undefined} />);
+    expect(document.querySelectorAll("[class*=animate]").length).toBeGreaterThan(0);
   });
 
   it("shows empty message when no protocols", () => {

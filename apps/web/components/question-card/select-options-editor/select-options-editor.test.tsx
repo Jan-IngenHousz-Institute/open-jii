@@ -41,6 +41,7 @@ describe("SelectOptionsEditor", () => {
     render(<SelectOptionsEditor options={["Option 1"]} onUpdateOption={mockOnUpdateOption} />);
 
     const input = screen.getByPlaceholderText("questionCard.answerOptionPlaceholder");
+    // fireEvent: controlled component without state wrapper - userEvent.type fires per-character
     fireEvent.change(input, { target: { value: "Updated Option" } });
 
     expect(mockOnUpdateOption).toHaveBeenCalledWith(0, "Updated Option");

@@ -38,21 +38,6 @@ vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
   }),
 }));
 
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    className,
-    type,
-  }: React.ComponentProps<"button"> & { className?: string; type?: string }) => (
-    <button onClick={onClick} disabled={disabled} className={className} type={type}>
-      {children}
-    </button>
-  ),
-}));
-
 // Mock child components
 vi.mock("./iot-connection-type-selector", () => ({
   ConnectionTypeSelector: ({
@@ -140,14 +125,14 @@ describe("IotProtocolRunner", () => {
     });
 
     it("renders with horizontal layout by default", () => {
-      const { container } = render(<IotProtocolRunner {...defaultProps} />);
-      const mainDiv = container.querySelector(".md\\:flex-row");
+      render(<IotProtocolRunner {...defaultProps} />);
+      const mainDiv = document.querySelector(".md\\:flex-row");
       expect(mainDiv).toBeInTheDocument();
     });
 
     it("renders with vertical layout when specified", () => {
-      const { container } = render(<IotProtocolRunner {...defaultProps} layout="vertical" />);
-      const mainDiv = container.querySelector(".md\\:flex-row");
+      render(<IotProtocolRunner {...defaultProps} layout="vertical" />);
+      const mainDiv = document.querySelector(".md\\:flex-row");
       expect(mainDiv).not.toBeInTheDocument();
     });
 
@@ -500,22 +485,22 @@ describe("IotProtocolRunner", () => {
 
   describe("UI states", () => {
     it("applies correct layout classes for horizontal layout", () => {
-      const { container } = render(<IotProtocolRunner {...defaultProps} layout="horizontal" />);
+      render(<IotProtocolRunner {...defaultProps} layout="horizontal" />);
 
-      const layoutDiv = container.querySelector(".md\\:flex-row");
+      const layoutDiv = document.querySelector(".md\\:flex-row");
       expect(layoutDiv).toBeInTheDocument();
 
-      const columnDiv = container.querySelector(".md\\:w-80");
+      const columnDiv = document.querySelector(".md\\:w-80");
       expect(columnDiv).toBeInTheDocument();
     });
 
     it("applies correct layout classes for vertical layout", () => {
-      const { container } = render(<IotProtocolRunner {...defaultProps} layout="vertical" />);
+      render(<IotProtocolRunner {...defaultProps} layout="vertical" />);
 
-      const layoutDiv = container.querySelector(".md\\:flex-row");
+      const layoutDiv = document.querySelector(".md\\:flex-row");
       expect(layoutDiv).not.toBeInTheDocument();
 
-      const columnDiv = container.querySelector(".md\\:w-80");
+      const columnDiv = document.querySelector(".md\\:w-80");
       expect(columnDiv).not.toBeInTheDocument();
     });
   });

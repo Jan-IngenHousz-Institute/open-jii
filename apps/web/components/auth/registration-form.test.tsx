@@ -1,15 +1,13 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import type React from "react";
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
 const pushMock = vi.fn();
 
-// Mock useAuth
+// useUpdateUser — pragmatic mock (uses authClient, not ts-rest)
 const mockUpdateUserMutate = vi.fn();
 vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   useUpdateUser: () => ({
@@ -17,11 +15,7 @@ vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   }),
 }));
 
-const handleRegisterMock = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  handleRegister: (): unknown => handleRegisterMock(),
-}));
-
+// useSignInEmail / useVerifyEmail — pragmatic mock (uses authClient, not ts-rest)
 const mockSendOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
 vi.mock("~/hooks/auth", () => ({
@@ -29,6 +23,7 @@ vi.mock("~/hooks/auth", () => ({
   useVerifyEmail: () => ({ mutateAsync: mockVerifyOtpMutate }),
 }));
 
+// useCreateUserProfile — pragmatic mock (intertwined with auth flow; mock simulates onSuccess callback chain)
 const createUserProfileMock = vi.fn();
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
@@ -44,19 +39,6 @@ vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   }),
 }));
 
-// Helper
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
-
 // --- Test data ---
 const termsData = {
   title: "Terms and Conditions",
@@ -70,23 +52,7 @@ describe("RegistrationForm", () => {
     userEmail: "test@example.com",
   };
 
-  beforeAll(() => {
-    // fix ResizeObserver missing in jsdom
-    global.ResizeObserver = class {
-      observe() {
-        // no op
-      }
-      unobserve() {
-        // no op
-      }
-      disconnect() {
-        // no op
-      }
-    };
-  });
-
   beforeEach(() => {
-    vi.clearAllMocks();
     vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<
       typeof useRouter
     >);
@@ -96,7 +62,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the registration form with title and description", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
     expect(screen.getByText("registration.description")).toBeInTheDocument();

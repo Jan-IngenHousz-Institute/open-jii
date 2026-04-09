@@ -25,10 +25,8 @@ function viz(overrides: Partial<ExperimentVisualization> = {}): ExperimentVisual
 
 describe("ExperimentVisualizationsList", () => {
   it("renders loading skeleton", () => {
-    const { container } = render(
-      <ExperimentVisualizationsList visualizations={[]} experimentId={expId} isLoading />,
-    );
-    expect(container.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
+    render(<ExperimentVisualizationsList visualizations={[]} experimentId={expId} isLoading />);
+    expect(document.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
   });
 
   it("renders empty state", () => {
@@ -129,33 +127,33 @@ describe("ExperimentVisualizationsList", () => {
   });
 
   it.each([null, ""])("hides description when value is %s", (desc) => {
-    const { container } = render(
+    render(
       <ExperimentVisualizationsList
         visualizations={[viz({ description: desc as unknown as string })]}
         experimentId={expId}
       />,
     );
-    expect(container.querySelector("p.text-gray-600")).not.toBeInTheDocument();
+    expect(document.querySelector("p.text-gray-600")).not.toBeInTheDocument();
   });
 
   it("renders chevron icons for navigation", () => {
-    const { container } = render(
+    render(
       <ExperimentVisualizationsList
         visualizations={[viz({ id: "v1" }), viz({ id: "v2" })]}
         experimentId={expId}
       />,
     );
-    expect(container.querySelectorAll(".lucide-chevron-right").length).toBe(2);
+    expect(document.querySelectorAll(".lucide-chevron-right").length).toBe(2);
   });
 
   it("uses responsive grid layout", () => {
-    const { container } = render(
+    render(
       <ExperimentVisualizationsList
         visualizations={[viz({ id: "v-1" }), viz({ id: "v-2" }), viz({ id: "v-3" })]}
         experimentId={expId}
       />,
     );
-    const grid = container.querySelector(".grid");
+    const grid = document.querySelector(".grid");
     expect(grid).toHaveClass("grid-cols-1", "md:grid-cols-2", "lg:grid-cols-3");
   });
 });

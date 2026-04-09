@@ -1,9 +1,12 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Macro } from "@repo/api";
+import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";
@@ -24,34 +27,6 @@ vi.mock("@repo/analytics", () => ({
   FEATURE_FLAGS: {
     MACRO_DELETION: "macro-deletion",
   },
-}));
-
-vi.mock("posthog-js/react", () => ({
-  useFeatureFlagEnabled: vi.fn(() => false),
-}));
-
-// Mock hooks
-const mockUpdateMacro = vi.fn().mockResolvedValue({});
-vi.mock("@/hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
-  useMacroUpdate: vi.fn(() => ({
-    mutateAsync: mockUpdateMacro,
-    isPending: false,
-  })),
-}));
-
-const mockDeleteMacro = vi.fn().mockResolvedValue({});
-vi.mock("@/hooks/macro/useMacroDelete/useMacroDelete", () => ({
-  useMacroDelete: vi.fn(() => ({
-    mutateAsync: mockDeleteMacro,
-    isPending: false,
-  })),
-}));
-
-vi.mock("../../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols", () => ({
-  useMacroCompatibleProtocols: vi.fn(() => ({
-    data: { body: [{ id: "p1" }, { id: "p2" }] },
-    isLoading: false,
-  })),
 }));
 
 // Mock MacroCompatibleProtocolsCard
@@ -95,19 +70,9 @@ vi.mock("../../shared/details-sidebar-card", () => ({
   ),
 }));
 
-// Mock UI components
-vi.mock("@repo/ui/components", () => {
-  const Button = ({
-    children,
-    onClick,
-    disabled,
-    variant,
-    ...rest
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; asChild?: boolean }) => (
-    <button onClick={onClick} disabled={disabled} data-variant={variant} {...rest}>
-      {children}
-    </button>
-  );
+// Mock UI components (pragmatic: keep Dialog + Select which use Radix portals)
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
 
   const Dialog = ({
     children,
@@ -186,7 +151,10 @@ vi.mock("@repo/ui/components", () => {
         data-testid="select-native"
         value={value}
         disabled={disabled}
-        onChange={(e) => onValueChange?.(e.target.value)}
+        onChange={(e) => {
+          const result = onValueChange?.(e.target.value);
+          if (result instanceof Promise) result.catch(() => {});
+        }}
       >
         <option value="python">Python</option>
         <option value="r">R</option>
@@ -221,7 +189,7 @@ vi.mock("@repo/ui/components", () => {
   const SelectValue = () => <span data-testid="select-value" />;
 
   return {
-    Button,
+    ...actual,
     Dialog,
     DialogTrigger,
     DialogContent,
@@ -241,7 +209,7 @@ vi.mock("@repo/ui/components", () => {
 // Test Data
 // --------------------
 
-const baseMacro: Macro = {
+const baseMacro = createMacro({
   id: "abc12345-6789-0abc-def0-123456789abc",
   name: "Test Macro",
   filename: "test_macro.py",
@@ -253,12 +221,12 @@ const baseMacro: Macro = {
   createdByName: "John Doe",
   createdAt: "2024-01-15T10:00:00.000Z",
   updatedAt: "2024-06-20T14:30:00.000Z",
-};
+});
 
-const nonCreatorMacro: Macro = {
+const nonCreatorMacro = createMacro({
   ...baseMacro,
   createdBy: "other-user-456",
-};
+});
 
 // --------------------
 // Tests
@@ -267,8 +235,32 @@ const nonCreatorMacro: Macro = {
 describe("<MacroDetailsSidebar />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUpdateMacro.mockResolvedValue({});
-    mockDeleteMacro.mockResolvedValue({});
+    server.mount(contract.macros.updateMacro, { body: baseMacro });
+    server.mount(contract.macros.deleteMacro, {});
+    server.mount(contract.macros.listCompatibleProtocols, {
+      body: [
+        {
+          macroId: "abc12345-6789-0abc-def0-123456789abc",
+          protocol: {
+            id: "00000000-0000-0000-0000-000000000001",
+            name: "Protocol 1",
+            family: "multispeq",
+            createdBy: "00000000-0000-0000-0000-000000000002",
+          },
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+        {
+          macroId: "abc12345-6789-0abc-def0-123456789abc",
+          protocol: {
+            id: "00000000-0000-0000-0000-000000000003",
+            name: "Protocol 2",
+            family: "multispeq",
+            createdBy: "00000000-0000-0000-0000-000000000004",
+          },
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ],
+    });
     vi.mocked(useSession).mockReturnValue({
       data: { user: { id: "user-123" } },
     } as never);
@@ -361,66 +353,68 @@ describe("<MacroDetailsSidebar />", () => {
       expect(protocolsCard).toHaveAttribute("data-embedded", "true");
     });
 
-    it("shows compatible protocols count as text when user is not the creator", () => {
+    it("shows compatible protocols count as text when user is not the creator", async () => {
       render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
 
       expect(screen.queryByTestId("macro-compatible-protocols-card")).not.toBeInTheDocument();
       expect(screen.getByText("macroSettings.compatibleProtocols")).toBeInTheDocument();
-      expect(screen.getByText("2 protocols")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("2 protocols")).toBeInTheDocument();
+      });
     });
 
     it("shows singular 'protocol' when count is 1", async () => {
-      const { useMacroCompatibleProtocols } = await import(
-        "../../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols"
-      );
-      vi.mocked(useMacroCompatibleProtocols).mockReturnValue({
-        data: { body: [{ id: "p1" }] },
-        isLoading: false,
-      } as never);
+      server.mount(contract.macros.listCompatibleProtocols, {
+        body: [
+          {
+            macroId: "abc12345-6789-0abc-def0-123456789abc",
+            protocol: {
+              id: "00000000-0000-0000-0000-000000000001",
+              name: "Protocol 1",
+              family: "multispeq",
+              createdBy: "00000000-0000-0000-0000-000000000002",
+            },
+            addedAt: "2024-01-01T00:00:00.000Z",
+          },
+        ],
+      });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
 
-      expect(screen.getByText("1 protocol")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("1 protocol")).toBeInTheDocument();
+      });
     });
 
     it("shows 'no compatible protocols' text when count is 0 for non-creator", async () => {
-      const { useMacroCompatibleProtocols } = await import(
-        "../../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols"
-      );
-      vi.mocked(useMacroCompatibleProtocols).mockReturnValue({
-        data: { body: [] },
-        isLoading: false,
-      } as never);
+      server.mount(contract.macros.listCompatibleProtocols, { body: [] });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
 
-      expect(screen.getByText("macroSettings.noCompatibleProtocols")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("macroSettings.noCompatibleProtocols")).toBeInTheDocument();
+      });
     });
   });
 
   describe("language change", () => {
     it("calls updateMacro when language is changed", async () => {
+      const spy = server.mount(contract.macros.updateMacro, { body: baseMacro });
+
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
       const selectEl = screen.getByTestId("select-native");
       await userEvent.selectOptions(selectEl, "r");
 
-      expect(mockUpdateMacro).toHaveBeenCalledWith(
-        {
-          params: { id: "abc12345" },
-          body: { language: "r" },
-        },
-        expect.objectContaining({
-          onSuccess: expect.any(Function) as unknown,
-          onError: expect.any(Function) as unknown,
-        }),
-      );
+      await waitFor(() => {
+        expect(spy.callCount).toBe(1);
+      });
+      expect(spy.params).toEqual({ id: "abc12345" });
+      expect(spy.body).toEqual({ language: "r" });
     });
 
     it("calls toast on successful language update", async () => {
-      mockUpdateMacro.mockImplementation((_args: unknown, opts: { onSuccess?: () => void }) => {
-        opts.onSuccess?.();
-      });
+      server.mount(contract.macros.updateMacro, { body: baseMacro });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
@@ -428,17 +422,15 @@ describe("<MacroDetailsSidebar />", () => {
       await userEvent.selectOptions(selectEl, "javascript");
 
       const { toast } = await import("@repo/ui/hooks");
-      expect(toast).toHaveBeenCalledWith({
-        description: "macros.macroUpdated",
+      await waitFor(() => {
+        expect(toast).toHaveBeenCalledWith({
+          description: "macros.macroUpdated",
+        });
       });
     });
 
     it("calls toast with destructive variant on language update error", async () => {
-      mockUpdateMacro.mockImplementation(
-        (_args: unknown, opts: { onError?: (err: unknown) => void }) => {
-          opts.onError?.(new Error("update failed"));
-        },
-      );
+      server.mount(contract.macros.updateMacro, { status: 400 });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
@@ -446,10 +438,15 @@ describe("<MacroDetailsSidebar />", () => {
       await userEvent.selectOptions(selectEl, "r");
 
       const { toast } = await import("@repo/ui/hooks");
-      expect(toast).toHaveBeenCalledWith({
-        description: expect.any(String) as unknown,
-        variant: "destructive",
-      });
+      await waitFor(
+        () => {
+          expect(toast).toHaveBeenCalledWith({
+            description: expect.any(String) as unknown,
+            variant: "destructive",
+          });
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -512,40 +509,43 @@ describe("<MacroDetailsSidebar />", () => {
     it("calls deleteMacro and navigates on confirm delete", async () => {
       const { useFeatureFlagEnabled } = await import("posthog-js/react");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+      const spy = server.mount(contract.macros.deleteMacro, {});
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
-      // Find the confirm delete button (the one with destructive variant in the dialog footer)
-      const footer = screen.getByTestId("dialog-footer");
-      const confirmButton = footer.querySelector('button[data-variant="destructive"]');
-      if (!confirmButton) throw new Error("Expected confirm button");
+      // Find the confirm delete button by its text content
+      const confirmButton = screen.getByRole("button", { name: "macroSettings.delete" });
 
       await userEvent.click(confirmButton);
 
-      expect(mockDeleteMacro).toHaveBeenCalledWith({ params: { id: "abc12345" } });
-      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith(
-        "/en-US/platform/macros",
-      );
+      await waitFor(() => {
+        expect(spy.callCount).toBe(1);
+      });
+      expect(spy.params).toEqual({ id: "abc12345" });
+      await waitFor(() => {
+        expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith(
+          "/en-US/platform/macros",
+        );
+      });
     });
 
     it("shows deleting state when deletion is pending", async () => {
       const { useFeatureFlagEnabled } = await import("posthog-js/react");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-
-      const { useMacroDelete } = await import("@/hooks/macro/useMacroDelete/useMacroDelete");
-      vi.mocked(useMacroDelete).mockReturnValue({
-        mutateAsync: mockDeleteMacro,
-        isPending: true,
-      } as never);
+      server.mount(contract.macros.deleteMacro, { delay: 999_999 });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
-      expect(screen.getByText("macroSettings.deleting")).toBeInTheDocument();
+      const confirmButton = screen.getByRole("button", { name: "macroSettings.delete" });
+      await userEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("macroSettings.deleting")).toBeInTheDocument();
+      });
 
       // Confirm button should be disabled
-      const footer = screen.getByTestId("dialog-footer");
-      const confirmButton = footer.querySelector('button[data-variant="destructive"]');
-      expect(confirmButton).toBeDisabled();
+      const deletingButton = screen.getByRole("button", { name: "macroSettings.deleting" });
+      expect(deletingButton).toBeDisabled();
     });
 
     it("renders additional separator before danger zone", async () => {

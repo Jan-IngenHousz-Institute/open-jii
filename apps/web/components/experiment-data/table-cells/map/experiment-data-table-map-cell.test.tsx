@@ -124,7 +124,7 @@ describe("ExperimentDataTableMapCell", () => {
   });
 
   it("should handle null, undefined, and empty values", () => {
-    const { container } = render(
+    render(
       <ExperimentDataTableMapCell
         data={null as unknown as string}
         columnName="test"
@@ -132,7 +132,7 @@ describe("ExperimentDataTableMapCell", () => {
         isExpanded={false}
       />,
     );
-    expect(container.querySelector("span")).toBeInTheDocument();
+    expect(document.querySelector("span")).toBeInTheDocument();
   });
 
   it("should format different value types", () => {
@@ -240,7 +240,7 @@ describe("ExperimentDataTableMapCell", () => {
 
   it("should handle DOM manipulation gracefully without table structure", async () => {
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <div>
         <ExperimentDataTableMapCell
           data='{"key1": "value1", "key2": "value2"}'
@@ -254,7 +254,7 @@ describe("ExperimentDataTableMapCell", () => {
     const button = screen.getByRole("button");
     await user.click(button);
 
-    const expandedRows = container.querySelectorAll(".map-expanded-row");
+    const expandedRows = document.querySelectorAll(".map-expanded-row");
     expect(expandedRows.length).toBe(0);
   });
 });
@@ -301,7 +301,7 @@ describe("MapExpandedContent", () => {
   });
 
   it("should handle empty map", () => {
-    const { container } = render(<MapExpandedContent data="{}" />);
-    expect(container.querySelector(".w-full")).toBeInTheDocument();
+    render(<MapExpandedContent data="{}" />);
+    expect(document.querySelector(".w-full")).toBeInTheDocument();
   });
 });
