@@ -47,18 +47,11 @@ export function QuestionNode({ node }: QuestionNodeProps) {
     setAnswer(iterationCount, node.id, value);
   };
 
-  // When a question has a pre-filled value from auto-increment/remember on a
-  // repeat iteration, don't auto-advance — let the user confirm with Next.
-  const isPrefilled =
-    iterationCount > 0 && (isAutoincrementEnabled(node.id) || isRememberAnswerEnabled(node.id));
-
   // Handler for yes/no and multi_choice that auto-advances
   const handleAnswerChangeAndAdvance = (value: string) => {
     Keyboard.dismiss();
     // Set the answer
     setAnswer(iterationCount, node.id, value);
-    // Skip auto-advance when the answer was pre-filled on a repeat iteration
-    if (isPrefilled) return;
     // Use shared utility to advance with proper answer handling
     advanceWithAnswer(node, value);
   };
