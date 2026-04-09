@@ -40,6 +40,7 @@ runs:
         TEST_LOG="$(mktemp)"
         pnpm turbo run test "${TEST_ARGS[@]}" 2>&1 | tee "$TEST_LOG"
         EXIT_CODE=${PIPESTATUS[0]}
+        set -e
 
         if [ $EXIT_CODE -ne 0 ]; then
           echo ""

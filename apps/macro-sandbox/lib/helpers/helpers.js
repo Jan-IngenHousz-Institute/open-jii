@@ -100,8 +100,8 @@ function ArrayUnZip(input) {
 
   var arrays = { x: [], y: [] };
   for (var i = 0, len = input.length; i < len; i++) {
-    arrays.x.push(input[i][0] || null);
-    arrays.y.push(input[i][1] || null);
+    arrays.x.push(input[i][0] != null ? input[i][0] : null);
+    arrays.y.push(input[i][1] != null ? input[i][1] : null);
   }
   return arrays;
 }
@@ -162,7 +162,9 @@ function GetIndexByLabel(label, json, array) {
       if (a.label == label) return i;
       else return null;
     })
-    .filter(Number);
+    .filter(function (v) {
+      return v !== null;
+    });
 
   if (out.length == 0) return null;
   if (out.length == 1) return array ? out : out[0];
@@ -1335,7 +1337,7 @@ function TransformTrace(fn, a1, a2) {
       var tmp = [];
       a1.unshift(beg2, beg1, beg0);
       a1.push(end0, end1, end2);
-      for (var i = 3; i < len - 3; i++) {
+      for (var i = 3; i < len + 3; i++) {
         tmp.push(
           (-2 * a1[i - 3] +
             3 * a1[i - 2] +
@@ -1343,7 +1345,7 @@ function TransformTrace(fn, a1, a2) {
             7 * a1[i] +
             6 * a1[i + 1] +
             3 * a1[i + 2] +
-            -2 * a1[i + 2]) /
+            -2 * a1[i + 3]) /
             21,
         );
       }
@@ -1376,7 +1378,7 @@ function TransformTrace(fn, a1, a2) {
       if (fn == "subtract" || fn == "-") {
         trace.push(a1[i] - a2[i]);
       }
-      if (fn == "multiply" || fn == "-") {
+      if (fn == "multiply" || fn == "*") {
         trace.push(a1[i] * a2[i]);
       }
       if (fn == "divide" || fn == "/") {
@@ -1577,7 +1579,7 @@ function MathPOLYREG(input_raw, degree) {
     var yHat = 0;
     temp.push(input_raw[i][0]);
     for (var j = 0; j < degree + 1; j++) {
-      yHat += Math.pow(input_raw[i][0], degree) * slopes[j];
+      yHat += Math.pow(input_raw[i][0], j) * slopes[j];
     }
     temp.push(yHat);
     points.push(temp);
@@ -1611,8 +1613,10 @@ function calcSunAngle(roll, pitch, compass, azimuth, altitude) {
   var deviceVector = [cos(roll) * sin(pitch), -1 * sin(roll), cos(roll) * cos(pitch)];
 
   //rotate by compass
-  deviceVector[0] = cos(compass) * deviceVector[0] - sin(compass) * deviceVector[1];
-  deviceVector[1] = sin(compass) * deviceVector[0] - cos(compass) * deviceVector[1];
+  var dvx = deviceVector[0];
+  var dvy = deviceVector[1];
+  deviceVector[0] = cos(compass) * dvx - sin(compass) * dvy;
+  deviceVector[1] = sin(compass) * dvx + cos(compass) * dvy;
 
   var solarVector = [cos(azimuth) * cos(altitude), sin(azimuth), -1 * cos(azimuth) * sin(altitude)];
 

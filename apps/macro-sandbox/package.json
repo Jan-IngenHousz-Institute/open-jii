@@ -19,7 +19,7 @@
     "env:test": "dotenv -e .env -e .env.test --",
     "test:up": "pnpm env:test docker compose up --build -d --wait",
     "test:down": "pnpm env:test docker compose down",
-    "test": "pnpm --silent env:test sh -c 'if [ -z \"$MACRO_SB_TEST_KEY\" ]; then echo \"Skipping macro-sandbox tests (MACRO_SB_TEST_KEY not set)\"; else pnpm test:up && pnpm test:run && pnpm test:down; fi'",
+    "test": "pnpm --silent env:test sh -c 'if [ -z \"$MACRO_SB_TEST_KEY\" ]; then echo \"Skipping macro-sandbox tests (MACRO_SB_TEST_KEY not set)\"; else trap \"pnpm test:down\" EXIT; pnpm test:up && pnpm test:run; fi'",
     "test:run": "pnpm env:test vitest run",
     "test:generate": "pnpm env:test tsx test/scripts/generate.ts",
     "test:init": "pnpm env:test tsx test/scripts/init.ts",

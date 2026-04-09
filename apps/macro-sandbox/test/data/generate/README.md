@@ -4,7 +4,7 @@ Add test cases by creating a directory here. Each directory becomes one test cas
 
 ## Directory structure
 
-```
+```text
 generate/
   my_test_name/
     macro.py          # or macro.js / macro.R

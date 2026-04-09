@@ -168,7 +168,7 @@ jobs:
       always() &&
       needs.detect-changes.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
-      (inputs.deploy_all || contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'macro-sandbox'))
+      (inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'macro-sandbox')))
     permissions:
       id-token: write
       contents: read

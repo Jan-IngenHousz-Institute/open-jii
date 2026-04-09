@@ -6,27 +6,27 @@ openJII is a monorepo built with [Turborepo](https://turbo.build/) and [pnpm](ht
 
 ## Applications
 
-| App | Technology | Purpose |
-| --- | ---------- | ------- |
-| `apps/web` | Next.js (React) | Web platform — experiment management, data visualization, protocol/macro editing |
-| `apps/mobile` | React Native (Expo) | Mobile app — sensor connection, measurement collection, offline support |
-| `apps/backend` | NestJS | REST API — business logic, authentication, data access |
-| `apps/data` | Python / PySpark | Databricks pipelines — data ingestion, transformation, export jobs |
-| `apps/macro-sandbox` | AWS Lambda, Docker, Node.js | Sandboxed Lambda-based execution environment for user-authored macros in Python, JavaScript, and R |
-| `apps/docs` | Docusaurus | Documentation site |
-| `apps/cms` | Contentful integration | Content management for landing pages |
+| App                  | Technology                      | Purpose                                                                                            |
+| -------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `apps/web`           | Next.js (React)                 | Web platform — experiment management, data visualization, protocol/macro editing                   |
+| `apps/mobile`        | React Native (Expo)             | Mobile app — sensor connection, measurement collection, offline support                            |
+| `apps/backend`       | NestJS                          | REST API — business logic, authentication, data access                                             |
+| `apps/data`          | Python / PySpark                | Databricks pipelines — data ingestion, transformation, export jobs                                 |
+| `apps/macro-sandbox` | AWS Lambda, Docker, Python/JS/R | Sandboxed Lambda-based execution environment for user-authored macros in Python, JavaScript, and R |
+| `apps/docs`          | Docusaurus                      | Documentation site                                                                                 |
+| `apps/cms`           | Contentful integration          | Content management for landing pages                                                               |
 
 ## Shared Packages
 
-| Package | Purpose |
-| ------- | ------- |
-| `packages/api` | Shared Zod schemas, API types, and column type utilities |
-| `packages/auth` | Better Auth configuration — email OTP, OAuth (GitHub, ORCID), session management |
-| `packages/db` | Drizzle ORM schema, migrations, and database client |
-| `packages/iot` | Platform-agnostic device communication — transport adapters (Bluetooth, BLE, USB, Web Serial) and device drivers (MultispeQ, generic JSON devices) |
-| `packages/transactional` | Email templates (React Email) — OTP codes, invitations, project transfer notifications |
-| `packages/ui` | Shared React UI components |
-| `packages/tsconfig` | Shared TypeScript configurations |
+| Package                  | Purpose                                                                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/api`           | Shared Zod schemas, API types, and column type utilities                                                                                           |
+| `packages/auth`          | Better Auth configuration — email OTP, OAuth (GitHub, ORCID), session management                                                                   |
+| `packages/db`            | Drizzle ORM schema, migrations, and database client                                                                                                |
+| `packages/iot`           | Platform-agnostic device communication — transport adapters (Bluetooth, BLE, USB, Web Serial) and device drivers (MultispeQ, generic JSON devices) |
+| `packages/transactional` | Email templates (React Email) — OTP codes, invitations, project transfer notifications                                                             |
+| `packages/ui`            | Shared React UI components                                                                                                                         |
+| `packages/tsconfig`      | Shared TypeScript configurations                                                                                                                   |
 
 ## Infrastructure
 
@@ -38,7 +38,7 @@ openJII is a monorepo built with [Turborepo](https://turbo.build/) and [pnpm](ht
 - **IoT Core + Kinesis**: Real-time sensor data ingestion via MQTT
 - **S3**: Object storage for data lake, exports, and static assets
 - **CloudFront + ALB**: CDN and load balancing
-- **Lambda**: Server functions, automated code revert on failure, and sandboxed execution of user-authored macros (`apps/macro-sandbox`) in Python, JavaScript, and R. Each language runtime runs in its own Lambda container with pre-loaded scientific libraries (numpy, pandas, scipy). Supports timeout enforcement (1s per-item, 10-60s handler-level) and enforces limits: 1MB script size, 10MB output, 1000 items/request
+- **Lambda**: Server functions, automated code revert on failure, and sandboxed execution of user-authored macros (`apps/macro-sandbox`) in Python, JavaScript, and R. Each language runtime runs in its own Lambda container with pre-loaded helper libraries (Python also includes numpy, pandas, scipy). Supports timeout enforcement (1s per-item, 10-60s handler-level) and enforces limits: 1MB script size, 10MB output, 1000 items/request
 
 ### Data Platform (Databricks)
 

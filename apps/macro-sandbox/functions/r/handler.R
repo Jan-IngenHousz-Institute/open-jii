@@ -55,12 +55,16 @@ script_content <- rawToChar(script_bytes)
 # Validate items
 items <- event$items
 if (is.null(items)) items <- list()
+if (!is.null(names(items))) {
+  cat(toJSON(list(status = "error", results = list(), errors = list("'items' must be an array, not an object")), auto_unbox = TRUE))
+  quit(status = 0)
+}
 if (length(items) > MAX_ITEM_COUNT) {
   cat(toJSON(list(status = "error", results = list(), errors = list(paste0("Exceeds ", MAX_ITEM_COUNT, " item limit"))), auto_unbox = TRUE))
   quit(status = 0)
 }
 
-timeout <- min(as.numeric(ifelse(is.null(event$timeout), DEFAULT_TIMEOUT, event$timeout)), MAX_TIMEOUT)
+timeout <- max(DEFAULT_TIMEOUT, min(as.numeric(ifelse(is.null(event$timeout), DEFAULT_TIMEOUT, event$timeout)), MAX_TIMEOUT))
 
 # Warm-start cleanup: remove leftover temp dirs from crashed invocations.
 for (d in Sys.glob("/tmp/macro_*")) {

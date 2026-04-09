@@ -58,7 +58,10 @@ exports.handler = async (event) => {
       };
     }
 
-    const timeout = Math.min(parseInt(event.timeout) || DEFAULT_TIMEOUT, MAX_TIMEOUT);
+    const timeout = Math.max(
+      DEFAULT_TIMEOUT,
+      Math.min(parseInt(event.timeout) || DEFAULT_TIMEOUT, MAX_TIMEOUT),
+    );
 
     // Write temp files
     tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), "macro_"));

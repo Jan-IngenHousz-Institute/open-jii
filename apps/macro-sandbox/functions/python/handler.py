@@ -43,13 +43,11 @@ def _execute(event):
 
     try:
         script_bytes = base64.b64decode(event["script"])
+        if len(script_bytes) > MAX_SCRIPT_SIZE:
+            return {"status": "error", "results": [], "errors": ["Script exceeds 1MB limit"]}
+        script_content = script_bytes.decode("utf-8")
     except Exception:
-        return {"status": "error", "results": [], "errors": ["Invalid base64 in 'script'"]}
-
-    if len(script_bytes) > MAX_SCRIPT_SIZE:
-        return {"status": "error", "results": [], "errors": ["Script exceeds 1MB limit"]}
-
-    script_content = script_bytes.decode("utf-8")
+        return {"status": "error", "results": [], "errors": ["Invalid base64 or encoding in 'script'"]}
 
     # Validate items
     items = event.get("items", [])
@@ -62,7 +60,7 @@ def _execute(event):
             "errors": [f"Exceeds {MAX_ITEM_COUNT} item limit"],
         }
 
-    timeout = min(int(event.get("timeout", DEFAULT_TIMEOUT)), MAX_TIMEOUT)
+    timeout = max(DEFAULT_TIMEOUT, min(int(event.get("timeout", DEFAULT_TIMEOUT)), MAX_TIMEOUT))
 
     # Write to temp files
     tmpdir = tempfile.mkdtemp(prefix="macro_", dir="/tmp")

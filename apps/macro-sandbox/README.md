@@ -24,7 +24,7 @@ flowchart TD
 Each invocation:
 
 1. **Handler** validates the event, base64-decodes the user script, writes it and the input items to temp files.
-2. **Wrapper** is spawned as a subprocess with a minimal environment (no AWS credentials). It loads helpers, compiles the user script once, then iterates over each item — injecting `json` (item data) and `output` (result dict) into the script's scope.
+2. **Wrapper** is spawned as a subprocess with a minimal environment (no AWS credentials). It loads helpers, compiles the user script once, then iterates over each item - injecting `json` (item data) and `output` (result dict) into the script's scope.
 3. **Helpers** provide domain-specific functions (`MathMEAN`, `MathROUND`, `ArrayNth`, `TransformTrace`, etc.) mirroring the MultispeQ ecosystem.
 
 ### Limits
@@ -69,15 +69,15 @@ The per-item timeout prevents a single bad item from consuming the entire handle
   "status": "success", // or "error"
   "results": [
     { "id": "sample-1", "success": true, "output": { "chlorophyll": 45.37 } },
-    { "id": "sample-2", "success": true, "output": { "chlorophyll": 38.47 } },
+    { "id": "sample-2", "success": false, "error": "Item timed out after 1s" },
   ],
-  "errors": [], // populated on failure
+  "errors": [], // populated on handler-level failure
 }
 ```
 
 ## Project Structure
 
-```
+```text
 apps/macro-sandbox/
 ├── functions/                  # Lambda entry points (one per language)
 │   ├── javascript/
@@ -199,7 +199,7 @@ pnpm test:down    # stop & remove containers
 
 Create a directory under `test/data/generate/` with:
 
-```
+```text
 test/data/generate/my_test/
   macro.py              # or .js / .R
   input.json            # array of { id, data } items
