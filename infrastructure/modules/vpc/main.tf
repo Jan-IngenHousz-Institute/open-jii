@@ -226,7 +226,7 @@ resource "aws_security_group" "macro_sandbox_vpc_endpoints" {
   count = var.create_macro_sandbox_resources ? 1 : 0
 
   name        = "${var.environment}-macro-sandbox-vpc-endpoints-sg"
-  description = "SG for ECR and Logs VPC endpoints in isolated subnets"
+  description = "SG for VPC endpoints in isolated subnets - only accepts traffic from macro-sandbox Lambda"
   vpc_id      = aws_vpc.this.id
 
   tags = merge(var.tags, {
