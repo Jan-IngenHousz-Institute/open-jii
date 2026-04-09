@@ -87,7 +87,7 @@ describe("intensive", () => {
             expect(result.success).toBe(true);
             expect(result.output).toBeDefined();
 
-              if (base.expect.output?.[0]) {
+            if (base.expect.output?.[0]) {
               expect(result.output).toEqual(base.expect.output[0]);
             }
           }
