@@ -104,12 +104,6 @@ function renderLayout({
 describe("ProtocolLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useParams).mockReturnValue({ id: "test-id", locale: "en" });
-    vi.mocked(usePathname).mockReturnValue("/en/platform/protocols/test-id");
-    vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: "user-123" } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
     mockBrowserSupport.bluetooth = true;
     mockBrowserSupport.serial = true;
     mockBrowserSupport.any = true;
@@ -145,14 +139,18 @@ describe("ProtocolLayout", () => {
       server.mount(contract.protocols.getProtocol, { status: 404 });
       renderLayout();
 
-      expect(notFound).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
+      });
     });
 
     it("should call notFound for 400 errors (invalid UUID)", async () => {
       server.mount(contract.protocols.getProtocol, { status: 400 });
       renderLayout();
 
-      expect(notFound).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
+      });
     });
 
     it("should display error display for 500 errors", async () => {

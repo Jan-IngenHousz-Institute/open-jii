@@ -53,21 +53,6 @@ describe("RegistrationForm", () => {
     userEmail: "test@example.com",
   };
 
-  beforeAll(() => {
-    // fix ResizeObserver missing in jsdom
-    global.ResizeObserver = class {
-      observe() {
-        // no op
-      }
-      unobserve() {
-        // no op
-      }
-      disconnect() {
-        // no op
-      }
-    };
-  });
-
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<
       typeof useRouter
@@ -78,7 +63,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the registration form with title and description", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
     expect(screen.getByText("registration.description")).toBeInTheDocument();
