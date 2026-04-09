@@ -72,7 +72,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders all input fields", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByLabelText("registration.firstName")).toBeInTheDocument();
     expect(screen.getByLabelText("registration.lastName")).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button with correct styling", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const button = screen.getByRole("button", { name: "registration.register" });
     expect(button).toBeInTheDocument();
@@ -186,13 +186,13 @@ describe("RegistrationForm", () => {
 
   it("renders with different locale", () => {
     const props = { ...defaultProps, locale: "de-DE" };
-    render(<RegistrationForm {...props} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...props} />);
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
   });
 
   it("renders inputs empty and checkbox unchecked by default", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByLabelText("registration.firstName")).toHaveValue("");
     expect(screen.getByLabelText("registration.lastName")).toHaveValue("");
@@ -201,14 +201,14 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button enabled by default", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const submit = screen.getByRole("button", { name: "registration.register" });
     expect(submit).not.toBeDisabled();
   });
 
   it("renders terms link with correct structure", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const termsTrigger = screen.getByText("auth.terms");
     const closestAnchorOrButton = termsTrigger.closest("a,button");
@@ -220,9 +220,7 @@ describe("RegistrationForm", () => {
   it("renders custom terms data when provided", async () => {
     const user = userEvent.setup();
     const customTermsData = { title: "Custom Terms", content: "Custom content" };
-    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />, {
-      wrapper: createWrapper(),
-    });
+    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />);
 
     await user.click(screen.getByText("auth.terms")); // open dialog
 
