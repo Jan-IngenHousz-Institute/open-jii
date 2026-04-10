@@ -319,9 +319,7 @@ describe("measurements-storage", () => {
 
     it("does not remove failed rows even if old", async () => {
       const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-      // createdAt is intentionally recent to conflict with the old timestamp,
-      // ensuring the pruning logic uses timestamp (not createdAt) to judge age.
-      insertRow("old-failed", "failed", { timestamp: eightDaysAgo, createdAt: Date.now() });
+      insertRow("old-failed", "failed", { timestamp: eightDaysAgo, createdAt: Date.now() - 8 * 24 * 60 * 60 * 1000 });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
@@ -333,12 +331,9 @@ describe("measurements-storage", () => {
     it("keeps successful rows within 7 days", async () => {
       const sixDaysAgoMs = Date.now() - 6 * 24 * 60 * 60 * 1000;
       const sixDaysAgo = new Date(sixDaysAgoMs).toISOString();
-      const eightDaysAgoMs = Date.now() - 8 * 24 * 60 * 60 * 1000;
-      // createdAt is intentionally older than 7 days to conflict with the recent
-      // timestamp, ensuring the pruning logic uses timestamp (not createdAt).
       insertRow("within-window", "successful", {
         timestamp: sixDaysAgo,
-        createdAt: eightDaysAgoMs,
+        createdAt: sixDaysAgoMs,
       });
 
       const mod = await import("../measurements-storage");
