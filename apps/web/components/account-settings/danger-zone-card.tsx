@@ -5,11 +5,13 @@ import { useState } from "react";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useDeleteUser } from "~/hooks/profile/useDeleteUser/useDeleteUser";
+import { tsr } from "~/lib/tsr";
 import { parseApiError } from "~/util/apiError";
 
 import type { CreateUserProfileBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
+  Badge,
   Button,
   Card,
   CardHeader,
@@ -31,11 +33,34 @@ interface DangerZoneCardProps {
   userId: string;
 }
 
+const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  active: "default",
+  archived: "secondary",
+  stale: "outline",
+  published: "default",
+};
+
 export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
   const { t } = useTranslation("account");
   const [openModal, setOpenModal] = useState<"deactivate" | "delete" | null>(null);
   const [confirmation, setConfirmation] = useState("");
+  const [transferEmail, setTransferEmail] = useState("");
   const signOut = useSignOut();
+
+  // Fetch deletion check when dialog opens
+  const { data: deletionCheck, refetch: refetchDeletionCheck } =
+    tsr.users.getDeletionCheck.useQuery({
+      queryData: { params: { id: userId } },
+      queryKey: ["deletionCheck", userId],
+      enabled: openModal === "delete",
+    });
+
+  const blockingExperiments = deletionCheck?.body.blockingExperiments ?? [];
+  const canDelete = deletionCheck?.body.canDelete ?? false;
+
+  // Bulk transfer mutation
+  const { mutateAsync: bulkTransfer, isPending: isTransferring } =
+    tsr.users.bulkTransferAdmin.useMutation();
 
   const { mutate: updateProfile, isPending } = useCreateUserProfile({
     onSuccess: async () => {
@@ -51,6 +76,7 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
   const handleClose = () => {
     setOpenModal(null);
     setConfirmation("");
+    setTransferEmail("");
   };
 
   // Deactivate handler - only supports deactivation from the UI
@@ -88,9 +114,35 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
     }
   };
 
+  const handleTransfer = async () => {
+    try {
+      await bulkTransfer({
+        params: { id: userId },
+        body: { email: transferEmail },
+      });
+      toast({ description: t("dangerZone.delete.transferSuccess") });
+      setTransferEmail("");
+      await refetchDeletionCheck();
+    } catch (err) {
+      toast({
+        description: parseApiError(err)?.message ?? t("dangerZone.delete.transferError"),
+        variant: "destructive",
+      });
+    }
+  };
+
   const actionLabel = isPending
     ? t("dangerZone.deactivate.buttonSaving")
     : t("dangerZone.deactivate.buttonConfirm");
+
+  const statusLabel = (status: string) => {
+    const key = `dangerZone.delete.status${status.charAt(0).toUpperCase() + status.slice(1)}` as
+      | "dangerZone.delete.statusActive"
+      | "dangerZone.delete.statusArchived"
+      | "dangerZone.delete.statusStale"
+      | "dangerZone.delete.statusPublished";
+    return t(key);
+  };
 
   return (
     <Card className="border-destructive/40 mt-8 rounded-md">
@@ -163,7 +215,7 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
                 <p className="text-muted-foreground text-sm">
                   {t("dangerZone.deactivate.confirmPrompt")}{" "}
                   <span className="text-destructive font-semibold">
-                    "{t("dangerZone.deactivate.confirmWord")}"
+                    &quot;{t("dangerZone.deactivate.confirmWord")}&quot;
                   </span>{" "}
                   {t("dangerZone.deactivate.confirmSuffix")}
                 </p>
@@ -203,6 +255,7 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
               if (!v) handleClose();
               else {
                 setConfirmation("");
+                setTransferEmail("");
                 setOpenModal("delete");
               }
             }}
@@ -220,6 +273,51 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
                   {t("dangerZone.delete.dialogDescription")}
                 </DialogDescription>
               </DialogHeader>
+
+              {/* Blocking experiments section */}
+              {blockingExperiments.length > 0 && (
+                <div className="border-warning/30 bg-muted mt-3 rounded-md border p-3 text-sm">
+                  <div className="mb-2 flex items-start gap-2">
+                    <AlertTriangle className="text-warning mt-0.5 h-5 w-5 shrink-0" />
+                    <p className="font-medium">{t("dangerZone.delete.blockingTitle")}</p>
+                  </div>
+                  <ul className="mb-3 space-y-1.5 pl-7">
+                    {blockingExperiments.map((exp) => (
+                      <li key={exp.id} className="flex items-center gap-2">
+                        <span className="text-foreground">{exp.name}</span>
+                        <Badge variant={statusVariantMap[exp.status] ?? "outline"}>
+                          {statusLabel(exp.status)}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-muted-foreground pl-7">
+                    {t("dangerZone.delete.blockingDescription")}
+                  </p>
+                  <div className="mt-3 space-y-2 pl-7">
+                    <label className="text-foreground text-sm font-medium">
+                      {t("dangerZone.delete.transferLabel")}
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        placeholder={t("dangerZone.delete.transferPlaceholder")}
+                        value={transferEmail}
+                        onChange={(e) => setTransferEmail(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleTransfer}
+                        disabled={!transferEmail || isTransferring}
+                      >
+                        {isTransferring
+                          ? t("dangerZone.delete.transferring")
+                          : t("dangerZone.delete.transferButton")}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Red warning box */}
               <div className="border-destructive/30 bg-muted mt-3 rounded-md border p-3 text-sm">
@@ -249,7 +347,7 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
                 <p className="text-muted-foreground text-sm">
                   {t("dangerZone.delete.confirmPrompt")}{" "}
                   <span className="text-destructive font-semibold">
-                    "{t("dangerZone.delete.confirmWord")}"
+                    &quot;{t("dangerZone.delete.confirmWord")}&quot;
                   </span>{" "}
                   {t("dangerZone.delete.confirmSuffix")}
                 </p>
@@ -267,7 +365,9 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
                 <Button
                   variant="destructive"
                   onClick={handleDelete}
-                  disabled={confirmation !== t("dangerZone.delete.confirmWord") || isDeleting}
+                  disabled={
+                    confirmation !== t("dangerZone.delete.confirmWord") || isDeleting || !canDelete
+                  }
                 >
                   {isDeleting
                     ? t("dangerZone.delete.buttonDeleting")

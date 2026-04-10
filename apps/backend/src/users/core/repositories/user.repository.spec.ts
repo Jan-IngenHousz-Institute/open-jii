@@ -316,23 +316,23 @@ describe("UserRepository", () => {
     });
   });
 
-  describe("isOnlyAdminOfAnyExperiments", () => {
-    it("should return false when user is not an admin of any experiments", async () => {
+  describe("getExperimentsWhereOnlyAdmin", () => {
+    it("should return empty array when user is not an admin of any experiments", async () => {
       // Arrange
       const userId = await testApp.createTestUser({
         email: "nonadmin@example.com",
       });
 
       // Act
-      const result = await repository.isOnlyAdminOfAnyExperiments(userId);
+      const result = await repository.getExperimentsWhereOnlyAdmin(userId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(false);
+      expect(result.value).toEqual([]);
     });
 
-    it("should return false when user is admin but other admins exist", async () => {
+    it("should return empty array when user is admin but other admins exist", async () => {
       // Arrange
       const admin1Id = await testApp.createTestUser({
         email: "admin1@example.com",
@@ -350,15 +350,15 @@ describe("UserRepository", () => {
       await testApp.addExperimentMember(experiment.id, admin2Id, "admin");
 
       // Act
-      const result = await repository.isOnlyAdminOfAnyExperiments(admin1Id);
+      const result = await repository.getExperimentsWhereOnlyAdmin(admin1Id);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(false);
+      expect(result.value).toEqual([]);
     });
 
-    it("should return true when user is the only admin of an experiment", async () => {
+    it("should return experiment details when user is the only admin", async () => {
       // Arrange
       const soloAdminId = await testApp.createTestUser({
         email: "soloadmin@example.com",
@@ -376,15 +376,20 @@ describe("UserRepository", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Act
-      const result = await repository.isOnlyAdminOfAnyExperiments(soloAdminId);
+      const result = await repository.getExperimentsWhereOnlyAdmin(soloAdminId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(true);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0]).toMatchObject({
+        id: experiment.id,
+        name: "Solo Admin Experiment",
+        status: "active",
+      });
     });
 
-    it("should return true when user is sole admin of at least one experiment among many", async () => {
+    it("should return only the experiment where user is sole admin among many", async () => {
       // Arrange
       const userId = await testApp.createTestUser({
         email: "multiadmin@example.com",
@@ -394,7 +399,7 @@ describe("UserRepository", () => {
       });
 
       // Experiment 1: user is sole admin
-      await testApp.createExperiment({
+      const { experiment: experiment1 } = await testApp.createExperiment({
         name: "Sole Admin Experiment",
         userId: userId,
       });
@@ -407,15 +412,16 @@ describe("UserRepository", () => {
       await testApp.addExperimentMember(experiment2.id, otherAdminId, "admin");
 
       // Act
-      const result = await repository.isOnlyAdminOfAnyExperiments(userId);
+      const result = await repository.getExperimentsWhereOnlyAdmin(userId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(true);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0].id).toBe(experiment1.id);
     });
 
-    it("should return false when user is only a member, not an admin", async () => {
+    it("should return empty array when user is only a member, not an admin", async () => {
       // Arrange
       const adminId = await testApp.createTestUser({
         email: "admin@example.com",
@@ -433,12 +439,38 @@ describe("UserRepository", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Act
-      const result = await repository.isOnlyAdminOfAnyExperiments(memberId);
+      const result = await repository.getExperimentsWhereOnlyAdmin(memberId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(false);
+      expect(result.value).toEqual([]);
+    });
+
+    it("should include archived experiments where user is sole admin", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({
+        email: "archiveadmin@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Archived Solo Experiment",
+        userId: userId,
+        status: "archived",
+      });
+
+      // Act
+      const result = await repository.getExperimentsWhereOnlyAdmin(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0]).toMatchObject({
+        id: experiment.id,
+        name: "Archived Solo Experiment",
+        status: "archived",
+      });
     });
   });
 

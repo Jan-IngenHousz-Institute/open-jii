@@ -90,7 +90,19 @@
       "confirmPlaceholder": "Type 'delete' here",
       "buttonDeleting": "Deleting...",
       "buttonConfirm": "Delete Account",
-      "successMessage": "Account deleted. Your personal data has been erased."
+      "successMessage": "Account deleted. Your personal data has been erased.",
+      "blockingTitle": "You are the sole admin of these experiments:",
+      "blockingDescription": "Transfer admin rights before you can delete your account.",
+      "transferLabel": "Transfer all to:",
+      "transferPlaceholder": "colleague@example.com",
+      "transferButton": "Transfer Admin Rights",
+      "transferring": "Transferring...",
+      "transferSuccess": "Admin rights transferred successfully. You can now delete your account.",
+      "transferError": "Failed to transfer admin rights.",
+      "statusActive": "Active",
+      "statusArchived": "Archived",
+      "statusStale": "Stale",
+      "statusPublished": "Published"
     },
     "cancel": "Cancel"
   }

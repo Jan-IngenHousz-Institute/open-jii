@@ -6,9 +6,11 @@ import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { AcceptPendingInvitationsUseCase } from "./application/use-cases/accept-pending-invitations/accept-pending-invitations";
+import { BulkTransferAdminUseCase } from "./application/use-cases/bulk-transfer-admin/bulk-transfer-admin";
 import { CreateInvitationUseCase } from "./application/use-cases/create-invitation/create-invitation";
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
 import { DeleteUserUseCase } from "./application/use-cases/delete-user/delete-user";
+import { GetDeletionCheckUseCase } from "./application/use-cases/get-deletion-check/get-deletion-check";
 import { GetInvitationsUseCase } from "./application/use-cases/get-invitations/get-invitations";
 import { GetUserProfileUseCase } from "./application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
@@ -45,7 +47,9 @@ import { UserController } from "./presentation/user.controller";
     },
 
     // Use case providers
+    BulkTransferAdminUseCase,
     DeleteUserUseCase,
+    GetDeletionCheckUseCase,
     GetUserUseCase,
     SearchUsersUseCase,
     CreateUserProfileUseCase,

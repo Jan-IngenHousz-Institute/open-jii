@@ -12,12 +12,29 @@ import { DangerZoneCard } from "./danger-zone-card";
 globalThis.React = React;
 
 // ---------- Hoisted mocks ----------
-const { updateProfileSpy, deleteAccountSpy, handleLogoutSpy, toastSpy } = vi.hoisted(() => {
+const {
+  updateProfileSpy,
+  deleteAccountSpy,
+  handleLogoutSpy,
+  toastSpy,
+  bulkTransferSpy,
+  mockDeletionCheckData,
+} = vi.hoisted(() => {
   return {
     updateProfileSpy: vi.fn<(arg: { body: CreateUserProfileBody }) => unknown>(),
     deleteAccountSpy: vi.fn<(arg: { params: { id: string } }) => Promise<void>>(),
     handleLogoutSpy: vi.fn<(arg: { redirectTo: string }) => Promise<void>>(),
     toastSpy: vi.fn<(arg: { description: string; variant?: string }) => void>(),
+    bulkTransferSpy:
+      vi.fn<(arg: { params: { id: string }; body: { email: string } }) => Promise<unknown>>(),
+    mockDeletionCheckData: {
+      current: null as {
+        body: {
+          canDelete: boolean;
+          blockingExperiments: { id: string; name: string; status: string }[];
+        };
+      } | null,
+    },
   };
 });
 
@@ -42,6 +59,26 @@ vi.mock("~/hooks/auth/useSignOut/useSignOut", () => ({
 
 vi.mock("~/app/actions/auth", () => ({
   handleLogout: (arg: { redirectTo: string }) => handleLogoutSpy(arg),
+}));
+
+// Mock tsr for getDeletionCheck and bulkTransferAdmin
+vi.mock("~/lib/tsr", () => ({
+  tsr: {
+    users: {
+      getDeletionCheck: {
+        useQuery: () => ({
+          data: mockDeletionCheckData.current,
+          refetch: vi.fn().mockResolvedValue(undefined),
+        }),
+      },
+      bulkTransferAdmin: {
+        useMutation: () => ({
+          mutateAsync: bulkTransferSpy,
+          isPending: false,
+        }),
+      },
+    },
+  },
 }));
 
 let isPendingUpdate = false;
@@ -139,6 +176,7 @@ describe("<DangerZoneCard />", () => {
     vi.clearAllMocks();
     isPendingUpdate = false;
     isDeletingUser = false;
+    mockDeletionCheckData.current = null;
   });
 
   describe("Rendering", () => {
@@ -389,7 +427,135 @@ describe("<DangerZoneCard />", () => {
       expect(screen.getByText("dangerZone.delete.warningPreserveList.content")).toBeInTheDocument();
     });
 
+    it("disables delete button when there are blocking experiments", async () => {
+      mockDeletionCheckData.current = {
+        body: {
+          canDelete: false,
+          blockingExperiments: [{ id: "exp-1", name: "My Experiment", status: "active" }],
+        },
+      };
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+      const input = screen.getByPlaceholderText("dangerZone.delete.confirmPlaceholder");
+      await user.type(input, "dangerZone.delete.confirmWord");
+
+      const dialogContents = screen.getAllByTestId("dialog-content");
+      const dialogContent = dialogContents[1];
+      const confirmBtn = within(dialogContent).getByRole("button", {
+        name: "dangerZone.delete.buttonConfirm",
+      });
+
+      // Should be disabled because canDelete is false
+      expect(confirmBtn).toBeDisabled();
+    });
+
+    it("shows blocking experiments with transfer UI", async () => {
+      mockDeletionCheckData.current = {
+        body: {
+          canDelete: false,
+          blockingExperiments: [
+            { id: "exp-1", name: "My Experiment", status: "active" },
+            { id: "exp-2", name: "Archived Experiment", status: "archived" },
+          ],
+        },
+      };
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+      // Should show blocking experiments section
+      expect(screen.getByText("dangerZone.delete.blockingTitle")).toBeInTheDocument();
+      expect(screen.getByText("My Experiment")).toBeInTheDocument();
+      expect(screen.getByText("Archived Experiment")).toBeInTheDocument();
+
+      // Should show transfer input and button
+      expect(
+        screen.getByPlaceholderText("dangerZone.delete.transferPlaceholder"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "dangerZone.delete.transferButton" }),
+      ).toBeInTheDocument();
+    });
+
+    it("calls bulkTransfer with email when transfer button is clicked", async () => {
+      mockDeletionCheckData.current = {
+        body: {
+          canDelete: false,
+          blockingExperiments: [{ id: "exp-1", name: "My Experiment", status: "active" }],
+        },
+      };
+      bulkTransferSpy.mockResolvedValueOnce({ body: { transferred: 1 } });
+
+      const user = userEvent.setup();
+      renderComponent({ userId: "user-123" });
+
+      await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+      const emailInput = screen.getByPlaceholderText("dangerZone.delete.transferPlaceholder");
+      await user.type(emailInput, "colleague@example.com");
+
+      const transferBtn = screen.getByRole("button", {
+        name: "dangerZone.delete.transferButton",
+      });
+      await user.click(transferBtn);
+
+      await waitFor(() => {
+        expect(bulkTransferSpy).toHaveBeenCalledWith({
+          params: { id: "user-123" },
+          body: { email: "colleague@example.com" },
+        });
+      });
+
+      await waitFor(() => {
+        expect(toastSpy).toHaveBeenCalledWith({
+          description: "dangerZone.delete.transferSuccess",
+        });
+      });
+    });
+
+    it("shows error toast when transfer fails", async () => {
+      mockDeletionCheckData.current = {
+        body: {
+          canDelete: false,
+          blockingExperiments: [{ id: "exp-1", name: "My Experiment", status: "active" }],
+        },
+      };
+      bulkTransferSpy.mockRejectedValueOnce({
+        body: { message: "No user found with email bad@example.com" },
+      });
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+      const emailInput = screen.getByPlaceholderText("dangerZone.delete.transferPlaceholder");
+      await user.type(emailInput, "bad@example.com");
+
+      const transferBtn = screen.getByRole("button", {
+        name: "dangerZone.delete.transferButton",
+      });
+      await user.click(transferBtn);
+
+      await waitFor(() => {
+        expect(toastSpy).toHaveBeenCalledWith({
+          description: "No user found with email bad@example.com",
+          variant: "destructive",
+        });
+      });
+    });
+
     it("requires confirmation word to enable delete button", async () => {
+      mockDeletionCheckData.current = {
+        body: { canDelete: true, blockingExperiments: [] },
+      };
+
       const user = userEvent.setup();
       renderComponent();
 
@@ -416,6 +582,10 @@ describe("<DangerZoneCard />", () => {
     });
 
     it("calls deleteAccount with correct userId when deleting", async () => {
+      mockDeletionCheckData.current = {
+        body: { canDelete: true, blockingExperiments: [] },
+      };
+
       const user = userEvent.setup();
       const userId = "user-456";
       renderComponent({ userId });
@@ -438,6 +608,10 @@ describe("<DangerZoneCard />", () => {
     });
 
     it("shows success toast and logs out after deletion", async () => {
+      mockDeletionCheckData.current = {
+        body: { canDelete: true, blockingExperiments: [] },
+      };
+
       const user = userEvent.setup();
       renderComponent();
 
@@ -465,6 +639,9 @@ describe("<DangerZoneCard />", () => {
     });
 
     it("handles deletion errors and shows error toast", async () => {
+      mockDeletionCheckData.current = {
+        body: { canDelete: true, blockingExperiments: [] },
+      };
       deleteAccountSpy.mockRejectedValueOnce({
         body: { message: "Network error", code: "NETWORK_ERROR" },
       });

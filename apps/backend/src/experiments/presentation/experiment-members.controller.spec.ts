@@ -675,7 +675,7 @@ describe("ExperimentMembersController", () => {
         });
     });
 
-    it("should return 403 when updating role in archived experiment", async () => {
+    it("should allow updating role in archived experiment", async () => {
       // Create an archived experiment
       const { experiment } = await testApp.createExperiment({
         name: "Test Archived Experiment",
@@ -689,20 +689,13 @@ describe("ExperimentMembersController", () => {
       });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      // Try to update role
+      // Update role — should succeed
       const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
         id: experiment.id,
         memberId: memberId,
       });
 
-      await testApp
-        .patch(path)
-        .withAuth(testUserId)
-        .send({ role: "admin" })
-        .expect(StatusCodes.FORBIDDEN)
-        .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toContain("Cannot update member roles in archived experiments");
-        });
+      await testApp.patch(path).withAuth(testUserId).send({ role: "admin" }).expect(StatusCodes.OK);
     });
 
     it("should return 401 if not authenticated", async () => {

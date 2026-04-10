@@ -19,6 +19,9 @@ import {
   zUpdateInvitationRoleBody,
   zInvitationIdPathParam,
   zListInvitationsQuery,
+  zDeletionCheckResponse,
+  zBulkTransferAdminBody,
+  zBulkTransferAdminResponse,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -84,6 +87,35 @@ export const userContract = c.router({
     },
     summary: "Delete a user",
     description: "Deletes a user by their ID if allowed",
+  },
+
+  getDeletionCheck: {
+    method: "GET",
+    path: "/api/v1/users/:id/deletion-check",
+    pathParams: zUserIdPathParam,
+    responses: {
+      200: zDeletionCheckResponse,
+      404: zErrorResponse,
+    },
+    summary: "Check if user can be deleted",
+    description:
+      "Returns whether the user can be deleted and lists any experiments blocking deletion",
+  },
+
+  bulkTransferAdmin: {
+    method: "POST",
+    path: "/api/v1/users/:id/transfer-experiments",
+    pathParams: zUserIdPathParam,
+    body: zBulkTransferAdminBody,
+    responses: {
+      200: zBulkTransferAdminResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Bulk transfer experiment admin rights",
+    description:
+      "Transfers admin rights on all experiments where the user is the sole admin to the specified new admin user",
   },
 
   getUserMetadata: {
