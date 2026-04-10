@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
-import { Download, ChevronsLeft, UploadCloud } from "lucide-react-native";
+import { ChevronsLeft, UploadCloud, Trash2 } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View, Text, FlatList, Pressable } from "react-native";
 import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
@@ -15,6 +15,7 @@ import type {
   MeasurementItem as MeasurementItemType,
 } from "~/hooks/use-all-measurements";
 import { useMeasurements } from "~/hooks/use-measurements";
+import { useMultiTapAction } from "~/hooks/use-multi-tap-action";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
@@ -33,10 +34,15 @@ export function RecentMeasurementsScreen() {
   const [filter, setFilter] = useState<TabKey>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
-  const { uploadAll, isUploading, uploadOne, removeMeasurement, updateMeasurementComment } =
-    useMeasurements();
+  const {
+    uploadAll,
+    isUploading,
+    uploadOne,
+    removeMeasurement,
+    clearSyncedMeasurements,
+    updateMeasurementComment,
+  } = useMeasurements();
 
   const handleSyncAll = () => {
     showAlert(
@@ -109,18 +115,40 @@ export function RecentMeasurementsScreen() {
     ]);
   };
 
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-      await exportMeasurementsToFile();
-    } catch {
-      toast.error("Export failed. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
+  const handleDeleteAllSynced = () => {
+    showAlert(
+      "Delete all synced measurements",
+      `Are you sure you want to delete all ${syncedCount} synced measurements from local storage?`,
+      [
+        {
+          text: "Delete",
+          variant: "danger",
+          onPress: () => {
+            clearSyncedMeasurements()
+              .then(() => {
+                invalidate();
+              })
+              .catch(() => {
+                toast.error("Failed to delete synced measurements");
+              });
+          },
+        },
+        {
+          text: "Cancel",
+          variant: "ghost",
+        },
+      ],
+    );
   };
 
   const unsyncedCount = measurements?.filter((m) => m.status === "unsynced").length ?? 0;
+  const syncedCount = measurements?.filter((m) => m.status === "synced").length ?? 0;
+
+  const handleExportTap = useMultiTapAction(() => {
+    void exportMeasurementsToFile().catch(() => {
+      toast.error("Export failed. Please try again.");
+    });
+  });
 
   const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
     setSelectedMeasurement(measurement);
@@ -128,16 +156,15 @@ export function RecentMeasurementsScreen() {
 
   return (
     <View className={clsx("flex-1", classes.background)}>
-      <View className="flex-row items-center justify-between p-4">
+      <Pressable className="flex-row items-center justify-between p-4" onPress={handleExportTap}>
         <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
 
         <View className="flex-row gap-3">
           <Button
             variant="tertiary"
-            onPress={handleExport}
-            isLoading={isExporting}
-            isDisabled={!measurements || measurements.length === 0}
-            icon={<Download size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+            onPress={handleDeleteAllSynced}
+            isDisabled={syncedCount === 0}
+            icon={<Trash2 size={24} color={colors.primary.dark} strokeWidth={1.4} />}
             style={{ borderColor: "transparent", padding: 9 }}
           />
           <Button
@@ -149,7 +176,7 @@ export function RecentMeasurementsScreen() {
             style={{ borderColor: "transparent", padding: 9 }}
           />
         </View>
-      </View>
+      </Pressable>
       {measurements && measurements.length > 0 && (
         <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />

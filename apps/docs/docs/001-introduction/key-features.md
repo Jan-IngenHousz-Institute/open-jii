@@ -19,7 +19,7 @@ This page highlights the main capabilities of the openJII platform. For detailed
 - **Question-only flows:** collect survey data and field observations without a sensor measurement.
 - **Offline-first:** capture data offline with on-device gzip compression; sync when network is available. User sessions are maintained during temporary network drops. After login, all experiment data is prefetched and cached so measurements can run completely offline.
 - **Comments & annotations:** add comments to measurements via swipe actions.
-- **Local export:** save measurements locally as JSON for backup or external analysis.
+- **Bulk delete synced measurements:** remove all synced measurements from local storage to free up space on the mobile device.
 - **Python macros:** run Python post-processing macros on-device via embedded Pyodide runtime.
 
 See the Mobile App [overview](../003-data-platform/002-mobile-app.md) for device-specific details.

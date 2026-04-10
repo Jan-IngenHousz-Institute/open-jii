@@ -301,11 +301,13 @@ describe("measurements-storage", () => {
 
   describe("pruneExpiredMeasurements", () => {
     it("removes successful rows older than 7 days", async () => {
-      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
-      const oneDayAgo = Date.now() - 1 * 24 * 60 * 60 * 1000;
+      const eightDaysAgoMs = Date.now() - 8 * 24 * 60 * 60 * 1000;
+      const oneDayAgoMs = Date.now() - 1 * 24 * 60 * 60 * 1000;
+      const eightDaysAgo = new Date(eightDaysAgoMs).toISOString();
+      const oneDayAgo = new Date(oneDayAgoMs).toISOString();
 
-      insertRow("old", "successful", { createdAt: eightDaysAgo });
-      insertRow("recent", "successful", { createdAt: oneDayAgo });
+      insertRow("old", "successful", { timestamp: eightDaysAgo, createdAt: eightDaysAgoMs });
+      insertRow("recent", "successful", { timestamp: oneDayAgo, createdAt: oneDayAgoMs });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
@@ -316,8 +318,8 @@ describe("measurements-storage", () => {
     });
 
     it("does not remove failed rows even if old", async () => {
-      const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
-      insertRow("old-failed", "failed", { createdAt: eightDaysAgo });
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      insertRow("old-failed", "failed", { timestamp: eightDaysAgo, createdAt: Date.now() - 8 * 24 * 60 * 60 * 1000 });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
@@ -327,8 +329,12 @@ describe("measurements-storage", () => {
     });
 
     it("keeps successful rows within 7 days", async () => {
-      const sixDaysAgo = Date.now() - 6 * 24 * 60 * 60 * 1000;
-      insertRow("within-window", "successful", { createdAt: sixDaysAgo });
+      const sixDaysAgoMs = Date.now() - 6 * 24 * 60 * 60 * 1000;
+      const sixDaysAgo = new Date(sixDaysAgoMs).toISOString();
+      insertRow("within-window", "successful", {
+        timestamp: sixDaysAgo,
+        createdAt: sixDaysAgoMs,
+      });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
@@ -407,6 +413,31 @@ describe("measurements-storage", () => {
       const rows = sqlite.prepare("SELECT * FROM measurements").all();
       expect(rows).toHaveLength(0);
       expect(AsyncStorage.multiRemove).not.toHaveBeenCalled();
+    });
+
+    it("migrates a legacy entry with an invalid timestamp and auto-fills created_at", async () => {
+      const invalidTimestampMeasurement = {
+        ...mockMeasurement,
+        metadata: { ...mockMeasurement.metadata, timestamp: "not-a-date" },
+      };
+
+      vi.mocked(AsyncStorage.getAllKeys).mockResolvedValue(["FAILED_UPLOAD_legacy-bad-ts"]);
+      vi.mocked(AsyncStorage.multiGet).mockResolvedValue([
+        ["FAILED_UPLOAD_legacy-bad-ts", compressForStorage(invalidTimestampMeasurement)],
+      ]);
+
+      const mod = await import("../measurements-storage");
+      await mod.getMeasurements("failed");
+
+      const rows = sqlite
+        .prepare("SELECT * FROM measurements WHERE id = 'legacy-bad-ts'")
+        .all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe("failed");
+      // created_at must not be null: the invalid timestamp is excluded from the
+      // insert and Drizzle's $defaultFn fills in the current time instead.
+      expect(rows[0].created_at).not.toBeNull();
+      expect(AsyncStorage.multiRemove).toHaveBeenCalledWith(["FAILED_UPLOAD_legacy-bad-ts"]);
     });
 
     it("runs migration exactly once regardless of how many functions are called", async () => {

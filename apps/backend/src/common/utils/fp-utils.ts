@@ -85,13 +85,17 @@ function getCauseMessage(error: unknown): string {
   return causeMessage ? `${message} ${causeMessage}` : message;
 }
 
-function mapErrorMessage(error: unknown): { causeCode: CauseCode | undefined; causeMessage: string; causeMessageLower: string } {
+function mapErrorMessage(error: unknown): {
+  causeCode: CauseCode | undefined;
+  causeMessage: string;
+  causeMessageLower: string;
+} {
   const causeMessage = getCauseMessage(error);
   return {
     causeCode: getCauseCode(error),
     causeMessage,
     causeMessageLower: causeMessage.toLowerCase(),
-  }
+  };
 }
 
 /**
@@ -99,7 +103,7 @@ function mapErrorMessage(error: unknown): { causeCode: CauseCode | undefined; ca
  */
 export class Success<T> {
   readonly _tag = "success";
-  constructor(readonly value: T) { }
+  constructor(readonly value: T) {}
 
   isSuccess(): this is Success<T> {
     return true;
@@ -136,7 +140,7 @@ export class Success<T> {
  */
 export class Failure<E> {
   readonly _tag = "failure";
-  constructor(readonly error: E) { }
+  constructor(readonly error: E) {}
 
   isSuccess(): this is Success<never> {
     return false;
@@ -338,7 +342,10 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
     return AppError.conflict(causeMessage, "REPOSITORY_DUPLICATE");
   }
 
-  if (causeMessageLower.includes(CauseMessageCheck.FOREIGN_KEY) || causeMessageLower.includes(CauseMessageCheck.REFERENCE)) {
+  if (
+    causeMessageLower.includes(CauseMessageCheck.FOREIGN_KEY) ||
+    causeMessageLower.includes(CauseMessageCheck.REFERENCE)
+  ) {
     return AppError.badRequest(causeMessage, "REPOSITORY_REFERENCE");
   }
 
