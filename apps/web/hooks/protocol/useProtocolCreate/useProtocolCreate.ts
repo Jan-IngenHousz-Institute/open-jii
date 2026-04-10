@@ -1,51 +1,62 @@
 import type { Protocol } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
+import { toast } from "@repo/ui/hooks";
 
-import { tsr } from "../../../lib/tsr";
+import { getContractError, tsr } from "../../../lib/tsr";
+import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
 
-interface ProtocolCreateProps {
-  onSuccess?: (id: string) => void;
-  onError?: () => void;
-}
+const route = tsr.protocols.createProtocol;
 
-/**
- * Hook to create a new protocol
- * @param props Optional callbacks and configuration
- * @returns Mutation result for creating a protocol
- */
-export const useProtocolCreate = (props: ProtocolCreateProps = {}) => {
+export type UseProtocolCreateOptions = TsRestMutationOptions<
+  TsrRoute<typeof route>,
+  "onSuccess" | "onError" | "onSettled"
+>;
+
+export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
+  const { t } = useTranslation();
   const queryClient = tsr.useQueryClient();
 
-  return tsr.protocols.createProtocol.useMutation({
+  return route.useMutation({
+    ...options,
+    onSuccess: (...args) => {
+      toast({ description: t("protocols.protocolCreated") });
+      options.onSuccess?.(...args);
+    },
     onMutate: async () => {
-      // Cancel any outgoing refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ["protocols"] });
 
-      // Get the current protocols
       const previousProtocols = queryClient.getQueryData<{
         body: Protocol[];
       }>(["protocols"]);
 
-      // Return the previous protocols to use in case of error
       return { previousProtocols };
     },
-    onError: (error, variables, context) => {
-      // If there was an error, revert to the previous state
+    onError: (error, variables, context, mutation) => {
       if (context?.previousProtocols) {
         queryClient.setQueryData(["protocols"], context.previousProtocols);
       }
-      props.onError?.();
-    },
-    onSettled: async () => {
-      // Always refetch after error or success to make sure cache is in sync with server
-      await queryClient.invalidateQueries({
-        queryKey: ["protocols"],
-      });
-    },
-    onSuccess: (data) => {
-      // Call the provided onSuccess callback if it exists
-      if (props.onSuccess) {
-        props.onSuccess(data.body.id);
+
+      const contractError = getContractError(route, error);
+
+      if (!contractError) {
+        toast({ description: t("common.errors.serverError"), variant: "destructive" });
+        return;
       }
+
+      switch (contractError.status) {
+        case 409:
+          toast({ description: t("protocols.nameAlreadyExists"), variant: "destructive" });
+          break;
+        default:
+          toast({ description: t("protocols.createError"), variant: "destructive" });
+          break;
+      }
+
+      options.onError?.(contractError, variables, context, mutation);
+    },
+    onSettled: async (...args) => {
+      await queryClient.invalidateQueries({ queryKey: ["protocols"] });
+      options.onSettled?.(...args);
     },
   });
 };

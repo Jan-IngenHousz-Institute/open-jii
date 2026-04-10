@@ -5,8 +5,6 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { toast } from "@repo/ui/hooks";
-
 import { NewMacroForm } from "./new-macro";
 
 // Type definitions for mock components
@@ -156,7 +154,6 @@ vi.mock("@repo/i18n", () => ({
 }));
 
 vi.mock("@repo/ui/hooks");
-const mockToast = vi.mocked(toast);
 
 vi.mock("@repo/ui/components", () => ({
   Form: ({ children, ...props }: MockFormProps) => <div {...props}>{children}</div>,
@@ -359,7 +356,7 @@ describe("NewMacroForm", () => {
     });
   });
 
-  it("should show toast notification on submit", async () => {
+  it("should call mutate on submit", async () => {
     // Arrange
     const user = userEvent.setup();
     render(<NewMacroForm />);
@@ -369,9 +366,7 @@ describe("NewMacroForm", () => {
     await user.click(submitButton);
 
     // Assert
-    expect(mockToast).toHaveBeenCalledWith({
-      description: "macros.macroCreated",
-    });
+    expect(mockMutate).toHaveBeenCalled();
   });
 
   it("should render code editor with correct language", () => {
@@ -456,7 +451,6 @@ describe("NewMacroForm", () => {
 
     // Assert
     expect(mockMutate).toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalled();
   });
 
   it("should show loading skeletons when user profile is loading", () => {

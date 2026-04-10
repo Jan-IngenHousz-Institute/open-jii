@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { tsr } from "@/lib/tsr";
+import { tsr, getContractError } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+import { toast } from "@repo/ui/hooks";
 
 import { useMacroCreate } from "./useMacroCreate";
 
@@ -16,9 +18,20 @@ vi.mock("@/lib/tsr", () => ({
       },
     },
   },
+  getContractError: vi.fn(),
+}));
+
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+vi.mock("@repo/ui/hooks", () => ({
+  toast: vi.fn(),
 }));
 
 const mockTsr = tsr;
+const mockGetContractError = vi.mocked(getContractError);
+const mockToast = vi.mocked(toast);
 
 describe("useMacroCreate", () => {
   let queryClient: QueryClient;
@@ -81,7 +94,7 @@ describe("useMacroCreate", () => {
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["macros"],
       });
-      expect(mockOnSuccess).toHaveBeenCalledWith("macro-123");
+      expect(mockOnSuccess).toHaveBeenCalledWith(result);
     });
 
     it("should work when onSuccess option is not provided", () => {
@@ -108,41 +121,112 @@ describe("useMacroCreate", () => {
   });
 
   describe("onError callback", () => {
-    it("should call onError option when provided", () => {
-      let onError: ((error: Error) => void) | undefined;
+    it("should call onError option when provided with a contract error", () => {
+      let onError: ((error: unknown) => void) | undefined;
       const mockOnError = vi.fn();
 
       (mockTsr.macros.createMacro.useMutation as unknown) = vi.fn(
-        (opts: { onError: (error: Error) => void }) => {
+        (opts: { onError: (error: unknown) => void }) => {
           onError = opts.onError;
           return {};
         },
       );
+
+      const contractError = { status: 409, body: { message: "Conflict" }, headers: new Headers() };
+      mockGetContractError.mockReturnValue(contractError as never);
 
       renderHook(() => useMacroCreate({ onError: mockOnError }), { wrapper: createWrapper() });
 
-      const error = new Error("Create failed");
-      onError?.(error);
+      onError?.({});
 
-      expect(mockOnError).toHaveBeenCalledWith(error);
+      expect(mockOnError).toHaveBeenCalledWith(contractError);
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "macros.nameAlreadyExists",
+        variant: "destructive",
+      });
     });
 
-    it("should work when onError option is not provided", () => {
-      let onError: ((error: Error) => void) | undefined;
+    it("shows createError toast for non-409 contract errors", () => {
+      let onError: ((error: unknown) => void) | undefined;
 
       (mockTsr.macros.createMacro.useMutation as unknown) = vi.fn(
-        (opts: { onError: (error: Error) => void }) => {
+        (opts: { onError: (error: unknown) => void }) => {
           onError = opts.onError;
           return {};
         },
       );
 
+      const contractError = { status: 422, body: {}, headers: new Headers() };
+      mockGetContractError.mockReturnValue(contractError as never);
+
       renderHook(() => useMacroCreate(), { wrapper: createWrapper() });
 
-      const error = new Error("Create failed");
+      onError?.(contractError);
+
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "macros.createError",
+        variant: "destructive",
+      });
+    });
+
+    it("shows server error toast when getContractError returns undefined", () => {
+      let onError: ((error: unknown) => void) | undefined;
+
+      (mockTsr.macros.createMacro.useMutation as unknown) = vi.fn(
+        (opts: { onError: (error: unknown) => void }) => {
+          onError = opts.onError;
+          return {};
+        },
+      );
+
+      mockGetContractError.mockReturnValue(undefined);
+
+      renderHook(() => useMacroCreate(), { wrapper: createWrapper() });
+
+      onError?.(new Error("network"));
+
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "common.errors.serverError",
+        variant: "destructive",
+      });
+    });
+
+    it("should not call onError option when error is not a contract error", () => {
+      let onError: ((error: unknown) => void) | undefined;
+      const mockOnError = vi.fn();
+
+      (mockTsr.macros.createMacro.useMutation as unknown) = vi.fn(
+        (opts: { onError: (error: unknown) => void }) => {
+          onError = opts.onError;
+          return {};
+        },
+      );
+
+      mockGetContractError.mockReturnValue(undefined);
+
+      renderHook(() => useMacroCreate({ onError: mockOnError }), { wrapper: createWrapper() });
+
+      onError?.(new Error("non-contract error"));
+
+      expect(mockOnError).not.toHaveBeenCalled();
+    });
+
+    it("should work when onError option is not provided", () => {
+      let onError: ((error: unknown) => void) | undefined;
+
+      (mockTsr.macros.createMacro.useMutation as unknown) = vi.fn(
+        (opts: { onError: (error: unknown) => void }) => {
+          onError = opts.onError;
+          return {};
+        },
+      );
+
+      mockGetContractError.mockReturnValue(undefined);
+
+      renderHook(() => useMacroCreate(), { wrapper: createWrapper() });
 
       // This should not throw
-      onError?.(error);
+      onError?.(new Error("Create failed"));
     });
   });
 

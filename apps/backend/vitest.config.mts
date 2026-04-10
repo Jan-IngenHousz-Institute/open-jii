@@ -10,6 +10,7 @@ export default mergeConfig(
     test: {
       environment: "node",
       globals: true,
+      restoreMocks: true,
       setupFiles: ["./src/test/setup.ts"],
       pool: "forks",
       poolOptions: {

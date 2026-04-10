@@ -47,6 +47,7 @@ export const protocolContract = c.router({
     responses: {
       201: zProtocol,
       400: zProtocolErrorResponse,
+      409: zProtocolErrorResponse,
     },
     summary: "Create a new protocol",
     description: "Creates a new protocol with the given properties",
@@ -97,9 +98,9 @@ export const protocolContract = c.router({
     body: zAddCompatibleMacrosBody,
     responses: {
       201: zProtocolMacroList,
-      400: zProtocolErrorResponse,
       403: zProtocolErrorResponse,
       404: zProtocolErrorResponse,
+      500: zProtocolErrorResponse,
     },
     summary: "Add compatible macros to a protocol",
     description: "Links macros as compatible with this protocol (creator only)",

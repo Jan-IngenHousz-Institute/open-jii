@@ -271,7 +271,7 @@ describe("ExperimentMemberRepository", () => {
       ]);
       expect(result2.isSuccess()).toBe(false);
       assertFailure(result2);
-      expect(result2.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(result2.error.statusCode).toBe(StatusCodes.CONFLICT);
 
       // Verify only one membership exists
       const membersResult = await repository.getMembers(experiment.id);
@@ -652,7 +652,7 @@ describe("ExperimentMemberRepository", () => {
       ]);
       expect(result2.isSuccess()).toBe(false);
       assertFailure(result2);
-      expect(result2.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(result2.error.statusCode).toBe(StatusCodes.CONFLICT);
 
       // Verify only one membership exists
       const membersResult = await repository.getMembers(experiment.id);

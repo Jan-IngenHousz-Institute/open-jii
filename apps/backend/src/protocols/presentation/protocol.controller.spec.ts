@@ -5,9 +5,62 @@ import { contract } from "@repo/api";
 import type { ProtocolMacroList } from "@repo/api";
 import { macros } from "@repo/database";
 
+import { AppError, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { ProtocolMacroRepository } from "../core/repositories/protocol-macro.repository";
+
+describe("ProtocolController – createProtocol", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+  let createProtocolUseCase: CreateProtocolUseCase;
+
+  beforeAll(async () => {
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    createProtocolUseCase = testApp.module.get(CreateProtocolUseCase);
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  it("should return 409 when a protocol with the same name already exists", async () => {
+    // Arrange
+    const protocolData = {
+      name: "Test Protocol",
+      description: "A test protocol description",
+      code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+      family: "multispeq",
+    };
+
+    vi.spyOn(createProtocolUseCase, "execute").mockResolvedValue(
+      failure(AppError.conflict("A protocol with this name already exists")),
+    );
+
+    // Act
+    const response = await testApp
+      .post(contract.protocols.createProtocol.path)
+      .withAuth(testUserId)
+      .send(protocolData)
+      .expect(StatusCodes.CONFLICT);
+
+    // Assert
+    expect(response.body).toMatchObject({
+      message: "A protocol with this name already exists",
+    });
+  });
+});
 
 describe("ProtocolController – protocol-macro endpoints", () => {
   const testApp = TestHarness.App;
