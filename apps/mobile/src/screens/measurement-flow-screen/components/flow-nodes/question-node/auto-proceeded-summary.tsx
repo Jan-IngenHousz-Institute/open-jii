@@ -11,7 +11,11 @@ interface AutoProceededSummaryProps {
   iterationCount: number;
 }
 
-// Only the anchor node is cached — everything else stays dynamic.
+// The banner is anchored to whichever question node was the first not remembered question at the start of
+// the iteration. This anchor is cached so that toggling "remember answer" or navigating to the
+// overview and back does not move the banner to a different question mid-iteration.
+// The banner content (which auto-proceeded questions exist and their current answers) and its
+// visibility remain fully dynamic, so the banner disappears if there are no auto-proceeded answers.
 let cachedForIteration = -1;
 let cachedFirstManualNodeId: string | undefined;
 
@@ -54,20 +58,21 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
 
   return (
     <View
-      className="rounded-xl p-2"
+      className="gap-1 rounded-xl p-2"
       style={{
         backgroundColor: theme.isDark ? colors.dark.grayBackground : colors.light.grayBackground,
       }}
     >
+      <Text
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        className={clsx("text-sm", classes.textSecondary)}
+      >
+        Your current plot
+      </Text>
+
       {autoProceededWithAnswers.map((n) => (
-        <View key={n.id} className="gap-1">
-          <Text
-            numberOfLines={1}
-            ellipsizeMode="tail"
-            className={clsx("text-sm", classes.textSecondary)}
-          >
-            Your current plot
-          </Text>
+        <View key={n.id}>
           <View className="flex-row items-center gap-1">
             <Text
               numberOfLines={1}
