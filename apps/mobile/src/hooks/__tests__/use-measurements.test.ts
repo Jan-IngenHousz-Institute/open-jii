@@ -292,7 +292,10 @@ describe("useMeasurements", () => {
 
       expect(mockUpdateMeasurement).toHaveBeenCalledWith("key-1", {
         ...mockUpload,
-        measurementResult: { ...mockUpload.measurementResult, annotations: { comment: "a comment" } },
+        measurementResult: {
+          ...mockUpload.measurementResult,
+          annotations: { comment: "a comment" },
+        },
       });
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });

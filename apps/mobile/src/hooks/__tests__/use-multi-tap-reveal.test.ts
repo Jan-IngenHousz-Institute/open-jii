@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+import { useMultiTapReveal } from "../use-multi-tap-reveal";
+
 let capturedOnAction: () => void;
 let capturedOptions: Record<string, unknown>;
 const mockHandleTap = vi.fn();
@@ -20,8 +22,6 @@ vi.mock("~/hooks/use-multi-tap-action", () => ({
   },
 }));
 
-import { useMultiTapReveal } from "../use-multi-tap-reveal";
-
 describe("useMultiTapReveal", () => {
   let isVisible: boolean;
 
@@ -29,7 +29,12 @@ describe("useMultiTapReveal", () => {
     let slot = 0;
     mockUseState.mockImplementation((_init: boolean) => {
       if (slot++ === 0) {
-        return [isVisible, (v: boolean) => { isVisible = v; }];
+        return [
+          isVisible,
+          (v: boolean) => {
+            isVisible = v;
+          },
+        ];
       }
       return [false, vi.fn()];
     });
@@ -53,7 +58,7 @@ describe("useMultiTapReveal", () => {
 
   it("becomes visible when onAction is triggered", () => {
     renderHook();
-    capturedOnAction();               // setIsVisible(true)
+    capturedOnAction(); // setIsVisible(true)
 
     const { isVisible: visible } = renderHook();
     expect(visible).toBe(true);
