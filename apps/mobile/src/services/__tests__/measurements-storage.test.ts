@@ -319,7 +319,9 @@ describe("measurements-storage", () => {
 
     it("does not remove failed rows even if old", async () => {
       const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-      insertRow("old-failed", "failed", { timestamp: eightDaysAgo });
+      // createdAt is intentionally recent to conflict with the old timestamp,
+      // ensuring the pruning logic uses timestamp (not createdAt) to judge age.
+      insertRow("old-failed", "failed", { timestamp: eightDaysAgo, createdAt: Date.now() });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
@@ -329,8 +331,12 @@ describe("measurements-storage", () => {
     });
 
     it("keeps successful rows within 7 days", async () => {
-      const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
-      insertRow("within-window", "successful", { timestamp: sixDaysAgo });
+      const sixDaysAgoMs = Date.now() - 6 * 24 * 60 * 60 * 1000;
+      const sixDaysAgo = new Date(sixDaysAgoMs).toISOString();
+      const eightDaysAgoMs = Date.now() - 8 * 24 * 60 * 60 * 1000;
+      // createdAt is intentionally older than 7 days to conflict with the recent
+      // timestamp, ensuring the pruning logic uses timestamp (not createdAt).
+      insertRow("within-window", "successful", { timestamp: sixDaysAgo, createdAt: eightDaysAgoMs });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
@@ -430,6 +436,9 @@ describe("measurements-storage", () => {
         .all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].status).toBe("failed");
+      // created_at must not be null: the invalid timestamp is excluded from the
+      // insert and Drizzle's $defaultFn fills in the current time instead.
+      expect(rows[0].created_at).not.toBeNull();
       expect(AsyncStorage.multiRemove).toHaveBeenCalledWith(["FAILED_UPLOAD_legacy-bad-ts"]);
     });
 
