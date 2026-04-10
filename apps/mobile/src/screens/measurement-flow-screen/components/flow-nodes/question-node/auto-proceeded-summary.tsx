@@ -19,7 +19,7 @@ interface AutoProceededSummaryProps {
 let cachedForIteration = -1;
 let cachedFirstManualNodeId: string | undefined;
 
-function getCachedFirstManualNodeId(iterationCount: number): string | undefined {
+export function getCachedFirstManualNodeId(iterationCount: number): string | undefined {
   if (cachedForIteration === iterationCount) {
     return cachedFirstManualNodeId;
   }
