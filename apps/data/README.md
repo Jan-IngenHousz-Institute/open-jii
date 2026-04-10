@@ -4,12 +4,11 @@ Databricks notebooks and Python packages for OpenJII data processing and analysi
 
 ## Packages
 
-This project contains four main packages:
+This project contains three main packages:
 
-- **multispeq** - MultispeQ data processing utilities
 - **ambyte** - Ambyte data processing utilities
-- **enrich** - Data enrichment utilities for Databricks pipelines
-- **openjii** - OpenJII data analysis helpers for Databricks
+- **enrich** - Data enrichment utilities for ELT pipelines (backend API client, user metadata, annotations, macro execution)
+- **openjii** - OpenJII Data Analysis Helpers for Databricks
 
 ## Development
 
