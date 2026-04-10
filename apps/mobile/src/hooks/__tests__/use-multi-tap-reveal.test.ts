@@ -1,81 +1,72 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+// @vitest-environment jsdom
+import { renderHook, act } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useMultiTapReveal } from "../use-multi-tap-reveal";
 
-let capturedOnAction: () => void;
-let capturedOptions: Record<string, unknown>;
-const mockHandleTap = vi.fn();
-
-const { mockUseState } = vi.hoisted(() => ({
-  mockUseState: vi.fn(),
-}));
-
-vi.mock("react", () => ({
-  useState: mockUseState,
-}));
-
-vi.mock("~/hooks/use-multi-tap-action", () => ({
-  useMultiTapAction: (onAction: () => void, options: Record<string, unknown>) => {
-    capturedOnAction = onAction;
-    capturedOptions = options;
-    return mockHandleTap;
-  },
-}));
-
 describe("useMultiTapReveal", () => {
-  let isVisible: boolean;
-
-  function renderHook(options?: { tapsRequired?: number; intervalMs?: number }) {
-    let slot = 0;
-    mockUseState.mockImplementation((_init: boolean) => {
-      if (slot++ === 0) {
-        return [
-          isVisible,
-          (v: boolean) => {
-            isVisible = v;
-          },
-        ];
-      }
-      return [false, vi.fn()];
-    });
-    return useMultiTapReveal(options);
-  }
-
   beforeEach(() => {
-    isVisible = false;
-    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("is not visible initially", () => {
-    const { isVisible: visible } = renderHook();
-    expect(visible).toBe(false);
+    const { result } = renderHook(() => useMultiTapReveal());
+    expect(result.current.isVisible).toBe(false);
   });
 
-  it("returns the handleTap from useMultiTapAction", () => {
-    const { handleTap } = renderHook();
-    expect(handleTap).toBe(mockHandleTap);
+  it("returns a handleTap function", () => {
+    const { result } = renderHook(() => useMultiTapReveal());
+    expect(typeof result.current.handleTap).toBe("function");
   });
 
-  it("becomes visible when onAction is triggered", () => {
-    renderHook();
-    capturedOnAction(); // setIsVisible(true)
+  it("becomes visible after 4 taps (default) within the window", () => {
+    const { result } = renderHook(() => useMultiTapReveal());
 
-    const { isVisible: visible } = renderHook();
-    expect(visible).toBe(true);
+    act(() => { result.current.handleTap(); });
+    vi.setSystemTime(1500);
+    act(() => { result.current.handleTap(); });
+    vi.setSystemTime(2000);
+    act(() => { result.current.handleTap(); });
+    vi.setSystemTime(2500);
+    act(() => { result.current.handleTap(); }); // 4th tap → visible
+
+    expect(result.current.isVisible).toBe(true);
   });
 
-  it("defaults to tapsRequired 4", () => {
-    renderHook();
-    expect(capturedOptions.tapsRequired).toBe(4);
+  it("remains hidden before reaching tapsRequired", () => {
+    const { result } = renderHook(() => useMultiTapReveal());
+
+    act(() => { result.current.handleTap(); });
+    vi.setSystemTime(1500);
+    act(() => { result.current.handleTap(); });
+    vi.setSystemTime(2000);
+    act(() => { result.current.handleTap(); }); // only 3 of 4
+
+    expect(result.current.isVisible).toBe(false);
   });
 
-  it("forwards custom tapsRequired", () => {
-    renderHook({ tapsRequired: 7 });
-    expect(capturedOptions.tapsRequired).toBe(7);
+  it("respects custom tapsRequired", () => {
+    const { result } = renderHook(() => useMultiTapReveal({ tapsRequired: 2 }));
+
+    act(() => { result.current.handleTap(); });
+    vi.setSystemTime(1500);
+    act(() => { result.current.handleTap(); }); // 2nd tap → visible
+
+    expect(result.current.isVisible).toBe(true);
   });
 
-  it("forwards custom intervalMs", () => {
-    renderHook({ intervalMs: 300 });
-    expect(capturedOptions.intervalMs).toBe(300);
+  it("respects custom intervalMs", () => {
+    const { result } = renderHook(() => useMultiTapReveal({ tapsRequired: 2, intervalMs: 200 }));
+
+    act(() => { result.current.handleTap(); }); // tap 1 at 1000ms
+    vi.setSystemTime(1300); // +300ms > 200ms, window expired → resets
+    act(() => { result.current.handleTap(); }); // count=1 (reset)
+
+    expect(result.current.isVisible).toBe(false);
   });
 });
