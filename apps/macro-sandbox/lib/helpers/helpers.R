@@ -103,10 +103,7 @@ ArrayZip <- function(x, y) {
   min_length <- min(length(x), length(y))
   
   result <- list()
-  for (i in 1:min_length) {
-    result[[i]] <- c(x[i], y[i])
-  }
-  
+  for (i in seq_len(min_length)) {
   return(result)
 }
 
@@ -127,6 +124,10 @@ MathLINREG <- function(x, y) {
   y <- y[complete_cases]
   
   if (length(x) < 2) {
+    return(FALSE)
+  }
+  
+  if (var(x) == 0) {
     return(FALSE)
   }
   
