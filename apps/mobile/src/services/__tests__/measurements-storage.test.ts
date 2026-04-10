@@ -56,7 +56,7 @@ const mockMeasurement = {
 function insertRow(
   id: string,
   status: "failed" | "successful",
-  overrides: Partial<{ topic: string; timestamp: string }> = {},
+  overrides: Partial<{ topic: string; timestamp: string; createdAt: number }> = {},
 ) {
   sqlite
     .prepare(
@@ -71,7 +71,7 @@ function insertRow(
       "Test Experiment",
       "protocol-1",
       overrides.timestamp ?? "2026-03-02T10:00:00.000Z",
-      Date.now(),
+      overrides.createdAt ?? Date.now(),
     );
 }
 
@@ -301,11 +301,13 @@ describe("measurements-storage", () => {
 
   describe("pruneExpiredMeasurements", () => {
     it("removes successful rows older than 7 days", async () => {
-      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-      const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
+      const eightDaysAgoMs = Date.now() - 8 * 24 * 60 * 60 * 1000;
+      const oneDayAgoMs = Date.now() - 1 * 24 * 60 * 60 * 1000;
+      const eightDaysAgo = new Date(eightDaysAgoMs).toISOString();
+      const oneDayAgo = new Date(oneDayAgoMs).toISOString();
 
-      insertRow("old", "successful", { timestamp: eightDaysAgo });
-      insertRow("recent", "successful", { timestamp: oneDayAgo });
+      insertRow("old", "successful", { timestamp: eightDaysAgo, createdAt: eightDaysAgoMs });
+      insertRow("recent", "successful", { timestamp: oneDayAgo, createdAt: oneDayAgoMs });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
