@@ -1,7 +1,7 @@
 import { useScannerCommandExecutorStore } from "~/stores/use-scanner-command-executor-store";
 
 export function useScannerCommandExecutor() {
-  const { commandResponse, reset, isExecuting, error, executeCommand } =
+  const { commandResponse, reset, isExecuting, error, executeCommand, cancelCommand } =
     useScannerCommandExecutorStore();
 
   return {
@@ -10,5 +10,6 @@ export function useScannerCommandExecutor() {
     isExecuting,
     error,
     executeCommand,
+    cancelCommand,
   };
 }

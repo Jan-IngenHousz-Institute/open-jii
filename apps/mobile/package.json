@@ -29,6 +29,7 @@
     "@react-navigation/native-stack": "^7.14.10",
     "@repo/api": "workspace:*",
     "@repo/auth": "workspace:*",
+    "@repo/iot": "workspace:*",
     "@shopify/react-native-skia": "2.2.12",
     "@tanstack/pacer": "^0.19.0",
     "@tanstack/query-async-storage-persister": "catalog:react-query",

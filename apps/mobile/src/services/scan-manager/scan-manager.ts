@@ -3,7 +3,7 @@ import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-command-executor";
 
 export function useScanner() {
-  const { executeCommand } = useScannerCommandExecutor();
+  const { executeCommand, cancelCommand } = useScannerCommandExecutor();
 
   const { setBatteryLevel } = useDeviceConnectionStore();
 
@@ -36,5 +36,6 @@ export function useScanner() {
     error,
     result,
     executeCommand,
+    cancelCommand,
   };
 }
