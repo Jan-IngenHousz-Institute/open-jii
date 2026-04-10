@@ -104,6 +104,8 @@ ArrayZip <- function(x, y) {
   
   result <- list()
   for (i in seq_len(min_length)) {
+    result[[i]] <- c(x[i], y[i])
+  }
   return(result)
 }
 
