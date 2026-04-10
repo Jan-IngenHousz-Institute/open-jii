@@ -13,7 +13,7 @@ export type UseMacroCreateOptions = TsRestMutationOptions<
 
 export function useMacroCreate(options?: UseMacroCreateOptions) {
   const queryClient = tsr.useQueryClient();
-  const { t } = useTranslation();
+  const { t } = useTranslation(["macro", "common"]);
 
   return route.useMutation({
     ...options,
