@@ -26,6 +26,7 @@ interface SwipeableMeasurementRowProps {
   onComment?: (id: string) => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
+  hasComment?: boolean;
 }
 
 export function SwipeableMeasurementRow({
@@ -38,6 +39,7 @@ export function SwipeableMeasurementRow({
   onComment,
   onSync,
   onDelete,
+  hasComment = false,
 }: SwipeableMeasurementRowProps) {
   const { colors } = useTheme();
   const translateX = useSharedValue(0);
@@ -127,6 +129,7 @@ export function SwipeableMeasurementRow({
             questions={questions}
             onPress={onPress}
             hideActions
+            hasComment={hasComment}
           />
         </Animated.View>
       </GestureDetector>

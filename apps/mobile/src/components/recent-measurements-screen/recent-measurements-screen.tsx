@@ -195,6 +195,11 @@ export function RecentMeasurementsScreen() {
                   ? () => handleSync(measurement.key, measurement.experimentName)
                   : undefined
               }
+              hasComment={
+                !!getCommentFromMeasurementResult(
+                  measurement.data.measurementResult as Record<string, unknown>,
+                )
+              }
             />
           )}
         />
