@@ -9,3 +9,9 @@ CVE-2026-33671
 # NestJS routes are defined at compile time via decorators - no user input reaches route compilation.
 # Will be resolved when Express/router releases an update pinning path-to-regexp@>=8.4.0.
 CVE-2026-4926
+
+# CVE-2026-4800: lodash template() arbitrary code execution - false positive on lodash-es
+# Trivy maps this CVE to lodash-es but lodash-es@4.18.0 does not exist (last release was 4.17.21 in 2021).
+# The vulnerability affects lodash's _.template() with untrusted input; lodash is covered by the
+# pnpm override forcing ^4.18.0. lodash-es is not fixable and the CVE mapping is incorrect.
+CVE-2026-4800

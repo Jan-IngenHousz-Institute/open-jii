@@ -20,5 +20,6 @@
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "references": [{ "path": "../cms" }]
 }

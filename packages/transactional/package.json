@@ -3,21 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "exports": {
-    "./emails/added-user-notification": {
-      "types": "./dist/emails/added-user-notification.d.ts",
-      "default": "./dist/emails/added-user-notification.js"
+    "./emails/email": {
+      "types": "./dist/emails/email.d.ts",
+      "default": "./dist/emails/email.js"
     },
     "./emails/verification-request": {
       "types": "./dist/emails/verification-request.d.ts",
       "default": "./dist/emails/verification-request.js"
-    },
-    "./emails/otp-email": {
-      "types": "./dist/emails/otp-email.d.ts",
-      "default": "./dist/emails/otp-email.js"
-    },
-    "./emails/transfer-request-confirmation": {
-      "types": "./dist/emails/transfer-request-confirmation.d.ts",
-      "default": "./dist/emails/transfer-request-confirmation.js"
     },
     "./render/otp-email": {
       "types": "./dist/render/otp-email.d.ts",
@@ -35,10 +27,6 @@
       "types": "./dist/render/transfer-request-confirmation.d.ts",
       "default": "./dist/render/transfer-request-confirmation.js"
     },
-    "./emails/project-transfer-complete": {
-      "types": "./dist/emails/project-transfer-complete.d.ts",
-      "default": "./dist/emails/project-transfer-complete.js"
-    },
     "./render/project-transfer-complete": {
       "types": "./dist/render/project-transfer-complete.d.ts",
       "default": "./dist/render/project-transfer-complete.js"
@@ -47,6 +35,7 @@
   "scripts": {
     "build": "tsc --build --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "test:render": "pnpm build && node --env-file=../../apps/backend/.env scripts/test-render.mjs",
     "dev": "tsc --watch & email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
     "email:dev": "email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
     "export": "email export",
@@ -56,7 +45,10 @@
     "start:mailcatcher": "docker compose -f docker-compose.yml up mailcatcher"
   },
   "dependencies": {
+    "@contentful/rich-text-react-renderer": "16.0.2",
+    "@contentful/rich-text-types": "17.0.1",
     "@react-email/components": "^0.3.3",
+    "@repo/cms": "workspace:*",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
