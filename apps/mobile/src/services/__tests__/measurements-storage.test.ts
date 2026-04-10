@@ -417,7 +417,7 @@ describe("measurements-storage", () => {
       expect(AsyncStorage.multiRemove).not.toHaveBeenCalled();
     });
 
-    it("migrates a legacy entry with an invalid timestamp, omitting createdAt", async () => {
+    it("migrates a legacy entry with an invalid timestamp and auto-fills created_at", async () => {
       const invalidTimestampMeasurement = {
         ...mockMeasurement,
         metadata: { ...mockMeasurement.metadata, timestamp: "not-a-date" },

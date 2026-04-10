@@ -122,4 +122,19 @@ describe("useMultiTapAction", () => {
 
     expect(onAction).not.toHaveBeenCalled();
   });
+
+  it("treats tap at exactly intervalMs boundary as outside the window (exclusive upper bound)", () => {
+    const onAction = vi.fn();
+    const intervalMs = 600;
+
+    // tap 1 at 1000ms → count=1, lastTapTime=1000
+    renderHook(onAction, { intervalMs })();
+
+    // tap 2 at exactly 1000+600=1600ms: now - lastTapTime === intervalMs → withinWindow = false → count resets to 1
+    vi.setSystemTime(1600);
+    renderHook(onAction, { intervalMs })();
+
+    expect(tapCount).toBe(1);
+    expect(onAction).not.toHaveBeenCalled();
+  });
 });
