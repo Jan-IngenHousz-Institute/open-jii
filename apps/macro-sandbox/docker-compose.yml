@@ -10,6 +10,8 @@ services:
       - "${PYTHON_PORT:-9001}:8080"
     environment:
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=1024
+    mem_limit: 1024m
+    memswap_limit: 1024m
     healthcheck:
       test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
       interval: 5s
@@ -25,6 +27,8 @@ services:
       - "${JAVASCRIPT_PORT:-9002}:8080"
     environment:
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=512
+    mem_limit: 512m
+    memswap_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
       interval: 5s
@@ -40,6 +44,8 @@ services:
       - "${R_PORT:-9003}:8080"
     environment:
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=1024
+    mem_limit: 1024m
+    memswap_limit: 1024m
     healthcheck:
       test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
       interval: 5s

@@ -76,7 +76,14 @@ wrapped_code <- paste0(
 )
 
 # Parse once before the loop
-parsed_code <- parse(text = wrapped_code)
+parse_error <- NULL
+parsed_code <- tryCatch(
+  parse(text = wrapped_code),
+  error = function(e) {
+    parse_error <<- as.character(e$message)
+    NULL
+  }
+)
 
 # 4. EXECUTION LOOP
 for (item in batch_items) {
@@ -179,7 +186,14 @@ for (item in batch_items) {
   run_env$output <- new.env(parent = emptyenv())
   
   # B. Run User Code
-  execution_result <- tryCatch({
+  execution_result <- if (!is.null(parse_error)) {
+    list(
+      id = item$id,
+      success = FALSE,
+      error = parse_error
+    )
+  } else {
+    tryCatch({
     # 1s per-item timeout
     setTimeLimit(cpu = 1.0, elapsed = 1.0, transient = TRUE)
     on.exit(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE))
@@ -200,6 +214,7 @@ for (item in batch_items) {
       error = as.character(e$message)
     )
   })
+  }
   
   results[[length(results) + 1]] <- execution_result
 }
