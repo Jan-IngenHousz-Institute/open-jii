@@ -65,7 +65,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
         keyboardShouldPersistTaps="handled"
       >
         {questionEntries.map(({ node, index }, position) => {
-          const label = node.name ?? node.content?.text ?? "Question";
+          const label = node.content?.text ?? node.name ?? "Question";
           const answer = getAnswer(iterationCount, node.id);
           const hasAnswer = !!answer?.trim();
           const isAutoincrement = isAutoincrementEnabled(node.id);
@@ -102,7 +102,12 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               </View>
 
               <View className="flex-1 gap-1">
-                <Text className={clsx("text-xs font-medium", classes.textSecondary)}>{label}</Text>
+                <Text
+                  className={clsx("text-xs font-medium", classes.textSecondary)}
+                  numberOfLines={1}
+                >
+                  {label}
+                </Text>
                 <View className="flex-row items-center gap-1">
                   <Text
                     numberOfLines={1}
