@@ -66,7 +66,7 @@ describe("CreateProtocolUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
-    expect(result.error.message).toBe("A protocol with this name already exists");
+    expect(result.error.code).toBe("REPOSITORY_DUPLICATE");
   });
 
   it("should return internal error when create returns no rows", async () => {
