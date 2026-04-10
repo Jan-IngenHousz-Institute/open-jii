@@ -23,15 +23,6 @@ export class CreateMacroUseCase {
       userId,
     });
 
-    // Check if a macro with this name already exists
-    const existingMacro = await this.macroRepository.findByName(data.name);
-    if (existingMacro.isFailure()) {
-      return existingMacro;
-    }
-    if (existingMacro.value !== null) {
-      return failure(AppError.conflict("A macro with this name already exists"));
-    }
-
     // First, create the macro in the database
     const macroResult = await this.macroRepository.create(
       {
