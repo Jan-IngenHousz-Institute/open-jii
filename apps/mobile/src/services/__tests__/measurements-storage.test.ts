@@ -336,7 +336,10 @@ describe("measurements-storage", () => {
       const eightDaysAgoMs = Date.now() - 8 * 24 * 60 * 60 * 1000;
       // createdAt is intentionally older than 7 days to conflict with the recent
       // timestamp, ensuring the pruning logic uses timestamp (not createdAt).
-      insertRow("within-window", "successful", { timestamp: sixDaysAgo, createdAt: eightDaysAgoMs });
+      insertRow("within-window", "successful", {
+        timestamp: sixDaysAgo,
+        createdAt: eightDaysAgoMs,
+      });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();
