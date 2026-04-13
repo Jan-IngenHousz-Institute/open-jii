@@ -168,6 +168,12 @@ locals {
         "lambda:GetFunctionConcurrency",
         # Code signing (Terraform provider reads)
         "lambda:GetFunctionCodeSigningConfig",
+        # Layer management (Terraform provider reads layer metadata before attaching)
+        "lambda:GetLayerVersion",
+        "lambda:GetLayerVersionPolicy",
+        "lambda:ListLayers",
+        "lambda:ListLayerVersions",
+        "lambda:PublishLayerVersion",
       ]
       resource = "*"
     }
@@ -445,6 +451,10 @@ locals {
         "ec2:DeleteVpcEndpoints",
         "ec2:DescribeVpcEndpoints",
         "ec2:ModifyVpcEndpoint",
+        # VPC Flow Logs
+        "ec2:CreateFlowLogs",
+        "ec2:DeleteFlowLogs",
+        "ec2:DescribeFlowLogs",
         # Tags
         "ec2:CreateTags",
         "ec2:DeleteTags",

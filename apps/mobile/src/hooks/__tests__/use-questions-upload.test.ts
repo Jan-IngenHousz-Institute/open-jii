@@ -2,17 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { useQuestionsUpload } from "../use-questions-upload";
 
-const {
-  mockSaveMeasurement,
-  mockSendMqttEvent,
-  mockToastSuccess,
-  mockToastError,
-} = vi.hoisted(() => ({
-  mockSaveMeasurement: vi.fn(),
-  mockSendMqttEvent: vi.fn(),
-  mockToastSuccess: vi.fn(),
-  mockToastError: vi.fn(),
-}));
+const { mockSaveMeasurement, mockSendMqttEvent, mockToastSuccess, mockToastError } = vi.hoisted(
+  () => ({
+    mockSaveMeasurement: vi.fn(),
+    mockSendMqttEvent: vi.fn(),
+    mockToastSuccess: vi.fn(),
+    mockToastError: vi.fn(),
+  }),
+);
 
 let capturedCallback: (...args: any[]) => Promise<any>;
 

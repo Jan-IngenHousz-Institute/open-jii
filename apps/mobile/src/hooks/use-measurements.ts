@@ -8,9 +8,8 @@ import {
   saveMeasurement as saveMeasurementToStorage,
   updateMeasurement,
   pruneExpiredMeasurements,
-  type Measurement,
-  type MeasurementStatus,
 } from "~/services/measurements-storage";
+import type { Measurement, MeasurementStatus } from "~/services/measurements-storage";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
 

@@ -140,7 +140,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     Returns:
     --------
     dict
-        Dictionary with keys: identifier, row_count, macro_schema, questions_schema
+        Dictionary with keys: identifier, row_count, macro_schema, questions_schema, custom_metadata_schema
     """
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import col
@@ -150,7 +150,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     metadata_df = (
         spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata")
         .filter((col("experiment_id") == experiment_id) & (col("identifier") == identifier))
-        .select("identifier", "row_count", "macro_schema", "questions_schema")
+        .select("identifier", "row_count", "macro_schema", "questions_schema", "custom_metadata_schema")
     )
     
     rows = metadata_df.collect()
@@ -163,6 +163,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
         "row_count": row.row_count,
         "macro_schema": row.macro_schema,
         "questions_schema": row.questions_schema,
+        "custom_metadata_schema": row.custom_metadata_schema,
     }
 
 
@@ -210,9 +211,14 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     spark = SparkSession.builder.getOrCreate()
     metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
     
-    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT)
+    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT, VOID → STRING).
+    # VOID is matched only after ": " so we hit the type position and not a field identifier
+    # that happens to contain the substring (e.g. "avoid"). DDL identifiers can't contain ":"
+    # or spaces, so ": VOID" is unambiguous.
     def normalize_schema(schema):
-        return schema.replace("OBJECT<", "STRUCT<") if schema else None
+        if not schema:
+            return None
+        return schema.replace("OBJECT<", "STRUCT<").replace(": VOID", ": STRING")
     
     macro_schema = normalize_schema(metadata["macro_schema"])
     questions_schema = normalize_schema(metadata["questions_schema"])

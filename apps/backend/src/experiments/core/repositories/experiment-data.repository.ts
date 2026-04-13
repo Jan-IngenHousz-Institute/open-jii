@@ -102,7 +102,13 @@ export class ExperimentDataRepository {
     limit?: number,
     offset?: number,
   ): Result<string> {
-    const { identifier: tableName, tableType, macroSchema, questionsSchema } = metadata;
+    const {
+      identifier: tableName,
+      tableType,
+      macroSchema,
+      questionsSchema,
+      customMetadataSchema,
+    } = metadata;
 
     const config = (() => {
       if (tableType === "macro") return MACRO_TABLE_CONFIG;
@@ -134,6 +140,14 @@ export class ExperimentDataRepository {
         variants.push({ columnName: "questions_data", schema: questionsSchema });
       } else {
         exceptColumns.push("questions_data");
+      }
+    }
+
+    if (config.variantColumns.includes("custom_metadata")) {
+      if (customMetadataSchema) {
+        variants.push({ columnName: "custom_metadata", schema: customMetadataSchema });
+      } else {
+        exceptColumns.push("custom_metadata");
       }
     }
 

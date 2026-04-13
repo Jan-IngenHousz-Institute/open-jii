@@ -97,6 +97,11 @@ The IAM role includes permissions for the following AWS services and operations:
 
 These permissions allow Terraform/OpenTofu to enable and manage AWS Inspector v2 for vulnerability scanning of ECR images and Lambda functions. All actions apply to resource scope `*` (account-level enablement).
 
+### Lambda
+- **Function management**: Function configuration and management operations
+- **Code signing**: `lambda:GetFunctionCodeSigningConfig` (Terraform provider reads)
+- **Layer management**: `lambda:GetLayerVersion`, `lambda:GetLayerVersionPolicy`, `lambda:ListLayers`, `lambda:ListLayerVersions`, `lambda:PublishLayerVersion` (Terraform provider reads layer metadata before attaching)
+
 ### Other Services
 - **VPC**: Network infrastructure management
 - **CloudFront**: Distribution configuration

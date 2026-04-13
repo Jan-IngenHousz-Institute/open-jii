@@ -87,7 +87,10 @@ describe("useMeasurements", () => {
 
       await capturedUploadAllCallback();
 
-      expect(mockSendMqttEvent).toHaveBeenCalledWith(mockUpload.topic, mockUpload.measurementResult);
+      expect(mockSendMqttEvent).toHaveBeenCalledWith(
+        mockUpload.topic,
+        mockUpload.measurementResult,
+      );
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("upload-key-1");
     });
 

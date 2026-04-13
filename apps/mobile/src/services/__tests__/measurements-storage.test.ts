@@ -384,9 +384,7 @@ describe("measurements-storage", () => {
         "UNRELATED_KEY",
       ]);
       vi.mocked(AsyncStorage.multiGet)
-        .mockResolvedValueOnce([
-          ["FAILED_UPLOAD_legacy-f1", compressForStorage(mockMeasurement)],
-        ])
+        .mockResolvedValueOnce([["FAILED_UPLOAD_legacy-f1", compressForStorage(mockMeasurement)]])
         .mockResolvedValueOnce([
           ["SUCCESSFUL_UPLOAD_legacy-s1", compressForStorage(mockMeasurement)],
         ]);
