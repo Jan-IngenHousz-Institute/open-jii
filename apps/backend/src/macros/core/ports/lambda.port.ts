@@ -9,10 +9,10 @@ export abstract class LambdaPort {
    * Domain consumers are responsible for constructing the payload
    * and interpreting the response.
    */
-  abstract invokeLambda(
+  abstract invokeLambda<TResponse = Record<string, unknown>>(
     functionName: string,
-    payload: Record<string, unknown>,
-  ): Promise<Result<InvokeLambdaResponse>>;
+    payload: object,
+  ): Promise<Result<InvokeLambdaResponse<TResponse>>>;
 
   /**
    * Resolve the Lambda function name for a given macro language.

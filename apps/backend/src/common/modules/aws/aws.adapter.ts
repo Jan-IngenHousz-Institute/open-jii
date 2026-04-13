@@ -134,11 +134,13 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
   /**
    * Invoke a Lambda function and return the result
    */
-  async invokeLambda(
+  async invokeLambda<TResponse = Record<string, unknown>>(
     functionName: string,
-    payload: Record<string, unknown>,
-  ): Promise<Result<InvokeLambdaResponse>> {
-    return this.awsLambdaService.invoke({ functionName, payload });
+    payload: object,
+  ): Promise<Result<InvokeLambdaResponse<TResponse>>> {
+    return this.awsLambdaService.invoke({ functionName, payload }) as unknown as Promise<
+      Result<InvokeLambdaResponse<TResponse>>
+    >;
   }
 
   /**

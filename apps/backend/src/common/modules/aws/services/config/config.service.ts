@@ -94,7 +94,7 @@ export class AwsConfigService {
   get cognitoDeveloperProviderName(): string {
     return this.config.cognitoDeveloperProviderName;
   }
-  /*
+  /**
    * Gets the Lambda function name for macro sandbox by language
    */
   get lambdaConfig() {

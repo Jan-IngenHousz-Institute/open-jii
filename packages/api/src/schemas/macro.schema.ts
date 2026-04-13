@@ -110,7 +110,7 @@ export const zMacroExecutionRequestBody = z.object({
 });
 
 export const zMacroExecutionResponse = z.object({
-  macro_id: z.string(),
+  macro_id: z.string().uuid(),
   success: z.boolean(),
   output: z.record(z.unknown()).optional(),
   error: z.string().optional(),

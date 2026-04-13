@@ -4,13 +4,13 @@
 
 export interface InvokeLambdaRequest {
   functionName: string;
-  payload: Record<string, unknown>;
+  payload: object;
   invocationType?: "RequestResponse" | "Event";
 }
 
-export interface InvokeLambdaResponse {
+export interface InvokeLambdaResponse<TPayload = Record<string, unknown>> {
   statusCode: number;
-  payload: Record<string, unknown>;
+  payload: TPayload;
   functionError?: string;
 }
 

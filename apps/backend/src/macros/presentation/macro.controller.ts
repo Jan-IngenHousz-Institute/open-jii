@@ -109,7 +109,7 @@ export class MacroController {
   }
 
   @TsRestHandler(macroContract.executeMacro)
-  executeMacro() {
+  executeMacro(@Session() _session: UserSession) {
     return tsRestHandler(macroContract.executeMacro, async ({ params, body }) => {
       const result = await this.executeMacroUseCase.execute(params.id, body);
 

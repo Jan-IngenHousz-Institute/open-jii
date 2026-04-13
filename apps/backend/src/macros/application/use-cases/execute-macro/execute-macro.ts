@@ -57,9 +57,9 @@ export class ExecuteMacroUseCase {
     };
 
     // 3. Invoke Lambda
-    const lambdaResult = await this.lambdaPort.invokeLambda(
+    const lambdaResult = await this.lambdaPort.invokeLambda<LambdaExecutionResponse>(
       functionName,
-      payload as unknown as Record<string, unknown>,
+      payload,
     );
 
     if (lambdaResult.isFailure()) {
@@ -77,7 +77,7 @@ export class ExecuteMacroUseCase {
       });
     }
 
-    const lambdaResponse = lambdaResult.value.payload as unknown as LambdaExecutionResponse;
+    const lambdaResponse = lambdaResult.value.payload;
 
     if (lambdaResponse.status === "error") {
       const errorMsg = lambdaResponse.errors?.join("; ") ?? "Lambda execution failed";

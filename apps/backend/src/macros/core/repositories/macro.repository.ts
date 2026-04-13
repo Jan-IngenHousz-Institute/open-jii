@@ -184,8 +184,8 @@ export class MacroRepository {
         .where(eq(macros.id, id))
         .returning();
 
-      // Invalidate cache on update
-      await this.cachePort.invalidate(id);
+      // Best-effort cache invalidation — must not mask a successful write
+      void this.cachePort.invalidate(id).catch(() => {});
 
       return results as unknown as MacroDto[];
     });
@@ -195,8 +195,8 @@ export class MacroRepository {
     return tryCatch(async () => {
       const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
 
-      // Invalidate cache on delete
-      await this.cachePort.invalidate(id);
+      // Best-effort cache invalidation — must not mask a successful write
+      void this.cachePort.invalidate(id).catch(() => {});
 
       return results as unknown as MacroDto[];
     });
@@ -239,8 +239,14 @@ export class MacroRepository {
    * Lean projection — only fetches columns needed for Lambda execution.
    */
   async findScriptsByIds(ids: string[]): Promise<Result<Map<string, MacroScript>>> {
+    const uuids = ids.filter((id) => z.string().uuid().safeParse(id).success);
+
+    if (uuids.length === 0) {
+      return success(new Map());
+    }
+
     return tryCatch(() =>
-      this.cachePort.tryCacheMany<MacroScript>(ids, async (missedIds) => {
+      this.cachePort.tryCacheMany<MacroScript>(uuids, async (missedIds) => {
         const rows = await this.database
           .select({
             id: macros.id,
