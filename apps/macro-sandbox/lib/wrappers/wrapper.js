@@ -11,7 +11,7 @@ if (!scriptPath || !inputPath) {
     JSON.stringify({
       status: "error",
       results: [],
-      errors: ["Usage: node wrapper.js <script> <input>"],
+      errors: ["Missing required arguments: expected <script_path> and <input_path>"],
     }),
   );
   process.exit(0);

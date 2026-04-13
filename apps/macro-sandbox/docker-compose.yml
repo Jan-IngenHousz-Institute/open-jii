@@ -39,7 +39,7 @@ services:
   r:
     build:
       context: .
-      dockerfile: functions/r/Dockerfile
+      dockerfile: functions/r/Dockerfile.local
     ports:
       - "${R_PORT:-9003}:8080"
     environment:

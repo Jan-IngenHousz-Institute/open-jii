@@ -1,9 +1,8 @@
-# R macro sandbox Lambda
-# Uses a custom Runtime API bootstrap (no official AWS Lambda R runtime).
+# R macro sandbox Lambda — local development with RIE
+# Use via docker-compose; production deploys use Dockerfile instead.
 
 FROM debian:bookworm-slim
 
-# Install R, jsonlite, and curl (for Lambda Runtime API polling)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     r-base \
     r-cran-jsonlite \
@@ -24,4 +23,11 @@ COPY functions/r/handler.R /var/task/handler.R
 COPY lib/wrappers/wrapper.R /var/task/wrappers/wrapper.R
 COPY lib/helpers/helpers.R /var/task/src/helpers/helpers.R
 
-ENTRYPOINT ["/var/runtime/bootstrap"]
+# RIE for local testing
+ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
+RUN chmod +x /usr/local/bin/aws-lambda-rie
+
+COPY functions/r/entry.sh /entry.sh
+RUN chmod +x /entry.sh
+
+ENTRYPOINT ["/entry.sh"]
