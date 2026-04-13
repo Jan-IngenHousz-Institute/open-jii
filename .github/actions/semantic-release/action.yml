@@ -133,7 +133,7 @@ runs:
         echo "releases_created=$(echo $RELEASES_JSON | jq -c '.')" >> $GITHUB_OUTPUT
         
     - name: Upload Release Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: inputs.dry_run == 'false'
       with:
         name: release-metadata
