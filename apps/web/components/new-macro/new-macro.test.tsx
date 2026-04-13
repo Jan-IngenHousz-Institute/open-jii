@@ -1,11 +1,9 @@
 import * as base64Utils from "@/util/base64";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-
-import { toast } from "@repo/ui/hooks";
 
 import { NewMacroForm } from "./new-macro";
 
@@ -91,6 +89,8 @@ const mockPush = vi.fn();
 const mockBack = vi.fn();
 const mockMutate = vi.fn();
 
+let macroCreateOnSuccess: ((data: { body: { id: string } }) => void) | undefined;
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
@@ -106,10 +106,13 @@ vi.mock("@repo/auth/client", () => ({
 }));
 
 vi.mock("~/hooks/macro/useMacroCreate/useMacroCreate", () => ({
-  useMacroCreate: () => ({
-    mutate: mockMutate,
-    isPending: false,
-  }),
+  useMacroCreate: (opts?: { onSuccess?: (data: { body: { id: string } }) => void }) => {
+    macroCreateOnSuccess = opts?.onSuccess;
+    return {
+      mutate: mockMutate,
+      isPending: false,
+    };
+  },
 }));
 
 // Mock hooks added by protocol-macro compatibility feature
@@ -126,8 +129,10 @@ vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
 }));
 
+const mockAddProtocolsMutateAsync = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol", () => ({
-  useAddCompatibleProtocol: () => ({ mutateAsync: vi.fn() }),
+  useAddCompatibleProtocol: () => ({ mutateAsync: mockAddProtocolsMutateAsync }),
 }));
 
 interface DropdownPropsCaptured {
@@ -170,7 +175,6 @@ vi.mock("@repo/i18n", () => ({
 }));
 
 vi.mock("@repo/ui/hooks");
-const mockToast = vi.mocked(toast);
 
 vi.mock("@repo/ui/components", () => ({
   Form: ({ children, ...props }: MockFormProps) => <div {...props}>{children}</div>,
@@ -326,6 +330,11 @@ describe("NewMacroForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lastDropdownProps = null;
+    macroCreateOnSuccess = undefined;
+    mockAddProtocolsMutateAsync.mockResolvedValue(undefined);
+    mockMutate.mockImplementation(() => {
+      macroCreateOnSuccess?.({ body: { id: "new-macro-id" } });
+    });
   });
 
   it("should render form elements", () => {
@@ -380,7 +389,7 @@ describe("NewMacroForm", () => {
     });
   });
 
-  it("should show toast notification on submit", async () => {
+  it("should call mutate on submit", async () => {
     // Arrange
     const user = userEvent.setup();
     render(<NewMacroForm />);
@@ -390,9 +399,7 @@ describe("NewMacroForm", () => {
     await user.click(submitButton);
 
     // Assert
-    expect(mockToast).toHaveBeenCalledWith({
-      description: "macros.macroCreated",
-    });
+    expect(mockMutate).toHaveBeenCalled();
   });
 
   it("should render code editor with correct language", () => {
@@ -480,7 +487,6 @@ describe("NewMacroForm", () => {
 
     // Assert
     expect(mockMutate).toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalled();
   });
 
   it("should change language when language select changes", () => {
@@ -573,6 +579,26 @@ describe("NewMacroForm", () => {
 
       // Protocol should be removed from the list
       expect(screen.queryByText("Temperature Protocol")).not.toBeInTheDocument();
+    });
+
+    it("should link compatible protocols after create then navigate", async () => {
+      const user = userEvent.setup();
+      render(<NewMacroForm />);
+
+      act(() => {
+        lastDropdownProps?.onAddProtocol("proto-1");
+      });
+
+      await user.click(screen.getByText("newMacro.finalizeSetup"));
+
+      await waitFor(() => {
+        expect(mockAddProtocolsMutateAsync).toHaveBeenCalledWith({
+          params: { id: "new-macro-id" },
+          body: { protocolIds: ["proto-1"] },
+        });
+      });
+
+      expect(mockPush).toHaveBeenCalledWith("/en/platform/macros/new-macro-id");
     });
   });
 });

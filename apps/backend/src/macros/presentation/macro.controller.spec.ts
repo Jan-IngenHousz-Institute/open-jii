@@ -118,6 +118,32 @@ describe("MacroController", () => {
         .expect(StatusCodes.BAD_REQUEST);
     });
 
+    it("should return 409 when a macro with the same name already exists", async () => {
+      // Arrange
+      const macroData: CreateMacroDto = {
+        name: "Test Macro",
+        description: "Test Description",
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=",
+      };
+
+      vi.spyOn(createMacroUseCase, "execute").mockResolvedValue(
+        failure(AppError.conflict("A macro with this name already exists")),
+      );
+
+      // Act
+      const response = await testApp
+        .post(contract.macros.createMacro.path)
+        .withAuth(testUserId)
+        .send(macroData)
+        .expect(StatusCodes.CONFLICT);
+
+      // Assert
+      expect(response.body).toMatchObject({
+        message: "A macro with this name already exists",
+      });
+    });
+
     it("should handle use case failure", async () => {
       // Arrange
       const macroData: CreateMacroDto = {

@@ -16,6 +16,8 @@
     "macroCreated": "Makro erfolgreich erstellt",
     "macroUpdated": "Makro erfolgreich aktualisiert",
     "macroDeleted": "Makro erfolgreich gelöscht",
+    "nameAlreadyExists": "Ein Makro mit diesem Namen existiert bereits. Bitte wählen Sie einen anderen Namen.",
+    "createError": "Makro konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
     "listDescription": "Anzeigen und verwalten Sie Ihre Code-Makros für die Datenverarbeitung.",
     "manageMacroDescription": "Anzeigen und verwalten Sie die Details und Einstellungen Ihres Makros.",
     "settings": "Makro-Einstellungen",
