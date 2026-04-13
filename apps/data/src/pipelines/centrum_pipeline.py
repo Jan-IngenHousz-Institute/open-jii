@@ -996,7 +996,7 @@ def enriched_experiment_raw_data():
             raw_data.device_id,
             raw_data.device_name,
             raw_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
-            raw_data.timestamp.alias("timestamp_utc"),
+            raw_data.timestamp.alias("measurement_time_utc"),
             raw_data.timezone,
             raw_data.date,
             raw_data.macros,
@@ -1007,17 +1007,17 @@ def enriched_experiment_raw_data():
             raw_data.processed_timestamp
         )
         .withColumn(
-            "timestamp_local",
+            "measurement_time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss XXX")
             )
         )
         .withColumn(
-            "time_local",
+            "local_time",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
             )
         )
     )
@@ -1088,7 +1088,7 @@ def enriched_experiment_macro_data():
             macro_data.device_id,
             macro_data.device_name,
             macro_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
-            macro_data.timestamp.alias("timestamp_utc"),
+            macro_data.timestamp.alias("measurement_time_utc"),
             macro_data.timezone,
             macro_data.date,
             contributors.user.alias("contributor"),
@@ -1102,17 +1102,17 @@ def enriched_experiment_macro_data():
             macro_data.annotations
         )
         .withColumn(
-            "timestamp_local",
+            "measurement_time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss XXX")
             )
         )
         .withColumn(
-            "time_local",
+            "local_time",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
             )
         )
     )
