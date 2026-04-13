@@ -1,16 +1,20 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
 
-export default defineConfig({
-  test: {
-    globals: true,
-    include: ["test/test.ts"],
-    testTimeout: 60_000,
-    hookTimeout: 120_000,
-    pool: "forks",
-    poolOptions: {
-      forks: { singleFork: true },
+import { baseConfig } from "@repo/vitest-config/base";
+
+export default mergeConfig(
+  baseConfig,
+  defineConfig({
+    test: {
+      include: ["test/test.ts"],
+      testTimeout: 60_000,
+      hookTimeout: 120_000,
+      pool: "forks",
+      poolOptions: {
+        forks: { singleFork: true },
+      },
+      fileParallelism: false,
+      sequence: { concurrent: false },
     },
-    fileParallelism: false,
-    sequence: { concurrent: false },
-  },
-});
+  }),
+);

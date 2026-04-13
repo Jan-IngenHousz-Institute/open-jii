@@ -377,6 +377,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../tooling/vitest-config
       dotenv-cli:
         specifier: ^8.0.0
         version: 8.0.0
