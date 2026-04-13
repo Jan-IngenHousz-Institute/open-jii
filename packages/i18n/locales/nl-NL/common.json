@@ -311,6 +311,8 @@
     "protocolCreated": "Protocol succesvol aangemaakt",
     "protocolUpdated": "Protocol succesvol bijgewerkt",
     "protocolDeleted": "Protocol succesvol verwijderd",
+    "nameAlreadyExists": "Er bestaat al een protocol met deze naam. Kies een andere naam.",
+    "createError": "Aanmaken van protocol mislukt. Probeer het opnieuw.",
     "listDescription": "Deze pagina toont een lijst van bestaande protocollen.",
     "protocol": "Protocol",
     "settings": "Protocol instellingen",

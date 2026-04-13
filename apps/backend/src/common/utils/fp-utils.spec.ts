@@ -421,7 +421,7 @@ describe("Functional Programming Utilities", () => {
       const error = new Error("Duplicate entry");
       const mappedError = defaultRepositoryErrorMapper(error);
 
-      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.statusCode).toBe(StatusCodes.CONFLICT);
       expect(mappedError.code).toBe("REPOSITORY_DUPLICATE");
     });
 
@@ -429,7 +429,7 @@ describe("Functional Programming Utilities", () => {
       const error = new Error("unique constraint violation");
       const mappedError = defaultRepositoryErrorMapper(error);
 
-      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.statusCode).toBe(StatusCodes.CONFLICT);
       expect(mappedError.code).toBe("REPOSITORY_DUPLICATE");
     });
 
@@ -437,7 +437,15 @@ describe("Functional Programming Utilities", () => {
       const error = new Error("user already exists");
       const mappedError = defaultRepositoryErrorMapper(error);
 
-      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.statusCode).toBe(StatusCodes.CONFLICT);
+      expect(mappedError.code).toBe("REPOSITORY_DUPLICATE");
+    });
+
+    it('should map "conflict" errors correctly', () => {
+      const error = new Error("conflict while creating record");
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.CONFLICT);
       expect(mappedError.code).toBe("REPOSITORY_DUPLICATE");
     });
 

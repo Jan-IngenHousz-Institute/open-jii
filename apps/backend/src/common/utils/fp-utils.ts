@@ -50,12 +50,56 @@ export function assertSuccess<T, E>(result: Result<T, E>): asserts result is Suc
   }
 }
 
+enum CauseCode {
+  // Postgres error code 23505 = unique_violation
+  UNIQUE_VIOLATION = "23505",
+}
+
+enum CauseMessageCheck {
+  NOT_FOUND = "not found",
+  NO_ROWS = "no rows",
+  DOES_NOT_EXIST = "does not exist",
+  DUPLICATE = "duplicate",
+  UNIQUE_CONSTRAINT = "unique constraint",
+  ALREADY_EXISTS = "already exists",
+  CONFLICT = "conflict",
+  FOREIGN_KEY = "foreign key",
+  REFERENCE = "reference",
+}
+
+function getCauseCode(error: unknown): CauseCode | undefined {
+  const cause = error instanceof Error ? error.cause : undefined;
+  const causeCode =
+    cause != null && typeof cause === "object" && "code" in cause
+      ? String((cause as Record<string, unknown>).code)
+      : undefined;
+  return causeCode as CauseCode | undefined;
+}
+
+function getCauseMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  const cause = error instanceof Error ? error.cause : undefined;
+  const causeMessage =
+    cause instanceof Error ? cause.message : typeof cause === "string" ? cause : "";
+  return causeMessage ? `${message} ${causeMessage}` : message;
+}
+
+function mapErrorMessage(error: unknown): { causeCode: CauseCode | undefined; causeMessage: string; causeMessageLower: string } {
+  const causeMessage = getCauseMessage(error);
+  return {
+    causeCode: getCauseCode(error),
+    causeMessage,
+    causeMessageLower: causeMessage.toLowerCase(),
+  }
+}
+
 /**
  * Success case of Result
  */
 export class Success<T> {
   readonly _tag = "success";
-  constructor(readonly value: T) {}
+  constructor(readonly value: T) { }
 
   isSuccess(): this is Success<T> {
     return true;
@@ -92,7 +136,7 @@ export class Success<T> {
  */
 export class Failure<E> {
   readonly _tag = "failure";
-  constructor(readonly error: E) {}
+  constructor(readonly error: E) { }
 
   isSuccess(): this is Success<never> {
     return false;
@@ -273,43 +317,32 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   if (error instanceof AppError) {
     return error;
   }
-
-  const message = error instanceof Error ? error.message : String(error);
-
-  // Also check the cause chain — drizzle-orm 0.45+ wraps native postgres errors
-  const cause = error instanceof Error ? error.cause : undefined;
-  const causeMessage =
-    cause instanceof Error ? cause.message : typeof cause === "string" ? cause : "";
-  // Postgres error code 23505 = unique_violation
-  const causeCode =
-    cause != null && typeof cause === "object" && "code" in cause
-      ? String((cause as Record<string, unknown>).code)
-      : "";
-  const fullMessage = `${message} ${causeMessage}`.toLowerCase();
+  const { causeCode, causeMessage, causeMessageLower } = mapErrorMessage(error);
 
   // Check for common database error patterns
   if (
-    fullMessage.includes("not found") ||
-    fullMessage.includes("no rows") ||
-    fullMessage.includes("does not exist")
+    causeMessageLower.includes(CauseMessageCheck.NOT_FOUND) ||
+    causeMessageLower.includes(CauseMessageCheck.NO_ROWS) ||
+    causeMessageLower.includes(CauseMessageCheck.DOES_NOT_EXIST)
   ) {
-    return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
+    return AppError.notFound(causeMessage, "REPOSITORY_NOT_FOUND");
   }
 
   if (
-    fullMessage.includes("duplicate") ||
-    fullMessage.includes("unique constraint") ||
-    fullMessage.includes("already exists") ||
-    causeCode === "23505"
+    causeMessageLower.includes(CauseMessageCheck.DUPLICATE) ||
+    causeMessageLower.includes(CauseMessageCheck.UNIQUE_CONSTRAINT) ||
+    causeMessageLower.includes(CauseMessageCheck.ALREADY_EXISTS) ||
+    causeMessageLower.includes(CauseMessageCheck.CONFLICT) ||
+    causeCode === CauseCode.UNIQUE_VIOLATION
   ) {
-    return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
+    return AppError.conflict(causeMessage, "REPOSITORY_DUPLICATE");
   }
 
-  if (fullMessage.includes("foreign key") || fullMessage.includes("reference")) {
-    return AppError.badRequest(message, "REPOSITORY_REFERENCE");
+  if (causeMessageLower.includes(CauseMessageCheck.FOREIGN_KEY) || causeMessageLower.includes(CauseMessageCheck.REFERENCE)) {
+    return AppError.badRequest(causeMessage, "REPOSITORY_REFERENCE");
   }
 
-  return AppError.repositoryError(message);
+  return AppError.repositoryError(causeMessage);
 }
 
 /**

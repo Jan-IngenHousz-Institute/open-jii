@@ -15,7 +15,7 @@
     "lint:ws": "pnpm dlx sherif@latest",
     "test": "turbo test",
     "test:watch": "turbo test --watch",
-    "test:coverage": "turbo test --coverage",
+    "test:coverage": "turbo run test:coverage",
     "test:projects": "vitest run",
     "test:projects:watch": "vitest --watch",
     "view-report": "turbo run view-report",
@@ -47,12 +47,12 @@
     "onlyBuiltDependencies": [
       "@swc/core",
       "better-sqlite3",
-      "turbo"
+      "turbo",
+      "@shopify/react-native-skia"
     ],
     "overrides": {
       "react": "catalog:react19",
       "react-dom": "catalog:react19",
-      "router>path-to-regexp": "^8.4.0",
       "lodash": "^4.18.0"
     },
     "patchedDependencies": {
