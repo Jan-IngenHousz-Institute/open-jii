@@ -1,25 +1,26 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 /**
- * Run with:  node --env-file=.env scripts/test-render.mjs
+ * Run with:  npx tsx --env-file=../../apps/backend/.env scripts/test-render.ts
+ *  or via package.json script:  pnpm test:render
  *
  * Renders all emails using the live render functions (which hit Contentful)
  * and writes the HTML output to /tmp/email-*.html so you can open them in a browser.
  */
 import { writeFileSync } from "fs";
 
-import { renderAddedUserNotification } from "../dist/render/added-user-notification.js";
-import { renderOtpEmail } from "../dist/render/otp-email.js";
-import { renderProjectTransferComplete } from "../dist/render/project-transfer-complete.js";
-import { renderTransferRequestConfirmation } from "../dist/render/transfer-request-confirmation.js";
+import { renderAddedUserNotification } from "../src/render/added-user-notification.js";
+import { renderOtpEmail } from "../src/render/otp-email.js";
+import { renderProjectTransferComplete } from "../src/render/project-transfer-complete.js";
+import { renderTransferRequestConfirmation } from "../src/render/transfer-request-confirmation.js";
 
-function withPreview(html, preview) {
+function withPreview(html: string, preview: string): string {
   return (
     `<p style="font-family:sans-serif;padding:8px 16px;"><strong>Preview:</strong> ${preview}</p>\n` +
     html
   );
 }
 
-async function main() {
+async function main(): Promise<void> {
   console.log("Rendering otp-email...");
   const otp = await renderOtpEmail({
     otp: "123456",
@@ -76,7 +77,7 @@ async function main() {
   console.log("  open /tmp/email-transfer-request.html");
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error(err);
   process.exit(1);
 });

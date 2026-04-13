@@ -1211,6 +1211,9 @@ importers:
       react-email:
         specifier: 5.2.10
         version: 5.2.10
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

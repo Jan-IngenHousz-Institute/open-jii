@@ -35,7 +35,7 @@
   "scripts": {
     "build": "tsc --build --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "test:render": "pnpm build && node --env-file=../../apps/backend/.env scripts/test-render.mjs",
+    "test:render": "tsx --env-file=../../apps/backend/.env scripts/test-render.ts",
     "dev": "tsc --watch & email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
     "email:dev": "email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
     "export": "email export",
@@ -60,6 +60,7 @@
     "eslint": "catalog:",
     "react": "catalog:react19",
     "react-email": "5.2.10",
+    "tsx": "^4.21.0",
     "typescript": "catalog:"
   }
 }
