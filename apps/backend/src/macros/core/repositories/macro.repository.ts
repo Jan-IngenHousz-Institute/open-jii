@@ -18,6 +18,8 @@ import {
 } from "../models/macro.model";
 import { CACHE_PORT, CachePort } from "../ports/cache.port";
 
+const isValidUuid = (value: string): boolean => z.string().uuid().safeParse(value).success;
+
 export interface MacroFilter {
   search?: string;
   language?: "python" | "r" | "javascript";
@@ -210,7 +212,7 @@ export class MacroRepository {
   async findNamesByIds(
     ids: string[],
   ): Promise<Result<Map<string, { name: string; filename: string }>>> {
-    const uuids = ids.filter((id) => z.string().uuid().safeParse(id).success);
+    const uuids = ids.filter(isValidUuid);
 
     if (uuids.length === 0) {
       return success(new Map());
@@ -239,7 +241,7 @@ export class MacroRepository {
    * Lean projection — only fetches columns needed for Lambda execution.
    */
   async findScriptsByIds(ids: string[]): Promise<Result<Map<string, MacroScript>>> {
-    const uuids = ids.filter((id) => z.string().uuid().safeParse(id).success);
+    const uuids = ids.filter(isValidUuid);
 
     if (uuids.length === 0) {
       return success(new Map());

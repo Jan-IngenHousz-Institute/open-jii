@@ -15,13 +15,16 @@ export class AwsLambdaService {
   constructor(private readonly configService: AwsConfigService) {
     this.lambdaClient = new LambdaClient({
       region: this.configService.region,
+      maxAttempts: 5,
     });
   }
 
   /**
    * Invoke a Lambda function with a JSON payload
    */
-  async invoke(request: InvokeLambdaRequest): Promise<Result<InvokeLambdaResponse>> {
+  async invoke<TPayload = Record<string, unknown>>(
+    request: InvokeLambdaRequest,
+  ): Promise<Result<InvokeLambdaResponse<TPayload>>> {
     const { functionName, payload, invocationType = "RequestResponse" } = request;
 
     return tryCatch(
@@ -35,9 +38,9 @@ export class AwsLambdaService {
         const command = new InvokeCommand(input);
         const response = await this.lambdaClient.send(command);
 
-        const responsePayload: Record<string, unknown> = response.Payload
-          ? (JSON.parse(new TextDecoder().decode(response.Payload)) as Record<string, unknown>)
-          : {};
+        const responsePayload = response.Payload
+          ? (JSON.parse(new TextDecoder().decode(response.Payload)) as TPayload)
+          : ({} as TPayload);
 
         if (response.FunctionError) {
           throw AppError.internal(

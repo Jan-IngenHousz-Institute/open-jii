@@ -9,10 +9,8 @@ import type {
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
-import type {
-  LambdaExecutionPayload,
-  LambdaExecutionResponse,
-} from "../../../core/models/macro-execution.model";
+import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
+import { LambdaExecutionResponseSchema } from "../../../core/models/macro-execution.model";
 import type { MacroScript } from "../../../core/models/macro.model";
 import { LAMBDA_PORT, LambdaPort } from "../../../core/ports/lambda.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -57,11 +55,11 @@ export class ExecuteMacroBatchUseCase {
     }
 
     // 3. Fan out Lambda invocations in parallel (one per macro_id)
-    const lambdaPromises = [...groups.entries()].map(([macroId, items]) =>
-      this.processGroup(macroId, items, macroMap.get(macroId), request.timeout ?? 30),
+    const groupResults = await Promise.all(
+      [...groups.entries()].map(([macroId, items]) =>
+        this.processGroup(macroId, items, macroMap.get(macroId), request.timeout ?? 30),
+      ),
     );
-
-    const groupResults = await Promise.all(lambdaPromises);
 
     // 4. Merge results
     const allResults: MacroBatchExecutionResultItem[] = [];
@@ -118,10 +116,7 @@ export class ExecuteMacroBatchUseCase {
       timeout,
     };
 
-    const lambdaResult = await this.lambdaPort.invokeLambda<LambdaExecutionResponse>(
-      functionName,
-      payload,
-    );
+    const lambdaResult = await this.lambdaPort.invokeLambda(functionName, payload);
 
     if (lambdaResult.isFailure()) {
       const errorMsg = lambdaResult.error.message;
@@ -136,7 +131,20 @@ export class ExecuteMacroBatchUseCase {
       };
     }
 
-    const lambdaResponse = lambdaResult.value.payload;
+    const parseResult = LambdaExecutionResponseSchema.safeParse(lambdaResult.value.payload);
+    if (!parseResult.success) {
+      return {
+        results: items.map((item) => ({
+          id: item.id,
+          macro_id: macroId,
+          success: false,
+          error: "Invalid Lambda response payload",
+        })),
+        error: `Macro ${macro.name} (${macroId}): Invalid Lambda response payload`,
+      };
+    }
+
+    const lambdaResponse = parseResult.data;
 
     if (lambdaResponse.status === "error") {
       const errorMsg = lambdaResponse.errors?.join("; ") ?? "Lambda execution failed";
@@ -151,14 +159,27 @@ export class ExecuteMacroBatchUseCase {
       };
     }
 
+    const resultMap = new Map(lambdaResponse.results.map((r) => [r.id, r]));
+
     return {
-      results: lambdaResponse.results.map((r) => ({
-        id: r.id,
-        macro_id: macroId,
-        success: r.success,
-        output: r.output,
-        error: r.error,
-      })),
+      results: items.map((item) => {
+        const r = resultMap.get(item.id);
+        if (!r) {
+          return {
+            id: item.id,
+            macro_id: macroId,
+            success: false,
+            error: "No result returned from Lambda for this item",
+          };
+        }
+        return {
+          id: r.id,
+          macro_id: macroId,
+          success: r.success,
+          output: r.output,
+          error: r.error,
+        };
+      }),
     };
   }
 }

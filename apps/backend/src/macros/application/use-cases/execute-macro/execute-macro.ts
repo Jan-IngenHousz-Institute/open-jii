@@ -5,11 +5,8 @@ import type { MacroExecutionRequestBody, MacroExecutionResponse } from "@repo/ap
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
-import type {
-  LambdaExecutionPayload,
-  LambdaExecutionResponse,
-  LambdaExecutionResultItem,
-} from "../../../core/models/macro-execution.model";
+import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
+import { LambdaExecutionResponseSchema } from "../../../core/models/macro-execution.model";
 import { LAMBDA_PORT, LambdaPort } from "../../../core/ports/lambda.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
@@ -57,10 +54,7 @@ export class ExecuteMacroUseCase {
     };
 
     // 3. Invoke Lambda
-    const lambdaResult = await this.lambdaPort.invokeLambda<LambdaExecutionResponse>(
-      functionName,
-      payload,
-    );
+    const lambdaResult = await this.lambdaPort.invokeLambda(functionName, payload);
 
     if (lambdaResult.isFailure()) {
       this.logger.error({
@@ -77,7 +71,23 @@ export class ExecuteMacroUseCase {
       });
     }
 
-    const lambdaResponse = lambdaResult.value.payload;
+    const parseResult = LambdaExecutionResponseSchema.safeParse(lambdaResult.value.payload);
+    if (!parseResult.success) {
+      this.logger.error({
+        msg: "Invalid Lambda response payload",
+        operation: "executeMacro",
+        macroId,
+        errors: parseResult.error.errors,
+      });
+
+      return success({
+        macro_id: macroId,
+        success: false,
+        error: "Invalid Lambda response payload",
+      });
+    }
+
+    const lambdaResponse = parseResult.data;
 
     if (lambdaResponse.status === "error") {
       const errorMsg = lambdaResponse.errors?.join("; ") ?? "Lambda execution failed";
@@ -97,7 +107,7 @@ export class ExecuteMacroUseCase {
     }
 
     // 4. Extract the single result
-    const result = lambdaResponse.results[0] as LambdaExecutionResultItem | undefined;
+    const result = lambdaResponse.results[0];
 
     if (!result) {
       return success({
