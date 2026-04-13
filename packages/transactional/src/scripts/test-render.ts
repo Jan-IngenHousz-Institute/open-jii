@@ -1,17 +1,13 @@
-#!/usr/bin/env tsx
 /**
- * Run with:  npx tsx --env-file=../../apps/backend/.env scripts/test-render.ts
- *  or via package.json script:  pnpm test:render
- *
  * Renders all emails using the live render functions (which hit Contentful)
  * and writes the HTML output to /tmp/email-*.html so you can open them in a browser.
  */
 import { writeFileSync } from "fs";
 
-import { renderAddedUserNotification } from "../src/render/added-user-notification.js";
-import { renderOtpEmail } from "../src/render/otp-email.js";
-import { renderProjectTransferComplete } from "../src/render/project-transfer-complete.js";
-import { renderTransferRequestConfirmation } from "../src/render/transfer-request-confirmation.js";
+import { renderAddedUserNotification } from "../render/added-user-notification";
+import { renderOtpEmail } from "../render/otp-email.js";
+import { renderProjectTransferComplete } from "../render/project-transfer-complete";
+import { renderTransferRequestConfirmation } from "../render/transfer-request-confirmation";
 
 function withPreview(html: string, preview: string): string {
   return (
