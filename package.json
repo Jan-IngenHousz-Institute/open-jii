@@ -47,7 +47,8 @@
     "onlyBuiltDependencies": [
       "@swc/core",
       "better-sqlite3",
-      "turbo"
+      "turbo",
+      "@shopify/react-native-skia"
     ],
     "overrides": {
       "react": "catalog:react19",

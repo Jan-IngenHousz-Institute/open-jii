@@ -12,7 +12,6 @@ module.exports = function (api) {
     ],
     plugins: [
       "@babel/plugin-transform-class-static-block",
-      "inline-dotenv",
       ["inline-import", { extensions: [".sql"] }],
     ],
   };
