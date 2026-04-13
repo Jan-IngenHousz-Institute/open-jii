@@ -15,6 +15,7 @@ export default mergeConfig(
       },
       fileParallelism: false,
       sequence: { concurrent: false },
+      coverage: { enabled: false },
     },
   }),
 );
