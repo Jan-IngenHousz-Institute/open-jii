@@ -247,6 +247,32 @@ resource "aws_security_group_rule" "vpc_endpoint_ingress_from_macro_sandbox" {
   security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
   description              = "Allow Lambda macro-sandbox to reach VPC endpoints"
 }
+
+# Allow ECS tasks to reach the VPC endpoints (private_dns_enabled is VPC-wide)
+resource "aws_security_group_rule" "vpc_endpoint_ingress_from_ecs" {
+  count = (var.create_macro_sandbox_resources && var.create_ecs_resources) ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_sg[0].id
+  security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
+  description              = "Allow ECS tasks to reach ECR and Logs VPC endpoints"
+}
+
+# Allow migration tasks to reach the VPC endpoints (private_dns_enabled is VPC-wide)
+resource "aws_security_group_rule" "vpc_endpoint_ingress_from_migration" {
+  count = (var.create_macro_sandbox_resources && var.create_migration_resources) ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.migration_task_sg[0].id
+  security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
+  description              = "Allow migration tasks to reach ECR and Logs VPC endpoints"
+}
 # ---------------
 # Public Subnets
 # ---------------
