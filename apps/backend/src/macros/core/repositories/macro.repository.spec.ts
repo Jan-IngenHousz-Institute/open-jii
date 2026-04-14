@@ -1032,7 +1032,6 @@ describe("MacroRepository", () => {
       expect(result.value).toBeInstanceOf(Map);
       expect(result.value.size).toBe(0);
     });
-
   });
 
   describe("findScriptById", () => {
