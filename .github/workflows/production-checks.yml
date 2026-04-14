@@ -63,3 +63,19 @@ jobs:
               with:
                   web-base-origin: ${{ vars.WEB_BASE_ORIGIN }}
                   posthog-key: ${{ secrets.POSTHOG_KEY }}
+
+    dependency-scan:
+        name: Scan Dependencies & Licenses
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: aquasecurity/trivy-action@0.35.0
+              with:
+                  scan-type: fs
+                  scan-ref: .
+                  format: table
+                  exit-code: 1
+                  severity: CRITICAL
+                  scanners: vuln,license
+                  ignore-unfixed: true
+                  trivyignores: .trivyignore

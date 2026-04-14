@@ -76,18 +76,6 @@ jobs:
             apps/*/coverage.json
           retention-days: 1
 
-      - name: Scan dependencies and licenses with Trivy
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: table
-          exit-code: 1
-          severity: CRITICAL
-          scanners: vuln,license
-          ignore-unfixed: true
-          trivyignores: .trivyignore
-
   production_checks:
     name: Production Checks
     needs: build_lint_test
