@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "scripts": {
     "build": "nest build",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
