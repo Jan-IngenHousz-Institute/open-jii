@@ -1,5 +1,5 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 
 import { CachePort } from "../../../macros/core/ports/cache.port";
@@ -16,22 +16,32 @@ const TTL_MS = 5 * 60 * 1000; // 5 minutes
  */
 @Injectable()
 export class CacheAdapter extends CachePort {
+  private readonly logger = new Logger(CacheAdapter.name);
+
   constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) {
     super();
   }
 
   async tryCache<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
     const cacheKey = `${PREFIX}${key}`;
-    const cached = await this.cache.get<T>(cacheKey);
 
-    if (cached !== undefined && cached !== null) {
-      return cached;
+    try {
+      const cached = await this.cache.get<T>(cacheKey);
+      if (cached !== undefined && cached !== null) {
+        return cached;
+      }
+    } catch (error) {
+      this.logger.warn({ msg: "Cache read failed, treating as miss", cacheKey, error });
     }
 
     const value = await fetchFn();
 
     if (value !== null && value !== undefined) {
-      await this.cache.set(cacheKey, value, TTL_MS);
+      try {
+        await this.cache.set(cacheKey, value, TTL_MS);
+      } catch (error) {
+        this.logger.warn({ msg: "Cache write failed", cacheKey, error });
+      }
     }
 
     return value;
@@ -45,13 +55,16 @@ export class CacheAdapter extends CachePort {
     const missedKeys: string[] = [];
 
     for (const key of keys) {
-      const cached = await this.cache.get<T>(`${PREFIX}${key}`);
-
-      if (cached !== undefined && cached !== null) {
-        result.set(key, cached);
-      } else {
-        missedKeys.push(key);
+      try {
+        const cached = await this.cache.get<T>(`${PREFIX}${key}`);
+        if (cached !== undefined && cached !== null) {
+          result.set(key, cached);
+          continue;
+        }
+      } catch (error) {
+        this.logger.warn({ msg: "Cache read failed, treating as miss", key, error });
       }
+      missedKeys.push(key);
     }
 
     if (missedKeys.length > 0) {
@@ -59,7 +72,11 @@ export class CacheAdapter extends CachePort {
 
       for (const [key, value] of fetched) {
         result.set(key, value);
-        await this.cache.set(`${PREFIX}${key}`, value, TTL_MS);
+        try {
+          await this.cache.set(`${PREFIX}${key}`, value, TTL_MS);
+        } catch (error) {
+          this.logger.warn({ msg: "Cache write failed", key, error });
+        }
       }
     }
 

@@ -106,8 +106,8 @@ export class ExecuteMacroUseCase {
       });
     }
 
-    // 4. Extract the single result
-    const result = lambdaResponse.results[0];
+    // 4. Extract the single result by matching the request item ID
+    const result = lambdaResponse.results.find((r) => r.id === itemId);
 
     if (!result) {
       return success({

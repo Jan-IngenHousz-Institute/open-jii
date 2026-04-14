@@ -1,5 +1,4 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { z } from "zod";
 
 import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
@@ -17,8 +16,6 @@ import {
   generateHashedFilename,
 } from "../models/macro.model";
 import { CACHE_PORT, CachePort } from "../ports/cache.port";
-
-const isValidUuid = (value: string): boolean => z.string().uuid().safeParse(value).success;
 
 export interface MacroFilter {
   search?: string;
@@ -206,15 +203,12 @@ export class MacroRepository {
 
   /**
    * Find multiple macros by their IDs.
-   * Non-UUID identifiers are silently excluded to avoid PostgreSQL cast errors.
    * Returns a map keyed by macro UUID -> { name, filename }.
    */
   async findNamesByIds(
     ids: string[],
   ): Promise<Result<Map<string, { name: string; filename: string }>>> {
-    const uuids = ids.filter(isValidUuid);
-
-    if (uuids.length === 0) {
+    if (ids.length === 0) {
       return success(new Map());
     }
 
@@ -226,7 +220,7 @@ export class MacroRepository {
           filename: macros.filename,
         })
         .from(macros)
-        .where(inArray(macros.id, uuids));
+        .where(inArray(macros.id, ids));
 
       const map = new Map<string, { name: string; filename: string }>();
       for (const row of results) {
@@ -241,14 +235,12 @@ export class MacroRepository {
    * Lean projection — only fetches columns needed for Lambda execution.
    */
   async findScriptsByIds(ids: string[]): Promise<Result<Map<string, MacroScript>>> {
-    const uuids = ids.filter(isValidUuid);
-
-    if (uuids.length === 0) {
+    if (ids.length === 0) {
       return success(new Map());
     }
 
     return tryCatch(() =>
-      this.cachePort.tryCacheMany<MacroScript>(uuids, async (missedIds) => {
+      this.cachePort.tryCacheMany<MacroScript>(ids, async (missedIds) => {
         const rows = await this.database
           .select({
             id: macros.id,
