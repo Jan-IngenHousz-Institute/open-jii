@@ -1,0 +1,50 @@
+# R sandbox base image CVEs (debian:bookworm-slim)
+# Debian-managed OS packages. Fixes require Debian to publish updates to bookworm.
+# Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
+
+vulnerabilities:
+    # zlib1g heap buffer overflow in MiniZip. Sandbox R code has no zip extraction.
+    - id: CVE-2023-45853
+      statement: "MiniZip heap buffer overflow. Sandbox R code has no zip extraction."
+
+    # libsystemd0 - pulled in as transitive dep. No systemd services in the container.
+    - id: CVE-2026-29111
+      statement: "libsystemd0 transitive dep. No systemd services in the container."
+
+    # libexpat1 XML parser. Sandbox R code does not parse XML via libexpat.
+    - id: CVE-2026-25210
+      statement: "libexpat1 XML parser. Sandbox R code does not parse XML via libexpat."
+
+    # libc-bin (glibc) - core C library, cannot be removed. Awaiting Debian patch.
+    - id: CVE-2026-0861
+      statement: "libc-bin (glibc) core C library. Cannot be removed, awaiting Debian patch."
+
+    # libtinfo6 (ncurses) - terminal handling. Sandbox runs non-interactively.
+    - id: CVE-2025-69720
+      statement: "ncurses terminal handling. Sandbox runs non-interactively."
+
+    # libtiff6 DoS. Sandbox R code does not process TIFF images.
+    - id: CVE-2023-52355
+      statement: "libtiff6 DoS. Sandbox R code does not process TIFF images."
+
+    # libldap-2.5-0 NULL deref. Sandbox has no LDAP connections.
+    - id: CVE-2023-2953
+      statement: "libldap NULL deref. Sandbox has no LDAP connections."
+
+    # libharfbuzz0b text shaping. Pulled in by R's graphics stack.
+    - id: CVE-2023-25193
+      statement: >-
+          HarfBuzz text shaping pulled in by R graphics stack.
+          Requires crafted font files to exploit.
+
+    # xdg-utils URI validation bypass. No desktop environment in the container.
+    - id: CVE-2022-4055
+      statement: "xdg-utils URI validation bypass. No desktop environment in container."
+
+    # r-cran-jsonlite (native yajl C parser)
+    - id: CVE-2022-24795
+      statement: >-
+          yajl integer overflow requires >2 GB JSON input.
+          Lambda sync invoke payload is capped at 6 MB.
+    - id: CVE-2017-16516
+      statement: "yajl buffer over-read in parser. Sandboxed, no untrusted JSON parsing."

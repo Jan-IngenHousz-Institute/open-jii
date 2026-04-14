@@ -5,10 +5,8 @@ FROM public.ecr.aws/lambda/python:3.12
 RUN pip install --no-cache-dir \
     numpy==2.4.2 \
     pandas==3.0.1 \
-    scipy==1.17.0
-
-# Remove pip after installing dependencies.
-RUN rm -rf /var/lang/bin/pip /var/lang/bin/pip3 /var/lang/bin/pip3.12 \
+    scipy==1.17.0 \
+ && rm -rf /var/lang/bin/pip /var/lang/bin/pip3 /var/lang/bin/pip3.12 \
            /var/lang/lib/python3.12/site-packages/pip \
            /var/lang/lib/python3.12/ensurepip
 
