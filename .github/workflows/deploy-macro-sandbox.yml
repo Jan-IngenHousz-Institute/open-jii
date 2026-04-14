@@ -40,64 +40,11 @@ permissions:
   contents: read
 
 jobs:
-  # ── Bootstrap: already ran, kept for reference ──
-  # push-bootstrap-images:
-  #   name: Push Bootstrap Images
-  #   runs-on: ubuntu-latest
-  #   environment: ${{ inputs.environment }}
-  #
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include:
-  #         - language: python
-  #           dockerfile: functions/python/Dockerfile
-  #           ecr_repo: macro-sandbox-python
-  #         - language: javascript
-  #           dockerfile: functions/javascript/Dockerfile
-  #           ecr_repo: macro-sandbox-js
-  #         - language: r
-  #           dockerfile: functions/r/Dockerfile
-  #           ecr_repo: macro-sandbox-r
-  #
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
-  #
-  #     - name: Login to Amazon ECR
-  #       id: login-ecr
-  #       uses: aws-actions/amazon-ecr-login@v2
-  #
-  #     - name: Build and push :latest image
-  #       working-directory: apps/macro-sandbox
-  #       run: |
-  #         set -euo pipefail
-  #
-  #         IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ matrix.ecr_repo }}-${{ env.ENV }}:latest"
-  #
-  #         echo "🔨 Building ${{ matrix.language }} bootstrap image..."
-  #         docker build \
-  #           -f ${{ matrix.dockerfile }} \
-  #           -t "${IMAGE}" \
-  #           --platform linux/amd64 \
-  #           .
-  #
-  #         echo "📦 Pushing ${IMAGE}..."
-  #         docker push "${IMAGE}"
-  #
-  #         echo "✅ ${{ matrix.language }} bootstrap image pushed"
-
-  build-and-deploy:
-    name: Build and Deploy Macro Sandbox
+  push-bootstrap-images:
+    name: Push Bootstrap Images
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-
+  
     strategy:
       fail-fast: false
       matrix:
@@ -105,120 +52,172 @@ jobs:
           - language: python
             dockerfile: functions/python/Dockerfile
             ecr_repo: macro-sandbox-python
-            function_name: macro-sandbox-python
           - language: javascript
             dockerfile: functions/javascript/Dockerfile
             ecr_repo: macro-sandbox-js
-            function_name: macro-sandbox-js
           - language: r
             dockerfile: functions/r/Dockerfile
             ecr_repo: macro-sandbox-r
-            function_name: macro-sandbox-r
-
+  
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.ref || github.sha }}
-
-      - name: Get Checked Out SHA
-        id: get-sha
-        run: |
-          ACTUAL_SHA=$(git rev-parse HEAD)
-          echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
-          echo "Checked out SHA: $ACTUAL_SHA"
-
-      - name: Capture Deployment Start Time
-        uses: ./.github/actions/capture-dora-start
+  
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-
+  
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set environment variables
-        run: |
-          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
-          echo "ECR_REPO=${{ matrix.ecr_repo }}-${{ env.ENV }}" >> $GITHUB_ENV
-          echo "FUNCTION_NAME=${{ matrix.function_name }}-${{ env.ENV }}" >> $GITHUB_ENV
-
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
+  
+      - name: Build and push :latest image
         working-directory: apps/macro-sandbox
         run: |
           set -euo pipefail
-
-          FULL_IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
-
-          echo "🔨 Building ${{ matrix.language }} macro-sandbox..."
+  
+          IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ matrix.ecr_repo }}-${{ env.ENV }}:latest"
+  
+          echo "🔨 Building ${{ matrix.language }} bootstrap image..."
           docker build \
             -f ${{ matrix.dockerfile }} \
-            -t "${FULL_IMAGE}" \
+            -t "${IMAGE}" \
             --platform linux/amd64 \
             .
+  
+          echo "📦 Pushing ${IMAGE}..."
+          docker push "${IMAGE}"
+  
+          echo "✅ ${{ matrix.language }} bootstrap image pushed"
 
-          echo "📦 Pushing ${FULL_IMAGE}..."
-          docker push "${FULL_IMAGE}"
+  # build-and-deploy:
+  #   name: Build and Deploy Macro Sandbox
+  #   runs-on: ubuntu-latest
+  #   environment: ${{ inputs.environment }}
 
-          echo "image=${FULL_IMAGE}" >> $GITHUB_OUTPUT
-          echo "✅ Image pushed: ${FULL_IMAGE}"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - language: python
+  #           dockerfile: functions/python/Dockerfile
+  #           ecr_repo: macro-sandbox-python
+  #           function_name: macro-sandbox-python
+  #         - language: javascript
+  #           dockerfile: functions/javascript/Dockerfile
+  #           ecr_repo: macro-sandbox-js
+  #           function_name: macro-sandbox-js
+  #         - language: r
+  #           dockerfile: functions/r/Dockerfile
+  #           ecr_repo: macro-sandbox-r
+  #           function_name: macro-sandbox-r
 
-      - name: Update Lambda function code
-        id: update-lambda
-        run: |
-          set -euo pipefail
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         ref: ${{ inputs.ref || github.sha }}
 
-          echo "🚀 Updating Lambda function: ${FUNCTION_NAME}"
-          aws lambda update-function-code \
-            --function-name "${FUNCTION_NAME}" \
-            --image-uri "${{ steps.build-image.outputs.image }}" \
-            --output json > /dev/null
+  #     - name: Get Checked Out SHA
+  #       id: get-sha
+  #       run: |
+  #         ACTUAL_SHA=$(git rev-parse HEAD)
+  #         echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
+  #         echo "Checked out SHA: $ACTUAL_SHA"
 
-          echo "⏳ Waiting for function update to complete..."
-          aws lambda wait function-updated-v2 \
-            --function-name "${FUNCTION_NAME}"
+  #     - name: Capture Deployment Start Time
+  #       uses: ./.github/actions/capture-dora-start
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+  #         aws-region: ${{ secrets.AWS_REGION }}
 
-          echo "✅ Lambda function updated: ${FUNCTION_NAME}"
+  #     - name: Login to Amazon ECR
+  #       id: login-ecr
+  #       uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Verify deployment
-        run: |
-          set -euo pipefail
+  #     - name: Set environment variables
+  #       run: |
+  #         echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+  #         echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
+  #         echo "ECR_REPO=${{ matrix.ecr_repo }}-${{ env.ENV }}" >> $GITHUB_ENV
+  #         echo "FUNCTION_NAME=${{ matrix.function_name }}-${{ env.ENV }}" >> $GITHUB_ENV
 
-          CODE_SHA=$(aws lambda get-function-configuration \
-            --function-name "${FUNCTION_NAME}" \
-            --query "CodeSha256" \
-            --output text)
+  #     - name: Build, tag, and push image to Amazon ECR
+  #       id: build-image
+  #       working-directory: apps/macro-sandbox
+  #       run: |
+  #         set -euo pipefail
 
-          echo "🔍 Function: ${FUNCTION_NAME}"
-          echo "   Code SHA: ${CODE_SHA}"
-          echo "   Image: ${{ steps.build-image.outputs.image }}"
+  #         FULL_IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
 
-      - name: Publish DORA Metrics
-        if: always()
-        uses: ./.github/actions/publish-dora-metrics
-        with:
-          deployment-outcome: ${{ steps.update-lambda.outcome == 'success' && 'success' || 'failure' }}
-          service: "macro-sandbox-${{ matrix.language }}"
-          environment: ${{ inputs.environment }}
-          aws-region: ${{ secrets.AWS_REGION }}
+  #         echo "🔨 Building ${{ matrix.language }} macro-sandbox..."
+  #         docker build \
+  #           -f ${{ matrix.dockerfile }} \
+  #           -t "${FULL_IMAGE}" \
+  #           --platform linux/amd64 \
+  #           .
 
-      - name: Deployment Summary
-        if: always()
-        run: |
-          echo "::group::=== ${{ matrix.language }} Deployment Summary ==="
-          echo "Environment: ${{ env.ENV }}"
-          echo "Function: ${FUNCTION_NAME}"
-          echo "Image: ${{ steps.build-image.outputs.image }}"
+  #         echo "📦 Pushing ${FULL_IMAGE}..."
+  #         docker push "${FULL_IMAGE}"
 
-          if [[ "${{ steps.update-lambda.outcome }}" == "success" ]]; then
-            echo "✅ ${{ matrix.language }} macro-sandbox deployed successfully"
-          else
-            echo "❌ ${{ matrix.language }} macro-sandbox deployment failed"
-          fi
-          echo "::endgroup::"
+  #         echo "image=${FULL_IMAGE}" >> $GITHUB_OUTPUT
+  #         echo "✅ Image pushed: ${FULL_IMAGE}"
+
+  #     - name: Update Lambda function code
+  #       id: update-lambda
+  #       run: |
+  #         set -euo pipefail
+
+  #         echo "🚀 Updating Lambda function: ${FUNCTION_NAME}"
+  #         aws lambda update-function-code \
+  #           --function-name "${FUNCTION_NAME}" \
+  #           --image-uri "${{ steps.build-image.outputs.image }}" \
+  #           --output json > /dev/null
+
+  #         echo "⏳ Waiting for function update to complete..."
+  #         aws lambda wait function-updated-v2 \
+  #           --function-name "${FUNCTION_NAME}"
+
+  #         echo "✅ Lambda function updated: ${FUNCTION_NAME}"
+
+  #     - name: Verify deployment
+  #       run: |
+  #         set -euo pipefail
+
+  #         CODE_SHA=$(aws lambda get-function-configuration \
+  #           --function-name "${FUNCTION_NAME}" \
+  #           --query "CodeSha256" \
+  #           --output text)
+
+  #         echo "🔍 Function: ${FUNCTION_NAME}"
+  #         echo "   Code SHA: ${CODE_SHA}"
+  #         echo "   Image: ${{ steps.build-image.outputs.image }}"
+
+  #     - name: Publish DORA Metrics
+  #       if: always()
+  #       uses: ./.github/actions/publish-dora-metrics
+  #       with:
+  #         deployment-outcome: ${{ steps.update-lambda.outcome == 'success' && 'success' || 'failure' }}
+  #         service: "macro-sandbox-${{ matrix.language }}"
+  #         environment: ${{ inputs.environment }}
+  #         aws-region: ${{ secrets.AWS_REGION }}
+
+  #     - name: Deployment Summary
+  #       if: always()
+  #       run: |
+  #         echo "::group::=== ${{ matrix.language }} Deployment Summary ==="
+  #         echo "Environment: ${{ env.ENV }}"
+  #         echo "Function: ${FUNCTION_NAME}"
+  #         echo "Image: ${{ steps.build-image.outputs.image }}"
+
+  #         if [[ "${{ steps.update-lambda.outcome }}" == "success" ]]; then
+  #           echo "✅ ${{ matrix.language }} macro-sandbox deployed successfully"
+  #         else
+  #           echo "❌ ${{ matrix.language }} macro-sandbox deployment failed"
+  #         fi
+  #         echo "::endgroup::"
