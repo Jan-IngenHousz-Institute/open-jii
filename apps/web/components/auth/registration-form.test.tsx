@@ -303,7 +303,6 @@ describe("RegistrationForm", () => {
     // Second click while pending
     await user.click(submitButton);
 
-    // Should only call once
     expect(createUserProfileMock).toHaveBeenCalledTimes(1);
   });
 
