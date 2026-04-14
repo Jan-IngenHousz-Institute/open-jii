@@ -202,21 +202,21 @@ jobs:
             echo "❌ Lambda did not become Active after waiting $WAITED seconds."
             exit 1
           fi
-               
+
       - name: Health Check New Version (before updating alias)
         id: healthcheck-server
         run: |
           FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
           NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
-          
+
           echo "Health checking new version $NEW_VERSION (before updating alias)..."
-          
+
           # Invoke Lambda with a minimal test event and capture response
           timeout 30 aws lambda invoke \
             --function-name "$FUNCTION_NAME:$NEW_VERSION" \
             /tmp/response.json > /tmp/invoke-metadata.json 2>&1
           INVOKE_EXIT_CODE=$?
-          
+
           if [ "$INVOKE_EXIT_CODE" -ne 0 ]; then
             echo "❌ Lambda invoke command failed with exit code $INVOKE_EXIT_CODE"
             echo "Invoke metadata:"
@@ -225,27 +225,27 @@ jobs:
             cat /tmp/response.json || true
             exit 1
           fi
-          
+
           echo "✅ Lambda invocation successful"
           echo "Invoke metadata:"
           cat /tmp/invoke-metadata.json
-          
+
           echo "Response payload:"
           cat /tmp/response.json
-          
+
           # Check if Lambda executed (StatusCode 200 means it ran)
           STATUS_CODE=$(jq -r '.StatusCode' /tmp/invoke-metadata.json 2>/dev/null || echo "unknown")
           if [[ "$STATUS_CODE" != "200" ]]; then
             echo "❌ Lambda did not execute, StatusCode: $STATUS_CODE"
             exit 1
           fi
-          
+
           # Only fail if there's a critical error that means the Lambda can't start at all
           if jq -e '.errorType == "Runtime.ImportModuleError" or .errorType == "Runtime.HandlerNotFound"' /tmp/response.json > /dev/null 2>&1; then
             echo "❌ Critical Lambda error - code cannot load or handler not found"
             exit 1
           fi
-          
+
           echo "✅ Health check passed - Lambda version $NEW_VERSION is operational"
 
       - name: Update Server Alias to New Version
@@ -263,11 +263,11 @@ jobs:
         run: |
           ALIAS_NAME="live"
           PREV_VERSION="${{ steps.get-server-alias.outputs.prev_version }}"
-          
+
           echo "❌ Deployment failed - rolling back alias to previous version $PREV_VERSION"
           aws lambda update-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "$PREV_VERSION"
           echo "✅ Rolled back Lambda alias to previous version"
-          
+
           # Also delete the failed version to keep things clean
           NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
           if [[ -n "$NEW_VERSION" && "$NEW_VERSION" != "$PREV_VERSION" ]]; then
@@ -296,7 +296,6 @@ jobs:
             done
           echo "✅ S3 asset revert complete"
 
-      
       - name: Prune old Lambda versions (keep 10 latest)
         if: success()
         run: |
@@ -499,7 +498,7 @@ jobs:
         uses: ./.github/actions/publish-dora-metrics
         with:
           deployment-outcome: ${{ steps.update-lambdas.outcome || 'failure' }}
-          service: 'web'
+          service: "web"
           environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
 
