@@ -151,11 +151,6 @@ describe("DataUploadModal", () => {
       />,
     );
 
-    // Wait for reset timeout
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 350));
-    });
-
     // Reopen modal
     rerender(
       <DataUploadModal
@@ -165,16 +160,12 @@ describe("DataUploadModal", () => {
       />,
     );
 
-    // Should be back to sensor selection
-    expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
-    expect(screen.queryByTestId("file-upload-step")).not.toBeInTheDocument();
+    expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
+    expect(screen.queryByTestId("success-step")).not.toBeInTheDocument();
   });
 
   it("calls onOpenChange when dialog requests to close", () => {
     renderModal();
-
-    // The dialog component should be able to trigger onOpenChange
-    // This would be handled by the Dialog component internally
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 

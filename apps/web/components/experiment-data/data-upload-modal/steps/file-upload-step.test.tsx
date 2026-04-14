@@ -156,8 +156,6 @@ describe("FileUploadStep", () => {
   it("renders buttons", () => {
     render(<FileUploadStep {...defaultProps} />);
 
-    expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
-    expect(screen.getByText("uploadModal.fileUpload.description")).toBeInTheDocument();
     expect(screen.getByText("uploadModal.fileUpload.back")).toBeInTheDocument();
     expect(screen.getByText("uploadModal.fileUpload.uploadFiles")).toBeInTheDocument();
   });

@@ -73,9 +73,6 @@ function renderLayout({
   return render(<MacroLayout>{children}</MacroLayout>);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<MacroLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
