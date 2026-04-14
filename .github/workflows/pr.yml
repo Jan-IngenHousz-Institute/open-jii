@@ -22,11 +22,35 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build_lint_test:
-    name: Build, Lint, & Test
+  detect:
+    name: Detect Affected Packages
     runs-on: ubuntu-latest
     outputs:
       affected_apps: ${{ steps.detect.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+
+  build_lint_test:
+    name: Build, Lint, & Test
+    needs: detect
+    runs-on: ubuntu-latest
+    if: needs.detect.outputs.has_affected_apps == 'true'
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
@@ -41,33 +65,26 @@ jobs:
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-      - name: Detect Affected Packages
-        id: detect
-        uses: ./.github/actions/detect-affected-packages
 
       - name: Build Packages
-        if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/build-packages
         with:
-          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+          affected_apps: ${{ needs.detect.outputs.affected_apps }}
 
       - name: Lint Packages
-        if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/lint-packages
         with:
-          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+          affected_apps: ${{ needs.detect.outputs.affected_apps }}
 
       - name: Test Packages
-        if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/test-packages
         with:
-          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+          affected_apps: ${{ needs.detect.outputs.affected_apps }}
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           macro-sb-test-key: ${{ secrets.MACRO_SB_TEST_KEY }}
           skip-coverage: ${{ github.actor == 'dependabot[bot]' }}
 
       - name: Save coverage artifacts for main branch upload
-        if: steps.detect.outputs.has_affected_apps == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: coverage-reports-${{ github.event.pull_request.head.sha }}
@@ -78,15 +95,16 @@ jobs:
 
   production_checks:
     name: Production Checks
-    needs: build_lint_test
+    needs: detect
+    if: needs.detect.outputs.has_affected_apps == 'true'
     uses: ./.github/workflows/production-checks.yml
     secrets: inherit
     with:
-      affected-apps: ${{ needs.build_lint_test.outputs.affected_apps || '[]' }}
+      affected-apps: ${{ needs.detect.outputs.affected_apps || '[]' }}
 
   tofu:
     name: OpenTofu (Plan)
-    needs: build_lint_test
+    needs: detect
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
     strategy:
