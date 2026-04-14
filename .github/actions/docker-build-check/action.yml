@@ -1,0 +1,64 @@
+name: "Docker Build Check"
+description: "Builds a Docker image (no push) and scans it with Trivy"
+
+inputs:
+  image-name:
+    description: "Name/tag for the built image (e.g. open-jii-backend:pr-check)"
+    required: true
+  dockerfile:
+    description: "Path to the Dockerfile relative to the context"
+    required: true
+  context:
+    description: "Docker build context path"
+    required: false
+    default: "."
+  platforms:
+    description: "Target platform(s) for the build"
+    required: false
+    default: "linux/amd64"
+  build-args:
+    description: "Newline-separated list of build args (KEY=VALUE)"
+    required: false
+    default: ""
+  trivyignores:
+    description: "Path to .trivyignore file"
+    required: false
+    default: ".trivyignore"
+  trivy-severity:
+    description: "Trivy severity levels to fail on"
+    required: false
+    default: "CRITICAL,HIGH"
+  use-gha-cache:
+    description: "Whether to use GitHub Actions build cache"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image (no push)
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ inputs.context }}
+        file: ${{ inputs.dockerfile }}
+        platforms: ${{ inputs.platforms }}
+        push: false
+        load: true
+        tags: ${{ inputs.image-name }}
+        build-args: ${{ inputs.build-args }}
+        cache-from: ${{ inputs.use-gha-cache == 'true' && 'type=gha' || '' }}
+        cache-to: ${{ inputs.use-gha-cache == 'true' && 'type=gha,mode=max' || '' }}
+
+    - name: Scan Docker image with Trivy
+      uses: aquasecurity/trivy-action@0.35.0
+      with:
+        image-ref: ${{ inputs.image-name }}
+        format: table
+        exit-code: 1
+        severity: ${{ inputs.trivy-severity }}
+        vuln-type: os,library
+        ignore-unfixed: true
+        trivyignores: ${{ inputs.trivyignores }}
