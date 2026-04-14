@@ -56,126 +56,12 @@ jobs:
       - name: Capture Deployment Start Time
         uses: ./.github/actions/capture-dora-start
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
+      - name: Build with OpenNext
+        uses: ./.github/actions/opennext-build
         with:
-          node-version: "22"
-          hoisted: "true"
-
-      - name: Set build environment variables
-        env:
-          WEB_BASE_ORIGIN: ${{ vars.WEB_BASE_ORIGIN }}
-          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
-        run: |
-          echo "Preparing build-time environment variables..."
-
-          NODE_ENV="production"
-
-          # Public URLs by environment
-          if [[ "${{ inputs.environment }}" == "prod" ]]; then
-            NEXT_PUBLIC_API_URL="https://api.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_DOCS_URL="https://docs.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_BASE_URL="https://${WEB_BASE_ORIGIN}"
-          else
-            NEXT_PUBLIC_API_URL="https://api.dev.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_DOCS_URL="https://docs.dev.${WEB_BASE_ORIGIN}"
-            NEXT_PUBLIC_BASE_URL="https://dev.${WEB_BASE_ORIGIN}"
-          fi
-
-          # PostHog configuration
-          NEXT_PUBLIC_POSTHOG_KEY="${POSTHOG_KEY}"
-          NEXT_PUBLIC_POSTHOG_HOST="https://eu.i.posthog.com"
-          NEXT_PUBLIC_POSTHOG_UI_HOST="https://eu.posthog.com"
-
-          echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_DOCS_URL=${NEXT_PUBLIC_DOCS_URL}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_POSTHOG_UI_HOST=${NEXT_PUBLIC_POSTHOG_UI_HOST}" >> $GITHUB_ENV
-          echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
-
-      - name: Build Next.js Application
-        env:
-          NODE_ENV: ${{ env.NODE_ENV }}
-          NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BASE_URL: ${{ env.NEXT_PUBLIC_BASE_URL }}
-          NEXT_PUBLIC_POSTHOG_KEY: ${{ env.NEXT_PUBLIC_POSTHOG_KEY }}
-          NEXT_PUBLIC_POSTHOG_HOST: ${{ env.NEXT_PUBLIC_POSTHOG_HOST }}
-          NEXT_PUBLIC_POSTHOG_UI_HOST: ${{ env.NEXT_PUBLIC_POSTHOG_UI_HOST }}
-        run: |
-          echo "Building Next.js application..."
-          pnpm run build --filter=web
-
-      - name: Run OpenNext Build
-        run: |
-          echo "Running OpenNext build..."
-          cd apps/web && nice -n 10 pnpm run build:opennext
-
-      - name: Check OpenNext Build Output
-        run: |
-          echo "Verifying OpenNext build output..."
-          if [[ ! -d "apps/web/.open-next" ]]; then
-            echo "::error::OpenNext build directory not found: apps/web/.open-next"
-            exit 1
-          fi
-          echo "OpenNext build directory found"
-
-          # Check for server functions
-          if [[ -d "apps/web/.open-next/server-functions" ]]; then
-            echo "Server function found"
-          else
-            echo "No server functions found"
-          fi
-
-          # Check for image optimization function
-          if [[ -d "apps/web/.open-next/image-optimization-function" ]]; then
-            echo "Image optimization function found"
-          else
-            echo "No image optimization function found"
-          fi
-
-          # Check for revalidation function
-          if [[ -d "apps/web/.open-next/revalidation-function" ]]; then
-            echo "Revalidation function found"
-          else
-            echo "No revalidation function found"
-          fi
-
-          # Check for warmer function
-          if [[ -d "apps/web/.open-next/warmer-function" ]]; then
-            echo "Warmer function found"
-          else
-            echo "No warmer function found"
-          fi
-
-          # Check for dynamodb provider
-          if [[ -d "apps/web/.open-next/dynamodb-provider" ]]; then
-            echo "DynamoDB provider found"
-          else
-            echo "No DynamoDB provider found"
-          fi
-
-          # Check for assets
-          if [[ -d "apps/web/.open-next/assets" ]]; then
-            echo "Assets directory found"
-          else
-            echo "No assets directory found"
-          fi
-
-          # Check for cache
-          if [[ -d "apps/web/.open-next/cache" ]]; then
-            echo "Cache directory found"
-          else
-            echo "No cache directory found"
-          fi
-
-          # Check for OpenNext output JSON
-          if [[ -f "apps/web/.open-next/open-next.output.json" ]]; then
-            echo "OpenNext output JSON found"
-          else
-            echo "No OpenNext output JSON found"
-          fi
+          environment: ${{ inputs.environment }}
+          web-base-origin: ${{ vars.WEB_BASE_ORIGIN }}
+          posthog-key: ${{ secrets.POSTHOG_KEY }}
 
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6
@@ -316,21 +202,21 @@ jobs:
             echo "❌ Lambda did not become Active after waiting $WAITED seconds."
             exit 1
           fi
-               
+
       - name: Health Check New Version (before updating alias)
         id: healthcheck-server
         run: |
           FUNCTION_NAME="${{ env.SERVER_FUNCTION }}"
           NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
-          
+
           echo "Health checking new version $NEW_VERSION (before updating alias)..."
-          
+
           # Invoke Lambda with a minimal test event and capture response
           timeout 30 aws lambda invoke \
             --function-name "$FUNCTION_NAME:$NEW_VERSION" \
             /tmp/response.json > /tmp/invoke-metadata.json 2>&1
           INVOKE_EXIT_CODE=$?
-          
+
           if [ "$INVOKE_EXIT_CODE" -ne 0 ]; then
             echo "❌ Lambda invoke command failed with exit code $INVOKE_EXIT_CODE"
             echo "Invoke metadata:"
@@ -339,27 +225,27 @@ jobs:
             cat /tmp/response.json || true
             exit 1
           fi
-          
+
           echo "✅ Lambda invocation successful"
           echo "Invoke metadata:"
           cat /tmp/invoke-metadata.json
-          
+
           echo "Response payload:"
           cat /tmp/response.json
-          
+
           # Check if Lambda executed (StatusCode 200 means it ran)
           STATUS_CODE=$(jq -r '.StatusCode' /tmp/invoke-metadata.json 2>/dev/null || echo "unknown")
           if [[ "$STATUS_CODE" != "200" ]]; then
             echo "❌ Lambda did not execute, StatusCode: $STATUS_CODE"
             exit 1
           fi
-          
+
           # Only fail if there's a critical error that means the Lambda can't start at all
           if jq -e '.errorType == "Runtime.ImportModuleError" or .errorType == "Runtime.HandlerNotFound"' /tmp/response.json > /dev/null 2>&1; then
             echo "❌ Critical Lambda error - code cannot load or handler not found"
             exit 1
           fi
-          
+
           echo "✅ Health check passed - Lambda version $NEW_VERSION is operational"
 
       - name: Update Server Alias to New Version
@@ -377,11 +263,11 @@ jobs:
         run: |
           ALIAS_NAME="live"
           PREV_VERSION="${{ steps.get-server-alias.outputs.prev_version }}"
-          
+
           echo "❌ Deployment failed - rolling back alias to previous version $PREV_VERSION"
           aws lambda update-alias --function-name "${{ env.SERVER_FUNCTION }}" --name "$ALIAS_NAME" --function-version "$PREV_VERSION"
           echo "✅ Rolled back Lambda alias to previous version"
-          
+
           # Also delete the failed version to keep things clean
           NEW_VERSION="${{ steps.deploy-server.outputs.version }}"
           if [[ -n "$NEW_VERSION" && "$NEW_VERSION" != "$PREV_VERSION" ]]; then
@@ -410,7 +296,6 @@ jobs:
             done
           echo "✅ S3 asset revert complete"
 
-      
       - name: Prune old Lambda versions (keep 10 latest)
         if: success()
         run: |
@@ -613,7 +498,7 @@ jobs:
         uses: ./.github/actions/publish-dora-metrics
         with:
           deployment-outcome: ${{ steps.update-lambdas.outcome || 'failure' }}
-          service: 'web'
+          service: "web"
           environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
 
