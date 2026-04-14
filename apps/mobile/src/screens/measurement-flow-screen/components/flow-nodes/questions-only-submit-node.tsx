@@ -5,6 +5,7 @@ import { useExperiments } from "~/hooks/use-experiments";
 import { useQuestionsUpload } from "~/hooks/use-questions-upload";
 import { useSession } from "~/hooks/use-session";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
+import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
 import { getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
@@ -107,8 +108,8 @@ export function QuestionsOnlySubmitNode() {
           activeOpacity={0.7}
         >
           <Flag size={18} color={flagType ? colors.semantic.error : colors.inactive} />
-            {flagType === "outlier" ? "Outlier" : flagType === "needs_review" ? "Needs Review" : "Flag"}
           <Text className={clsx("text-sm", flagType ? classes.text : classes.textMuted)}>
+            {flagType ? FLAG_TYPE_LABELS[flagType] : "Flag"}
           </Text>
         </TouchableOpacity>
       </View>

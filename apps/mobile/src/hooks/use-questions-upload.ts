@@ -1,5 +1,6 @@
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
+import { type AnnotationFlagType } from "@repo/api";
 import { useMeasurements } from "~/hooks/use-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
@@ -27,7 +28,7 @@ export function useQuestionsUpload() {
       userId: string;
       questions: AnswerData[];
       commentText?: string;
-      flagType?: string | null;
+      flagType?: AnnotationFlagType | null;
     }) => {
       const topic = getMultispeqMqttTopic({ experimentId, protocolId: "questions" });
 
