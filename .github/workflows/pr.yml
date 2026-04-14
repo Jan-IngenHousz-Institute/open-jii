@@ -63,6 +63,7 @@ jobs:
         with:
           affected_apps: ${{ steps.detect.outputs.affected_apps }}
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
+          macro-sb-test-key: ${{ secrets.MACRO_SB_TEST_KEY }}
           skip-coverage: ${{ github.actor == 'dependabot[bot]' }}
 
       - name: Save coverage artifacts for main branch upload
