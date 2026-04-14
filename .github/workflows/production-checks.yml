@@ -51,6 +51,7 @@ jobs:
                   image-name: macro-sandbox-${{ matrix.language }}:pr-check
                   dockerfile: apps/macro-sandbox/functions/${{ matrix.language }}/Dockerfile
                   context: apps/macro-sandbox
+                  trivyignores: apps/macro-sandbox/functions/${{ matrix.language }}/.trivyignore.yaml
                   use-gha-cache: "false"
 
     web-opennext:

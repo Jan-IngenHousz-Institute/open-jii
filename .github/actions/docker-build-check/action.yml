@@ -21,7 +21,7 @@ inputs:
     required: false
     default: ""
   trivyignores:
-    description: "Path to .trivyignore file"
+    description: "Path to .trivyignore or .trivyignore.yaml file"
     required: false
     default: ".trivyignore"
   trivy-severity:
