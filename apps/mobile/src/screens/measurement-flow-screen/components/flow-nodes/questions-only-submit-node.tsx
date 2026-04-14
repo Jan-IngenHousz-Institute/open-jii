@@ -13,6 +13,7 @@ import { useQuestionsUpload } from "~/hooks/use-questions-upload";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
+import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
@@ -136,7 +137,7 @@ export function QuestionsOnlySubmitNode() {
         >
           <Flag size={18} color={flagType ? colors.semantic.error : colors.inactive} />
           <Text className={clsx("text-sm", flagType ? classes.text : classes.textMuted)}>
-            {flagType === "outlier" ? "Outlier" : flagType === "needs_review" ? "Needs Review" : "Flag"}
+            {flagType ? FLAG_TYPE_LABELS[flagType] : "Flag"}
           </Text>
         </TouchableOpacity>
       </View>

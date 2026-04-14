@@ -11,12 +11,12 @@ import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { type AnnotationFlagType } from "@repo/api";
 import { useTheme } from "~/hooks/use-theme";
+import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 
 
-const FLAG_OPTIONS: { value: AnnotationFlagType; label: string }[] = [
-  { value: "outlier", label: "Outlier" },
-  { value: "needs_review", label: "Needs Review" },
-];
+const FLAG_OPTIONS: { value: AnnotationFlagType; label: string }[] = (
+  Object.entries(FLAG_TYPE_LABELS) as [AnnotationFlagType, string][]
+).map(([value, label]) => ({ value, label }));
 
 interface FlagTypeModalProps {
   visible: boolean;
@@ -71,7 +71,7 @@ export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTyp
         <View className="flex-row items-center justify-between pb-2">
           <Text className={clsx("text-lg font-bold", classes.text)}>Select flag type</Text>
           <TouchableOpacity onPress={onCancel} className="p-1">
-            <X size={24} color={colors.neutral.black} />
+            <X size={24} color={colors.onSurface} />
           </TouchableOpacity>
         </View>
 
