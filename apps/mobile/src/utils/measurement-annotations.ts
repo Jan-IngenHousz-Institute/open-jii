@@ -2,16 +2,21 @@
  * Helpers for measurement annotations (comments) compatible with the pipeline
  * (centrum_pipeline expects annotations array with type "comment", content: { text, flagType }).
  */
-
-import { type AnnotationFlagType } from "@repo/api";
+import type { AnnotationFlagType } from "@repo/api";
 
 export const FLAG_TYPE_LABELS: Record<AnnotationFlagType, string> = {
   outlier: "Outlier",
   needs_review: "Needs Review",
 };
 
-type CommentAnnotation = { type: "comment"; content: { text: string; flagType: null } };
-type FlagAnnotation = { type: "flag"; content: { text: string; flagType: AnnotationFlagType } };
+interface CommentAnnotation {
+  type: "comment";
+  content: { text: string; flagType: null };
+}
+interface FlagAnnotation {
+  type: "flag";
+  content: { text: string; flagType: AnnotationFlagType };
+}
 type MeasurementAnnotation = CommentAnnotation | FlagAnnotation;
 
 export function getCommentFromMeasurementResult(

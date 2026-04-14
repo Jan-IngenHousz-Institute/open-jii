@@ -1,11 +1,13 @@
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
-import { type AnnotationFlagType } from "@repo/api";
+import type {AnnotationFlagType} from "@repo/api";
 import { useMeasurements } from "~/hooks/use-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 import { buildAnnotations } from "~/utils/measurement-annotations";
+
+import type {AnnotationFlagType} from "@repo/api";
 
 export function useQuestionsUpload() {
   const { saveMeasurement } = useMeasurements();

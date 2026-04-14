@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Button } from "~/components/Button";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
-import { type AnnotationFlagType } from "@repo/api";
+import type {AnnotationFlagType} from "@repo/api";
 import { FlagTypeModal } from "~/components/recent-measurements-screen/flag-type-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { MeasurementItem } from "~/hooks/use-all-measurements";
@@ -13,10 +13,12 @@ import { useQuestionsUpload } from "~/hooks/use-questions-upload";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
-import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
+import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
+
+import type {AnnotationFlagType} from "@repo/api";
 
 import { AnalysisSummaryCard } from "./analysis-node/analysis-summary-card";
 
@@ -124,7 +126,10 @@ export function QuestionsOnlySubmitNode() {
           className="flex-row items-center gap-1.5 py-1"
           activeOpacity={0.7}
         >
-          <MessageCircle size={18} color={measurementComment ? colors.onSurface : colors.inactive} />
+          <MessageCircle
+            size={18}
+            color={measurementComment ? colors.onSurface : colors.inactive}
+          />
           <Text className={clsx("text-sm", measurementComment ? classes.text : classes.textMuted)}>
             {measurementComment ? "Edit comment" : "Add comment"}
           </Text>
