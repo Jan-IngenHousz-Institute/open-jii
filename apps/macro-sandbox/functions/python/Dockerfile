@@ -7,6 +7,11 @@ RUN pip install --no-cache-dir \
     pandas==3.0.1 \
     scipy==1.17.0
 
+# Remove pip after installing dependencies.
+RUN rm -rf /var/lang/bin/pip /var/lang/bin/pip3 /var/lang/bin/pip3.12 \
+           /var/lang/lib/python3.12/site-packages/pip \
+           /var/lang/lib/python3.12/ensurepip
+
 COPY lib/wrappers/wrapper.py ${LAMBDA_TASK_ROOT}/wrappers/wrapper.py
 COPY lib/helpers/helpers.py ${LAMBDA_TASK_ROOT}/src/helpers/helpers.py
 

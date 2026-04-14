@@ -1,0 +1,37 @@
+# R sandbox base image CVEs (debian:bookworm-slim)
+# Debian-managed OS packages. Fixes require Debian to publish updates to bookworm.
+# Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
+
+# zlib1g heap buffer overflow in MiniZip. Sandbox R code has no zip extraction.
+CVE-2023-45853
+
+# libsystemd0 - pulled in as transitive dep. No systemd services in the container.
+CVE-2026-29111
+
+# libexpat1 XML parser. Sandbox R code does not parse XML via libexpat.
+CVE-2026-25210
+
+# libc-bin (glibc) - core C library, cannot be removed. Awaiting Debian patch.
+CVE-2026-0861
+
+# libtinfo6 (ncurses) - terminal handling. Sandbox runs non-interactively.
+CVE-2025-69720
+
+# libtiff6 DoS. Sandbox R code does not process TIFF images.
+CVE-2023-52355
+
+# libldap-2.5-0 NULL deref. Sandbox has no LDAP connections.
+CVE-2023-2953
+
+# libharfbuzz0b text shaping. Pulled in by R's graphics stack.
+# Requires crafted font files to exploit.
+CVE-2023-25193
+
+# xdg-utils URI validation bypass. No desktop environment in the container.
+CVE-2022-4055
+
+# r-cran-jsonlite (native yajl C parser)
+# CVE-2022-24795: integer overflow requires >2GB JSON input (sandbox limits to 1MB)
+# CVE-2017-16516: buffer over-read in yajl parser
+CVE-2022-24795
+CVE-2017-16516
