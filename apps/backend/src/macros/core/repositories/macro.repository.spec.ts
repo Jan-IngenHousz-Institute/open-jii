@@ -1085,14 +1085,21 @@ describe("MacroRepository", () => {
       const created = createResult.value[0];
 
       const cachePort = testApp.module.get<CachePort>(CACHE_PORT);
-      const tryCacheSpy = vi.spyOn(cachePort, "tryCache");
+      let fetchCallCount = 0;
+      const originalTryCache = cachePort.tryCache.bind(cachePort);
+      vi.spyOn(cachePort, "tryCache").mockImplementation(async (key, fetchFn) => {
+        return originalTryCache(key, async () => {
+          fetchCallCount++;
+          return fetchFn();
+        });
+      });
 
-      // First call fills cache
+      // First call fills cache (fetchFn hits DB)
       await repository.findScriptById(created.id);
-      // Second call should still invoke tryCache (which returns from cache)
+      // Second call returns from cache (fetchFn should not be called)
       await repository.findScriptById(created.id);
 
-      expect(tryCacheSpy).toHaveBeenCalledTimes(2);
+      expect(fetchCallCount).toBe(1);
     });
   });
 

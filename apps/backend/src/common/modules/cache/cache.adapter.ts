@@ -84,6 +84,10 @@ export class CacheAdapter extends CachePort {
   }
 
   async invalidate(key: string): Promise<void> {
-    await this.cache.del(`${PREFIX}${key}`);
+    try {
+      await this.cache.del(`${PREFIX}${key}`);
+    } catch (error) {
+      this.logger.warn({ msg: "Cache invalidation failed", key, error });
+    }
   }
 }
