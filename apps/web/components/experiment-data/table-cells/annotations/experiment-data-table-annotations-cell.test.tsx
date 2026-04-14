@@ -102,7 +102,6 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     const flagBadge = screen.getByText("2");
     await user.click(flagBadge);
 
-    // Check flag types are displayed - they appear as "experimentDataAnnotations.flagTypes.outlier" and "experimentDataAnnotations.flagTypes.needs_review"
     expect(screen.getByText("experimentDataAnnotations.flagTypes.outlier")).toBeInTheDocument();
     expect(
       screen.getByText("experimentDataAnnotations.flagTypes.needs_review"),

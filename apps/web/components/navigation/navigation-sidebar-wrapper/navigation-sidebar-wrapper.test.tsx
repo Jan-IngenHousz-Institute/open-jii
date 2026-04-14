@@ -62,7 +62,6 @@ describe("NavigationSidebarWrapper", () => {
       }[];
     };
 
-    // Check dashboard navigation
     expect(navigationData.navDashboard).toHaveLength(1);
     expect(navigationData.navDashboard[0]).toMatchObject({
       title: "dashboard.title",
@@ -71,7 +70,6 @@ describe("NavigationSidebarWrapper", () => {
       isActive: true,
     });
 
-    // Check experiments navigation
     expect(navigationData.navExperiments).toHaveLength(1);
     expect(navigationData.navExperiments[0]).toMatchObject({
       title: "sidebar.experiments",
@@ -105,7 +103,6 @@ describe("NavigationSidebarWrapper", () => {
       }[];
     };
 
-    // Check protocols navigation
     expect(navigationData.navProtocols).toHaveLength(1);
     expect(navigationData.navProtocols[0]).toMatchObject({
       title: "sidebar.protocols",
@@ -135,7 +132,6 @@ describe("NavigationSidebarWrapper", () => {
       }[];
     };
 
-    // Check macros navigation
     expect(navigationData.navMacros).toHaveLength(1);
     expect(navigationData.navMacros[0]).toMatchObject({
       title: "sidebar.macros",
@@ -239,7 +235,6 @@ describe("NavigationSidebarWrapper", () => {
     };
 
     // Lines 34-35 pattern is repeated for experiments, protocols, macros
-    // Verify experiments items are mapped correctly (has items in mock)
     const experimentsItems = navigationData.navExperiments[0].items;
     expect(experimentsItems.length).toBeGreaterThan(0);
     expect(experimentsItems[0]).toHaveProperty("title");

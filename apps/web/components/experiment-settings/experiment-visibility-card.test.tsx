@@ -44,9 +44,7 @@ describe("<ExperimentVisibilityCard />", () => {
       embargoUntil: "2026-01-15T23:59:59.999Z",
     });
 
-    // Should show embargo field with date
     expect(screen.getByText("experimentSettings.embargoUntil")).toBeInTheDocument();
-    // Check for date button (format may vary by timezone)
     expect(screen.getByRole("button", { name: /Jan 1[56], 2026/ })).toBeInTheDocument();
     expect(screen.getByText("newExperiment.embargoUntilHelperString")).toBeInTheDocument();
   });
@@ -61,7 +59,6 @@ describe("<ExperimentVisibilityCard />", () => {
     const combobox = screen.getByRole("combobox");
     expect(combobox).toBeDisabled();
 
-    // Should show warning that visibility cannot be changed
     expect(screen.getByText("experimentSettings.visibilityCannotBeChanged")).toBeInTheDocument();
 
     // Embargo section should be hidden for public experiments

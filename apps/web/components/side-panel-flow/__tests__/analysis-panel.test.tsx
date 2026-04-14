@@ -8,10 +8,6 @@ import { contract } from "@repo/api";
 
 import { AnalysisPanel } from "../analysis-panel";
 
-// --------------------
-// Mocks
-// --------------------
-
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
 }));
@@ -44,9 +40,6 @@ vi.mock("../../macro-search-with-dropdown", () => ({
   },
 }));
 
-// --------------------
-// Tests
-// --------------------
 describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   const defaultOnChange = vi.fn();
 

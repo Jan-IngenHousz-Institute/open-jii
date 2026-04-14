@@ -123,9 +123,7 @@ describe("SelectOptionsEditor", () => {
     const bulkAddButton = screen.getByText("questionCard.bulkAddOptions");
     await user.click(bulkAddButton);
 
-    // In real usage, the dialog would call onBulkAddOptions
-    // This tests the prop is passed correctly
-    expect(mockOnBulkAddOptions).not.toHaveBeenCalled(); // Until dialog confirms
+    expect(mockOnBulkAddOptions).not.toHaveBeenCalled();
   });
 
   it("calls onDeleteAllOptions when confirmed", async () => {

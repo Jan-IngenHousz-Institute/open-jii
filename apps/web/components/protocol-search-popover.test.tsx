@@ -68,12 +68,10 @@ describe("<ProtocolSearchPopover />", () => {
     const items = screen.getAllByRole("option");
     expect(items).toHaveLength(3);
 
-    // Check protocol names
     expect(screen.getByText("Fv/FM Baseline")).toBeInTheDocument();
     expect(screen.getByText("Ambient Light")).toBeInTheDocument();
     expect(screen.getByText("PAM Fluorometry")).toBeInTheDocument();
 
-    // Check families
     expect(screen.getAllByText("multispeq")).toHaveLength(2);
     expect(screen.getByText("ambit")).toBeInTheDocument();
   });
@@ -81,15 +79,12 @@ describe("<ProtocolSearchPopover />", () => {
   it("displays protocol details correctly with created by info", () => {
     renderPopover();
 
-    // Check that created by info is shown for protocols that have it
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("Al Turing")).toBeInTheDocument();
 
-    // Check that family labels are shown
     const familyLabels = screen.getAllByText("experiments.family");
     expect(familyLabels).toHaveLength(3);
 
-    // Check that created by labels are shown for protocols that have creator
     const createdByLabels = screen.getAllByText("experiments.createdBy");
     expect(createdByLabels).toHaveLength(2); // Only p1 and p2 have createdByName
   });

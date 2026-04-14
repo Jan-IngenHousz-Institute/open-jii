@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { CodeEditorHeaderActions } from "../code-editor-header-actions";
 
-// ---------- Helpers ----------
 type SyncStatus = "synced" | "unsynced" | "syncing";
 
 function renderComponent(syncStatus: SyncStatus, onClose = vi.fn()) {
@@ -13,13 +12,11 @@ function renderComponent(syncStatus: SyncStatus, onClose = vi.fn()) {
   };
 }
 
-// ---------- Tests ----------
 describe("CodeEditorHeaderActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // ---------- Icon rendering ----------
   it("renders check icon when syncStatus is synced", () => {
     renderComponent("synced");
     expect(document.querySelector(".lucide-check")).toBeInTheDocument();
@@ -41,7 +38,6 @@ describe("CodeEditorHeaderActions", () => {
     expect(document.querySelector(".lucide-circle")).not.toBeInTheDocument();
   });
 
-  // ---------- Tooltip text ----------
   it("shows 'All changes saved' tooltip for synced", () => {
     renderComponent("synced");
     const trigger = document.querySelector(".lucide-check")!.closest("span")!;
@@ -70,7 +66,6 @@ describe("CodeEditorHeaderActions", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("Close editor");
   });
 
-  // ---------- Close button ----------
   it("calls onClose when close button is clicked", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

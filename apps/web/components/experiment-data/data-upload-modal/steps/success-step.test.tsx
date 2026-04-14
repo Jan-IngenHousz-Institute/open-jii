@@ -38,7 +38,6 @@ describe("SuccessStep", () => {
   it("renders success icon", () => {
     render(<SuccessStep onClose={mockOnClose} />);
 
-    // Check if CheckCircle icon is rendered (it should be in the DOM)
     const successIcon = document.querySelector("svg");
     expect(successIcon).toBeInTheDocument();
   });
@@ -46,7 +45,6 @@ describe("SuccessStep", () => {
   it("renders info icon in description section", () => {
     render(<SuccessStep onClose={mockOnClose} />);
 
-    // Check if Info icon is rendered
     const icons = document.querySelectorAll("svg");
     expect(icons.length).toBeGreaterThanOrEqual(2); // CheckCircle + Info
   });
@@ -54,7 +52,6 @@ describe("SuccessStep", () => {
   it("has correct styling classes", () => {
     render(<SuccessStep onClose={mockOnClose} />);
 
-    // Check if the main container has the expected structure
     const container = screen.getByText("uploadModal.success.title").closest("div");
     expect(container).toBeInTheDocument();
   });

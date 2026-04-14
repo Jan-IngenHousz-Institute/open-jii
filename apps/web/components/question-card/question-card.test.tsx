@@ -159,7 +159,6 @@ describe("QuestionCard", () => {
       />,
     );
 
-    // Verify SelectOptionsEditor is rendered with correct props
     expect(screen.getByText("questionCard.answerOptionsLabel")).toBeInTheDocument();
   });
 });

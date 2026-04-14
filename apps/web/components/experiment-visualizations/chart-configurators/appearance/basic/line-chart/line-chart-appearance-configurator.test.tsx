@@ -80,7 +80,6 @@ describe("LineChartAppearanceConfigurator", () => {
     render(<TestComponent />);
 
     expect(screen.getByRole("combobox")).toBeInTheDocument();
-    // Check for the label specifically
     expect(screen.getByText(/chartOptions\.mode/i)).toBeInTheDocument();
   });
 
@@ -165,7 +164,6 @@ describe("LineChartAppearanceConfigurator", () => {
 
     await user.click(screen.getByRole("combobox"));
 
-    // Check that all three options are present in the dropdown
     const linesOptions = screen.getAllByText(/^configuration\.modes\.lines$/i);
     expect(linesOptions.length).toBeGreaterThanOrEqual(1);
 

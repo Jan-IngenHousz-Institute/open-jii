@@ -47,9 +47,6 @@ vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
-// -------------------
-// Default mock data
-// -------------------
 const defaultMacro = createMacro({
   id: "test-macro-id",
   name: "Test Macro",
@@ -62,9 +59,6 @@ const defaultSession = {
   data: { user: { id: "user-123" } },
 };
 
-// -------------------
-// Helpers
-// -------------------
 function renderLayout({
   macroId = "test-macro-id",
   session = defaultSession,
@@ -80,9 +74,6 @@ function renderLayout({
   return render(<MacroLayout>{children}</MacroLayout>);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<MacroLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

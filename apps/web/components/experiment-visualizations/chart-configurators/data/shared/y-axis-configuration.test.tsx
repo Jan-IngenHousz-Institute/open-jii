@@ -395,7 +395,6 @@ describe("YAxisConfiguration", () => {
       const option = screen.getByRole("option", { name: /temperature/ });
       await user.click(option);
 
-      // Check if Y-axis title input shows in the first series styling section
       const titleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
       expect(titleInputs[0]).toHaveValue("temperature");
     });
@@ -434,7 +433,6 @@ describe("YAxisConfiguration", () => {
       const option = screen.getByRole("option", { name: /humidity/ });
       await user.click(option);
 
-      // Check if Y-axis title input shows in the first series styling section
       const titleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
       expect(titleInputs[0]).toHaveValue("humidity");
     });
@@ -781,7 +779,6 @@ describe("YAxisConfiguration", () => {
       });
 
       const axisTitleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
-      // Should only have one axis title input (for first series)
       expect(axisTitleInputs.length).toBe(1);
     });
 

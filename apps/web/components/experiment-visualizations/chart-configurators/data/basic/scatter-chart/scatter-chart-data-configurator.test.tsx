@@ -172,7 +172,6 @@ describe("ScatterChartDataConfigurator", () => {
         },
       });
 
-      // Should have 3 y-axis sources
       expect(screen.getByTestId("y-axis-source-0")).toBeInTheDocument();
       expect(screen.getByTestId("y-axis-source-1")).toBeInTheDocument();
       expect(screen.getByTestId("y-axis-source-2")).toBeInTheDocument();
@@ -326,7 +325,6 @@ describe("ScatterChartDataConfigurator", () => {
       expect(screen.getByTestId("y-axis-config")).toBeInTheDocument();
       expect(screen.getByTestId("color-config")).toBeInTheDocument();
 
-      // Should show no color selected
       expect(screen.getByTestId("color-selected")).toHaveTextContent("no");
     });
 

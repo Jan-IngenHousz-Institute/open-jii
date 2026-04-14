@@ -62,9 +62,6 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
   ),
 }));
 
-// -------------------
-// Default mock data
-// -------------------
 const defaultProtocol = createProtocol({
   id: "test-id",
   name: "Test Protocol",
@@ -78,9 +75,6 @@ const defaultSession = {
   isPending: false,
 };
 
-// -------------------
-// Helpers
-// -------------------
 function renderLayout({
   protocolId = "test-id",
   session = defaultSession,
@@ -98,10 +92,6 @@ function renderLayout({
 
   return render(<ProtocolLayout>{children}</ProtocolLayout>);
 }
-
-// -------------------
-// Tests
-// -------------------
 
 describe("ProtocolLayout", () => {
   beforeEach(() => {

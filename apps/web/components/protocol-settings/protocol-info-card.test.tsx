@@ -33,17 +33,14 @@ describe("ProtocolInfoCard", () => {
   it("should render the protocol info card with correct data", () => {
     render(<ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />);
 
-    // Check titles
     expect(screen.getByText("protocolSettings.protocolInfo")).toBeInTheDocument();
     expect(screen.getByText("protocolSettings.protocolInfoDescription")).toBeInTheDocument();
 
-    // Check creation and update dates
     expect(screen.getByText("protocolSettings.created:")).toBeInTheDocument();
     expect(screen.getByText(formatDate("2023-01-01T00:00:00Z"))).toBeInTheDocument();
     expect(screen.getByText("protocolSettings.updated:")).toBeInTheDocument();
     expect(screen.getByText(formatDate("2023-01-02T00:00:00Z"))).toBeInTheDocument();
 
-    // Check ID
     expect(screen.getByText("protocols.protocolId:")).toBeInTheDocument();
     expect(screen.getByText("protocol-123")).toBeInTheDocument();
   });
@@ -90,7 +87,6 @@ describe("ProtocolInfoCard", () => {
     const deleteButton = screen.getByText("protocolSettings.deleteProtocol");
     await user.click(deleteButton);
 
-    // Check that the dialog is open
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveTextContent("common.confirmDelete");

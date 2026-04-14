@@ -398,7 +398,6 @@ describe("<ExperimentSidePanel />", () => {
       nodeTitle: "My Question Label!",
     });
 
-    // Check that the info icon SVG is present for QUESTION nodes
     const infoIcon = document.querySelector("svg.lucide-info");
     expect(infoIcon).toBeTruthy();
     expect(infoIcon).toHaveClass("lucide-info");
@@ -424,7 +423,6 @@ describe("<ExperimentSidePanel />", () => {
       nodeTitle: "Test",
     });
 
-    // Should not have the info icon
     const infoIcon = document.querySelector("svg.lucide-info");
     expect(infoIcon).toBeFalsy();
   });

@@ -22,10 +22,6 @@ vi.mock("@/util/base64", () => ({
   encodeBase64: (s: string) => btoa(s),
 }));
 
-// --------------------
-// Component mocks
-// --------------------
-
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">{title}</div>
@@ -134,10 +130,6 @@ vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
-// --------------------
-// Test data
-// --------------------
-
 const mockMacroData = createMacro({
   id: "test-macro-id",
   name: "Test Macro",
@@ -151,10 +143,6 @@ const mockMacroData = createMacro({
   createdByName: "John Doe",
   sortOrder: null,
 });
-
-// --------------------
-// Tests
-// --------------------
 
 describe("MacroOverviewPage", () => {
   const mockParams = Promise.resolve({ id: "test-macro-id" });

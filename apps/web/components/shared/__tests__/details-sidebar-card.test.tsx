@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { DetailsSidebarCard } from "../details-sidebar-card";
 
-// ---------- Helpers ----------
 function renderComponent(props: Partial<React.ComponentProps<typeof DetailsSidebarCard>> = {}) {
   const defaultProps: React.ComponentProps<typeof DetailsSidebarCard> = {
     title: "Test Title",
@@ -14,7 +13,6 @@ function renderComponent(props: Partial<React.ComponentProps<typeof DetailsSideb
   return render(<DetailsSidebarCard {...defaultProps} />);
 }
 
-// ---------- Tests ----------
 describe("DetailsSidebarCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,7 +46,6 @@ describe("DetailsSidebarCard", () => {
     expect(heading).toHaveTextContent("Heading Title");
   });
 
-  // ---------- Collapse / Expand behavior ----------
   it("starts in collapsed state by default", () => {
     renderComponent();
     expect(document.querySelector(".lucide-chevron-down")).toBeInTheDocument();
@@ -78,7 +75,6 @@ describe("DetailsSidebarCard", () => {
     expect(document.querySelector(".lucide-chevron-up")).not.toBeInTheDocument();
   });
 
-  // ---------- Collapsed summary ----------
   it("shows collapsed summary when collapsed and collapsedSummary is provided", () => {
     renderComponent({ collapsedSummary: "Summary text here" });
     expect(screen.getByText("Summary text here")).toBeInTheDocument();
@@ -114,7 +110,6 @@ describe("DetailsSidebarCard", () => {
     expect(screen.getByText("Reappearing summary")).toBeInTheDocument();
   });
 
-  // ---------- CSS class behavior ----------
   it("applies hidden class to content wrapper when collapsed", () => {
     renderComponent();
     const contentWrapper = document.querySelector('[class*="md:block"]');
@@ -139,7 +134,6 @@ describe("DetailsSidebarCard", () => {
     expect(contentWrapper).toHaveClass("md:block");
   });
 
-  // ---------- Button positioning ----------
   it("applies correct positioning class to toggle button when collapsed", () => {
     renderComponent();
     const button = screen.getByRole("button");
@@ -158,7 +152,6 @@ describe("DetailsSidebarCard", () => {
     expect(button.className).toContain("translate-y-0");
   });
 
-  // ---------- Children rendering ----------
   it("renders complex children", () => {
     renderComponent({
       children: (
@@ -173,7 +166,6 @@ describe("DetailsSidebarCard", () => {
     expect(screen.getByTestId("child-2")).toBeInTheDocument();
   });
 
-  // ---------- Toggle button uses ghost variant ----------
   it("renders toggle button with ghost variant", () => {
     renderComponent();
     const button = screen.getByRole("button");

@@ -4,7 +4,6 @@ import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-uti
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api";
-
 import { toast } from "@repo/ui/hooks";
 
 import { useMacroCreate } from "./useMacroCreate";
@@ -28,7 +27,8 @@ describe("useMacroCreate", () => {
     });
 
     await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalledWith("macro-1");
+      expect(onSuccess).toHaveBeenCalled();
+      expect(onSuccess.mock.calls[0][0].body.id).toBe("macro-1");
     });
   });
 

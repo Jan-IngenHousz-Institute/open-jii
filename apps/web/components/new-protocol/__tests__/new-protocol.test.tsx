@@ -30,7 +30,7 @@ vi.mock("../../macro-search-with-dropdown", () => ({
   },
 }));
 
-// Supplement global @repo/ui/hooks mock with hooks needed by CodeTesterLayout (step 2)
+// Global mock only provides toast - this component also needs useBreakpoint/useIsMobile
 vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
   useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
@@ -321,8 +321,13 @@ describe("NewProtocolForm", () => {
     });
 
     it("should link compatible macros after create then navigate", async () => {
+      const addMacrosSpy = server.mount(contract.protocols.addCompatibleMacros, { body: [] });
       const user = userEvent.setup();
-      render(<NewProtocolForm />);
+      const { router } = render(<NewProtocolForm />);
+
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
+      });
 
       act(() => {
         lastDropdownProps?.onAddMacro("macro-1");
@@ -346,13 +351,12 @@ describe("NewProtocolForm", () => {
       await user.click(screen.getByRole("button", { name: /finalizeSetup/i }));
 
       await waitFor(() => {
-        expect(mockAddMacrosMutateAsync).toHaveBeenCalledWith({
-          params: { id: "new-protocol-id" },
-          body: { macroIds: ["macro-1"] },
-        });
+        expect(addMacrosSpy.body).toMatchObject({ macroIds: ["macro-1"] });
       });
 
-      expect(mockPush).toHaveBeenCalledWith("/en/platform/protocols/new-protocol-id");
+      await waitFor(() => {
+        expect(router.push).toHaveBeenCalledWith("/en-US/platform/protocols/new-protocol-id");
+      });
     });
   });
 });

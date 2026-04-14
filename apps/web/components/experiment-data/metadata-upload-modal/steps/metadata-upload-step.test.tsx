@@ -1,11 +1,8 @@
-import "@testing-library/jest-dom";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MetadataUploadStep } from "./metadata-upload-step";
-
-globalThis.React = React;
 
 const mockParseClipboard = vi.fn();
 const mockParseClipboardText = vi.fn();
@@ -75,12 +72,8 @@ vi.mock("@/hooks/experiment/useExperimentMetadata/useExperimentMetadata", () => 
   }),
 }));
 
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
+// Stub UI components - this test validates data flow via data-testid callbacks
+// on mocked MetadataTable, so Radix Select/Input must be simplified.
 vi.mock("@repo/ui/components", () => ({
   Button: ({
     children,
@@ -143,22 +136,6 @@ vi.mock("@repo/ui/components", () => ({
 
 vi.mock("@repo/ui/lib/utils", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
-}));
-
-vi.mock("lucide-react", () => ({
-  ArrowLeft: () => <span />,
-  Calendar: () => <span />,
-  Check: () => <span />,
-  ClipboardPaste: () => <span />,
-  FileSpreadsheet: () => <span />,
-  KeyRound: () => <span />,
-  Loader2: () => <span />,
-  Pencil: () => <span />,
-  Plus: () => <span />,
-  Rows3: () => <span />,
-  TableProperties: () => <span />,
-  Trash2: () => <span />,
-  Upload: () => <span />,
 }));
 
 const sampleData = {

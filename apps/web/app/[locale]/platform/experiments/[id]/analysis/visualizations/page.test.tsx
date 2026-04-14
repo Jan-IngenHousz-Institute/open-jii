@@ -106,10 +106,10 @@ describe("VisualizationsPage", () => {
       render(<VisualizationsPage />);
 
       await waitFor(() => {
-        expect(screen.getByRole("button")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /create/ })).not.toBeDisabled();
       });
 
-      const createButton = screen.getByRole("button");
+      const createButton = screen.getByRole("button", { name: /create/ });
       await user.click(createButton);
 
       const mockRouter = vi.mocked(useRouter)();

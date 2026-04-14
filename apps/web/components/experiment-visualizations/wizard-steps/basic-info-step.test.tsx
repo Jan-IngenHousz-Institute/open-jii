@@ -207,7 +207,6 @@ describe("BasicInfoStep", () => {
     it("should pass correct props to WizardStepButtons", () => {
       renderBasicInfoStep({ stepIndex: 2, totalSteps: 5, isSubmitting: true });
 
-      // Verify step navigation behavior
       const previousButton = screen.getByRole("button", { name: "experiments.back" });
       const nextButton = screen.getByRole("button", { name: "experiments.next" });
 

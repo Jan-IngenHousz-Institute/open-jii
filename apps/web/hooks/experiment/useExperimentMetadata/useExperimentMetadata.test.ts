@@ -1,138 +1,64 @@
-import { tsr } from "@/lib/tsr";
-import { renderHook } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentMetadata } from "./useExperimentMetadata";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    experiments: {
-      listExperimentMetadata: {
-        useQuery: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
-
 describe("useExperimentMetadata", () => {
-  const mockExperimentId = "test-experiment-id";
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should call useQuery with correct parameters", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
+  it("returns metadata for an experiment", async () => {
+    server.mount(contract.experiments.listExperimentMetadata, {
+      body: [
+        {
+          metadataId: "meta-1",
+          experimentId: "exp-123",
+          metadata: { location: "Lab A" },
+          createdBy: "user-1",
+          createdAt: "2025-01-01T00:00:00.000Z",
+          updatedAt: "2025-01-02T00:00:00.000Z",
+        },
+      ],
     });
-    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
 
-    renderHook(() => useExperimentMetadata(mockExperimentId));
+    const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockExperimentId } },
-      queryKey: ["experiment", mockExperimentId, "metadata"],
+    await waitFor(() => {
+      expect(result.current.data?.body).toHaveLength(1);
+      expect(result.current.data?.body[0].metadataId).toBe("meta-1");
+      expect(result.current.data?.body[0].metadata).toEqual({ location: "Lab A" });
     });
   });
 
-  it("should return the query result directly", () => {
-    const mockReturnValue = {
-      data: {
-        body: [
-          {
-            metadataId: "meta-uuid",
-            experimentId: mockExperimentId,
-            metadata: { location: "Lab A" },
-            createdBy: "user-uuid",
-            createdAt: "2025-01-01T00:00:00.000Z",
-            updatedAt: "2025-01-02T00:00:00.000Z",
-          },
-        ],
-      },
-      isLoading: false,
-      error: null,
-    };
+  it("returns empty array when no metadata exists", async () => {
+    server.mount(contract.experiments.listExperimentMetadata, { body: [] });
 
-    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
+    const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 
-    const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
-
-    expect(result.current.data).toEqual(mockReturnValue.data);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
+    await waitFor(() => {
+      expect(result.current.data?.body).toEqual([]);
+    });
   });
 
-  it("should handle loading state", () => {
-    const mockReturnValue = {
-      data: undefined,
-      isLoading: true,
-      error: null,
-    };
+  it("handles loading state", () => {
+    server.mount(contract.experiments.listExperimentMetadata, {
+      body: [],
+      delay: 999_999,
+    });
 
-    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
+    const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.data).toBeUndefined();
-    expect(result.current.error).toBeNull();
   });
 
-  it("should handle error state", () => {
-    const mockError = new Error("Failed to fetch metadata");
-    const mockReturnValue = {
-      data: undefined,
-      isLoading: false,
-      error: mockError,
-    };
+  it("handles error state", async () => {
+    server.mount(contract.experiments.listExperimentMetadata, { status: 500 });
 
-    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
+    const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 
-    const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
-
-    expect(result.current.error).toBe(mockError);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.data).toBeUndefined();
-  });
-
-  it("should handle empty metadata response (no metadata exists)", () => {
-    const mockReturnValue = {
-      data: { body: [] },
-      isLoading: false,
-      error: null,
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperimentMetadata(mockExperimentId));
-
-    expect(result.current.data?.body).toEqual([]);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
-  });
-
-  it("should pass through experiment ID correctly", () => {
-    const differentExperimentId = "another-experiment-id";
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.listExperimentMetadata.useQuery = mockUseQuery;
-
-    renderHook(() => useExperimentMetadata(differentExperimentId));
-
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: differentExperimentId } },
-      queryKey: ["experiment", differentExperimentId, "metadata"],
+    await waitFor(() => {
+      expect(result.current.error).toBeTruthy();
     });
   });
 });

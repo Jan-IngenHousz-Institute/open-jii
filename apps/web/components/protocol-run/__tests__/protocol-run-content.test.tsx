@@ -9,10 +9,6 @@ import { useSession } from "@repo/auth/client";
 
 import { ProtocolRunContent } from "../protocol-run-content";
 
-// --------------------
-// Mocks
-// --------------------
-
 vi.mock("@repo/ui/lib/utils", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
 }));
@@ -99,9 +95,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-// --------------------
-// Tests
-// --------------------
 describe("<ProtocolRunContent />", () => {
   const mockProtocol = createProtocol({
     id: "proto-1",

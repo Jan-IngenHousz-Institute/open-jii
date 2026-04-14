@@ -1,5 +1,4 @@
 import { render, screen } from "@/test/test-utils";
-// ---------- Mocks ----------
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -15,7 +14,6 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-// ---------- Helpers ----------
 interface RenderOptions {
   isLoading?: boolean;
   error?: unknown;
@@ -48,13 +46,11 @@ function renderComponent(options: RenderOptions = {}) {
   );
 }
 
-// ---------- Tests ----------
 describe("EntityLayoutShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // ---------- Loading state ----------
   it("shows loading message when isLoading is true", () => {
     renderComponent({ isLoading: true });
     expect(screen.getByText("common.loading")).toBeInTheDocument();
@@ -67,7 +63,6 @@ describe("EntityLayoutShell", () => {
     expect(screen.queryByText("common.loading")).not.toBeInTheDocument();
   });
 
-  // ---------- Error states ----------
   it("calls notFound for 404 error", () => {
     renderComponent({ error: { status: 404 } });
     expect(mockNotFound).toHaveBeenCalled();
@@ -98,14 +93,12 @@ describe("EntityLayoutShell", () => {
     expect(screen.getByText("errors.resourceNotFoundMessage")).toBeInTheDocument();
   });
 
-  // ---------- No data state ----------
   it("returns null when hasData is false and no error", () => {
     const { container } = renderComponent({ hasData: false });
     expect(container.innerHTML).toBe("");
     expect(screen.queryByTestId("children-content")).not.toBeInTheDocument();
   });
 
-  // ---------- Success state ----------
   it("renders children when hasData is true", () => {
     renderComponent({ hasData: true });
     expect(screen.getByTestId("children-content")).toBeInTheDocument();

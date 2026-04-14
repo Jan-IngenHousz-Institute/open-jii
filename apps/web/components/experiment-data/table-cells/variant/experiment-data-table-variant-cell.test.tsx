@@ -167,7 +167,6 @@ describe("VariantExpandedContent", () => {
     const jsonData = '{\n  "name": "John",\n  "age": 30\n}';
     render(<VariantExpandedContent data={jsonData} />);
 
-    // Check for copy button
     const copyButtons = screen.getAllByRole("button");
     expect(copyButtons.length).toBeGreaterThan(0);
     expect(screen.getByText("common.copy")).toBeInTheDocument();
@@ -185,7 +184,6 @@ describe("VariantExpandedContent", () => {
       await user.click(copyButton);
     }
 
-    // Check that clipboard.writeText was called
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(jsonData);
     });
@@ -201,7 +199,6 @@ describe("VariantExpandedContent", () => {
       await user.click(copyButton);
     }
 
-    // Should show "copied" text
     await waitFor(() => {
       expect(screen.getByText("common.copied")).toBeInTheDocument();
     });
@@ -211,7 +208,6 @@ describe("VariantExpandedContent", () => {
     const jsonData = '{\n  "name": "John",\n  "age": 30\n}';
     render(<VariantExpandedContent data={jsonData} />);
 
-    // Check that the code block was created
     const codeBlock = screen.getByText(/"name": "John"/);
     expect(codeBlock).toBeInTheDocument();
     expect(screen.getByText(/"age": 30/)).toBeInTheDocument();
@@ -221,7 +217,6 @@ describe("VariantExpandedContent", () => {
     const invalidJson = "not valid json";
     render(<VariantExpandedContent data={invalidJson} />);
 
-    // Should still render the content
     expect(screen.getByText("not valid json")).toBeInTheDocument();
   });
 

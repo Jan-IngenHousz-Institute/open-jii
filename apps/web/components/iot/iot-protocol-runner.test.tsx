@@ -282,12 +282,10 @@ describe("IotProtocolRunner", () => {
       });
       await user.click(runButton);
 
-      // Check that button shows running state
       await waitFor(() => {
         expect(screen.getByText("iot.protocolRunner.running")).toBeInTheDocument();
       });
 
-      // Check that button is disabled while running
       expect(runButton).toBeDisabled();
     });
 

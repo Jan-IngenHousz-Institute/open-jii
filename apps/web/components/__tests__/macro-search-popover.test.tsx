@@ -61,12 +61,10 @@ describe("<MacroSearchPopover />", () => {
     const items = screen.getAllByRole("option");
     expect(items).toHaveLength(3);
 
-    // Check macro names
     expect(screen.getByText(macros[0].name)).toBeInTheDocument();
     expect(screen.getByText(macros[1].name)).toBeInTheDocument();
     expect(screen.getByText(macros[2].name)).toBeInTheDocument();
 
-    // Check languages
     expect(screen.getByText("python")).toBeInTheDocument();
     expect(screen.getByText("r")).toBeInTheDocument();
     expect(screen.getByText("javascript")).toBeInTheDocument();
@@ -78,10 +76,8 @@ describe("<MacroSearchPopover />", () => {
     // m1 and m2 have createdByName ("Test User" from factory); m3 does not
     expect(screen.getAllByText("Test User")).toHaveLength(2);
 
-    // Check that language labels are shown for all macros
     expect(screen.getAllByText("common.language")).toHaveLength(3);
 
-    // Check that created by labels are shown for macros that have creator
     expect(screen.getAllByText("experiments.createdBy")).toHaveLength(2);
   });
 

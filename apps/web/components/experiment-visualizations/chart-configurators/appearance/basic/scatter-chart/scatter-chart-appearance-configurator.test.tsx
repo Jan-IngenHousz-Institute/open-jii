@@ -81,7 +81,6 @@ describe("ScatterChartAppearanceConfigurator", () => {
     const comboboxes = screen.getAllByRole("combobox");
     await user.click(comboboxes[0]);
 
-    // Check that both mode options are present
     const markersOptions = screen.getAllByText(/^configuration\.modes\.markers$/i);
     expect(markersOptions.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/^configuration\.modes\.linesMarkers$/i)).toBeInTheDocument();
@@ -153,7 +152,6 @@ describe("ScatterChartAppearanceConfigurator", () => {
     const comboboxes = screen.getAllByRole("combobox");
     await user.click(comboboxes[1]); // Second combobox is marker shape
 
-    // Check that all marker shape options are present
     expect(
       screen.getAllByText(/^configuration\.markerSymbols\.circle$/i).length,
     ).toBeGreaterThanOrEqual(1);

@@ -11,8 +11,6 @@ import { useSession } from "@repo/auth/client";
 
 import { ProtocolDetailsSidebar } from "../protocol-details-sidebar";
 
-// ---------- Mocks ----------
-
 vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
 }));
@@ -161,7 +159,6 @@ vi.mock("../../shared/details-sidebar-card", () => ({
   ),
 }));
 
-// ---------- Test Data ----------
 const mockProtocol = createProtocol({
   id: "550e8400-e29b-41d4-a716-446655440000",
   name: "Test Protocol",
@@ -175,7 +172,6 @@ const mockProtocol = createProtocol({
   updatedAt: "2024-06-15T12:00:00.000Z",
 });
 
-// ---------- Helpers ----------
 function renderComponent(props: Partial<React.ComponentProps<typeof ProtocolDetailsSidebar>> = {}) {
   const defaultProps: React.ComponentProps<typeof ProtocolDetailsSidebar> = {
     protocolId: "550e8400-e29b-41d4-a716-446655440000",
@@ -186,7 +182,6 @@ function renderComponent(props: Partial<React.ComponentProps<typeof ProtocolDeta
   return render(<ProtocolDetailsSidebar {...defaultProps} />);
 }
 
-// ---------- Tests ----------
 describe("ProtocolDetailsSidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -222,8 +217,6 @@ describe("ProtocolDetailsSidebar", () => {
       ],
     });
   });
-
-  // ---- Basic rendering ----
 
   it("renders the sidebar with the details title", () => {
     renderComponent();
@@ -272,8 +265,6 @@ describe("ProtocolDetailsSidebar", () => {
     expect(sidebarCard.dataset.collapsedSummary).toContain("protocols.protocolId");
     expect(sidebarCard.dataset.collapsedSummary).toContain("550e8400...");
   });
-
-  // ---- Creator vs Non-Creator: Family selector ----
 
   it("renders a Select component for family when user is the creator", () => {
     renderComponent();
@@ -349,8 +340,6 @@ describe("ProtocolDetailsSidebar", () => {
     );
   });
 
-  // ---- Creator vs Non-Creator: Compatible Macros ----
-
   it("renders ProtocolCompatibleMacrosCard when user is the creator", () => {
     renderComponent();
     const card = screen.getByTestId("protocol-compatible-macros-card");
@@ -412,8 +401,6 @@ describe("ProtocolDetailsSidebar", () => {
       expect(screen.getByText("protocolSettings.noCompatibleMacros")).toBeInTheDocument();
     });
   });
-
-  // ---- Danger Zone (Delete) ----
 
   it("renders danger zone when user is creator and feature flag is enabled", () => {
     renderComponent();
@@ -550,8 +537,6 @@ describe("ProtocolDetailsSidebar", () => {
     });
   });
 
-  // ---- Separator rendering ----
-
   it("renders separators", () => {
     renderComponent();
     const separators = screen.getAllByRole("separator");
@@ -565,8 +550,6 @@ describe("ProtocolDetailsSidebar", () => {
     const separators = screen.getAllByRole("separator");
     expect(separators).toHaveLength(1);
   });
-
-  // ---- Session edge case ----
 
   it("treats user as non-creator when session is null", () => {
     vi.mocked(useSession).mockReturnValue({ data: null } as never);

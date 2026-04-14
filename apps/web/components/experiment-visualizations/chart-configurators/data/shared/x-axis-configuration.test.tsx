@@ -226,7 +226,6 @@ describe("XAxisConfiguration", () => {
       if (typeSelect) {
         await user.click(typeSelect);
 
-        // Check that all three options are present in the dropdown
         const linearOptions = screen.getAllByText(/configuration\.axisTypes\.linear/i);
         expect(linearOptions.length).toBeGreaterThanOrEqual(1);
 

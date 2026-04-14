@@ -214,7 +214,6 @@ describe("ColorDimensionConfiguration", () => {
       const colorscaleSelect = colorscaleSelects[1]; // Second combobox is colorscale
       await user.click(colorscaleSelect);
 
-      // Check all 18 colorscales are present (use getAllByText since they appear in trigger + options)
       expect(
         screen.getAllByText("configuration.colorscales.viridis").length,
       ).toBeGreaterThanOrEqual(1);
@@ -247,11 +246,9 @@ describe("ColorDimensionConfiguration", () => {
       const colorscaleSelect = colorscaleSelects[1];
       await user.click(colorscaleSelect);
 
-      // Check that gradient divs are rendered (each option has a gradient preview)
       const listbox = screen.getByRole("listbox");
       const gradientDivs = within(listbox).getAllByRole("option");
 
-      // Should have 18 options
       expect(gradientDivs.length).toBeGreaterThanOrEqual(18);
     });
   });

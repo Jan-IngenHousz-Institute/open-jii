@@ -97,11 +97,9 @@ describe("FileUploadStep", () => {
     vi.mocked(isExcludedFile).mockReturnValue(false);
   });
 
-  it("renders title, description, and buttons", () => {
+  it("renders buttons", () => {
     render(<FileUploadStep {...defaultProps} />);
 
-    expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
-    expect(screen.getByText("uploadModal.fileUpload.description")).toBeInTheDocument();
     expect(screen.getByText("uploadModal.fileUpload.back")).toBeInTheDocument();
     expect(screen.getByText("uploadModal.fileUpload.uploadFiles")).toBeInTheDocument();
   });

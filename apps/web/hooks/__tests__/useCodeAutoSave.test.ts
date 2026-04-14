@@ -14,7 +14,6 @@ vi.mock("~/util/apiError", () => ({
   },
 }));
 
-// ---------- Helpers ----------
 const defaultOptions = {
   saveFn: vi.fn(),
   buildPayload: (code: string) => ({ code }),
@@ -30,7 +29,6 @@ function renderAutoSave(overrides: Partial<typeof defaultOptions> = {}) {
   );
 }
 
-// ---------- Tests ----------
 describe("useCodeAutoSave", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,7 +40,6 @@ describe("useCodeAutoSave", () => {
     vi.useRealTimers();
   });
 
-  // ---------- startEditing ----------
   describe("startEditing", () => {
     it("sets isEditing to true and editedCode to initial value with synced status", () => {
       const { result } = renderAutoSave();
@@ -59,7 +56,6 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-  // ---------- handleChange ----------
   describe("handleChange", () => {
     it("sets syncStatus to unsynced and calls saveFn after delay with buildPayload result", () => {
       const saveFn = vi.fn();
@@ -146,7 +142,7 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-  // ---------- Debounced save callbacks ----------
+
   describe("debounced save callbacks", () => {
     it("transitions syncing -> synced on onSuccess and updates savedKey", () => {
       const saveFn = vi.fn();
@@ -218,7 +214,6 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-  // ---------- closeEditing ----------
   describe("closeEditing", () => {
     it("calls saveFn immediately when there are unsaved changes", () => {
       const saveFn = vi.fn();
@@ -286,7 +281,7 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-  // ---------- Cleanup on unmount ----------
+
   describe("cleanup on unmount", () => {
     it("clears pending timeout on unmount", () => {
       const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");

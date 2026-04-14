@@ -14,7 +14,6 @@ describe("ExperimentDataTableUserCell", () => {
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
 
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    // Check that initials are rendered as fallback (since images don't load in tests)
     expect(screen.getByText("JD")).toBeInTheDocument();
   });
 

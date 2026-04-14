@@ -57,10 +57,8 @@ describe("ExperimentDataTableChartCell", () => {
     // Fast-forward time to trigger setTimeout
     vi.advanceTimersByTime(100);
 
-    // Verify getElementById was called with the correct ID
     expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
 
-    // Verify scrollIntoView was called with correct options
     expect(mockScrollIntoView).toHaveBeenCalledWith({
       behavior: "smooth",
       block: "start",
@@ -76,7 +74,6 @@ describe("ExperimentDataTableChartCell", () => {
     const mockGetElementById = vi.spyOn(document, "getElementById");
     mockGetElementById.mockReturnValue(null);
 
-    // Should not throw error
     render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
 
     const chartContainer = document.querySelector("svg")?.parentElement;
@@ -88,7 +85,6 @@ describe("ExperimentDataTableChartCell", () => {
     // Fast-forward time to trigger setTimeout
     vi.advanceTimersByTime(100);
 
-    // Verify getElementById was called but no error was thrown
     expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
 
     mockGetElementById.mockRestore();
@@ -105,7 +101,6 @@ describe("ExperimentDataTableChartCell", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
     await user.click(noDataElement);
 
-    // Should not attempt to scroll
     expect(mockGetElementById).not.toHaveBeenCalled();
 
     mockGetElementById.mockRestore();

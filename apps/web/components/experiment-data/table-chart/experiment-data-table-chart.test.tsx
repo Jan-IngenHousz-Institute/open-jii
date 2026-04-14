@@ -173,7 +173,6 @@ describe("ExperimentDataTableChart", () => {
       />,
     );
 
-    // Check that Pin icon is rendered (it should be in the DOM)
     const pinIcon = document.querySelector(".lucide-pin");
     expect(pinIcon).toBeInTheDocument();
   });

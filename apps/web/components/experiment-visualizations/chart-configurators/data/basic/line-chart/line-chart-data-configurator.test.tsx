@@ -75,7 +75,6 @@ describe("LineChartDataConfigurator", () => {
       { tableName: "test_table", columnName: "value", role: "y", alias: "Value" },
     ]);
 
-    // Verify the addYAxisSeries function was captured and can be called
     expect(capturedAddYAxisSeries).toBeTruthy();
     act(() => {
       capturedAddYAxisSeries?.();

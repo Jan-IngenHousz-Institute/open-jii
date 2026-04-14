@@ -162,7 +162,6 @@ describe("DisplayOptionsSection", () => {
     it("should have all fields in proper form layout", () => {
       renderDisplayOptions();
 
-      // Check that all form items are present
       const titleInput = screen.getByPlaceholderText(/enterChartTitle/i);
       const legendCheckbox = screen.getByRole("checkbox", { name: /showLegend/i });
       const gridCheckbox = screen.getByRole("checkbox", { name: /gridLines/i });

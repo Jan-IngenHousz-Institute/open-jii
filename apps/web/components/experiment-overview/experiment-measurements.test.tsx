@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { ExperimentMeasurements } from "./experiment-measurements";
 
-// ---------- Hoisted mocks ----------
+// Hoisted: must precede vi.mock calls that reference these spies
 const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   return {
     useExperimentDataSpy: vi.fn(() => ({
@@ -19,7 +19,6 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   };
 });
 
-// ---------- Mocks ----------
 // useExperimentData — pragmatic mock (heavy: tsr query + tanstack-table column creation + cell formatting)
 vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: (...args: unknown[]) => useExperimentDataSpy(...args),

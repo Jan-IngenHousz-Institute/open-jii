@@ -11,10 +11,6 @@ import { useSession } from "@repo/auth/client";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";
 
-// --------------------
-// Mocks
-// --------------------
-
 vi.mock("@/util/date", () => ({
   formatDate: (d: string) => `formatted:${d}`,
 }));
@@ -205,10 +201,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-// --------------------
-// Test Data
-// --------------------
-
 const baseMacro = createMacro({
   id: "abc12345-6789-0abc-def0-123456789abc",
   name: "Test Macro",
@@ -227,10 +219,6 @@ const nonCreatorMacro = createMacro({
   ...baseMacro,
   createdBy: "other-user-456",
 });
-
-// --------------------
-// Tests
-// --------------------
 
 describe("<MacroDetailsSidebar />", () => {
   beforeEach(() => {
@@ -543,7 +531,6 @@ describe("<MacroDetailsSidebar />", () => {
         expect(screen.getByText("macroSettings.deleting")).toBeInTheDocument();
       });
 
-      // Confirm button should be disabled
       const deletingButton = screen.getByRole("button", { name: "macroSettings.deleting" });
       expect(deletingButton).toBeDisabled();
     });

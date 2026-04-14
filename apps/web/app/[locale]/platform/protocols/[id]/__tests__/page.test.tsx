@@ -125,10 +125,6 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
   ),
 }));
 
-// --------------------
-// Test data
-// --------------------
-
 const mockProtocol = createProtocol({
   id: "proto-1",
   name: "Water Quality Protocol",
@@ -140,10 +136,6 @@ const mockProtocol = createProtocol({
   createdByName: "Dr. Smith",
   createdBy: "other-user",
 });
-
-// --------------------
-// Tests
-// --------------------
 
 describe("ProtocolOverviewPage", () => {
   beforeEach(() => {

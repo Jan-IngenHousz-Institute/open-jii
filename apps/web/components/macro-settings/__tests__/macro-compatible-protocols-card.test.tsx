@@ -8,10 +8,6 @@ import { contract } from "@repo/api";
 
 import { MacroCompatibleProtocolsCard } from "../macro-compatible-protocols-card";
 
-// --------------------
-// Mocks
-// --------------------
-
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
 }));
@@ -36,9 +32,6 @@ vi.mock("../../protocol-search-with-dropdown", () => ({
   },
 }));
 
-// --------------------
-// Test data
-// --------------------
 const MACRO_ID = "macro-1";
 const PROTO_1_ID = "00000000-0000-0000-0000-000000000010";
 const PROTO_2_ID = "00000000-0000-0000-0000-000000000020";
@@ -69,9 +62,6 @@ const mockAllProtocols = [
   createProtocol({ id: PROTO_3_ID, name: "Light Protocol", family: "multispeq" }),
 ];
 
-// --------------------
-// Tests
-// --------------------
 describe("<MacroCompatibleProtocolsCard />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

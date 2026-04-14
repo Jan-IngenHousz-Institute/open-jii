@@ -87,7 +87,6 @@ describe("ExperimentVisualizationRenderer", () => {
     expect(errorMessageDiv?.textContent).toContain("unsupported");
     expect(errorMessageDiv?.textContent).toContain("errors.chartTypeNotSupported");
 
-    // Verify the error styling is applied - check the outer error container
     const errorContainer = screen
       .getByText("errors.unsupportedChartType")
       .closest(".bg-muted\\/30");

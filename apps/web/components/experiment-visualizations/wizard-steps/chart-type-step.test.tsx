@@ -128,7 +128,6 @@ describe("ChartTypeStep", () => {
       const user = userEvent.setup();
       renderChartTypeStep({ defaultValues: { chartType: "line" } });
 
-      // Verify line is initially selected
       expect(screen.getByLabelText("charts.types.line")).toHaveClass("border-primary");
 
       // Switch to scatter — verify it becomes selected
@@ -145,7 +144,6 @@ describe("ChartTypeStep", () => {
       const scatterChartOption = screen.getByLabelText("charts.types.scatter");
       await user.click(scatterChartOption);
 
-      // Verify the chart type changed
       expect(scatterChartOption).toHaveClass("border-primary");
     });
 
@@ -249,7 +247,6 @@ describe("ChartTypeStep", () => {
     it("should render chart type icons", () => {
       renderChartTypeStep();
 
-      // Check that both chart type options are rendered with their labels
       expect(screen.getByText("charts.types.line")).toBeInTheDocument();
       expect(screen.getByText("charts.types.scatter")).toBeInTheDocument();
     });

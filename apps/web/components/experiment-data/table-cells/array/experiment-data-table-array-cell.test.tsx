@@ -214,7 +214,6 @@ describe("ArrayExpandedContent", () => {
 
     render(<ArrayExpandedContent data={data} />);
 
-    // Verify content is rendered
     expect(document.querySelector(".w-full")).toBeInTheDocument();
   });
 });

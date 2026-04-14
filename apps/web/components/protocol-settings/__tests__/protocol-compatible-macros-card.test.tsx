@@ -7,10 +7,6 @@ import { contract } from "@repo/api";
 
 import { ProtocolCompatibleMacrosCard } from "../protocol-compatible-macros-card";
 
-// --------------------
-// Mocks (utility + UI component only)
-// --------------------
-
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
 }));
@@ -35,9 +31,6 @@ vi.mock("../../macro-search-with-dropdown", () => ({
   },
 }));
 
-// --------------------
-// Test data
-// --------------------
 const PROTO_ID = "00000000-0000-0000-0000-000000000001";
 const MACRO_ID_1 = "00000000-0000-0000-0000-000000000010";
 const MACRO_ID_2 = "00000000-0000-0000-0000-000000000020";
@@ -69,9 +62,6 @@ const defaultCompatibleMacros = [
   },
 ];
 
-// --------------------
-// Tests
-// --------------------
 describe("<ProtocolCompatibleMacrosCard />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

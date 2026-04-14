@@ -18,7 +18,6 @@ describe("<QuestionPanel />", () => {
     const spec = makeSpec({ answerType: "TEXT", validationMessage: "Hello" });
     render(<QuestionPanel stepSpecification={spec} onChange={() => void 0} disabled={false} />);
     expect(screen.getByText("questionPanel.title")).toBeInTheDocument();
-    // Check that the TEXT radio button is checked
     const textRadio = screen.getByRole("radio", { name: "questionCard.answerTypes.TEXT" });
     expect(textRadio).toBeChecked();
   });
@@ -33,7 +32,6 @@ describe("<QuestionPanel />", () => {
     // Type some text - this will append to "Init"
     await user.type(input, "X");
 
-    // Should have been called with updated text
     expect(onChange).toHaveBeenCalled();
     const lastCall = onChange.mock.calls.at(-1)?.[0];
     expect(lastCall?.validationMessage).toBe("InitX");
@@ -114,7 +112,6 @@ describe("<QuestionPanel />", () => {
     const optionInput = inputs[inputs.length - 1]; // Last textbox is the option input
     await user.clear(optionInput);
     await user.type(optionInput, "UPDATED_OPT");
-    // Check that onChange was called with updated option
     expect(onChange).toHaveBeenCalled();
 
     // Delete option - use translation key
