@@ -5,7 +5,31 @@ terraform {
       version               = ">= 4.2.1"
       configuration_aliases = [grafana.amg]
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.7"
+    }
   }
+}
+
+resource "random_password" "grafana_db" {
+  length           = 32
+  special          = true
+  override_special = "!#%*-_=+?" # URL- and shell-safe, no quoting issues in connection strings
+}
+
+resource "aws_secretsmanager_secret" "grafana_db_credentials" {
+  name                    = "openjii-grafana-db-credentials-${var.environment}"
+  description             = "Credentials for the Grafana read-only PostgreSQL user (grafana_readonly)"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "grafana_db_credentials" {
+  secret_id = aws_secretsmanager_secret.grafana_db_credentials.id
+  secret_string = jsonencode({
+    username = var.grafana_db_username
+    password = random_password.grafana_db.result
+  })
 }
 
 data "aws_caller_identity" "current" {}
@@ -14,22 +38,22 @@ locals {
   dashboard_json_file = file("${path.module}/dashboard.json.tftpl")
 
   dashboard_vars = {
-    datasource_uid                    = grafana_data_source.cloudwatch_source.uid
-    logs_datasource_uid               = grafana_data_source.cloudwatch_logs_source.uid
-    project                           = var.project
-    environment                       = var.environment
-    aws_region                        = var.aws_region
-    cloudfront_distribution_id        = var.cloudfront_distribution_id
-    load_balancer_dimension           = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
-    target_group_dimension            = element(split(":", var.target_group_arn), length(split(":", var.target_group_arn)) - 1)
-    ecs_cluster_name                  = var.ecs_cluster_name
-    ecs_service_name                  = var.ecs_service_name
-    server_function_name              = var.server_function_name
-    db_cluster_identifier             = var.db_cluster_identifier
-    kinesis_stream_name               = var.kinesis_stream_name
-    ecs_log_group_name                = var.ecs_log_group_name
-    iot_log_group_name                = var.iot_log_group_name
-    account_id                        = data.aws_caller_identity.current.account_id
+    datasource_uid                     = grafana_data_source.cloudwatch_source.uid
+    logs_datasource_uid                = grafana_data_source.cloudwatch_logs_source.uid
+    project                            = var.project
+    environment                        = var.environment
+    aws_region                         = var.aws_region
+    cloudfront_distribution_id         = var.cloudfront_distribution_id
+    load_balancer_dimension            = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
+    target_group_dimension             = element(split(":", var.target_group_arn), length(split(":", var.target_group_arn)) - 1)
+    ecs_cluster_name                   = var.ecs_cluster_name
+    ecs_service_name                   = var.ecs_service_name
+    server_function_name               = var.server_function_name
+    db_cluster_identifier              = var.db_cluster_identifier
+    kinesis_stream_name                = var.kinesis_stream_name
+    ecs_log_group_name                 = var.ecs_log_group_name
+    iot_log_group_name                 = var.iot_log_group_name
+    account_id                         = data.aws_caller_identity.current.account_id
     macro_sandbox_python_function_name = lookup(var.macro_sandbox_function_names, "python", "")
     macro_sandbox_js_function_name     = lookup(var.macro_sandbox_function_names, "js", "")
     macro_sandbox_r_function_name      = lookup(var.macro_sandbox_function_names, "r", "")
@@ -63,6 +87,31 @@ resource "grafana_data_source" "cloudwatch_logs_source" {
   })
 }
 
+# PostgreSQL data source pointing at Aurora
+resource "grafana_data_source" "postgres" {
+  provider = grafana.amg
+  type     = "postgres"
+  name     = "postgresql-datasource"
+
+  url      = "${var.db_host}:${var.db_port}"
+  username = var.grafana_db_username
+
+  json_data_encoded = jsonencode({
+    database         = var.db_name
+    sslmode          = "require"
+    maxOpenConns     = 100
+    maxIdleConns     = 100
+    maxIdleConnsAuto = true
+    connMaxLifetime  = 14400
+    postgresVersion  = 1600
+    timescaledb      = false
+  })
+
+  secure_json_data_encoded = jsonencode({
+    password = random_password.grafana_db.result
+  })
+}
+
 resource "grafana_folder" "folder" {
   provider = grafana.amg
   title    = "${var.environment} Dashboards"
@@ -75,6 +124,17 @@ resource "grafana_dashboard" "dashboard" {
   overwrite = true
 
   config_json = templatefile("${path.module}/dashboard.json.tftpl", local.dashboard_vars)
+}
+
+resource "grafana_dashboard" "postgres_dashboard" {
+  provider  = grafana.amg
+  folder    = grafana_folder.folder.id
+  overwrite = true
+
+  config_json = templatefile("${path.module}/postgres_dashboard.json.tftpl", {
+    postgres_datasource_uid = grafana_data_source.postgres.uid
+    environment             = var.environment
+  })
 }
 
 resource "grafana_dashboard" "dora_dashboard" {

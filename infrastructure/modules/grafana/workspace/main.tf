@@ -24,6 +24,11 @@ resource "aws_grafana_workspace" "this" {
     }
   })
 
+  vpc_configuration {
+    security_group_ids = var.security_group_ids
+    subnet_ids         = var.private_subnets_id
+  }
+
   tags = {
     Project     = "Open-JII"
     Environment = var.environment
