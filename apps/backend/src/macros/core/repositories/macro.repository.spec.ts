@@ -1086,7 +1086,7 @@ describe("MacroRepository", () => {
 
       const cachePort = testApp.module.get<CachePort>(CACHE_PORT);
       let fetchCallCount = 0;
-      const originalTryCache: CachePort["tryCache"] = cachePort.tryCache.bind(cachePort);
+      const originalTryCache = cachePort.tryCache.bind(cachePort) as CachePort["tryCache"];
       vi.spyOn(cachePort, "tryCache").mockImplementation(
         <T>(key: string, fetchFn: () => Promise<T>): Promise<T> => {
           return originalTryCache(key, () => {
