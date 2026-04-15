@@ -9,7 +9,7 @@ import { useState } from "react";
 import React from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

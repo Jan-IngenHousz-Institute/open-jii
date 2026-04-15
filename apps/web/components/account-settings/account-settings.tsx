@@ -6,9 +6,8 @@ import { useForm } from "react-hook-form";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
-import { zCreateUserProfileBody } from "@repo/api";
-import type { CreateUserProfileBody } from "@repo/api";
-import type { User } from "@repo/api";
+import { zCreateUserProfileBody } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody, User } from "@repo/api/schemas/user.schema";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

@@ -1,6 +1,6 @@
 import { Mail } from "lucide-react";
 
-import type { UserProfile } from "@repo/api";
+import type { UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,

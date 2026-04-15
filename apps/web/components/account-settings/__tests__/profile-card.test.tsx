@@ -1,7 +1,7 @@
 import { renderWithForm, screen } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import type { CreateUserProfileBody } from "@repo/api";
+import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
 
 import { ProfileCard } from "../profile-card";
 

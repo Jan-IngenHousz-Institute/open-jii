@@ -5,7 +5,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { usePathname, useParams, notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import ExperimentLayout from "./layout";
 

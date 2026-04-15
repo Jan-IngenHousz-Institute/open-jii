@@ -4,7 +4,7 @@ import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import * as base64Utils from "@/util/base64";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 

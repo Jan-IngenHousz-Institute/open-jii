@@ -4,8 +4,8 @@ import { useForm } from "react-hook-form";
 import { useExperimentAnnotationAdd } from "~/hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd";
 import { useExperimentAnnotationAddBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk";
 
-import type { AnnotationContent, AnnotationType } from "@repo/api";
-import { zAnnotationContent } from "@repo/api";
+import type { AnnotationContent, AnnotationType } from "@repo/api/schemas/experiment.schema";
+import { zAnnotationContent } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

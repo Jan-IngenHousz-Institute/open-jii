@@ -17,15 +17,14 @@ import type {
   ExportRecord,
   Flow,
   FlowGraph,
-  Invitation,
   Location,
-  Macro,
-  Protocol,
-  UserProfile,
   ExperimentVisualization,
   ExperimentTableMetadata,
   PlaceSearchResult,
-} from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
+import type { Macro } from "@repo/api/schemas/macro.schema";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
 
 // ── Experiment ──────────────────────────────────────────────────
 

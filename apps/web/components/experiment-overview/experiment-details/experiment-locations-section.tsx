@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { Location } from "@repo/api";
+import type { Location } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

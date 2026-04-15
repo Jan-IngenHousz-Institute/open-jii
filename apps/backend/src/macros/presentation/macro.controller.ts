@@ -5,7 +5,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { macroContract } from "@repo/api";
+import { macroContract } from "@repo/api/contracts/macro.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure, isSuccess } from "../../common/utils/fp-utils";

@@ -3,7 +3,8 @@
 import { Mail } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { UserProfile, ExperimentMemberRole, ExperimentMember, Invitation } from "@repo/api";
+import type { ExperimentMemberRole, ExperimentMember } from "@repo/api/schemas/experiment.schema";
+import type { UserProfile, Invitation } from "@repo/api/schemas/user.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

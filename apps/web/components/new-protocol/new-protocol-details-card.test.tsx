@@ -3,8 +3,8 @@ import { render, screen } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { CreateProtocolRequestBody } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
 import { Form } from "@repo/ui/components/form";
 
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";

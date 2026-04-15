@@ -2,7 +2,7 @@ import { createProtocol } from "@/test/factories";
 import { act, render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Protocol } from "@repo/api";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 

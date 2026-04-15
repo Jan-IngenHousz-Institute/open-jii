@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { ExperimentMetadata } from "@repo/api";
+import type { ExperimentMetadata } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";

@@ -7,7 +7,7 @@ import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCr
 import { useDeleteUser } from "~/hooks/profile/useDeleteUser/useDeleteUser";
 import { parseApiError } from "~/util/apiError";
 
-import type { CreateUserProfileBody } from "@repo/api";
+import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";

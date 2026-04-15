@@ -9,7 +9,11 @@ import type { FC } from "react";
 import { useDebounce } from "~/hooks/useDebounce";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { findProtocolErrorLine, getErrorMessage, validateProtocolJson } from "@repo/api";
+import {
+  findProtocolErrorLine,
+  getErrorMessage,
+  validateProtocolJson,
+} from "@repo/api/schemas/protocol-validator";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
 import {

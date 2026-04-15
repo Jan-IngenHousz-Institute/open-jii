@@ -4,7 +4,10 @@ import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
 import { env } from "~/env";
 
-import { experimentContract, macroContract, protocolContract, userContract } from "@repo/api";
+import { experimentContract } from "@repo/api/contracts/experiment.contract";
+import { macroContract } from "@repo/api/contracts/macro.contract";
+import { protocolContract } from "@repo/api/contracts/protocol.contract";
+import { userContract } from "@repo/api/contracts/user.contract";
 
 import { tsrCustomApiFetcher } from "./tsr-custom-fetch";
 

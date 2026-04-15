@@ -3,7 +3,7 @@ import { renderWithForm, screen, userEvent, within } from "@/test/test-utils";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExperimentTableMetadata, DataColumn } from "@repo/api";
+import type { ExperimentTableMetadata, DataColumn } from "@repo/api/schemas/experiment.schema";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { DataSourceStep } from "./data-source-step";

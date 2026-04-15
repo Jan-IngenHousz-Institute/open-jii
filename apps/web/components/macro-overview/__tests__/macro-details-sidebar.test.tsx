@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Macro } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useSession } from "@repo/auth/client";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";

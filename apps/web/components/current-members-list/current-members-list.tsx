@@ -3,7 +3,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { UserProfile, ExperimentMemberRole } from "@repo/api";
+import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
+import type { UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 

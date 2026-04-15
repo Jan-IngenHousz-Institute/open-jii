@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import ExperimentOverviewPage from "./page";
 

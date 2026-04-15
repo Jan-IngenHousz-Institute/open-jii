@@ -6,7 +6,11 @@ import { useMemo, useState } from "react";
 import { useFieldArray } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { UserProfile, CreateExperimentBody, ExperimentMemberRole } from "@repo/api";
+import type {
+  CreateExperimentBody,
+  ExperimentMemberRole,
+} from "@repo/api/schemas/experiment.schema";
+import type { UserProfile } from "@repo/api/schemas/user.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

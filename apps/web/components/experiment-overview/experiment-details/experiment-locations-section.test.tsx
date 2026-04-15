@@ -2,7 +2,7 @@ import { createLocation } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Location } from "@repo/api";
+import type { Location } from "@repo/api/schemas/experiment.schema";
 
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 

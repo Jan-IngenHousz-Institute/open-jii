@@ -5,8 +5,8 @@ import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 
-import type { CreateExperimentBody } from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import { zExperimentVisibility } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

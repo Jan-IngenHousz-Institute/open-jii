@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import { authClient } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";

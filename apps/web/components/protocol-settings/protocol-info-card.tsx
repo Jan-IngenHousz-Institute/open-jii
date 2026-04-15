@@ -7,7 +7,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Protocol } from "@repo/api";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

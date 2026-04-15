@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
-import type { Protocol, CreateExperimentBody } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,
