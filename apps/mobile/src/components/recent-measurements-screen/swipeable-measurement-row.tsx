@@ -9,9 +9,9 @@ import type { MeasurementStatus } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 
-const SPRING_CONFIG = { damping: 20, stiffness: 300 };
+const SPRING_CONFIG = { damping: 40, stiffness: 350 };
 /** Horizontal movement (px) before pan activates - avoids revealing on light touch */
-const ACTIVATE_OFFSET_X = 28;
+const ACTIVATE_OFFSET_X = 8;
 /** Dimensions for action buttons */
 const ICON_BUTTON_SIZE = 38;
 const COMMENT_BUTTON_WIDTH = 100;
@@ -24,7 +24,7 @@ interface SwipeableMeasurementRowProps {
   questions?: AnswerData[];
   onPress?: () => void;
   onComment?: (id: string) => void;
-  onSync?: (id: string) => void;
+  onSync?: (id: string, close: () => void) => void;
   onDelete?: (id: string) => void;
   hasComment?: boolean;
 }
@@ -50,9 +50,13 @@ export function SwipeableMeasurementRow({
   const showSync = status === "unsynced" && !!onSync;
   const showDelete = !!onDelete;
 
+  const closeRow = () => {
+    translateX.value = withSpring(0, SPRING_CONFIG);
+  };
+
   const panGesture = Gesture.Pan()
     .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])
-    .failOffsetY([-18, 18])
+    .failOffsetY([-10, 10])
     .onStart(() => {
       startX.value = translateX.value;
     })
@@ -61,8 +65,16 @@ export function SwipeableMeasurementRow({
       translateX.value = Math.min(0, Math.max(-actionWidthSV.value, next));
     })
     .onEnd((e) => {
-      const snapOpen = translateX.value < -actionWidthSV.value / 2 || e.velocityX < -200;
-      translateX.value = withSpring(snapOpen ? -actionWidthSV.value : 0, SPRING_CONFIG);
+      // Velocity-first: a rightward flick always closes, leftward always opens
+      if (e.velocityX > 150) {
+        translateX.value = withSpring(0, SPRING_CONFIG);
+      } else if (e.velocityX < -150) {
+        translateX.value = withSpring(-actionWidthSV.value, SPRING_CONFIG);
+      } else {
+        // Position-based: snap open past halfway, closed before halfway
+        const snapOpen = translateX.value < -actionWidthSV.value / 2;
+        translateX.value = withSpring(snapOpen ? -actionWidthSV.value : 0, SPRING_CONFIG);
+      }
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -70,7 +82,9 @@ export function SwipeableMeasurementRow({
   }));
 
   const handleComment = () => onComment?.(id);
-  const handleSync = () => onSync?.(id);
+  const handleSync = () => {
+    onSync?.(id, closeRow);
+  };
   const handleDelete = () => onDelete?.(id);
 
   return (

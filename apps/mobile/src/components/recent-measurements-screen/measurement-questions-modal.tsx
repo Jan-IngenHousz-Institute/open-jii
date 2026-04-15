@@ -1,6 +1,6 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
-import { Clock, FlaskConical, MessageCircle, X } from "lucide-react-native";
+import { Clock, FlaskConical, MessageCircleMore, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -118,14 +118,14 @@ export function MeasurementQuestionsModal({
           </View>
 
           <View className="flex-row items-center gap-2">
-            {isUnsynced && (
+            {(isUnsynced || !!currentComment) && (
               <TouchableOpacity
                 onPress={() => setCommentModalVisible(true)}
                 className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
                 style={{ backgroundColor: colors.surface }}
                 activeOpacity={0.7}
               >
-                <MessageCircle size={20} color={colors.onSurface} />
+                <MessageCircleMore size={20} color={colors.onSurface} />
               </TouchableOpacity>
             )}
 
@@ -237,6 +237,7 @@ export function MeasurementQuestionsModal({
         timestamp={measurement.timestamp}
         onSave={handleSaveComment}
         onCancel={() => setCommentModalVisible(false)}
+        readOnly={!isUnsynced}
       />
     </>
   );

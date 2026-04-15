@@ -36,12 +36,13 @@ export function CompletedState() {
   const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
   const { uploadOne, removeMeasurement, updateMeasurementComment } = useMeasurements();
 
-  const handleSync = (id: string, experimentName: string) => {
+  const handleSync = (id: string, experimentName: string, closeRow?: () => void) => {
     showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
       {
         text: "Upload",
         variant: "primary",
         onPress: () => {
+          closeRow?.();
           void (async () => {
             await uploadOne(id);
             invalidate();
@@ -127,8 +128,13 @@ export function CompletedState() {
               }
               onSync={
                 measurement.status === "unsynced"
-                  ? () => handleSync(measurement.key, measurement.experimentName)
+                  ? (_, close) => handleSync(measurement.key, measurement.experimentName, close)
                   : undefined
+              }
+              hasComment={
+                !!getCommentFromMeasurementResult(
+                  measurement.data.measurementResult as Record<string, unknown>,
+                )
               }
             />
           )}

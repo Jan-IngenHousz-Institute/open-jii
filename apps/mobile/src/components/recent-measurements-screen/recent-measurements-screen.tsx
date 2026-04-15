@@ -66,12 +66,13 @@ export function RecentMeasurementsScreen() {
     );
   };
 
-  const handleSync = (id: string, experimentName: string) => {
+  const handleSync = (id: string, experimentName: string, closeRow?: () => void) => {
     showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
       {
         text: "Upload",
         variant: "primary",
         onPress: () => {
+          closeRow?.();
           void (async () => {
             await uploadOne(id);
             invalidate();
@@ -192,7 +193,7 @@ export function RecentMeasurementsScreen() {
               }
               onSync={
                 measurement.status === "unsynced"
-                  ? () => handleSync(measurement.key, measurement.experimentName)
+                  ? (_, close) => handleSync(measurement.key, measurement.experimentName, close)
                   : undefined
               }
               hasComment={

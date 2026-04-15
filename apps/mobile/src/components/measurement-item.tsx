@@ -1,6 +1,12 @@
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
-import { UploadCloud, Trash2, CloudCheck, CloudAlert, MessageCircle } from "lucide-react-native";
+import {
+  UploadCloud,
+  Trash2,
+  CloudCheck,
+  CloudAlert,
+  MessageCircleMore,
+} from "lucide-react-native";
 import React from "react";
 import { View, Text, TouchableOpacity, Pressable } from "react-native";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
@@ -68,12 +74,12 @@ export function MeasurementItem({
 
       {/* Bottom row: experiment name on left, timestamp + icon on right */}
       <View className="flex-row items-center justify-between">
-        <Text
-          className={clsx("mr-2 flex-1 text-sm font-normal", classes.textMuted)}
-          numberOfLines={1}
-        >
-          {experimentName}
-        </Text>
+        <View className="mr-2 flex-1 flex-row items-center gap-1">
+          <Text className={clsx("shrink text-sm font-normal", classes.textMuted)} numberOfLines={1}>
+            {experimentName}
+          </Text>
+          {hasComment && <MessageCircleMore size={14} color={colors.inactive} />}
+        </View>
 
         <View className="flex-row items-center gap-1.5">
           {!hideActions && (
@@ -105,9 +111,6 @@ export function MeasurementItem({
                 </TouchableOpacity>
               )}
             </View>
-          )}
-          {hasComment && (
-            <MessageCircle size={14} color={colors.onSurface} />
           )}
           <Text className={clsx("shrink-0 text-sm", classes.textMuted)} numberOfLines={1}>
             {formatTimeAgo(timestamp)}
