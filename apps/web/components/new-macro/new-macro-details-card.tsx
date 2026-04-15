@@ -8,7 +8,6 @@ import { useTranslation } from "@repo/i18n";
 import { FormControl, FormField, FormItem, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
-
 interface NewMacroDetailsCardProps {
   form: UseFormReturn<CreateMacroRequestBody>;
 }

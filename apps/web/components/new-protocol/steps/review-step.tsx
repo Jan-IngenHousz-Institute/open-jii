@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ca
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
-
 import { codeSchema } from "./code-test-step";
 import { detailsSchema } from "./details-step";
 

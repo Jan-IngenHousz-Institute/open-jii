@@ -2,6 +2,9 @@
 
 import type { PlotData } from "plotly.js";
 import React from "react";
+import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";
+import { PlotlyChart } from "./plotly-chart";
+import { createPlotlyConfig, getRenderer } from "./utils";
 
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";

@@ -10,7 +10,6 @@ import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-
 export default function NewVisualizationPage() {
   const { t } = useTranslation("experimentVisualizations");
   const { id: experimentId } = useParams<{ id: string }>();

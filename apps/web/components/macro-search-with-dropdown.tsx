@@ -9,7 +9,6 @@ import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
-
 import { MacroSearchPopover } from "./macro-search-popover";
 
 export interface MacroSearchWithDropdownProps {

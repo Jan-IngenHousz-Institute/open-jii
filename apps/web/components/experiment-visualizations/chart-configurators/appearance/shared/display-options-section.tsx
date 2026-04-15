@@ -7,7 +7,6 @@ import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
-
 import type { ChartFormValues } from "../../chart-configurator-util";
 
 interface DisplayOptionsSectionProps {

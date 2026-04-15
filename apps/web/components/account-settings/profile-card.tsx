@@ -8,7 +8,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/ca
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
-
 interface ProfileCardProps {
   form: UseFormReturn<CreateUserProfileBody>;
 }

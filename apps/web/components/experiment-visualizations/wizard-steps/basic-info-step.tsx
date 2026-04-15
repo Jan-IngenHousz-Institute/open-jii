@@ -21,7 +21,6 @@ import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
-
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreviewModal } from "../chart-preview/chart-preview-modal";
 

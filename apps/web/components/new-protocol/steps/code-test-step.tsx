@@ -9,7 +9,6 @@ import { useTranslation } from "@repo/i18n";
 import { FormField } from "@repo/ui/components/form";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
-
 // Validation schema for step 2 — code only
 export const codeSchema = zCreateProtocolRequestBody.pick({ code: true });
 

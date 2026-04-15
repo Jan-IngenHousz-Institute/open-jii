@@ -5,7 +5,6 @@ import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-
 interface ErrorContentProps {
   locale: string;
   error?: string;

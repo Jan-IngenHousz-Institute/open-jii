@@ -8,7 +8,6 @@ import React from "react";
 import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
-
 interface ExperimentVisualizationsListProps {
   visualizations: ExperimentVisualization[];
   experimentId: string;

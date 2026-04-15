@@ -2,7 +2,6 @@ import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { SidebarProvider } from "@repo/ui/components/sidebar";
-
 import { AppSidebar } from "./navigation-sidebar";
 
 // Mock NavItems child component

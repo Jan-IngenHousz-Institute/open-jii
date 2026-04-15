@@ -14,7 +14,6 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
-
 const FLAG_TYPE_COLORS: Record<AnnotationFlagType, { bg: string; text: string; border: string }> = {
   outlier: {
     bg: "bg-amber-100 dark:bg-amber-950",

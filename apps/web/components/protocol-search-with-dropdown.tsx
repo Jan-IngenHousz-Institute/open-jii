@@ -9,7 +9,6 @@ import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
-
 import { ProtocolSearchPopover } from "./protocol-search-popover";
 
 export interface ProtocolSearchWithDropdownProps {

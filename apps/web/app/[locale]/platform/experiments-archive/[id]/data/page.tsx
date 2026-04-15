@@ -16,7 +16,6 @@ import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
-
 interface ExperimentDataPageProps {
   params: Promise<{ id: string; locale: string }>;
 }

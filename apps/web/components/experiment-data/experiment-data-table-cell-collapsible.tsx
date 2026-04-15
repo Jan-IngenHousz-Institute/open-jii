@@ -1,7 +1,6 @@
 import React from "react";
 
 import { TableCell, TableRow } from "@repo/ui/components/table";
-
 import { ArrayExpandedContent } from "./table-cells/array/experiment-data-table-array-cell";
 import { MapExpandedContent } from "./table-cells/map/experiment-data-table-map-cell";
 import { StructExpandedContent } from "./table-cells/struct/experiment-data-table-struct-cell";

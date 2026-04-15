@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
-
 export interface EdgeSidePanelProps {
   open: boolean;
   selectedEdge: Edge | null;

@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Macro } from "@repo/api";
 import { Popover } from "@repo/ui/components/popover";
-
 import { MacroSearchPopover } from "../macro-search-popover";
 
 // Test data & helpers

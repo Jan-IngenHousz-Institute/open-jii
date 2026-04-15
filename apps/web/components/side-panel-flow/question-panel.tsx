@@ -2,7 +2,6 @@ import React from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
-
 import type { QuestionUI } from "../question-card/question-card";
 import { QuestionCard } from "../question-card/question-card";
 

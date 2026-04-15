@@ -12,7 +12,6 @@ import { useState } from "react";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
-
 export default function EditVisualizationPage() {
   const { t } = useTranslation("experimentVisualizations");
   const { id: experimentId, visualizationId } = useParams<{

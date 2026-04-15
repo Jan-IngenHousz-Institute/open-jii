@@ -4,7 +4,6 @@ import { ExperimentOverviewCards } from "~/components/experiment-overview-cards"
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
 import { Skeleton } from "@repo/ui/components/skeleton";
-
 export function UserExperimentsSection() {
   // Get only user's experiments (member experiments) with a limit for dashboard view
   const { data } = useExperiments({

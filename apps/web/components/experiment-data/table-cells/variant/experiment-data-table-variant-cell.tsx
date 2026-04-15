@@ -6,7 +6,6 @@ import React, { useState } from "react";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Collapsible, CollapsibleTrigger } from "@repo/ui/components/collapsible";
-
 interface ExperimentDataTableVariantCellProps {
   data: string; // JSON string representation of the variant data
   columnName: string;

@@ -9,7 +9,6 @@ import { ExperimentTitle } from "~/components/experiment-overview/experiment-tit
 
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
-
 interface ExperimentLayoutProps {
   children: React.ReactNode;
 }

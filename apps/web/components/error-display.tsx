@@ -3,7 +3,6 @@
 import { AlertCircle } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
-
 interface ErrorDisplayProps {
   error: unknown;
   title?: string;

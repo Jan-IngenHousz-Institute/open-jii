@@ -4,7 +4,6 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { Popover } from "@repo/ui/components/popover";
-
 import { ProtocolSearchPopover } from "./protocol-search-popover";
 
 // Test data & helpers
