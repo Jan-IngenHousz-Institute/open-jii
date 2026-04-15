@@ -45,9 +45,7 @@ export function MeasurementItem({
   const isSynced = status === "synced";
 
   const hasAnswers = questions && questions.length > 0;
-  const answersText = hasAnswers
-    ? questions.map((q) => `${q.question_label}: ${q.question_answer}`).join(" | ")
-    : null;
+  const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
 
   return (
     <Pressable
