@@ -2003,8 +2003,8 @@ module "managed_grafana_workspace" {
   source      = "../../modules/grafana/workspace"
   environment = var.environment
 
-  private_subnets_id = module.vpc.private_subnets
-  security_group_ids = [module.vpc.aurora_security_group_id]
+  private_subnets_ids = module.vpc.private_subnets
+  security_group_ids  = [module.vpc.aurora_security_group_id]
 }
 
 module "grafana_dashboard" {
