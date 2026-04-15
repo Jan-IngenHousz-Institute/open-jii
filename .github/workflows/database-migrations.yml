@@ -157,18 +157,33 @@ jobs:
           # Define the full image reference for consistency
           FULL_IMAGE_REF="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
+          # Store the full image reference for later use
+          echo "full_image_ref=$FULL_IMAGE_REF" >> $GITHUB_OUTPUT
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+          echo "✅ Successfully built Docker image"
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        with:
+          image-ref: ${{ steps.build-image.outputs.image }}
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          vuln-type: os,library
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+
+      - name: Push image to Amazon ECR
+        run: |
+          FULL_IMAGE_REF="${{ steps.build-image.outputs.image }}"
           echo "Pushing image to ECR repository"
-          docker push $FULL_IMAGE_REF > /dev/null
+          docker push $FULL_IMAGE_REF
           if [ $? -ne 0 ]; then
             echo "::error::Failed to push image to ECR"
             exit 1
           fi
-
-          # Store the full image reference for later use
-          echo "full_image_ref=$FULL_IMAGE_REF" >> $GITHUB_OUTPUT
-
-          echo "✅ Successfully built and pushed Docker image"
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "✅ Successfully pushed Docker image"
 
       - name: Check for already running migration task
         id: check-running

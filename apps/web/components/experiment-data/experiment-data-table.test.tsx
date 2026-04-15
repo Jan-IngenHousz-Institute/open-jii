@@ -155,7 +155,7 @@ vi.mock("@repo/ui/components", () => ({
     className?: string;
     title?: string;
   }) => (
-    <button onClick={onClick} className={className} title={title} {...props}>
+    <button type="button" onClick={onClick} className={className} title={title} {...props}>
       {children ?? "Next"}
     </button>
   ),
@@ -171,7 +171,7 @@ vi.mock("@repo/ui/components", () => ({
     className?: string;
     title?: string;
   }) => (
-    <button onClick={onClick} className={className} title={title} {...props}>
+    <button type="button" onClick={onClick} className={className} title={title} {...props}>
       {children ?? "Previous"}
     </button>
   ),

@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Keyboard } from "react-native";
 import { toast } from "sonner-native";
 import { Checkbox } from "~/components/Checkbox";
 import { useTheme } from "~/hooks/use-theme";
@@ -49,6 +49,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
 
   // Handler for yes/no and multi_choice that auto-advances
   const handleAnswerChangeAndAdvance = (value: string) => {
+    Keyboard.dismiss();
     // Set the answer
     setAnswer(iterationCount, node.id, value);
     // Use shared utility to advance with proper answer handling

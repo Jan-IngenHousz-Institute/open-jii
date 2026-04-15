@@ -78,10 +78,17 @@ export function NavigationButtons() {
     (currentNode.content.kind === "yes_no" || currentNode.content.kind === "multi_choice");
 
   const handleBackPress = () => {
+    Keyboard.dismiss();
     previousStep();
   };
 
+  const handleReturnToOverview = () => {
+    Keyboard.dismiss();
+    returnToOverview();
+  };
+
   const handleNextPress = () => {
+    Keyboard.dismiss();
     // For questions, use shared utility to handle answer logic and advance
     if (currentNode?.type === "question") {
       const { getAnswer } = useFlowAnswersStore.getState();
@@ -108,7 +115,7 @@ export function NavigationButtons() {
         <View className="px-4 py-3">
           <Button
             title="Back to overview"
-            onPress={returnToOverview}
+            onPress={handleReturnToOverview}
             isDisabled={isNextDisabled}
             style={{ height: 44 }}
           />

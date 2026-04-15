@@ -1,0 +1,11 @@
+# CVE-2026-33671: picomatch ReDoS in system npm installation (usr/local/lib/node_modules/npm)
+# This is bundled with the Node.js Docker image's npm CLI, not in the app's runtime.
+# The app runs as `node dist/main` and never invokes npm at runtime.
+CVE-2026-33671
+
+# CVE-2026-4926: path-to-regexp ReDoS via crafted route patterns
+# Affects path-to-regexp@8.3.0 pinned by Express 5's `router` package (exact version constraint).
+# The vulnerability requires an attacker to control route *definition* patterns, not URL paths.
+# NestJS routes are defined at compile time via decorators - no user input reaches route compilation.
+# Will be resolved when Express/router releases an update pinning path-to-regexp@>=8.4.0.
+CVE-2026-4926

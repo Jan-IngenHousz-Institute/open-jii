@@ -1,12 +1,11 @@
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { getFailedUploadsWithKeys } from "~/services/failed-uploads-storage";
-import { getSuccessfulUploadsWithKeys } from "~/services/successful-uploads-storage";
+import { getMeasurements } from "~/services/measurements-storage";
 
 export async function exportMeasurementsToFile(): Promise<void> {
   const [failedEntries, successfulEntries] = await Promise.all([
-    getFailedUploadsWithKeys(),
-    getSuccessfulUploadsWithKeys(),
+    getMeasurements("failed"),
+    getMeasurements("successful"),
   ]);
 
   const measurements = [

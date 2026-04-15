@@ -293,6 +293,6 @@ variable "secrets_extension_layer_arn" {
   type        = string
   # Example for eu-central-1, replace if deploying to other regions
   # You can find the latest ARNs here: https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html#ps-integration-lambda-extensions-add
-  default = "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:17"
+  default = "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:69"
 }
 

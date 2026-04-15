@@ -88,6 +88,20 @@ The IAM role includes permissions for the following AWS services and operations:
 - **Data encryption operations**: `kms:GenerateDataKey`, `kms:GenerateDataKeyWithoutPlaintext`, `kms:Decrypt` (required when AWS services such as AWS Backup use a KMS key to encrypt data)
 - **Grant management operations**: `kms:CreateGrant`, `kms:ListGrants`, `kms:RevokeGrant` (required by AWS Backup's CreateBackupVault to establish ongoing encryption access for the vault)
 
+### AWS Inspector v2
+- **Enable/disable scanning** (create, update, destroy): `inspector2:Enable`
+- **Disable scanning**: `inspector2:Disable`
+- **Read current account status** (plan/refresh): `inspector2:BatchGetAccountStatus`
+- **Provider reads during plan**: `inspector2:ListAccountPermissions`
+- **Service-linked role creation** (first-time enablement): `iam:CreateServiceLinkedRole` - Limited to the AWS Inspector v2 service-linked role ARN (`arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2`)
+
+These permissions allow Terraform/OpenTofu to enable and manage AWS Inspector v2 for vulnerability scanning of ECR images and Lambda functions. All actions apply to resource scope `*` (account-level enablement).
+
+### Lambda
+- **Function management**: Function configuration and management operations
+- **Code signing**: `lambda:GetFunctionCodeSigningConfig` (Terraform provider reads)
+- **Layer management**: `lambda:GetLayerVersion`, `lambda:GetLayerVersionPolicy`, `lambda:ListLayers`, `lambda:ListLayerVersions`, `lambda:PublishLayerVersion` (Terraform provider reads layer metadata before attaching)
+
 ### Other Services
 - **VPC**: Network infrastructure management
 - **CloudFront**: Distribution configuration

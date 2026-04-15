@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, useRouter, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
 import { useEffect, useState } from "react";
@@ -8,6 +9,7 @@ import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
 import { useIsOnline } from "~/hooks/use-is-online";
 import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
+import { pruneExpiredMeasurements } from "~/services/measurements-storage";
 import { hadActiveSession } from "~/services/session-persistence";
 import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
@@ -22,12 +24,18 @@ export default function TabLayout() {
   const { session, isLoaded, error } = useSession();
   const { data: online } = useIsOnline();
   const [hadSession, setHadSession] = useState<boolean | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     void hadActiveSession().then(setHadSession);
   }, []);
 
   useAutoReconnect();
+
+  useEffect(() => {
+    void pruneExpiredMeasurements();
+    void queryClient.invalidateQueries({ queryKey: ["measurements"] });
+  }, [queryClient]);
 
   const inMeasureTab = segments.includes("measurement-flow");
 

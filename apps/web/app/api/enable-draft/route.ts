@@ -49,8 +49,7 @@ const buildRedirectUrl = ({
 
 async function enableDraftMode() {
   (await draftMode()).enable();
-  const cookieStore = cookies();
-  const store = await cookieStore;
+  const store = await cookies();
   const cookie = store.get("__prerender_bypass");
   if (!cookie) {
     throw new Error("Missing '__prerender_bypass' cookie");
