@@ -1086,13 +1086,15 @@ describe("MacroRepository", () => {
 
       const cachePort = testApp.module.get<CachePort>(CACHE_PORT);
       let fetchCallCount = 0;
-      const originalTryCache = cachePort.tryCache.bind(cachePort);
-      vi.spyOn(cachePort, "tryCache").mockImplementation(async (key, fetchFn) => {
-        return originalTryCache(key, async () => {
-          fetchCallCount++;
-          return fetchFn();
-        });
-      });
+      const originalTryCache: CachePort["tryCache"] = cachePort.tryCache.bind(cachePort);
+      vi.spyOn(cachePort, "tryCache").mockImplementation(
+        <T>(key: string, fetchFn: () => Promise<T>): Promise<T> => {
+          return originalTryCache(key, () => {
+            fetchCallCount++;
+            return fetchFn();
+          });
+        },
+      );
 
       // First call fills cache (fetchFn hits DB)
       await repository.findScriptById(created.id);

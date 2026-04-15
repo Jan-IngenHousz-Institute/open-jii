@@ -184,7 +184,9 @@ export class MacroRepository {
         .returning();
 
       // Best-effort cache invalidation — must not mask a successful write
-      void this.cachePort.invalidate(id).catch(() => {});
+      void this.cachePort.invalidate(id).catch(() => {
+        // noop
+      });
 
       return results as unknown as MacroDto[];
     });
@@ -195,7 +197,9 @@ export class MacroRepository {
       const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
 
       // Best-effort cache invalidation — must not mask a successful write
-      void this.cachePort.invalidate(id).catch(() => {});
+      void this.cachePort.invalidate(id).catch(() => {
+        // noop — best-effort
+      });
 
       return results as unknown as MacroDto[];
     });
