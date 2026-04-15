@@ -138,6 +138,7 @@ export const zMacroBatchExecutionResultItem = z.object({
 });
 
 export const zMacroBatchExecutionResponse = z.object({
+  success: z.literal(true),
   results: z.array(zMacroBatchExecutionResultItem),
   errors: z.array(z.string()).optional(),
 });

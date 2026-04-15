@@ -191,6 +191,7 @@ describe("MacroWebhookController", () => {
 
       vi.spyOn(executeMacroBatchUseCase, "execute").mockResolvedValue(
         success({
+          success: true as const,
           results: [{ id: "item-1", macro_id: macroId, success: true, output: { mean: 15 } }],
         }),
       );

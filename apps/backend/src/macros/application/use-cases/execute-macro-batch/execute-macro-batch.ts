@@ -81,6 +81,7 @@ export class ExecuteMacroBatchUseCase {
     });
 
     return success({
+      success: true as const,
       results: allResults,
       ...(errors.length > 0 ? { errors } : {}),
     });

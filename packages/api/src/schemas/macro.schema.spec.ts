@@ -421,6 +421,7 @@ describe("Macro Schema", () => {
   describe("zMacroBatchExecutionResponse", () => {
     it("valid response with results", () => {
       const res = {
+        success: true,
         results: [{ id: "m1", macro_id: uuidA, success: true }],
       };
       expect(zMacroBatchExecutionResponse.parse(res)).toEqual(res);
@@ -428,6 +429,7 @@ describe("Macro Schema", () => {
 
     it("valid response with errors array", () => {
       const res = {
+        success: true,
         results: [{ id: "m1", macro_id: uuidA, success: false, error: "fail" }],
         errors: ["Macro not found: abc"],
       };
@@ -435,7 +437,7 @@ describe("Macro Schema", () => {
     });
 
     it("errors is optional", () => {
-      const res = { results: [] };
+      const res = { success: true, results: [] };
       expect(zMacroBatchExecutionResponse.parse(res)).toEqual(res);
     });
   });
