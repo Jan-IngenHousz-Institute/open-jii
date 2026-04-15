@@ -6,7 +6,7 @@
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType, IntegerType
 import requests
 import json
 import pandas as pd
