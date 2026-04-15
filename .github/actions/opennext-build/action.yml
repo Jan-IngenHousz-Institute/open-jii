@@ -1,0 +1,78 @@
+name: OpenNext Build
+description: Build Next.js application with OpenNext and verify the output
+
+inputs:
+  environment:
+    description: "Deployment environment (dev or prod) - controls URL prefixes"
+    default: "dev"
+  web-base-origin:
+    description: "WEB_BASE_ORIGIN value for constructing public URLs"
+    required: true
+  posthog-key:
+    description: "PostHog API key"
+    default: ""
+  node-version:
+    description: "Node.js version"
+    default: "22"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js and pnpm
+      uses: ./.github/actions/setup-nodejs-pnpm
+      with:
+        node-version: ${{ inputs.node-version }}
+        hoisted: "true"
+
+    - name: Set build environment variables
+      shell: bash
+      env:
+        WEB_BASE_ORIGIN: ${{ inputs.web-base-origin }}
+        POSTHOG_KEY: ${{ inputs.posthog-key }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        if [[ "$ENVIRONMENT" == "prod" ]]; then
+          echo "NEXT_PUBLIC_API_URL=https://api.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_DOCS_URL=https://docs.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_BASE_URL=https://${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+        else
+          echo "NEXT_PUBLIC_API_URL=https://api.dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_DOCS_URL=https://docs.dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_BASE_URL=https://dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+        fi
+        echo "NEXT_PUBLIC_POSTHOG_KEY=${POSTHOG_KEY}" >> $GITHUB_ENV
+        echo "NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com" >> $GITHUB_ENV
+        echo "NEXT_PUBLIC_POSTHOG_UI_HOST=https://eu.posthog.com" >> $GITHUB_ENV
+
+    - name: Build Next.js Application
+      shell: bash
+      env:
+        NODE_ENV: production
+      run: pnpm run build --filter=web
+
+    - name: Run OpenNext Build
+      shell: bash
+      run: cd apps/web && pnpm run build:opennext
+
+    - name: Verify OpenNext Output
+      shell: bash
+      run: |
+        if [[ ! -d "apps/web/.open-next" ]]; then
+          echo "::error::OpenNext build directory not found"
+          exit 1
+        fi
+
+        echo "OpenNext build output:"
+        for dir in server-functions image-optimization-function revalidation-function warmer-function dynamodb-provider assets cache; do
+          if [[ -d "apps/web/.open-next/${dir}" ]]; then
+            echo "  [ok] ${dir}"
+          else
+            echo "  [--] ${dir} (not present)"
+          fi
+        done
+
+        if [[ ! -f "apps/web/.open-next/open-next.output.json" ]]; then
+          echo "::error::open-next.output.json not found"
+          exit 1
+        fi
+        echo "  [ok] open-next.output.json"
