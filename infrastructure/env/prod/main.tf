@@ -1352,6 +1352,11 @@ module "migration_runner_ecs" {
     {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
+    },
+    {
+      # Grafana read-only user credentials — created by this task after migrations
+      name      = "GRAFANA_DB_CREDENTIALS"
+      valueFrom = module.grafana_dashboard.grafana_db_credentials_secret_arn
     }
   ]
 
@@ -1997,6 +2002,9 @@ module "ssm_opennext_outputs" {
 module "managed_grafana_workspace" {
   source      = "../../modules/grafana/workspace"
   environment = var.environment
+
+  private_subnets_id = module.vpc.private_subnets
+  security_group_ids = [module.vpc.aurora_security_group_id]
 }
 
 module "grafana_dashboard" {
@@ -2021,6 +2029,11 @@ module "grafana_dashboard" {
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
+
+  # Use dedicated read-only Grafana DB user — managed inside the grafana dashboard module
+  db_host = module.aurora_db.cluster_endpoint
+  db_port = module.aurora_db.cluster_port
+  db_name = module.aurora_db.database_name
 
   providers = {
     grafana.amg = grafana.amg
