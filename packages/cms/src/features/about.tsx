@@ -8,7 +8,8 @@ import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { PageAboutFieldsFragment } from "../lib/__generated/sdk";
-import { CtfImage, CtfRichText } from "./contentful";
+import { CtfImage } from "./contentful/ctf-image";
+import { CtfRichText } from "./contentful/ctf-rich-text";
 import type { EmbeddedEntryType } from "./contentful/ctf-rich-text";
 
 interface AboutContentProps {

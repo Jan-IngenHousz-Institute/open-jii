@@ -1,15 +1,7 @@
 import React, { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components";
-
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
 interface BulkAddOptionsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

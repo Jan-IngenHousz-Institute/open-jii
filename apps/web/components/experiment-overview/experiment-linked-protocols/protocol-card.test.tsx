@@ -7,7 +7,7 @@ import { contract } from "@repo/api";
 
 import { ProtocolCard, ProtocolSelector } from "./protocol-card";
 
-vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
+vi.mock("@repo/ui/components/rich-text-renderer", async (importOriginal: () => Promise<Record<string, unknown>>) => {
   const actual = await importOriginal();
   return {
     ...actual,

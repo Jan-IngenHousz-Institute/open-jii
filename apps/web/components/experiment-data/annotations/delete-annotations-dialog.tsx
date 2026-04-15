@@ -3,17 +3,9 @@ import { useExperimentAnnotationDeleteBulk } from "~/hooks/experiment/annotation
 
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Button } from "@repo/ui/components/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 export interface DeleteAnnotationsDialogProps {
   experimentId: string;

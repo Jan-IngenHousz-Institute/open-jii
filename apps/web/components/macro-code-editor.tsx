@@ -7,15 +7,9 @@ import React from "react";
 import { useRef, useState } from "react";
 import type { FC } from "react";
 
-import {
-  Button,
-  Label,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
+import { Label } from "@repo/ui/components/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@repo/ui/components/tooltip";
 type CodeLanguage = "python" | "r" | "javascript";
 
 interface MacroCodeEditorProps {

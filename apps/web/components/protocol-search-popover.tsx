@@ -7,15 +7,9 @@ import React, { useCallback } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Badge,
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@repo/ui/components";
-import { PopoverContent } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components/badge";
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@repo/ui/components/command";
+import { PopoverContent } from "@repo/ui/components/popover";
 import { cva } from "@repo/ui/lib/utils";
 
 const protocolItemVariants = cva(

@@ -2,7 +2,9 @@
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
+import { Badge } from "@repo/ui/components/badge";
 import { cva } from "@repo/ui/lib/utils";
 
 import { embargoUntilHelperString } from "../../embargo-utils";

@@ -4,14 +4,7 @@ import { Eye } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components";
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreview } from "./chart-preview";
 

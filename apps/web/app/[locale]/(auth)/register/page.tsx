@@ -9,8 +9,7 @@ import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { RegistrationForm } from "~/components/auth/registration-form";
 import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
 
-import { Toaster } from "@repo/ui/components";
-
+import { Toaster } from "@repo/ui/components/toaster";
 export default async function UserRegistrationPage(props: {
   params: Promise<{ locale: string }>;
   searchParams: SearchParamsType;

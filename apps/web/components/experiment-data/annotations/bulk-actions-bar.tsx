@@ -3,15 +3,8 @@ import React from "react";
 
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@repo/ui/components/dropdown-menu";
 import {
   parseAnnotations,
   groupAnnotations,

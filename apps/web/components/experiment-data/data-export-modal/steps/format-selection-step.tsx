@@ -7,22 +7,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { useTranslation } from "@repo/i18n/client";
-import {
-  Button,
-  DialogFooter,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
+import { DialogFooter } from "@repo/ui/components/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
 const formatSelectionSchema = z.object({
   format: z.string().min(1, "Please select a format"),
 });

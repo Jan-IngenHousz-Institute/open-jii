@@ -9,22 +9,11 @@ import { useTransferRequestCreate } from "~/hooks/useTransferRequestCreate/useTr
 
 import { zCreateTransferRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Checkbox,
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-} from "@repo/ui/components";
-
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
+import { Button } from "@repo/ui/components/button";
+import { Checkbox } from "@repo/ui/components/checkbox";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
 const transferRequestSchema = zCreateTransferRequestBody.extend({
   consent: z.boolean().refine((val) => val === true, {
     message: "You must confirm ownership or permission",

@@ -8,20 +8,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@repo/ui/components/input-otp";
 import { useSignInEmail } from "../../hooks/auth/useSignInEmail/useSignInEmail";
 import { useVerifyEmail } from "../../hooks/auth/useVerifyEmail/useVerifyEmail";
 

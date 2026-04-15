@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Input } from "@repo/ui/components";
+import { Input } from "@repo/ui/components/input";
 import { cn } from "@repo/ui/lib/utils";
 
 interface EditableCellProps {

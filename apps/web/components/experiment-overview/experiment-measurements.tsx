@@ -7,20 +7,10 @@ import { useLocale } from "~/hooks/useLocale";
 
 import { ExperimentTableName } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardTitle,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardTitle } from "@repo/ui/components/card";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/table";
 interface ExperimentMeasurementsProps {
   experimentId: string;
   isArchived?: boolean;

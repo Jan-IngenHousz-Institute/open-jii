@@ -6,8 +6,8 @@ import { authClient } from "@repo/auth/client";
 import { EmailLoginForm } from "./email-login-form";
 
 // InputOTP doesn't work well in jsdom, provide a testable shim
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
+vi.mock("@repo/ui/components/input-otp", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components/input-otp");
   return {
     ...actual,
     InputOTP: ({

@@ -6,15 +6,8 @@ import { ProtocolOverviewCards } from "~/components/protocol-overview-cards";
 import { useProtocols } from "~/hooks/protocol/useProtocols/useProtocols";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components";
-
+import { Input } from "@repo/ui/components/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
 export function ListProtocols() {
   const { protocols, filter, setFilter, search, setSearch } = useProtocols({});
   const { t } = useTranslation();

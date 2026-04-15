@@ -5,15 +5,8 @@ import { ExperimentOverviewCards } from "~/components/experiment-overview-cards"
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Input,
-} from "@repo/ui/components";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import { Input } from "@repo/ui/components/input";
 interface ListExperimentsProps {
   archived?: boolean;
 }

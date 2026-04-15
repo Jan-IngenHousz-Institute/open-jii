@@ -7,24 +7,11 @@ import type { UseFormReturn } from "react-hook-form";
 import type { ExperimentVisibility } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  Calendar,
-} from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@repo/ui/components/popover";
+import { Calendar } from "@repo/ui/components/calendar";
 import { cn } from "@repo/ui/lib/utils";
 
 import { isoToLocalCalendarDate, embargoUntilHelperString } from "../new-experiment/embargo-utils";

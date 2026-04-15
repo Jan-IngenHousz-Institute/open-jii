@@ -21,8 +21,10 @@ vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
 // useSignInEmail / useVerifyEmail — pragmatic mock (uses authClient, not ts-rest)
 const mockSendOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
-vi.mock("~/hooks/auth", () => ({
+vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
   useSignInEmail: () => ({ mutateAsync: mockSendOtpMutate }),
+}));
+vi.mock("~/hooks/auth/useVerifyEmail/useVerifyEmail", () => ({
   useVerifyEmail: () => ({ mutateAsync: mockVerifyOtpMutate }),
 }));
 

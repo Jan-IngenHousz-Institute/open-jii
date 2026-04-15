@@ -4,7 +4,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentDelete } from "./experiment-delete";
 

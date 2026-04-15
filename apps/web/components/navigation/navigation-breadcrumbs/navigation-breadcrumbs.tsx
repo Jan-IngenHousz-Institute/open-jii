@@ -4,14 +4,7 @@ import { useBreadcrumbs } from "@/hooks/breadcrumbs/useBreadcrumbs";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from "@repo/ui/components";
-
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@repo/ui/components/breadcrumb";
 interface BreadcrumbsProps {
   locale: string;
 }

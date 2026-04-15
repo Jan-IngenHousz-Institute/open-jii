@@ -17,7 +17,7 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-vi.mock("@/components/flow-editor", () => ({
+vi.mock("@/components/flow-editor/flow-editor", () => ({
   FlowEditor: ({
     initialFlow,
     isDisabled,

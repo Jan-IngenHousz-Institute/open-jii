@@ -4,7 +4,8 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
 import { cva } from "@repo/ui/lib/utils";
 
 const toggleButtonVariants = cva(

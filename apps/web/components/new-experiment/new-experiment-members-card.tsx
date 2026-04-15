@@ -9,15 +9,8 @@ import type { UseFormReturn } from "react-hook-form";
 import type { UserProfile, CreateExperimentBody, ExperimentMemberRole } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  Button,
-} from "@repo/ui/components";
-
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
+import { Button } from "@repo/ui/components/button";
 import { MemberList } from "../current-members-list/current-members-list";
 import { UserSearchPopover } from "../user-search-popover";
 

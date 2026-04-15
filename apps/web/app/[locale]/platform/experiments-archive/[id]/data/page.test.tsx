@@ -33,8 +33,8 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ),
 }));
 
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual("@repo/ui/components");
+vi.mock("@repo/ui/components/nav-tabs", async () => {
+  const actual = await vi.importActual("@repo/ui/components/nav-tabs");
   return {
     ...actual,
     NavTabs: ({ children }: { children: React.ReactNode }) => (
@@ -49,6 +49,13 @@ vi.mock("@repo/ui/components", async () => {
     NavTabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => (
       <div data-testid={`nav-tab-content-${value}`}>{children}</div>
     ),
+  };
+});
+
+vi.mock("@repo/ui/components/skeleton", async () => {
+  const actual = await vi.importActual("@repo/ui/components/skeleton");
+  return {
+    ...actual,
     Skeleton: ({ className }: { className?: string }) => (
       <div data-testid="skeleton" className={className} />
     ),

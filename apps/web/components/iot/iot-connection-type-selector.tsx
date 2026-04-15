@@ -4,13 +4,8 @@ import { Bluetooth, Usb } from "lucide-react";
 import type { TransportUnavailableReason } from "~/hooks/iot/useIotBrowserSupport";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
 interface ConnectionTypeSelectorProps {

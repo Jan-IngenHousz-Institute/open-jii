@@ -13,25 +13,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { env } from "~/env";
-import { useSignOut } from "~/hooks/auth";
+import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import { useTranslation } from "@repo/i18n";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dropdown-menu";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@repo/ui/components/sidebar";
 
 interface NavUserProps {
   user: {

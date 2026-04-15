@@ -9,7 +9,7 @@ import type { ChartFormValues } from "../chart-configurators/chart-configurator-
 import { DataSourceStep } from "./data-source-step";
 
 // Select — pragmatic mock (Radix Select portal/pointer issues in jsdom)
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/select", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,
@@ -31,11 +31,13 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
   };
 });
 
-vi.mock("../chart-configurators/data", () => ({
-  LineChartDataConfigurator: ({ columns }: { columns: DataColumn[] }) => (
+vi.mock("../chart-configurators/data/basic/line-chart/line-chart-data-configurator", () => ({
+  default: ({ columns }: { columns: DataColumn[] }) => (
     <div data-testid="line-chart-configurator">Columns: {columns.length}</div>
   ),
-  ScatterChartDataConfigurator: ({ columns }: { columns: DataColumn[] }) => (
+}));
+vi.mock("../chart-configurators/data/basic/scatter-chart/scatter-chart-data-configurator", () => ({
+  default: ({ columns }: { columns: DataColumn[] }) => (
     <div data-testid="scatter-chart-configurator">Columns: {columns.length}</div>
   ),
 }));

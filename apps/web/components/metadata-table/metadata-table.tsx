@@ -10,24 +10,10 @@ import type { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { KeyRound, MoreHorizontal, PencilIcon, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@repo/ui/components/dropdown-menu";
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@repo/ui/components/pagination";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
 import { EditableCell } from "./editable-cell";

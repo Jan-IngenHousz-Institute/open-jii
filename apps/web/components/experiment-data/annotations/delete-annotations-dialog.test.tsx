@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api";
 import type { AnnotationType } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DeleteAnnotationsDialog } from "./delete-annotations-dialog";
 

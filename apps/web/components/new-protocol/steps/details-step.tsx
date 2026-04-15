@@ -6,9 +6,8 @@ import type { UseFormReturn } from "react-hook-form";
 import type { CreateProtocolRequestBody } from "@repo/api";
 import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { WizardStepButtons } from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
-
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 // Validation schema for step 1 — details only (no code)
 export const detailsSchema = zCreateProtocolRequestBody.pick({
   name: true,

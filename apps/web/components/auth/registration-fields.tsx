@@ -4,23 +4,11 @@ import React from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Checkbox,
-  Input,
-  ScrollArea,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormDescription,
-  FormMessage,
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components";
-
+import { Checkbox } from "@repo/ui/components/checkbox";
+import { Input } from "@repo/ui/components/input";
+import { ScrollArea } from "@repo/ui/components/scroll-area";
+import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@repo/ui/components/form";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
 import type { Registration } from "./registration-form";
 
 export function RegistrationFields({

@@ -4,8 +4,7 @@ import { CheckCircle, Info } from "lucide-react";
 import * as React from "react";
 
 import { useTranslation } from "@repo/i18n/client";
-import { Button } from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
 interface SuccessStepProps {
   onClose: () => void;
   isMetadata?: boolean;

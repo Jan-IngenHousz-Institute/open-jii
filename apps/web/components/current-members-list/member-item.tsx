@@ -2,8 +2,7 @@ import { Mail } from "lucide-react";
 
 import type { UserProfile } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
 interface MemberItemProps {
   member: {
     role: string;

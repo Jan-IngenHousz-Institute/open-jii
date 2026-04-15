@@ -9,9 +9,8 @@ import { useParams, usePathname } from "next/navigation";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 interface ProtocolLayoutProps {
   children: React.ReactNode;
 }

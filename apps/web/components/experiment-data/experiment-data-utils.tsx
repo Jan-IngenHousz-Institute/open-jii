@@ -23,7 +23,8 @@ import {
   getWellKnownSortField,
 } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
 import { ExperimentDataTableCellCollapsible } from "./experiment-data-table-cell-collapsible";

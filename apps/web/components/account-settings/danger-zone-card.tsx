@@ -9,22 +9,11 @@ import { parseApiError } from "~/util/apiError";
 
 import type { CreateUserProfileBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  Dialog,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  Input,
-  DialogContent,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
+import { Dialog, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent } from "@repo/ui/components/dialog";
+import { Input } from "@repo/ui/components/input";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface DangerZoneCardProps {
   profile?: CreateUserProfileBody | null;

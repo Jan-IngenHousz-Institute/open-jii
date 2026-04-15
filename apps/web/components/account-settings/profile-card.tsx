@@ -4,20 +4,10 @@ import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateUserProfileBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  Input,
-  Textarea,
-} from "@repo/ui/components";
-
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import { Textarea } from "@repo/ui/components/textarea";
 interface ProfileCardProps {
   form: UseFormReturn<CreateUserProfileBody>;
 }

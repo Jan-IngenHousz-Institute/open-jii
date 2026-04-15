@@ -7,15 +7,8 @@ import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 
 import type { MacroLanguage } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components";
-
+import { Input } from "@repo/ui/components/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
 export function ListMacros() {
   const {
     data: macros,

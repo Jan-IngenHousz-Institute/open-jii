@@ -7,9 +7,9 @@ import React from "react";
 import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
-import type { PlotlyChartConfig, ScatterSeriesData } from "@repo/ui/components";
-import { ScatterChart } from "@repo/ui/components";
-
+import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
+import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";
+import { ScatterChart } from "@repo/ui/components/charts/scatter-chart";
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 
 export interface ScatterChartRendererProps {

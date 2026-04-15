@@ -6,8 +6,7 @@ import { env } from "~/env";
 
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
 interface OAuthLoginFormProps {
   provider: { id: string; name: string };
   callbackUrl: string | undefined;

@@ -5,8 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { CreateProtocolRequestBody } from "@repo/api";
 import { contract } from "@repo/api";
-import { Form } from "@repo/ui/components";
-
+import { Form } from "@repo/ui/components/form";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 
 // Mock MacroSearchWithDropdown
@@ -20,7 +19,7 @@ vi.mock("@/hooks/useDebounce", () => ({
 }));
 
 // Mock RichTextarea (Quill editor)
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/rich-textarea", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,

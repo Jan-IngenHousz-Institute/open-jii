@@ -16,21 +16,10 @@ import type { CreateMacroRequestBody, Protocol } from "@repo/api";
 import { zCreateMacroRequestBody } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Form,
-  FormField,
-  FormItem,
-  FormControl,
-  FormMessage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton,
-} from "@repo/ui/components";
-
+import { Button } from "@repo/ui/components/button";
+import { Form, FormField, FormItem, FormControl, FormMessage } from "@repo/ui/components/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
