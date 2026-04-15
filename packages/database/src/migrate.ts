@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 
-import { setupGrafanaUser } from "../scripts/setup-grafana-user";
 import { getClient, db } from "./database";
+import { setupGrafanaUser } from "./setup-grafana-user";
 
 async function runMigrations() {
   let exit = 0;

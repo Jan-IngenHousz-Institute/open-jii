@@ -5,6 +5,10 @@ terraform {
       version               = ">= 4.2.1"
       configuration_aliases = [grafana.amg]
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
     random = {
       source  = "hashicorp/random"
       version = ">= 3.7"
@@ -22,6 +26,13 @@ resource "aws_secretsmanager_secret" "grafana_db_credentials" {
   name                    = "openjii-grafana-db-credentials-${var.environment}"
   description             = "Credentials for the Grafana read-only PostgreSQL user (grafana_readonly)"
   recovery_window_in_days = 0
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    ManagedBy   = "terraform"
+    Component   = "grafana"
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "grafana_db_credentials" {

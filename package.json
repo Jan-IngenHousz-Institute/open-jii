@@ -8,7 +8,7 @@
     "build:affected": "turbo build --affected",
     "clean": "git clean -xdf node_modules .turbo",
     "clean:workspaces": "turbo run clean && pnpm run clean",
-    "dev": "turbo dev --concurrency 14",
+    "dev": "turbo dev --concurrency 20",
     "check:affected": "turbo ls --affected",
     "format": "prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
