@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { ScanQrCode, X } from "lucide-react-native";
+import { X } from "lucide-react-native";
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
@@ -10,10 +10,9 @@ interface NumberQuestionProps {
   content: QuestionContent;
   value: string;
   onChange: (text: string) => void;
-  onQRPress?: () => void;
 }
 
-export function NumberQuestion({ content, value, onChange, onQRPress }: NumberQuestionProps) {
+export function NumberQuestion({ content, value, onChange }: NumberQuestionProps) {
   const theme = useTheme();
   const { classes, colors } = theme;
 
@@ -48,7 +47,7 @@ export function NumberQuestion({ content, value, onChange, onQRPress }: NumberQu
         />
 
         {/* Right button */}
-        {hasValue ? (
+        {hasValue && (
           <TouchableOpacity
             className="rounded-md p-1"
             style={{
@@ -60,20 +59,6 @@ export function NumberQuestion({ content, value, onChange, onQRPress }: NumberQu
           >
             <X size={20} color={colors.neutral.black} />
           </TouchableOpacity>
-        ) : (
-          onQRPress && (
-            <TouchableOpacity
-              className="rounded-md p-1"
-              style={{
-                backgroundColor: theme.isDark
-                  ? colors.dark.grayBackground
-                  : colors.light.grayBackground,
-              }}
-              onPress={onQRPress}
-            >
-              <ScanQrCode size={20} color={colors.neutral.black} />
-            </TouchableOpacity>
-          )
         )}
       </View>
 

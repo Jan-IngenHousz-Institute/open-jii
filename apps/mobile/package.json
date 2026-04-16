@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "postinstall": "cd ../../packages/api && pnpm run build && cd - && cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd -"
+    "postinstall": "cd ../../packages/api && pnpm run build && cd - && cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd - && cd ../../packages/iot && pnpm run build && cd -"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
@@ -30,6 +30,7 @@
     "@react-navigation/native-stack": "^7.14.10",
     "@repo/api": "workspace:*",
     "@repo/auth": "workspace:*",
+    "@repo/iot": "workspace:*",
     "@shopify/react-native-skia": "2.4.18",
     "@tanstack/pacer": "^0.19.0",
     "@tanstack/query-async-storage-persister": "catalog:react-query",
