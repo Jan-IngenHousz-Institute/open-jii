@@ -2,7 +2,7 @@ import Papa from "papaparse";
 
 import type { MetadataColumn, MetadataRow } from "../types";
 
-const CLIPBOARD_TIMEOUT_MS = 3000;
+const CLIPBOARD_TIMEOUT_MS = 30_000;
 const DELIMITED_EXTENSIONS = new Set(["csv", "tsv", "txt"]);
 const EXCEL_EXTENSIONS = new Set(["xlsx", "xls"]);
 
