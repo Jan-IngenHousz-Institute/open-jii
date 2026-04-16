@@ -9,7 +9,7 @@
  * No factory knowledge — tests provide the exact body they want.
  */
 import { http, HttpResponse, delay as mswDelay } from "msw";
-import type { SetupServerApi } from "msw/node";
+import type { SetupServer } from "msw/node";
 
 export const API_URL = "http://localhost:3020";
 
@@ -74,7 +74,7 @@ function statusForMethod(method: HttpMethod): number {
  * Create a `mount` function bound to the given MSW server instance.
  * Called once in `server.ts`; tests use `server.mount(…)`.
  */
-export function createMount(server: SetupServerApi) {
+export function createMount(server: SetupServer) {
   return function mount(endpoint: ContractEndpoint, options: MountOptions = {}): RequestSpy {
     const method = endpoint.method.toLowerCase() as HttpMethod;
     const url = `${API_URL}${endpoint.path}`;
