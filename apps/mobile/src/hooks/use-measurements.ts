@@ -11,7 +11,10 @@ import {
 } from "~/services/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/services/measurements-storage";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
-import { buildAnnotations } from "~/utils/measurement-annotations";
+import {
+  buildAnnotations,
+  getFlagTypeFromMeasurementResult,
+} from "~/utils/measurement-annotations";
 
 export function useMeasurements() {
   const queryClient = useQueryClient();
@@ -71,7 +74,10 @@ export function useMeasurements() {
   };
 
   const updateMeasurementComment = async (key: string, data: Measurement, commentText: string) => {
-    const annotations = buildAnnotations(commentText);
+    const flagType = getFlagTypeFromMeasurementResult(
+      data.measurementResult as Record<string, unknown>,
+    );
+    const annotations = buildAnnotations(commentText, flagType);
     const measurementResult = { ...data.measurementResult, annotations };
     await updateMeasurement(key, { ...data, measurementResult });
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });

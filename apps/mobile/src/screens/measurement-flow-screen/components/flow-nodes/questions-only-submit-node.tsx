@@ -4,7 +4,6 @@ import React, { useMemo, useRef, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Button } from "~/components/Button";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
-import type {AnnotationFlagType} from "@repo/api";
 import { FlagTypeModal } from "~/components/recent-measurements-screen/flag-type-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { MeasurementItem } from "~/hooks/use-all-measurements";
@@ -18,7 +17,7 @@ import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-arr
 import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
 
-import type {AnnotationFlagType} from "@repo/api";
+import type { AnnotationFlagType } from "@repo/api";
 
 import { AnalysisSummaryCard } from "./analysis-node/analysis-summary-card";
 
@@ -36,6 +35,8 @@ export function QuestionsOnlySubmitNode() {
   const [flagPickerVisible, setFlagPickerVisible] = useState(false);
   const [measurementComment, setMeasurementComment] = useState("");
   const [flagType, setFlagType] = useState<AnnotationFlagType | null>(null);
+
+  const trimmedComment = measurementComment.trim();
 
   const displayTimestamp = useRef<string>(getSyncedLocalISO()).current;
 
@@ -83,7 +84,7 @@ export function QuestionsOnlySubmitNode() {
       experimentId,
       userId: session.data.user.id,
       questions,
-      commentText: measurementComment.trim() || undefined,
+      commentText: trimmedComment || undefined,
       flagType,
     });
 
@@ -126,12 +127,9 @@ export function QuestionsOnlySubmitNode() {
           className="flex-row items-center gap-1.5 py-1"
           activeOpacity={0.7}
         >
-          <MessageCircle
-            size={18}
-            color={measurementComment ? colors.onSurface : colors.inactive}
-          />
-          <Text className={clsx("text-sm", measurementComment ? classes.text : classes.textMuted)}>
-            {measurementComment ? "Edit comment" : "Add comment"}
+          <MessageCircle size={18} color={trimmedComment ? colors.onSurface : colors.inactive} />
+          <Text className={clsx("text-sm", trimmedComment ? classes.text : classes.textMuted)}>
+            {trimmedComment ? "Edit comment" : "Add comment"}
           </Text>
         </TouchableOpacity>
 
