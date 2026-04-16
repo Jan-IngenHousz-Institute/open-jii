@@ -168,6 +168,12 @@ locals {
         "lambda:GetFunctionConcurrency",
         # Code signing (Terraform provider reads)
         "lambda:GetFunctionCodeSigningConfig",
+        # Layer management (Terraform provider reads layer metadata before attaching)
+        "lambda:GetLayerVersion",
+        "lambda:GetLayerVersionPolicy",
+        "lambda:ListLayers",
+        "lambda:ListLayerVersions",
+        "lambda:PublishLayerVersion",
       ]
       resource = "*"
     }
@@ -445,6 +451,10 @@ locals {
         "ec2:DeleteVpcEndpoints",
         "ec2:DescribeVpcEndpoints",
         "ec2:ModifyVpcEndpoint",
+        # VPC Flow Logs
+        "ec2:CreateFlowLogs",
+        "ec2:DeleteFlowLogs",
+        "ec2:DescribeFlowLogs",
         # Tags
         "ec2:CreateTags",
         "ec2:DeleteTags",
@@ -959,6 +969,28 @@ locals {
         "backup-storage:MountCapsule",
       ]
       resource = "*"
+    }
+
+    # ── Inspector v2: account-level enablement (Terraform) ──
+    inspector2 = {
+      actions = [
+        # Enable/disable scanning (create, update, destroy)
+        "inspector2:Enable",
+        "inspector2:Disable",
+        # Read current account status (plan/refresh)
+        "inspector2:BatchGetAccountStatus",
+        # Provider reads during plan
+        "inspector2:ListAccountPermissions",
+      ]
+      resource = "*"
+    }
+
+    # ── Inspector v2: service-linked role creation (first-time enablement) ──
+    inspector2-slr = {
+      actions = [
+        "iam:CreateServiceLinkedRole",
+      ]
+      resource = "arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2"
     }
   }
 

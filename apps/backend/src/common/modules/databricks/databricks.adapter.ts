@@ -521,7 +521,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * @param experimentId - The experiment identifier
    * @param options - Optional configuration
    * @param options.identifier - If provided, only return metadata for this specific table (static name or macro_id)
-   * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
+   * @param options.includeSchemas - If false, exclude macro_schema, questions_schema, and custom_metadata_schema columns (default: true)
    * @returns Result containing array of table metadata with identifiers, types, and row counts
    */
   async getExperimentTableMetadata(
@@ -536,7 +536,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
     const includeSchemas = options?.includeSchemas !== false; // Default to true
     const columns = includeSchemas
-      ? ["identifier", "table_type", "row_count", "macro_schema", "questions_schema"]
+      ? [
+          "identifier",
+          "table_type",
+          "row_count",
+          "macro_schema",
+          "questions_schema",
+          "custom_metadata_schema",
+        ]
       : ["identifier", "table_type", "row_count"];
 
     const whereConditions: [string, string][] = [["experiment_id", experimentId]];
@@ -582,6 +589,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
           ...base,
           macroSchema: row[3],
           questionsSchema: row[4],
+          customMetadataSchema: row[5],
         };
       }
 

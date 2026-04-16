@@ -8,7 +8,7 @@ import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/Button";
@@ -54,6 +54,7 @@ export function CommentModal({
       setText(initialText);
       sheetRef.current?.present();
     } else {
+      Keyboard.dismiss();
       sheetRef.current?.dismiss();
     }
   }, [visible, initialText]);

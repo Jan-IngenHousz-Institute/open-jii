@@ -77,9 +77,34 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
   ),
 }));
 
+vi.mock("~/components/experiment-data/metadata-upload-modal/metadata-upload-modal", () => ({
+  MetadataUploadModal: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => (
+    <div data-testid="metadata-upload-modal" data-open={open}>
+      <button onClick={() => onOpenChange(false)}>Close Metadata Modal</button>
+    </div>
+  ),
+}));
+
 const mockUseExperimentTables = vi.fn();
 vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
   useExperimentTables: (): unknown => mockUseExperimentTables(),
+}));
+
+const mockMetadataUseQuery = vi.fn();
+vi.mock("~/lib/tsr", () => ({
+  tsr: {
+    experiments: {
+      listExperimentMetadata: {
+        useQuery: (...args: unknown[]): unknown => mockMetadataUseQuery(...args),
+      },
+    },
+  },
 }));
 
 vi.mock("~/components/experiment-data/experiment-data-table", () => ({
@@ -109,9 +134,24 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ),
 }));
 
+vi.mock("lucide-react", () => ({
+  BarChart3: () => <span data-testid="icon-bar-chart" />,
+  Database: () => <span data-testid="icon-database" />,
+  FileSpreadsheet: () => <span data-testid="icon-file-spreadsheet" />,
+  Pencil: () => <span data-testid="icon-pencil" />,
+}));
+
 vi.mock("@repo/ui/components", () => ({
-  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
-    <button data-testid="button" onClick={onClick}>
+  Button: ({
+    children,
+    onClick,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+  }) => (
+    <button data-testid="button" onClick={onClick} disabled={disabled}>
       {children}
     </button>
   ),
@@ -185,6 +225,7 @@ describe("ExperimentDataPage", () => {
     mockUseTranslation.mockReturnValue({
       t: (key: string) => key,
     });
+    mockMetadataUseQuery.mockReturnValue({ data: null });
   });
 
   it("renders the experiment data page with tabs when loaded", async () => {
@@ -193,7 +234,8 @@ describe("ExperimentDataPage", () => {
     await waitFor(() => {
       expect(screen.getByText("experimentData.title")).toBeInTheDocument();
       expect(screen.getByText("experimentData.description")).toBeInTheDocument();
-      expect(screen.getByTestId("button")).toBeInTheDocument();
+      const buttons = screen.getAllByTestId("button");
+      expect(buttons.length).toBeGreaterThanOrEqual(2);
       expect(screen.getByTestId("nav-tabs")).toBeInTheDocument();
       expect(screen.getByTestId("nav-tabs-list")).toBeInTheDocument();
     });
@@ -362,15 +404,14 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("renders upload button with correct styling", async () => {
-    const { container } = render(<ExperimentDataPage params={defaultProps.params} />);
+  it("renders upload buttons with correct styling", async () => {
+    render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      const button = screen.getByTestId("button");
-      expect(button).toHaveTextContent("experimentData.uploadData");
-
-      const uploadIcon = container.querySelector("svg");
-      expect(uploadIcon).toBeInTheDocument();
+      const buttons = screen.getAllByTestId("button");
+      const buttonTexts = buttons.map((b) => b.textContent);
+      expect(buttonTexts).toContain("experimentData.uploadMetadata");
+      expect(buttonTexts).toContain("experimentData.uploadSensorData");
     });
   });
 
@@ -381,7 +422,7 @@ describe("ExperimentDataPage", () => {
       const mainDiv = container.querySelector(".space-y-8");
       expect(mainDiv).toBeInTheDocument();
 
-      const headerDiv = container.querySelector(".flex.items-start.justify-between");
+      const headerDiv = container.querySelector(".flex.items-center.justify-between");
       expect(headerDiv).toBeInTheDocument();
     });
   });
@@ -461,6 +502,154 @@ describe("ExperimentDataPage", () => {
       expect(trigger).toBeInTheDocument();
       // The truncate class should be present in the parent structure
       expect(container.querySelector(".truncate")).toBeInTheDocument();
+    });
+  });
+
+  it("shows editMetadata text when metadata already exists", async () => {
+    mockMetadataUseQuery.mockReturnValue({
+      data: { body: [{ id: "m1", metadata: {} }] },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.editMetadata")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-pencil")).toBeInTheDocument();
+    });
+  });
+
+  it("shows uploadMetadata text when no metadata exists", async () => {
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.uploadMetadata")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-file-spreadsheet")).toBeInTheDocument();
+    });
+  });
+
+  it("opens metadata upload modal when clicking metadata button", async () => {
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const metadataBtn = screen.getByText("experimentData.uploadMetadata").closest("button");
+      expect(metadataBtn).not.toBeDisabled();
+      metadataBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("metadata-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
+    });
+  });
+
+  it("opens data upload modal when clicking sensor data button", async () => {
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const sensorBtn = screen.getByText("experimentData.uploadSensorData").closest("button");
+      expect(sensorBtn).not.toBeDisabled();
+      sensorBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("data-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
+    });
+  });
+
+  it("shows editMetadata in no-data state when metadata exists", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    });
+    mockMetadataUseQuery.mockReturnValue({
+      data: { body: [{ id: "m1", metadata: {} }] },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.editMetadata")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-pencil")).toBeInTheDocument();
+    });
+  });
+
+  it("opens metadata upload from no-data state", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    });
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const metadataBtn = screen.getByText("experimentData.uploadMetadata").closest("button");
+      metadataBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("metadata-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
+    });
+  });
+
+  it("opens sensor data upload from no-data state", async () => {
+    mockUseExperimentTables.mockReturnValue({
+      tables: [],
+      isLoading: false,
+      error: null,
+    });
+    mockUseExperimentAccess.mockReturnValue({
+      ...mockExperimentData,
+      data: {
+        body: {
+          experiment: { id: "exp-123", name: "Test Experiment", status: "active" },
+          isAdmin: true,
+        },
+      },
+    });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      const sensorBtn = screen.getByText("experimentData.uploadSensorData").closest("button");
+      sensorBtn?.click();
+    });
+
+    await waitFor(() => {
+      const modal = screen.getByTestId("data-upload-modal");
+      expect(modal).toHaveAttribute("data-open", "true");
     });
   });
 });

@@ -49,7 +49,7 @@ export interface DatabricksPort {
    * @param experimentId - The experiment identifier
    * @param options - Optional configuration
    * @param options.identifier - If provided, only return metadata for this specific table (static name or macro_id)
-   * @param options.includeSchemas - If false, exclude macro_schema and questions_schema columns (default: true)
+   * @param options.includeSchemas - If false, exclude macro_schema, questions_schema, and custom_metadata_schema columns (default: true)
    * @returns Result containing array of table metadata with identifiers, types, and row counts
    */
   getExperimentTableMetadata(

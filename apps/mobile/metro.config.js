@@ -23,5 +23,6 @@ config.resolver.nodeModulesPaths = [
 config.resolver.unstable_enablePackageExports = true;
 
 config.resolver.assetExts.push("txt");
+config.resolver.sourceExts.push("sql");
 
 module.exports = config;

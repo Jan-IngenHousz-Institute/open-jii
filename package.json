@@ -2,20 +2,22 @@
   "name": "open-jii",
   "private": true,
   "scripts": {
-    "build": "turbo build",
+    "build": "turbo build --concurrency 14",
+    "build:apps": "turbo build --filter=./apps/*",
+    "build:packages": "turbo build --filter=./packages/*",
+    "build:affected": "turbo build --affected",
     "clean": "git clean -xdf node_modules .turbo",
     "clean:workspaces": "turbo run clean && pnpm run clean",
     "dev": "turbo dev --concurrency 14",
-    "build:affected": "turbo build --affected",
     "check:affected": "turbo ls --affected",
     "format": "prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
-    "lint": "turbo run lint --continue -- --no-cache",
+    "lint": "turbo run lint --concurrency 14 --continue -- --no-cache",
     "lint:fix": "turbo run lint --continue -- --fix --no-cache",
     "lint:ws": "pnpm dlx sherif@latest",
-    "test": "turbo test",
+    "test": "turbo test --concurrency 14",
     "test:watch": "turbo test --watch",
-    "test:coverage": "turbo test --coverage",
+    "test:coverage": "turbo run test:coverage",
     "test:projects": "vitest run",
     "test:projects:watch": "vitest --watch",
     "view-report": "turbo run view-report",
@@ -26,7 +28,6 @@
     "db:generate": "turbo --filter database db:generate",
     "db:studio": "turbo --filter database db:studio",
     "db:setup": "turbo db:setup",
-    "postinstall": "pnpm lint:ws",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
     "dev:fb": "turbo run dev --filter=backend --filter=web"
@@ -45,9 +46,16 @@
     "node": ">=22"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "better-sqlite3",
+      "turbo",
+      "@shopify/react-native-skia"
+    ],
     "overrides": {
       "react": "catalog:react19",
-      "react-dom": "catalog:react19"
+      "react-dom": "catalog:react19",
+      "lodash": "^4.18.0"
     },
     "patchedDependencies": {
       "react-native-usb-serialport-for-android": "patches/react-native-usb-serialport-for-android.patch",

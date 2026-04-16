@@ -14,10 +14,9 @@ import type {
   MeasurementFilter,
   MeasurementItem as MeasurementItemType,
 } from "~/hooks/use-all-measurements";
-import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { useMeasurements } from "~/hooks/use-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
-import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
@@ -36,8 +35,8 @@ export function RecentMeasurementsScreen() {
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
-  const { uploadAll, isUploading, uploadOne, removeFailedUpload, updateMeasurementComment } =
-    useFailedUploads();
+  const { uploadAll, isUploading, uploadOne, removeMeasurement, updateMeasurementComment } =
+    useMeasurements();
 
   const handleSyncAll = () => {
     showAlert(
@@ -97,12 +96,8 @@ export function RecentMeasurementsScreen() {
         text: status === "synced" ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
-          void (async () => {
-            if (status === "synced") {
-              await removeSuccessfulUpload(id);
-            } else {
-              await removeFailedUpload(id);
-            }
+          void (() => {
+            removeMeasurement(id);
             invalidate();
           })();
         },

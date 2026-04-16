@@ -13,6 +13,7 @@ from .user_metadata import add_user_column
 from .question_metadata import add_question_columns, get_experiment_question_labels
 from .annotations_metadata import add_annotation_column
 from .transfer_metadata import execute_transfers
+from .custom_metadata import add_custom_metadata_column
 
 __all__ = [
     "BackendClient",
@@ -22,4 +23,5 @@ __all__ = [
     "get_experiment_question_labels",
     "add_annotation_column",
     "execute_transfers",
+    "add_custom_metadata_column"
 ]

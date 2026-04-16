@@ -60,14 +60,14 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@react-email/preview-server": "5.2.8",
+    "@react-email/preview-server": "5.2.10",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:react19",
     "eslint": "catalog:",
     "react": "catalog:react19",
-    "react-email": "5.2.8",
+    "react-email": "5.2.10",
     "typescript": "catalog:"
   }
 }

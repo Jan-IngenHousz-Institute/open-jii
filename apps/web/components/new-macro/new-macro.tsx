@@ -30,7 +30,6 @@ import {
   SelectValue,
   Skeleton,
 } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
 
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";
@@ -57,7 +56,8 @@ export function NewMacroForm() {
   const addProtocolsMutationRef = useRef<ReturnType<typeof useAddCompatibleProtocol>>(null);
 
   const { mutate: createMacro, isPending } = useMacroCreate({
-    onSuccess: (id: string) => {
+    onSuccess: (data) => {
+      const id = data.body.id;
       // Link selected protocols after macro creation, then redirect
       if (selectedProtocols.length > 0 && addProtocolsMutationRef.current) {
         addProtocolsMutationRef.current
@@ -107,7 +107,6 @@ export function NewMacroForm() {
         code: code,
       },
     });
-    toast({ description: t("macros.macroCreated") });
   }
 
   const selectedProtocolIds = useMemo(

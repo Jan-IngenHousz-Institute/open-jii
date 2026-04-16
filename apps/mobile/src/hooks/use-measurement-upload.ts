@@ -1,11 +1,9 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
-import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { useMeasurements } from "~/hooks/use-measurements";
 import { exportSingleMeasurementToFile } from "~/services/export-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
-import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { compressSample } from "~/utils/compress-sample";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
@@ -94,8 +92,7 @@ function promptMeasurementFileSave(measurement: {
 }
 
 export function useMeasurementUpload() {
-  const queryClient = useQueryClient();
-  const { saveFailedUpload } = useFailedUploads();
+  const { saveMeasurement } = useMeasurements();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
     async ({
@@ -152,8 +149,7 @@ export function useMeasurementUpload() {
       try {
         await sendMqttEvent(topic, measurementData);
         toast.success("Measurement uploaded!");
-        await saveSuccessfulUpload(failedUploadData);
-        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+        await saveMeasurement(failedUploadData, "successful");
         return;
       } catch (uploadError) {
         console.error("Upload failed:", uploadError);
@@ -161,8 +157,7 @@ export function useMeasurementUpload() {
       }
 
       try {
-        await saveFailedUpload(failedUploadData);
-        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
+        await saveMeasurement(failedUploadData, "failed");
       } catch (storageError) {
         console.error("Failed to save measurement to local storage:", storageError);
         promptMeasurementFileSave(failedUploadData);

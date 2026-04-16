@@ -12,6 +12,9 @@ inputs:
     description: "Skip coverage upload (e.g., for Dependabot PRs)"
     required: false
     default: "false"
+  macro-sb-test-key:
+    description: "AES key for decrypting macro-sandbox test scripts"
+    required: false
 
 runs:
   using: "composite"
@@ -19,24 +22,73 @@ runs:
     - name: Run Tests
       id: run-tests
       shell: bash
+      env:
+        MACRO_SB_TEST_KEY: ${{ inputs.macro-sb-test-key }}
       run: |
         echo "🧪 Testing affected packages"
 
         AFFECTED_APPS='${{ inputs.affected_apps }}'
-        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+        mapfile -t APPS < <(jq -r '.[]' <<<"$AFFECTED_APPS")
 
-        TEST_CMD="pnpm turbo run test"
+        TEST_ARGS=()
         for APP in "${APPS[@]}"; do
-          TEST_CMD="$TEST_CMD --filter=$APP"
+          TEST_ARGS+=("--filter=$APP")
         done
 
-        echo "Running: $TEST_CMD"
+        echo "Running: pnpm turbo run test ${TEST_ARGS[*]}"
 
-        OUTPUT=$(eval "$TEST_CMD" 2>&1)
-        EXIT_CODE=$?
-        echo "$OUTPUT"
+        TEST_LOG="$(mktemp)"
+        pnpm turbo run test "${TEST_ARGS[@]}" 2>&1 | tee "$TEST_LOG"
+        EXIT_CODE=${PIPESTATUS[0]}
+        set -e
 
-        COVERAGE_FILES=$(find apps tooling packages -maxdepth 2 -name "coverage.json" -type f 2>/dev/null)
+        if [ $EXIT_CODE -ne 0 ]; then
+          echo ""
+          echo "❌ Test command failed (exit code: $EXIT_CODE)"
+          echo "🔎 Running each affected app test individually to pinpoint failures"
+          FAILED_APPS=()
+          for APP in "${APPS[@]}"; do
+            echo ""
+            echo "▶️ Running: pnpm turbo run test --filter=$APP"
+            if pnpm turbo run test "--filter=$APP"; then
+              echo "✅ Passed: $APP"
+            else
+              echo "❌ Failed: $APP"
+              FAILED_APPS+=("$APP")
+            fi
+          done
+
+          if [ ${#FAILED_APPS[@]} -gt 0 ]; then
+            echo ""
+            echo "🧵 Re-running failed app(s) with full logging/debug output"
+            for FAILED_APP in "${FAILED_APPS[@]}"; do
+              echo ""
+              echo "🐛 Debug run for $FAILED_APP"
+              echo "▶️ Running: pnpm turbo run test --filter=$FAILED_APP --output-logs=full --summarize"
+              if pnpm turbo run test "--filter=$FAILED_APP" --output-logs=full --summarize; then
+                echo "✅ Debug run passed: $FAILED_APP"
+              else
+                echo "❌ Debug run failed: $FAILED_APP"
+              fi
+            done
+          fi
+
+          echo ""
+          echo "📄 Last 200 lines from the original failed run:"
+          tail -n 200 "$TEST_LOG"
+        fi
+
+        SEARCH_ROOTS=()
+        for d in apps tooling packages; do
+          [ -d "$d" ] && SEARCH_ROOTS+=("$d")
+        done
+
+        if [ ${#SEARCH_ROOTS[@]} -eq 0 ]; then
+          COVERAGE_FILES=""
+        else
+          # Do not fail the workflow if one search root is inaccessible/missing.
+          COVERAGE_FILES=$(find "${SEARCH_ROOTS[@]}" -maxdepth 2 -name "coverage.json" -type f 2>/dev/null || true)
+        fi
 
         if [ -z "$COVERAGE_FILES" ]; then
           echo "⚠️ No coverage files were generated; skipping Codecov upload"
