@@ -1001,6 +1001,14 @@ locals {
       ]
       resource = "arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2"
     }
+
+    # ── ECR replication: service-linked role creation (first-time enablement) ──
+    ecr-replication-slr = {
+      actions = [
+        "iam:CreateServiceLinkedRole",
+      ]
+      resource = "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication"
+    }
   }
 
   # Combine all service permissions into comprehensive policy statements
