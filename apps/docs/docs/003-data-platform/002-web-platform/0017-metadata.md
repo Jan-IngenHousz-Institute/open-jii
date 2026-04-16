@@ -12,14 +12,14 @@ Sensor data alone tells you *what* was measured, but not *why* or *under which c
 
 ### Common examples
 
-| Column | Purpose | Example values |
-|:---|:---|:---|
-| `plant_id` | Unique identifier per plant or plot | `P001`, `P002`, `A-12` |
-| `genotype` | Genetic background or cultivar | `Col-0`, `Ler`, `Nipponbare` |
-| `treatment` | Experimental condition | `control`, `drought`, `high-light` |
-| `block` | Field or greenhouse block | `B1`, `B2` |
-| `sowing_date` | Date the plant was sown | `2025-03-15` |
-| `harvest_date` | Date of harvest or final measurement | `2025-06-20` |
+| Column         | Purpose                              | Example values                     |
+| :------------- | :----------------------------------- | :--------------------------------- |
+| `plant_id`     | Unique identifier per plant or plot  | `P001`, `P002`, `A-12`             |
+| `genotype`     | Genetic background or cultivar       | `Col-0`, `Ler`, `Nipponbare`       |
+| `treatment`    | Experimental condition               | `control`, `drought`, `high-light` |
+| `block`        | Field or greenhouse block            | `B1`, `B2`                         |
+| `sowing_date`  | Date the plant was sown              | `2025-03-15`                       |
+| `harvest_date` | Date of harvest or final measurement | `2025-06-20`                       |
 
 You can add any columns that are relevant to your experiment. There is no fixed schema.
 
