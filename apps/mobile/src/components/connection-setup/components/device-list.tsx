@@ -40,6 +40,7 @@ export function DeviceList({
       )}
 
       <FlatList
+        scrollEnabled={false}
         data={devices}
         extraData={connectingDeviceId}
         renderItem={({ item }) => {

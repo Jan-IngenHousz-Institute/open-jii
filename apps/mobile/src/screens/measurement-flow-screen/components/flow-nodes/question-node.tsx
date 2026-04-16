@@ -64,7 +64,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           (opt) => opt.trim().toLowerCase() === data.trim().toLowerCase(),
         );
         if (!match) {
-          toast.error("QR doesn't match any options.");
+          toast.error(`"${data}" does not exist.`);
           return;
         }
         handleAnswerChangeAndAdvance(match);
@@ -75,15 +75,6 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         handleAnswerChange(data);
         toast.success("QR applied successfully!");
         break;
-      case "number": {
-        if (data.trim() === "" || isNaN(Number(data))) {
-          toast.error("QR is not a valid number.");
-          return;
-        }
-        handleAnswerChange(data);
-        toast.success("QR applied successfully!");
-        break;
-      }
       default:
         handleAnswerChange(data);
         toast.success("QR applied successfully!");
@@ -96,12 +87,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         return <TextQuestion content={content} value={answerValue} onChange={handleAnswerChange} />;
       case "number":
         return (
-          <NumberQuestion
-            content={content}
-            value={answerValue}
-            onChange={handleAnswerChange}
-            onQRPress={() => setQrScannerVisible(true)}
-          />
+          <NumberQuestion content={content} value={answerValue} onChange={handleAnswerChange} />
         );
       case "single_choice":
         return (

@@ -1,0 +1,82 @@
+name: Production Checks
+
+on:
+    workflow_call:
+        inputs:
+            affected-apps:
+                description: "JSON array of affected app names"
+                required: true
+                type: string
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    backend:
+        name: Docker Build (Backend)
+        runs-on: ubuntu-latest
+        if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'backend')
+        steps:
+            - uses: actions/checkout@v6
+            - uses: ./.github/actions/docker-build-check
+              with:
+                  image-name: open-jii-backend:pr-check
+                  dockerfile: apps/backend/Dockerfile
+                  build-args: PROJECT=backend
+
+    database:
+        name: Docker Build (Database Migrations)
+        runs-on: ubuntu-latest
+        if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), '@repo/database')
+        steps:
+            - uses: actions/checkout@v6
+            - uses: ./.github/actions/docker-build-check
+              with:
+                  image-name: open-jii-database:pr-check
+                  dockerfile: packages/database/Dockerfile
+
+    macro-sandbox:
+        name: Docker Build (Macro Sandbox - ${{ matrix.language }})
+        runs-on: ubuntu-latest
+        if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'macro-sandbox')
+        strategy:
+            fail-fast: false
+            matrix:
+                language: [javascript, python, r]
+        steps:
+            - uses: actions/checkout@v6
+            - uses: ./.github/actions/docker-build-check
+              with:
+                  image-name: macro-sandbox-${{ matrix.language }}:pr-check
+                  dockerfile: apps/macro-sandbox/functions/${{ matrix.language }}/Dockerfile
+                  context: apps/macro-sandbox
+                  trivyignores: apps/macro-sandbox/functions/${{ matrix.language }}/.trivyignore.yaml
+                  use-gha-cache: "false"
+
+    web-opennext:
+        name: OpenNext Build (Web)
+        runs-on: ubuntu-latest
+        if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'web')
+        steps:
+            - uses: actions/checkout@v6
+            - uses: ./.github/actions/opennext-build
+              with:
+                  web-base-origin: ${{ vars.WEB_BASE_ORIGIN }}
+                  posthog-key: ${{ secrets.POSTHOG_KEY }}
+
+    dependency-scan:
+        name: Scan Dependencies & Licenses
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: aquasecurity/trivy-action@0.35.0
+              with:
+                  scan-type: fs
+                  scan-ref: .
+                  format: table
+                  exit-code: 1
+                  severity: CRITICAL
+                  scanners: vuln,license
+                  ignore-unfixed: true
+                  trivyignores: .trivyignore
