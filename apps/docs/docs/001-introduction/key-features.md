@@ -15,7 +15,7 @@ This page highlights the main capabilities of the openJII platform. For detailed
 
 - **Sensor support:** connect to supported sensors (MultispeQ) over Bluetooth and run measurements.
 - **Redesigned measurement flow:** guided flows with auto-advance, smart skipping, and animated progress for rapid field data collection.
-- **QR code scanning:** scan QR codes to populate answers in NumberQuestion and OpenEndedQuestion inputs, or to apply a MultipleChoiceQuestion option. Uses the device camera for faster data entry compared to manual typing. Requires camera permissions.
+- **QR code scanning:** scan QR codes to populate answers in OpenEndedQuestion inputs, or to apply a MultipleChoiceQuestion option. Uses the device camera for faster data entry compared to manual typing. Requires camera permissions.
 - **Question-only flows:** collect survey data and field observations without a sensor measurement.
 - **Offline-first:** capture data offline with on-device gzip compression; sync when network is available. User sessions are maintained during temporary network drops. After login, all experiment data is prefetched and cached so measurements can run completely offline.
 - **Comments & annotations:** add comments to measurements via swipe actions.
