@@ -103,8 +103,12 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
           value={value}
           disabled={disabled}
           onChange={(e) => {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             const result = onValueChange?.(e.target.value);
-            if (result instanceof Promise) result.catch(() => {});
+            if (result instanceof Promise)
+              result.catch(() => {
+                /* noop */
+              });
           }}
         >
           <option value="multispeq">MultispeQ</option>
@@ -491,9 +495,10 @@ describe("ProtocolDetailsSidebar", () => {
     expect(spy.params).toEqual({ id: "550e8400-e29b-41d4-a716-446655440000" });
 
     await waitFor(() => {
-      expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith(
-        "/en-US/platform/protocols",
-      );
+      expect(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        vi.mocked(useRouter).mock.results[0]?.value.push as ReturnType<typeof vi.fn>,
+      ).toHaveBeenCalledWith("/en-US/platform/protocols");
     });
   });
 

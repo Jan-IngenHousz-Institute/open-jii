@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, fireEvent, render, screen, waitFor } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

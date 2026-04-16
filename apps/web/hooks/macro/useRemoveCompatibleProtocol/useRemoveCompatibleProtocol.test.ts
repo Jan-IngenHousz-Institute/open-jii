@@ -19,8 +19,8 @@ describe("useRemoveCompatibleProtocol", () => {
     });
 
     await waitFor(() => {
-      expect(spy.params?.id).toBe("macro-1");
-      expect(spy.params?.protocolId).toBe("p-1");
+      expect(spy.params.id).toBe("macro-1");
+      expect(spy.params.protocolId).toBe("p-1");
     });
   });
 

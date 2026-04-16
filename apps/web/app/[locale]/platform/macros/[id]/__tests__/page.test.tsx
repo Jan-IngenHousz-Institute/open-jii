@@ -63,7 +63,11 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
       <span data-testid="description-content">{description}</span>
       <button
         data-testid="description-save-btn"
-        onClick={() => onSave("new description").catch(() => {})}
+        onClick={() =>
+          onSave("new description").catch(() => {
+            /* noop */
+          })
+        }
       >
         save
       </button>

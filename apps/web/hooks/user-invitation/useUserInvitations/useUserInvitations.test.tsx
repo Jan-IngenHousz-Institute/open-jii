@@ -30,7 +30,7 @@ describe("useUserInvitations", () => {
   it("passes correct query params", async () => {
     const spy = server.mount(contract.users.listInvitations, { body: [] });
 
-    const { result } = renderHook(() => useUserInvitations("experiment", "exp-123"));
+    renderHook(() => useUserInvitations("experiment", "exp-123"));
 
     await waitFor(() => {
       expect(spy.called).toBe(true);

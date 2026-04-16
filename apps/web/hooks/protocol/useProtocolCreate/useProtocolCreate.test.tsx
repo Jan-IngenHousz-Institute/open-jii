@@ -1,11 +1,10 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { renderHook, waitFor, act } from "@/test/test-utils";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api";
-
 import { toast } from "@repo/ui/hooks";
 
 import { useProtocolCreate } from "./useProtocolCreate";
@@ -27,7 +26,7 @@ describe("useProtocolCreate", () => {
 
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalled();
-      expect(onSuccess.mock.calls[0][0].body.id).toBe("proto-1");
+      expect((onSuccess.mock.calls[0][0] as { body: { id: string } }).body.id).toBe("proto-1");
     });
   });
 

@@ -382,6 +382,7 @@ describe("RegistrationForm", () => {
       const form = screen
         .getByRole("button", { name: "registration.continueWithEmailVerification" })
         .closest("form");
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 
       await waitFor(() => {

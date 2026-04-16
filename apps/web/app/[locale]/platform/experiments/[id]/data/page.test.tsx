@@ -329,6 +329,7 @@ describe("ExperimentDataPage", () => {
       expect(screen.getByText("experimentData.uploadMetadata")).toBeInTheDocument();
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     await user.click(screen.getByText("experimentData.uploadMetadata").closest("button")!);
 
     await waitFor(() => {
@@ -346,6 +347,7 @@ describe("ExperimentDataPage", () => {
       expect(screen.getByText("experimentData.uploadSensorData")).toBeInTheDocument();
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     await user.click(screen.getByText("experimentData.uploadSensorData").closest("button")!);
 
     await waitFor(() => {
@@ -387,6 +389,7 @@ describe("ExperimentDataPage", () => {
       expect(screen.getByText("experimentData.uploadMetadata")).toBeInTheDocument();
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     await user.click(screen.getByText("experimentData.uploadMetadata").closest("button")!);
 
     await waitFor(() => {
@@ -405,6 +408,7 @@ describe("ExperimentDataPage", () => {
       expect(screen.getByText("experimentData.uploadSensorData")).toBeInTheDocument();
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     await user.click(screen.getByText("experimentData.uploadSensorData").closest("button")!);
 
     await waitFor(() => {

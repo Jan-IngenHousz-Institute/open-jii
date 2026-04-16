@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -55,7 +54,14 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
       <span data-testid="title-is-pending">{String(isPending)}</span>
       {badges && <div data-testid="title-badges">{badges}</div>}
       {actions && <div data-testid="title-actions">{actions}</div>}
-      <button data-testid="save-title-btn" onClick={() => void onSave("New Title").catch(() => {})}>
+      <button
+        data-testid="save-title-btn"
+        onClick={() =>
+          void onSave("New Title").catch(() => {
+            /* noop */
+          })
+        }
+      >
         Save
       </button>
     </div>
@@ -86,7 +92,9 @@ function renderLayout({
     | { data: null; isPending: boolean };
   children?: React.ReactNode;
 } = {}) {
-  vi.mocked(useParams).mockReturnValue({ id: protocolId, locale: "en" } as any);
+  vi.mocked(useParams).mockReturnValue({ id: protocolId, locale: "en" } as ReturnType<
+    typeof useParams
+  >);
   vi.mocked(usePathname).mockReturnValue(`/en/platform/protocols/${protocolId}`);
   vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
 

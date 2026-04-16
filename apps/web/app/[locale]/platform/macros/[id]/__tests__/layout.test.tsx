@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -68,8 +67,8 @@ function renderLayout({
   session?: { data: { user: { id: string } } } | { data: null };
   children?: React.ReactNode;
 } = {}) {
-  vi.mocked(useParams).mockReturnValue({ id: macroId } as any);
-  vi.mocked(useSession).mockReturnValue(session as any);
+  vi.mocked(useParams).mockReturnValue({ id: macroId } as ReturnType<typeof useParams>);
+  vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
 
   return render(<MacroLayout>{children}</MacroLayout>);
 }

@@ -1,4 +1,4 @@
-import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataUploadModal } from "./data-upload-modal";

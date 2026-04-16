@@ -25,7 +25,7 @@ vi.mock("./new-macro-details-card", () => ({
 vi.mock("../macro-code-editor", () => ({
   default: (props: Record<string, unknown>) => (
     <div data-testid="code-editor" data-language={String(props.language)}>
-      {props.title && <div>{String(props.title)}</div>}
+      {props.title != null && <div>{String(props.title as string)}</div>}
     </div>
   ),
 }));

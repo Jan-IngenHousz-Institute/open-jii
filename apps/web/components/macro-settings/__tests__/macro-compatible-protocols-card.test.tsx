@@ -162,7 +162,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
 
     await waitFor(() => {
       expect(lastDropdownProps).not.toBeNull();
-      expect(lastDropdownProps!.availableProtocols.length).toBeGreaterThan(0);
+      expect(lastDropdownProps?.availableProtocols.length).toBeGreaterThan(0);
     });
 
     // proto-1 and proto-2 are already linked, so only proto-3 should be available
@@ -205,11 +205,11 @@ describe("<MacroCompatibleProtocolsCard />", () => {
 
     await waitFor(() => {
       expect(lastDropdownProps).not.toBeNull();
-      expect(lastDropdownProps!.availableProtocols.length).toBeGreaterThan(0);
+      expect(lastDropdownProps?.availableProtocols.length).toBeGreaterThan(0);
     });
 
-    // Trigger the add (it will hang due to delay) — don't await the promise
-    lastDropdownProps?.onAddProtocol(PROTO_3_ID);
+    // Trigger the add (it will hang due to delay) -- don't await the promise
+    void lastDropdownProps?.onAddProtocol(PROTO_3_ID);
 
     await waitFor(() => {
       expect(lastDropdownProps?.isAddingProtocol).toBe(true);

@@ -40,6 +40,7 @@ describe("CodeEditorHeaderActions", () => {
 
   it("shows 'All changes saved' tooltip for synced", () => {
     renderComponent("synced");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const trigger = document.querySelector(".lucide-check")!.closest("span")!;
     fireEvent.focus(trigger);
     expect(screen.getByRole("tooltip")).toHaveTextContent("All changes saved");
@@ -47,6 +48,7 @@ describe("CodeEditorHeaderActions", () => {
 
   it("shows 'Unsaved changes' tooltip for unsynced", () => {
     renderComponent("unsynced");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const trigger = document.querySelector(".lucide-circle")!.closest("span")!;
     fireEvent.focus(trigger);
     expect(screen.getByRole("tooltip")).toHaveTextContent("Unsaved changes");
@@ -54,6 +56,7 @@ describe("CodeEditorHeaderActions", () => {
 
   it("shows 'Saving...' tooltip for syncing", () => {
     renderComponent("syncing");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const trigger = document.querySelector(".lucide-loader-circle")!.closest("span")!;
     fireEvent.focus(trigger);
     expect(screen.getByRole("tooltip")).toHaveTextContent("Saving...");

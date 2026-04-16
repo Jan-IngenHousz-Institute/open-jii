@@ -81,7 +81,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     });
   });
 
-  it("should show loading state", async () => {
+  it("should show loading state", () => {
     server.mount(contract.protocols.listCompatibleMacros, { body: [], delay: 999_999 });
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
@@ -210,7 +210,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     });
 
     // Trigger the add without awaiting so it stays pending
-    lastDropdownProps?.onAddMacro(MACRO_ID_3);
+    void lastDropdownProps?.onAddMacro(MACRO_ID_3);
 
     await waitFor(() => {
       expect(lastDropdownProps?.isAddingMacro).toBe(true);

@@ -142,7 +142,6 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-
   describe("debounced save callbacks", () => {
     it("transitions syncing -> synced on onSuccess and updates savedKey", () => {
       const saveFn = vi.fn();
@@ -280,7 +279,6 @@ describe("useCodeAutoSave", () => {
       expect(result.current.isEditing).toBe(false);
     });
   });
-
 
   describe("cleanup on unmount", () => {
     it("clears pending timeout on unmount", () => {

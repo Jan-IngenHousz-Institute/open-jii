@@ -149,7 +149,10 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
         disabled={disabled}
         onChange={(e) => {
           const result = onValueChange?.(e.target.value);
-          if (result instanceof Promise) result.catch(() => {});
+          if (result instanceof Promise)
+            result.catch(() => {
+              /* noop */
+            });
         }}
       >
         <option value="python">Python</option>
@@ -511,9 +514,10 @@ describe("<MacroDetailsSidebar />", () => {
       });
       expect(spy.params).toEqual({ id: "abc12345" });
       await waitFor(() => {
-        expect(vi.mocked(useRouter).mock.results[0]?.value.push).toHaveBeenCalledWith(
-          "/en-US/platform/macros",
-        );
+        expect(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          vi.mocked(useRouter).mock.results[0]?.value.push as ReturnType<typeof vi.fn>,
+        ).toHaveBeenCalledWith("/en-US/platform/macros");
       });
     });
 

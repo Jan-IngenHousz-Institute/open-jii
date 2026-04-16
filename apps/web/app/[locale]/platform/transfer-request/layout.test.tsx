@@ -1,5 +1,5 @@
 import { useLocale } from "@/hooks/useLocale";
-import { render, screen, within } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 

@@ -189,7 +189,7 @@ describe("UnifiedNavbar", () => {
     const mobile = dropdowns[dropdowns.length - 1];
     const aboutLink = within(mobile)
       .getAllByRole("link")
-      .find((l) => l.textContent?.includes("navigation.about") === true);
+      .find((l) => l.textContent?.includes("navigation.about")); // eslint-disable-line @typescript-eslint/no-unnecessary-condition
     expect(aboutLink).toBeDefined();
     expect(aboutLink).toHaveAttribute("aria-current", "page");
   });
