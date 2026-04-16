@@ -30,6 +30,17 @@ export function getCommentFromMeasurementResult(
   return comment?.content?.text ?? "";
 }
 
+export function getFlagTypeFromMeasurementResult(
+  measurementResult: Record<string, unknown>,
+): AnnotationFlagType | null {
+  const annotations = measurementResult?.annotations as
+    | { type?: string; content?: { flagType?: AnnotationFlagType } }[]
+    | undefined;
+  if (!Array.isArray(annotations)) return null;
+  const flag = annotations.find((a) => a?.type === "flag");
+  return flag?.content?.flagType ?? null;
+}
+
 /** Build annotations array from optional comment text and/or flag type. */
 export function buildAnnotations(
   commentText?: string,

@@ -11,7 +11,6 @@ node_modules
 .pnp
 .pnpm-store
 .pnp.js
-.pnpm-store/**
 
 # AI Generated Files
 .wolf/

@@ -41,7 +41,8 @@ vi.mock("~/utils/get-multispeq-mqtt-topic", () => ({
 }));
 
 vi.mock("~/utils/measurement-annotations", () => ({
-  buildAnnotations: (c?: string) => (c ? [{ comment: c }] : []),
+  buildAnnotations: (c?: string) =>
+    c ? [{ type: "comment", content: { text: c, flagType: null } }] : [],
 }));
 
 vi.mock("sonner-native", () => ({
