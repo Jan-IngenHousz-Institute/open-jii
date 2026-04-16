@@ -27439,7 +27439,7 @@ snapshots:
 
   '@types/sax@1.2.7':
     dependencies:
-      '@types/node': 25.5.0
+      '@types/node': 17.0.45
 
   '@types/send@0.17.6':
     dependencies:
@@ -35093,7 +35093,7 @@ snapshots:
       '@sinonjs/commons': 3.0.1
       '@sinonjs/fake-timers': 15.1.1
       just-extend: 6.2.0
-      path-to-regexp: 8.4.2
+      path-to-regexp: 8.4.0
 
   no-case@3.0.4:
     dependencies:
