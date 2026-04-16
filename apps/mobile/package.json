@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "postinstall": "cd ../../packages/api && pnpm run build && cd - && cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd -"
+    "postinstall": "cd ../../packages/api && pnpm run build && cd - && cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd - && cd ../../packages/iot && pnpm run build && cd -"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
