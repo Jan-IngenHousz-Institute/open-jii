@@ -33,6 +33,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     reset: resetScan,
     result: scanResult,
     error: scanError,
+    cancelCommand,
   } = useScanner();
   const { data: device } = useConnectedDevice();
   const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
@@ -58,6 +59,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
   const handleCardPress = (flowStepIndex: number) => {
     navigateToQuestionFromOverview(flowStepIndex);
+  };
+
+  const handleCancelMeasurement = () => {
+    void cancelCommand();
+    resetScan();
   };
 
   const handleStartScan = async () => {
@@ -130,7 +136,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
               </Text>
             </View>
 
-            <Button title="Cancel Measurement" onPress={resetScan} style={{ height: 44 }} />
+            <Button
+              title="Cancel Measurement"
+              onPress={handleCancelMeasurement}
+              style={{ height: 44 }}
+            />
           </View>
         </View>
       );
