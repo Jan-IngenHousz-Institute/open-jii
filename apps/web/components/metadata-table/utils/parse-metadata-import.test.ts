@@ -284,7 +284,7 @@ describe("parseClipboard", () => {
     const resultPromise = parseClipboard();
 
     // Advance past the timeout
-    await vi.advanceTimersByTimeAsync(3500);
+    await vi.advanceTimersByTimeAsync(31_000);
 
     const result = await resultPromise;
 
