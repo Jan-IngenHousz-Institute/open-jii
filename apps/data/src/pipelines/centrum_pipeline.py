@@ -17,6 +17,7 @@ from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
+from enrich.macro_execution import make_execute_macro_udf
 from openjii import decompress_sample
 
 # COMMAND ----------
@@ -91,6 +92,7 @@ EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
+EXPERIMENT_MACRO_DATA_SANDBOX_TABLE = "experiment_macro_data_sandbox"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
@@ -733,6 +735,132 @@ def experiment_macro_data():
             )
         )
         # For imported rows, use pre-computed output_data; otherwise use UDF result
+        .withColumn(
+            "macro_output",
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.col("output_data")
+            ).otherwise(
+                F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
+            )
+        )
+        .withColumn(
+            "macro_error",
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.lit(None).cast("string")
+            ).otherwise(F.col("macro_result.error"))
+        )
+        .withColumn(
+            "macro_row_id",
+            F.abs(
+                F.hash(
+                    F.col("id"),
+                    F.col("macro_filename"),
+                    F.col("processed_timestamp")
+                )
+            )
+        )
+        .select(
+            "experiment_id",
+            F.col("macro_row_id").alias("id"),
+            F.col("id").alias("raw_id"),
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "macro_id",
+            "macro_name",
+            "macro_filename",
+            "macro_output",
+            "macro_error",
+            "processed_timestamp",
+            "date",
+            "questions_data",
+            "annotations"
+        )
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Testing - Macro Sandbox Comparison
+@dlt.table(
+    name=EXPERIMENT_MACRO_DATA_SANDBOX_TABLE,
+    comment="Testing: Macro processing via backend API / Lambda sandbox for comparison with Databricks-processed experiment_macro_data",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.feature.variantType-preview": "supported"
+    }
+)
+def experiment_macro_data_sandbox():
+    """Process macros via backend API -> Lambda (sandboxed) for comparison testing."""
+    
+    base_df = (
+        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
+        .filter("macros IS NOT NULL")
+        .filter("size(macros) > 0")
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "data",
+            "output_data",
+            "date",
+            "processed_timestamp",
+            "questions_data",
+            "annotations",
+            "skip_macro_processing",
+            F.explode("macros").alias("macro")
+        )
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "data",
+            "output_data",
+            "date",
+            "processed_timestamp",
+            "questions_data",
+            "annotations",
+            "skip_macro_processing",
+            F.col("macro.id").alias("macro_id"),
+            F.col("macro.name").alias("macro_name"),
+            F.col("macro.filename").alias("macro_filename")
+        )
+    )
+    
+    # Execute macros via backend API -> Lambda (sandboxed Firecracker microVMs)
+    sandbox_macro_udf = make_execute_macro_udf(
+        environment=ENVIRONMENT,
+        dbutils=dbutils,
+        timeout=30,
+    )
+    
+    return (
+        base_df
+        .withColumn(
+            "macro_result",
+            F.when(
+                ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
+                sandbox_macro_udf(F.struct(
+                    F.col("id").cast("string").alias("id"),
+                    F.col("macro_id"),
+                    F.col("data").cast("string").alias("data"),
+                ))
+            )
+        )
         .withColumn(
             "macro_output",
             F.when(
