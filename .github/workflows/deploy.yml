@@ -58,6 +58,7 @@ jobs:
     outputs:
       affected_apps: ${{ steps.detect.outputs.affected_apps }}
       has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+      macro_sandbox_languages: ${{ steps.detect.outputs.macro_sandbox_languages }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -176,4 +177,5 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
       ref: ${{ inputs.ref || github.sha }}
+      languages: ${{ (inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox')) && '["python","javascript","r"]' || needs.detect-changes.outputs.macro_sandbox_languages }}
     secrets: inherit
