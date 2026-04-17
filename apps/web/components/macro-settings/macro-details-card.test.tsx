@@ -60,10 +60,18 @@ describe("MacroDetailsCard", () => {
 
   it("renders the MacroCodeEditor with decoded initial code", async () => {
     render(<MacroDetailsCard {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("editor-value")).toHaveTextContent("print('Hello')");
+    expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
+  });
 
-    const button = screen.getByTestId("button");
-    expect(button).toBeInTheDocument();
-    expect(button).toHaveTextContent("macroSettings.save");
-    expect(button).not.toBeDisabled();
+  it("renders a save button", async () => {
+    render(<MacroDetailsCard {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /macroSettings.save/i })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /macroSettings.save/i })).not.toBeDisabled();
   });
 });

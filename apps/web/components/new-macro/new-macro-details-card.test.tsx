@@ -45,14 +45,11 @@ describe("NewMacroDetailsCard", () => {
     expect(screen.getByPlaceholderText("newMacro.name")).toBeInTheDocument();
   });
 
-  it("should render input components", () => {
-    render(
-      <TestWrapper>
-        <NewMacroDetailsCard form={undefined as any} />
-      </TestWrapper>,
-    );
-
-    expect(screen.getByTestId("input")).toBeInTheDocument();
+  it("renders input and textarea", () => {
+    setup();
+    // Both the name <input> and the RichTextarea mock <textarea> have role="textbox"
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+    // RichTextarea mock renders a <textarea>
     expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
   });
 

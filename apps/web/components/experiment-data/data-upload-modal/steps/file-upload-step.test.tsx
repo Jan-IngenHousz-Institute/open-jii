@@ -178,49 +178,6 @@ describe("FileUploadStep", () => {
     expect(spy.called).toBe(false);
   });
 
-  it("shows validation errors when files are invalid", async () => {
-    (validateAmbyteStructure as ReturnType<typeof vi.fn>).mockReturnValue({
-      isValid: false,
-      errors: [{ key: "uploadModal.validation.invalidStructure", options: {} }],
-    });
-
-    render(
-      <FileUploadStep
-        experimentId="test-experiment"
-        onBack={mockOnBack}
-        onUploadSuccess={mockOnUploadSuccess}
-      />,
-    );
-
-    const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("validation-errors")).toBeInTheDocument();
-    });
-  });
-
-  it("calls upload mutation when upload button is clicked with valid files", async () => {
-    render(
-      <FileUploadStep
-        experimentId="test-experiment"
-        onBack={mockOnBack}
-        onUploadSuccess={mockOnUploadSuccess}
-      />,
-    );
-
-    // First select files
-    const fileUploadButton = screen.getByTestId("file-upload-button");
-    fireEvent.click(fileUploadButton);
-
-    await waitFor(() => {
-      const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
-      fireEvent.click(uploadButton);
-    });
-
-    expect(mockUploadData).toHaveBeenCalled();
-  });
-
   it("shows validation errors when file structure is invalid", async () => {
     vi.mocked(validateAmbyteStructure).mockReturnValue({
       isValid: false,

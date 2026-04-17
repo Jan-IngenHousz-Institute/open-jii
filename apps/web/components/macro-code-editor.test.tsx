@@ -16,30 +16,19 @@ vi.mock("@monaco-editor/react", () => ({
     language?: string;
     theme?: string;
   }) => (
-    <button onClick={onClick} className={className} data-testid={dataTestId ?? "button"} {...props}>
-      {children}
-    </button>
-  ),
-  Label: ({ children }: { children: React.ReactNode }) => (
-    <label data-testid="label">{children}</label>
+    <div data-testid="monaco-editor" data-language={language} data-theme={theme}>
+      <textarea
+        data-testid="editor-textarea"
+        value={value}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
+      />
+    </div>
   ),
 }));
 
 const mockWriteText = vi.fn().mockResolvedValue(undefined);
 Object.defineProperty(navigator, "clipboard", {
   value: { writeText: mockWriteText },
-  writable: true,
-  configurable: true,
-});
-
-const defaults = {
-  value: "",
-  onChange: vi.fn(),
-  language: "python" as const,
-};
-
-Object.defineProperty(global.navigator, "clipboard", {
-  value: mockClipboard,
   writable: true,
   configurable: true,
 });

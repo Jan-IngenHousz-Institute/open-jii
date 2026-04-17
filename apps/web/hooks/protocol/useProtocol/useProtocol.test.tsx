@@ -16,11 +16,19 @@ describe("useProtocol", () => {
     expect(result.current.fetchStatus).toBe("idle");
   });
 
-  it("should call useQuery with correct parameters", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
+  it("returns protocol data", async () => {
+    const protocol = createProtocol({ id: "protocol-123" });
+    server.mount(contract.protocols.getProtocol, { body: protocol });
+
+    const { result } = renderHook(() => useProtocol("protocol-123"));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.body).toMatchObject({
+      id: "protocol-123",
+      name: protocol.name,
     });
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();

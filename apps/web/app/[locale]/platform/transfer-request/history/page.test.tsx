@@ -160,8 +160,11 @@ describe("<TransferRequestHistoryPage />", () => {
         body: [createRequest("req-1", "rejected", "project-123")],
       });
 
-      const rejectedLabel = screen.getByText("Rejected");
-      expect(rejectedLabel).toBeInTheDocument();
+      render(<TransferRequestHistoryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Rejected")).toBeInTheDocument();
+      });
     });
   });
 
