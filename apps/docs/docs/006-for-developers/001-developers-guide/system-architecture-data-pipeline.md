@@ -138,4 +138,4 @@ The `@repo/iot` package provides a layered architecture for sensor communication
 - **Many-to-many protocol/macro compatibility**: Join table linking protocols and macros independently
 - **Invitation system**: Email-based invitations with auto-acceptance on first sign-in
 - **On-device macro execution**: Python macros run via embedded Pyodide in mobile app
-- **Compression throughout**: gzip+base64 for MQTT payloads, gzip for on-device storage
+- **Measurements**: MQTT transmission uses gzip+base64 encoding; on-device SQLite storage uses plain JSON strings
