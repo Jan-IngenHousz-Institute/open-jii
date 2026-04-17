@@ -7,13 +7,16 @@ import { contract } from "@repo/api";
 
 import { ProtocolCard, ProtocolSelector } from "./protocol-card";
 
-vi.mock("@repo/ui/components/rich-text-renderer", async (importOriginal: () => Promise<Record<string, unknown>>) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    RichTextRenderer: ({ content }: { content: string }) => <span>{content}</span>,
-  };
-});
+vi.mock(
+  "@repo/ui/components/rich-text-renderer",
+  async (importOriginal: () => Promise<Record<string, unknown>>) => {
+    const actual = await importOriginal();
+    return {
+      ...actual,
+      RichTextRenderer: ({ content }: { content: string }) => <span>{content}</span>,
+    };
+  },
+);
 
 function mockOverflow({
   scrollHeight,

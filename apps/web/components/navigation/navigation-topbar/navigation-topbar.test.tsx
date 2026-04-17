@@ -13,7 +13,6 @@ vi.mock("../nav-user/nav-user", () => ({
   NavUser: () => <span>nav-user</span>,
 }));
 
-// useSidebar -- pragmatic mock (requires SidebarProvider context not in test wrapper)
 vi.mock("@repo/ui/components/sidebar", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {

@@ -4,7 +4,13 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@repo/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@repo/ui/components/dialog";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { cva } from "@repo/ui/lib/utils";
 

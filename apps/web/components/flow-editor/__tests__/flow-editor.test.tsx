@@ -1,15 +1,12 @@
-// apps/web/components/__tests__/flow-editor.test.tsx
 import { render, screen, userEvent } from "@/test/test-utils";
 import type * as xyflowReact from "@xyflow/react";
 import React, { createRef } from "react";
 import { describe, it, expect, vi } from "vitest";
 
-// Spy on ensureOneStartNode from the real module (no full mock)
 import * as nodeUtils from "../../react-flow/node-utils";
 import { FlowEditor } from "../flow-editor";
 import type { FlowEditorHandle } from "../flow-editor";
 
-// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
@@ -18,7 +15,6 @@ vi.mock("../../side-panel-flow/measurement-panel", () => ({
   MeasurementPanel: () => null,
 }));
 
-// @xyflow/react — pragmatic mock (canvas-based library, not renderable in jsdom)
 vi.mock("@xyflow/react", async () => {
   const actual = await vi.importActual("@xyflow/react");
   const ReactFlow = ({

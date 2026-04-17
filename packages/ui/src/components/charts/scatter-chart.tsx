@@ -4,8 +4,8 @@ import type { PlotData } from "plotly.js";
 import React from "react";
 
 import { cn } from "../../lib/utils";
-import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
 import { PlotlyChart } from "./plotly-chart";
+import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface ScatterSeriesData extends BaseSeries {

@@ -12,8 +12,23 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/components/dialog";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components/card";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@repo/ui/components/dialog";
+
 interface MacroInfoCardProps {
   macroId: string;
   macro: Macro;

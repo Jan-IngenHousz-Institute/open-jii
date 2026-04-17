@@ -6,10 +6,17 @@ import { z } from "zod";
 
 import type { UserProfile } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui/components/popover";
-import { Button } from "@repo/ui/components/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
+
 const emailSchema = z.string().email();
 
 function isValidEmail(value: string): boolean {

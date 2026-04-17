@@ -8,7 +8,6 @@ import type { ExperimentTableMetadata, DataColumn } from "@repo/api";
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { DataSourceStep } from "./data-source-step";
 
-// Select — pragmatic mock (Radix Select portal/pointer issues in jsdom)
 vi.mock("@repo/ui/components/select", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
@@ -62,7 +61,6 @@ vi.mock("../chart-preview/chart-preview-modal", () => ({
   ),
 }));
 
-// useExperimentData — pragmatic mock (hook does heavy tanstack-table column creation + formatting)
 vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: vi.fn(),
 }));

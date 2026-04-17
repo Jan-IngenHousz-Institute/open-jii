@@ -4,7 +4,13 @@ import React, { useState, useEffect } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@repo/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
+
 import { AnalysisPanel } from "./analysis-panel";
 import { EdgeSidePanel } from "./edge-panel";
 import { InstructionPanel } from "./instruction-panel";

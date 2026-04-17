@@ -2,10 +2,10 @@
 
 import type { PlotData } from "plotly.js";
 import React from "react";
-import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
-import { PlotlyChart } from "./plotly-chart";
-import { createPlotlyConfig, getRenderer, getPlotType, createBaseLayout } from "./utils";
 
+import { PlotlyChart } from "./plotly-chart";
+import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
+import { createPlotlyConfig, getRenderer, getPlotType, createBaseLayout } from "./utils";
 
 export interface LogSeriesData extends BaseSeries {
   x: any[];

@@ -1,5 +1,6 @@
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+
 export const ExperimentStatusBadge = ({ status }: { status: string }) => {
   const { t } = useTranslation("experiments");
 

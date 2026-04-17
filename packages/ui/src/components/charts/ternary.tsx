@@ -2,10 +2,10 @@
 
 import type { PlotData } from "plotly.js";
 import React from "react";
-import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
-import { PlotlyChart } from "./plotly-chart";
-import { createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
+import { PlotlyChart } from "./plotly-chart";
+import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
+import { createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface TernarySeriesData extends BaseSeries {
   a: number[];

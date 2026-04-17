@@ -4,8 +4,15 @@ import { Upload, Plus } from "lucide-react";
 import { User } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
 import { Button } from "@repo/ui/components/button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components/card";
+
 export function ProfilePictureCard() {
   const { t } = useTranslation("account");
   return (

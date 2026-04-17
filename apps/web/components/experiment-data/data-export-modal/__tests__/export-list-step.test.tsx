@@ -8,7 +8,6 @@ import type { ExportRecord } from "@repo/api";
 
 import { ExportListStep } from "../steps/export-list-step";
 
-// useDownloadExport — pragmatic mock (browser download API: blob + anchor + click)
 const mockDownloadExport = vi.fn();
 vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
   useDownloadExport: () => ({

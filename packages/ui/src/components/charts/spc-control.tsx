@@ -2,10 +2,10 @@
 
 import type { PlotData } from "plotly.js";
 import React from "react";
-import type { BaseChartProps, BaseSeries } from "./types";
-import { PlotlyChart } from "./plotly-chart";
-import { createPlotlyConfig, getRenderer, getPlotType, createBaseLayout } from "./utils";
 
+import { PlotlyChart } from "./plotly-chart";
+import type { BaseChartProps, BaseSeries } from "./types";
+import { createPlotlyConfig, getRenderer, getPlotType, createBaseLayout } from "./utils";
 
 export interface SPCSeriesData extends BaseSeries {
   x: any[]; // Mixed types for time series, categories, or numeric data

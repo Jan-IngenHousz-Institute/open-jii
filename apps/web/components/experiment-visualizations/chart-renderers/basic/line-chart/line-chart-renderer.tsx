@@ -6,8 +6,9 @@ import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
-import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
+import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
+
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 
 interface LineChartRendererProps {

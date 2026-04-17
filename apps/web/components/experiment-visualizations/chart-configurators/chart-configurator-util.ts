@@ -2,9 +2,10 @@ import type {
   CreateExperimentVisualizationBody,
   UpdateExperimentVisualizationBody,
 } from "@repo/api";
-import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";
+import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
+
 // Union type for all chart configurations
 // Combines PlotlyChartConfig with series data interfaces (minus x,y data arrays)
 // Add index signature to make it compatible with Record<string, unknown>

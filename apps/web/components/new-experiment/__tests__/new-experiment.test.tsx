@@ -9,7 +9,6 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { NewExperimentForm } from "../new-experiment";
 
-// WizardForm — pragmatic mock (complex multi-step wizard orchestration)
 vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {

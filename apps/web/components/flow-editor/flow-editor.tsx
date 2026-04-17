@@ -10,8 +10,9 @@ import { useCallback, useState, useEffect, useRef, useImperativeHandle, forwardR
 
 import type { Flow } from "@repo/api";
 import type { UpsertFlowBody } from "@repo/api";
-import { Card, CardContent } from "@repo/ui/components/card";
 import { Button } from "@repo/ui/components/button";
+import { Card, CardContent } from "@repo/ui/components/card";
+
 import { LegendFlow } from "../legend-flow";
 import {
   getFlowData,

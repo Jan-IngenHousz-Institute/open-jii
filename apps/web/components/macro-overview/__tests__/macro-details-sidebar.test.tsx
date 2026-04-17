@@ -66,7 +66,6 @@ vi.mock("../../shared/details-sidebar-card", () => ({
   ),
 }));
 
-// Mock UI Dialog components (pragmatic: Dialog uses Radix portals)
 vi.mock("@repo/ui/components/dialog", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
 
@@ -143,7 +142,6 @@ vi.mock("@repo/ui/components/dialog", async (importOriginal) => {
   };
 });
 
-// Mock UI Select components (pragmatic: Select uses Radix portals)
 vi.mock("@repo/ui/components/select", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
 

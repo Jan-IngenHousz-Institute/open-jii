@@ -3,7 +3,14 @@
 import * as React from "react";
 
 import { useTranslation } from "@repo/i18n/client";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
+
 import { MetadataUploadStep } from "./steps/metadata-upload-step";
 
 interface MetadataUploadModalProps {

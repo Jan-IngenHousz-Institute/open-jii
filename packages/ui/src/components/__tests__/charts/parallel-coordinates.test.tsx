@@ -2,7 +2,11 @@ import { render } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { ParallelCoordinates, ParallelCategories, Alluvial } from "../../charts/parallel-coordinates";
+import {
+  ParallelCoordinates,
+  ParallelCategories,
+  Alluvial,
+} from "../../charts/parallel-coordinates";
 import type {
   ParallelCoordinatesSeriesData,
   ParallelCategoriesSeriesData,

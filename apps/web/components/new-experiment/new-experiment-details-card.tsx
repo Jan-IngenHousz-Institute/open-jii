@@ -2,10 +2,17 @@ import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components/card";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
+
 interface NewExperimentDetailsCardProps {
   form: UseFormReturn<CreateExperimentBody>;
 }

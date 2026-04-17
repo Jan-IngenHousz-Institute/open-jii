@@ -2,10 +2,10 @@
 
 import type { PlotData } from "plotly.js";
 import React from "react";
-import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";
-import { PlotlyChart } from "./plotly-chart";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
+import { PlotlyChart } from "./plotly-chart";
+import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";
+import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface DensityPlotProps extends BaseChartProps {
   x: number[];

@@ -7,6 +7,7 @@ import { getContentfulClients } from "~/lib/contentful";
 import { HomeFooter } from "@repo/cms";
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import { Toaster } from "@repo/ui/components/toaster";
+
 interface InfoLayoutProps {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;

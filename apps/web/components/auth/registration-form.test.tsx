@@ -2,15 +2,11 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
-import { authClient } from "@repo/auth/client";
-
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
 const pushMock = vi.fn();
 
-// useUpdateUser — pragmatic mock (uses authClient, not ts-rest)
 const mockUpdateUserMutate = vi.fn();
 vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   useUpdateUser: () => ({
@@ -18,7 +14,6 @@ vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   }),
 }));
 
-// useSignInEmail / useVerifyEmail — pragmatic mock (uses authClient, not ts-rest)
 const mockSendOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
 vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
@@ -28,7 +23,6 @@ vi.mock("~/hooks/auth/useVerifyEmail/useVerifyEmail", () => ({
   useVerifyEmail: () => ({ mutateAsync: mockVerifyOtpMutate }),
 }));
 
-// useCreateUserProfile — pragmatic mock (intertwined with auth flow; mock simulates onSuccess callback chain)
 const createUserProfileMock = vi.fn();
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
@@ -44,7 +38,6 @@ vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   }),
 }));
 
-// --- Test data ---
 const termsData = {
   title: "Terms and Conditions",
   content: "Mock terms content",

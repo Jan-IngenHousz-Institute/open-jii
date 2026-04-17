@@ -15,7 +15,6 @@ vi.mock("../data-upload-validation", () => ({
   isExcludedFile: vi.fn().mockReturnValue(false),
 }));
 
-// FileUpload — pragmatic mock (browser file/directory API not available in jsdom)
 vi.mock("@repo/ui/components/file-upload", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {

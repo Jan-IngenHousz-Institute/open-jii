@@ -4,12 +4,10 @@ import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { Form } from "@repo/ui/components/form";
-import type * as UIComponents from "@repo/ui/components/input-otp";
 
 import type { Registration } from "./registration-form";
 import { RegistrationOtpVerification } from "./registration-otp-verification";
 
-// useSignInEmail — pragmatic mock (uses authClient, not ts-rest)
 const mockSignInEmailMutate = vi.fn();
 vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
   useSignInEmail: () => ({

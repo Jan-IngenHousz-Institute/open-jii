@@ -7,7 +7,14 @@ import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtoco
 
 import type { Protocol, CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components/card";
+
 import { ProtocolList } from "../current-protocols-list";
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 

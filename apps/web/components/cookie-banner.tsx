@@ -6,8 +6,16 @@ import { useEffect, useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
 import { Switch } from "@repo/ui/components/switch";
+
 import type { ConsentStatus } from "../lib/cookie-consent";
 import { getConsentStatus, setConsentStatus } from "../lib/cookie-consent";
 

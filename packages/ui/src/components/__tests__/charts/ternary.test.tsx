@@ -3,7 +3,11 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { TernaryPlot, TernaryContour } from "../../charts/ternary";
-import type { TernarySeriesData, TernaryContourSeriesData, TernaryBoundary } from "../../charts/ternary";
+import type {
+  TernarySeriesData,
+  TernaryContourSeriesData,
+  TernaryBoundary,
+} from "../../charts/ternary";
 
 // Mock utils
 vi.mock("../../charts/plotly-chart", () => ({

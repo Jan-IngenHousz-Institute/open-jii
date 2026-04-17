@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { describe, it, expect } from "vitest";
 
 import { Form } from "@repo/ui/components/form";
+
 import { RegistrationFields } from "./registration-fields";
 import type { Registration } from "./registration-form";
 

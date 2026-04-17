@@ -3,6 +3,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { SidebarProvider } from "@repo/ui/components/sidebar";
+
 import { NavigationSidebarWrapper } from "./navigation-sidebar-wrapper";
 
 // Mock AppSidebar component

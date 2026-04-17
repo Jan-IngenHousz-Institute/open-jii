@@ -4,7 +4,13 @@ import Link from "next/link";
 
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@repo/ui/components/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
+
 export default async function AccountSettingsLayout({
   children,
   params,

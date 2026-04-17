@@ -12,7 +12,12 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { findProtocolErrorLine, getErrorMessage, validateProtocolJson } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@repo/ui/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
 interface ProtocolCodeEditorProps {
