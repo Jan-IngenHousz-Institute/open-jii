@@ -45,35 +45,6 @@ vi.mock("./wizard-steps/appearance-step", () => ({
   AppearanceStep: () => null,
   appearanceSchema: () => ({}),
 }));
-vi.mock("./wizard-steps/chart-type-step", () => ({
-  ChartTypeStep: () => null,
-  chartTypeSchema: () => ({}),
-}));
-vi.mock("./wizard-steps/data-source-step", () => ({
-  DataSourceStep: () => null,
-  dataSourceSchema: () => ({}),
-}));
-vi.mock("./wizard-steps/appearance-step", () => ({
-  AppearanceStep: () => null,
-  appearanceSchema: () => ({}),
-}));
-
-function mountCreate(body = createVisualization()) {
-  return server.mount(contract.experiments.createExperimentVisualization, { body });
-}
-
-const tables: ExperimentTableMetadata[] = [
-  createExperimentTable({ identifier: "measurements", displayName: "Measurements" }),
-  createExperimentTable({ identifier: "observations", displayName: "Observations" }),
-];
-
-const defaultProps = {
-  experimentId: "exp-1",
-  tables,
-  onSuccess: vi.fn(),
-  isPreviewOpen: false,
-  onPreviewClose: vi.fn(),
-};
 
 function mountCreate(body = createVisualization()) {
   return server.mount(contract.experiments.createExperimentVisualization, { body });

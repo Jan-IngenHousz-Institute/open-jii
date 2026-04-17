@@ -2,6 +2,7 @@ import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { SidebarProvider } from "@repo/ui/components/sidebar";
+
 import { AppSidebar } from "./navigation-sidebar";
 
 // Mock NavItems child component
@@ -14,34 +15,6 @@ vi.mock("./nav-items", () => ({
     </div>
   ),
 }));
-
-const navigationData = {
-  navDashboard: [{ title: "Dashboard", url: "/en/platform", icon: "Home", items: [] }],
-  navExperiments: [
-    { title: "Experiments", url: "/en/platform/experiments", icon: "Microscope", items: [] },
-  ],
-  navProtocols: [
-    { title: "Protocols", url: "/en/platform/protocols", icon: "FileSliders", items: [] },
-  ],
-  navMacros: [{ title: "Macros", url: "/en/platform/macros", icon: "Code", items: [] }],
-};
-
-const translations = {
-  openJII: "openJII",
-  logoAlt: "openJII Logo",
-  signIn: "Sign in",
-  experimentsTitle: "Experiments",
-  protocolTitle: "Protocols",
-  macrosTitle: "Macros",
-};
-
-function renderSidebar() {
-  return render(
-    <SidebarProvider>
-      <AppSidebar locale="en" navigationData={navigationData} translations={translations} />
-    </SidebarProvider>,
-  );
-}
 
 const navigationData = {
   navDashboard: [{ title: "Dashboard", url: "/en/platform", icon: "Home", items: [] }],

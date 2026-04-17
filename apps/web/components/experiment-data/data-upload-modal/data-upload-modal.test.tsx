@@ -146,15 +146,6 @@ describe("DataUploadModal", () => {
     rerender(
       <DataUploadModal
         experimentId="test-experiment"
-        open={false}
-        onOpenChange={mockOnOpenChange}
-      />,
-    );
-
-    // Reopen modal
-    rerender(
-      <DataUploadModal
-        experimentId="test-experiment"
         open={true}
         onOpenChange={mockOnOpenChange}
       />,
@@ -162,11 +153,6 @@ describe("DataUploadModal", () => {
 
     expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
     expect(screen.queryByTestId("success-step")).not.toBeInTheDocument();
-  });
-
-  it("calls onOpenChange when dialog requests to close", () => {
-    renderModal();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("calls onOpenChange when dialog requests to close", () => {

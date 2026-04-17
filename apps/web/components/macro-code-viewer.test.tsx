@@ -46,16 +46,30 @@ describe("MacroCodeViewer", () => {
     expect(value).toHaveTextContent("print('Hello')");
   });
 
-  it("should render copy button", () => {
-    render(<MacroCodeViewer {...defaultProps} />);
-
-    expect(screen.getByTestId("copy-icon")).toBeInTheDocument();
+  it("displays code statistics", () => {
+    render(<MacroCodeViewer value="# 1\n# 2\n# 3" language="python" />);
+    // Stats div contains line count and "common.lines" text
+    const matches = screen.getAllByText(
+      (_content, el) =>
+        el instanceof HTMLDivElement &&
+        el.classList.contains("text-xs") &&
+        el.textContent.includes("3") === true &&
+        el.textContent.includes("common.lines") === true,
+    );
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("should use python language in editor", () => {
-    render(<MacroCodeViewer {...defaultProps} language="python" />);
-
-    expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
+  it("copies code to clipboard", async () => {
+    render(<MacroCodeViewer value="# Test" language="python" />);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    // Before click: copy icon is shown
+    const button = screen.getAllByRole("button")[0];
+    expect(button.querySelector(".lucide-copy")).toBeInTheDocument();
+    await user.click(button);
+    // After click: check icon appears confirming the copy
+    await waitFor(() => {
+      expect(button.querySelector(".lucide-check")).toBeInTheDocument();
+    });
   });
 
   it("applies custom height", () => {

@@ -163,11 +163,6 @@ describe("DataExportModal", () => {
     });
 
     rerender(<DataExportModal {...defaultProps} open={true} />);
-    expect(screen.getByTestId("creation-status")).toHaveTextContent("idle");
-  });
-
-  it("renders dialog header correctly", () => {
-    renderModal();
-    expect(screen.getByTestId("dialog-header")).toBeInTheDocument();
+    expect(screen.getByText("idle")).toBeInTheDocument();
   });
 });
