@@ -43,18 +43,24 @@ export async function getContentfulConfig(): Promise<ContentfulConfig> {
   return config;
 }
 
-// Cache only after a successful config fetch — a failed cold-start fetch
-// (ECONNRESET from the secrets extension) must not be permanently memoized.
-let _contentfulClientsPromise: Promise<ContentfulClients> | null = null;
+// Memoize the configuration to avoid repeated calls
+const contentfulConfigPromise = getContentfulConfig();
+
+// Export the config promise to be used in the application
+export const contentfulConfig = contentfulConfigPromise;
+
+/**
+ * Initialize Contentful clients with the configuration from the contentful config
+ */
+export async function initializeContentfulClients(): Promise<ContentfulClients> {
+  const config = await contentfulConfig;
+
+  return createContentfulClient(config);
+}
+
+// Create a singleton instance of the Contentful clients
+const contentfulClientsPromise: Promise<ContentfulClients> = initializeContentfulClients();
 
 export const getContentfulClients = async (): Promise<ContentfulClients> => {
-  if (!_contentfulClientsPromise) {
-    _contentfulClientsPromise = getContentfulConfig()
-      .then((config) => createContentfulClient(config))
-      .catch((err) => {
-        _contentfulClientsPromise = null; // Allow retry on next request
-        throw err;
-      });
-  }
-  return _contentfulClientsPromise;
+  return contentfulClientsPromise;
 };

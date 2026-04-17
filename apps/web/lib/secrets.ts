@@ -36,11 +36,11 @@ function fetchSecretOnce(secretArn: string): Promise<SecretMap> {
             const wrapper = JSON.parse(data) as { SecretString: string };
             resolve(JSON.parse(wrapper.SecretString) as SecretMap);
           } catch (error) {
-            reject(error);
+            reject(error instanceof Error ? error : new Error(String(error)));
           }
         });
       })
-      .on("error", reject);
+      .on("error", (err) => reject(err instanceof Error ? err : new Error(String(err))));
   });
 }
 
