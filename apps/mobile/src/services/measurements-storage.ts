@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { eq, and, lt } from "drizzle-orm";
 import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
-import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
+import { decompressFromStorage } from "~/utils/storage-compression";
 
 import { db } from "./db/client";
 import { measurements } from "./db/schema";
@@ -47,7 +47,7 @@ async function migrateLegacyEntries(): Promise<void> {
             id,
             status,
             topic: parsed.topic,
-            measurementResult: compressForStorage(parsed.measurementResult),
+            measurementResult: JSON.stringify(parsed.measurementResult),
             experimentName: parsed.metadata.experimentName,
             protocolName: parsed.metadata.protocolName,
             timestamp: parsed.metadata.timestamp,
@@ -92,7 +92,7 @@ export async function saveMeasurement(
       id: uuidv4(),
       status,
       topic: upload.topic,
-      measurementResult: compressForStorage(upload.measurementResult),
+      measurementResult: JSON.stringify(upload.measurementResult),
       experimentName: upload.metadata.experimentName,
       protocolName: upload.metadata.protocolName,
       timestamp: upload.metadata.timestamp,
@@ -130,7 +130,7 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
     db.update(measurements)
       .set({
         topic: data.topic,
-        measurementResult: compressForStorage(data.measurementResult),
+        measurementResult: JSON.stringify(data.measurementResult),
         experimentName: data.metadata.experimentName,
         protocolName: data.metadata.protocolName,
         timestamp: data.metadata.timestamp,
