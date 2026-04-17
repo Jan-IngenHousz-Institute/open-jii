@@ -17,6 +17,7 @@ from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
+from enrich.macro_execution import make_execute_macro_udf
 from openjii import decompress_sample
 
 # COMMAND ----------
@@ -91,6 +92,7 @@ EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
+EXPERIMENT_MACRO_DATA_SANDBOX_TABLE = "experiment_macro_data_sandbox"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
@@ -777,6 +779,113 @@ def experiment_macro_data():
             "date",
             "questions_data",
             "annotations"
+        )
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Macro Data (Sandbox Comparison)
+EXPERIMENT_SANDBOX_MACRO_UDF = make_execute_macro_udf()
+
+@dlt.table(
+    name=EXPERIMENT_MACRO_DATA_SANDBOX_TABLE,
+    comment="Gold layer: Macro processing via backend API/Lambda sandbox for comparison with local execution",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.feature.variantType-preview": "supported",
+    },
+)
+def experiment_macro_data_sandbox():
+    """Process macros via backend API (Lambda sandbox) for comparison."""
+
+    base_df = (
+        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
+        .filter("macros IS NOT NULL")
+        .filter("size(macros) > 0")
+        .filter(~F.coalesce(F.col("skip_macro_processing"), F.lit(False)))
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "data",
+            "date",
+            "processed_timestamp",
+            "questions_data",
+            "annotations",
+            F.explode("macros").alias("macro"),
+        )
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "data",
+            "date",
+            "processed_timestamp",
+            "questions_data",
+            "annotations",
+            F.col("macro.id").alias("macro_id"),
+            F.col("macro.name").alias("macro_name"),
+            F.col("macro.filename").alias("macro_filename"),
+        )
+    )
+
+    return (
+        base_df
+        .withColumn(
+            "sandbox_result",
+            EXPERIMENT_SANDBOX_MACRO_UDF(
+                F.col("id"), F.col("macro_id"), F.col("data")
+            ),
+        )
+        .withColumn(
+            "macro_output",
+            F.when(
+                F.col("sandbox_result.macro_data").isNotNull(),
+                F.expr("parse_json(sandbox_result.macro_data)"),
+            ),
+        )
+        .withColumn("macro_error", F.col("sandbox_result.macro_error"))
+        .withColumn(
+            "macro_row_id",
+            F.abs(
+                F.hash(
+                    F.col("id"),
+                    F.col("macro_filename"),
+                    F.col("processed_timestamp"),
+                )
+            ),
+        )
+        .select(
+            "experiment_id",
+            F.col("macro_row_id").alias("id"),
+            F.col("id").alias("raw_id"),
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "macro_id",
+            "macro_name",
+            "macro_filename",
+            "macro_output",
+            "macro_error",
+            "processed_timestamp",
+            "date",
+            "questions_data",
+            "annotations",
         )
     )
 
