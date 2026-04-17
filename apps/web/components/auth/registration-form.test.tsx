@@ -1,19 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useRouter } from "next/navigation";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
 const pushMock = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushMock }),
-}));
 
-// Mock useAuth
+// useUpdateUser — pragmatic mock (uses authClient, not ts-rest)
 const mockUpdateUserMutate = vi.fn();
 vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   useUpdateUser: () => ({
@@ -21,11 +15,7 @@ vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   }),
 }));
 
-const handleRegisterMock = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  handleRegister: (): unknown => handleRegisterMock(),
-}));
-
+// useSignInEmail / useVerifyEmail — pragmatic mock (uses authClient, not ts-rest)
 const mockSendOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
 vi.mock("~/hooks/auth", () => ({
@@ -33,6 +23,7 @@ vi.mock("~/hooks/auth", () => ({
   useVerifyEmail: () => ({ mutateAsync: mockVerifyOtpMutate }),
 }));
 
+// useCreateUserProfile — pragmatic mock (intertwined with auth flow; mock simulates onSuccess callback chain)
 const createUserProfileMock = vi.fn();
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
@@ -48,25 +39,6 @@ vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
   }),
 }));
 
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key, // return translation keys directly
-  }),
-}));
-
-// Helper
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
-
 // --- Test data ---
 const termsData = {
   title: "Terms and Conditions",
@@ -80,37 +52,24 @@ describe("RegistrationForm", () => {
     userEmail: "test@example.com",
   };
 
-  beforeAll(() => {
-    // fix ResizeObserver missing in jsdom
-    global.ResizeObserver = class {
-      observe() {
-        // no op
-      }
-      unobserve() {
-        // no op
-      }
-      disconnect() {
-        // no op
-      }
-    };
-  });
-
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.mocked(useRouter).mockReturnValue({ push: pushMock } as unknown as ReturnType<
+      typeof useRouter
+    >);
     mockUpdateUserMutate.mockResolvedValue({});
     mockSendOtpMutate.mockResolvedValue({});
     mockVerifyOtpMutate.mockResolvedValue({});
   });
 
   it("renders the registration form with title and description", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
     expect(screen.getByText("registration.description")).toBeInTheDocument();
   });
 
   it("renders all input fields", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByLabelText("registration.firstName")).toBeInTheDocument();
     expect(screen.getByLabelText("registration.lastName")).toBeInTheDocument();
@@ -118,14 +77,15 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the terms and conditions section", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByText("auth.termsPrefix")).toBeInTheDocument();
     const trigger = screen.getByText("auth.terms");
     expect(trigger).toBeInTheDocument();
 
     // open the dialog
-    fireEvent.click(trigger);
+    const user = userEvent.setup();
+    await user.click(trigger);
 
     await waitFor(() => {
       expect(screen.getByText("Terms and Conditions")).toBeInTheDocument();
@@ -134,7 +94,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button with correct styling", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const button = screen.getByRole("button", { name: "registration.register" });
     expect(button).toBeInTheDocument();
@@ -143,12 +103,13 @@ describe("RegistrationForm", () => {
   });
 
   it("shows validation error if terms are not accepted", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "Alice");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "Smith");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Alice");
+    await user.type(screen.getByLabelText("registration.lastName"), "Smith");
 
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(screen.getByText("registration.acceptTermsError")).toBeInTheDocument();
@@ -157,14 +118,15 @@ describe("RegistrationForm", () => {
   });
 
   it("submits form successfully when terms are accepted", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "Jane");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "Doe");
-    await userEvent.type(screen.getByLabelText("registration.organization"), "Acme");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Jane");
+    await user.type(screen.getByLabelText("registration.lastName"), "Doe");
+    await user.type(screen.getByLabelText("registration.organization"), "Acme");
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalledWith({
@@ -173,21 +135,18 @@ describe("RegistrationForm", () => {
     });
   });
 
-  it("calls handleRegister and pushes router after success", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+  it("calls updateUser and pushes router after successful registration", async () => {
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "Bob");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "Builder");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Bob");
+    await user.type(screen.getByLabelText("registration.lastName"), "Builder");
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
-      // handleRegisterMock check might be legacy if component only uses hooks?
-      // Check component: it uses useCreateUserProfile -> onSuccess -> useUpdateUser.
-      // It does NOT use handleRegister. It uses updateUser
-      // expect(handleRegisterMock).toHaveBeenCalled(); // REMOVE this expectation if component doesn't use it
       expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true });
       expect(pushMock).toHaveBeenCalledWith("/dashboard");
     });
@@ -207,15 +166,14 @@ describe("RegistrationForm", () => {
 
     // Let's stick to what the code says.
 
-    render(<RegistrationForm termsData={termsData} userEmail="test@example.com" />, {
-      wrapper: createWrapper(),
-    });
+    render(<RegistrationForm termsData={termsData} userEmail="test@example.com" />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "No");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "Callback");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "No");
+    await user.type(screen.getByLabelText("registration.lastName"), "Callback");
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
@@ -225,13 +183,13 @@ describe("RegistrationForm", () => {
 
   it("renders with different locale", () => {
     const props = { ...defaultProps, locale: "de-DE" };
-    render(<RegistrationForm {...props} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...props} />);
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();
   });
 
   it("renders inputs empty and checkbox unchecked by default", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     expect(screen.getByLabelText("registration.firstName")).toHaveValue("");
     expect(screen.getByLabelText("registration.lastName")).toHaveValue("");
@@ -240,14 +198,14 @@ describe("RegistrationForm", () => {
   });
 
   it("renders the submit button enabled by default", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const submit = screen.getByRole("button", { name: "registration.register" });
     expect(submit).not.toBeDisabled();
   });
 
   it("renders terms link with correct structure", () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
     const termsTrigger = screen.getByText("auth.terms");
     const closestAnchorOrButton = termsTrigger.closest("a,button");
@@ -257,12 +215,11 @@ describe("RegistrationForm", () => {
   });
 
   it("renders custom terms data when provided", async () => {
+    const user = userEvent.setup();
     const customTermsData = { title: "Custom Terms", content: "Custom content" };
-    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />, {
-      wrapper: createWrapper(),
-    });
+    render(<RegistrationForm {...defaultProps} termsData={customTermsData} />);
 
-    fireEvent.click(screen.getByText("auth.terms")); // open dialog
+    await user.click(screen.getByText("auth.terms")); // open dialog
 
     expect(await screen.findByText("Custom Terms")).toBeInTheDocument();
     expect(await screen.findByText("Custom content")).toBeInTheDocument();
@@ -273,13 +230,14 @@ describe("RegistrationForm", () => {
       error: { message: "Update failed" },
     });
 
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "Test");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "User");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Test");
+    await user.type(screen.getByLabelText("registration.lastName"), "User");
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalled();
@@ -294,17 +252,18 @@ describe("RegistrationForm", () => {
     // Create a mock that throws an error
     createUserProfileMock.mockRejectedValue(new Error("Network error"));
 
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "Error");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "Test");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Error");
+    await user.type(screen.getByLabelText("registration.lastName"), "Test");
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     expect(submitButton).not.toBeDisabled();
 
-    fireEvent.click(submitButton);
+    await user.click(submitButton);
 
     // Button should be disabled during submission
     await waitFor(() => {
@@ -322,35 +281,36 @@ describe("RegistrationForm", () => {
       return new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "Multi");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "Submit");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Multi");
+    await user.type(screen.getByLabelText("registration.lastName"), "Submit");
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     // First click
-    fireEvent.click(submitButton);
+    await user.click(submitButton);
 
     await waitFor(() => {
       expect(submitButton).toBeDisabled();
     });
 
     // Second click while pending
-    fireEvent.click(submitButton);
+    await user.click(submitButton);
 
-    // Should only call once
     expect(createUserProfileMock).toHaveBeenCalledTimes(1);
   });
 
   it("shows validation error if firstName is too short", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "A");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "Smith");
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "A");
+    await user.type(screen.getByLabelText("registration.lastName"), "Smith");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(screen.getByText("registration.firstNameError")).toBeInTheDocument();
@@ -359,12 +319,13 @@ describe("RegistrationForm", () => {
   });
 
   it("shows validation error if lastName is too short", async () => {
-    render(<RegistrationForm {...defaultProps} />, { wrapper: createWrapper() });
+    render(<RegistrationForm {...defaultProps} />);
 
-    await userEvent.type(screen.getByLabelText("registration.firstName"), "Alice");
-    await userEvent.type(screen.getByLabelText("registration.lastName"), "S");
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "registration.register" }));
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Alice");
+    await user.type(screen.getByLabelText("registration.lastName"), "S");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(screen.getByText("registration.lastNameError")).toBeInTheDocument();
@@ -373,9 +334,7 @@ describe("RegistrationForm", () => {
   });
 
   it("shows email field when userEmail is not a valid email", () => {
-    render(<RegistrationForm termsData={termsData} userEmail="not-an-email" />, {
-      wrapper: createWrapper(),
-    });
+    render(<RegistrationForm termsData={termsData} userEmail="not-an-email" />);
 
     expect(screen.getByLabelText("registration.email")).toBeInTheDocument();
     expect(
@@ -385,14 +344,14 @@ describe("RegistrationForm", () => {
 
   describe("emailOnly mode", () => {
     it("renders emailOnly title and description", () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       expect(screen.getByText("registration.emailOnlyTitle")).toBeInTheDocument();
       expect(screen.getByText("registration.emailOnlyDescription")).toBeInTheDocument();
     });
 
     it("does not render name, organization, or terms fields", () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
       expect(screen.queryByLabelText("registration.firstName")).not.toBeInTheDocument();
       expect(screen.queryByLabelText("registration.lastName")).not.toBeInTheDocument();
@@ -401,9 +360,10 @@ describe("RegistrationForm", () => {
     });
 
     it("shows validation error for empty email", async () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
-      fireEvent.click(
+      await user.click(
         screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
       );
 
@@ -413,19 +373,17 @@ describe("RegistrationForm", () => {
     });
 
     it("shows validation error for invalid email format", async () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, {
-        wrapper: createWrapper(),
-      });
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
-      await userEvent.type(screen.getByLabelText("registration.email"), "notanemail");
+      await user.type(screen.getByLabelText("registration.email"), "notanemail");
 
+      // Use direct form submit to bypass HTML5 email validation in jsdom
       const form = screen
         .getByRole("button", { name: "registration.continueWithEmailVerification" })
         .closest("form");
-
-      if (form) {
-        fireEvent.submit(form);
-      }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 
       await waitFor(() => {
         expect(screen.getByText("registration.emailInvalid")).toBeInTheDocument();
@@ -433,10 +391,11 @@ describe("RegistrationForm", () => {
     });
 
     it("transitions to OTP step after submitting a valid email", async () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
-      await userEvent.type(screen.getByLabelText("registration.email"), "user@example.com");
-      fireEvent.click(
+      await user.type(screen.getByLabelText("registration.email"), "user@example.com");
+      await user.click(
         screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
       );
 
@@ -449,10 +408,11 @@ describe("RegistrationForm", () => {
     it("sets email field error when sendOtp fails", async () => {
       mockSendOtpMutate.mockResolvedValue({ error: { message: "Too many requests" } });
 
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
-      await userEvent.type(screen.getByLabelText("registration.email"), "user@example.com");
-      fireEvent.click(
+      await user.type(screen.getByLabelText("registration.email"), "user@example.com");
+      await user.click(
         screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
       );
 
@@ -463,10 +423,11 @@ describe("RegistrationForm", () => {
     });
 
     it("returns to email form when edit email button is clicked", async () => {
-      render(<RegistrationForm termsData={termsData} emailOnly />, { wrapper: createWrapper() });
+      render(<RegistrationForm termsData={termsData} emailOnly />);
 
-      await userEvent.type(screen.getByLabelText("registration.email"), "user@example.com");
-      fireEvent.click(
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText("registration.email"), "user@example.com");
+      await user.click(
         screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
       );
 
@@ -474,7 +435,7 @@ describe("RegistrationForm", () => {
         expect(screen.getByText("auth.checkEmail")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Edit email address" }));
+      await user.click(screen.getByRole("button", { name: "Edit email address" }));
 
       await waitFor(() => {
         expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();

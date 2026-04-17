@@ -1,5 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
@@ -36,8 +35,8 @@ describe("ExperimentDataTableChartCell", () => {
     expect(screen.getByText("No data")).toBeInTheDocument();
   });
 
-  it("scrolls to experiment-data-chart when clicked", () => {
-    vi.useFakeTimers();
+  it("scrolls to experiment-data-chart when clicked", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     // Mock scrollIntoView
     const mockScrollIntoView = vi.fn();
@@ -51,16 +50,15 @@ describe("ExperimentDataTableChartCell", () => {
 
     const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
-      fireEvent.click(chartContainer);
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+      await user.click(chartContainer);
     }
 
     // Fast-forward time to trigger setTimeout
     vi.advanceTimersByTime(100);
 
-    // Verify getElementById was called with the correct ID
     expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
 
-    // Verify scrollIntoView was called with correct options
     expect(mockScrollIntoView).toHaveBeenCalledWith({
       behavior: "smooth",
       block: "start",
@@ -70,42 +68,43 @@ describe("ExperimentDataTableChartCell", () => {
     vi.useRealTimers();
   });
 
-  it("handles missing chart container gracefully on click", () => {
-    vi.useFakeTimers();
+  it("handles missing chart container gracefully on click", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     const mockGetElementById = vi.spyOn(document, "getElementById");
     mockGetElementById.mockReturnValue(null);
 
-    // Should not throw error
     render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
 
     const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
-      fireEvent.click(chartContainer);
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+      await user.click(chartContainer);
     }
 
     // Fast-forward time to trigger setTimeout
     vi.advanceTimersByTime(100);
 
-    // Verify getElementById was called but no error was thrown
     expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
 
     mockGetElementById.mockRestore();
     vi.useRealTimers();
   });
 
-  it("does not scroll when clicking on empty data", () => {
+  it("does not scroll when clicking on empty data", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const mockGetElementById = vi.spyOn(document, "getElementById");
 
     render(<ExperimentDataTableChartCell data={[]} columnName={mockColumnName} />);
 
     const noDataElement = screen.getByText("No data");
-    fireEvent.click(noDataElement);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    await user.click(noDataElement);
 
-    // Should not attempt to scroll
     expect(mockGetElementById).not.toHaveBeenCalled();
 
     mockGetElementById.mockRestore();
+    vi.useRealTimers();
   });
 
   it("parses JSON string data correctly", () => {

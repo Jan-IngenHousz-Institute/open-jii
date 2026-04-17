@@ -1,23 +1,11 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { ProtocolSettings } from "./protocol-settings";
-
-// Hoisted mocks
-const useProtocolMock = vi.hoisted(() => vi.fn());
-
-// Mock useProtocol hook
-vi.mock("../../hooks/protocol/useProtocol/useProtocol", () => ({
-  useProtocol: useProtocolMock,
-}));
-
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: "en-US" },
-  }),
-}));
 
 // Mock child components to isolate ProtocolSettings logic
 vi.mock("./protocol-details-card", () => ({
@@ -45,32 +33,21 @@ vi.mock("./protocol-compatible-macros-card", () => ({
 }));
 
 describe("ProtocolSettings", () => {
-  const mockProtocol = {
+  const mockProtocol = createProtocol({
     id: "protocol-123",
     name: "Test Protocol",
     description: "A test description",
     code: [{ averages: 1 }],
-    family: "generic" as const,
+    family: "generic",
     sortOrder: null,
     createdBy: "user-123",
     createdByName: "Test User",
     createdAt: "2023-01-01T00:00:00Z",
     updatedAt: "2023-01-02T00:00:00Z",
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    useProtocolMock.mockReturnValue({
-      data: { body: mockProtocol },
-      isLoading: false,
-    });
   });
 
   it("should show loading state while fetching protocol", () => {
-    useProtocolMock.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-    });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol, delay: 999_999 });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
@@ -79,55 +56,76 @@ describe("ProtocolSettings", () => {
     expect(screen.queryByTestId("protocol-info-card")).not.toBeInTheDocument();
   });
 
-  it("should show not found state when data is missing", () => {
-    useProtocolMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
+  it("should show not found state when data is missing", async () => {
+    server.mount(contract.protocols.getProtocol, {
+      status: 404,
+      body: { message: "Not found", statusCode: 404 },
     });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
-    expect(screen.getByText("protocolSettings.notFound")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("protocolSettings.notFound")).toBeInTheDocument();
+    });
     expect(screen.queryByTestId("protocol-details-card")).not.toBeInTheDocument();
     expect(screen.queryByTestId("protocol-info-card")).not.toBeInTheDocument();
   });
 
-  it("should render both child cards when data is loaded", () => {
+  it("should render both child cards when data is loaded", async () => {
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+
     render(<ProtocolSettings protocolId="protocol-123" />);
 
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    });
     expect(screen.getByTestId("protocol-info-card")).toBeInTheDocument();
   });
 
-  it("should pass protocol id to useProtocol hook", () => {
+  it("should pass protocol id via API call", async () => {
+    const spy = server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+
     render(<ProtocolSettings protocolId="protocol-123" />);
 
-    expect(useProtocolMock).toHaveBeenCalledWith("protocol-123");
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
+    });
+    expect(spy.params.id).toBe("protocol-123");
   });
 
-  it("should pass correct props to ProtocolDetailsCard", () => {
+  it("should pass correct props to ProtocolDetailsCard", async () => {
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+
     render(<ProtocolSettings protocolId="protocol-123" />);
 
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    });
     const detailsCard = screen.getByTestId("protocol-details-card");
     expect(detailsCard).toHaveAttribute("data-protocol-id", "protocol-123");
   });
 
-  it("should pass correct props to ProtocolInfoCard", () => {
+  it("should pass correct props to ProtocolInfoCard", async () => {
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+
     render(<ProtocolSettings protocolId="protocol-123" />);
 
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-info-card")).toBeInTheDocument();
+    });
     const infoCard = screen.getByTestId("protocol-info-card");
     expect(infoCard).toHaveAttribute("data-protocol-id", "protocol-123");
   });
 
-  it("should use empty string for null description", () => {
-    useProtocolMock.mockReturnValue({
-      data: { body: { ...mockProtocol, description: null } },
-      isLoading: false,
+  it("should use empty string for null description", async () => {
+    server.mount(contract.protocols.getProtocol, {
+      body: { ...mockProtocol, description: null },
     });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
-    // Component should still render without error
-    expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("protocol-details-card")).toBeInTheDocument();
+    });
   });
 });

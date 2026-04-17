@@ -1,5 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent, fireEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { QuestionUI } from "./question-card";
@@ -30,6 +29,7 @@ describe("QuestionCard", () => {
     render(<QuestionCard stepSpecification={defaultSpec} onUpdateText={mockOnUpdateText} />);
 
     const input = screen.getByPlaceholderText("questionCard.placeholder");
+    // fireEvent: controlled component without state wrapper - userEvent.type fires per-character
     fireEvent.change(input, { target: { value: "New question" } });
 
     expect(mockOnUpdateText).toHaveBeenCalledWith("New question");
@@ -47,14 +47,15 @@ describe("QuestionCard", () => {
     expect(checkbox).toBeChecked();
   });
 
-  it("calls onToggleRequired when checkbox is clicked", () => {
+  it("calls onToggleRequired when checkbox is clicked", async () => {
     const mockOnToggleRequired = vi.fn();
     render(
       <QuestionCard stepSpecification={defaultSpec} onToggleRequired={mockOnToggleRequired} />,
     );
 
+    const user = userEvent.setup();
     const checkbox = screen.getByRole("checkbox");
-    fireEvent.click(checkbox);
+    await user.click(checkbox);
 
     expect(mockOnToggleRequired).toHaveBeenCalledTimes(1);
   });
@@ -76,14 +77,15 @@ describe("QuestionCard", () => {
     expect(textRadio).toBeChecked();
   });
 
-  it("calls onUpdateAnswerType when answer type changes", () => {
+  it("calls onUpdateAnswerType when answer type changes", async () => {
     const mockOnUpdateAnswerType = vi.fn();
     render(
       <QuestionCard stepSpecification={defaultSpec} onUpdateAnswerType={mockOnUpdateAnswerType} />,
     );
 
+    const user = userEvent.setup();
     const selectRadio = screen.getByLabelText("questionCard.answerTypes.SELECT");
-    fireEvent.click(selectRadio);
+    await user.click(selectRadio);
 
     expect(mockOnUpdateAnswerType).toHaveBeenCalledWith("SELECT");
   });
@@ -157,7 +159,6 @@ describe("QuestionCard", () => {
       />,
     );
 
-    // Verify SelectOptionsEditor is rendered with correct props
     expect(screen.getByText("questionCard.answerOptionsLabel")).toBeInTheDocument();
   });
 });

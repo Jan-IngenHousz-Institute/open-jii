@@ -1,78 +1,45 @@
-import { tsr } from "@/lib/tsr";
-import { renderHook } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act } from "@/test/test-utils";
+import { describe, expect, it } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useAddCompatibleProtocol } from "./useAddCompatibleProtocol";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    macros: {
-      addCompatibleProtocols: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = vi.mocked(tsr, true);
-
 describe("useAddCompatibleProtocol", () => {
-  const mockMacroId = "test-macro-id";
-  const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
-  let capturedOnSettled: ((...args: unknown[]) => Promise<void>) | undefined;
+  it("sends add request with protocol IDs", async () => {
+    const spy = server.mount(contract.macros.addCompatibleProtocols, {
+      body: [],
+    });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    capturedOnSettled = undefined;
+    const { result } = renderHook(() => useAddCompatibleProtocol("macro-1"));
 
-    mockTsr.useQueryClient.mockReturnValue({
-      invalidateQueries: mockInvalidateQueries,
-    } as never);
+    act(() => {
+      result.current.mutate({
+        body: { protocolIds: ["p-1", "p-2"] },
+        params: { id: "macro-1" },
+      });
+    });
 
-    mockTsr.macros.addCompatibleProtocols.useMutation.mockImplementation(((opts: {
-      onSettled: typeof capturedOnSettled;
-    }) => {
-      capturedOnSettled = opts.onSettled;
-      return { mutateAsync: vi.fn(), isPending: false };
-    }) as never);
-  });
-
-  it("should call useMutation with onSettled handler", () => {
-    renderHook(() => useAddCompatibleProtocol(mockMacroId));
-
-    expect(mockTsr.macros.addCompatibleProtocols.useMutation.mock.calls).toHaveLength(1);
-    const call = mockTsr.macros.addCompatibleProtocols.useMutation.mock.calls[0]?.[0] as {
-      onSettled?: unknown;
-    };
-    expect(typeof call.onSettled).toBe("function");
-  });
-
-  it("should return mutation result", () => {
-    const { result } = renderHook(() => useAddCompatibleProtocol(mockMacroId));
-
-    expect(result.current).toHaveProperty("mutateAsync");
-    expect(result.current).toHaveProperty("isPending");
-  });
-
-  it("should invalidate correct query key on settled", async () => {
-    renderHook(() => useAddCompatibleProtocol(mockMacroId));
-
-    await capturedOnSettled?.();
-
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["macro-compatible-protocols", mockMacroId],
+    await waitFor(() => {
+      expect(spy.body).toMatchObject({ protocolIds: ["p-1", "p-2"] });
     });
   });
 
-  it("should invalidate with different macro IDs", async () => {
-    const differentId = "other-macro-id";
-    renderHook(() => useAddCompatibleProtocol(differentId));
+  it("completes mutation successfully", async () => {
+    server.mount(contract.macros.addCompatibleProtocols, { body: [] });
 
-    await capturedOnSettled?.();
+    const { result } = renderHook(() => useAddCompatibleProtocol("macro-1"));
 
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["macro-compatible-protocols", differentId],
+    act(() => {
+      result.current.mutate({
+        body: { protocolIds: ["p-1"] },
+        params: { id: "macro-1" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
     });
   });
 });

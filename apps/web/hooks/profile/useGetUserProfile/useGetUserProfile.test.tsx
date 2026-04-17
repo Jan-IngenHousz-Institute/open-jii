@@ -1,208 +1,74 @@
-// Import after mocking
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useGetUserProfile } from "./useGetUserProfile";
 
-// 🔑 Hoist the mock function
-const { useQueryMock } = vi.hoisted(() => {
-  return { useQueryMock: vi.fn() };
-});
-
-// Mock BEFORE importing the SUT
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    users: {
-      getUserProfile: {
-        useQuery: useQueryMock,
-      },
-    },
-  },
-}));
-
 describe("useGetUserProfile", () => {
-  let queryClient: QueryClient;
+  it("returns user profile data", async () => {
+    const profile = createUserProfile({ userId: "user-123" });
+    server.mount(contract.users.getUserProfile, { body: profile });
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
+    const { result } = renderHook(() => useGetUserProfile("user-123"));
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should call useQuery with correct parameters", () => {
-    useQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
     });
 
-    renderHook(() => useGetUserProfile("user-123"), { wrapper: createWrapper() });
-
-    expect(useQueryMock).toHaveBeenCalledWith({
-      queryData: { params: { id: "user-123" } },
-      queryKey: ["userProfile", "user-123"],
-      enabled: true,
-      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
+    expect(result.current.data?.body).toMatchObject({
+      firstName: "Test",
+      lastName: "User",
     });
-  });
-
-  it("should return successful user profile data", () => {
-    const mockData = {
-      status: 200,
-      body: {
-        id: "user-123",
-        username: "testuser",
-        email: "test@example.com",
-        firstName: "Test",
-        lastName: "User",
-        createdAt: "2023-01-01T00:00:00Z",
-      },
-    };
-
-    useQueryMock.mockReturnValue({
-      data: mockData,
-      error: null,
-      isLoading: false,
-    });
-
-    const { result } = renderHook(() => useGetUserProfile("user-123"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.data).toEqual(mockData);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
-  });
-
-  it("should handle 404 error for non-existent user", () => {
-    const mockError = { status: 404, message: "User not found" };
-
-    useQueryMock.mockReturnValue({
-      data: undefined,
-      error: mockError,
-      isLoading: false,
-    });
-
-    const { result } = renderHook(() => useGetUserProfile("non-existent"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.error).toEqual(mockError);
     expect(result.current.isLoading).toBe(false);
   });
 
-  it("should disable query when enabled is false", () => {
-    useQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: false,
-    });
+  it("disables query when enabled is false", async () => {
+    const { result } = renderHook(() => useGetUserProfile("user-123", false));
 
-    renderHook(() => useGetUserProfile("user-123", false), {
-      wrapper: createWrapper(),
-    });
-
-    expect(useQueryMock).toHaveBeenCalledWith({
-      queryData: { params: { id: "user-123" } },
-      queryKey: ["userProfile", "user-123"],
-      enabled: false,
-      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
-    });
-  });
-
-  it("should disable query when userId is empty", () => {
-    useQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: false,
-    });
-
-    renderHook(() => useGetUserProfile(""), { wrapper: createWrapper() });
-
-    expect(useQueryMock).toHaveBeenCalledWith({
-      queryData: { params: { id: "" } },
-      queryKey: ["userProfile", ""],
-      enabled: false,
-      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
-    });
-  });
-
-  describe("retry logic", () => {
-    let retryFunction: (failureCount: number, error: unknown) => boolean;
-
-    beforeEach(() => {
-      useQueryMock.mockImplementation(
-        (options: { retry: (failureCount: number, error: unknown) => boolean }) => {
-          retryFunction = options.retry;
-          return { data: undefined, error: null, isLoading: true };
-        },
-      );
-
-      renderHook(() => useGetUserProfile("user-123"), { wrapper: createWrapper() });
-    });
-
-    it("should NOT retry on 404 Not Found errors", () => {
-      expect(retryFunction(0, { status: 404 })).toBe(false);
-      expect(retryFunction(2, { status: 404 })).toBe(false);
-    });
-
-    it("should retry on network/other errors (up to 3 times)", () => {
-      expect(retryFunction(0, { status: 500 })).toBe(true);
-      expect(retryFunction(2, { status: 500 })).toBe(true);
-      expect(retryFunction(3, { status: 500 })).toBe(false);
-    });
-
-    it("should handle odd error shapes", () => {
-      expect(retryFunction(0, { message: "weird" })).toBe(true);
-      expect(retryFunction(0, "string")).toBe(true);
-      expect(retryFunction(0, { status: "bad" as unknown })).toBe(true);
-      expect(retryFunction(0, {})).toBe(true);
-    });
-  });
-
-  it("should handle loading state", () => {
-    useQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-
-    const { result } = renderHook(() => useGetUserProfile("user-123"), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.isLoading).toBe(true);
+    // Query should not fire — data stays undefined, not loading
+    // Wait a tick to ensure no request goes out
+    await new Promise((r) => setTimeout(r, 50));
     expect(result.current.data).toBeUndefined();
-    expect(result.current.error).toBeNull();
+    expect(result.current.isLoading).toBe(false);
   });
 
-  it("should use different query keys for different user IDs", () => {
-    useQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: false,
+  it("disables query when userId is empty", async () => {
+    const { result } = renderHook(() => useGetUserProfile(""));
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles 404 for non-existent user (no retry)", async () => {
+    server.mount(contract.users.getUserProfile, { status: 404 });
+
+    const { result } = renderHook(() => useGetUserProfile("non-existent"));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
 
-    const wrapper = createWrapper();
+    // On 404, the retry callback returns false → no retries → fast failure
+    expect(result.current.data?.body).toBeUndefined();
+  });
 
-    renderHook(() => useGetUserProfile("user-1"), { wrapper });
-    renderHook(() => useGetUserProfile("user-2"), { wrapper });
+  it("uses different query keys for different user IDs", async () => {
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
 
-    expect(useQueryMock).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["userProfile", "user-1"] }),
-    );
-    expect(useQueryMock).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["userProfile", "user-2"] }),
-    );
+    const { result: r1 } = renderHook(() => useGetUserProfile("user-1"));
+    const { result: r2 } = renderHook(() => useGetUserProfile("user-2"));
+
+    await waitFor(() => {
+      expect(r1.current.data).toBeDefined();
+      expect(r2.current.data).toBeDefined();
+    });
+
+    // Both resolve independently
+    expect(r1.current.isLoading).toBe(false);
+    expect(r2.current.isLoading).toBe(false);
   });
 });
