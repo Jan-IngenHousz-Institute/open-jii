@@ -1670,6 +1670,18 @@ module "backend_ecs" {
     {
       name  = "NEXT_PUBLIC_API_URL"
       value = "https://${module.route53.api_domain}"
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["python"]
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_JAVASCRIPT_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["js"]
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["r"]
     }
   ]
 
