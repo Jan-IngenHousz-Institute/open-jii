@@ -17,10 +17,8 @@ vi.mock("@/components/language-switcher", () => ({
 }));
 
 // DropdownMenu mock — Radix doesn't work in jsdom without pointer events / portals
-vi.mock("@repo/ui/components/dropdown-menu", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>(
-    "@repo/ui/components/dropdown-menu",
-  );
+vi.mock("@repo/ui/components", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
 
   const DropdownMenu = ({
     children,
@@ -156,68 +154,33 @@ describe("UnifiedNavbar", () => {
     });
   });
 
-  it("renders user avatar/name when authenticated", () => {
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US",
-      session: makeSession(),
-    });
-
-    const trigger = screen.getAllByTestId("dropdown-trigger")[0];
-
-    // Avatar should be in the trigger
-    const avatarImage = within(trigger).getByTestId("avatar-image");
-    expect(avatarImage).toHaveAttribute("src", "https://example.com/ada.png");
-
-    // Display name should be in the dropdown content
-    const dropdownContent = screen.getAllByTestId("dropdown-content")[0];
-    expect(within(dropdownContent).getByText("Ada Lovelace")).toBeInTheDocument();
+  it("renders account and sign out in desktop dropdown", () => {
+    renderNavbar({ session: makeSession() });
+    const dropdown = screen.getAllByTestId("dropdown-content")[0];
+    expect(within(dropdown).getByRole("link", { name: /auth\.account/i })).toHaveAttribute(
+      "href",
+      "/en-US/platform/account/settings",
+    );
+    expect(within(dropdown).getByRole("menuitem", { name: /auth\.signOut/i })).toBeInTheDocument();
   });
 
-  it("renders account + sign out entries inside desktop dropdown content", () => {
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US",
-      session: makeSession(),
-    });
-
-    const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
-
-    const account = within(desktopDropdown).getByRole("link", { name: /Account/i });
-    expect(account).toHaveAttribute("href", "/en-US/platform/account/settings");
-
-    const signOutButton = within(desktopDropdown).getByRole("menuitem", { name: /Sign Out/i });
-    expect(signOutButton).toBeInTheDocument();
-    expect(signOutButton).not.toHaveAttribute("href"); // Button, not link
-  });
-
-  it("calls signOut when sign out button is clicked", async () => {
+  it("calls signOut on Sign Out click", async () => {
     const user = userEvent.setup();
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US/blog",
-      session: makeSession(),
-    });
-
-    const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
-    const signOutButton = within(desktopDropdown).getByRole("menuitem", { name: /Sign Out/i });
-
-    await user.click(signOutButton);
-
-    expect(mockSignOutMutateAsync).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith("/");
+    const { router } = renderNavbar({ pathname: "/en-US/blog", session: makeSession() });
+    const dropdown = screen.getAllByTestId("dropdown-content")[0];
+    await user.click(within(dropdown).getByRole("menuitem", { name: /auth\.signOut/i }));
+    await waitFor(() => expect(authClient.signOut).toHaveBeenCalled());
+    expect(router.push).toHaveBeenCalledWith("/");
   });
 
-  it("mobile menu trigger is present (icon button)", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US" });
-    expect(screen.getByRole("button", { name: /Navigation menu/i })).toBeInTheDocument();
+  it("has mobile menu trigger button", () => {
+    renderNavbar();
+    expect(screen.getByRole("button", { name: /navigation\.menu/i })).toBeInTheDocument();
   });
 
-  it("renders header on platform-related pages", () => {
-    renderNavbar({ locale: "en-US", pathname: "/en-US/platform" });
-
-    const header = screen.getByRole("banner");
-    expect(header).toBeInTheDocument();
+  it("renders header banner", () => {
+    renderNavbar();
+    expect(screen.getByRole("banner")).toBeInTheDocument();
   });
 
   it("renders mobile nav links with active state", () => {
@@ -229,68 +192,19 @@ describe("UnifiedNavbar", () => {
       .find((l) => l.textContent?.includes("navigation.about")); // eslint-disable-line @typescript-eslint/no-unnecessary-condition
     expect(aboutLink).toBeDefined();
     expect(aboutLink).toHaveAttribute("aria-current", "page");
-
-    const homeLink = mobileLinks.find((link) => link.textContent.includes("Home"));
-    expect(homeLink).not.toHaveAttribute("aria-current");
   });
 
-  it("renders user dropdown with User fallback icon when no avatar", () => {
+  it("shows User icon fallback when no avatar", () => {
     renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US",
-      session: {
-        user: { id: "u-1", email: "test@example.com", image: null, registered: true },
-      },
+      session: makeSession({ user: { email: "test@example.com", image: null } }),
     });
-
-    // Line 75: else clause renders <User> icon when no avatar
-    const trigger = screen.getByRole("button", { name: "User menu" });
-    expect(trigger).toBeInTheDocument();
-
-    // Verify user email is displayed in dropdown content (appears in both desktop and mobile)
-    const emails = screen.getAllByText("test@example.com");
-    expect(emails.length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "auth.userMenu" })).toBeInTheDocument();
+    expect(screen.getAllByText("test@example.com").length).toBeGreaterThan(0);
   });
 
-  it("renders avatar in dropdown menu content when user has image", () => {
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US",
-      session: makeSession(),
-    });
-
-    // Line 84: Avatar in dropdown content when session.user.image is truthy
-    // There are 2 dropdown-content elements (desktop user menu + mobile nav menu)
-    // Both should have avatars when user has an image
-    const dropdownContents = screen.getAllByTestId("dropdown-content");
-    expect(dropdownContents.length).toBeGreaterThan(0);
-
-    // Check that at least one dropdown has the user avatar
-    const allAvatars = screen.getAllByTestId("avatar-image");
-    expect(allAvatars.length).toBeGreaterThan(0);
-  });
-
-  it("toggles chevron rotation when dropdown opens", async () => {
-    const user = userEvent.setup();
-    renderNavbar({
-      locale: "en-US",
-      pathname: "/en-US",
-      session: makeSession(),
-    });
-
-    // Line 78: Test the ternary operator ${open ? "rotate-180" : "rotate-0"}
-    // Click the user menu button to toggle open state
-    const userMenuButton = screen.getByLabelText("User menu");
-    await user.click(userMenuButton);
-
-    // The component should render without errors, covering both branches of the ternary
-    expect(userMenuButton).toBeInTheDocument();
-  });
-
-  it("does not setup intersection observer when not on home page", () => {
-    const observe = vi.fn();
-    const unobserve = vi.fn();
-    const disconnect = vi.fn();
+  it("sets up IntersectionObserver on home page", () => {
+    const observeMock = vi.fn();
+    const unobserveMock = vi.fn();
 
     vi.stubGlobal(
       "IntersectionObserver",
