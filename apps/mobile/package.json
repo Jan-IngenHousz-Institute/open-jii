@@ -4,7 +4,7 @@
   "main": "index.tsx",
   "scripts": {
     "clean": "git clean -xdf .cache .expo .turbo android ios node_modules",
-    "dev": "expo start -c --non-interactive",
+    "dev": "expo start -c",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build": "expo export --platform android",
