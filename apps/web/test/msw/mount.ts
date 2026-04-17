@@ -15,21 +15,36 @@ export const API_URL = "http://localhost:3020";
 
 // ── Types ───────────────────────────────────────────────────────
 
-/** Minimal shape of a ts-rest contract endpoint. */
+/** Minimal shape of a ts-rest contract endpoint with typed responses. */
 export interface ContractEndpoint {
   method: string;
   path: string;
+  responses: Record<number, unknown>;
 }
 
-/** Options for `server.mount()`. All optional. */
-export interface MountOptions {
-  /** JSON response body. Omit for 204 or error defaults. */
-  body?: unknown;
-  /** HTTP status. Auto-detected from method if omitted (200/201/204). ≥400 = error. */
-  status?: number;
-  /** Artificial delay in ms before responding. */
-  delay?: number;
-}
+/** Resolve a ts-rest response schema to its inferred output type. */
+type InferBody<T> = T extends { _output: infer O } ? O : T extends null ? null : unknown;
+
+/** Status codes defined in an endpoint's responses. */
+type StatusOf<T extends ContractEndpoint> = Extract<keyof T["responses"], number>;
+
+/** Union of all possible body types for an endpoint's responses. */
+type AnyBody<T extends ContractEndpoint> = {
+  [S in StatusOf<T>]: InferBody<T["responses"][S]>;
+}[StatusOf<T>];
+
+/** Type-safe mount function - infers status codes and body types from the contract. */
+export type MountFn = <T extends ContractEndpoint>(
+  endpoint: T,
+  options?: {
+    /** HTTP status - contract-defined codes + 500. */
+    status?: StatusOf<T> | 500;
+    /** JSON response body. */
+    body?: AnyBody<T>;
+    /** Artificial delay in ms before responding. */
+    delay?: number;
+  },
+) => RequestSpy;
 
 /** Individual request captured by the spy. */
 export interface SpyCall {
@@ -74,8 +89,11 @@ function statusForMethod(method: HttpMethod): number {
  * Create a `mount` function bound to the given MSW server instance.
  * Called once in `server.ts`; tests use `server.mount(…)`.
  */
-export function createMount(server: SetupServer) {
-  return function mount(endpoint: ContractEndpoint, options: MountOptions = {}): RequestSpy {
+export function createMount(server: SetupServer): MountFn {
+  function mount(
+    endpoint: ContractEndpoint,
+    options: { body?: unknown; status?: number; delay?: number } = {},
+  ): RequestSpy {
     const method = endpoint.method.toLowerCase() as HttpMethod;
     const url = `${API_URL}${endpoint.path}`;
 
@@ -136,5 +154,6 @@ export function createMount(server: SetupServer) {
 
     server.use(handler);
     return spy;
-  };
+  }
+  return mount as MountFn;
 }

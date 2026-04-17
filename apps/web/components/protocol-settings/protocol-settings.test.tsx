@@ -58,8 +58,8 @@ describe("ProtocolSettings", () => {
 
   it("should show not found state when data is missing", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: { message: "Not found" } as never,
       status: 404,
+      body: { message: "Not found", statusCode: 404 },
     });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
