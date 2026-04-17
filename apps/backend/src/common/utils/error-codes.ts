@@ -63,6 +63,8 @@ export enum ErrorCodes {
   MACRO_PROTOCOLS_ADD_FAILED = "MACRO_PROTOCOLS_ADD_FAILED", // Failed to add compatible protocols
   MACRO_PROTOCOLS_REMOVE_FAILED = "MACRO_PROTOCOLS_REMOVE_FAILED", // Failed to remove compatible protocol
   MACRO_PROTOCOLS_LIST_FAILED = "MACRO_PROTOCOLS_LIST_FAILED", // Failed to list compatible protocols
+  MACRO_EXECUTION_FAILED = "MACRO_EXECUTION_FAILED", // Lambda macro execution failed
+  MACRO_BATCH_VALIDATION_FAILED = "MACRO_BATCH_VALIDATION_FAILED", // Batch request validation failed
 
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/

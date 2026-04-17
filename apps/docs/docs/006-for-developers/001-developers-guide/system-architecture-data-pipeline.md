@@ -138,4 +138,5 @@ The `@repo/iot` package provides a layered architecture for sensor communication
 - **Many-to-many protocol/macro compatibility**: Join table linking protocols and macros independently
 - **Invitation system**: Email-based invitations with auto-acceptance on first sign-in
 - **On-device macro execution**: Python macros run via embedded Pyodide in mobile app
+- **Server-side macro execution**: Python, JavaScript, and R macros invoked via AWS Lambda functions from backend — supports individual execution and batch execution via webhook endpoint for Databricks pipeline integration
 - **Compression throughout**: gzip+base64 for MQTT payloads, gzip for on-device storage
