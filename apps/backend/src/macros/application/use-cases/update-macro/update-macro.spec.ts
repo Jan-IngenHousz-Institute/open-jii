@@ -242,6 +242,78 @@ describe("UpdateMacroUseCase", () => {
     });
   });
 
+  it("should return failure when findById fails", async () => {
+    // Arrange
+    vi.spyOn(macroRepository, "findById").mockResolvedValue(
+      failure({
+        message: "Database connection lost",
+        code: "INTERNAL_ERROR",
+        statusCode: 500,
+        name: "",
+      }),
+    );
+
+    // Act
+    const result = await useCase.execute("any-id", { name: "New Name" }, testUserId);
+
+    // Assert
+    assertFailure(result);
+    expect(result.error.message).toBe("Database connection lost");
+  });
+
+  it("should return failure when update operation fails", async () => {
+    // Arrange
+    const macroData: CreateMacroDto = {
+      name: "Failure Update Macro",
+      description: "Will fail on update",
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
+    };
+
+    const createResult = await macroRepository.create(macroData, testUserId);
+    assertSuccess(createResult);
+    const createdMacro = createResult.value[0];
+
+    vi.spyOn(macroRepository, "update").mockResolvedValue(
+      failure({
+        message: "Update query failed",
+        code: "INTERNAL_ERROR",
+        statusCode: 500,
+        name: "",
+      }),
+    );
+
+    // Act
+    const result = await useCase.execute(createdMacro.id, { name: "New Name" }, testUserId);
+
+    // Assert
+    assertFailure(result);
+    expect(result.error.message).toBe("Update query failed");
+  });
+
+  it("should return failure when update returns empty array", async () => {
+    // Arrange
+    const macroData: CreateMacroDto = {
+      name: "Empty Update Macro",
+      description: "Update returns nothing",
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
+    };
+
+    const createResult = await macroRepository.create(macroData, testUserId);
+    assertSuccess(createResult);
+    const createdMacro = createResult.value[0];
+
+    vi.spyOn(macroRepository, "update").mockResolvedValue(success([]));
+
+    // Act
+    const result = await useCase.execute(createdMacro.id, { name: "New Name" }, testUserId);
+
+    // Assert
+    assertFailure(result);
+    expect(result.error.message).toBe("Failed to update macro");
+  });
+
   it("should return forbidden error when user is not the creator", async () => {
     // Arrange
     const macroData: CreateMacroDto = {

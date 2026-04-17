@@ -12,6 +12,7 @@ import { handleFailure, isSuccess } from "../../common/utils/fp-utils";
 import { AddCompatibleProtocolsUseCase } from "../application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
+import { ExecuteMacroUseCase } from "../application/use-cases/execute-macro/execute-macro";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListCompatibleProtocolsUseCase } from "../application/use-cases/list-compatible-protocols/list-compatible-protocols";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
@@ -28,6 +29,7 @@ export class MacroController {
     @Inject(ANALYTICS_PORT)
     private readonly analyticsPort: AnalyticsPort,
     private readonly createMacroUseCase: CreateMacroUseCase,
+    private readonly executeMacroUseCase: ExecuteMacroUseCase,
     private readonly getMacroUseCase: GetMacroUseCase,
     private readonly listMacrosUseCase: ListMacrosUseCase,
     private readonly updateMacroUseCase: UpdateMacroUseCase,
@@ -99,6 +101,22 @@ export class MacroController {
         return {
           status: StatusCodes.OK,
           body: formatDates(result.value),
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.executeMacro)
+  executeMacro(@Session() _session: UserSession) {
+    return tsRestHandler(macroContract.executeMacro, async ({ params, body }) => {
+      const result = await this.executeMacroUseCase.execute(params.id, body);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK,
+          body: result.value,
         };
       }
 
