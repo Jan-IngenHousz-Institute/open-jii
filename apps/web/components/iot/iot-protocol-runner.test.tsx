@@ -530,7 +530,9 @@ describe("IotProtocolRunner", () => {
 
     it("handles rapid protocol execution clicks", async () => {
       mockIsConnected = true;
-      let resolveExecution: (value: unknown) => void;
+      let resolveExecution: (value: unknown) => void = () => {
+        // noop
+      };
       mockExecuteProtocol.mockImplementation(
         () =>
           new Promise((resolve) => {
@@ -554,7 +556,7 @@ describe("IotProtocolRunner", () => {
       expect(mockExecuteProtocol).toHaveBeenCalledTimes(1);
 
       // Clean up: resolve the pending promise
-      resolveExecution!({ data: "test" });
+      resolveExecution({ data: "test" });
       await waitFor(() => {
         expect(runButton).not.toBeDisabled();
       });
