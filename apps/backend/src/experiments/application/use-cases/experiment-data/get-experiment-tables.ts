@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
+import { z } from "zod";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -148,7 +149,15 @@ export class GetExperimentTablesUseCase {
       return new Map();
     }
 
-    const macroIds = macroMetadata.map((m) => m.identifier);
+    const isUuid = z.string().uuid();
+    const macroIds = macroMetadata
+      .map((m) => m.identifier)
+      .filter((id) => isUuid.safeParse(id).success);
+
+    if (macroIds.length === 0) {
+      return new Map();
+    }
+
     const result = await this.macroRepository.findNamesByIds(macroIds);
 
     if (result.isFailure()) {
