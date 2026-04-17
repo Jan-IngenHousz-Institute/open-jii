@@ -18,7 +18,7 @@ export function LegendFlow({
 
   const card = (
     <Card
-      className={`w-full max-w-full border border-slate-200 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/50 md:w-48`}
+      className={`w-full max-w-full border border-slate-200 bg-white/70 backdrop-blur-sm supports-[backdrop-filter]:bg-white/50 md:w-48`}
     >
       <CardHeader>
         <CardTitle>{t("flow.legend")}</CardTitle>

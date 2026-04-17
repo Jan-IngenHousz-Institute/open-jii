@@ -96,7 +96,7 @@ export function VariantExpandedContent({ data }: { data: string }) {
       <Button
         variant="ghost"
         size="sm"
-        className="z-1 absolute right-12 top-8 h-7 border bg-white/90 px-2 shadow-sm backdrop-blur-sm hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
+        className="z-1 absolute right-12 top-8 h-7 border bg-white/90 px-2 shadow-xs backdrop-blur-xs hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
         onClick={handleCopy}
         title={t("common.copy")}
       >
@@ -112,7 +112,7 @@ export function VariantExpandedContent({ data }: { data: string }) {
           </>
         )}
       </Button>
-      <pre className="max-h-96 w-full overflow-x-auto overflow-y-auto rounded border border-gray-200 bg-white p-3 font-mono text-xs dark:border-gray-700 dark:bg-gray-900">
+      <pre className="max-h-96 w-full overflow-x-auto overflow-y-auto rounded-sm border border-gray-200 bg-white p-3 font-mono text-xs dark:border-gray-700 dark:bg-gray-900">
         <code className="text-gray-800 dark:text-gray-200">{formatted}</code>
       </pre>
     </div>

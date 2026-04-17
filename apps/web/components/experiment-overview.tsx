@@ -86,7 +86,7 @@ export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
         <h4 className="text-muted-foreground mb-2 text-sm font-medium">
           {t("experiments.experimentId")}
         </h4>
-        <p className="bg-muted rounded p-2 font-mono text-sm">{experiment.id}</p>
+        <p className="bg-muted rounded-sm p-2 font-mono text-sm">{experiment.id}</p>
       </div>
     </div>
   );

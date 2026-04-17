@@ -78,7 +78,7 @@ export const LocationSidebarEntry = ({
           {/* Location Name */}
           <div className="flex items-start gap-2">
             <MapPin
-              className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
+              className={`mt-0.5 h-4 w-4 shrink-0 ${
                 isSelected ? "text-jii-dark-green" : "text-gray-500"
               }`}
             />
@@ -110,7 +110,7 @@ export const LocationSidebarEntry = ({
                   </span>
                 )}
                 {postalCode && (
-                  <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700">
+                  <span className="rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700">
                     {postalCode}
                   </span>
                 )}
@@ -127,7 +127,7 @@ export const LocationSidebarEntry = ({
                 e.stopPropagation();
                 onRemove();
               }}
-              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
               title="Remove location"
             >
               <Trash2 className="h-4 w-4" />
@@ -139,7 +139,7 @@ export const LocationSidebarEntry = ({
                 e.stopPropagation();
                 onNavigate();
               }}
-              className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded p-1.5 text-gray-400 transition-colors"
+              className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded-sm p-1.5 text-gray-400 transition-colors"
               title="Navigate to location"
             >
               <Navigation2 className="h-4 w-4" />
@@ -152,7 +152,7 @@ export const LocationSidebarEntry = ({
               const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
               window.open(url, "_blank");
             }}
-            className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded p-1.5 text-gray-400 transition-colors"
+            className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded-sm p-1.5 text-gray-400 transition-colors"
             title="Open in Google Maps"
           >
             <ExternalLink className="h-4 w-4" />

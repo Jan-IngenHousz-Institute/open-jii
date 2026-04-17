@@ -1,8 +1,6 @@
 {
   "expo": {
-    "scheme": [
-      "openjii"
-    ],
+    "scheme": ["openjii"],
     "name": "openJII",
     "slug": "openjii",
     "version": "1.1.0",
@@ -29,9 +27,7 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "package": "com.openjii.app"
     },
     "web": {
@@ -52,20 +48,15 @@
       [
         "react-native-permissions",
         {
-          "iosPermissions": [
-            "Bluetooth"
-          ]
+          "iosPermissions": ["Bluetooth"]
         }
       ],
       [
-        "with-rn-bluetooth-classic",
+        "./plugins/with-bluetooth-classic",
         {
           "peripheralUsageDescription": "Allow myDevice to check bluetooth peripheral info",
           "alwaysUsageDescription": "Allow myDevice to always use bluetooth info",
-          "protocols": [
-            "com.myCompany.p1",
-            "com.myCompany.p2"
-          ]
+          "protocols": ["com.myCompany.p1", "com.myCompany.p2"]
         }
       ],
       "expo-router",
@@ -88,6 +79,9 @@
         }
       ]
     ],
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
     "extra": {
       "expo-router": {
         "appRoot": "./app"

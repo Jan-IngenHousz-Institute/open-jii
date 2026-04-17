@@ -43,7 +43,7 @@ export function ProtocolList({
       {protocols.map((protocol) => (
         <div
           key={protocol.id}
-          className="flex items-center justify-between gap-3 rounded border px-3 py-2"
+          className="flex items-center justify-between gap-3 rounded-sm border px-3 py-2"
         >
           <div className="flex min-w-0 flex-1 flex-col justify-center">
             {/* Protocol name */}
@@ -79,7 +79,7 @@ export function ProtocolList({
               onClick={() => onRemoveProtocol(protocol.id)}
               disabled={isRemovingProtocol && removingProtocolId === protocol.id}
               title={t("experimentSettings.removeProtocol")}
-              className="hover:bg-destructive/10 h-8 w-8 flex-shrink-0 p-0"
+              className="hover:bg-destructive/10 h-8 w-8 shrink-0 p-0"
               aria-label={t("experimentSettings.removeProtocol")}
             >
               <Trash2 className="text-destructive h-4 w-4" />

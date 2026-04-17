@@ -30,8 +30,8 @@ export function ExperimentLocationsDisplay({
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-2">
-            <div className="h-4 w-3/4 rounded bg-gray-200"></div>
-            <div className="h-64 rounded bg-gray-200"></div>
+            <div className="h-4 w-3/4 rounded-sm bg-gray-200"></div>
+            <div className="h-64 rounded-sm bg-gray-200"></div>
           </div>
         </CardContent>
       </Card>

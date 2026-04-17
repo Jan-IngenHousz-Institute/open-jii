@@ -1,10 +1,9 @@
 import type { Config } from "tailwindcss";
-import animate from "tailwindcss-animate";
 
-import base from "./base.js";
+import base from "./base";
 
 export default {
-  darkMode: ["class"],
+  darkMode: "class",
   content: base.content,
   presets: [base],
   theme: {
@@ -45,17 +44,16 @@ export default {
       },
       colors: {
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          accent: "hsl(var(--sidebar-accent))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          DEFAULT: "var(--sidebar-background)",
+          foreground: "var(--sidebar-foreground)",
+          primary: "var(--sidebar-primary)",
+          accent: "var(--sidebar-accent)",
+          border: "var(--sidebar-border)",
+          ring: "var(--sidebar-ring)",
+          "primary-foreground": "var(--sidebar-primary-foreground)",
+          "accent-foreground": "var(--sidebar-accent-foreground)",
         },
       },
     },
   },
-  plugins: [animate],
 } satisfies Config;

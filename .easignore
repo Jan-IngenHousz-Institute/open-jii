@@ -1,0 +1,37 @@
+# EAS build only needs mobile app + its workspace deps
+
+# Exclude unrelated apps and heavy directories
+
+# Apps not needed for mobile build
+
+apps/backend
+apps/data
+apps/docs
+apps/macro-sandbox
+apps/node-red
+apps/tools
+apps/web
+
+# Infrastructure
+
+infrastructure
+
+# Coverage & build outputs
+
+coverage
+.next
+.open-next
+out
+build
+dist
+
+# CI/CD
+
+.github
+
+# Misc
+
+.vscode
+.turbo
+\*.md
+!apps/mobile/README.md

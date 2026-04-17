@@ -96,7 +96,7 @@ export default function YAxisConfiguration({
         {yAxisDataSources.map(({ field, index: dataSourceIndex }, seriesIndex) => {
           const columnName = form.watch(`dataConfig.dataSources.${dataSourceIndex}.columnName`);
           return (
-            <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-sm">
+            <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-5 pt-4">
                 <div className="flex items-center gap-2">
                   <Layers className="text-primary h-4 w-4" />

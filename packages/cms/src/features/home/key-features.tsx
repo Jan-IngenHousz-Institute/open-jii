@@ -106,7 +106,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
                 {...currentFeatures.image}
                 nextImageProps={{
                   className:
-                    "lg:w-5xl relative -z-20 min-w-full max-w-xl rounded-xl shadow-xl ring-1 ring-white/10 lg:row-span-4 lg:max-w-none",
+                    "relative -z-20 min-w-full max-w-xl rounded-xl shadow-xl ring-1 ring-white/10 lg:row-span-4 lg:max-w-none",
                   ...inspectorProps({ fieldId: "image" }),
                 }}
               />

@@ -55,7 +55,7 @@ export function BulkAddOptionsDialog({
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
             placeholder={t("questionCard.bulkAdd.placeholder")}
-            className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 min-h-[300px] w-full rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2"
+            className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 min-h-[300px] w-full rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-hidden focus:ring-2"
           />
           <p className="mt-2 text-xs text-gray-500">{t("questionCard.bulkAdd.hint")}</p>
         </div>

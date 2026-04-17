@@ -59,7 +59,7 @@ export function ExperimentDataTableChart({
           </div>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm transition-colors hover:bg-gray-100"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 rounded-sm px-2 py-1 text-sm transition-colors hover:bg-gray-100"
             type="button"
           >
             <X className="h-4 w-4" />

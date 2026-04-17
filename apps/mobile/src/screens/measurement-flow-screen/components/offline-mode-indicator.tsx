@@ -16,7 +16,7 @@ export function OfflineModeIndicator({ isVisible }: OfflineModeIndicatorProps) {
 
   return (
     <View
-      className="flex-row items-center gap-1 rounded border px-2 py-0.5"
+      className="flex-row items-center gap-1 rounded-sm border px-2 py-0.5"
       style={{
         backgroundColor: colors.semantic.success + "15",
         borderColor: colors.semantic.success + "40",

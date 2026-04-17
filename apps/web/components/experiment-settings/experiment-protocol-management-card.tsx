@@ -91,10 +91,10 @@ export function ExperimentProtocolManagement({ experimentId }: ExperimentProtoco
       <Card className="animate-pulse">
         <CardHeader>
           <CardTitle>{t("experimentSettings.protocolManagement")}</CardTitle>
-          <div className="bg-muted/40 h-6 w-32 rounded" />
+          <div className="bg-muted/40 h-6 w-32 rounded-sm" />
         </CardHeader>
         <CardContent>
-          <div className="bg-muted/40 h-64 rounded" />
+          <div className="bg-muted/40 h-64 rounded-sm" />
         </CardContent>
       </Card>
     );

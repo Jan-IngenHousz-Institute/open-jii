@@ -344,7 +344,7 @@ describe("ColorDimensionConfiguration", () => {
       });
 
       // The preview div has a gradient background - check it exists
-      const previewDiv = document.querySelector(".h-6.w-full.rounded.border");
+      const previewDiv = container.querySelector(".h-6.w-full.rounded-sm.border");
       expect(previewDiv).toBeInTheDocument();
     });
   });

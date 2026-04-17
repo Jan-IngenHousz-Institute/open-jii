@@ -11,13 +11,15 @@ export function isLambdaEnvironment(): boolean {
   return !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 }
 
-const RETRY_DELAYS_MS = [200, 500, 1000];
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 200;
 
 function fetchSecretOnce(secretArn: string): Promise<SecretMap> {
   return new Promise<SecretMap>((resolve, reject) => {
+    const port = parseInt(process.env.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT ?? "2773", 10);
     const options = {
       hostname: "localhost",
-      port: 2773,
+      port,
       path: `/secretsmanager/get?secretId=${encodeURIComponent(secretArn)}`,
       headers: {
         "X-Aws-Parameters-Secrets-Token": process.env.AWS_SESSION_TOKEN ?? "",
@@ -27,21 +29,59 @@ function fetchSecretOnce(secretArn: string): Promise<SecretMap> {
     http
       .get(options, (res) => {
         let data = "";
-        res.on("data", (chunk) => (data += chunk));
+        res.on("data", (chunk: string) => (data += chunk));
         res.on("end", () => {
           if (res.statusCode !== 200) {
-            return reject(new Error(`HTTP ${res.statusCode}`));
+            return reject(new Error(`Secret fetch HTTP ${res.statusCode}: ${data}`));
           }
+
           try {
             const wrapper = JSON.parse(data) as { SecretString: string };
-            resolve(JSON.parse(wrapper.SecretString) as SecretMap);
+            const secretValue = JSON.parse(wrapper.SecretString) as SecretMap;
+            resolve(secretValue);
           } catch (error) {
-            reject(error instanceof Error ? error : new Error(String(error)));
+            reject(new Error(`Failed to parse secret: ${error}`));
           }
         });
       })
-      .on("error", (err) => reject(err instanceof Error ? err : new Error(String(err))));
+      .on("error", (error) => {
+        reject(error);
+      });
   });
+}
+
+/**
+ * Fetches a JSON secret from the Lambda Parameters & Secrets extension.
+ * Retries on connection errors (e.g. ECONNRESET during cold start).
+ * Built-in extension cache (300s TTL) + in-process memo avoids repeated calls.
+ */
+export async function fetchSecret(secretArn: string): Promise<SecretMap> {
+  // Early return for local development
+  if (!isLambdaEnvironment()) {
+    return {};
+  }
+
+  // Check if we already have this secret in cache
+  if (secretArn in _cache) {
+    return _cache[secretArn];
+  }
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const secretValue = await fetchSecretOnce(secretArn);
+      _cache[secretArn] = secretValue;
+      return secretValue;
+    } catch (error) {
+      console.error(`Secret fetch attempt ${attempt}/${MAX_RETRIES} failed:`, error);
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+      }
+    }
+  }
+
+  // All retries exhausted - do NOT cache failures
+  console.error(`All ${MAX_RETRIES} secret fetch attempts failed for ${secretArn}`);
+  return {};
 }
 
 /**

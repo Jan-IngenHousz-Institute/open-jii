@@ -28,7 +28,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({ onClose, isMetadata = 
 
       <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
         <div className="flex">
-          <Info className="mr-2 mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
+          <Info className="mr-2 mt-0.5 h-5 w-5 shrink-0 text-green-500" />
           <p>{t(descriptionKey)}</p>
         </div>
       </div>

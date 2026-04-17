@@ -40,8 +40,25 @@ describe("ExperimentLocationsDisplay", () => {
   it("renders loading skeleton and hides map when isLoading", () => {
     render(<ExperimentLocationsDisplay locations={[]} isLoading={true} />);
 
-    expect(screen.getByText("details.locations.locationsTitle")).toBeInTheDocument();
-    expect(screen.queryByTestId("map-component")).not.toBeInTheDocument();
+      expect(screen.getByTestId("card")).toBeInTheDocument();
+      expect(screen.getByTestId("card-header")).toBeInTheDocument();
+      expect(screen.getByTestId("card-title")).toBeInTheDocument();
+      expect(screen.getByText("details.locations.locationsTitle")).toBeInTheDocument();
+      expect(screen.getByTestId("map-pin-icon")).toBeInTheDocument();
+
+      // Check for loading skeleton
+      expect(screen.getByTestId("card-content")).toBeInTheDocument();
+      const content = screen.getByTestId("card-content");
+      expect(content.querySelector(".animate-pulse")).toBeInTheDocument();
+      expect(content.querySelector(".h-4.w-3\\/4.rounded-sm.bg-gray-200")).toBeInTheDocument();
+      expect(content.querySelector(".h-64.rounded-sm.bg-gray-200")).toBeInTheDocument();
+    });
+
+    it("should not render map component when loading", () => {
+      render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={true} />);
+
+      expect(screen.queryByTestId("map-component")).not.toBeInTheDocument();
+    });
   });
 
   it("renders empty state when no locations", () => {

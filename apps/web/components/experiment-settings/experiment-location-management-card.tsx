@@ -170,7 +170,7 @@ export function ExperimentLocationManagement({
     return (
       <div className="space-y-4">
         <div className="animate-pulse space-y-2">
-          <div className="h-[460px] rounded bg-gray-200"></div>
+          <div className="h-[460px] rounded-sm bg-gray-200"></div>
         </div>
       </div>
     );

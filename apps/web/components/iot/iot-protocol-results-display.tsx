@@ -83,7 +83,7 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-background hover:bg-accent absolute right-2 top-2 z-10 h-7 w-7 border shadow-sm"
+                  className="bg-background hover:bg-accent absolute right-2 top-2 z-10 h-7 w-7 border shadow-xs"
                   onClick={handleCopy}
                   aria-label={copied ? tCommon("common.copied") : tCommon("common.copy")}
                   title={copied ? tCommon("common.copied") : tCommon("common.copy")}
@@ -94,7 +94,7 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
                     <Copy className="h-3.5 w-3.5" />
                   )}
                 </Button>
-                <div className="bg-muted/30 min-h-[12rem] flex-1 overflow-auto rounded border">
+                <div className="bg-muted/30 min-h-[12rem] flex-1 overflow-auto rounded-sm border">
                   <pre className="p-3 text-xs">{JSON.stringify(testResult.data, null, 2)}</pre>
                 </div>
               </div>

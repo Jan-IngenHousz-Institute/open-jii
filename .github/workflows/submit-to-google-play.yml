@@ -137,4 +137,4 @@ jobs:
       # Builds AAB on EAS servers (auto-increments versionCode) and submits to Google Play. Will wait for build to complete.
       - name: Build and Submit to Google Play
         working-directory: apps/mobile
-        run: pnpm run submit-to-google-play
+        run: pnpm run build:submit

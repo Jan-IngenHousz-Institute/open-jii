@@ -62,10 +62,10 @@ export function EdgeSidePanel({
       {/* Always render backdrop for fade animation */}
       <div
         className={
-          "fixed inset-0 z-[80] bg-black transition-opacity duration-300 " +
+          "fixed inset-0 z-[80] transition-opacity duration-300 " +
           (open && selectedEdge
-            ? "pointer-events-auto bg-opacity-60 opacity-100"
-            : "pointer-events-none bg-opacity-0 opacity-0")
+            ? "pointer-events-auto bg-black/60 opacity-100"
+            : "pointer-events-none bg-black/0 opacity-0")
         }
         onClick={onClose}
         aria-label={t("edgePanel.closeBackdrop")}
@@ -100,7 +100,7 @@ export function EdgeSidePanel({
                 onChange={handleLabelChange}
                 placeholder={t("edgePanel.labelPlaceholder")}
                 disabled={isDisabled}
-                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </CardContent>
           </Card>
@@ -114,7 +114,7 @@ export function EdgeSidePanel({
               <div className="flex justify-center">
                 <button
                   type="button"
-                  className="rounded bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+                  className="rounded-sm bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-400"
                   onClick={handleDeleteEdge}
                   disabled={isDisabled}
                 >

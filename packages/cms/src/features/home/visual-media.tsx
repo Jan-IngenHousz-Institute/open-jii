@@ -49,7 +49,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
             <button
               aria-label="Previous image"
               onClick={handlePrev}
-              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow hover:bg-white disabled:opacity-50"
+              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-sm hover:bg-white disabled:opacity-50"
               disabled={currentIdx === 0}
               style={{ pointerEvents: currentIdx === 0 ? "none" : undefined }}
             >
@@ -68,7 +68,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
             <button
               aria-label="Next image"
               onClick={handleNext}
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow hover:bg-white disabled:opacity-50"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-sm hover:bg-white disabled:opacity-50"
               disabled={currentIdx === filteredImages.length - 1}
               style={{
                 pointerEvents: currentIdx === filteredImages.length - 1 ? "none" : undefined,
@@ -117,7 +117,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
                   alt={img.title ?? "Partner visual"}
                   width={900}
                   height={400}
-                  className="h-full w-full rounded-2xl object-cover shadow-sm"
+                  className="h-full w-full rounded-2xl object-cover shadow-xs"
                   priority={idx === 0}
                   onClick={() => scrollToIdx(idx)}
                   style={{ cursor: "pointer" }}

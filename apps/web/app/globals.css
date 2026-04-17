@@ -1,7 +1,11 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@config "../tailwind.config.ts";
+
 /* Leaflet CSS for map components */
 /* @import "leaflet/dist/leaflet.css"; */
 
-/* Force remove border and shadow from React Flow nodes (strongest override) */
+/* Force remove border and shadow-sm from React Flow nodes (strongest override) */
 .react-flow__node,
 .react-flow__node-default {
   border: none !important;
@@ -11,8 +15,8 @@
 
 /* Plotly mode bar styling - stronger selectors to override inline styles */
 .modebar-container .modebar {
-  background: hsl(var(--card)) !important;
-  border: 1px solid hsl(var(--border)) !important;
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
   border-radius: calc(var(--radius) - 2px) !important;
   box-shadow:
     0 1px 3px 0 rgb(0 0 0 / 0.1),
@@ -45,137 +49,141 @@
 }
 
 .modebar-container .modebar-btn:hover {
-  background: hsl(var(--accent)) !important;
+  background: var(--accent) !important;
 }
 
 .modebar-container .modebar-btn svg,
 .modebar-container .modebar-btn svg path {
-  fill: hsl(var(--foreground)) !important;
+  fill: var(--foreground) !important;
   opacity: 0.8 !important;
   transition: all 0.2s ease !important;
 }
 
 .modebar-container .modebar-btn:hover svg,
 .modebar-container .modebar-btn:hover svg path {
-  fill: hsl(var(--foreground)) !important;
+  fill: var(--foreground) !important;
   opacity: 1 !important;
 }
 
 .modebar-container .modebar-btn.active svg,
 .modebar-container .modebar-btn.active svg path {
-  fill: hsl(var(--primary)) !important;
+  fill: var(--primary) !important;
   opacity: 1 !important;
 }
 
 .dark .modebar-container .modebar {
-  background: hsl(var(--card)) !important;
-  border-color: hsl(var(--border)) !important;
+  background: var(--card) !important;
+  border-color: var(--border) !important;
   box-shadow:
     0 4px 6px -1px rgb(0 0 0 / 0.3),
     0 2px 4px -2px rgb(0 0 0 / 0.3) !important;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(240 10% 3.9%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(240 10% 3.9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(240 10% 3.9%);
+  --primary: hsl(180 100% 18.4%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(136 74% 58%);
+  --secondary-foreground: hsl(0 0% 0%);
+  --tertiary: hsl(110 29% 55%);
+  --tertiary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 4.8% 95.9%);
+  --muted-foreground: hsl(240 3.8% 46.1%);
+  --accent: hsl(206 77% 82%);
+  --accent-foreground: hsl(0 0% 0%);
+  --highlight: hsl(56 100% 75%);
+  --highlight-foreground: hsl(0 0% 0%);
+  --destructive: hsl(0 89% 53.73%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(240 5.9% 90%);
+  --input: hsl(240 5.9% 90%);
+  --ring: hsl(180 100% 18.4%);
+  --radius: 0.5rem;
+  --sidebar-background: hsl(180 100% 9%);
+  --sidebar-foreground: hsl(0 0% 100%);
+  --sidebar-primary: hsl(136 74% 58%);
+  --sidebar-primary-foreground: hsl(0 0% 0%);
+  --sidebar-accent: hsl(180 45% 18%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(180 30% 25%);
+  --sidebar-ring: hsl(136 74% 58%);
+}
 
-@layer base {
-  :root {
-    /* Base colors */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+.dark {
+  --background: hsl(240 10% 3.9%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(240 10% 3.9%);
+  --card-foreground: hsl(0 0% 98%);
+  --popover: hsl(240 10% 3.9%);
+  --popover-foreground: hsl(0 0% 98%);
+  --primary: hsl(180 80% 15%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(136 60% 45%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --tertiary: hsl(110 29% 40%);
+  --tertiary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 3.7% 15.9%);
+  --muted-foreground: hsl(240 5% 64.9%);
+  --accent: hsl(206 40% 60%);
+  --accent-foreground: hsl(0 0% 100%);
+  --highlight: hsl(56 70% 65%);
+  --highlight-foreground: hsl(0 0% 0%);
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(0 85.7% 97.3%);
+  --border: hsl(240 3.7% 15.9%);
+  --input: hsl(240 3.7% 15.9%);
+  --ring: hsl(180 80% 15%);
+  --sidebar-background: hsl(180 100% 9%);
+  --sidebar-foreground: hsl(0 0% 100%);
+  --sidebar-primary: hsl(136 60% 45%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(180 45% 18%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(180 30% 20%);
+  --sidebar-ring: hsl(136 60% 45%);
+}
 
-    /* JII Brand Colors - using HSL versions of the hex colors */
-    /* #005e5e = hsl(180 100% 18.4%) */
-    --primary: 180 100% 18.4%;
-    --primary-foreground: 0 0% 100%;
-
-    /* #49e06d = hsl(136 74% 58%) */
-    --secondary: 136 74% 58%;
-    --secondary-foreground: 0 0% 0%;
-
-    /* #76b465 = hsl(110 29% 55%) */
-    --tertiary: 110 29% 55%;
-    --tertiary-foreground: 0 0% 100%;
-
-    /* Keep some of the original values for compatibility */
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-
-    /* #afd7f4 = hsl(206 77% 82%) */
-    --accent: 206 77% 82%;
-    --accent-foreground: 0 0% 0%;
-
-    /* #fff381 = hsl(56 100% 75%) */
-    --highlight: 56 100% 75%;
-    --highlight-foreground: 0 0% 0%;
-
-    /* #f22020 = hsl(0 89% 53.73%) */
-    --destructive: 0 89% 53.73%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 180 100% 18.4%; /* Same as primary */
-    --radius: 0.5rem;
-
-    /* Sidebar colors */
-    --sidebar-background: 180 100% 9%; /* #002F2F */
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 136 74% 58%; /* Secondary bright green */
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 180 45% 18%; /* Primary dark green */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 180 30% 25%;
-    --sidebar-ring: 136 74% 58%;
-  }
-
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-
-    /* Dark mode versions of JII colors */
-    --primary: 180 80% 15%; /* Darker teal */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 136 60% 45%; /* Darker green */
-    --secondary-foreground: 0 0% 100%;
-
-    --tertiary: 110 29% 40%; /* Darker medium green */
-    --tertiary-foreground: 0 0% 100%;
-
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-
-    --accent: 206 40% 60%; /* Darker blue */
-    --accent-foreground: 0 0% 100%;
-
-    --highlight: 56 70% 65%; /* Darker yellow */
-    --highlight-foreground: 0 0% 0%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 85.7% 97.3%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 180 80% 15%;
-
-    /* Dark mode sidebar */
-    --sidebar-background: 180 100% 9%; /* #002F2F */
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 136 60% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 180 45% 18%; /* Primary dark green */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 180 30% 20%;
-    --sidebar-ring: 136 60% 45%;
-  }
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-foreground: var(--tertiary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar-background: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 @layer base {

@@ -92,7 +92,7 @@ export function RichTextarea({
 
   return (
     <div
-      className="border-input focus-visible:ring-ring flex w-full flex-col overflow-hidden rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+      className="border-input focus-visible:ring-ring flex w-full flex-col overflow-hidden rounded-md border bg-transparent text-base shadow-xs focus-visible:outline-hidden focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
       onBlur={onBlur}
     >
       <div

@@ -111,7 +111,7 @@ export function AppSidebar({
             ref={searchInputRef}
             type="text"
             placeholder="Search by keyword..."
-            className="placeholder:text-sidebar-search-placeholder h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20 focus:outline-none group-data-[collapsible=icon]:hidden"
+            className="placeholder:text-sidebar-search-placeholder h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20 focus:outline-hidden group-data-[collapsible=icon]:hidden"
           />
           <Search className="text-sidebar-search-icon absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 group-data-[collapsible=icon]:hidden" />
           <button

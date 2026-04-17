@@ -171,7 +171,7 @@ const ExportCard = ({
     <div
       className={`flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800 ${borderColor}`}
     >
-      <div className="flex-shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
+      <div className="shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
         <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
       </div>
 
@@ -208,7 +208,7 @@ const ExportCard = ({
           size="icon"
           onClick={() => onDownload(exportRecord.exportId ?? "")}
           disabled={isDownloading}
-          className="h-8 w-8 flex-shrink-0"
+          className="h-8 w-8 shrink-0"
         >
           {isDownloading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -294,12 +294,12 @@ export function ExportListStep({
                 <Skeleton className="h-7 w-7 rounded-md" />
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-10 rounded" />
+                    <Skeleton className="h-4 w-10 rounded-sm" />
                     <Skeleton className="h-5 w-16 rounded-full" />
                   </div>
                   <div className="flex items-center gap-3">
-                    <Skeleton className="h-3 w-16 rounded" />
-                    <Skeleton className="h-3 w-12 rounded" />
+                    <Skeleton className="h-3 w-16 rounded-sm" />
+                    <Skeleton className="h-3 w-12 rounded-sm" />
                   </div>
                 </div>
               </div>

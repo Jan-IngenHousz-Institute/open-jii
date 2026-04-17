@@ -187,7 +187,7 @@ export function MeasurementQuestionsModal({
                 >
                   <View className="flex-row items-start gap-3 p-4">
                     <View
-                      className="mt-0.5 h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
+                      className="mt-0.5 h-6 w-6 shrink-0 items-center justify-center rounded-full"
                       style={{ backgroundColor: colors.primary.dark + "15" }}
                     >
                       <Text className="text-xs font-bold" style={{ color: colors.primary.dark }}>

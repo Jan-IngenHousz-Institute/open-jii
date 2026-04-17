@@ -270,7 +270,7 @@ export default function ColorDimensionConfiguration({
                         <SelectItem key={colorscale.value} value={colorscale.value}>
                           <div className="flex items-center gap-3">
                             <div
-                              className="h-4 w-8 rounded border"
+                              className="h-4 w-8 rounded-sm border"
                               style={{
                                 background: colorscale.gradient,
                               }}
@@ -340,7 +340,7 @@ export default function ColorDimensionConfiguration({
           <div>
             <div className="text-muted-foreground mb-2 text-xs">{t("preview.title")}</div>
             <div
-              className="h-6 w-full rounded border"
+              className="h-6 w-full rounded-sm border"
               style={{
                 background: getColorscaleGradient(form.watch("config.marker.colorscale") as string),
               }}
