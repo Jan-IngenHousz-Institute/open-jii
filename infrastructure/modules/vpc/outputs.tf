@@ -61,6 +61,11 @@ output "ecs_security_group_id" {
   value       = var.create_ecs_resources ? aws_security_group.ecs_sg[0].id : null
 }
 
+output "grafana_workspace_security_group_id" {
+  description = "ID of the Grafana workspace security group — attach to the AMG workspace and grants ingress to Aurora on 5432"
+  value       = var.create_grafana_resources && var.create_aurora_resources ? aws_security_group.grafana_workspace_sg[0].id : null
+}
+
 output "macro_sandbox_lambda_security_group_id" {
   description = "ID of the macro-sandbox Lambda security group (isolated, no inbound, HTTPS to VPC endpoints only)"
   value       = var.create_macro_sandbox_resources ? aws_security_group.macro_sandbox_lambda[0].id : null

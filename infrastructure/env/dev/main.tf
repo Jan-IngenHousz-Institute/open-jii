@@ -2034,7 +2034,7 @@ module "managed_grafana_workspace" {
   environment = var.environment
 
   private_subnets_ids = module.vpc.private_subnets
-  security_group_ids  = [module.vpc.aurora_security_group_id]
+  security_group_ids  = [module.vpc.grafana_workspace_security_group_id]
 }
 
 module "grafana_dashboard" {
@@ -2064,6 +2064,8 @@ module "grafana_dashboard" {
   db_host = module.aurora_db.cluster_endpoint
   db_port = module.aurora_db.cluster_port
   db_name = module.aurora_db.database_name
+
+  recovery_window_in_days = 0 # No recovery window for dev workspace
 
   providers = {
     grafana.amg = grafana.amg

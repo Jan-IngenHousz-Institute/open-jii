@@ -70,3 +70,9 @@ variable "create_macro_sandbox_resources" {
   type        = bool
   default     = true
 }
+
+variable "create_grafana_resources" {
+  description = "Whether to create the Grafana workspace security group and Aurora ingress rule"
+  type        = bool
+  default     = true
+}

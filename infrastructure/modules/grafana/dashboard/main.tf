@@ -25,7 +25,7 @@ resource "random_password" "grafana_db" {
 resource "aws_secretsmanager_secret" "grafana_db_credentials" {
   name                    = "openjii-grafana-db-credentials-${var.environment}"
   description             = "Credentials for the Grafana read-only PostgreSQL user (grafana_readonly)"
-  recovery_window_in_days = 0
+  recovery_window_in_days = var.recovery_window_in_days
 
   tags = {
     Environment = var.environment
@@ -116,6 +116,7 @@ resource "grafana_data_source" "postgres" {
     connMaxLifetime  = 14400
     postgresVersion  = 1600
     timescaledb      = false
+    timezone         = "UTC"
   })
 
   secure_json_data_encoded = jsonencode({

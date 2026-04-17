@@ -2004,7 +2004,7 @@ module "managed_grafana_workspace" {
   environment = var.environment
 
   private_subnets_ids = module.vpc.private_subnets
-  security_group_ids  = [module.vpc.aurora_security_group_id]
+  security_group_ids  = [module.vpc.grafana_workspace_security_group_id]
 }
 
 module "grafana_dashboard" {

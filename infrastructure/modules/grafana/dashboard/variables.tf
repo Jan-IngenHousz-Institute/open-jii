@@ -96,3 +96,9 @@ variable "db_name" {
   description = "Name of the PostgreSQL database to connect to"
   type        = string
 }
+
+variable "recovery_window_in_days" {
+  description = "Number of days to retain the Secrets Manager secret (default 30 days)"
+  type        = number
+  default     = 30
+}

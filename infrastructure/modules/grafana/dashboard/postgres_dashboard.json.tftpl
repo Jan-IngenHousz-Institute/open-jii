@@ -70,7 +70,7 @@
         {
           "datasource": { "type": "postgres", "uid": "${postgres_datasource_uid}" },
           "format": "table",
-          "rawSql": "SELECT COUNT(*) AS \"This Week\" FROM users WHERE created_at >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT COUNT(*) AS \"This Week\" FROM users WHERE created_at AT TIME ZONE 'UTC' >= DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC')",
           "refId": "A"
         }
       ],
@@ -103,7 +103,7 @@
         {
           "datasource": { "type": "postgres", "uid": "${postgres_datasource_uid}" },
           "format": "table",
-          "rawSql": "SELECT COUNT(*) AS \"Last 30 Days\" FROM users WHERE created_at >= NOW() - INTERVAL '30 days'",
+          "rawSql": "SELECT COUNT(*) AS \"Last 30 Days\" FROM users WHERE created_at AT TIME ZONE 'UTC' >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '30 days'",
           "refId": "A"
         }
       ],
@@ -153,7 +153,7 @@
         {
           "datasource": { "type": "postgres", "uid": "${postgres_datasource_uid}" },
           "format": "time_series",
-          "rawSql": "SELECT\n  DATE_TRUNC('week', created_at) AS time,\n  COUNT(*) AS \"New Users\"\nFROM users\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  DATE_TRUNC('week', created_at AT TIME ZONE 'UTC') AS time,\n  COUNT(*) AS \"New Users\"\nFROM users\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -184,7 +184,10 @@
           },
           {
             "matcher": { "id": "byName", "options": "year" },
-            "properties": [{ "id": "custom.width", "value": 100 }]
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "displayName", "value": "ISO Year" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "week_number" },
@@ -206,14 +209,14 @@
           "show": true
         },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "year" }]
+        "sortBy": [{ "desc": true, "displayName": "ISO Year" }]
       },
       "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "${postgres_datasource_uid}" },
           "format": "table",
-          "rawSql": "SELECT\n  EXTRACT(ISOYEAR FROM created_at) AS year,\n  EXTRACT(WEEK FROM created_at) AS week_number,\n  COUNT(*) AS user_count\nFROM users\nGROUP BY year, week_number\nORDER BY year, week_number",
+          "rawSql": "SELECT\n  EXTRACT(ISOYEAR FROM (created_at AT TIME ZONE 'UTC')) AS year,\n  EXTRACT(WEEK FROM (created_at AT TIME ZONE 'UTC')) AS week_number,\n  COUNT(*) AS user_count\nFROM users\nGROUP BY year, week_number\nORDER BY year, week_number",
           "refId": "A"
         }
       ],

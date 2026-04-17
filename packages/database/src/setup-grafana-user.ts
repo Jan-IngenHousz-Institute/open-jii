@@ -43,12 +43,13 @@ export async function setupGrafanaUser(): Promise<void> {
     throw new Error("DB_HOST, DB_PORT, DB_NAME, and DB_CREDENTIALS are required");
   }
 
-  const { username: masterUser, password: masterPass } = JSON.parse(DB_CREDENTIALS) as {
-    username: string;
-    password: string;
-  };
+  const parsed = JSON.parse(DB_CREDENTIALS) as { username?: string; password?: string };
+  if (!parsed.username || !parsed.password) {
+    throw new Error("DB_CREDENTIALS must contain username and password");
+  }
+  const { username: masterUser, password: masterPass } = parsed;
 
-  const sslmode = process.env.DATABASE_URL?.includes("sslmode=disable") ? "disable" : "require";
+  const sslmode = process.env.DB_SSLMODE ?? "require";
   const sql = postgres(
     `postgres://${masterUser}:${encodeURIComponent(masterPass)}@${host}:${port}/${name}?sslmode=${sslmode}`,
     {
@@ -59,24 +60,36 @@ export async function setupGrafanaUser(): Promise<void> {
   try {
     console.log(`Setting up Grafana read-only user ${pgIdent(username)}...`);
 
-    await sql.unsafe(`
-            DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = ${pgLiteral(username)}) THEN
-                    CREATE USER ${pgIdent(username)} WITH ENCRYPTED PASSWORD ${pgLiteral(password)};
-                ELSE
-                    ALTER USER ${pgIdent(username)} WITH ENCRYPTED PASSWORD ${pgLiteral(password)};
-                END IF;
+    // CREATE/ALTER USER contains a password literal — keep it isolated so errors
+    // from this statement can be scrubbed before being logged/re-thrown.
+    try {
+      await sql.unsafe(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = ${pgLiteral(username)}) THEN
+            CREATE USER ${pgIdent(username)} WITH ENCRYPTED PASSWORD ${pgLiteral(password)};
+          ELSE
+            ALTER USER ${pgIdent(username)} WITH ENCRYPTED PASSWORD ${pgLiteral(password)};
+          END IF;
+        END;
+        $$;
+      `);
+    } catch (err: unknown) {
+      // Scrub the query string (which contains the password literal) before propagating.
+      const scrubbed = new Error("Failed to create/update Grafana DB user (credentials redacted)");
+      if (err instanceof Error) scrubbed.stack = err.stack;
+      throw scrubbed;
+    }
 
-                GRANT CONNECT ON DATABASE ${pgIdent(dbName)} TO ${pgIdent(username)};
-                GRANT USAGE ON SCHEMA public TO ${pgIdent(username)};
-                GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${pgIdent(username)};
-                GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ${pgIdent(username)};
-                ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ${pgIdent(username)};
-                ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO ${pgIdent(username)};
-            END;
-            $$;
-        `);
+    // Grants are idempotent and contain no secrets — safe to let errors propagate as-is.
+    await sql.unsafe(`
+      GRANT CONNECT ON DATABASE ${pgIdent(dbName)} TO ${pgIdent(username)};
+      GRANT USAGE ON SCHEMA public TO ${pgIdent(username)};
+      GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${pgIdent(username)};
+      GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ${pgIdent(username)};
+      ALTER DEFAULT PRIVILEGES FOR ROLE ${pgIdent(masterUser)} IN SCHEMA public GRANT SELECT ON TABLES TO ${pgIdent(username)};
+      ALTER DEFAULT PRIVILEGES FOR ROLE ${pgIdent(masterUser)} IN SCHEMA public GRANT SELECT ON SEQUENCES TO ${pgIdent(username)};
+    `);
 
     console.log(
       `Grafana user ${pgIdent(username)} is ready with SELECT permissions on all public tables.`,

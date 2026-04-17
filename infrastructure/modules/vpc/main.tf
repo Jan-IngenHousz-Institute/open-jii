@@ -187,6 +187,42 @@ resource "aws_security_group_rule" "ecs_to_aurora" {
 }
 
 # -------------------------
+# Grafana Workspace Security Group
+# -------------------------
+resource "aws_security_group" "grafana_workspace_sg" {
+  count = var.create_grafana_resources && var.create_aurora_resources ? 1 : 0
+
+  name        = "${var.environment}-grafana-workspace-sg"
+  description = "Security group for Amazon Managed Grafana workspace — allows outbound to Aurora"
+  vpc_id      = aws_vpc.this.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.environment}-grafana-workspace-sg"
+  })
+}
+
+# Allow Grafana workspace to connect to Aurora on 5432
+resource "aws_security_group_rule" "grafana_to_aurora" {
+  count = var.create_grafana_resources && var.create_aurora_resources ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.grafana_workspace_sg[0].id
+  security_group_id        = aws_security_group.aurora_sg[0].id
+  description              = "Allow Grafana workspace to query Aurora on port 5432"
+}
+
+# -------------------------
 # Macro Sandbox Lambda Security Group
 # -------------------------
 # No inbound (Lambda doesn't receive connections).
