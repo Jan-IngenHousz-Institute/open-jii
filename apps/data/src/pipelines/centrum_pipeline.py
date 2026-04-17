@@ -16,7 +16,6 @@ from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
 from enrich.macro_execution import make_execute_macro_udf
 from openjii import decompress_sample
-from enrich.macro_execution import make_execute_macro_udf
 
 # COMMAND ----------
 
