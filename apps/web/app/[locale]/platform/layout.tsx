@@ -7,6 +7,7 @@ import { auth } from "~/app/actions/auth";
 
 import { SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
+
 import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
 import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
 

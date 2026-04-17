@@ -8,6 +8,7 @@ import type { FC } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+
 type CodeLanguage = "python" | "r" | "javascript";
 
 interface MacroCodeViewerProps {

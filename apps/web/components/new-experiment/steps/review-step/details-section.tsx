@@ -5,6 +5,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+
 interface DetailsSectionProps {
   formData: CreateExperimentBody;
   onEdit: () => void;

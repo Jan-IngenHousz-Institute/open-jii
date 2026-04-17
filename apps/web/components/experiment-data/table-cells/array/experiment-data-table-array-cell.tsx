@@ -5,6 +5,7 @@ import React, { useRef } from "react";
 
 import { Button } from "@repo/ui/components/button";
 import { Collapsible, CollapsibleTrigger } from "@repo/ui/components/collapsible";
+
 interface ExperimentDataTableArrayCellProps {
   data: string; // JSON string representation of the array
   columnName: string;

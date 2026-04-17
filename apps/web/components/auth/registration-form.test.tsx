@@ -2,9 +2,6 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
-import { authClient } from "@repo/auth/client";
-
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---

@@ -9,6 +9,7 @@ import ExperimentVisualizationsList from "~/components/experiment-visualizations
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+
 export default function ExperimentVisualizationsPage() {
   const { t } = useTranslation("experimentVisualizations");
   const { id } = useParams<{ id: string }>();

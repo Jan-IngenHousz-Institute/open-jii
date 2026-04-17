@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+
 /**
  * Platform 404 Not Found Page
  *

@@ -61,7 +61,6 @@ vi.mock("../chart-preview/chart-preview-modal", () => ({
   ),
 }));
 
-// useExperimentData — pragmatic mock (hook does heavy tanstack-table column creation + formatting)
 vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: vi.fn(),
 }));

@@ -6,6 +6,7 @@ import React from "react";
 import { useTranslation } from "@repo/i18n";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
+
 interface ExperimentDataTableChartProps {
   data: number[];
   columnName: string;

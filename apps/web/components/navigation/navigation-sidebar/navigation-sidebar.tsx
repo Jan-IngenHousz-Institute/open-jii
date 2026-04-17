@@ -5,6 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sidebar";
+
 import { NavItems } from "../nav-items/nav-items";
 import { iconMap } from "../navigation-config";
 

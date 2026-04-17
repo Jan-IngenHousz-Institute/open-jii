@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CreateProtocolRequestBody } from "@repo/api";
 import { contract } from "@repo/api";
 import { Form } from "@repo/ui/components/form";
+
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 
 // Mock MacroSearchWithDropdown
