@@ -532,7 +532,10 @@ describe("IotProtocolRunner", () => {
       mockIsConnected = true;
       let resolveExecution: (value: unknown) => void;
       mockExecuteProtocol.mockImplementation(
-        () => new Promise((resolve) => { resolveExecution = resolve; }),
+        () =>
+          new Promise((resolve) => {
+            resolveExecution = resolve;
+          }),
       );
 
       const user = userEvent.setup();
