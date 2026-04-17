@@ -530,8 +530,9 @@ describe("IotProtocolRunner", () => {
 
     it("handles rapid protocol execution clicks", async () => {
       mockIsConnected = true;
+      let resolveExecution: (value: unknown) => void;
       mockExecuteProtocol.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 50)),
+        () => new Promise((resolve) => { resolveExecution = resolve; }),
       );
 
       const user = userEvent.setup();
@@ -541,14 +542,18 @@ describe("IotProtocolRunner", () => {
         name: /iot\.protocolRunner\.runProtocol/i,
       });
 
-      // Click multiple times rapidly
+      // Click multiple times rapidly - execution never resolves so button stays disabled
       await user.click(runButton);
       await user.click(runButton);
       await user.click(runButton);
 
       // Should only execute once due to disabled state
+      expect(mockExecuteProtocol).toHaveBeenCalledTimes(1);
+
+      // Clean up: resolve the pending promise
+      resolveExecution!({ data: "test" });
       await waitFor(() => {
-        expect(mockExecuteProtocol).toHaveBeenCalledTimes(1);
+        expect(runButton).not.toBeDisabled();
       });
     });
 
