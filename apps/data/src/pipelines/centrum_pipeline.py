@@ -785,7 +785,7 @@ def experiment_macro_data():
 # COMMAND ----------
 
 # DBTITLE 1,Gold Layer - Experiment Macro Data (Sandbox Comparison)
-EXPERIMENT_SANDBOX_MACRO_UDF = make_execute_macro_udf()
+EXPERIMENT_SANDBOX_MACRO_UDF = make_execute_macro_udf(ENVIRONMENT, dbutils)
 
 @dlt.table(
     name=EXPERIMENT_MACRO_DATA_SANDBOX_TABLE,
@@ -847,17 +847,17 @@ def experiment_macro_data_sandbox():
         .withColumn(
             "sandbox_result",
             EXPERIMENT_SANDBOX_MACRO_UDF(
-                F.col("id"), F.col("macro_id"), F.col("data")
+                F.struct("id", "macro_id", "data")
             ),
         )
         .withColumn(
             "macro_output",
             F.when(
-                F.col("sandbox_result.macro_data").isNotNull(),
-                F.expr("parse_json(sandbox_result.macro_data)"),
+                F.col("sandbox_result.result").isNotNull(),
+                F.expr("parse_json(sandbox_result.result)"),
             ),
         )
-        .withColumn("macro_error", F.col("sandbox_result.macro_error"))
+        .withColumn("macro_error", F.col("sandbox_result.error"))
         .withColumn(
             "macro_row_id",
             F.abs(
