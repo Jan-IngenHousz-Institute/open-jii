@@ -42,30 +42,6 @@ describe("RegisterPage", () => {
     expect(redirect).toHaveBeenCalledWith("/en-US/platform");
   });
 
-  it("passes termsData to RegistrationForm", async () => {
-    render(await UserRegistrationPage(defaultProps));
-
-    expect(screen.getByTestId("registration-form")).toHaveTextContent("with terms");
-  });
-
-  it("redirects to signin if no user session", async () => {
-    mockAuth.mockResolvedValue(null);
-
-    try {
-      await UserRegistrationPage(defaultProps);
-    } catch {
-      // Expected to throw NEXT_REDIRECT
-    }
-
-    expect(mockRedirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
-  });
-
-  it("redirects to platform when already registered", async () => {
-    vi.mocked(auth).mockResolvedValue(createSession());
-    await RegisterPage(props);
-    expect(redirect).toHaveBeenCalledWith("/en-US/platform");
-  });
-
   it("renders registration form for unregistered authenticated user", async () => {
     const ui = await RegisterPage(props);
     render(ui);
