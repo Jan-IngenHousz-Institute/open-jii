@@ -1,8 +1,11 @@
 import { clsx } from "clsx";
-import { ChevronRight, MessageCircle } from "lucide-react-native";
+import * as Clipboard from "expo-clipboard";
+import { ChevronRight, Copy, MessageCircle } from "lucide-react-native";
 import React, { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { toast } from "sonner-native";
+import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
 import { useTheme } from "~/hooks/use-theme";
 import { applyMacro } from "~/utils/process-scan/process-scan";
@@ -46,10 +49,31 @@ export function MeasurementResult({
       ?.map((output) => output.messages)
       .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
 
+  const handleCopyRawJson = async () => {
+    try {
+      await Clipboard.setStringAsync(JSON.stringify(rawMeasurement, null, 2));
+      toast.success("Copied raw JSON to clipboard");
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
+  };
+
   const renderRawContent = () => (
-    <Text className={clsx("font-mono text-sm leading-5", classes.text)}>
-      {JSON.stringify(rawMeasurement, null, 2)}
-    </Text>
+    <View className="gap-2">
+      <View className="flex-row justify-end">
+        <Button
+          title="Copy JSON"
+          variant="outline"
+          size="sm"
+          icon={<Copy size={14} color={colors.primary.dark} />}
+          iconPosition="left"
+          onPress={handleCopyRawJson}
+        />
+      </View>
+      <Text className={clsx("font-mono text-sm leading-5", classes.text)}>
+        {JSON.stringify(rawMeasurement, null, 2)}
+      </Text>
+    </View>
   );
 
   const renderProcessedContent = () => {
