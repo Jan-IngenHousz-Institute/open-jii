@@ -31,3 +31,13 @@ diff --git a/android/build.gradle b/android/build.gradle
  }
  
  dependencies {
+diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
+index b88623856198359153c479f17413321f18b7b9bd..57636d24e79f9b8020fe172c2256670f791a20ae 100644
+--- a/android/src/main/AndroidManifest.xml
++++ b/android/src/main/AndroidManifest.xml
+@@ -1,4 +1,4 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+           package="com.bastengao.usbserialport">
+-    <uses-feature android:name="android.hardware.usb.host" />
++    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+ </manifest>
