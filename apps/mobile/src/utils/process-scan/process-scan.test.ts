@@ -132,11 +132,11 @@ describe("applyMacro — input isolation (OJD-1463)", () => {
       const result = { sample };
 
       let receivedRef: unknown = null;
-      registerPythonMacroRunner(async (_code, json) => {
+      registerPythonMacroRunner((_code, json) => {
         receivedRef = json;
         (json as { meta: string }).meta = "mutated-by-python";
         (json as { data_raw: number[] }).data_raw[0] = 999;
-        return { ok: true };
+        return Promise.resolve({ ok: true });
       });
 
       await applyMacro(result, {
@@ -155,9 +155,9 @@ describe("applyMacro — input isolation (OJD-1463)", () => {
       const sample2 = { data_raw: [4, 5, 6] };
       const result = { sample: [sample1, sample2] };
 
-      registerPythonMacroRunner(async (_code, json) => {
+      registerPythonMacroRunner((_code, json) => {
         (json as { data_raw: number[] }).data_raw[0] = 999;
-        return { ok: true };
+        return Promise.resolve({ ok: true });
       });
 
       await applyMacro(result, {
