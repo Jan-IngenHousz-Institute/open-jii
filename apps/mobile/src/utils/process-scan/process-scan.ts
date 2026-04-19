@@ -36,7 +36,7 @@ async function executeMacro(code: string, json: object): Promise<MacroOutput> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const fn = new Function("json", macroSource);
-    const output = fn(json);
+    const output = fn(structuredClone(json));
     // console.log("[macro] (JS) output:", JSON.stringify(output));
     return output;
   } catch (err) {
@@ -85,7 +85,7 @@ export async function applyMacro(
       const sample = samples[i];
       console.log("[macro] (Python) input sample", i, JSON.stringify(sample));
       try {
-        const out = await runPython(code, sample);
+        const out = await runPython(code, structuredClone(sample));
         console.log("[macro] (Python) output sample", i, JSON.stringify(out));
         outputs.push(out);
       } catch (err) {
