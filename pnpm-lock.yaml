@@ -678,6 +678,9 @@ importers:
       '@repo/vitest-config':
         specifier: workspace:*
         version: link:../../tooling/vitest-config
+      '@testing-library/react':
+        specifier: catalog:testing
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -729,6 +732,9 @@ importers:
       expo-drizzle-studio-plugin:
         specifier: ^0.2.1
         version: 0.2.1(expo-sqlite@55.0.15(expo@55.0.15)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(expo@55.0.15)
+      jsdom:
+        specifier: catalog:testing
+        version: 26.1.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

@@ -6,6 +6,7 @@ const {
   mockRemoveMeasurement,
   mockSaveMeasurement,
   mockUpdateMeasurement,
+  mockClearMeasurements,
   mockSendMqttEvent,
   mockPruneExpiredMeasurements,
   mockToastInfo,
@@ -15,6 +16,7 @@ const {
   mockRemoveMeasurement: vi.fn().mockResolvedValue(undefined),
   mockSaveMeasurement: vi.fn().mockResolvedValue(undefined),
   mockUpdateMeasurement: vi.fn().mockResolvedValue(undefined),
+  mockClearMeasurements: vi.fn().mockResolvedValue(undefined),
   mockSendMqttEvent: vi.fn(),
   mockPruneExpiredMeasurements: vi.fn().mockResolvedValue(undefined),
   mockToastInfo: vi.fn(),
@@ -34,7 +36,12 @@ vi.mock("~/services/measurements-storage", () => ({
   removeMeasurement: mockRemoveMeasurement,
   saveMeasurement: mockSaveMeasurement,
   updateMeasurement: mockUpdateMeasurement,
+  clearMeasurements: mockClearMeasurements,
   pruneExpiredMeasurements: mockPruneExpiredMeasurements,
+}));
+
+vi.mock("~/utils/measurement-annotations", () => ({
+  buildAnnotationsWithComment: (text: string) => ({ comment: text }),
 }));
 
 vi.mock("~/services/mqtt/send-mqtt-event", () => ({
@@ -254,6 +261,42 @@ describe("useMeasurements", () => {
       await removeMeasurement("key-1");
 
       expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // clearSyncedMeasurements
+  // ---------------------------------------------------------------------------
+
+  describe("clearSyncedMeasurements", () => {
+    it("clears successful measurements and invalidates", async () => {
+      const { clearSyncedMeasurements } = await mountWithUploads([]);
+
+      await clearSyncedMeasurements();
+
+      expect(mockClearMeasurements).toHaveBeenCalledWith("successful");
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // updateMeasurementComment
+  // ---------------------------------------------------------------------------
+
+  describe("updateMeasurementComment", () => {
+    it("updates measurement with built annotations and invalidates", async () => {
+      const { updateMeasurementComment } = await mountWithUploads([]);
+
+      await updateMeasurementComment("key-1", mockUpload, "a comment");
+
+      expect(mockUpdateMeasurement).toHaveBeenCalledWith("key-1", {
+        ...mockUpload,
+        measurementResult: {
+          ...mockUpload.measurementResult,
+          annotations: { comment: "a comment" },
+        },
+      });
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });
