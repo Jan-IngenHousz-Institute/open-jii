@@ -4,10 +4,13 @@ vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
   return {
     ...actual,
-    useState: (initial: unknown) => [
-      typeof initial === "function" ? (initial as () => unknown)() : initial,
-      vi.fn(),
-    ],
+    useState: (initial: unknown) => {
+      const value = typeof initial === "function" ? (initial as () => unknown)() : initial;
+      const setter = vi.fn((newState: unknown) => {
+        if (typeof newState === "function") (newState as (prev: unknown) => unknown)(value);
+      });
+      return [value, setter];
+    },
   };
 });
 
