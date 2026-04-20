@@ -28,6 +28,7 @@ jobs:
     outputs:
       affected_apps: ${{ steps.detect.outputs.affected_apps }}
       has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+      has_infrastructure_changes: ${{ steps.infra.outputs.has_infrastructure_changes }}
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
@@ -45,6 +46,22 @@ jobs:
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
+
+      - name: Detect Infrastructure Changes
+        id: infra
+        shell: bash
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+          if git diff --name-only "$BASE_SHA" HEAD -- \
+              infrastructure/ \
+              .github/workflows/tofu.yml \
+              .github/actions/tofu/ | grep -q .; then
+            echo "has_infrastructure_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Infrastructure changes detected"
+          else
+            echo "has_infrastructure_changes=false" >> $GITHUB_OUTPUT
+            echo "No infrastructure changes detected"
+          fi
 
   build_lint_test:
     name: Build, Lint, & Test
@@ -106,7 +123,7 @@ jobs:
     name: OpenTofu (Plan)
     needs: detect
     runs-on: ubuntu-latest
-    if: github.actor != 'dependabot[bot]'
+    if: github.actor != 'dependabot[bot]' && needs.detect.outputs.has_infrastructure_changes == 'true'
     strategy:
       matrix:
         environment: [dev, prod]
