@@ -18,6 +18,7 @@ const aliasConfig = defineConfig({
 // Web-specific configuration
 const webConfig = defineConfig({
   test: {
+    isolate: false,
     setupFiles: ["./test/setup.ts"],
     coverage: {
       exclude: [

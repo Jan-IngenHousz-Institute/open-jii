@@ -29,12 +29,12 @@ function layerPriority(filepath: string): number {
 
 /**
  * Custom sequencer that orders test files by architectural layer (bottom-up):
- *   0. utils   - pure functions, no dependencies
- *   1. guards  - request guards
- *   2. services - module-level services
- *   3. repositories - data-access layer
- *   4. use-cases - application layer
- *   5. presentation - controllers, hooks, webhooks
+ *   0. utils         - pure functions, no dependencies
+ *   1. guards        - request guards
+ *   2. services      - module-level services
+ *   3. repositories  - data-access layer
+ *   4. use-cases     - application layer
+ *   5. presentation  - controllers, hooks, webhooks
  *
  * Extends Vitest's {@link BaseSequencer} and overrides `sort()`.
  * Files within the same layer are sorted alphabetically.
