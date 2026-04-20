@@ -25,7 +25,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
     return initializePostHogServer(...args);
   }
 
-  protected getPostHogClient() {
+  protected getPostHogClient(): ReturnType<typeof getPostHogServerClient> {
     return getPostHogServerClient();
   }
 
