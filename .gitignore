@@ -1,5 +1,11 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# AI artifacts
+.wolf/
+.claude/rules/openwolf.md
+.claude/settings.json
+CLAUDE.md
+
 # Dependencies
 node_modules
 .pnp
