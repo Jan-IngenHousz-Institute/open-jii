@@ -375,7 +375,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isQuestionsSubmitPending).toBe(false);
     });
 
-    it("returns to the submit/review screen in a questions-only flow", () => {
+    it("returns to the submit/review screen in a questions-only flow (questions + instructions)", () => {
       useMeasurementFlowStore.setState({
         flowNodes: [makeQuestion("q1"), makeQuestion("q2"), makeInstruction("i1")],
         currentFlowStep: 0,
@@ -385,6 +385,16 @@ describe("useMeasurementFlowStore", () => {
       const state = useMeasurementFlowStore.getState();
       expect(state.isQuestionsSubmitPending).toBe(true);
       expect(state.isFromOverview).toBe(false);
+    });
+
+    it("returns to the submit/review screen when the flow is questions-only (no instructions)", () => {
+      useMeasurementFlowStore.setState({
+        flowNodes: [makeQuestion("q1"), makeQuestion("q2")],
+        currentFlowStep: 0,
+        isFromOverview: true,
+      });
+      useMeasurementFlowStore.getState().returnToOverview();
+      expect(useMeasurementFlowStore.getState().isQuestionsSubmitPending).toBe(true);
     });
   });
 });

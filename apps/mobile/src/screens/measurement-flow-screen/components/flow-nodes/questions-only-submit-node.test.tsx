@@ -369,16 +369,16 @@ describe("QuestionsOnlySubmitNode", () => {
     });
     const err = new Error("boom");
     uploadQuestionsMock.mockRejectedValue(err);
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const { getByText } = render(<QuestionsOnlySubmitNode />);
     fireEvent.click(getByText("Submit & Continue"));
     fireEvent.click(getByText("Finish"));
 
-    await waitFor(() => expect(consoleLogSpy).toHaveBeenCalledWith(err));
+    await waitFor(() => expect(consoleErrorSpy).toHaveBeenCalledWith(err));
     // Neither success handler should fire when the upload rejects
     expect(dismissQuestionsSubmit).not.toHaveBeenCalled();
     expect(finishFlow).not.toHaveBeenCalled();
-    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 });

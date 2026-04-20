@@ -190,16 +190,15 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
 
   returnToOverview: () =>
     set((state) => {
-      const measurementIndex = state.flowNodes.findIndex((n) => n.type === "measurement");
-      if (measurementIndex === -1) {
-        // Questions-only flow: return to the submit/review screen
+      if (isQuestionsOnlyFlow(state.flowNodes)) {
+        // No measurement node to jump to — return to the submit/review screen
         return {
           isQuestionsSubmitPending: true,
           isFromOverview: false,
         };
       }
       return {
-        currentFlowStep: measurementIndex,
+        currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
         isFromOverview: false,
       };
     }),

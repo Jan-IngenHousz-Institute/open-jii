@@ -81,14 +81,14 @@ export function QuestionsOnlySubmitNode() {
       <View className="flex-row gap-4 px-4 py-3">
         <Button
           title="Finish"
-          onPress={() => handleFinish().catch(console.log)}
+          onPress={() => handleFinish().catch(console.error)}
           disabled={isUploading || !canUpload}
           variant="tertiary"
           style={{ flex: 1, height: 44, borderColor: "transparent" }}
         />
         <Button
           title={isUploading ? "Uploading..." : "Submit & Continue"}
-          onPress={() => handleSubmitAndContinue().catch(console.log)}
+          onPress={() => handleSubmitAndContinue().catch(console.error)}
           disabled={isUploading || !canUpload}
           style={{ flex: 1, height: 44 }}
         />

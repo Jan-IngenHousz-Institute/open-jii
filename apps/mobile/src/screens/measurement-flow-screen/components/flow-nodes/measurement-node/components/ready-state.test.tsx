@@ -9,12 +9,12 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import { ReadyState } from "./ready-state";
 
-// Hoist React so mock factories (hoisted by vitest) can use it. Mock factories
-// run before top-level imports, so we cannot simply reach for the already-
-// imported `React` below.
-const { hoistedReact } = vi.hoisted(() => ({
+// Hoist React + the isDark toggle so mock factories (hoisted by vitest) can
+// use them. Mock factories run before top-level imports resolve.
+const { hoistedReact, themeState } = vi.hoisted(() => ({
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   hoistedReact: require("react") as typeof import("react"),
+  themeState: { isDark: false },
 }));
 
 // --- react-native: render primitives as plain host elements so they work in jsdom.
@@ -69,7 +69,7 @@ vi.mock("lucide-react-native", () => {
 
 vi.mock("~/hooks/use-theme", () => ({
   useTheme: () => ({
-    isDark: false,
+    isDark: themeState.isDark,
     classes: {
       text: "text",
       textSecondary: "text-secondary",
@@ -120,6 +120,7 @@ function resetStores() {
 
 describe("ReadyState", () => {
   beforeEach(() => {
+    themeState.isDark = false;
     resetStores();
   });
 
@@ -263,5 +264,24 @@ describe("ReadyState", () => {
     const { queryByText } = render(<ReadyState onCardPress={vi.fn()} />);
     expect(queryByText("1")).toBeTruthy();
     expect(queryByText("2")).toBeTruthy();
+  });
+
+  it("uses the light-mode card background by default", () => {
+    useMeasurementFlowStore.setState({
+      flowNodes: [makeQuestion("q1")],
+    });
+    const { getAllByRole } = render(<ReadyState onCardPress={vi.fn()} />);
+    const card = getAllByRole("button")[0];
+    expect(card.style.backgroundColor).toMatch(/250|fafafa/);
+  });
+
+  it("uses the dark-mode card background when the theme is dark", () => {
+    themeState.isDark = true;
+    useMeasurementFlowStore.setState({
+      flowNodes: [makeQuestion("q1")],
+    });
+    const { getAllByRole } = render(<ReadyState onCardPress={vi.fn()} />);
+    const card = getAllByRole("button")[0];
+    expect(card.style.backgroundColor).toMatch(/34|222/);
   });
 });
