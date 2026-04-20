@@ -21,6 +21,18 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly configService: AnalyticsConfigService) {}
 
+  protected initializePostHog(...args: Parameters<typeof initializePostHogServer>) {
+    return initializePostHogServer(...args);
+  }
+
+  protected getPostHogClient() {
+    return getPostHogServerClient();
+  }
+
+  protected doShutdownPostHog() {
+    return shutdownPostHog();
+  }
+
   async onModuleInit() {
     if (!this.configService.isConfigured()) {
       this.logger.warn(
@@ -40,7 +52,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      this.initialized = await initializePostHogServer(
+      this.initialized = await this.initializePostHog(
         posthogKey,
         this.configService.getPostHogServerConfig(),
       );
@@ -69,7 +81,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     if (this.initialized) {
-      await shutdownPostHog();
+      await this.doShutdownPostHog();
       this.logger.log({
         msg: "PostHog shutdown completed",
         operation: "onModuleDestroy",
@@ -86,7 +98,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
    */
   async isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId = "anonymous"): Promise<boolean> {
     try {
-      const client = getPostHogServerClient();
+      const client = this.getPostHogClient();
 
       // If client is null (not initialized), return default
       if (!client) {
