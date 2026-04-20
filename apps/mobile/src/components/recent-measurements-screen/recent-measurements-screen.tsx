@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
-import { ChevronsLeft, UploadCloud, Trash2 } from "lucide-react-native";
+import { ChevronsLeft, UploadCloud, Trash2, Download } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, FlatList, Pressable } from "react-native";
+import { View, Text, FlatList } from "react-native";
 import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
@@ -15,7 +15,6 @@ import type {
   MeasurementItem as MeasurementItemType,
 } from "~/hooks/use-all-measurements";
 import { useMeasurements } from "~/hooks/use-measurements";
-import { useMultiTapAction } from "~/hooks/use-multi-tap-action";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
@@ -144,11 +143,11 @@ export function RecentMeasurementsScreen() {
   const unsyncedCount = measurements?.filter((m) => m.status === "unsynced").length ?? 0;
   const syncedCount = measurements?.filter((m) => m.status === "synced").length ?? 0;
 
-  const handleExportTap = useMultiTapAction(() => {
+  const handleExport = () => {
     void exportMeasurementsToFile().catch(() => {
       toast.error("Export failed. Please try again.");
     });
-  });
+  };
 
   const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
     setSelectedMeasurement(measurement);
@@ -156,7 +155,7 @@ export function RecentMeasurementsScreen() {
 
   return (
     <View className={clsx("flex-1", classes.background)}>
-      <Pressable className="flex-row items-center justify-between p-4" onPress={handleExportTap}>
+      <View className="flex-row items-center justify-between p-4">
         <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
 
         <View className="flex-row gap-3">
@@ -176,7 +175,7 @@ export function RecentMeasurementsScreen() {
             style={{ borderColor: "transparent", padding: 9 }}
           />
         </View>
-      </Pressable>
+      </View>
       {measurements && measurements.length > 0 && (
         <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />
@@ -201,6 +200,16 @@ export function RecentMeasurementsScreen() {
           data={measurements}
           keyExtractor={(item) => item.key}
           contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
+          ListFooterComponent={
+            <View className="px-4 pt-4">
+              <Button
+                title="Export measurements"
+                variant="tertiary"
+                onPress={handleExport}
+                icon={<Download size={16} color={colors.primary.dark} strokeWidth={1.4} />}
+              />
+            </View>
+          }
           renderItem={({ item: measurement }) => (
             <SwipeableMeasurementRow
               id={measurement.key}
