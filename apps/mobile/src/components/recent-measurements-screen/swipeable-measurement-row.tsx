@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -24,7 +24,7 @@ interface SwipeableMeasurementRowProps {
   questions?: AnswerData[];
   onPress?: () => void;
   onComment?: (id: string) => void;
-  onSync?: (id: string, close: () => void) => void;
+  onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
   hasComment?: boolean;
 }
@@ -53,6 +53,10 @@ export function SwipeableMeasurementRow({
   const closeRow = () => {
     translateX.value = withSpring(0, SPRING_CONFIG);
   };
+
+  useEffect(() => {
+    closeRow();
+  }, [status]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])
@@ -83,7 +87,7 @@ export function SwipeableMeasurementRow({
 
   const handleComment = () => onComment?.(id);
   const handleSync = () => {
-    onSync?.(id, closeRow);
+    onSync?.(id);
   };
   const handleDelete = () => onDelete?.(id);
 

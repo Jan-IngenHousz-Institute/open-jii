@@ -30,13 +30,12 @@ export function MeasurementList({
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const { uploadOne, removeMeasurement, updateMeasurementComment } = useMeasurements();
 
-  const handleSync = (id: string, experimentName: string, closeRow?: () => void) => {
+  const handleSync = (id: string, experimentName: string) => {
     showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
       {
         text: "Upload",
         variant: "primary",
         onPress: () => {
-          closeRow?.();
           void (async () => {
             await uploadOne(id);
             invalidate();
@@ -119,7 +118,7 @@ export function MeasurementList({
               }
               onSync={
                 measurement.status === "unsynced"
-                  ? (_, close) => handleSync(measurement.key, measurement.experimentName, close)
+                  ? () => handleSync(measurement.key, measurement.experimentName)
                   : undefined
               }
               hasComment={
