@@ -1,6 +1,7 @@
 import { render } from "@react-email/components";
 
 import { Email } from "../emails/email";
+import { OtpEmail } from "../emails/fallbacks/otp-email";
 import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderOtpEmailParams {
@@ -21,7 +22,11 @@ export async function renderOtpEmail(params: RenderOtpEmailParams): Promise<Rend
 
   const emailData = await getCmsEmail("otp-email", { otp, senderName, host, baseUrl });
 
-  if (!emailData) throw new Error("[transactional] CMS email 'otp-email' not found");
+  if (!emailData) {
+    const html = await render(OtpEmail({ otp, senderName, host, baseUrl }), {});
+    const text = await render(OtpEmail({ otp, senderName, host, baseUrl }), { plainText: true });
+    return { html, text, preview: "Your sign-in code for openJII" };
+  }
 
   const html = await render(
     Email({

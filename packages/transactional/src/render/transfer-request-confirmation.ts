@@ -1,6 +1,7 @@
 import { render } from "@react-email/components";
 
 import { Email } from "../emails/email";
+import { TransferRequestConfirmation } from "../emails/fallbacks/transfer-request-confirmation";
 import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderTransferRequestConfirmationParams {
@@ -30,8 +31,17 @@ export async function renderTransferRequestConfirmation(
     userEmail,
   });
 
-  if (!emailData)
-    throw new Error("[transactional] CMS email 'transfer-request-confirmation' not found");
+  if (!emailData) {
+    const html = await render(
+      TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
+      {},
+    );
+    const text = await render(
+      TransferRequestConfirmation({ host, projectIdOld, projectUrlOld, userEmail, baseUrl }),
+      { plainText: true },
+    );
+    return { html, text, preview: "Your transfer request has been received" };
+  }
 
   const html = await render(
     Email({

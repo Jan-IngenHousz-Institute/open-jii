@@ -1,6 +1,7 @@
 import { render } from "@react-email/components";
 
 import { Email } from "../emails/email";
+import { ProjectTransferComplete } from "../emails/fallbacks/project-transfer-complete";
 import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderProjectTransferCompleteParams {
@@ -28,8 +29,17 @@ export async function renderProjectTransferComplete(
     experimentUrl,
   });
 
-  if (!emailData)
-    throw new Error("[transactional] CMS email 'project-transfer-complete' not found");
+  if (!emailData) {
+    const html = await render(
+      ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
+      {},
+    );
+    const text = await render(
+      ProjectTransferComplete({ host, experimentName, experimentUrl, baseUrl }),
+      { plainText: true },
+    );
+    return { html, text, preview: "Your project transfer has been completed" };
+  }
 
   const html = await render(
     Email({

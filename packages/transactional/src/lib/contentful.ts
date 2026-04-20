@@ -4,6 +4,16 @@ import { createContentfulClient } from "@repo/cms/client";
 
 import type { EmailRichTextInterface } from "../components/ctf-rich-text";
 
+/**
+ * Each value must match the `internalName` of a `ComponentEmail` entry in Contentful.
+ * Before adding a new email here, create the corresponding entry in Contentful first.
+ */
+export type CmsEmailType =
+  | "added-user-notification"
+  | "otp-email"
+  | "project-transfer-complete"
+  | "transfer-request-confirmation";
+
 export interface CmsEmail {
   internalName: string;
   preview: string;
@@ -11,7 +21,7 @@ export interface CmsEmail {
 }
 
 export async function getCmsEmail(
-  internalName: string,
+  internalName: CmsEmailType,
   variables?: Record<string, string>,
 ): Promise<CmsEmail | null> {
   const { client } = createContentfulClient();

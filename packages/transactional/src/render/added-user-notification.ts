@@ -1,6 +1,7 @@
 import { render } from "@react-email/components";
 
 import { Email } from "../emails/email";
+import { AddedUserNotification } from "../emails/fallbacks/added-user-notification";
 import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderAddedUserNotificationParams {
@@ -32,7 +33,17 @@ export async function renderAddedUserNotification(
     role,
   });
 
-  if (!emailData) throw new Error("[transactional] CMS email 'added-user-notification' not found");
+  if (!emailData) {
+    const html = await render(
+      AddedUserNotification({ host, experimentName, experimentUrl, actor, role, baseUrl }),
+      {},
+    );
+    const text = await render(
+      AddedUserNotification({ host, experimentName, experimentUrl, actor, role, baseUrl }),
+      { plainText: true },
+    );
+    return { html, text, preview: "You've been added to an experiment on openJII" };
+  }
 
   const html = await render(
     Email({
