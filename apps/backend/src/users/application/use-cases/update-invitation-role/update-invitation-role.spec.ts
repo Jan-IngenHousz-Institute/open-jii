@@ -36,7 +36,6 @@ describe("UpdateInvitationRoleUseCase", () => {
     revokeUseCase = testApp.module.get(RevokeInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
-
   });
 
   afterEach(() => {
@@ -57,7 +56,6 @@ describe("UpdateInvitationRoleUseCase", () => {
       "member",
       testUserId,
     );
-
 
     assertSuccess(result);
     return result.value;

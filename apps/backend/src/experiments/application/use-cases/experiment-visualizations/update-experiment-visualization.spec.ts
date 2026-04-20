@@ -27,7 +27,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     useCase = testApp.module.get(UpdateExperimentVisualizationUseCase);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
     experimentRepository = testApp.module.get(ExperimentRepository);
-
   });
 
   afterEach(() => {
@@ -583,6 +582,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         assertFailure(result);
         expect(result.error.message).toContain("You do not have access to this experiment");
       } finally {
+        // cleanup handled by afterEach
       }
     });
   });

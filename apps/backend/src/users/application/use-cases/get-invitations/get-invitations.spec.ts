@@ -22,7 +22,6 @@ describe("GetInvitationsUseCase", () => {
     useCase = testApp.module.get(GetInvitationsUseCase);
     createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
-
   });
 
   afterEach(() => {
@@ -68,7 +67,6 @@ describe("GetInvitationsUseCase", () => {
       testUserId,
     );
 
-
     const result = await useCase.execute("experiment", experiment.id);
 
     assertSuccess(result);
@@ -94,7 +92,6 @@ describe("GetInvitationsUseCase", () => {
       "member",
       testUserId,
     );
-
 
     const result = await useCase.execute("experiment", experiment.id);
 
@@ -123,7 +120,6 @@ describe("GetInvitationsUseCase", () => {
       "member",
       testUserId,
     );
-
 
     const result = await useCase.execute("experiment", exp2.id);
 

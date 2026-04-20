@@ -33,7 +33,6 @@ describe("RevokeInvitationUseCase", () => {
     createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
-
   });
 
   afterEach(() => {
@@ -54,7 +53,6 @@ describe("RevokeInvitationUseCase", () => {
       "member",
       testUserId,
     );
-
 
     assertSuccess(result);
     return result.value;

@@ -74,9 +74,7 @@ describe("AwsLocationService", () => {
         },
       };
 
-      locationMock
-        .on(SearchPlaceIndexForSuggestionsCommand)
-        .resolves(mockSuggestionsResponse);
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves(mockSuggestionsResponse);
       locationMock
         .on(GetPlaceCommand)
         .resolvesOnce(mockPlaceResponse1)
@@ -106,16 +104,12 @@ describe("AwsLocationService", () => {
         municipality: "London",
         postalCode: "E1 6AN",
       });
-      expect(
-        locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand),
-      ).toHaveLength(1);
+      expect(locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand)).toHaveLength(1);
       expect(locationMock.commandCalls(GetPlaceCommand)).toHaveLength(2);
     });
 
     it("should handle empty results", async () => {
-      locationMock
-        .on(SearchPlaceIndexForSuggestionsCommand)
-        .resolves({ Results: [] });
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves({ Results: [] });
 
       const result = await service.searchPlaces({
         query: "NonexistentPlace12345",
@@ -123,9 +117,7 @@ describe("AwsLocationService", () => {
       });
 
       expect(result).toEqual([]);
-      expect(
-        locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand),
-      ).toHaveLength(1);
+      expect(locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand)).toHaveLength(1);
     });
 
     it("should handle results with missing geometry", async () => {
@@ -169,18 +161,14 @@ describe("AwsLocationService", () => {
     });
 
     it("should use default maxResults when not provided", async () => {
-      locationMock
-        .on(SearchPlaceIndexForSuggestionsCommand)
-        .resolves({ Results: [] });
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves({ Results: [] });
 
       const result = await service.searchPlaces({
         query: "test",
       });
 
       expect(result).toEqual([]);
-      expect(
-        locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand),
-      ).toHaveLength(1);
+      expect(locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand)).toHaveLength(1);
     });
 
     it("should handle errors gracefully", async () => {
@@ -197,9 +185,7 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown errors", async () => {
-      locationMock
-        .on(SearchPlaceIndexForSuggestionsCommand)
-        .rejects("Unknown error");
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).rejects("Unknown error");
 
       await expect(
         service.searchPlaces({
@@ -242,15 +228,11 @@ describe("AwsLocationService", () => {
         municipality: "New York",
         postalCode: "10001",
       });
-      expect(
-        locationMock.commandCalls(SearchPlaceIndexForPositionCommand),
-      ).toHaveLength(1);
+      expect(locationMock.commandCalls(SearchPlaceIndexForPositionCommand)).toHaveLength(1);
     });
 
     it("should handle empty geocoding results", async () => {
-      locationMock
-        .on(SearchPlaceIndexForPositionCommand)
-        .resolves({ Results: [] });
+      locationMock.on(SearchPlaceIndexForPositionCommand).resolves({ Results: [] });
 
       const result = await service.geocodeLocation({
         latitude: 0,
@@ -261,9 +243,7 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle geocoding errors", async () => {
-      locationMock
-        .on(SearchPlaceIndexForPositionCommand)
-        .rejects(new Error("Invalid coordinates"));
+      locationMock.on(SearchPlaceIndexForPositionCommand).rejects(new Error("Invalid coordinates"));
 
       await expect(
         service.geocodeLocation({
@@ -274,9 +254,7 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown geocoding errors", async () => {
-      locationMock
-        .on(SearchPlaceIndexForPositionCommand)
-        .rejects("Unknown geocoding error");
+      locationMock.on(SearchPlaceIndexForPositionCommand).rejects("Unknown geocoding error");
 
       await expect(
         service.geocodeLocation({
@@ -441,9 +419,7 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown errors", async () => {
-      locationMock
-        .on(SearchPlaceIndexForSuggestionsCommand)
-        .rejects("Unknown error");
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).rejects("Unknown error");
 
       await expect(
         service.searchPlaces({

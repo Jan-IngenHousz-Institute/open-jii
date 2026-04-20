@@ -10,6 +10,7 @@ import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
+import { auth } from "@repo/auth/server";
 import type { DatabaseInstance } from "@repo/database";
 import {
   experimentMembers,
@@ -26,7 +27,6 @@ import {
   flows,
   macros,
 } from "@repo/database";
-import { auth } from "@repo/auth/server";
 
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";

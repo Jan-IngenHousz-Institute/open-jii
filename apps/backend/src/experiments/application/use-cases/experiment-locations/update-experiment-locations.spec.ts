@@ -267,6 +267,7 @@ describe("UpdateExperimentLocationsUseCase", () => {
       assertFailure(result);
       expect(result.error.message).toContain("You do not have access to this experiment");
     } finally {
+      // cleanup handled by afterEach
     }
   });
 
