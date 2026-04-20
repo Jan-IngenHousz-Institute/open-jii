@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { BooleanAnswerDisplay } from "./boolean-answer-display";
@@ -16,8 +15,8 @@ describe("BooleanAnswerDisplay", () => {
   });
 
   it("displays the checkmark icon", () => {
-    const { container } = render(<BooleanAnswerDisplay />);
-    const svg = container.querySelector("svg");
+    render(<BooleanAnswerDisplay />);
+    const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
 

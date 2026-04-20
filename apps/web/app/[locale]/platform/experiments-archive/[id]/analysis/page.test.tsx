@@ -3,11 +3,6 @@ import { vi, describe, it, expect } from "vitest";
 
 import AnalysisPage from "./page";
 
-// Mock next/navigation
-vi.mock("next/navigation", () => ({
-  redirect: vi.fn(),
-}));
-
 describe("<AnalysisPage />", () => {
   it("redirects to visualizations page with correct archive path", async () => {
     const params = Promise.resolve({ locale: "en-US", id: "test-experiment-id" });

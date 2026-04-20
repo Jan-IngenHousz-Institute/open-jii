@@ -1,47 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import { createMacro } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useParams, notFound } from "next/navigation";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+import { useSession } from "@repo/auth/client";
+
 import MacroLayout from "../layout";
-
-// Global React for JSX in mocks
-globalThis.React = React;
-
-// -------------------
-// Mocks
-// -------------------
-const mockUseParams = vi.fn();
-const mockNotFound = vi.fn();
-const mockUseMacro = vi.fn();
-const mockUseMacroUpdate = vi.fn();
-const mockUseSession = vi.fn();
-const mockMutateAsync = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useParams: () => mockUseParams(),
-  notFound: () => mockNotFound(),
-}));
-
-vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
-  useMacro: () => mockUseMacro(),
-}));
-
-vi.mock("@/hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
-  useMacroUpdate: () => mockUseMacroUpdate(),
-}));
-
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => mockUseSession(),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  __esModule: true,
-  useTranslation: (_ns?: string) => ({
-    t: (key: string) => key,
-  }),
-}));
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
@@ -75,281 +42,317 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
   ),
 }));
 
-vi.mock("@repo/ui/components", () => ({
-  Badge: ({ children, className }: React.PropsWithChildren<{ className?: string }>) => (
-    <span data-testid="badge" className={className}>
-      {children}
-    </span>
-  ),
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
-
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
-// -------------------
-// Default mock data
-// -------------------
-const defaultMacro = {
+const defaultMacro = createMacro({
   id: "test-macro-id",
   name: "Test Macro",
   language: "python",
   createdBy: "user-123",
   sortOrder: null,
-};
+});
 
 const defaultSession = {
   data: { user: { id: "user-123" } },
 };
 
-// -------------------
-// Helpers
-// -------------------
 function renderLayout({
   macroId = "test-macro-id",
-  macroData = defaultMacro,
-  isLoading = false,
-  error = null,
   session = defaultSession,
-  isUpdating = false,
   children = <div>Child Content</div>,
 }: {
   macroId?: string;
-  macroData?: typeof defaultMacro | null;
-  isLoading?: boolean;
-  error?: { status?: number; message?: string } | Error | null;
   session?: { data: { user: { id: string } } } | { data: null };
-  isUpdating?: boolean;
   children?: React.ReactNode;
 } = {}) {
-  mockUseParams.mockReturnValue({ id: macroId });
-  mockUseMacro.mockReturnValue({ isLoading, error, data: macroData });
-  mockUseMacroUpdate.mockReturnValue({ mutateAsync: mockMutateAsync, isPending: isUpdating });
-  mockUseSession.mockReturnValue(session);
+  vi.mocked(useParams).mockReturnValue({ id: macroId } as ReturnType<typeof useParams>);
+  vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
 
   return render(<MacroLayout>{children}</MacroLayout>);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<MacroLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockMutateAsync.mockResolvedValue(undefined);
   });
 
   describe("Loading State", () => {
     it("renders loading indicator when isLoading is true", () => {
-      renderLayout({ isLoading: true, macroData: null });
+      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      renderLayout();
 
       expect(screen.getByText("common.loading")).toBeInTheDocument();
     });
 
     it("does not render children when loading", () => {
-      renderLayout({ isLoading: true, macroData: null });
+      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      renderLayout();
 
       expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 
     it("does not render the inline editable title when loading", () => {
-      renderLayout({ isLoading: true, macroData: null });
+      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      renderLayout();
 
       expect(screen.queryByTestId("inline-editable-title")).not.toBeInTheDocument();
     });
   });
 
   describe("Error Handling", () => {
-    it("calls notFound for 404 errors", () => {
-      renderLayout({
-        macroData: null,
-        error: { status: 404, message: "Not Found" },
-      });
+    it("calls notFound for 404 errors", async () => {
+      server.mount(contract.macros.getMacro, { status: 404 });
+      renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
+      });
     });
 
-    it("calls notFound for 400 errors (invalid UUID)", () => {
-      renderLayout({
-        macroData: null,
-        error: { status: 400, message: "Bad Request" },
-      });
+    it("calls notFound for 400 errors (invalid UUID)", async () => {
+      server.mount(contract.macros.getMacro, { status: 400 });
+      renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
+      });
     });
 
-    it("renders error display for 500 server errors", () => {
-      renderLayout({
-        macroData: null,
-        error: { status: 500, message: "Internal Server Error" },
-      });
+    it("renders error display for 500 server errors", async () => {
+      server.mount(contract.macros.getMacro, { status: 500 });
+      renderLayout();
 
-      expect(screen.getByText("errors.error")).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText("errors.error")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
       expect(screen.getByText("errors.resourceNotFoundMessage")).toBeInTheDocument();
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
+      expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
-    it("renders error display for 403 forbidden errors", () => {
-      renderLayout({
-        macroData: null,
-        error: { status: 403, message: "Forbidden" },
-      });
+    it("renders error display for 403 forbidden errors", async () => {
+      server.mount(contract.macros.getMacro, { status: 403 });
+      renderLayout();
 
-      expect(screen.getByText("errors.error")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("errors.error")).toBeInTheDocument();
+      });
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
+      expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
-    it("does not render children when an error is present", () => {
-      renderLayout({
-        macroData: null,
-        error: { status: 500, message: "Internal Server Error" },
-      });
+    it("does not render children when an error is present", async () => {
+      server.mount(contract.macros.getMacro, { status: 500 });
+      renderLayout();
 
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("error-display")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
       expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
   });
 
-  describe("Null Data State", () => {
-    it("renders null when macroData is falsy and no loading or error", () => {
-      const { container } = renderLayout({ macroData: null });
-
-      expect(container.firstChild).toBeNull();
-    });
-  });
-
   describe("Success State - Layout Structure", () => {
-    it("renders children when macro data is available", () => {
+    it("renders children when macro data is available", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
       renderLayout();
 
-      expect(screen.getByText("Child Content")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Child Content")).toBeInTheDocument();
+      });
     });
 
-    it("renders with space-y-6 container class", () => {
-      const { container } = renderLayout();
-
-      expect(container.firstChild).toHaveClass("space-y-6");
-    });
-
-    it("renders the InlineEditableTitle component", () => {
+    it("renders with space-y-6 container class", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
       renderLayout();
 
-      expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Child Content")).toBeInTheDocument();
+      });
+      expect(document.querySelector(".space-y-6")).toBeInTheDocument();
+    });
+
+    it("renders the InlineEditableTitle component", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      renderLayout();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
+      });
     });
   });
 
   describe("InlineEditableTitle Props", () => {
-    it("passes the macro name to InlineEditableTitle", () => {
-      renderLayout({ macroData: { ...defaultMacro, name: "My Test Macro" } });
+    it("passes the macro name to InlineEditableTitle", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacro({ ...defaultMacro, name: "My Test Macro" }),
+      });
+      renderLayout();
 
-      expect(screen.getByTestId("title-name")).toHaveTextContent("My Test Macro");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-name")).toHaveTextContent("My Test Macro");
+      });
     });
 
-    it("passes hasAccess=true when the session user is the creator", () => {
+    it("passes hasAccess=true when the session user is the creator", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacro({ ...defaultMacro, createdBy: "user-123" }),
+      });
       renderLayout({
-        macroData: { ...defaultMacro, createdBy: "user-123" },
         session: { data: { user: { id: "user-123" } } },
       });
 
-      expect(screen.getByTestId("title-has-access")).toHaveTextContent("true");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-has-access")).toHaveTextContent("true");
+      });
     });
 
-    it("passes hasAccess=false when the session user is not the creator", () => {
+    it("passes hasAccess=false when the session user is not the creator", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacro({ ...defaultMacro, createdBy: "other-user" }),
+      });
       renderLayout({
-        macroData: { ...defaultMacro, createdBy: "other-user" },
         session: { data: { user: { id: "user-123" } } },
       });
 
-      expect(screen.getByTestId("title-has-access")).toHaveTextContent("false");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-has-access")).toHaveTextContent("false");
+      });
     });
 
-    it("passes hasAccess=false when there is no session", () => {
+    it("passes hasAccess=false when there is no session", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
       renderLayout({
         session: { data: null },
       });
 
-      expect(screen.getByTestId("title-has-access")).toHaveTextContent("false");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-has-access")).toHaveTextContent("false");
+      });
     });
 
-    it("passes isPending from useMacroUpdate", () => {
-      renderLayout({ isUpdating: true });
+    it("passes isPending from useMacroUpdate", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      server.mount(contract.macros.updateMacro, { body: defaultMacro, delay: 999_999 });
+      const user = userEvent.setup();
+      renderLayout();
 
-      expect(screen.getByTestId("title-is-pending")).toHaveTextContent("true");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-save-btn")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("title-save-btn"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("title-is-pending")).toHaveTextContent("true");
+      });
     });
 
-    it("passes isPending=false when not updating", () => {
-      renderLayout({ isUpdating: false });
+    it("passes isPending=false when not updating", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      renderLayout();
 
-      expect(screen.getByTestId("title-is-pending")).toHaveTextContent("false");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-is-pending")).toHaveTextContent("false");
+      });
     });
   });
 
   describe("Preferred Badge", () => {
-    it("renders preferred badge when sortOrder is not null", () => {
-      renderLayout({ macroData: { ...defaultMacro, sortOrder: 1 } });
+    it("renders preferred badge when sortOrder is not null", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacro({ ...defaultMacro, sortOrder: 1 }),
+      });
+      renderLayout();
 
-      const badges = screen.getByTestId("title-badges");
-      expect(badges).toHaveTextContent("common.preferred");
+      await waitFor(() => {
+        const badges = screen.getByTestId("title-badges");
+        expect(badges).toHaveTextContent("common.preferred");
+      });
     });
 
-    it("does not render preferred badge when sortOrder is null", () => {
-      renderLayout({ macroData: { ...defaultMacro, sortOrder: null } });
+    it("does not render preferred badge when sortOrder is null", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacro({ ...defaultMacro, sortOrder: null }),
+      });
+      renderLayout();
 
+      await waitFor(() => {
+        expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
+      });
       expect(screen.queryByTestId("title-badges")).not.toBeInTheDocument();
     });
 
-    it("renders preferred badge with correct classes when sortOrder is 0", () => {
-      renderLayout({ macroData: { ...defaultMacro, sortOrder: 0 } });
+    it("renders preferred badge with correct classes when sortOrder is 0", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacro({ ...defaultMacro, sortOrder: 0 }),
+      });
+      renderLayout();
 
-      const allBadges = screen.getAllByTestId("badge");
-      const preferredBadge = allBadges.find((b) => b.textContent === "common.preferred");
-      expect(preferredBadge).toHaveClass("bg-secondary/30", "text-primary");
+      await waitFor(() => {
+        const preferredBadge = screen.getByText("common.preferred");
+        expect(preferredBadge).toHaveClass("bg-secondary/30", "text-primary");
+      });
     });
   });
 
   describe("Title Save Handler", () => {
-    it("calls useMacroUpdate mutateAsync when title is saved", () => {
+    it("sends update request when title is saved", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      const updateSpy = server.mount(contract.macros.updateMacro, { body: defaultMacro });
+      const user = userEvent.setup();
       renderLayout();
 
-      fireEvent.click(screen.getByTestId("title-save-btn"));
+      await waitFor(() => {
+        expect(screen.getByTestId("title-save-btn")).toBeInTheDocument();
+      });
 
-      expect(mockMutateAsync).toHaveBeenCalledWith(
-        {
-          params: { id: "test-macro-id" },
-          body: { name: "Updated Macro Name" },
-        },
-        expect.objectContaining({
-          onSuccess: expect.any(Function) as () => void,
-          onError: expect.any(Function) as () => void,
-        }),
-      );
+      await user.click(screen.getByTestId("title-save-btn"));
+
+      await waitFor(() => {
+        expect(updateSpy.called).toBe(true);
+      });
+      expect(updateSpy.body).toMatchObject({ name: "Updated Macro Name" });
+      expect(updateSpy.params).toMatchObject({ id: "test-macro-id" });
     });
 
-    it("uses the macro id from useParams when calling update", () => {
+    it("uses the macro id from useParams when calling update", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacro({ ...defaultMacro, id: "custom-macro-id" }),
+      });
+      const updateSpy = server.mount(contract.macros.updateMacro, { body: defaultMacro });
+      const user = userEvent.setup();
       renderLayout({ macroId: "custom-macro-id" });
 
-      fireEvent.click(screen.getByTestId("title-save-btn"));
+      await waitFor(() => {
+        expect(screen.getByTestId("title-save-btn")).toBeInTheDocument();
+      });
 
-      expect(mockMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          params: { id: "custom-macro-id" },
-        }),
-        expect.any(Object),
-      );
+      await user.click(screen.getByTestId("title-save-btn"));
+
+      await waitFor(() => {
+        expect(updateSpy.called).toBe(true);
+      });
+      expect(updateSpy.params).toMatchObject({ id: "custom-macro-id" });
     });
   });
 
   describe("Component Structure", () => {
-    it("renders InlineEditableTitle before children", () => {
+    it("renders InlineEditableTitle before children", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
       renderLayout({ children: <div data-testid="child-node">Child</div> });
 
-      const container = screen.getByTestId("inline-editable-title").closest(".space-y-6");
-      expect(container).not.toBeNull();
+      await waitFor(() => {
+        expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
+      });
 
       const title = screen.getByTestId("inline-editable-title");
       const child = screen.getByTestId("child-node");

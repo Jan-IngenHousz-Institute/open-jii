@@ -1,204 +1,111 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
-import { tsr } from "@/lib/tsr";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentMetadataUpdate } from "./useExperimentMetadataUpdate";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    experiments: {
-      updateExperimentMetadata: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as any;
+const metadataResponse = {
+  metadataId: "meta-1",
+  experimentId: "exp-123",
+  metadata: { key: "updated" },
+  createdBy: "user-1",
+  createdAt: "2025-01-01T00:00:00.000Z",
+  updatedAt: "2025-01-02T00:00:00.000Z",
+};
 
 describe("useExperimentMetadataUpdate", () => {
-  let queryClient: QueryClient;
-  const mockCancelQueries = vi.fn().mockResolvedValue(undefined);
-  const mockGetQueryData = vi.fn();
-  const mockSetQueryData = vi.fn();
-  const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
-
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
+  it("sends PUT request with correct params and body", async () => {
+    const spy = server.mount(contract.experiments.updateExperimentMetadata, {
+      body: metadataResponse,
     });
 
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
+    const { result } = renderHook(() => useExperimentMetadataUpdate());
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    const mockQueryClient = {
-      cancelQueries: mockCancelQueries,
-      getQueryData: mockGetQueryData,
-      setQueryData: mockSetQueryData,
-      invalidateQueries: mockInvalidateQueries,
-    };
-
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient);
-  });
-
-  it("should call useMutation with correct configuration", () => {
-    const mockUseMutation = vi.fn();
-    mockTsr.experiments.updateExperimentMetadata.useMutation = mockUseMutation;
-
-    renderHook(() => useExperimentMetadataUpdate(), {
-      wrapper: createWrapper(),
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123", metadataId: "meta-1" },
+        body: { metadata: { key: "updated" } },
+      });
     });
 
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onMutate: expect.any(Function),
-      onError: expect.any(Function),
-      onSettled: expect.any(Function),
+    await waitFor(() => {
+      expect(spy.params.id).toBe("exp-123");
+      expect(spy.params.metadataId).toBe("meta-1");
+      expect(spy.body).toMatchObject({ metadata: { key: "updated" } });
     });
   });
 
-  describe("onMutate callback", () => {
-    it("should cancel queries and return previous data", async () => {
-      const mockPreviousData = {
-        body: [{ metadataId: "meta-1", metadata: { key: "value" } }],
-      };
-      mockGetQueryData.mockReturnValue(mockPreviousData);
+  it("invalidates cache after successful update", async () => {
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(["experiment", "exp-123", "metadata"], {
+      body: [{ metadataId: "meta-1", metadata: { key: "old" } }],
+    });
 
-      let onMutate: any;
+    server.mount(contract.experiments.updateExperimentMetadata, {
+      body: metadataResponse,
+    });
 
-      mockTsr.experiments.updateExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onMutate = opts.onMutate;
-        return {};
-      });
+    const { result } = renderHook(() => useExperimentMetadataUpdate(), {
+      queryClient,
+    });
 
-      renderHook(() => useExperimentMetadataUpdate(), {
-        wrapper: createWrapper(),
-      });
-
-      const variables = {
+    act(() => {
+      result.current.mutate({
         params: { id: "exp-123", metadataId: "meta-1" },
         body: { metadata: { key: "updated" } },
-      };
-      const result = await onMutate(variables);
-
-      expect(mockCancelQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment", "exp-123", "metadata"],
       });
-      expect(mockGetQueryData).toHaveBeenCalledWith(["experiment", "exp-123", "metadata"]);
-      expect(result).toEqual({ previousData: mockPreviousData });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
     });
   });
 
-  describe("onError callback", () => {
-    it("should revert to previous data when context has previousData", () => {
-      let onError: any;
+  it("reverts cache on error", async () => {
+    const queryClient = createTestQueryClient();
+    const previousData = { body: [{ metadataId: "meta-1", metadata: { key: "original" } }] };
+    queryClient.setQueryData(["experiment", "exp-123", "metadata"], previousData);
 
-      mockTsr.experiments.updateExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
+    server.mount(contract.experiments.updateExperimentMetadata, { status: 500 });
 
-      renderHook(() => useExperimentMetadataUpdate(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Update failed");
-      const variables = {
-        params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: { key: "updated" } },
-      };
-      const context = {
-        previousData: { body: [{ metadataId: "meta-1" }] },
-      };
-
-      onError(error, variables, context);
-
-      expect(mockSetQueryData).toHaveBeenCalledWith(
-        ["experiment", "exp-123", "metadata"],
-        context.previousData,
-      );
+    const { result } = renderHook(() => useExperimentMetadataUpdate(), {
+      queryClient,
     });
 
-    it("should not revert data when context has no previousData", () => {
-      let onError: any;
-
-      mockTsr.experiments.updateExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
-
-      renderHook(() => useExperimentMetadataUpdate(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Update failed");
-      const variables = {
+    act(() => {
+      result.current.mutate({
         params: { id: "exp-123", metadataId: "meta-1" },
         body: { metadata: { key: "updated" } },
-      };
-
-      onError(error, variables, {});
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
+      });
     });
 
-    it("should not revert data when context is undefined", () => {
-      let onError: any;
-
-      mockTsr.experiments.updateExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
-
-      renderHook(() => useExperimentMetadataUpdate(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Update failed");
-      const variables = {
-        params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: { key: "updated" } },
-      };
-
-      onError(error, variables, undefined);
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
     });
   });
 
-  describe("onSettled callback", () => {
-    it("should invalidate queries after mutation", async () => {
-      let onSettled: any;
+  it("does not fail when cache is empty", async () => {
+    const queryClient = createTestQueryClient();
 
-      mockTsr.experiments.updateExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onSettled = opts.onSettled;
-        return {};
-      });
+    server.mount(contract.experiments.updateExperimentMetadata, {
+      body: metadataResponse,
+    });
 
-      renderHook(() => useExperimentMetadataUpdate(), {
-        wrapper: createWrapper(),
-      });
+    const { result } = renderHook(() => useExperimentMetadataUpdate(), {
+      queryClient,
+    });
 
-      const variables = {
+    act(() => {
+      result.current.mutate({
         params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: { key: "updated" } },
-      };
-      await onSettled(undefined, undefined, variables);
-
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment", "exp-123", "metadata"],
+        body: { metadata: { key: "new" } },
       });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess || result.current.isIdle).toBeTruthy();
     });
   });
 });

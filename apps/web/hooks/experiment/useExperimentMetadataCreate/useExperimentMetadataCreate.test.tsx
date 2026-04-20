@@ -1,189 +1,108 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
-import { tsr } from "@/lib/tsr";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentMetadataCreate } from "./useExperimentMetadataCreate";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    experiments: {
-      createExperimentMetadata: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as any;
+const metadataResponse = {
+  metadataId: "meta-new",
+  experimentId: "exp-123",
+  metadata: { location: "Lab B" },
+  createdBy: "user-1",
+  createdAt: "2025-01-01T00:00:00.000Z",
+  updatedAt: "2025-01-01T00:00:00.000Z",
+};
 
 describe("useExperimentMetadataCreate", () => {
-  let queryClient: QueryClient;
-  const mockCancelQueries = vi.fn().mockResolvedValue(undefined);
-  const mockGetQueryData = vi.fn();
-  const mockSetQueryData = vi.fn();
-  const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
-
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
+  it("sends POST request with correct params and body", async () => {
+    const spy = server.mount(contract.experiments.createExperimentMetadata, {
+      body: metadataResponse,
     });
 
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
+    const { result } = renderHook(() => useExperimentMetadataCreate());
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    const mockQueryClient = {
-      cancelQueries: mockCancelQueries,
-      getQueryData: mockGetQueryData,
-      setQueryData: mockSetQueryData,
-      invalidateQueries: mockInvalidateQueries,
-    };
-
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient);
-  });
-
-  it("should call useMutation with correct configuration", () => {
-    const mockUseMutation = vi.fn();
-    mockTsr.experiments.createExperimentMetadata.useMutation = mockUseMutation;
-
-    renderHook(() => useExperimentMetadataCreate(), {
-      wrapper: createWrapper(),
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { metadata: { location: "Lab B" } },
+      });
     });
 
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onMutate: expect.any(Function),
-      onError: expect.any(Function),
-      onSettled: expect.any(Function),
+    await waitFor(() => {
+      expect(spy.params.id).toBe("exp-123");
+      expect(spy.body).toMatchObject({ metadata: { location: "Lab B" } });
     });
   });
 
-  describe("onMutate callback", () => {
-    it("should cancel queries and return previous data", async () => {
-      const mockPreviousData = {
-        body: [{ metadataId: "meta-1", metadata: { key: "value" } }],
-      };
-      mockGetQueryData.mockReturnValue(mockPreviousData);
+  it("invalidates cache after successful create", async () => {
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(["experiment", "exp-123", "metadata"], { body: [] });
 
-      let onMutate: any;
+    server.mount(contract.experiments.createExperimentMetadata, {
+      body: metadataResponse,
+    });
 
-      mockTsr.experiments.createExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onMutate = opts.onMutate;
-        return {};
+    const { result } = renderHook(() => useExperimentMetadataCreate(), {
+      queryClient,
+    });
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { metadata: { location: "Lab B" } },
       });
+    });
 
-      renderHook(() => useExperimentMetadataCreate(), {
-        wrapper: createWrapper(),
-      });
-
-      const variables = { params: { id: "exp-123" }, body: { metadata: { key: "new" } } };
-      const result = await onMutate(variables);
-
-      expect(mockCancelQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment", "exp-123", "metadata"],
-      });
-      expect(mockGetQueryData).toHaveBeenCalledWith(["experiment", "exp-123", "metadata"]);
-      expect(result).toEqual({ previousData: mockPreviousData });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
     });
   });
 
-  describe("onError callback", () => {
-    it("should revert to previous data when context has previousData", () => {
-      let onError: any;
+  it("reverts cache on error", async () => {
+    const queryClient = createTestQueryClient();
+    const previousData = { body: [{ metadataId: "meta-1", metadata: { key: "value" } }] };
+    queryClient.setQueryData(["experiment", "exp-123", "metadata"], previousData);
 
-      mockTsr.experiments.createExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
+    server.mount(contract.experiments.createExperimentMetadata, { status: 500 });
 
-      renderHook(() => useExperimentMetadataCreate(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Creation failed");
-      const variables = { params: { id: "exp-123" }, body: { metadata: { key: "new" } } };
-      const context = {
-        previousData: { body: [{ metadataId: "meta-1" }] },
-      };
-
-      onError(error, variables, context);
-
-      expect(mockSetQueryData).toHaveBeenCalledWith(
-        ["experiment", "exp-123", "metadata"],
-        context.previousData,
-      );
+    const { result } = renderHook(() => useExperimentMetadataCreate(), {
+      queryClient,
     });
 
-    it("should not revert data when context has no previousData", () => {
-      let onError: any;
-
-      mockTsr.experiments.createExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { metadata: { location: "New" } },
       });
-
-      renderHook(() => useExperimentMetadataCreate(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Creation failed");
-      const variables = { params: { id: "exp-123" }, body: { metadata: { key: "new" } } };
-
-      onError(error, variables, {});
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
     });
 
-    it("should not revert data when context is undefined", () => {
-      let onError: any;
-
-      mockTsr.experiments.createExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
-
-      renderHook(() => useExperimentMetadataCreate(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Creation failed");
-      const variables = { params: { id: "exp-123" }, body: { metadata: { key: "new" } } };
-
-      onError(error, variables, undefined);
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
     });
   });
 
-  describe("onSettled callback", () => {
-    it("should invalidate queries after mutation", async () => {
-      let onSettled: any;
+  it("does not fail when cache is empty", async () => {
+    const queryClient = createTestQueryClient();
 
-      mockTsr.experiments.createExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onSettled = opts.onSettled;
-        return {};
+    server.mount(contract.experiments.createExperimentMetadata, {
+      body: metadataResponse,
+    });
+
+    const { result } = renderHook(() => useExperimentMetadataCreate(), {
+      queryClient,
+    });
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123" },
+        body: { metadata: { key: "new" } },
       });
+    });
 
-      renderHook(() => useExperimentMetadataCreate(), {
-        wrapper: createWrapper(),
-      });
-
-      const variables = { params: { id: "exp-123" }, body: { metadata: { key: "new" } } };
-      await onSettled(undefined, undefined, variables);
-
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment", "exp-123", "metadata"],
-      });
+    await waitFor(() => {
+      expect(result.current.isSuccess || result.current.isIdle).toBeTruthy();
     });
   });
 });

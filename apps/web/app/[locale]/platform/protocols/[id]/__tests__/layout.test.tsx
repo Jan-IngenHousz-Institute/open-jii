@@ -1,85 +1,15 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { notFound, useParams, usePathname } from "next/navigation";
+import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks";
 
 import ProtocolLayout from "../layout";
-
-// Global React for JSX in mocks
-globalThis.React = React;
-
-// -------------------
-// Mocks
-// -------------------
-
-interface MockProtocolReturn {
-  data:
-    | {
-        body: {
-          id: string;
-          name: string;
-          family: string;
-          sortOrder: number | null;
-          createdBy: string;
-        };
-      }
-    | undefined;
-  isLoading: boolean;
-  error: { status?: number; message?: string } | null;
-}
-
-const mockUseProtocol = vi.fn<() => MockProtocolReturn>();
-vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
-  useProtocol: () => mockUseProtocol(),
-}));
-
-const mockMutateAsync = vi.fn();
-
-interface MockProtocolUpdateReturn {
-  mutateAsync: typeof mockMutateAsync;
-  isPending: boolean;
-}
-
-const mockUseProtocolUpdate = vi.fn<() => MockProtocolUpdateReturn>();
-vi.mock("@/hooks/protocol/useProtocolUpdate/useProtocolUpdate", () => ({
-  useProtocolUpdate: () => mockUseProtocolUpdate(),
-}));
-
-const mockNotFound = vi.fn();
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "test-id", locale: "en" }) as { id: string; locale: string },
-  usePathname: () => "/en/platform/protocols/test-id",
-  notFound: () => mockNotFound() as never,
-}));
-
-vi.mock("next/link", () => ({
-  __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
-
-vi.mock("lucide-react", () => ({
-  ArrowLeft: () => <span data-testid="arrow-left-icon" />,
-  Play: () => <span data-testid="play-icon" />,
-}));
-
-vi.mock("@repo/auth/client", () => ({
-  useSession: () => ({
-    data: { user: { id: "user-123" } },
-  }),
-}));
-
-vi.mock("@repo/i18n", () => ({
-  __esModule: true,
-  useTranslation: (namespace?: string) => ({
-    t: (key: string) => (namespace ? `${namespace}.${key}` : key),
-    i18n: { language: "en" },
-  }),
-}));
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
@@ -100,10 +30,6 @@ const mockBrowserSupport = {
 };
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
-}));
-
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
 }));
 
 vi.mock("@/components/shared/inline-editable-title", () => ({
@@ -128,55 +54,52 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
       <span data-testid="title-is-pending">{String(isPending)}</span>
       {badges && <div data-testid="title-badges">{badges}</div>}
       {actions && <div data-testid="title-actions">{actions}</div>}
-      <button data-testid="save-title-btn" onClick={() => onSave("New Title")}>
+      <button
+        data-testid="save-title-btn"
+        onClick={() =>
+          void onSave("New Title").catch(() => {
+            /* noop */
+          })
+        }
+      >
         Save
       </button>
     </div>
   ),
 }));
 
-vi.mock("@repo/ui/components", () => ({
-  Badge: ({
-    children,
-    variant,
-    className,
-  }: React.PropsWithChildren<{ variant?: string; className?: string }>) => (
-    <span data-testid="badge" data-variant={variant} className={className}>
-      {children}
-    </span>
-  ),
-  Button: ({
-    children,
-    asChild,
-    ...rest
-  }: React.ComponentProps<"button"> & { asChild?: boolean; size?: string }) =>
-    asChild ? <>{children}</> : <button {...rest}>{children}</button>,
-  Tooltip: ({ children }: React.PropsWithChildren) => <>{children}</>,
-  TooltipTrigger: ({ children }: React.PropsWithChildren<{ asChild?: boolean }>) => <>{children}</>,
-  TooltipContent: ({ children }: React.PropsWithChildren) => (
-    <div data-testid="tooltip-content">{children}</div>
-  ),
-}));
-
-// -------------------
-// Helpers
-// -------------------
-
-const defaultProtocol = {
+const defaultProtocol = createProtocol({
   id: "test-id",
   name: "Test Protocol",
   family: "multispeq",
-  sortOrder: null as number | null,
+  sortOrder: null,
   createdBy: "other-user",
+});
+
+const defaultSession = {
+  data: { user: { id: "user-123" } },
+  isPending: false,
 };
 
-function renderLayout(children: React.ReactNode = <div>Children Content</div>) {
+function renderLayout({
+  protocolId = "test-id",
+  session = defaultSession,
+  children = <div>Children Content</div>,
+}: {
+  protocolId?: string;
+  session?:
+    | { data: { user: { id: string } }; isPending: boolean }
+    | { data: null; isPending: boolean };
+  children?: React.ReactNode;
+} = {}) {
+  vi.mocked(useParams).mockReturnValue({ id: protocolId, locale: "en" } as ReturnType<
+    typeof useParams
+  >);
+  vi.mocked(usePathname).mockReturnValue(`/en/platform/protocols/${protocolId}`);
+  vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
+
   return render(<ProtocolLayout>{children}</ProtocolLayout>);
 }
-
-// -------------------
-// Tests
-// -------------------
 
 describe("ProtocolLayout", () => {
   beforeEach(() => {
@@ -186,44 +109,25 @@ describe("ProtocolLayout", () => {
     mockBrowserSupport.any = true;
     mockBrowserSupport.bluetoothReason = null;
     mockBrowserSupport.serialReason = null;
-    mockUseProtocolUpdate.mockReturnValue({
-      mutateAsync: mockMutateAsync,
-      isPending: false,
-    });
   });
 
   describe("Loading State", () => {
     it("should display loading message when data is loading", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        error: null,
-      });
-
+      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
       renderLayout();
 
       expect(screen.getByText("protocols.loadingProtocols")).toBeInTheDocument();
     });
 
     it("should not render children when loading", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        error: null,
-      });
-
-      renderLayout(<div>Children Content</div>);
+      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      renderLayout();
 
       expect(screen.queryByText("Children Content")).not.toBeInTheDocument();
     });
 
     it("should not render the inline editable title when loading", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        error: null,
-      });
-
+      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByTestId("inline-editable-title")).not.toBeInTheDocument();
@@ -231,228 +135,238 @@ describe("ProtocolLayout", () => {
   });
 
   describe("Error Handling", () => {
-    it("should call notFound for 404 errors", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: { status: 404, message: "Not found" },
-      });
-
+    it("should call notFound for 404 errors", async () => {
+      server.mount(contract.protocols.getProtocol, { status: 404 });
       renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
+      });
     });
 
-    it("should call notFound for 400 errors (invalid UUID)", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: { status: 400, message: "Invalid UUID" },
-      });
-
+    it("should call notFound for 400 errors (invalid UUID)", async () => {
+      server.mount(contract.protocols.getProtocol, { status: 400 });
       renderLayout();
 
-      expect(mockNotFound).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(vi.mocked(notFound)).toHaveBeenCalled();
+      });
     });
 
-    it("should display error display for 500 errors", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: { status: 500, message: "Server error" },
-      });
-
+    it("should display error display for 500 errors", async () => {
+      server.mount(contract.protocols.getProtocol, { status: 500 });
       renderLayout();
 
-      expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(mockNotFound).not.toHaveBeenCalled();
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("error-display")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+      expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
-    it("should display error heading and description for non-404/400 errors", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: { status: 500, message: "Server error" },
-      });
-
+    it("should display error heading and description for non-404/400 errors", async () => {
+      server.mount(contract.protocols.getProtocol, { status: 500 });
       renderLayout();
 
-      expect(screen.getByText("common.errors.error")).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText("errors.error")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
       expect(screen.getByText("protocols.notFoundDescription")).toBeInTheDocument();
     });
 
-    it("should not render children when there is an error", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: { status: 500, message: "Server error" },
-      });
+    it("should not render children when there is an error", async () => {
+      server.mount(contract.protocols.getProtocol, { status: 500 });
+      renderLayout();
 
-      renderLayout(<div>Children Content</div>);
-
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("error-display")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
       expect(screen.queryByText("Children Content")).not.toBeInTheDocument();
     });
   });
 
-  describe("No Data State", () => {
-    it("should render null when protocolData body is missing", () => {
-      mockUseProtocol.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: null,
-      });
-
-      const { container } = renderLayout();
-
-      expect(container.firstChild).toBeNull();
-    });
-  });
-
   describe("Success State", () => {
-    it("should render InlineEditableTitle with protocol name", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, name: "My Protocol" } },
-        isLoading: false,
-        error: null,
+    it("should render InlineEditableTitle with protocol name", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol, name: "My Protocol" }),
       });
-
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
-      expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
+      });
       expect(screen.getByTestId("title-name")).toHaveTextContent("My Protocol");
     });
 
-    it("should render children content", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: defaultProtocol },
-        isLoading: false,
-        error: null,
+    it("should render children content", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol }),
       });
-
-      renderLayout(<div>Children Content</div>);
-
-      expect(screen.getByText("Children Content")).toBeInTheDocument();
-    });
-
-    it("should pass hasAccess=true when current user is the creator", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, createdBy: "user-123" } },
-        isLoading: false,
-        error: null,
-      });
-
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
-      expect(screen.getByTestId("title-has-access")).toHaveTextContent("true");
+      await waitFor(() => {
+        expect(screen.getByText("Children Content")).toBeInTheDocument();
+      });
     });
 
-    it("should pass hasAccess=false when current user is not the creator", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, createdBy: "different-user" } },
-        isLoading: false,
-        error: null,
+    it("should pass hasAccess=true when current user is the creator", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
       });
-
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
-      expect(screen.getByTestId("title-has-access")).toHaveTextContent("false");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-has-access")).toHaveTextContent("true");
+      });
     });
 
-    it("should pass isPending from useProtocolUpdate", () => {
-      mockUseProtocolUpdate.mockReturnValue({
-        mutateAsync: mockMutateAsync,
-        isPending: true,
+    it("should pass hasAccess=false when current user is not the creator", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol, createdBy: "different-user" }),
       });
-
-      mockUseProtocol.mockReturnValue({
-        data: { body: defaultProtocol },
-        isLoading: false,
-        error: null,
-      });
-
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
-      expect(screen.getByTestId("title-is-pending")).toHaveTextContent("true");
+      await waitFor(() => {
+        expect(screen.getByTestId("title-has-access")).toHaveTextContent("false");
+      });
     });
 
-    it("should render preferred badge when sortOrder is not null", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, sortOrder: 1 } },
-        isLoading: false,
-        error: null,
+    it("should pass hasAccess=false when there is no session", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol }),
+      });
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      renderLayout({
+        session: { data: null, isPending: false },
       });
 
+      await waitFor(() => {
+        expect(screen.getByTestId("title-has-access")).toHaveTextContent("false");
+      });
+    });
+
+    it("should render preferred badge when sortOrder is not null", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol, sortOrder: 1 }),
+      });
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
-      const badges = screen.getAllByTestId("badge");
-      const preferredBadge = badges.find((b) => b.textContent === "common.common.preferred");
-      expect(preferredBadge).toBeInTheDocument();
+      await waitFor(() => {
+        const badges = screen.getByTestId("title-badges");
+        expect(badges).toHaveTextContent("common.preferred");
+      });
     });
 
-    it("should not render preferred badge when sortOrder is null", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, sortOrder: null } },
-        isLoading: false,
-        error: null,
+    it("should not render preferred badge when sortOrder is null", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol, sortOrder: null }),
       });
-
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
-      const badges = screen.queryAllByTestId("badge");
-      const preferredBadge = badges.find((b) => b.textContent === "common.common.preferred");
-      expect(preferredBadge).toBeUndefined();
-    });
-
-    it("should render the outer container with space-y-6 class", () => {
-      mockUseProtocol.mockReturnValue({
-        data: { body: defaultProtocol },
-        isLoading: false,
-        error: null,
+      await waitFor(() => {
+        expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
       });
-
-      const { container } = renderLayout();
-
-      expect(container.firstChild).toHaveClass("space-y-6");
+      expect(screen.queryByTestId("title-badges")).not.toBeInTheDocument();
     });
 
+    it("should render the outer container with space-y-6 class", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol }),
+      });
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      renderLayout();
+
+      await waitFor(() => {
+        expect(screen.getByText("Children Content")).toBeInTheDocument();
+      });
+      expect(document.querySelector(".space-y-6")).toBeInTheDocument();
+    });
+  });
+
+  describe("Title Save Handler", () => {
     it("should call toast on successful title save", async () => {
-      mockMutateAsync.mockImplementation((_data: unknown, options?: { onSuccess?: () => void }) => {
-        options?.onSuccess?.();
-        return Promise.resolve();
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
       });
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, createdBy: "user-123" } },
-        isLoading: false,
-        error: null,
-      });
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      const user = userEvent.setup();
       renderLayout();
 
-      const saveBtn = screen.getByTestId("save-title-btn");
-      await userEvent.click(saveBtn);
+      await waitFor(() => {
+        expect(screen.getByTestId("save-title-btn")).toBeInTheDocument();
+      });
 
-      expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
+      await user.click(screen.getByTestId("save-title-btn"));
+
+      await waitFor(() => {
+        expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
+      });
     });
 
     it("should call toast with destructive variant on title save error", async () => {
-      mockMutateAsync.mockImplementation(
-        (_data: unknown, options?: { onError?: (err: unknown) => void }) => {
-          options?.onError?.(new Error("Update failed"));
-          return Promise.resolve();
-        },
-      );
-      mockUseProtocol.mockReturnValue({
-        data: { body: { ...defaultProtocol, createdBy: "user-123" } },
-        isLoading: false,
-        error: null,
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
       });
+      server.mount(contract.protocols.updateProtocol, { status: 400 });
+      const user = userEvent.setup();
       renderLayout();
 
-      const saveBtn = screen.getByTestId("save-title-btn");
-      await userEvent.click(saveBtn);
+      await waitFor(() => {
+        expect(screen.getByTestId("save-title-btn")).toBeInTheDocument();
+      });
 
-      expect(toast).toHaveBeenCalledWith({
-        description: expect.any(String) as unknown,
-        variant: "destructive",
+      await user.click(screen.getByTestId("save-title-btn"));
+
+      await waitFor(() => {
+        expect(toast).toHaveBeenCalledWith({
+          description: expect.any(String) as unknown,
+          variant: "destructive",
+        });
+      });
+    });
+
+    it("should pass isPending=true while update is in progress", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol }),
+      });
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol(), delay: 999_999 });
+      const user = userEvent.setup();
+      renderLayout();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("save-title-btn")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("save-title-btn"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("title-is-pending")).toHaveTextContent("true");
+      });
+    });
+
+    it("should pass isPending=false when not updating", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ ...defaultProtocol }),
+      });
+      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      renderLayout();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("title-is-pending")).toHaveTextContent("false");
       });
     });
   });

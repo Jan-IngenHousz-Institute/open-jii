@@ -1,12 +1,8 @@
 // JsonCodeViewer component test file
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent, act } from "@/test/test-utils";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { JsonCodeViewer } from "./json-code-viewer";
-
-globalThis.React = React;
 
 // Mock Monaco Editor (default export)
 vi.mock("@monaco-editor/react", () => ({
@@ -30,30 +26,6 @@ vi.mock("@monaco-editor/react", () => ({
   ),
 }));
 
-// Mock Lucide icons
-vi.mock("lucide-react", () => ({
-  Copy: () => <span data-testid="copy-icon">Copy</span>,
-  Check: () => <span data-testid="check-icon">Check</span>,
-  Pencil: () => <span data-testid="pencil-icon">Pencil</span>,
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    "data-testid": dataTestId,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    "data-testid"?: string;
-  }) => (
-    <button onClick={onClick} className={className} data-testid={dataTestId ?? "button"} {...props}>
-      {children}
-    </button>
-  ),
-}));
-
 // Mock clipboard API
 const mockClipboard = {
   writeText: vi.fn().mockResolvedValue(undefined),
@@ -62,6 +34,7 @@ const mockClipboard = {
 Object.defineProperty(global.navigator, "clipboard", {
   value: mockClipboard,
   writable: true,
+  configurable: true,
 });
 
 describe("JsonCodeViewer", () => {
@@ -73,9 +46,18 @@ describe("JsonCodeViewer", () => {
     value: sampleObject,
   };
 
+  let user: ReturnType<typeof userEvent.setup>;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    user = userEvent.setup({ pointerEventsCheck: 0 });
+    // Re-apply clipboard mock after userEvent.setup() replaces it with its own stub
+    Object.defineProperty(navigator, "clipboard", {
+      value: mockClipboard,
+      writable: true,
+      configurable: true,
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
@@ -97,7 +79,7 @@ describe("JsonCodeViewer", () => {
   it("should render copy button with copy icon", () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    expect(screen.getByTestId("copy-icon")).toBeInTheDocument();
+    expect(document.querySelector(".lucide-copy")).toBeInTheDocument();
   });
 
   it("should pass json language to editor", () => {
@@ -145,6 +127,7 @@ describe("JsonCodeViewer", () => {
       if (!element) return false;
       const text = element.textContent;
       return (
+        typeof element.className === "string" &&
         element.className.includes("text-xs text-slate-500") &&
         text.includes(`${lineCount}`) &&
         text.includes("lines")
@@ -171,22 +154,22 @@ describe("JsonCodeViewer", () => {
     expect(screen.queryByText("|")).not.toBeInTheDocument();
   });
 
-  it("should copy JSON to clipboard when clicking copy button", () => {
+  it("should copy JSON to clipboard when clicking copy button", async () => {
     render(<JsonCodeViewer value={sampleObject} />);
 
-    const copyButton = screen.getByTestId("button");
-    fireEvent.click(copyButton);
+    const copyButton = screen.getByRole("button");
+    await user.click(copyButton);
 
     const expectedJson = JSON.stringify(sampleObject, null, 2);
     expect(mockClipboard.writeText).toHaveBeenCalledWith(expectedJson);
     expect(mockClipboard.writeText).toHaveBeenCalledTimes(1);
   });
 
-  it("should copy string value as-is to clipboard", () => {
+  it("should copy string value as-is to clipboard", async () => {
     render(<JsonCodeViewer value={sampleString} />);
 
-    const copyButton = screen.getByTestId("button");
-    fireEvent.click(copyButton);
+    const copyButton = screen.getByRole("button");
+    await user.click(copyButton);
 
     expect(mockClipboard.writeText).toHaveBeenCalledWith(sampleString);
   });
@@ -194,17 +177,17 @@ describe("JsonCodeViewer", () => {
   it("should show check icon after successful copy", async () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    const copyButton = screen.getByTestId("button");
+    const copyButton = screen.getByRole("button");
 
-    await vi.waitFor(() => {
-      fireEvent.click(copyButton);
-    });
+    await user.click(copyButton);
 
     expect(mockClipboard.writeText).toHaveBeenCalled();
 
     // After timeout, copy icon should return
-    vi.advanceTimersByTime(2000);
-    expect(screen.getByTestId("copy-icon")).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(document.querySelector(".lucide-copy")).toBeInTheDocument();
   });
 
   it("should use default height of 400px", () => {
@@ -225,22 +208,22 @@ describe("JsonCodeViewer", () => {
     const onEditStart = vi.fn();
     render(<JsonCodeViewer {...defaultProps} onEditStart={onEditStart} />);
 
-    expect(screen.getByTestId("pencil-icon")).toBeInTheDocument();
+    expect(document.querySelector(".lucide-pencil")).toBeInTheDocument();
   });
 
   it("should not render pencil overlay when onEditStart is not provided", () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    expect(screen.queryByTestId("pencil-icon")).not.toBeInTheDocument();
+    expect(document.querySelector(".lucide-pencil")).not.toBeInTheDocument();
   });
 
-  it("should call onEditStart when the container is clicked", () => {
+  it("should call onEditStart when the container is clicked", async () => {
     const onEditStart = vi.fn();
     render(<JsonCodeViewer {...defaultProps} onEditStart={onEditStart} />);
 
     // Click the outer container
     const container = screen.getByTestId("json-viewer-wrapper");
-    fireEvent.click(container);
+    await user.click(container);
 
     expect(onEditStart).toHaveBeenCalled();
   });
@@ -269,12 +252,12 @@ describe("JsonCodeViewer", () => {
     expect(container.className).toContain("my-custom-class");
   });
 
-  it("should stop propagation on copy button click so onEditStart is not triggered", () => {
+  it("should stop propagation on copy button click so onEditStart is not triggered", async () => {
     const onEditStart = vi.fn();
     render(<JsonCodeViewer {...defaultProps} onEditStart={onEditStart} />);
 
-    const copyButton = screen.getByTestId("button");
-    fireEvent.click(copyButton);
+    const copyButton = screen.getByRole("button");
+    await user.click(copyButton);
 
     // The copy button's onClick calls e.stopPropagation(), so onEditStart should NOT
     // be called from the copy button click. However, the mock Button doesn't inherently
@@ -288,11 +271,9 @@ describe("JsonCodeViewer", () => {
 
     render(<JsonCodeViewer {...defaultProps} />);
 
-    const copyButton = screen.getByTestId("button");
+    const copyButton = screen.getByRole("button");
 
-    await vi.waitFor(() => {
-      fireEvent.click(copyButton);
-    });
+    await user.click(copyButton);
 
     // Should log the error and not crash
     await vi.waitFor(() => {
@@ -312,6 +293,7 @@ describe("JsonCodeViewer", () => {
     const statsEl = screen.getByText((_content, element) => {
       if (!element) return false;
       return (
+        typeof element.className === "string" &&
         element.className.includes("text-xs text-slate-500") &&
         element.textContent.includes(`${expectedSize} B`)
       );

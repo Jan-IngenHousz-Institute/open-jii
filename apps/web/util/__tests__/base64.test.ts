@@ -60,7 +60,6 @@ return output`;
     });
 
     it("should handle encoding errors gracefully", () => {
-      // Mock btoa to throw an error
       const originalBtoa = global.btoa;
       global.btoa = vi.fn(() => {
         throw new Error("Encoding failed");
@@ -70,7 +69,6 @@ return output`;
 
       expect(result).toBe("");
 
-      // Restore original functions
       global.btoa = originalBtoa;
     });
   });
