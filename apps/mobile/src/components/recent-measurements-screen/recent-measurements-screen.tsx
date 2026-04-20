@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { ChevronsLeft, UploadCloud, Trash2, Download } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { View, Text, FlatList } from "react-native";
 import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
@@ -17,7 +17,6 @@ import type {
 import { useMeasurements } from "~/hooks/use-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
-import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 const TABS = [
@@ -38,10 +37,97 @@ export function RecentMeasurementsScreen() {
     uploadAll,
     isUploading,
     uploadOne,
+    uploadingIds,
     removeMeasurement,
     clearSyncedMeasurements,
     updateMeasurementComment,
   } = useMeasurements();
+
+  // Ref holding all unstable values so useCallback handlers below need no deps.
+  // Safe to update synchronously in render body since these are only read in event handlers.
+  const cbRef = useRef({
+    measurements,
+    uploadOne,
+    invalidate,
+    removeMeasurement,
+    setSelectedMeasurement,
+    setSelectedForComment,
+  });
+  cbRef.current = {
+    measurements,
+    uploadOne,
+    invalidate,
+    removeMeasurement,
+    setSelectedMeasurement,
+    setSelectedForComment,
+  };
+
+  const handleItemPress = useCallback((id: string) => {
+    const m = cbRef.current.measurements.find((m) => m.key === id);
+    if (m) cbRef.current.setSelectedMeasurement(m);
+  }, []);
+
+  const handleComment = useCallback((id: string) => {
+    const m = cbRef.current.measurements.find((m) => m.key === id);
+    if (m) cbRef.current.setSelectedForComment(m);
+  }, []);
+
+  const handleSync = useCallback((id: string) => {
+    const m = cbRef.current.measurements.find((m) => m.key === id);
+    if (!m) return;
+    showAlert("Upload Measurement", `Are you sure you want to upload "${m.experimentName}"?`, [
+      {
+        text: "Upload",
+        variant: "primary",
+        onPress: () => {
+          void (async () => {
+            await cbRef.current.uploadOne(id);
+            cbRef.current.invalidate();
+          })();
+        },
+      },
+      { text: "Cancel", variant: "ghost" },
+    ]);
+  }, []);
+
+  const handleDelete = useCallback((id: string) => {
+    const m = cbRef.current.measurements.find((m) => m.key === id);
+    if (!m) return;
+    const isSynced = m.status === "synced";
+    const message = isSynced
+      ? `Are you sure you want to delete "${m.experimentName}" from local storage?`
+      : `Are you sure you want to remove "${m.experimentName}"? This will delete it from local storage.`;
+    showAlert(isSynced ? "Delete Measurement" : "Remove Measurement", message, [
+      {
+        text: isSynced ? "Delete" : "Remove",
+        variant: "danger",
+        onPress: () => {
+          void (() => {
+            cbRef.current.removeMeasurement(id);
+            cbRef.current.invalidate();
+          })();
+        },
+      },
+      { text: "Cancel", variant: "ghost" },
+    ]);
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item: measurement }: { item: MeasurementItemType }) => (
+      <SwipeableMeasurementRow
+        id={measurement.key}
+        timestamp={measurement.timestamp}
+        experimentName={measurement.experimentName}
+        status={uploadingIds.has(measurement.key) ? "syncing" : measurement.status}
+        questions={measurement.questions}
+        onPress={handleItemPress}
+        onComment={measurement.status === "unsynced" ? handleComment : undefined}
+        onDelete={handleDelete}
+        onSync={measurement.status === "unsynced" ? handleSync : undefined}
+      />
+    ),
+    [uploadingIds, handleItemPress, handleComment, handleDelete, handleSync],
+  );
 
   const handleSyncAll = () => {
     showAlert(
@@ -63,55 +149,9 @@ export function RecentMeasurementsScreen() {
             })();
           },
         },
-        {
-          text: "Cancel",
-          variant: "ghost",
-        },
+        { text: "Cancel", variant: "ghost" },
       ],
     );
-  };
-
-  const handleSync = (id: string, experimentName: string) => {
-    showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
-      {
-        text: "Upload",
-        variant: "primary",
-        onPress: () => {
-          void (async () => {
-            await uploadOne(id);
-            invalidate();
-          })();
-        },
-      },
-      {
-        text: "Cancel",
-        variant: "ghost",
-      },
-    ]);
-  };
-
-  const handleDelete = (id: string, status: "synced" | "unsynced", experimentName: string) => {
-    const message =
-      status === "synced"
-        ? `Are you sure you want to delete "${experimentName}" from local storage?`
-        : `Are you sure you want to remove "${experimentName}"? This will delete it from local storage.`;
-
-    showAlert(status === "synced" ? "Delete Measurement" : "Remove Measurement", message, [
-      {
-        text: status === "synced" ? "Delete" : "Remove",
-        variant: "danger",
-        onPress: () => {
-          void (() => {
-            removeMeasurement(id);
-            invalidate();
-          })();
-        },
-      },
-      {
-        text: "Cancel",
-        variant: "ghost",
-      },
-    ]);
   };
 
   const handleDeleteAllSynced = () => {
@@ -124,18 +164,11 @@ export function RecentMeasurementsScreen() {
           variant: "danger",
           onPress: () => {
             clearSyncedMeasurements()
-              .then(() => {
-                invalidate();
-              })
-              .catch(() => {
-                toast.error("Failed to delete synced measurements");
-              });
+              .then(() => invalidate())
+              .catch(() => toast.error("Failed to delete synced measurements"));
           },
         },
-        {
-          text: "Cancel",
-          variant: "ghost",
-        },
+        { text: "Cancel", variant: "ghost" },
       ],
     );
   };
@@ -147,10 +180,6 @@ export function RecentMeasurementsScreen() {
     void exportMeasurementsToFile().catch(() => {
       toast.error("Export failed. Please try again.");
     });
-  };
-
-  const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
-    setSelectedMeasurement(measurement);
   };
 
   return (
@@ -166,14 +195,26 @@ export function RecentMeasurementsScreen() {
             icon={<Trash2 size={24} color={colors.primary.dark} strokeWidth={1.4} />}
             style={{ borderColor: "transparent", padding: 9 }}
           />
-          <Button
-            variant="tertiary"
-            onPress={handleSyncAll}
-            isLoading={isUploading}
-            isDisabled={unsyncedCount === 0}
-            icon={<UploadCloud size={24} color={colors.primary.dark} strokeWidth={1.4} />}
-            style={{ borderColor: "transparent", padding: 9 }}
-          />
+          <View>
+            <Button
+              variant="tertiary"
+              onPress={handleSyncAll}
+              isLoading={isUploading}
+              isDisabled={unsyncedCount === 0}
+              icon={<UploadCloud size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+              style={{ borderColor: "transparent", padding: 9 }}
+            />
+            {uploadingIds.size > 0 && (
+              <View
+                className="absolute -right-1 -top-1 min-w-[18px] items-center justify-center rounded-full px-1"
+                style={{ backgroundColor: colors.semantic.info, height: 18 }}
+              >
+                <Text className="text-center text-[10px] font-bold text-white">
+                  {uploadingIds.size}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
       {measurements && measurements.length > 0 && (
@@ -199,7 +240,11 @@ export function RecentMeasurementsScreen() {
         <FlatList
           data={measurements}
           keyExtractor={(item) => item.key}
+          renderItem={renderItem}
           contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
+          windowSize={10}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
           ListFooterComponent={
             <View className="px-4 pt-4">
               <Button
@@ -210,29 +255,6 @@ export function RecentMeasurementsScreen() {
               />
             </View>
           }
-          renderItem={({ item: measurement }) => (
-            <SwipeableMeasurementRow
-              id={measurement.key}
-              timestamp={measurement.timestamp}
-              experimentName={measurement.experimentName}
-              status={measurement.status}
-              questions={parseQuestions(measurement.data.measurementResult)}
-              onPress={() => handleItemPress(measurement)}
-              onComment={
-                measurement.status === "unsynced"
-                  ? () => setSelectedForComment(measurement)
-                  : undefined
-              }
-              onDelete={() =>
-                handleDelete(measurement.key, measurement.status, measurement.experimentName)
-              }
-              onSync={
-                measurement.status === "unsynced"
-                  ? () => handleSync(measurement.key, measurement.experimentName)
-                  : undefined
-              }
-            />
-          )}
         />
       )}
 
@@ -251,7 +273,7 @@ export function RecentMeasurementsScreen() {
             selectedForComment.data.measurementResult as Record<string, unknown>,
           )}
           experimentName={selectedForComment.experimentName}
-          questions={parseQuestions(selectedForComment.data.measurementResult)}
+          questions={selectedForComment.questions}
           timestamp={selectedForComment.timestamp}
           onSave={async (text) => {
             await updateMeasurementComment(selectedForComment.key, selectedForComment.data, text);
