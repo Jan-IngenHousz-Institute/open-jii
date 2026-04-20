@@ -1,36 +1,18 @@
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import TransferRequestPage from "./page";
-
-globalThis.React = React;
-
-// -------------------
-// Mocks
-// -------------------
 
 vi.mock("~/components/transfer-request-form", () => ({
   TransferRequestForm: () => <div data-testid="transfer-request-form">Form Component</div>,
 }));
 
-vi.mock("@repo/i18n/server", () => ({
-  default: () => Promise.resolve({ t: (key: string) => key }),
-}));
-
-// -------------------
-// Helpers
-// -------------------
 async function renderTransferRequestPage({ locale = "en" }: { locale?: string } = {}) {
   const params = Promise.resolve({ locale });
   const component = await TransferRequestPage({ params });
   return render(component);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<TransferRequestPage />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,19 +57,17 @@ describe("<TransferRequestPage />", () => {
 
   describe("Layout Structure", () => {
     it("renders important notes in a highlighted box", async () => {
-      const { container } = await renderTransferRequestPage();
+      await renderTransferRequestPage();
 
-      const noteBox = container.querySelector('[class*="bg-surface-light"]');
+      const noteBox = document.querySelector('[class*="bg-surface-light"]');
       expect(noteBox).toBeInTheDocument();
     });
 
     it("renders notes as an unordered list", async () => {
-      const { container } = await renderTransferRequestPage();
+      await renderTransferRequestPage();
 
-      const list = container.querySelector("ul");
-      expect(list).toBeInTheDocument();
-      expect(list).toHaveClass("list-outside");
-      expect(list).toHaveClass("list-disc");
+      const list = screen.getByRole("list");
+      expect(list).toHaveClass("list-outside", "list-disc");
     });
   });
 

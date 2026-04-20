@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
@@ -37,6 +37,7 @@ export function IotProtocolRunner({
   const { t } = useTranslation("iot");
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const isRunningRef = useRef(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
   const browserSupport = useIotBrowserSupport(sensorFamily);
 
@@ -64,8 +65,9 @@ export function IotProtocolRunner({
   }, [sensorFamily]);
 
   const handleRunProtocol = async () => {
-    if (!isConnected) return;
+    if (!isConnected || isRunningRef.current) return;
 
+    isRunningRef.current = true;
     setIsRunning(true);
     setTestResult(null);
     const startTime = Date.now();
@@ -89,6 +91,7 @@ export function IotProtocolRunner({
         timestamp: new Date(),
       });
     } finally {
+      isRunningRef.current = false;
       setIsRunning(false);
     }
   };

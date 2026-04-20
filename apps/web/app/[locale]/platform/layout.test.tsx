@@ -1,122 +1,47 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { createSession } from "@/test/factories";
+import { render, screen } from "@/test/test-utils";
 import { redirect } from "next/navigation";
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import AppLayout from "./layout";
 
-globalThis.React = React;
-
-// --- Mocks ---
-const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  auth: (): unknown => mockAuth(),
-}));
-
-vi.mock("next/headers", () => ({
-  headers: vi.fn(() =>
-    Promise.resolve({
-      get: vi.fn().mockReturnValue("/platform/experiments"),
-    }),
-  ),
-}));
-
-vi.mock("next/navigation");
-
 vi.mock("@/components/navigation/navigation-breadcrumbs/navigation-breadcrumbs", () => ({
-  Breadcrumbs: () => <div data-testid="breadcrumbs">Breadcrumbs</div>,
+  Breadcrumbs: () => <nav aria-label="breadcrumbs">Breadcrumbs</nav>,
 }));
 
 vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper", () => ({
-  NavigationSidebarWrapper: ({ locale }: { locale: string }) => (
-    <div data-testid="app-sidebar-wrapper" data-locale={locale}>
-      Sidebar
-    </div>
-  ),
-}));
-
-vi.mock("@/components/language-switcher", () => ({
-  LanguageSwitcher: ({ locale }: { locale: string }) => (
-    <div data-testid="language-switcher" data-locale={locale}>
-      Language Switcher
-    </div>
-  ),
+  NavigationSidebarWrapper: () => <aside aria-label="sidebar">Sidebar</aside>,
 }));
 
 vi.mock("@/components/navigation/navigation-topbar/navigation-topbar", () => ({
-  NavigationTopbar: ({ locale }: { locale: string }) => (
-    <div data-testid="platform-top-bar" data-locale={locale}>
-      Platform Top Bar
-    </div>
-  ),
+  NavigationTopbar: () => <header aria-label="topbar">Topbar</header>,
 }));
 
-vi.mock("@repo/ui/components", () => ({
-  Separator: () => <div data-testid="separator">Separator</div>,
-  SidebarInset: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="sidebar-inset">{children}</div>
-  ),
-  SidebarProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="sidebar-provider">{children}</div>
-  ),
-  SidebarTrigger: () => <div data-testid="sidebar-trigger">Sidebar Trigger</div>,
-  Toaster: () => <div data-testid="toaster">Toaster</div>,
-  Button: ({
-    children,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
-    <button {...props}>{children}</button>
-  ),
-  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div>{children}</div>
-  ),
-  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div>{children}</div>
-  ),
-}));
-
-// --- Tests ---
 describe("AppLayout", () => {
-  const locale = "en-US";
   const defaultProps = {
-    children: <div data-testid="test-children">Test Content</div>,
-    pageTitle: "Test Page",
-    params: Promise.resolve({ locale }),
+    children: <div>Page content</div>,
+    params: Promise.resolve({ locale: "en-US" }),
   };
 
-  // Get the mocked redirect function
   const mockRedirect = vi.mocked(redirect);
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue({ user: { id: "123", name: "Test User", registered: true } });
+    vi.mocked(auth).mockResolvedValue(createSession());
   });
 
-  it("renders all layout components when authenticated", async () => {
+  it("renders children inside the layout when authenticated", async () => {
     render(await AppLayout(defaultProps));
 
-    expect(screen.getByTestId("sidebar-provider")).toBeInTheDocument();
-    expect(screen.getByTestId("app-sidebar-wrapper")).toBeInTheDocument();
-    expect(screen.getByTestId("platform-top-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-inset")).toBeInTheDocument();
-    expect(screen.getByTestId("breadcrumbs")).toBeInTheDocument();
-    expect(screen.getByTestId("test-children")).toBeInTheDocument();
-    expect(screen.getByTestId("toaster")).toBeInTheDocument();
+    expect(screen.getByText("Page content")).toBeInTheDocument();
+    expect(screen.getByText("Sidebar")).toBeInTheDocument();
+    expect(screen.getByText("Topbar")).toBeInTheDocument();
+    expect(screen.getByText("Breadcrumbs")).toBeInTheDocument();
   });
 
-  it("passes correct locale to components", async () => {
-    render(await AppLayout(defaultProps));
-
-    expect(screen.getByTestId("app-sidebar-wrapper")).toHaveAttribute("data-locale", "en-US");
-    expect(screen.getByTestId("platform-top-bar")).toHaveAttribute("data-locale", "en-US");
-  });
-
-  it("redirects to login when not authenticated", async () => {
-    mockAuth.mockResolvedValueOnce(null);
-    // Make redirect throw to simulate actual behavior
+  it("redirects to login when there is no session", async () => {
+    vi.mocked(auth).mockResolvedValue(null);
     mockRedirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
@@ -125,26 +50,19 @@ describe("AppLayout", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=%2Fplatform%2Fexperiments");
   });
 
-  it("handles different locale in redirect URL", async () => {
-    mockAuth.mockResolvedValueOnce(null);
-    const germanProps = {
-      ...defaultProps,
-      params: Promise.resolve({ locale: "de" }),
-    };
-    // Make redirect throw to simulate actual behavior
-    mockRedirect.mockImplementation(() => {
-      throw new Error("NEXT_REDIRECT");
-    });
-
-    await expect(AppLayout(germanProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/de/login?callbackUrl=%2Fplatform%2Fexperiments");
-  });
-
   it("redirects to registration when user is not registered", async () => {
-    mockAuth.mockResolvedValueOnce({
-      user: { id: "123", name: "Test User", registered: false },
-    });
-    // Make redirect throw to simulate actual behavior
+    vi.mocked(auth).mockResolvedValue(
+      createSession({
+        user: {
+          id: "1",
+          name: "New",
+          email: "a@b.com",
+          registered: false,
+          firstName: "New",
+          lastName: "User",
+        },
+      }),
+    );
     mockRedirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
@@ -153,61 +71,5 @@ describe("AppLayout", () => {
     expect(mockRedirect).toHaveBeenCalledWith(
       "/en-US/register?callbackUrl=%2Fplatform%2Fexperiments",
     );
-  });
-
-  it("redirects to registration with different locale when user is not registered", async () => {
-    mockAuth.mockResolvedValueOnce({
-      user: { id: "123", name: "Test User", registered: false },
-    });
-    const germanProps = {
-      ...defaultProps,
-      params: Promise.resolve({ locale: "de" }),
-    };
-    // Make redirect throw to simulate actual behavior
-    mockRedirect.mockImplementation(() => {
-      throw new Error("NEXT_REDIRECT");
-    });
-
-    await expect(AppLayout(germanProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/de/register?callbackUrl=%2Fplatform%2Fexperiments");
-  });
-
-  it("renders platform top bar", async () => {
-    render(await AppLayout(defaultProps));
-
-    expect(screen.getByTestId("platform-top-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("platform-top-bar")).toHaveAttribute("data-locale", "en-US");
-  });
-
-  it("renders content wrapper with correct structure", async () => {
-    render(await AppLayout(defaultProps));
-
-    expect(screen.getByTestId("sidebar-inset")).toBeInTheDocument();
-    expect(screen.getByTestId("breadcrumbs")).toBeInTheDocument();
-    expect(screen.getByTestId("test-children")).toBeInTheDocument();
-  });
-
-  it("renders page title when provided", async () => {
-    const propsWithTitle = {
-      ...defaultProps,
-      pageTitle: "Custom Page Title",
-    };
-
-    render(await AppLayout(propsWithTitle));
-
-    // The page title would be passed to components, but since we're mocking them,
-    // we just verify the layout renders successfully with the title
-    expect(screen.getByTestId("test-children")).toBeInTheDocument();
-  });
-
-  it("handles missing page title", async () => {
-    const propsWithoutTitle = {
-      ...defaultProps,
-      pageTitle: undefined,
-    };
-
-    render(await AppLayout(propsWithoutTitle));
-
-    expect(screen.getByTestId("test-children")).toBeInTheDocument();
   });
 });

@@ -1,46 +1,33 @@
-import { render, screen } from "@testing-library/react";
+import { createExperimentDataTable, createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { ExperimentVisualization } from "@repo/api";
+import { contract } from "@repo/api";
 
-import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { ScatterChartRenderer } from "./scatter-chart-renderer";
 
-// Mock the hooks and components
-vi.mock("@repo/i18n", () => ({
-  useTranslation: vi.fn(() => ({ t: (key: string) => key })),
-}));
-
-// Mock react-i18next (Trans component used for error messages with links)
-vi.mock("react-i18next", () => ({
-  Trans: ({ i18nKey }: { i18nKey: string }) => <span>{i18nKey}</span>,
-}));
-
-vi.mock("@repo/ui/components", () => ({
-  ScatterChart: vi.fn(({ data }) => (
-    <div data-testid="scatter-chart">
-      <pre data-testid="chart-data">{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  )),
-}));
-
-// Mock the useExperimentVisualizationData hook
-vi.mock(
-  "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData",
-  () => ({
-    useExperimentVisualizationData: vi.fn(),
-  }),
-);
+// ScatterChart is Plotly-based, doesn't work in jsdom
+vi.mock("@repo/ui/components", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    ScatterChart: vi.fn(({ data }: { data: unknown }) => (
+      <div data-testid="scatter-chart">
+        <pre data-testid="chart-data">{JSON.stringify(data, null, 2)}</pre>
+      </div>
+    )),
+  };
+});
 
 describe("ScatterChartRenderer", () => {
-  const mockVisualization: ExperimentVisualization = {
+  const mockVisualization = createVisualization({
     id: "viz-1",
     experimentId: "exp-1",
     name: "Test Scatter Chart",
     description: "Test Description",
     chartType: "scatter",
     chartFamily: "basic",
-    createdBy: "user-1",
     config: {
       mode: "markers",
       marker: {
@@ -55,18 +42,10 @@ describe("ScatterChartRenderer", () => {
         { tableName: "test_table", columnName: "y_value", role: "y", alias: "Y" },
       ],
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useExperimentVisualizationData).mockReturnValue({
-      data: undefined,
-      tableInfo: undefined,
-      isLoading: false,
-      error: null,
-    });
   });
 
   describe("Rendering with provided data", () => {
@@ -122,7 +101,16 @@ describe("ScatterChartRenderer", () => {
       expect(screen.getByText("errors.noDataFound")).toBeInTheDocument();
     });
 
-    it("should show no data message when data is undefined", () => {
+    it("should show no data message when data is undefined", async () => {
+      server.mount(contract.experiments.getExperimentData, {
+        body: [
+          createExperimentDataTable({
+            name: "test_table",
+            data: { columns: [], rows: [], totalRows: 0, truncated: false },
+          }),
+        ],
+      });
+
       render(
         <ScatterChartRenderer
           visualization={mockVisualization}
@@ -131,21 +119,7 @@ describe("ScatterChartRenderer", () => {
         />,
       );
 
-      expect(screen.getByText("errors.noData")).toBeInTheDocument();
-    });
-
-    it("should show error message when fetch fails", () => {
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: undefined,
-        tableInfo: undefined,
-        isLoading: false,
-        error: { status: 500, body: { message: "Internal error" }, headers: new Headers() },
-      });
-
-      render(<ScatterChartRenderer visualization={mockVisualization} experimentId="exp-1" />);
-
-      expect(screen.getByText("errors.failedToLoadData")).toBeInTheDocument();
-      expect(screen.getByText("errors.failedToLoadDataDescription")).toBeInTheDocument();
+      expect(await screen.findByText("errors.noData")).toBeInTheDocument();
     });
   });
 

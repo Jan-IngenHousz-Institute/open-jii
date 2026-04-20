@@ -1,5 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DeleteAllOptionsDialog } from "./delete-all-options-dialog";
@@ -52,7 +51,7 @@ describe("DeleteAllOptionsDialog", () => {
     expect(screen.getByText(/questionCard.deleteAll.description/)).toBeInTheDocument();
   });
 
-  it("calls onConfirm when Delete All is clicked", () => {
+  it("calls onConfirm when Delete All is clicked", async () => {
     render(
       <DeleteAllOptionsDialog
         open={true}
@@ -63,7 +62,8 @@ describe("DeleteAllOptionsDialog", () => {
     );
 
     const deleteButton = screen.getByText("questionCard.deleteAll.confirm");
-    fireEvent.click(deleteButton);
+    const user = userEvent.setup();
+    await user.click(deleteButton);
 
     expect(mockOnConfirm).toHaveBeenCalledTimes(1);
   });
