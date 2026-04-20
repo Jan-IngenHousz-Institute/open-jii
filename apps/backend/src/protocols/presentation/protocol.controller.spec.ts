@@ -24,7 +24,6 @@ describe("ProtocolController – createProtocol", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     createProtocolUseCase = testApp.module.get(CreateProtocolUseCase);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -75,7 +74,6 @@ describe("ProtocolController – protocol-macro endpoints", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     protocolMacroRepository = testApp.module.get(ProtocolMacroRepository);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

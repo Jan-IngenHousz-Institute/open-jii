@@ -26,7 +26,6 @@ describe("UpdateAnnotation", () => {
     useCase = testApp.module.get(UpdateAnnotationUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

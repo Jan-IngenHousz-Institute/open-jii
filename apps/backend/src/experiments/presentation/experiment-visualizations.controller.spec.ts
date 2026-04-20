@@ -96,7 +96,6 @@ describe("ExperimentVisualizationsController", () => {
     deleteExperimentVisualizationUseCase = testApp.module.get(DeleteExperimentVisualizationUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

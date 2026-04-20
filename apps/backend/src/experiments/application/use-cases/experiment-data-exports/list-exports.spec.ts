@@ -30,7 +30,6 @@ describe("ListExportsUseCase", () => {
     useCase = testApp.module.get(ListExportsUseCase);
     exportsRepository = testApp.module.get(ExperimentDataExportsRepository);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

@@ -78,7 +78,6 @@ describe("NotificationsService", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

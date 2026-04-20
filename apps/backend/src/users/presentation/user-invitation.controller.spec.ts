@@ -30,7 +30,6 @@ describe("InvitationController", () => {
     createUseCase = testApp.module.get(CreateInvitationUseCase);
     getUseCase = testApp.module.get(GetInvitationsUseCase);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -135,7 +134,6 @@ describe("InvitationController", () => {
         })
         .expect(StatusCodes.CREATED);
 
-      vi.restoreAllMocks();
 
       // Now list
       const listPath = testApp.resolvePath(contract.users.listInvitations.path, {});
@@ -200,7 +198,6 @@ describe("InvitationController", () => {
         })
         .expect(StatusCodes.CREATED);
 
-      vi.restoreAllMocks();
 
       const invitationId = createResponse.body.id;
       const updatePath = testApp.resolvePath(contract.users.updateInvitationRole.path, {
@@ -262,7 +259,6 @@ describe("InvitationController", () => {
         })
         .expect(StatusCodes.CREATED);
 
-      vi.restoreAllMocks();
 
       const invitationId = createResponse.body.id;
       const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {
@@ -300,7 +296,6 @@ describe("InvitationController", () => {
         })
         .expect(StatusCodes.CREATED);
 
-      vi.restoreAllMocks();
 
       const invitationId = createResponse.body.id;
       const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {

@@ -23,7 +23,6 @@ describe("EmailAdapter", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

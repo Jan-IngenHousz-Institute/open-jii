@@ -20,7 +20,6 @@ describe("AddExperimentMembersUseCase", () => {
     useCase = testApp.module.get(AddExperimentMembersUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

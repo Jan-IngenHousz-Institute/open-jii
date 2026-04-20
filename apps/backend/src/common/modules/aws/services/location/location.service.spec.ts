@@ -1,21 +1,15 @@
+import {
+  LocationClient,
+  SearchPlaceIndexForSuggestionsCommand,
+  GetPlaceCommand,
+  SearchPlaceIndexForPositionCommand,
+} from "@aws-sdk/client-location";
+import { mockClient } from "aws-sdk-client-mock";
+
 import { TestHarness } from "../../../../../test/test-harness";
 import { AwsLocationService } from "./location.service";
 
-// Mock the AWS SDK with vi.hoisted to avoid hoisting issues
-const mockSend = vi.hoisted(() => vi.fn());
-
-vi.mock("@aws-sdk/client-location", () => {
-  const mockLocationClient = {
-    send: mockSend,
-  };
-
-  return {
-    LocationClient: vi.fn(() => mockLocationClient),
-    SearchPlaceIndexForSuggestionsCommand: vi.fn(),
-    GetPlaceCommand: vi.fn(),
-    SearchPlaceIndexForPositionCommand: vi.fn(),
-  };
-});
+const locationMock = mockClient(LocationClient);
 
 describe("AwsLocationService", () => {
   const testApp = TestHarness.App;
@@ -26,9 +20,9 @@ describe("AwsLocationService", () => {
   });
 
   beforeEach(async () => {
+    locationMock.reset();
     await testApp.beforeEach();
     service = testApp.module.get(AwsLocationService);
-    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -41,7 +35,6 @@ describe("AwsLocationService", () => {
 
   describe("searchPlaces", () => {
     it("should search for places and return formatted results", async () => {
-      // Mock suggestions response (first call)
       const mockSuggestionsResponse = {
         Results: [
           {
@@ -55,7 +48,6 @@ describe("AwsLocationService", () => {
         ],
       };
 
-      // Mock place details responses (subsequent calls)
       const mockPlaceResponse1 = {
         Place: {
           Label: "New York, NY, USA",
@@ -82,10 +74,13 @@ describe("AwsLocationService", () => {
         },
       };
 
-      mockSend
-        .mockResolvedValueOnce(mockSuggestionsResponse) // First call: suggestions
-        .mockResolvedValueOnce(mockPlaceResponse1) // Second call: place details for place-1
-        .mockResolvedValueOnce(mockPlaceResponse2); // Third call: place details for place-2
+      locationMock
+        .on(SearchPlaceIndexForSuggestionsCommand)
+        .resolves(mockSuggestionsResponse);
+      locationMock
+        .on(GetPlaceCommand)
+        .resolvesOnce(mockPlaceResponse1)
+        .resolvesOnce(mockPlaceResponse2);
 
       const result = await service.searchPlaces({
         query: "New York",
@@ -111,15 +106,16 @@ describe("AwsLocationService", () => {
         municipality: "London",
         postalCode: "E1 6AN",
       });
-      expect(mockSend).toHaveBeenCalledTimes(3); // 1 suggestions + 2 place details
+      expect(
+        locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand),
+      ).toHaveLength(1);
+      expect(locationMock.commandCalls(GetPlaceCommand)).toHaveLength(2);
     });
 
     it("should handle empty results", async () => {
-      const mockSuggestionsResponse = {
-        Results: [],
-      };
-
-      mockSend.mockResolvedValue(mockSuggestionsResponse);
+      locationMock
+        .on(SearchPlaceIndexForSuggestionsCommand)
+        .resolves({ Results: [] });
 
       const result = await service.searchPlaces({
         query: "NonexistentPlace12345",
@@ -127,43 +123,33 @@ describe("AwsLocationService", () => {
       });
 
       expect(result).toEqual([]);
-      expect(mockSend).toHaveBeenCalledTimes(1); // Only suggestions call
+      expect(
+        locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand),
+      ).toHaveLength(1);
     });
 
     it("should handle results with missing geometry", async () => {
-      const mockSuggestionsResponse = {
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves({
         Results: [
-          {
-            PlaceId: "place-1",
-            Text: "Invalid Place",
-          },
-          {
-            PlaceId: "place-2",
-            Text: "Valid Place",
-          },
+          { PlaceId: "place-1", Text: "Invalid Place" },
+          { PlaceId: "place-2", Text: "Valid Place" },
         ],
-      };
+      });
 
-      const mockPlaceResponse1 = {
-        Place: {
-          Label: "Invalid Place",
-          // Missing Geometry
-        },
-      };
-
-      const mockPlaceResponse2 = {
-        Place: {
-          Label: "Valid Place",
-          Geometry: {
-            Point: [-74.006, 40.7128],
+      locationMock
+        .on(GetPlaceCommand)
+        .resolvesOnce({
+          Place: {
+            Label: "Invalid Place",
+            // Missing Geometry
           },
-        },
-      };
-
-      mockSend
-        .mockResolvedValueOnce(mockSuggestionsResponse)
-        .mockResolvedValueOnce(mockPlaceResponse1)
-        .mockResolvedValueOnce(mockPlaceResponse2);
+        })
+        .resolvesOnce({
+          Place: {
+            Label: "Valid Place",
+            Geometry: { Point: [-74.006, 40.7128] },
+          },
+        });
 
       const result = await service.searchPlaces({
         query: "test",
@@ -183,23 +169,24 @@ describe("AwsLocationService", () => {
     });
 
     it("should use default maxResults when not provided", async () => {
-      const mockSuggestionsResponse = {
-        Results: [],
-      };
-
-      mockSend.mockResolvedValue(mockSuggestionsResponse);
+      locationMock
+        .on(SearchPlaceIndexForSuggestionsCommand)
+        .resolves({ Results: [] });
 
       const result = await service.searchPlaces({
         query: "test",
       });
 
       expect(result).toEqual([]);
-      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(
+        locationMock.commandCalls(SearchPlaceIndexForSuggestionsCommand),
+      ).toHaveLength(1);
     });
 
     it("should handle errors gracefully", async () => {
-      const mockError = new Error("AWS Service Error");
-      mockSend.mockRejectedValue(mockError);
+      locationMock
+        .on(SearchPlaceIndexForSuggestionsCommand)
+        .rejects(new Error("AWS Service Error"));
 
       await expect(
         service.searchPlaces({
@@ -210,7 +197,9 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown errors", async () => {
-      mockSend.mockRejectedValue("Unknown error");
+      locationMock
+        .on(SearchPlaceIndexForSuggestionsCommand)
+        .rejects("Unknown error");
 
       await expect(
         service.searchPlaces({
@@ -223,14 +212,12 @@ describe("AwsLocationService", () => {
 
   describe("geocodeLocation", () => {
     it("should reverse geocode coordinates", async () => {
-      const mockResponse = {
+      locationMock.on(SearchPlaceIndexForPositionCommand).resolves({
         Results: [
           {
             Place: {
               Label: "123 Main St, New York, NY 10001, USA",
-              Geometry: {
-                Point: [-74.006, 40.7128],
-              },
+              Geometry: { Point: [-74.006, 40.7128] },
               Country: "USA",
               Region: "NY",
               Municipality: "New York",
@@ -238,9 +225,7 @@ describe("AwsLocationService", () => {
             },
           },
         ],
-      };
-
-      mockSend.mockResolvedValue(mockResponse);
+      });
 
       const result = await service.geocodeLocation({
         latitude: 40.7128,
@@ -257,16 +242,15 @@ describe("AwsLocationService", () => {
         municipality: "New York",
         postalCode: "10001",
       });
-
-      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(
+        locationMock.commandCalls(SearchPlaceIndexForPositionCommand),
+      ).toHaveLength(1);
     });
 
     it("should handle empty geocoding results", async () => {
-      const mockResponse = {
-        Results: [],
-      };
-
-      mockSend.mockResolvedValue(mockResponse);
+      locationMock
+        .on(SearchPlaceIndexForPositionCommand)
+        .resolves({ Results: [] });
 
       const result = await service.geocodeLocation({
         latitude: 0,
@@ -277,8 +261,9 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle geocoding errors", async () => {
-      const mockError = new Error("Invalid coordinates");
-      mockSend.mockRejectedValue(mockError);
+      locationMock
+        .on(SearchPlaceIndexForPositionCommand)
+        .rejects(new Error("Invalid coordinates"));
 
       await expect(
         service.geocodeLocation({
@@ -289,31 +274,29 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown geocoding errors", async () => {
-      mockSend.mockRejectedValue("Unknown geocoding error");
+      locationMock
+        .on(SearchPlaceIndexForPositionCommand)
+        .rejects("Unknown geocoding error");
 
       await expect(
         service.geocodeLocation({
           latitude: 40.7128,
           longitude: -74.006,
         }),
-      ).rejects.toThrow("Geocoding failed: Unknown error");
+      ).rejects.toThrow("Geocoding failed: Unknown geocoding error");
     });
 
     it("should handle extreme coordinates", async () => {
-      const mockResponse = {
+      locationMock.on(SearchPlaceIndexForPositionCommand).resolves({
         Results: [
           {
             Place: {
               Label: "North Pole",
-              Geometry: {
-                Point: [0, 90],
-              },
+              Geometry: { Point: [0, 90] },
             },
           },
         ],
-      };
-
-      mockSend.mockResolvedValue(mockResponse);
+      });
 
       const result = await service.geocodeLocation({
         latitude: 90,
@@ -335,27 +318,16 @@ describe("AwsLocationService", () => {
 
   describe("transformPlacesToResults", () => {
     it("should handle places with minimal data", async () => {
-      const mockSuggestionsResponse = {
-        Results: [
-          {
-            PlaceId: "place-1",
-            Text: "Minimal Place",
-          },
-        ],
-      };
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves({
+        Results: [{ PlaceId: "place-1", Text: "Minimal Place" }],
+      });
 
-      const mockPlaceResponse = {
+      locationMock.on(GetPlaceCommand).resolves({
         Place: {
-          Geometry: {
-            Point: [0, 0],
-          },
+          Geometry: { Point: [0, 0] },
           // Missing all optional fields
         },
-      };
-
-      mockSend
-        .mockResolvedValueOnce(mockSuggestionsResponse)
-        .mockResolvedValueOnce(mockPlaceResponse);
+      });
 
       const result = await service.searchPlaces({
         query: "minimal",
@@ -374,76 +346,50 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle places with missing geometry gracefully", async () => {
-      // This test covers the filter in transformPlacesToResults that filters out invalid places
-      const mockSuggestionsResponse = {
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves({
         Results: [
-          {
-            PlaceId: "place-1",
-            Text: "Place without geometry",
-          },
-          {
-            PlaceId: "place-2",
-            Text: "Valid Place",
-          },
+          { PlaceId: "place-1", Text: "Place without geometry" },
+          { PlaceId: "place-2", Text: "Valid Place" },
         ],
-      };
+      });
 
-      const mockPlaceResponse1 = {
-        Place: {
-          Label: "Place without geometry",
-          // Missing Geometry.Point
-        },
-      };
-
-      const mockPlaceResponse2 = {
-        Place: {
-          Label: "Valid Place",
-          Geometry: {
-            Point: [-74.006, 40.7128],
+      locationMock
+        .on(GetPlaceCommand)
+        .resolvesOnce({
+          Place: {
+            Label: "Place without geometry",
+            // Missing Geometry.Point
           },
-        },
-      };
-
-      mockSend
-        .mockResolvedValueOnce(mockSuggestionsResponse)
-        .mockResolvedValueOnce(mockPlaceResponse1)
-        .mockResolvedValueOnce(mockPlaceResponse2);
+        })
+        .resolvesOnce({
+          Place: {
+            Label: "Valid Place",
+            Geometry: { Point: [-74.006, 40.7128] },
+          },
+        });
 
       const result = await service.searchPlaces({
         query: "test",
       });
 
-      // Should only return the valid place, filtering out the one without geometry
       expect(result).toHaveLength(1);
       expect(result[0].label).toBe("Valid Place");
     });
 
     it("should handle suggestions without PlaceId", async () => {
-      const mockSuggestionsResponse = {
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves({
         Results: [
-          {
-            // Missing PlaceId
-            Text: "Invalid suggestion",
-          },
-          {
-            PlaceId: "place-1",
-            Text: "Valid suggestion",
-          },
+          { Text: "Invalid suggestion" }, // Missing PlaceId
+          { PlaceId: "place-1", Text: "Valid suggestion" },
         ],
-      };
+      });
 
-      const mockPlaceResponse = {
+      locationMock.on(GetPlaceCommand).resolves({
         Place: {
           Label: "Valid Place",
-          Geometry: {
-            Point: [-74.006, 40.7128],
-          },
+          Geometry: { Point: [-74.006, 40.7128] },
         },
-      };
-
-      mockSend
-        .mockResolvedValueOnce(mockSuggestionsResponse)
-        .mockResolvedValueOnce(mockPlaceResponse);
+      });
 
       const result = await service.searchPlaces({
         query: "test",
@@ -451,36 +397,26 @@ describe("AwsLocationService", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].label).toBe("Valid Place");
-      expect(mockSend).toHaveBeenCalledTimes(2); // 1 suggestion + 1 place detail (skipped the invalid one)
+      expect(locationMock.commandCalls(GetPlaceCommand)).toHaveLength(1);
     });
 
     it("should handle GetPlace failures gracefully", async () => {
-      const mockSuggestionsResponse = {
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).resolves({
         Results: [
-          {
-            PlaceId: "place-1",
-            Text: "Place that will fail",
-          },
-          {
-            PlaceId: "place-2",
-            Text: "Valid place",
-          },
+          { PlaceId: "place-1", Text: "Place that will fail" },
+          { PlaceId: "place-2", Text: "Valid place" },
         ],
-      };
+      });
 
-      const mockPlaceResponse = {
-        Place: {
-          Label: "Valid Place",
-          Geometry: {
-            Point: [-74.006, 40.7128],
+      locationMock
+        .on(GetPlaceCommand)
+        .rejectsOnce(new Error("GetPlace failed"))
+        .resolvesOnce({
+          Place: {
+            Label: "Valid Place",
+            Geometry: { Point: [-74.006, 40.7128] },
           },
-        },
-      };
-
-      mockSend
-        .mockResolvedValueOnce(mockSuggestionsResponse)
-        .mockRejectedValueOnce(new Error("GetPlace failed")) // First GetPlace fails
-        .mockResolvedValueOnce(mockPlaceResponse); // Second GetPlace succeeds
+        });
 
       const result = await service.searchPlaces({
         query: "test",
@@ -488,12 +424,13 @@ describe("AwsLocationService", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].label).toBe("Valid Place");
-      expect(mockSend).toHaveBeenCalledTimes(3); // 1 suggestion + 2 place details (one failed)
+      expect(locationMock.commandCalls(GetPlaceCommand)).toHaveLength(2);
     });
 
     it("should handle errors gracefully", async () => {
-      const mockError = new Error("AWS Service Error");
-      mockSend.mockRejectedValue(mockError);
+      locationMock
+        .on(SearchPlaceIndexForSuggestionsCommand)
+        .rejects(new Error("AWS Service Error"));
 
       await expect(
         service.searchPlaces({
@@ -504,7 +441,9 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown errors", async () => {
-      mockSend.mockRejectedValue("Unknown error");
+      locationMock
+        .on(SearchPlaceIndexForSuggestionsCommand)
+        .rejects("Unknown error");
 
       await expect(
         service.searchPlaces({
@@ -512,118 +451,6 @@ describe("AwsLocationService", () => {
           maxResults: 5,
         }),
       ).rejects.toThrow("Place search failed: Unknown error");
-    });
-  });
-
-  describe("geocodeLocation", () => {
-    it("should reverse geocode coordinates", async () => {
-      const mockResponse = {
-        Results: [
-          {
-            Place: {
-              Label: "123 Main St, New York, NY 10001, USA",
-              Geometry: {
-                Point: [-74.006, 40.7128],
-              },
-              Country: "USA",
-              Region: "NY",
-              Municipality: "New York",
-              PostalCode: "10001",
-            },
-          },
-        ],
-      };
-
-      mockSend.mockResolvedValue(mockResponse);
-
-      const result = await service.geocodeLocation({
-        latitude: 40.7128,
-        longitude: -74.006,
-      });
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
-        label: "123 Main St, New York, NY 10001, USA",
-        latitude: 40.7128,
-        longitude: -74.006,
-        country: "USA",
-        region: "NY",
-        municipality: "New York",
-        postalCode: "10001",
-      });
-
-      expect(mockSend).toHaveBeenCalledTimes(1);
-    });
-
-    it("should handle empty geocoding results", async () => {
-      const mockResponse = {
-        Results: [],
-      };
-
-      mockSend.mockResolvedValue(mockResponse);
-
-      const result = await service.geocodeLocation({
-        latitude: 0,
-        longitude: 0,
-      });
-
-      expect(result).toEqual([]);
-    });
-
-    it("should handle geocoding errors", async () => {
-      const mockError = new Error("Invalid coordinates");
-      mockSend.mockRejectedValue(mockError);
-
-      await expect(
-        service.geocodeLocation({
-          latitude: 40.7128,
-          longitude: -74.006,
-        }),
-      ).rejects.toThrow("Geocoding failed: Invalid coordinates");
-    });
-
-    it("should handle unknown geocoding errors", async () => {
-      mockSend.mockRejectedValue("Unknown geocoding error");
-
-      await expect(
-        service.geocodeLocation({
-          latitude: 40.7128,
-          longitude: -74.006,
-        }),
-      ).rejects.toThrow("Geocoding failed: Unknown error");
-    });
-
-    it("should handle extreme coordinates", async () => {
-      const mockResponse = {
-        Results: [
-          {
-            Place: {
-              Label: "North Pole",
-              Geometry: {
-                Point: [0, 90],
-              },
-            },
-          },
-        ],
-      };
-
-      mockSend.mockResolvedValue(mockResponse);
-
-      const result = await service.geocodeLocation({
-        latitude: 90,
-        longitude: 0,
-      });
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
-        label: "North Pole",
-        latitude: 90,
-        longitude: 0,
-        country: undefined,
-        region: undefined,
-        municipality: undefined,
-        postalCode: undefined,
-      });
     });
   });
 });

@@ -50,7 +50,6 @@ describe("ExperimentDataExportsController", () => {
     initiateExportUseCase = testApp.module.get(InitiateExportUseCase);
     listExportsUseCase = testApp.module.get(ListExportsUseCase);
     downloadExportUseCase = testApp.module.get(DownloadExportUseCase);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

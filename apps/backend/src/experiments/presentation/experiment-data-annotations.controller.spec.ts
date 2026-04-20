@@ -36,7 +36,6 @@ describe("ExperimentDataAnnotationsController", () => {
     deleteAnnotationsUseCase = testApp.module.get(DeleteAnnotationsUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

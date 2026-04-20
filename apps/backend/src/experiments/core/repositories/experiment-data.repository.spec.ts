@@ -36,7 +36,6 @@ describe("ExperimentDataRepository", () => {
     await testApp.beforeEach();
     repository = testApp.module.get(ExperimentDataRepository);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

@@ -78,7 +78,6 @@ describe("ExperimentMetadataRepository", () => {
     await testApp.beforeEach();
     repository = testApp.module.get(ExperimentMetadataRepository);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

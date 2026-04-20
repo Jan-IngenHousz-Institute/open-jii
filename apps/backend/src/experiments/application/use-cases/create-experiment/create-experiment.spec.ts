@@ -34,7 +34,6 @@ describe("CreateExperimentUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

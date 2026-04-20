@@ -253,7 +253,6 @@ describe("GetExperimentLocationsUseCase", () => {
       expect(result.error.message).toContain("Database query failed");
     } finally {
       // Restore original method
-      vi.restoreAllMocks();
     }
   });
 });

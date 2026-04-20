@@ -34,7 +34,6 @@ describe("GetExperimentTablesUseCase", () => {
     macroRepository = testApp.module.get(MacroRepository);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

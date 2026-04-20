@@ -32,7 +32,6 @@ describe("UserWebhookController", () => {
     getUsersMetadataUseCase = testApp.module.get(GetUsersMetadataUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

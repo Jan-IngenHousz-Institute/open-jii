@@ -31,7 +31,6 @@ describe("ExperimentLocationsController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

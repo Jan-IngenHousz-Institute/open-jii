@@ -29,7 +29,6 @@ describe("InitiateExportUseCase", () => {
     useCase = testApp.module.get(InitiateExportUseCase);
     exportsRepository = testApp.module.get(ExperimentDataExportsRepository);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

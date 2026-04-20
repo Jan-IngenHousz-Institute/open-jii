@@ -220,7 +220,6 @@ describe("AddExperimentLocationsUseCase", () => {
       expect(result.error.message).toContain("Database connection failed");
     } finally {
       // Restore original method
-      vi.restoreAllMocks();
     }
   });
 });

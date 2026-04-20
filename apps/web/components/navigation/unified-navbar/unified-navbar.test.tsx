@@ -210,11 +210,13 @@ describe("UnifiedNavbar", () => {
 
     vi.stubGlobal(
       "IntersectionObserver",
-      vi.fn((_cb: IntersectionObserverCallback) => ({
-        observe: observeMock,
-        unobserve: unobserveMock,
-        disconnect: vi.fn(),
-      })),
+      vi.fn(function (_cb: IntersectionObserverCallback) {
+        return {
+          observe: observeMock,
+          unobserve: unobserveMock,
+          disconnect: vi.fn(),
+        };
+      }),
     );
 
     const main = document.createElement("main");
@@ -235,7 +237,9 @@ describe("UnifiedNavbar", () => {
     const observeMock = vi.fn();
     vi.stubGlobal(
       "IntersectionObserver",
-      vi.fn(() => ({ observe: observeMock, unobserve: vi.fn(), disconnect: vi.fn() })),
+      vi.fn(function () {
+        return { observe: observeMock, unobserve: vi.fn(), disconnect: vi.fn() };
+      }),
     );
 
     renderNavbar({ isHomePage: false });
