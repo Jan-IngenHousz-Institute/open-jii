@@ -37,9 +37,9 @@ const STALE_TIME = 2 * 60 * 1000;
 
 export function getColumnWidth(typeText: string, columnName?: string): number | undefined {
   // Fixed widths for local time columns
-  if (columnName === "timestamp_local") return 220;
-  if (columnName === "time_local") return 90;
-  if (columnName === "timestamp_utc") return 175;
+  if (columnName === "measurement_time_local") return 220;
+  if (columnName === "local_time") return 90;
+  if (columnName === "measurement_time_utc") return 175;
   // Set medium width for well-known columns (user columns with avatar + name)
   if (isWellKnownType(typeText)) return 180;
   // Set medium width for struct/map columns that contain collapsible JSON
@@ -119,7 +119,7 @@ function createTableColumns({
   };
 
   // These columns are pinned to the front in a fixed display order
-  const PINNED_TIME_COLUMNS = ["timestamp_local", "time_local", "timestamp_utc"];
+  const PINNED_TIME_COLUMNS = ["measurement_time_local", "local_time", "measurement_time_utc"];
 
   // Sort columns: pinned time columns first (in defined order), then by type precedence
   const sortedColumns = [...data.columns].sort((a, b) => {
