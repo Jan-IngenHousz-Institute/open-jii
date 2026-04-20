@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
@@ -16,6 +17,10 @@ import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
 
 export function useMeasurements() {
   const queryClient = useQueryClient();
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
 
   const { data: failedUploads = [] } = useQuery({
     queryKey: ["measurements", "failed"],
@@ -27,21 +32,36 @@ export function useMeasurements() {
   });
 
   const uploadAsync = useAsyncCallback(async () => {
-    let lastError: any;
-    for (const { key, data } of failedUploads) {
-      try {
-        await sendMqttEvent(data.topic, data.measurementResult);
-        await markAsSuccessful(key);
-      } catch (error) {
-        console.warn(`Failed to upload item with key ${key}:`, error);
-        lastError = error;
-      }
-    }
+    const items = [...failedUploads];
+    setUploadProgress({ done: 0, total: items.length });
+    setUploadingIds(new Set(items.map(({ key }) => key)));
 
+    const results = await Promise.allSettled(
+      items.map(async ({ key, data }) => {
+        try {
+          await sendMqttEvent(data.topic, data.measurementResult);
+          await markAsSuccessful(key);
+        } catch (error) {
+          console.warn(`Failed to upload item with key ${key}:`, error);
+          throw error;
+        } finally {
+          setUploadingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+          setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
+        }
+      }),
+    );
+
+    setUploadProgress(null);
     await pruneExpiredMeasurements();
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-    if (lastError) {
-      throw lastError;
+
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (rejected.length > 0) {
+      throw rejected[rejected.length - 1].reason;
     }
   });
 
@@ -49,12 +69,19 @@ export function useMeasurements() {
     const item = failedUploads.find((u) => u.key === key);
     if (!item) return;
 
+    setUploadingIds((prev) => new Set([...prev, key]));
     try {
       await sendMqttEvent(item.data.topic, item.data.measurementResult);
       await markAsSuccessful(key);
     } catch (error) {
       console.warn(`Failed to upload item with key ${key}:`, error);
       toast.info("Failed to upload, try again later");
+    } finally {
+      setUploadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
 
     await pruneExpiredMeasurements();
@@ -85,6 +112,8 @@ export function useMeasurements() {
 
   return {
     failedUploads,
+    uploadingIds,
+    uploadProgress,
     isUploading: uploadAsync.loading,
     uploadAll: uploadAsync.execute,
     uploadOne,

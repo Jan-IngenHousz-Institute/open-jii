@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return {
+    ...actual,
+    useState: (initial: unknown) => [
+      typeof initial === "function" ? (initial as () => unknown)() : initial,
+      vi.fn(),
+    ],
+  };
+});
+
 const {
   mockInvalidateQueries,
   mockMarkAsSuccessful,
