@@ -1,12 +1,13 @@
-import http from "http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchSecret, getSecret, isLambdaEnvironment } from "./secrets";
 
-vi.mock("http");
+const { mockGet } = vi.hoisted(() => ({ mockGet: vi.fn() }));
 
-const mockGet = vi.fn();
-vi.mocked(http.get).mockImplementation(mockGet);
+vi.mock("http", () => ({
+  default: { get: mockGet },
+  get: mockGet,
+}));
 
 function makeMockResponse(statusCode: number, body: string) {
   const res = {
