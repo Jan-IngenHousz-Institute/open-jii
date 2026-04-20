@@ -7,7 +7,8 @@
     ".": "./dist/index.js",
     "./base": "./dist/configs/base-config.js",
     "./ui": "./dist/configs/ui-config.js",
-    "./setup": "./dist/setup.js"
+    "./setup": "./dist/setup.js",
+    "./mobile": "./src/mobile-rn.mjs"
   },
   "scripts": {
     "build": "tsc",
@@ -19,6 +20,9 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.27.4",
+    "flow-remove-types": "^2.257.1",
+    "pirates": "^4.0.6",
     "vitest": "catalog:testing"
   },
   "devDependencies": {

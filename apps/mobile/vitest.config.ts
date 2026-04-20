@@ -1,41 +1,25 @@
 import { resolve } from "path";
-import react from "@vitejs/plugin-react";
-import { reactNative } from "@srsholmes/vitest-react-native";
 import { defineConfig } from "vitest/config";
+// React-Native test harness lives in @repo/vitest-config/mobile. It ships
+// everything needed to run RNTL component tests under vitest (Flow stripping,
+// jest-style RN module mocks, self-registered setup file).
+// @ts-expect-error — the vendored harness is plain .mjs without .d.ts
+import { react, reactNative, rnSetupFile } from "@repo/vitest-config/mobile";
 
-const rnResolve = {
-  extensions: [
-    ".ios.ts",
-    ".ios.tsx",
-    ".native.ts",
-    ".native.tsx",
-    ".ts",
-    ".tsx",
-    ".js",
-    ".jsx",
-    ".json",
-  ],
-  conditions: ["react-native"],
-  alias: {
-    "~": resolve(__dirname, "src"),
-    "~/": resolve(__dirname, "src") + "/",
-  },
+const srcAlias = {
+  "~": resolve(__dirname, "src"),
+  "~/": resolve(__dirname, "src") + "/",
 };
 
 export default defineConfig({
-  // Two projects:
-  //   - node    : logic tests + RNTL component tests (@srsholmes/vitest-react-native)
-  //   - jsdom   : hook tests that rely on @testing-library/react + DOM
+  // Two projects, both vitest — one `pnpm test` runs everything:
+  //   - node  : logic tests + RNTL component tests (via @repo/vitest-config/mobile)
+  //   - jsdom : hook tests that rely on @testing-library/react + DOM
   test: {
     coverage: {
       provider: "v8",
       reporter: [
-        [
-          "json",
-          {
-            file: "../coverage.json",
-          },
-        ],
+        ["json", { file: "../coverage.json" }],
         "text",
       ],
       enabled: true,
@@ -44,30 +28,21 @@ export default defineConfig({
     projects: [
       {
         plugins: [react(), reactNative()],
-        resolve: rnResolve,
+        resolve: { alias: srcAlias },
         test: {
           name: "node",
           globals: true,
           environment: "node",
-          setupFiles: ["@srsholmes/vitest-react-native/setup", "./vitest.setup.ts"],
+          // rnSetupFile installs pirates hooks + core RN-module mocks;
+          // vitest.setup.ts holds this app's native-wrapper package mocks.
+          setupFiles: [rnSetupFile, "./vitest.setup.ts"],
           include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-          // Hook tests live in __tests__ dirs and need jsdom.
           exclude: ["**/node_modules/**", "src/hooks/__tests__/**"],
-          server: {
-            deps: {
-              external: ["react-native"],
-            },
-          },
         },
       },
       {
         plugins: [react()],
-        resolve: {
-          alias: {
-            "~": resolve(__dirname, "src"),
-            "~/": resolve(__dirname, "src") + "/",
-          },
-        },
+        resolve: { alias: srcAlias },
         test: {
           name: "jsdom",
           globals: true,
