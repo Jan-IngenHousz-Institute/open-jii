@@ -1,6 +1,12 @@
+import type { MockInstance } from "vitest";
+
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { NotificationsService } from "./notifications.service";
+
+function spyOnProtected(instance: object, method: string): MockInstance {
+  return vi.spyOn(instance as unknown as Record<string, unknown>, method as never);
+}
 
 // Test constants
 const MOCK_EXPERIMENT_ID = "exp-123";
@@ -15,11 +21,11 @@ describe("NotificationsService", () => {
   const testApp = TestHarness.App;
   let service: NotificationsService;
 
-  // Spy references — recreated fresh in each beforeEach
-  let mockCreateTransport: ReturnType<typeof vi.spyOn>;
-  let mockRenderAddedUserNotification: ReturnType<typeof vi.spyOn>;
-  let mockRenderTransferRequestConfirmation: ReturnType<typeof vi.spyOn>;
-  let mockRenderProjectTransferComplete: ReturnType<typeof vi.spyOn>;
+  // Spy references - recreated fresh in each beforeEach
+  let mockCreateTransport: MockInstance;
+  let mockRenderAddedUserNotification: MockInstance;
+  let mockRenderTransferRequestConfirmation: MockInstance;
+  let mockRenderProjectTransferComplete: MockInstance;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -30,25 +36,28 @@ describe("NotificationsService", () => {
     service = testApp.module.get(NotificationsService);
 
     // Create fresh spies on the protected wrapper methods
-    mockCreateTransport = vi.spyOn(service as any, "createMailTransport");
-    mockRenderAddedUserNotification = vi
-      .spyOn(service as any, "renderAddedUserNotificationEmail")
-      .mockResolvedValue({
-        html: MOCK_HTML_CONTENT,
-        text: MOCK_TEXT_CONTENT,
-      });
-    mockRenderTransferRequestConfirmation = vi
-      .spyOn(service as any, "renderTransferRequestConfirmationEmail")
-      .mockResolvedValue({
-        html: MOCK_HTML_CONTENT,
-        text: MOCK_TEXT_CONTENT,
-      });
-    mockRenderProjectTransferComplete = vi
-      .spyOn(service as any, "renderProjectTransferCompleteEmail")
-      .mockResolvedValue({
-        html: MOCK_HTML_CONTENT,
-        text: MOCK_TEXT_CONTENT,
-      });
+    mockCreateTransport = spyOnProtected(service, "createMailTransport");
+    mockRenderAddedUserNotification = spyOnProtected(
+      service,
+      "renderAddedUserNotificationEmail",
+    ).mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
+    mockRenderTransferRequestConfirmation = spyOnProtected(
+      service,
+      "renderTransferRequestConfirmationEmail",
+    ).mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
+    mockRenderProjectTransferComplete = spyOnProtected(
+      service,
+      "renderProjectTransferCompleteEmail",
+    ).mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
   });
 
   afterEach(() => {

@@ -29,7 +29,6 @@ describe("MacroWebhookController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     executeMacroBatchUseCase = testApp.module.get(ExecuteMacroBatchUseCase);
-
   });
 
   afterEach(() => {

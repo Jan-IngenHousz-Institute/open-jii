@@ -1,18 +1,24 @@
+import type { MockInstance } from "vitest";
+
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { AnalyticsConfigService } from "../config/config.service";
 import { FlagsService } from "./flags.service";
 
+function spyOnProtected(instance: object, method: string): MockInstance {
+  return vi.spyOn(instance as unknown as Record<string, unknown>, method as never);
+}
+
 describe("FlagsService", () => {
   const testApp = TestHarness.App;
   let service: FlagsService;
   let configService: AnalyticsConfigService;
 
-  // Spy references — recreated fresh in each beforeEach
-  let mockInitializePostHogServer: ReturnType<typeof vi.spyOn>;
-  let mockGetPostHogServerClient: ReturnType<typeof vi.spyOn>;
-  let mockShutdownPostHog: ReturnType<typeof vi.spyOn>;
+  // Spy references - recreated fresh in each beforeEach
+  let mockInitializePostHogServer: MockInstance;
+  let mockGetPostHogServerClient: MockInstance;
+  let mockShutdownPostHog: MockInstance;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -24,16 +30,14 @@ describe("FlagsService", () => {
     configService = testApp.module.get(AnalyticsConfigService);
 
     // Create fresh spies on the protected wrapper methods
-    mockInitializePostHogServer = vi
-      .spyOn(service as any, "initializePostHog")
-      .mockResolvedValue(true);
-    mockGetPostHogServerClient = vi.spyOn(service as any, "getPostHogClient").mockReturnValue({
+    mockInitializePostHogServer = spyOnProtected(service, "initializePostHog").mockResolvedValue(
+      true,
+    );
+    mockGetPostHogServerClient = spyOnProtected(service, "getPostHogClient").mockReturnValue({
       isFeatureEnabled: vi.fn().mockResolvedValue(true),
       shutdown: vi.fn().mockResolvedValue(undefined),
     });
-    mockShutdownPostHog = vi
-      .spyOn(service as any, "doShutdownPostHog")
-      .mockResolvedValue(undefined);
+    mockShutdownPostHog = spyOnProtected(service, "doShutdownPostHog").mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -62,7 +66,7 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn(),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      const freshInitSpy = vi.spyOn(freshService as any, "initializePostHog");
+      const freshInitSpy = spyOnProtected(freshService, "initializePostHog");
 
       await freshService.onModuleInit();
 
@@ -77,7 +81,7 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn(),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      const freshInitSpy = vi.spyOn(freshService as any, "initializePostHog");
+      const freshInitSpy = spyOnProtected(freshService, "initializePostHog");
 
       await freshService.onModuleInit();
 
@@ -92,7 +96,7 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn().mockReturnValue({ host: "test" }),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      vi.spyOn(freshService as any, "initializePostHog").mockResolvedValue(false);
+      spyOnProtected(freshService, "initializePostHog").mockResolvedValue(false);
 
       await freshService.onModuleInit();
 
@@ -106,7 +110,7 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn().mockReturnValue({ host: "test" }),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      vi.spyOn(freshService as any, "initializePostHog").mockRejectedValue(
+      spyOnProtected(freshService, "initializePostHog").mockRejectedValue(
         new Error("Network error"),
       );
 
@@ -134,7 +138,7 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn(),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      const freshShutdownSpy = vi.spyOn(freshService as any, "doShutdownPostHog");
+      const freshShutdownSpy = spyOnProtected(freshService, "doShutdownPostHog");
 
       await freshService.onModuleInit();
       await freshService.onModuleDestroy();

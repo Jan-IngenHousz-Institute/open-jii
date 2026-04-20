@@ -24,7 +24,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
     useCase = testApp.module.get(DeleteExperimentVisualizationUseCase);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
     experimentRepository = testApp.module.get(ExperimentRepository);
-
   });
 
   afterEach(() => {
@@ -391,6 +390,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
         assertFailure(result);
         expect(result.error.message).toContain("You do not have access to this experiment");
       } finally {
+        // cleanup handled by afterEach
       }
     });
   });

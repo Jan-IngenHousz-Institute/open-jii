@@ -31,7 +31,6 @@ describe("CreateInvitationUseCase", () => {
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
     userRepo = testApp.module.get(UserRepository);
-
   });
 
   afterEach(() => {

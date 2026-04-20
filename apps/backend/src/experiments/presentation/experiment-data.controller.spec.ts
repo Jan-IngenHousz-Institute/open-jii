@@ -20,10 +20,10 @@ import { ExperimentDataController } from "./experiment-data.controller";
  * `fileData.stream` (via `.resume()`) or busboy will never emit 'close'.
  */
 function multipartRequest(
-  parts: Array<
+  parts: (
     | { field: string; value: string }
     | { name: string; filename: string; content: string; mime: string }
-  >,
+  )[],
 ): Request {
   const boundary = "----TestBoundary";
   const body = parts
@@ -253,7 +253,7 @@ describe("ExperimentDataController", () => {
     };
 
     // Execute mock that drains the file stream so busboy can finish
-    const drainExecute = async (fileData: any) => {
+    const drainExecute = (fileData: { stream?: { resume?: () => void } }) => {
       fileData.stream?.resume?.();
     };
 
@@ -408,10 +408,12 @@ describe("ExperimentDataController", () => {
       vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
         success({ experiment: mockExperiment, directoryName: "dir" }),
       );
-      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockImplementation(async (fileData: any) => {
-        fileData.stream?.resume?.();
-        throw new Error("Upload failed");
-      });
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockImplementation(
+        (fileData: { stream?: { resume?: () => void } }): Promise<never> => {
+          fileData.stream?.resume?.();
+          return Promise.reject(new Error("Upload failed"));
+        },
+      );
       vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
         success({ uploadId: "123", files: [] }),
       );

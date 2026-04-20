@@ -17,7 +17,6 @@ describe("CacheAdapter", () => {
     await testApp.beforeEach();
     cacheAdapter = testApp.module.get(CacheAdapter);
     cacheManager = testApp.module.get(CACHE_MANAGER);
-
   });
 
   afterEach(() => {

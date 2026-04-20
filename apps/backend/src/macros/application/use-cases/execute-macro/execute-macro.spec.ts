@@ -31,7 +31,6 @@ describe("ExecuteMacroUseCase", () => {
     useCase = testApp.module.get(ExecuteMacroUseCase);
     macroRepository = testApp.module.get(MacroRepository);
     lambdaPort = testApp.module.get(LAMBDA_PORT);
-
   });
 
   afterEach(() => {

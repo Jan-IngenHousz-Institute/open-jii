@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 import { server } from "./msw/server";
 
@@ -88,23 +88,39 @@ vi.mock("@repo/i18n/server", () => ({
   initTranslations: initTranslationsMock,
 }));
 
-vi.mock("next/navigation", () => {
-  const router = {
+// Router mock object created via vi.hoisted so it's accessible for
+// beforeEach re-application of defaults (vi.clearAllMocks only clears
+// call history, not mockReturnValue/mockImplementation).
+const { mockRouter } = vi.hoisted(() => ({
+  mockRouter: {
     push: vi.fn(),
     replace: vi.fn(),
     back: vi.fn(),
     forward: vi.fn(),
     refresh: vi.fn(),
     prefetch: vi.fn(),
-  };
-  return {
-    useRouter: vi.fn(() => router),
-    usePathname: vi.fn(() => "/platform/experiments"),
-    useSearchParams: vi.fn(() => new URLSearchParams()),
-    useParams: vi.fn(() => ({ locale: "en-US" })),
-    redirect: vi.fn(),
-    notFound: vi.fn(),
-  };
+  },
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(() => mockRouter),
+  usePathname: vi.fn(() => "/platform/experiments"),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+  useParams: vi.fn(() => ({ locale: "en-US" })),
+  redirect: vi.fn(),
+  notFound: vi.fn(),
+}));
+
+// Re-apply default mock implementations before each test to prevent
+// cross-test leakage when isolate: false. Tests that override these
+// (e.g. vi.mocked(usePathname).mockReturnValue(...)) will have their
+// overrides reset before the next test.
+beforeEach(async () => {
+  const nav = await import("next/navigation");
+  vi.mocked(nav.useRouter).mockReturnValue(mockRouter);
+  vi.mocked(nav.usePathname).mockReturnValue("/platform/experiments");
+  vi.mocked(nav.useSearchParams).mockReturnValue(new URLSearchParams() as never);
+  vi.mocked(nav.useParams).mockReturnValue({ locale: "en-US" });
 });
 
 vi.mock("next/headers", () => ({
