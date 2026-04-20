@@ -1,29 +1,6 @@
-import { createTransport } from "nodemailer";
-
-import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
-import { renderProjectTransferComplete } from "@repo/transactional/render/project-transfer-complete";
-import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
-
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { NotificationsService } from "./notifications.service";
-
-// Mock external dependencies
-vi.mock("@repo/transactional/render/added-user-notification", () => ({
-  renderAddedUserNotification: vi.fn(),
-}));
-
-vi.mock("@repo/transactional/render/transfer-request-confirmation", () => ({
-  renderTransferRequestConfirmation: vi.fn(),
-}));
-
-vi.mock("@repo/transactional/render/project-transfer-complete", () => ({
-  renderProjectTransferComplete: vi.fn(),
-}));
-
-vi.mock("nodemailer", () => ({
-  createTransport: vi.fn(),
-}));
 
 // Test constants
 const MOCK_EXPERIMENT_ID = "exp-123";
@@ -38,15 +15,11 @@ describe("NotificationsService", () => {
   const testApp = TestHarness.App;
   let service: NotificationsService;
 
-  // Mock functions
-  const mockCreateTransport = createTransport as ReturnType<typeof vi.fn>;
-  const mockRenderAddedUserNotification = renderAddedUserNotification as ReturnType<typeof vi.fn>;
-  const mockRenderTransferRequestConfirmation = renderTransferRequestConfirmation as ReturnType<
-    typeof vi.fn
-  >;
-  const mockRenderProjectTransferComplete = renderProjectTransferComplete as ReturnType<
-    typeof vi.fn
-  >;
+  // Spy references — recreated fresh in each beforeEach
+  let mockCreateTransport: ReturnType<typeof vi.spyOn>;
+  let mockRenderAddedUserNotification: ReturnType<typeof vi.spyOn>;
+  let mockRenderTransferRequestConfirmation: ReturnType<typeof vi.spyOn>;
+  let mockRenderProjectTransferComplete: ReturnType<typeof vi.spyOn>;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -56,24 +29,26 @@ describe("NotificationsService", () => {
     await testApp.beforeEach();
     service = testApp.module.get(NotificationsService);
 
-    // Reset all mocks
-    vi.clearAllMocks();
-
-    // Setup default mock implementations
-    mockRenderAddedUserNotification.mockResolvedValue({
-      html: MOCK_HTML_CONTENT,
-      text: MOCK_TEXT_CONTENT,
-    });
-
-    mockRenderTransferRequestConfirmation.mockResolvedValue({
-      html: MOCK_HTML_CONTENT,
-      text: MOCK_TEXT_CONTENT,
-    });
-
-    mockRenderProjectTransferComplete.mockResolvedValue({
-      html: MOCK_HTML_CONTENT,
-      text: MOCK_TEXT_CONTENT,
-    });
+    // Create fresh spies on the protected wrapper methods
+    mockCreateTransport = vi.spyOn(service as any, "createMailTransport");
+    mockRenderAddedUserNotification = vi
+      .spyOn(service as any, "renderAddedUserNotificationEmail")
+      .mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    mockRenderTransferRequestConfirmation = vi
+      .spyOn(service as any, "renderTransferRequestConfirmationEmail")
+      .mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    mockRenderProjectTransferComplete = vi
+      .spyOn(service as any, "renderProjectTransferCompleteEmail")
+      .mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
   });
 
   afterEach(() => {

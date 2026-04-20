@@ -1,4 +1,4 @@
-import type { Logger } from "@nestjs/common";
+import { Logger } from "@nestjs/common";
 import { vi } from "vitest";
 
 import { AsyncQueue } from "./async-queue";
@@ -47,11 +47,19 @@ describe("AsyncQueue", () => {
       expect(status.concurrency).toBe(3);
     });
 
-    it("should create a default logger if none provided", () => {
+    it("should create a default logger if none provided", async () => {
+      // Suppress NestJS Logger output for the default-logger path
+      vi.spyOn(Logger.prototype, "debug").mockImplementation(() => {
+        // noop
+      });
+      vi.spyOn(Logger.prototype, "error").mockImplementation(() => {
+        // noop
+      });
       const queue = new AsyncQueue(1);
       expect(queue).toBeDefined();
-      // Should not throw when using the logger
+      // Should not throw when using the default logger
       queue.add(() => Promise.resolve());
+      await queue.waitForCompletion();
     });
 
     it("should log queue creation", () => {

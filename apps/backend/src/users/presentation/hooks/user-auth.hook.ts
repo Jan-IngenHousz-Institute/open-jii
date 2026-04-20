@@ -19,7 +19,7 @@ export class UserAuthHook {
 
   @BeforeHook("/sign-in/email-otp")
   async handleEmailOtpSignInBefore(ctx: AuthHookContext) {
-    const session = await getSessionFromCtx(ctx);
+    const session = await this.getSessionFromCtx(ctx);
     if (!session?.user) return;
 
     const currentUser = session.user as { id: string; email?: string; registered?: boolean };
@@ -60,6 +60,10 @@ export class UserAuthHook {
   @AfterHook("/email-otp/verify-email")
   async handleOtpVerify(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
+  }
+
+  protected async getSessionFromCtx(ctx: AuthHookContext) {
+    return getSessionFromCtx(ctx);
   }
 
   private async acceptInvitationsForNewUser(ctx: AuthHookContext) {

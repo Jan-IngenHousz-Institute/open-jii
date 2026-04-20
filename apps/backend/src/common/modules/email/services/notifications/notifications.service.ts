@@ -16,6 +16,28 @@ export class NotificationsService {
 
   constructor(private readonly emailConfigService: EmailConfigService) {}
 
+  protected createMailTransport(serverConfig: string) {
+    return createTransport(serverConfig);
+  }
+
+  protected renderAddedUserNotificationEmail(
+    ...args: Parameters<typeof renderAddedUserNotification>
+  ) {
+    return renderAddedUserNotification(...args);
+  }
+
+  protected renderTransferRequestConfirmationEmail(
+    ...args: Parameters<typeof renderTransferRequestConfirmation>
+  ) {
+    return renderTransferRequestConfirmation(...args);
+  }
+
+  protected renderProjectTransferCompleteEmail(
+    ...args: Parameters<typeof renderProjectTransferComplete>
+  ) {
+    return renderProjectTransferComplete(...args);
+  }
+
   async sendAddedUserNotification(
     experimentId: string,
     experimentName: string,
@@ -39,7 +61,7 @@ export class NotificationsService {
         const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
         const transport = createTransport(this.emailConfigService.getServer());
 
-        const { html, text } = await renderAddedUserNotification({
+        const { html, text } = await this.renderAddedUserNotificationEmail({
           host,
           experimentName,
           experimentUrl,
@@ -117,7 +139,7 @@ export class NotificationsService {
         const { host } = new URL(baseUrl);
         const transport = createTransport(this.emailConfigService.getServer());
 
-        const { html, text } = await renderTransferRequestConfirmation({
+        const { html, text } = await this.renderTransferRequestConfirmationEmail({
           host,
           projectIdOld,
           projectUrlOld,
@@ -191,7 +213,7 @@ export class NotificationsService {
         const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
         const transport = createTransport(this.emailConfigService.getServer());
 
-        const { html, text } = await renderProjectTransferComplete({
+        const { html, text } = await this.renderProjectTransferCompleteEmail({
           host,
           experimentName,
           experimentUrl,

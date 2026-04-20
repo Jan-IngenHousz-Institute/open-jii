@@ -1,31 +1,18 @@
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
-import {
-  initializePostHogServer,
-  getPostHogServerClient,
-  shutdownPostHog,
-} from "@repo/analytics/server";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { AnalyticsConfigService } from "../config/config.service";
 import { FlagsService } from "./flags.service";
 
-// Mock the analytics/server module
-vi.mock("@repo/analytics/server", () => ({
-  initializePostHogServer: vi.fn().mockResolvedValue(true),
-  getPostHogServerClient: vi.fn(() => ({
-    isFeatureEnabled: vi.fn().mockResolvedValue(true),
-  })),
-  shutdownPostHog: vi.fn().mockResolvedValue(undefined),
-}));
-
-const mockInitializePostHogServer = vi.mocked(initializePostHogServer);
-const mockGetPostHogServerClient = vi.mocked(getPostHogServerClient);
-const mockShutdownPostHog = vi.mocked(shutdownPostHog);
-
 describe("FlagsService", () => {
   const testApp = TestHarness.App;
   let service: FlagsService;
   let configService: AnalyticsConfigService;
+
+  // Spy references — recreated fresh in each beforeEach
+  let mockInitializePostHogServer: ReturnType<typeof vi.spyOn>;
+  let mockGetPostHogServerClient: ReturnType<typeof vi.spyOn>;
+  let mockShutdownPostHog: ReturnType<typeof vi.spyOn>;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -36,14 +23,17 @@ describe("FlagsService", () => {
     service = testApp.module.get(FlagsService);
     configService = testApp.module.get(AnalyticsConfigService);
 
-    // Reset mocks
-    vi.clearAllMocks();
-    // Reset default mock implementations
-    mockInitializePostHogServer.mockResolvedValue(true);
-    mockGetPostHogServerClient.mockReturnValue({
+    // Create fresh spies on the protected wrapper methods
+    mockInitializePostHogServer = vi
+      .spyOn(service as any, "initializePostHog")
+      .mockResolvedValue(true);
+    mockGetPostHogServerClient = vi.spyOn(service as any, "getPostHogClient").mockReturnValue({
       isFeatureEnabled: vi.fn().mockResolvedValue(true),
       shutdown: vi.fn().mockResolvedValue(undefined),
     });
+    mockShutdownPostHog = vi
+      .spyOn(service as any, "doShutdownPostHog")
+      .mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -66,32 +56,32 @@ describe("FlagsService", () => {
     });
 
     it("should skip initialization when not configured", async () => {
-      // Create a fresh service with mocked config for this test
       const mockConfig = {
         isConfigured: vi.fn().mockReturnValue(false),
         posthogKey: undefined,
         getPostHogServerConfig: vi.fn(),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
+      const freshInitSpy = vi.spyOn(freshService as any, "initializePostHog");
 
       await freshService.onModuleInit();
 
-      expect(mockInitializePostHogServer).not.toHaveBeenCalled();
+      expect(freshInitSpy).not.toHaveBeenCalled();
       expect(freshService.isInitialized()).toBe(false);
     });
 
     it("should handle missing PostHog key", async () => {
-      // Create a fresh service with mocked config for this test
       const mockConfig = {
         isConfigured: vi.fn().mockReturnValue(true),
         posthogKey: undefined,
         getPostHogServerConfig: vi.fn(),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
+      const freshInitSpy = vi.spyOn(freshService as any, "initializePostHog");
 
       await freshService.onModuleInit();
 
-      expect(mockInitializePostHogServer).not.toHaveBeenCalled();
+      expect(freshInitSpy).not.toHaveBeenCalled();
       expect(freshService.isInitialized()).toBe(false);
     });
 
@@ -102,7 +92,7 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn().mockReturnValue({ host: "test" }),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      mockInitializePostHogServer.mockResolvedValue(false);
+      vi.spyOn(freshService as any, "initializePostHog").mockResolvedValue(false);
 
       await freshService.onModuleInit();
 
@@ -116,7 +106,9 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn().mockReturnValue({ host: "test" }),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      mockInitializePostHogServer.mockRejectedValue(new Error("Network error"));
+      vi.spyOn(freshService as any, "initializePostHog").mockRejectedValue(
+        new Error("Network error"),
+      );
 
       await expect(freshService.onModuleInit()).resolves.not.toThrow();
       expect(freshService.isInitialized()).toBe(false);
@@ -136,21 +128,18 @@ describe("FlagsService", () => {
     });
 
     it("should not shutdown when not initialized", async () => {
-      // Create a fresh service that won't be initialized
       const mockConfig = {
         isConfigured: vi.fn().mockReturnValue(false),
         posthogKey: undefined,
         getPostHogServerConfig: vi.fn(),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-
-      // Clear mocks to ensure we only see calls from this test
-      mockShutdownPostHog.mockClear();
+      const freshShutdownSpy = vi.spyOn(freshService as any, "doShutdownPostHog");
 
       await freshService.onModuleInit();
       await freshService.onModuleDestroy();
 
-      expect(mockShutdownPostHog).not.toHaveBeenCalled();
+      expect(freshShutdownSpy).not.toHaveBeenCalled();
     });
   });
 

@@ -28,7 +28,7 @@ async function executeMacro(code: string, json: object): Promise<MacroOutput> {
   // console.log("[macro] (JS) input:", JSON.stringify(json));
   const mathLibSource = await mathLibSourcePromise;
   // Wrap the macro code in an IIFE to isolate its scope from mathLibSource variables
-  // This prevents variable name conflicts while still allowing access to mathLib functions
+  // This prevents variable name conflicts while still allowing access to math  Lib functions
   // The IIFE returns the output, which we capture and return
   const macroSource =
     mathLibSource + "\n\n\n" + "return (function(json) {\n" + code + "\n})(json);";
