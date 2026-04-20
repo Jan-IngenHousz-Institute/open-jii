@@ -82,6 +82,7 @@ jobs:
             javascript) SUFFIX="js" ;;
             python)     SUFFIX="python" ;;
             r)          SUFFIX="r" ;;
+            *) echo "Unsupported language: ${{ matrix.language }}"; exit 1 ;;
           esac
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
