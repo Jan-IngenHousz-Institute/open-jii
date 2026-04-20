@@ -20,7 +20,9 @@ const mockPostHogInstance = {
 };
 
 vi.mock("posthog-node", () => ({
-  PostHog: vi.fn(() => mockPostHogInstance),
+  PostHog: vi.fn(function () {
+    return mockPostHogInstance;
+  }),
 }));
 
 describe("posthog-server", () => {

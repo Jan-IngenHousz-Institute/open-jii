@@ -32,7 +32,6 @@ describe("ExecuteMacroUseCase", () => {
     macroRepository = testApp.module.get(MacroRepository);
     lambdaPort = testApp.module.get(LAMBDA_PORT);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

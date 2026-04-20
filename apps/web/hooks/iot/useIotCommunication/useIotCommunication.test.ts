@@ -5,25 +5,29 @@ import { useIotCommunication } from "./useIotCommunication";
 
 // Mock the IoT package
 vi.mock("@repo/iot", () => ({
-  MultispeqDriver: vi.fn().mockImplementation(() => ({
-    initialize: vi.fn(),
-    execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
-    getDeviceInfo: vi.fn().mockResolvedValue({
-      device_name: "Test Device",
-      device_version: "1.0.0",
-      device_battery: 85,
-    }),
-    destroy: vi.fn().mockResolvedValue(undefined),
-  })),
-  GenericDeviceDriver: vi.fn().mockImplementation(() => ({
-    initialize: vi.fn(),
-    execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
-    getDeviceInfo: vi.fn().mockResolvedValue({
-      device_name: "Generic Device",
-      device_version: "1.0.0",
-    }),
-    destroy: vi.fn().mockResolvedValue(undefined),
-  })),
+  MultispeqDriver: vi.fn(function () {
+    return {
+      initialize: vi.fn(),
+      execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
+      getDeviceInfo: vi.fn().mockResolvedValue({
+        device_name: "Test Device",
+        device_version: "1.0.0",
+        device_battery: 85,
+      }),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+  GenericDeviceDriver: vi.fn(function () {
+    return {
+      initialize: vi.fn(),
+      execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
+      getDeviceInfo: vi.fn().mockResolvedValue({
+        device_name: "Generic Device",
+        device_version: "1.0.0",
+      }),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
   GENERIC_BLE_UUIDS: {
     SERVICE: "generic-service",
     WRITE: "generic-write",

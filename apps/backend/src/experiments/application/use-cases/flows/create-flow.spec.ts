@@ -91,7 +91,6 @@ describe("CreateFlowUseCase", () => {
       expect(result.error.statusCode).toBe(403);
       expect(result.error.message).toContain("You do not have access to this experiment");
     } finally {
-      vi.restoreAllMocks();
     }
   });
 

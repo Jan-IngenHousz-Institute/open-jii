@@ -38,7 +38,6 @@ describe("ProjectTransferRequestsRepository", () => {
     databricksPort = testApp.module.get(DATABRICKS_PORT);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

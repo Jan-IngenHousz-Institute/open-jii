@@ -25,7 +25,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
     experimentRepository = testApp.module.get(ExperimentRepository);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -345,7 +344,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
         assertFailure(result);
         expect(result.error.message).toContain("You do not have access to this experiment");
       } finally {
-        vi.restoreAllMocks();
       }
     });
   });

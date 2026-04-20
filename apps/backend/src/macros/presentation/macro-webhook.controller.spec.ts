@@ -30,7 +30,6 @@ describe("MacroWebhookController", () => {
     await testApp.beforeEach();
     executeMacroBatchUseCase = testApp.module.get(ExecuteMacroBatchUseCase);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

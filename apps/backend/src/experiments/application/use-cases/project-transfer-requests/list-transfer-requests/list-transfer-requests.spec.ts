@@ -28,7 +28,6 @@ describe("ListTransferRequests", () => {
     databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

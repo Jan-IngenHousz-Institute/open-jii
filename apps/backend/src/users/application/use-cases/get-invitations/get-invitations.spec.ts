@@ -23,7 +23,6 @@ describe("GetInvitationsUseCase", () => {
     createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -69,7 +68,6 @@ describe("GetInvitationsUseCase", () => {
       testUserId,
     );
 
-    vi.restoreAllMocks();
 
     const result = await useCase.execute("experiment", experiment.id);
 
@@ -97,7 +95,6 @@ describe("GetInvitationsUseCase", () => {
       testUserId,
     );
 
-    vi.restoreAllMocks();
 
     const result = await useCase.execute("experiment", experiment.id);
 
@@ -127,7 +124,6 @@ describe("GetInvitationsUseCase", () => {
       testUserId,
     );
 
-    vi.restoreAllMocks();
 
     const result = await useCase.execute("experiment", exp2.id);
 

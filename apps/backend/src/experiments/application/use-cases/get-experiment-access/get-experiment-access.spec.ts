@@ -27,7 +27,6 @@ describe("GetExperimentAccessUseCase", () => {
   afterEach(() => {
     testApp.afterEach();
     // Reset any mocks
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -282,7 +281,6 @@ describe("GetExperimentAccessUseCase", () => {
 
     it("should correctly identify public vs private experiment access scenarios", async () => {
       // Reset any mocks to use real repository
-      vi.restoreAllMocks();
       experimentRepository = testApp.module.get(ExperimentRepository);
 
       // Arrange - Create both public and private experiments
@@ -318,7 +316,6 @@ describe("GetExperimentAccessUseCase", () => {
 
     it("should return correct access info structure with all required fields", async () => {
       // Reset any mocks to use real repository
-      vi.restoreAllMocks();
       experimentRepository = testApp.module.get(ExperimentRepository);
 
       const { experiment } = await testApp.createExperiment({

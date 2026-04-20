@@ -32,7 +32,6 @@ describe("GetExperimentDataUseCase", () => {
     experimentRepository = testApp.module.get(ExperimentRepository);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

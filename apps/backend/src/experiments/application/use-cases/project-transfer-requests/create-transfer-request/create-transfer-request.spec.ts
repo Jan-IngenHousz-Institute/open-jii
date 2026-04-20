@@ -31,7 +31,6 @@ describe("CreateTransferRequest", () => {
     emailAdapter = testApp.module.get(EmailAdapter);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

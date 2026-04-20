@@ -28,7 +28,6 @@ describe("UserController", () => {
     createUserProfileUseCase = testApp.module.get(CreateUserProfileUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

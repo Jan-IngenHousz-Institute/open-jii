@@ -7,6 +7,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: "node",
+      exclude: ["dist/**", "node_modules/**"],
       coverage: {
         exclude: [
           // API-specific exclusions (extends base config)

@@ -528,7 +528,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       // Need to re-import to pick up the mock
@@ -554,7 +554,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -585,7 +585,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -634,7 +634,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -681,7 +681,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -728,7 +728,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -781,7 +781,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -827,7 +827,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -874,7 +874,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -924,7 +924,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
@@ -952,7 +952,7 @@ describe("parseFile", () => {
       };
 
       vi.doMock("exceljs", () => ({
-        Workbook: vi.fn().mockImplementation(() => mockWorkbook),
+        Workbook: vi.fn(function () { return mockWorkbook; }),
       }));
 
       const { parseFile: parseFileFresh } = await import("./parse-metadata-import");

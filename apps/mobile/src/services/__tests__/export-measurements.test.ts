@@ -7,14 +7,14 @@ import { getMeasurements } from "~/services/measurements-storage";
 const mockCreate = vi.fn();
 const mockWrite = vi.fn();
 
-vi.mock("expo-file-system", () => ({
-  File: vi.fn().mockImplementation(() => ({
-    create: mockCreate,
-    write: mockWrite,
-    uri: "file:///cache/test-file.json",
-  })),
-  Paths: { cache: "/cache" },
-}));
+vi.mock("expo-file-system", () => {
+  const MockFile = vi.fn(function (this: any) {
+    this.create = mockCreate;
+    this.write = mockWrite;
+    this.uri = "file:///cache/test-file.json";
+  });
+  return { File: MockFile, Paths: { cache: "/cache" } };
+});
 
 vi.mock("expo-sharing", () => ({
   shareAsync: vi.fn(),

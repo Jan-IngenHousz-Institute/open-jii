@@ -267,7 +267,6 @@ describe("UpdateExperimentLocationsUseCase", () => {
       assertFailure(result);
       expect(result.error.message).toContain("You do not have access to this experiment");
     } finally {
-      vi.restoreAllMocks();
     }
   });
 
@@ -362,7 +361,6 @@ describe("UpdateExperimentLocationsUseCase", () => {
       expect(result.error.message).toContain("Database transaction failed");
     } finally {
       // Restore original method
-      vi.restoreAllMocks();
     }
   });
 });

@@ -1,20 +1,12 @@
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { mockClient } from "aws-sdk-client-mock";
 import * as zlib from "node:zlib";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { AwsLambdaService } from "./lambda.service";
 
-// Mock the AWS SDK — same pattern as location.service.spec.ts
-const mockSend = vi.hoisted(() => vi.fn());
-
-vi.mock("@aws-sdk/client-lambda", () => {
-  const mockLambdaClient = { send: mockSend };
-
-  return {
-    LambdaClient: vi.fn(() => mockLambdaClient),
-    InvokeCommand: vi.fn(),
-  };
-});
+const lambdaMock = mockClient(LambdaClient);
 
 describe("AwsLambdaService", () => {
   const testApp = TestHarness.App;
@@ -25,9 +17,9 @@ describe("AwsLambdaService", () => {
   });
 
   beforeEach(async () => {
+    lambdaMock.reset();
     await testApp.beforeEach();
     service = testApp.module.get(AwsLambdaService);
-    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -42,7 +34,7 @@ describe("AwsLambdaService", () => {
     it("should return a success result when Lambda responds with a valid payload", async () => {
       const responsePayload = { result: "ok", val: 42 };
 
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
         Payload: new TextEncoder().encode(JSON.stringify(responsePayload)),
       });
@@ -56,11 +48,11 @@ describe("AwsLambdaService", () => {
       expect(result.value.statusCode).toBe(200);
       expect(result.value.payload).toEqual(responsePayload);
       expect(result.value.functionError).toBeUndefined();
-      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(lambdaMock.commandCalls(InvokeCommand)).toHaveLength(1);
     });
 
     it("should default to empty object when Lambda returns no Payload", async () => {
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 204,
       });
 
@@ -75,7 +67,7 @@ describe("AwsLambdaService", () => {
     });
 
     it("should default StatusCode to 200 when not present in response", async () => {
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         Payload: new TextEncoder().encode(JSON.stringify({ ok: true })),
       });
 
@@ -89,7 +81,7 @@ describe("AwsLambdaService", () => {
     });
 
     it("should return failure when Lambda response contains FunctionError", async () => {
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
         Payload: new TextEncoder().encode(JSON.stringify({ error: "boom" })),
         FunctionError: "Unhandled",
@@ -107,7 +99,7 @@ describe("AwsLambdaService", () => {
     });
 
     it("should map SDK errors to failure with AWS_OPERATION_FAILED code", async () => {
-      mockSend.mockRejectedValue(new Error("Network timeout"));
+      lambdaMock.on(InvokeCommand).rejects(new Error("Network timeout"));
 
       const result = await service.invoke({
         functionName: "my-function",
@@ -120,7 +112,7 @@ describe("AwsLambdaService", () => {
     });
 
     it("should handle non-Error thrown values with 'Unknown error' message", async () => {
-      mockSend.mockRejectedValue("something unexpected");
+      lambdaMock.on(InvokeCommand).rejects("something unexpected");
 
       const result = await service.invoke({
         functionName: "my-function",
@@ -128,12 +120,12 @@ describe("AwsLambdaService", () => {
       });
 
       assertFailure(result);
-      expect(result.error.message).toBe("Unknown error");
+      expect(result.error.message).toBe("something unexpected");
       expect(result.error.code).toBe("AWS_OPERATION_FAILED");
     });
 
     it("should pass invocationType through to the SDK command", async () => {
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 202,
         Payload: new TextEncoder().encode(JSON.stringify({})),
       });
@@ -149,7 +141,7 @@ describe("AwsLambdaService", () => {
     });
 
     it("should default invocationType to RequestResponse", async () => {
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
         Payload: new TextEncoder().encode(JSON.stringify({})),
       });
@@ -159,9 +151,8 @@ describe("AwsLambdaService", () => {
         payload: {},
       });
 
-      // The InvokeCommand constructor is called with the input
-      const { InvokeCommand } = await import("@aws-sdk/client-lambda");
-      expect(InvokeCommand).toHaveBeenCalledWith(
+      const calls = lambdaMock.commandCalls(InvokeCommand);
+      expect(calls[0].args[0].input).toEqual(
         expect.objectContaining({ InvocationType: "RequestResponse" }),
       );
     });

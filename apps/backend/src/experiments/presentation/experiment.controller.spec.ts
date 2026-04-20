@@ -33,7 +33,6 @@ describe("ExperimentController", () => {
     analyticsAdapter = testApp.module.get(AnalyticsAdapter);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

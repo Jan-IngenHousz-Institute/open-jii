@@ -32,7 +32,6 @@ describe("CreateInvitationUseCase", () => {
     invitationRepo = testApp.module.get(InvitationRepository);
     userRepo = testApp.module.get(UserRepository);
 
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -123,16 +122,6 @@ describe("CreateInvitationUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
-
-    await useCase.execute(
-      "experiment",
-      experiment.id,
-      "existing@example.com",
-      "member",
-      testUserId,
-    );
-
     const emailSpy = vi
       .spyOn(emailPort, "sendInvitationEmail")
       .mockResolvedValue(success(undefined));
@@ -145,6 +134,21 @@ describe("CreateInvitationUseCase", () => {
       testUserId,
     );
 
+    // First call should have sent the email
+    expect(emailSpy).toHaveBeenCalledOnce();
+
+    // Reset call count before the duplicate attempt
+    emailSpy.mockClear();
+
+    await useCase.execute(
+      "experiment",
+      experiment.id,
+      "existing@example.com",
+      "member",
+      testUserId,
+    );
+
+    // Duplicate should return early without sending email
     expect(emailSpy).not.toHaveBeenCalled();
   });
 

@@ -34,7 +34,6 @@ describe("ProjectTransferWebhookController", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
