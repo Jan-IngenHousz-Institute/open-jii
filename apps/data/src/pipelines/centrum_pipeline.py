@@ -1010,7 +1010,7 @@ def enriched_experiment_raw_data():
             "measurement_time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss XXX")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
             )
         )
         .withColumn(
@@ -1105,7 +1105,7 @@ def enriched_experiment_macro_data():
             "measurement_time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss XXX")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
             )
         )
         .withColumn(
