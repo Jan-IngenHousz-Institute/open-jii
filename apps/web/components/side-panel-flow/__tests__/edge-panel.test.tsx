@@ -1,17 +1,10 @@
 // apps/web/components/side-panel-flow/__tests__/edge-side-panel.test.tsx
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, userEvent } from "@/test/test-utils";
 import type { Edge } from "@xyflow/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { EdgeSidePanel } from "../edge-panel";
-
-// Minimal i18n mock (labels are predictable)
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
 
 const makeEdge = (overrides?: Partial<Edge>): Edge =>
   ({
@@ -45,16 +38,17 @@ describe("<EdgeSidePanel />", () => {
     const input = screen.getByPlaceholderText<HTMLInputElement>("edgePanel.labelPlaceholder");
     expect(input.value).toBe("init");
 
+    const user = userEvent.setup();
     // Update label
-    await userEvent.clear(input);
-    await userEvent.type(input, "updated");
+    await user.clear(input);
+    await user.type(input, "updated");
     expect(onUpdate).toHaveBeenCalledWith("e1", {
       data: { label: "updated", extra: "x" },
     });
     expect(input.value).toBe("updated"); // local state reflects change
 
     // Delete
-    await userEvent.click(screen.getByRole("button", { name: "edgePanel.remove" }));
+    await user.click(screen.getByRole("button", { name: "edgePanel.remove" }));
     expect(onDelete).toHaveBeenCalledWith("e1");
     expect(onClose).toHaveBeenCalled();
   });
@@ -79,8 +73,9 @@ describe("<EdgeSidePanel />", () => {
     const input = screen.getByPlaceholderText<HTMLInputElement>("edgePanel.labelPlaceholder");
     expect(input.value).toBe("LBL");
 
-    await userEvent.clear(input);
-    await userEvent.type(input, "X");
+    const user = userEvent.setup();
+    await user.clear(input);
+    await user.type(input, "X");
     expect(onUpdate).toHaveBeenCalledWith("e1", {
       data: { foo: "bar", label: "X" },
     });
@@ -108,8 +103,9 @@ describe("<EdgeSidePanel />", () => {
     expect(input).toBeDisabled();
     expect(removeBtn).toBeDisabled();
 
-    await userEvent.type(input, "won't fire");
-    await userEvent.click(removeBtn);
+    const user = userEvent.setup();
+    await user.type(input, "won't fire");
+    await user.click(removeBtn);
 
     expect(onUpdate).not.toHaveBeenCalled();
     expect(onDelete).not.toHaveBeenCalled();
@@ -120,7 +116,8 @@ describe("<EdgeSidePanel />", () => {
     const onClose = vi.fn();
     render(<EdgeSidePanel open selectedEdge={makeEdge()} onClose={onClose} isDisabled={false} />);
 
-    await userEvent.click(screen.getByLabelText("edgePanel.closeBackdrop"));
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("edgePanel.closeBackdrop"));
     expect(onClose).toHaveBeenCalled();
   });
 });

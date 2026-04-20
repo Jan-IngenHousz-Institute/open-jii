@@ -168,6 +168,11 @@ locals {
         "lambda:GetFunctionConcurrency",
         # Code signing (Terraform provider reads)
         "lambda:GetFunctionCodeSigningConfig",
+        # Event invoke config (Terraform)
+        "lambda:GetFunctionEventInvokeConfig",
+        "lambda:PutFunctionEventInvokeConfig",
+        "lambda:UpdateFunctionEventInvokeConfig",
+        "lambda:DeleteFunctionEventInvokeConfig",
         # Layer management (Terraform provider reads layer metadata before attaching)
         "lambda:GetLayerVersion",
         "lambda:GetLayerVersionPolicy",
@@ -369,6 +374,10 @@ locals {
         "logs:ListTagsForResource",
         "logs:ListTagsLogGroup",
         "logs:TagLogGroup",
+        # Metric filters (Terraform)
+        "logs:PutMetricFilter",
+        "logs:DeleteMetricFilter",
+        "logs:DescribeMetricFilters",
       ]
       resource = "*"
     }
@@ -991,6 +1000,14 @@ locals {
         "iam:CreateServiceLinkedRole",
       ]
       resource = "arn:aws:iam::*:role/aws-service-role/inspector2.amazonaws.com/AWSServiceRoleForAmazonInspector2"
+    }
+
+    # ── ECR replication: service-linked role creation (first-time enablement) ──
+    ecr-replication-slr = {
+      actions = [
+        "iam:CreateServiceLinkedRole",
+      ]
+      resource = "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication"
     }
   }
 

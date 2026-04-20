@@ -1670,14 +1670,25 @@ module "backend_ecs" {
     {
       name  = "NEXT_PUBLIC_API_URL"
       value = "https://${module.route53.api_domain}"
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["python"]
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_JAVASCRIPT_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["js"]
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["r"]
     }
   ]
 
   # Additional IAM policies for the task role
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn,
-    # Uncomment after bootstrapping ECR images:
-    # module.macro_sandbox.invoke_policy_arn,
+    module.macro_sandbox.invoke_policy_arn,
   ]
 
   tags = {
@@ -2009,8 +2020,7 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
-  # Uncomment after bootstrapping ECR images:
-  # macro_sandbox_function_names = module.macro_sandbox.function_names
+  macro_sandbox_function_names = module.macro_sandbox.function_names
 
   providers = {
     grafana.amg = grafana.amg

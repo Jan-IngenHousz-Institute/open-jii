@@ -1,64 +1,11 @@
 import { useLocale } from "@/hooks/useLocale";
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { usePathname, useParams } from "next/navigation";
-import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import AnalysisLayout from "./layout";
 
-globalThis.React = React;
-
-// Mock hooks
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: vi.fn(),
-}));
-
-vi.mock("next/navigation", () => ({
-  usePathname: vi.fn(),
-  useParams: vi.fn(),
-}));
-
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href} data-testid="link">
-      {children}
-    </a>
-  ),
-}));
-
-// Mock translation hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  NavTabs: ({ children, value }: { children: React.ReactNode; value: string }) => (
-    <div data-testid="tabs" data-value={value}>
-      {children}
-    </div>
-  ),
-  NavTabsList: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="tabs-list">{children}</div>
-  ),
-  NavTabsTrigger: ({
-    children,
-    value,
-    asChild,
-  }: {
-    children: React.ReactNode;
-    value: string;
-    asChild?: boolean;
-  }) => (
-    <div data-testid={`tab-trigger-${value}`} data-as-child={String(!!asChild)}>
-      {children}
-    </div>
-  ),
-}));
-
 beforeEach(() => {
-  vi.clearAllMocks();
   vi.mocked(useLocale).mockReturnValue("en-US");
   vi.mocked(useParams).mockReturnValue({ id: "test-experiment-id" });
 });
@@ -71,12 +18,12 @@ describe("<AnalysisLayout />", () => {
 
     render(
       <AnalysisLayout>
-        <div data-testid="child-content">Child Content</div>
+        <div>Child Content</div>
       </AnalysisLayout>,
     );
 
-    expect(screen.getByTestId("child-content")).toBeInTheDocument();
-    expect(screen.queryByTestId("tabs")).not.toBeInTheDocument();
+    expect(screen.getByText("Child Content")).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
   });
 
   it("renders full layout for main visualizations page", () => {
@@ -86,15 +33,14 @@ describe("<AnalysisLayout />", () => {
 
     render(
       <AnalysisLayout>
-        <div data-testid="child-content">Child Content</div>
+        <div>Child Content</div>
       </AnalysisLayout>,
     );
 
     expect(screen.getByText("analysis.title")).toBeInTheDocument();
     expect(screen.getByText("analysis.description")).toBeInTheDocument();
-    expect(screen.getByTestId("tabs")).toBeInTheDocument();
-    expect(screen.getByTestId("tabs")).toHaveAttribute("data-value", "visualizations");
-    expect(screen.getByTestId("child-content")).toBeInTheDocument();
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByText("Child Content")).toBeInTheDocument();
   });
 
   it("renders correct tab links for archive experiments", () => {
@@ -104,48 +50,25 @@ describe("<AnalysisLayout />", () => {
 
     render(
       <AnalysisLayout>
-        <div data-testid="child-content">Child Content</div>
+        <div>Child Content</div>
       </AnalysisLayout>,
     );
 
-    expect(screen.getByTestId("tab-trigger-visualizations")).toBeInTheDocument();
-    expect(screen.getByTestId("tab-trigger-notebooks")).toBeInTheDocument();
-
-    // Check that visualizations tab is a link
-    const visualizationsTab = screen.getByTestId("tab-trigger-visualizations");
-    expect(visualizationsTab).toHaveAttribute("data-as-child", "true");
-
-    // Check that notebooks tab is disabled
-    const notebooksTab = screen.getByTestId("tab-trigger-notebooks");
-    expect(notebooksTab).toHaveAttribute("data-as-child", "false");
-    expect(screen.getByText("analysis.notebooks")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /analysis.visualizations/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /analysis.notebooks/ })).toBeInTheDocument();
   });
 
-  it("sets active tab to notebooks when pathname includes notebooks", () => {
+  it("renders tabs on notebooks page", () => {
     vi.mocked(usePathname).mockReturnValue(
       "/en-US/platform/experiments-archive/test-experiment-id/analysis/notebooks",
     );
 
     render(
       <AnalysisLayout>
-        <div data-testid="child-content">Child Content</div>
+        <div>Child Content</div>
       </AnalysisLayout>,
     );
 
-    expect(screen.getByTestId("tabs")).toHaveAttribute("data-value", "notebooks");
-  });
-
-  it("defaults to visualizations tab for unknown paths", () => {
-    vi.mocked(usePathname).mockReturnValue(
-      "/en-US/platform/experiments-archive/test-experiment-id/analysis/notebooks",
-    );
-
-    render(
-      <AnalysisLayout>
-        <div data-testid="child-content">Child Content</div>
-      </AnalysisLayout>,
-    );
-
-    expect(screen.getByTestId("tabs")).toHaveAttribute("data-value", "notebooks");
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
 });

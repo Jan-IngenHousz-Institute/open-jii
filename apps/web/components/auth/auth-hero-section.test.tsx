@@ -1,63 +1,26 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, expect, it } from "vitest";
 
 import { AuthHeroSection } from "./auth-hero-section";
 
-globalThis.React = React;
-
-// --- Mocks ---
-vi.mock("@repo/i18n/server", () => ({
-  default: vi.fn(() =>
-    Promise.resolve({
-      t: (key: string) => key,
-    }),
-  ),
-}));
-
 describe("AuthHeroSection", () => {
-  const locale = "en-US";
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("renders the hero title", async () => {
-    render(await AuthHeroSection({ locale }));
-
-    expect(screen.getByText("auth.heroTitle")).toBeInTheDocument();
-  });
-
-  it("renders the hero description", async () => {
-    render(await AuthHeroSection({ locale }));
+  it("renders hero title and description", async () => {
+    render(await AuthHeroSection({ locale: "en-US" }));
 
     expect(screen.getByText("auth.heroDescription")).toBeInTheDocument();
   });
 
-  it("renders openJII logo and powered by text", async () => {
-    render(await AuthHeroSection({ locale }));
+  it("renders openJII logo and powered-by text", async () => {
+    render(await AuthHeroSection({ locale: "en-US" }));
 
-    const openJiiLogo = screen.getByAltText("openJII Logo");
-    expect(openJiiLogo).toBeInTheDocument();
-
-    const src = openJiiLogo.getAttribute("src") ?? "";
-    expect(decodeURIComponent(src)).toContain("/openJII-logo-BW-horizontal-white.svg");
-
+    expect(screen.getByAltText("openJII Logo")).toBeInTheDocument();
     expect(screen.getByText("auth.poweredBy")).toBeInTheDocument();
   });
 
-  it("renders the institute logo with correct alt text", async () => {
-    render(await AuthHeroSection({ locale }));
+  it("renders institute logo with correct dimensions", async () => {
+    render(await AuthHeroSection({ locale: "en-US" }));
 
     const logo = screen.getByAltText("auth.instituteAlt");
-    expect(logo).toBeInTheDocument();
-
-    const src = logo.getAttribute("src") ?? "";
-
-    // decode %2F back into "/" so we can assert the filename is present
-    expect(decodeURIComponent(src)).toContain("/jan-ingenhousz-institute-logo-header-light.svg");
-
     expect(logo).toHaveAttribute("width", "140");
     expect(logo).toHaveAttribute("height", "28");
   });

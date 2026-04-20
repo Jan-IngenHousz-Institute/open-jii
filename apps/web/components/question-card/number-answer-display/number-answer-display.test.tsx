@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { NumberAnswerDisplay } from "./number-answer-display";
@@ -16,8 +15,8 @@ describe("NumberAnswerDisplay", () => {
   });
 
   it("displays the number icon", () => {
-    const { container } = render(<NumberAnswerDisplay />);
-    const svg = container.querySelector("svg");
+    render(<NumberAnswerDisplay />);
+    const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
 

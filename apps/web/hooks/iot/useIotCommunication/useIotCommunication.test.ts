@@ -1,5 +1,4 @@
-import "@testing-library/jest-dom/vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { useIotCommunication } from "./useIotCommunication";
@@ -215,7 +214,7 @@ describe("useIotCommunication", () => {
       // Capture the onStatusChanged callback so we can trigger it
       let statusCallback: ((connected: boolean, error?: Error) => void) | undefined;
       const { WebSerialAdapter } = await import("@repo/iot/transport/web");
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       vi.mocked(WebSerialAdapter.requestAndConnect).mockResolvedValue({
         isConnected: vi.fn().mockReturnValue(true),
         send: vi.fn(),

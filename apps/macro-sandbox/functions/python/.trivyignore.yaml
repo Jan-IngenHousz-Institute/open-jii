@@ -1,0 +1,29 @@
+# AWS Lambda Python base image CVEs (public.ecr.aws/lambda/python:3.12)
+# All in AWS-managed components. Fixes require AWS to publish updated base images.
+# Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
+
+vulnerabilities:
+    # libnghttp2
+    - id: CVE-2026-27135
+      statement: >-
+          libnghttp2 DoS via malformed HTTP/2 frames.
+          Sandbox cannot make outbound HTTP/2 connections.
+
+    # openssl - all require specific protocol usage that Lambda does not do
+    - id: CVE-2026-28387
+      statement: "DANE TLSA use-after-free. Lambda does not use DANE."
+    - id: CVE-2026-28388
+      statement: "delta CRL NULL deref. Requires X509_V_FLAG_USE_DELTAS."
+    - id: CVE-2026-28389
+      statement: "CMS KeyAgree NULL deref. No CMS processing."
+    - id: CVE-2026-28390
+      statement: "CMS EnvelopedData NULL deref. No CMS processing."
+    - id: CVE-2026-31790
+      statement: "RSASVE info disclosure. No RSA key encapsulation."
+
+    # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
+    # Only used for local testing - production Lambda ignores this binary.
+    - id: CVE-2026-32280
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-32282
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."

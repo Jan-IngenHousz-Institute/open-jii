@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Keyboard } from "react-native";
 import { toast } from "sonner-native";
 import { Checkbox } from "~/components/Checkbox";
 import { useTheme } from "~/hooks/use-theme";
@@ -49,6 +49,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
 
   // Handler for yes/no and multi_choice that auto-advances
   const handleAnswerChangeAndAdvance = (value: string) => {
+    Keyboard.dismiss();
     // Set the answer
     setAnswer(iterationCount, node.id, value);
     // Use shared utility to advance with proper answer handling
@@ -63,7 +64,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           (opt) => opt.trim().toLowerCase() === data.trim().toLowerCase(),
         );
         if (!match) {
-          toast.error("QR doesn't match any options.");
+          toast.error(`"${data}" does not exist.`);
           return;
         }
         handleAnswerChangeAndAdvance(match);
@@ -74,15 +75,6 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         handleAnswerChange(data);
         toast.success("QR applied successfully!");
         break;
-      case "number": {
-        if (data.trim() === "" || isNaN(Number(data))) {
-          toast.error("QR is not a valid number.");
-          return;
-        }
-        handleAnswerChange(data);
-        toast.success("QR applied successfully!");
-        break;
-      }
       default:
         handleAnswerChange(data);
         toast.success("QR applied successfully!");
@@ -95,12 +87,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         return <TextQuestion content={content} value={answerValue} onChange={handleAnswerChange} />;
       case "number":
         return (
-          <NumberQuestion
-            content={content}
-            value={answerValue}
-            onChange={handleAnswerChange}
-            onQRPress={() => setQrScannerVisible(true)}
-          />
+          <NumberQuestion content={content} value={answerValue} onChange={handleAnswerChange} />
         );
       case "single_choice":
         return (
