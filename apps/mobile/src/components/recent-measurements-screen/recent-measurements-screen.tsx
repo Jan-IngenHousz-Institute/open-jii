@@ -6,7 +6,7 @@ import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
-import { MeasurementList } from "~/components/recent-measurements-screen/measurements-list";
+import { MeasurementsList } from "~/components/recent-measurements-screen/measurements-list";
 import { useAllMeasurements } from "~/hooks/use-all-measurements";
 import type { MeasurementFilter } from "~/hooks/use-all-measurements";
 import { useMeasurements } from "~/hooks/use-measurements";
@@ -114,7 +114,7 @@ export function RecentMeasurementsScreen() {
         </View>
       </View>
 
-      <MeasurementList
+      <MeasurementsList
         measurements={measurements}
         filter={filter}
         invalidate={invalidate}

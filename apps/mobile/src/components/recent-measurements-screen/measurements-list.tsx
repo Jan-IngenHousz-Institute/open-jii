@@ -12,19 +12,19 @@ import { useTheme } from "~/hooks/use-theme";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
-interface MeasurementListProps {
+interface MeasurementsListProps {
   measurements: MeasurementItemType[] | undefined;
   filter: string;
   invalidate: () => void;
   listFooter?: React.ReactElement | null;
 }
 
-export function MeasurementList({
+export function MeasurementsList({
   measurements,
   filter,
   invalidate,
   listFooter,
-}: MeasurementListProps) {
+}: MeasurementsListProps) {
   const { classes, colors } = useTheme();
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
