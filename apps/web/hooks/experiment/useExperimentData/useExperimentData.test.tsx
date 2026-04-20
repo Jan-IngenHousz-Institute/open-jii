@@ -67,6 +67,18 @@ describe("getColumnWidth", () => {
   it("should return 180 for USER column type", () => {
     expect(getColumnWidth(WellKnownColumnTypes.CONTRIBUTOR)).toBe(180);
   });
+
+  it("should return fixed widths for time columns by name", () => {
+    expect(getColumnWidth("STRING", "measurement_time_local")).toBe(220);
+    expect(getColumnWidth("STRING", "local_time")).toBe(90);
+    expect(getColumnWidth("STRING", "measurement_time_utc")).toBe(175);
+  });
+
+  it("should prioritize column name over type for time columns", () => {
+    expect(getColumnWidth("ARRAY", "measurement_time_local")).toBe(220);
+    expect(getColumnWidth("MAP", "local_time")).toBe(90);
+    expect(getColumnWidth("TIMESTAMP", "measurement_time_utc")).toBe(175);
+  });
 });
 
 describe("useExperimentData", () => {
