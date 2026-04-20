@@ -27,7 +27,7 @@ on:
         type: string
         default: ""
       languages:
-        description: "JSON array of lambda languages to deploy (e.g. '["python","r"]'). Defaults to all."
+        description: "JSON array of lambda languages to deploy (e.g. '[\"python\",\"r\"]'). Defaults to all."
         required: false
         type: string
         default: '["python","javascript","r"]'
