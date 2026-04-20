@@ -1,44 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { useLocale } from "@/hooks/useLocale";
+import { render, screen } from "@/test/test-utils";
+import { usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import TransferRequestLayout from "./layout";
 
-globalThis.React = React;
-
-// -------------------
-// Mocks
-// -------------------
-
-const mockUseLocale = vi.fn();
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => mockUseLocale(),
-}));
-
-const mockUsePathname = vi.fn();
-vi.mock("next/navigation", () => ({
-  usePathname: () => mockUsePathname(),
-}));
-
-vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href} data-testid="next-link">
-      {children}
-    </a>
-  ),
-}));
-
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// -------------------
-// Helpers
-// -------------------
 function renderTransferRequestLayout({
   children = <div data-testid="child-content">Child Content</div>,
   pathname = "/en/platform/transfer-request",
@@ -48,15 +14,12 @@ function renderTransferRequestLayout({
   pathname?: string;
   locale?: string;
 } = {}) {
-  mockUsePathname.mockReturnValue(pathname);
-  mockUseLocale.mockReturnValue(locale);
+  vi.mocked(usePathname).mockReturnValue(pathname);
+  vi.mocked(useLocale).mockReturnValue(locale);
 
   return render(<TransferRequestLayout>{children}</TransferRequestLayout>);
 }
 
-// -------------------
-// Tests
-// -------------------
 describe("<TransferRequestLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -90,19 +53,19 @@ describe("<TransferRequestLayout />", () => {
     it("renders tabs as links with correct hrefs", () => {
       renderTransferRequestLayout({ locale: "en" });
 
-      const links = screen.getAllByTestId("next-link");
-      expect(links).toHaveLength(2);
+      const tabs = screen.getAllByRole("tab");
+      expect(tabs).toHaveLength(2);
 
-      expect(links[0]).toHaveAttribute("href", "/en/platform/transfer-request");
-      expect(links[1]).toHaveAttribute("href", "/en/platform/transfer-request/history");
+      expect(tabs[0]).toHaveAttribute("href", "/en/platform/transfer-request");
+      expect(tabs[1]).toHaveAttribute("href", "/en/platform/transfer-request/history");
     });
 
     it("generates correct links for different locale", () => {
       renderTransferRequestLayout({ locale: "de" });
 
-      const links = screen.getAllByTestId("next-link");
-      expect(links[0]).toHaveAttribute("href", "/de/platform/transfer-request");
-      expect(links[1]).toHaveAttribute("href", "/de/platform/transfer-request/history");
+      const tabs = screen.getAllByRole("tab");
+      expect(tabs[0]).toHaveAttribute("href", "/de/platform/transfer-request");
+      expect(tabs[1]).toHaveAttribute("href", "/de/platform/transfer-request/history");
     });
   });
 
@@ -151,10 +114,9 @@ describe("<TransferRequestLayout />", () => {
 
   describe("Layout Structure", () => {
     it("renders within a Card component", () => {
-      const { container } = renderTransferRequestLayout();
+      renderTransferRequestLayout();
 
-      // Card should be present (checking for class structure)
-      expect(container.querySelector('[class*="space-y-6"]')).toBeInTheDocument();
+      expect(document.querySelector('[class*="space-y-6"]')).toBeInTheDocument();
     });
 
     it("renders NavTabs component", () => {

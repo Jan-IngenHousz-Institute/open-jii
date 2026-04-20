@@ -1,14 +1,7 @@
-import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { EditableCell } from "./editable-cell";
-
-globalThis.React = React;
-
-/* --------------------------------- Tests --------------------------------- */
 
 describe("EditableCell", () => {
   const defaultProps = {
@@ -58,15 +51,19 @@ describe("EditableCell", () => {
       expect(screen.getByRole("textbox")).toHaveValue("test value");
     });
 
-    it("enters edit mode on Enter key", () => {
+    it("enters edit mode on Enter key", async () => {
+      const user = userEvent.setup();
       render(<EditableCell {...defaultProps} />);
-      fireEvent.keyDown(screen.getByRole("button"), { key: "Enter" });
+      screen.getByRole("button").focus();
+      await user.keyboard("{Enter}");
       expect(screen.getByRole("textbox")).toBeInTheDocument();
     });
 
-    it("enters edit mode on Space key", () => {
+    it("enters edit mode on Space key", async () => {
+      const user = userEvent.setup();
       render(<EditableCell {...defaultProps} />);
-      fireEvent.keyDown(screen.getByRole("button"), { key: " " });
+      screen.getByRole("button").focus();
+      await user.keyboard(" ");
       expect(screen.getByRole("textbox")).toBeInTheDocument();
     });
   });
@@ -82,7 +79,7 @@ describe("EditableCell", () => {
 
       await user.clear(input);
       await user.type(input, "new value");
-      fireEvent.blur(input);
+      await user.tab();
 
       expect(onUpdate).toHaveBeenCalledWith("row1", "col1", "new value");
     });
@@ -108,7 +105,7 @@ describe("EditableCell", () => {
       render(<EditableCell {...defaultProps} onUpdate={onUpdate} />);
 
       await user.click(screen.getByRole("button"));
-      fireEvent.blur(screen.getByRole("textbox"));
+      await user.tab();
 
       expect(onUpdate).not.toHaveBeenCalled();
     });
@@ -152,7 +149,7 @@ describe("EditableCell", () => {
 
       await user.clear(input);
       await user.type(input, "99");
-      fireEvent.blur(input);
+      await user.tab();
 
       expect(onUpdate).toHaveBeenCalledWith("row1", "col1", 99);
     });
@@ -166,7 +163,7 @@ describe("EditableCell", () => {
       const input = screen.getByRole("spinbutton");
 
       await user.clear(input);
-      fireEvent.blur(input);
+      await user.tab();
 
       expect(onUpdate).toHaveBeenCalledWith("row1", "col1", null);
     });

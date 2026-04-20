@@ -73,7 +73,7 @@ export function QuestionCard({
               <input
                 type="checkbox"
                 checked={required}
-                onChange={onToggleRequired}
+                onChange={() => onToggleRequired?.()}
                 disabled={disabled}
                 className="peer sr-only"
               />

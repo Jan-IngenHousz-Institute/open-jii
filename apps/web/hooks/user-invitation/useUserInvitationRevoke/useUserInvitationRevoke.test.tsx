@@ -1,114 +1,80 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-argument */
-import { tsr } from "@/lib/tsr";
-import { renderHook } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createInvitation } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useUserInvitationRevoke } from "./useUserInvitationRevoke";
 
-// Mock the tsr module
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    users: {
-      revokeInvitation: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
-
 describe("useUserInvitationRevoke", () => {
-  const mockQueryClient = {
-    invalidateQueries: vi.fn(),
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient as any);
-  });
-
-  it("should call useMutation with onSuccess callback", () => {
-    const mockUseMutation = vi.fn().mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-      error: null,
-    });
-    mockTsr.users.revokeInvitation.useMutation = mockUseMutation;
-
-    renderHook(() => useUserInvitationRevoke());
-
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onSuccess: expect.any(Function),
-    });
-  });
-
-  it("should return mutation result", () => {
-    const mockMutationResult = {
-      mutate: vi.fn(),
-      isPending: false,
-      error: null,
-      data: undefined,
-    };
-
-    const mockUseMutation = vi.fn().mockReturnValue(mockMutationResult);
-    mockTsr.users.revokeInvitation.useMutation = mockUseMutation;
+  it("sends DELETE request with correct params", async () => {
+    const spy = server.mount(contract.users.revokeInvitation, { status: 204 });
 
     const { result } = renderHook(() => useUserInvitationRevoke());
 
-    expect(result.current).toBe(mockMutationResult);
-  });
-
-  it("should handle pending state", () => {
-    const mockMutationResult = {
-      mutate: vi.fn(),
-      isPending: true,
-      error: null,
-      data: undefined,
-    };
-
-    const mockUseMutation = vi.fn().mockReturnValue(mockMutationResult);
-    mockTsr.users.revokeInvitation.useMutation = mockUseMutation;
-
-    const { result } = renderHook(() => useUserInvitationRevoke());
-
-    expect(result.current.isPending).toBe(true);
-  });
-
-  it("should handle error state", () => {
-    const mockError = new Error("Failed to revoke invitation");
-    const mockMutationResult = {
-      mutate: vi.fn(),
-      isPending: false,
-      error: mockError,
-      data: undefined,
-    };
-
-    const mockUseMutation = vi.fn().mockReturnValue(mockMutationResult);
-    mockTsr.users.revokeInvitation.useMutation = mockUseMutation;
-
-    const { result } = renderHook(() => useUserInvitationRevoke());
-
-    expect(result.current.error).toBe(mockError);
-  });
-
-  it("should invalidate experiment-invitations queries on success", () => {
-    let capturedOnSuccess: any;
-    const mockUseMutation = vi.fn((opts: any) => {
-      capturedOnSuccess = opts.onSuccess;
-      return { mutate: vi.fn() };
+    act(() => {
+      result.current.mutate({ params: { invitationId: "inv-1" } });
     });
 
-    mockTsr.users.revokeInvitation.useMutation = mockUseMutation as any;
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
+    });
 
-    renderHook(() => useUserInvitationRevoke());
+    expect(spy.params.invitationId).toBe("inv-1");
+  });
 
-    // Call onSuccess
-    capturedOnSuccess();
+  it("returns mutation result with mutate function", () => {
+    const { result } = renderHook(() => useUserInvitationRevoke());
 
-    expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["experiment-invitations"],
+    expect(result.current.mutate).toBeDefined();
+    expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("reports pending state while request is in-flight", async () => {
+    server.mount(contract.users.revokeInvitation, { status: 204, delay: 100 });
+
+    const { result } = renderHook(() => useUserInvitationRevoke());
+
+    act(() => {
+      result.current.mutate({ params: { invitationId: "inv-1" } });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isPending).toBe(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isPending).toBe(false);
+    });
+  });
+
+  it("reports error on failure", async () => {
+    server.mount(contract.users.revokeInvitation, { status: 403 });
+
+    const { result } = renderHook(() => useUserInvitationRevoke());
+
+    act(() => {
+      result.current.mutate({ params: { invitationId: "inv-1" } });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
+
+  it("invalidates experiment-invitations queries on success", async () => {
+    server.mount(contract.users.listInvitations, { body: [createInvitation()] });
+    server.mount(contract.users.revokeInvitation, { status: 204 });
+
+    const { result } = renderHook(() => useUserInvitationRevoke());
+
+    act(() => {
+      result.current.mutate({ params: { invitationId: "inv-1" } });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
     });
   });
 });

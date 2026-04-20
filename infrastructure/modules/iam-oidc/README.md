@@ -72,6 +72,7 @@ The IAM role includes permissions for the following AWS services and operations:
 - Repository management (Create, Delete, Describe, List)
 - Image lifecycle and tagging
 - **Replication configuration** (account-level): `ecr:PutReplicationConfiguration`, `ecr:DescribeReplicationConfigurations`, `ecr:DescribeRegistry`
+- **Service-linked role creation** (first-time enablement): `iam:CreateServiceLinkedRole` - Limited to the AWS ECR replication service-linked role ARN (`arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication`)
 - Image push/pull operations
 
 ### AWS Backup
@@ -100,11 +101,13 @@ These permissions allow Terraform/OpenTofu to enable and manage AWS Inspector v2
 ### Lambda
 - **Function management**: Function configuration and management operations
 - **Code signing**: `lambda:GetFunctionCodeSigningConfig` (Terraform provider reads)
+- **Event invoke configuration**: `lambda:GetFunctionEventInvokeConfig`, `lambda:PutFunctionEventInvokeConfig`, `lambda:UpdateFunctionEventInvokeConfig`, `lambda:DeleteFunctionEventInvokeConfig` (Terraform manages Lambda function event invoke configurations)
 - **Layer management**: `lambda:GetLayerVersion`, `lambda:GetLayerVersionPolicy`, `lambda:ListLayers`, `lambda:ListLayerVersions`, `lambda:PublishLayerVersion` (Terraform provider reads layer metadata before attaching)
 
 ### Other Services
 - **VPC**: Network infrastructure management
 - **CloudFront**: Distribution configuration
+- **CloudWatch Logs**: Log group management, tagging operations, and **metric filter management**: `logs:PutMetricFilter`, `logs:DeleteMetricFilter`, `logs:DescribeMetricFilters` (Terraform manages CloudWatch Logs metric filters)
 - **Timestream**: Database operations
 - **Kinesis**: Stream management
 - **IoT**: Device and policy management

@@ -32,6 +32,7 @@ async function migrateLegacyEntries(): Promise<void> {
     if (legacyKeys.length === 0) continue;
 
     const entries = await AsyncStorage.multiGet(legacyKeys);
+    const migratedKeys: string[] = [];
 
     for (const [key, value] of entries) {
       if (!value) continue;
@@ -40,8 +41,9 @@ async function migrateLegacyEntries(): Promise<void> {
         if (!isValidMeasurement(parsed)) continue;
 
         const id = key.replace(prefix, "");
-        const parsedDate = new Date(parsed.metadata.timestamp);
-        const createdAt = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+        const createdAtDate = new Date(parsed.metadata.timestamp);
+        const createdAt = isFinite(createdAtDate.getTime()) ? { createdAt: createdAtDate } : {};
+
         db.insert(measurements)
           .values({
             id,
@@ -51,16 +53,18 @@ async function migrateLegacyEntries(): Promise<void> {
             experimentName: parsed.metadata.experimentName,
             protocolName: parsed.metadata.protocolName,
             timestamp: parsed.metadata.timestamp,
-            createdAt,
+            ...createdAt,
           })
           .onConflictDoNothing()
           .run();
+
+        migratedKeys.push(key);
       } catch {
         // Skip corrupt entries
       }
     }
 
-    await AsyncStorage.multiRemove(legacyKeys);
+    await AsyncStorage.multiRemove(migratedKeys);
     console.log(`[measurements] Migrated ${legacyKeys.length} ${status} entries from AsyncStorage`);
   }
 }
@@ -101,27 +105,32 @@ export async function saveMeasurement(
 }
 
 export async function getMeasurements(status: MeasurementStatus): Promise<[string, Measurement][]> {
-  await ensureMigrated();
-  const rows = db.select().from(measurements).where(eq(measurements.status, status)).all();
+  try {
+    await ensureMigrated();
+    const rows = db.select().from(measurements).where(eq(measurements.status, status)).all();
 
-  return rows
-    .map((row) => {
-      try {
-        const measurement: Measurement = {
-          topic: row.topic,
-          measurementResult: decompressFromStorage(row.measurementResult),
-          metadata: {
-            experimentName: row.experimentName,
-            protocolName: row.protocolName,
-            timestamp: row.timestamp,
-          },
-        };
-        return [row.id, measurement] as [string, Measurement];
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean) as [string, Measurement][];
+    return rows
+      .map((row) => {
+        try {
+          const measurement: Measurement = {
+            topic: row.topic,
+            measurementResult: decompressFromStorage(row.measurementResult),
+            metadata: {
+              experimentName: row.experimentName,
+              protocolName: row.protocolName,
+              timestamp: row.timestamp,
+            },
+          };
+          return [row.id, measurement] as [string, Measurement];
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as [string, Measurement][];
+  } catch (error) {
+    console.error("Failed to fetch measurements:", error);
+    throw error;
+  }
 }
 
 export async function updateMeasurement(key: string, data: Measurement): Promise<void> {

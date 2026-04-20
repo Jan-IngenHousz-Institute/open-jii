@@ -1,13 +1,7 @@
-import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { MetadataTable } from "./metadata-table";
-
-globalThis.React = React;
-
-/* --------------------------------- Tests --------------------------------- */
 
 const defaultProps = {
   columns: [] as { id: string; name: string; type: "string" | "number" | "date" }[],
@@ -111,7 +105,7 @@ describe("MetadataTable", () => {
   });
 
   it("does not render actions column when disabled", () => {
-    const { container } = render(
+    render(
       <MetadataTable
         {...defaultProps}
         columns={[{ id: "col1", name: "Name", type: "string" }]}
@@ -120,12 +114,12 @@ describe("MetadataTable", () => {
       />,
     );
 
-    const headerCells = container.querySelectorAll("th");
+    const headerCells = screen.getAllByRole("columnheader");
     expect(headerCells).toHaveLength(1);
   });
 
   it("renders actions column when not disabled", () => {
-    const { container } = render(
+    render(
       <MetadataTable
         {...defaultProps}
         columns={[{ id: "col1", name: "Name", type: "string" }]}
@@ -133,11 +127,12 @@ describe("MetadataTable", () => {
       />,
     );
 
-    const headerCells = container.querySelectorAll("th");
+    const headerCells = screen.getAllByRole("columnheader");
     expect(headerCells).toHaveLength(2);
   });
 
-  it("calls onDeleteRow when row delete button is clicked", () => {
+  it("calls onDeleteRow when row delete button is clicked", async () => {
+    const user = userEvent.setup();
     const onDeleteRow = vi.fn();
     render(
       <MetadataTable
@@ -149,7 +144,7 @@ describe("MetadataTable", () => {
     );
 
     const deleteButton = screen.getByLabelText("Delete row");
-    fireEvent.click(deleteButton);
+    await user.click(deleteButton);
 
     expect(onDeleteRow).toHaveBeenCalledWith("row1");
   });

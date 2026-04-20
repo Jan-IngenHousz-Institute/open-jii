@@ -97,7 +97,7 @@ describe("CreateMacroUseCase", () => {
       expect(listResult.value).toHaveLength(0);
     });
 
-    it("should return a 409 conflict error when a macro with the same name already exists", async () => {
+    it("should handle duplicate macro names", async () => {
       // Arrange - Create a macro with the same name first
       vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
 

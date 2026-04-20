@@ -1,5 +1,4 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { z } from "zod";
 
 import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
@@ -13,8 +12,10 @@ import {
   CreateMacroDto,
   UpdateMacroDto,
   MacroDto,
+  MacroScript,
   generateHashedFilename,
 } from "../models/macro.model";
+import { CACHE_PORT, CachePort } from "../ports/cache.port";
 
 export interface MacroFilter {
   search?: string;
@@ -28,6 +29,7 @@ export class MacroRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    @Inject(CACHE_PORT) private readonly cachePort: CachePort,
   ) {}
 
   async create(data: CreateMacroDto, userId: string): Promise<Result<MacroDto[]>> {
@@ -146,6 +148,29 @@ export class MacroRepository {
     });
   }
 
+  /**
+   * Find a single macro script by ID with read-through caching.
+   * Lean projection — only fetches columns needed for Lambda execution.
+   */
+  async findScriptById(id: string): Promise<Result<MacroScript | null>> {
+    return tryCatch(() =>
+      this.cachePort.tryCache<MacroScript>(id, async () => {
+        const rows = await this.database
+          .select({
+            id: macros.id,
+            name: macros.name,
+            language: macros.language,
+            code: macros.code,
+          })
+          .from(macros)
+          .where(eq(macros.id, id))
+          .limit(1);
+
+        return rows.length > 0 ? rows[0] : null;
+      }),
+    );
+  }
+
   async update(id: string, data: UpdateMacroDto): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       // The filename is based on the macro ID hash and should not change during updates
@@ -158,6 +183,11 @@ export class MacroRepository {
         .where(eq(macros.id, id))
         .returning();
 
+      // Best-effort cache invalidation — must not mask a successful write
+      void this.cachePort.invalidate(id).catch(() => {
+        // noop
+      });
+
       return results as unknown as MacroDto[];
     });
   }
@@ -166,21 +196,23 @@ export class MacroRepository {
     return tryCatch(async () => {
       const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
 
+      // Best-effort cache invalidation — must not mask a successful write
+      void this.cachePort.invalidate(id).catch(() => {
+        // noop — best-effort
+      });
+
       return results as unknown as MacroDto[];
     });
   }
 
   /**
    * Find multiple macros by their IDs.
-   * Non-UUID identifiers are silently excluded to avoid PostgreSQL cast errors.
    * Returns a map keyed by macro UUID -> { name, filename }.
    */
   async findNamesByIds(
     ids: string[],
   ): Promise<Result<Map<string, { name: string; filename: string }>>> {
-    const uuids = ids.filter((id) => z.string().uuid().safeParse(id).success);
-
-    if (uuids.length === 0) {
+    if (ids.length === 0) {
       return success(new Map());
     }
 
@@ -192,7 +224,7 @@ export class MacroRepository {
           filename: macros.filename,
         })
         .from(macros)
-        .where(inArray(macros.id, uuids));
+        .where(inArray(macros.id, ids));
 
       const map = new Map<string, { name: string; filename: string }>();
       for (const row of results) {
@@ -200,5 +232,38 @@ export class MacroRepository {
       }
       return map;
     });
+  }
+
+  /**
+   * Find macro scripts by IDs with read-through caching.
+   * Lean projection — only fetches columns needed for Lambda execution.
+   */
+  async findScriptsByIds(ids: string[]): Promise<Result<Map<string, MacroScript>>> {
+    if (ids.length === 0) {
+      return success(new Map());
+    }
+
+    return tryCatch(() =>
+      this.cachePort.tryCacheMany<MacroScript>(ids, async (missedIds) => {
+        const rows = await this.database
+          .select({
+            id: macros.id,
+            name: macros.name,
+            language: macros.language,
+            code: macros.code,
+          })
+          .from(macros)
+          .where(inArray(macros.id, missedIds));
+
+        return new Map(rows.map((r) => [r.id, r]));
+      }),
+    );
+  }
+
+  /**
+   * Invalidate cache for a macro by ID.
+   */
+  async invalidateCache(id: string): Promise<void> {
+    await this.cachePort.invalidate(id);
   }
 }
