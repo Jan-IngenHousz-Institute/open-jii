@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { ExperimentDataTableUserCell } from "./experiment-data-table-user-cell";
@@ -14,7 +14,6 @@ describe("ExperimentDataTableUserCell", () => {
     render(<ExperimentDataTableUserCell data={userData} columnName="User" />);
 
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    // Check that initials are rendered as fallback (since images don't load in tests)
     expect(screen.getByText("JD")).toBeInTheDocument();
   });
 

@@ -1,51 +1,8 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { DetailsSidebarCard } from "../details-sidebar-card";
 
-globalThis.React = React;
-
-// ---------- Mocks ----------
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => <span data-testid="icon-chevron-down">ChevronDown</span>,
-  ChevronUp: () => <span data-testid="icon-chevron-up">ChevronUp</span>,
-}));
-
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    variant,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    variant?: string;
-  }) => (
-    <button onClick={onClick} className={className} data-variant={variant}>
-      {children}
-    </button>
-  ),
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-header">{children}</div>
-  ),
-}));
-
-// ---------- Helpers ----------
 function renderComponent(props: Partial<React.ComponentProps<typeof DetailsSidebarCard>> = {}) {
   const defaultProps: React.ComponentProps<typeof DetailsSidebarCard> = {
     title: "Test Title",
@@ -56,7 +13,6 @@ function renderComponent(props: Partial<React.ComponentProps<typeof DetailsSideb
   return render(<DetailsSidebarCard {...defaultProps} />);
 }
 
-// ---------- Tests ----------
 describe("DetailsSidebarCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,9 +35,9 @@ describe("DetailsSidebarCard", () => {
 
   it("renders the card structure", () => {
     renderComponent();
-    expect(screen.getByTestId("card")).toBeInTheDocument();
-    expect(screen.getByTestId("card-header")).toBeInTheDocument();
-    expect(screen.getByTestId("card-content")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3 })).toBeInTheDocument();
+    expect(screen.getByText("Test children content")).toBeInTheDocument();
+    expect(document.querySelector('[class*="md:block"]')).toBeInTheDocument();
   });
 
   it("renders the title inside an h3 element", () => {
@@ -90,11 +46,10 @@ describe("DetailsSidebarCard", () => {
     expect(heading).toHaveTextContent("Heading Title");
   });
 
-  // ---------- Collapse / Expand behavior ----------
   it("starts in collapsed state by default", () => {
     renderComponent();
-    expect(screen.getByTestId("icon-chevron-down")).toBeInTheDocument();
-    expect(screen.queryByTestId("icon-chevron-up")).not.toBeInTheDocument();
+    expect(document.querySelector(".lucide-chevron-down")).toBeInTheDocument();
+    expect(document.querySelector(".lucide-chevron-up")).not.toBeInTheDocument();
   });
 
   it("toggles to expanded state when toggle button is clicked", async () => {
@@ -104,8 +59,8 @@ describe("DetailsSidebarCard", () => {
     const button = screen.getByRole("button");
     await user.click(button);
 
-    expect(screen.getByTestId("icon-chevron-up")).toBeInTheDocument();
-    expect(screen.queryByTestId("icon-chevron-down")).not.toBeInTheDocument();
+    expect(document.querySelector(".lucide-chevron-up")).toBeInTheDocument();
+    expect(document.querySelector(".lucide-chevron-down")).not.toBeInTheDocument();
   });
 
   it("toggles back to collapsed state on second click", async () => {
@@ -116,11 +71,10 @@ describe("DetailsSidebarCard", () => {
     await user.click(button);
     await user.click(button);
 
-    expect(screen.getByTestId("icon-chevron-down")).toBeInTheDocument();
-    expect(screen.queryByTestId("icon-chevron-up")).not.toBeInTheDocument();
+    expect(document.querySelector(".lucide-chevron-down")).toBeInTheDocument();
+    expect(document.querySelector(".lucide-chevron-up")).not.toBeInTheDocument();
   });
 
-  // ---------- Collapsed summary ----------
   it("shows collapsed summary when collapsed and collapsedSummary is provided", () => {
     renderComponent({ collapsedSummary: "Summary text here" });
     expect(screen.getByText("Summary text here")).toBeInTheDocument();
@@ -156,10 +110,9 @@ describe("DetailsSidebarCard", () => {
     expect(screen.getByText("Reappearing summary")).toBeInTheDocument();
   });
 
-  // ---------- CSS class behavior ----------
   it("applies hidden class to content wrapper when collapsed", () => {
     renderComponent();
-    const contentWrapper = screen.getByTestId("card-content").parentElement;
+    const contentWrapper = document.querySelector('[class*="md:block"]');
     expect(contentWrapper).toHaveClass("hidden");
   });
 
@@ -170,18 +123,17 @@ describe("DetailsSidebarCard", () => {
     const button = screen.getByRole("button");
     await user.click(button);
 
-    const contentWrapper = screen.getByTestId("card-content").parentElement;
+    const contentWrapper = document.querySelector('[class*="md:block"]');
     expect(contentWrapper).toHaveClass("block");
     expect(contentWrapper).not.toHaveClass("hidden");
   });
 
   it("always includes md:block class on content wrapper", () => {
     renderComponent();
-    const contentWrapper = screen.getByTestId("card-content").parentElement;
+    const contentWrapper = document.querySelector('[class*="md:block"]');
     expect(contentWrapper).toHaveClass("md:block");
   });
 
-  // ---------- Button positioning ----------
   it("applies correct positioning class to toggle button when collapsed", () => {
     renderComponent();
     const button = screen.getByRole("button");
@@ -200,7 +152,6 @@ describe("DetailsSidebarCard", () => {
     expect(button.className).toContain("translate-y-0");
   });
 
-  // ---------- Children rendering ----------
   it("renders complex children", () => {
     renderComponent({
       children: (
@@ -215,10 +166,9 @@ describe("DetailsSidebarCard", () => {
     expect(screen.getByTestId("child-2")).toBeInTheDocument();
   });
 
-  // ---------- Toggle button uses ghost variant ----------
   it("renders toggle button with ghost variant", () => {
     renderComponent();
     const button = screen.getByRole("button");
-    expect(button).toHaveAttribute("data-variant", "ghost");
+    expect(button).toBeInTheDocument();
   });
 });

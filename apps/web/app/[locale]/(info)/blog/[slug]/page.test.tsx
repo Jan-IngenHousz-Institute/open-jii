@@ -1,257 +1,95 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getContentfulClients } from "~/lib/contentful";
 
-import BlogSlugPage, { generateMetadata } from "./page";
+import Page, { generateMetadata } from "./page";
 
-globalThis.React = React;
+const mockBlogDetail = vi.fn();
 
-// --- Mocks ---
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
-}));
-
-vi.mock("next/headers", () => ({
-  draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
-}));
-
-const mockGetContentfulClients = vi.fn();
-vi.mock("~/lib/contentful", () => ({
-  getContentfulClients: (): unknown => mockGetContentfulClients(),
-}));
-
-const mockInitTranslations = vi.fn();
-vi.mock("@repo/i18n/server", () => ({
-  __esModule: true,
-  default: (): unknown => mockInitTranslations(),
+vi.mock("@repo/cms/article", () => ({
+  ArticleHero: ({ article }: { article?: { title?: string } }) => (
+    <section aria-label="article hero">{article?.title}</section>
+  ),
+  ArticleContent: ({ article }: { article?: { title?: string } }) => (
+    <article>{article?.title} content</article>
+  ),
+  ArticleTileGrid: ({ articles }: { articles: unknown[] }) => (
+    <section aria-label="related posts">{articles.length} posts</section>
+  ),
 }));
 
 vi.mock("@repo/cms/container", () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
+  Container: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("@repo/cms/article", () => ({
-  ArticleContent: ({ article }: { article: unknown }) => (
-    <div data-testid="article-content">{article ? "Article Content" : "No content"}</div>
-  ),
-  ArticleHero: ({ article }: { article: unknown }) => (
-    <div data-testid="article-hero">{article ? "Article Hero" : "No article"}</div>
-  ),
-  ArticleTileGrid: ({ articles, locale }: { articles: unknown[]; locale: string }) => (
-    <div data-testid="article-tile-grid" data-locale={locale}>
-      {articles.length} related articles
-    </div>
-  ),
-}));
+const blogPost = {
+  slug: "test-post",
+  title: "Test Post",
+  seoFields: {
+    pageTitle: "SEO Title",
+    pageDescription: "SEO Desc",
+    nofollow: false,
+    noindex: false,
+  },
+  relatedBlogPostsCollection: { items: [{ slug: "related-1", title: "Related 1" }] },
+};
 
-// --- Tests ---
-describe("BlogSlugPage", () => {
-  const locale = "en-US";
-  const slug = "test-post";
-  const defaultProps = {
-    params: Promise.resolve({ locale, slug }),
-  };
+const defaultResult = {
+  pageBlogPostCollection: { items: [blogPost] },
+  pageLandingCollection: { items: [{ featuredBlogPost: { slug: "other" } }] },
+};
 
-  const mockBlogDetailData = {
-    pageBlogPostCollection: {
-      items: [
-        {
-          slug: "test-post",
-          title: "Test Post",
-          sys: { id: "post-1" },
-          seoFields: {
-            pageTitle: "Test Post Title",
-            pageDescription: "Test post description",
-            nofollow: false,
-            noindex: false,
-          },
-          relatedBlogPostsCollection: {
-            items: [
-              { title: "Related Post 1", slug: "related-1" },
-              { title: "Related Post 2", slug: "related-2" },
-            ],
-          },
-        },
-      ],
-    },
-    pageLandingCollection: {
-      items: [
-        {
-          featuredBlogPost: {
-            slug: "featured-post",
-          },
-        },
-      ],
-    },
-  };
-
+describe("BlogDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetContentfulClients.mockResolvedValue({
-      client: {
-        pageBlogDetail: vi.fn().mockResolvedValue(mockBlogDetailData),
-      },
-      previewClient: {
-        pageBlogDetail: vi.fn().mockResolvedValue(mockBlogDetailData),
-      },
-    });
-    mockInitTranslations.mockResolvedValue({
-      t: (key: string) => key,
-      resources: {},
-    });
+    vi.mocked(getContentfulClients).mockResolvedValue({
+      client: { pageBlogDetail: mockBlogDetail },
+      previewClient: { pageBlogDetail: mockBlogDetail },
+    } as never);
+    mockBlogDetail.mockResolvedValue(defaultResult);
   });
 
-  describe("generateMetadata", () => {
-    it("should generate metadata from blog post data", async () => {
-      const metadata = await generateMetadata(defaultProps);
+  const params = { params: Promise.resolve({ locale: "en-US", slug: "test-post" }) };
 
-      expect(metadata).toEqual({
-        alternates: {
-          canonical: "test-post",
-          languages: {
-            "de-DE": "/de-DE/test-post",
-            "en-US": "/test-post",
-          },
-        },
-        title: "Test Post Title",
-        description: "Test post description",
-        robots: {
-          follow: true,
-          index: true,
-        },
-      });
-    });
-
-    it("should handle missing SEO fields", async () => {
-      const postDataWithoutSeo = {
-        pageBlogPostCollection: {
-          items: [
-            {
-              slug: "test-post",
-              title: "Test Post",
-            },
-          ],
-        },
-        pageLandingCollection: {
-          items: [{}],
-        },
-      };
-
-      mockGetContentfulClients.mockResolvedValueOnce({
-        client: {
-          pageBlogDetail: vi.fn().mockResolvedValue(postDataWithoutSeo),
-        },
-        previewClient: {
-          pageBlogDetail: vi.fn().mockResolvedValue(postDataWithoutSeo),
-        },
-      });
-
-      const metadata = await generateMetadata(defaultProps);
-
-      expect(metadata).toEqual({
-        alternates: {
-          canonical: "test-post",
-          languages: {
-            "de-DE": "/de-DE/test-post",
-            "en-US": "/test-post",
-          },
-        },
-      });
-    });
+  it("generates metadata with SEO fields and alternates", async () => {
+    const metadata = await generateMetadata(params);
+    expect(metadata.title).toBe("SEO Title");
+    expect(metadata.description).toBe("SEO Desc");
+    expect(metadata.alternates?.canonical).toBe("test-post");
   });
 
-  describe("Component", () => {
-    it("renders the blog post page with all components", async () => {
-      render(await BlogSlugPage(defaultProps));
-
-      expect(screen.getByTestId("article-hero")).toBeInTheDocument();
-      expect(screen.getByTestId("article-content")).toBeInTheDocument();
-      expect(screen.getByTestId("article-tile-grid")).toBeInTheDocument();
-      expect(screen.getByText("article.relatedArticles")).toBeInTheDocument();
+  it("calls notFound when blog post does not exist", async () => {
+    mockBlogDetail.mockResolvedValue({
+      pageBlogPostCollection: { items: [] },
+      pageLandingCollection: { items: [{}] },
     });
+    await Page(params).catch(() => undefined);
+    expect(notFound).toHaveBeenCalled();
+  });
 
-    it("passes correct locale to components", async () => {
-      render(await BlogSlugPage(defaultProps));
+  it("renders article hero and content", async () => {
+    const ui = await Page(params);
+    render(ui);
+    expect(screen.getByRole("region", { name: /article hero/i })).toHaveTextContent("Test Post");
+    expect(screen.getByRole("article")).toHaveTextContent("Test Post content");
+  });
 
-      expect(screen.getByTestId("article-tile-grid")).toHaveAttribute("data-locale", "en-US");
+  it("shows related posts when available", async () => {
+    const ui = await Page(params);
+    render(ui);
+    expect(screen.getByRole("region", { name: /related posts/i })).toHaveTextContent("1 posts");
+  });
+
+  it("hides related section when no related posts", async () => {
+    mockBlogDetail.mockResolvedValue({
+      pageBlogPostCollection: {
+        items: [{ ...blogPost, relatedBlogPostsCollection: { items: [] } }],
+      },
+      pageLandingCollection: { items: [{}] },
     });
-
-    it("displays related articles count", async () => {
-      render(await BlogSlugPage(defaultProps));
-
-      expect(screen.getByTestId("article-tile-grid")).toHaveTextContent("2 related articles");
-    });
-
-    it("calls notFound when blog post is missing", async () => {
-      mockGetContentfulClients.mockResolvedValueOnce({
-        client: {
-          pageBlogDetail: vi.fn().mockResolvedValue({
-            pageBlogPostCollection: { items: [] },
-            pageLandingCollection: { items: [{}] },
-          }),
-        },
-        previewClient: {
-          pageBlogDetail: vi.fn().mockResolvedValue({
-            pageBlogPostCollection: { items: [] },
-            pageLandingCollection: { items: [{}] },
-          }),
-        },
-      });
-
-      await BlogSlugPage(defaultProps);
-      expect(notFound).toHaveBeenCalled();
-    });
-
-    it("handles case when no related posts exist", async () => {
-      const blogDetailDataNoRelated = {
-        pageBlogPostCollection: {
-          items: [
-            {
-              slug: "test-post",
-              title: "Test Post",
-              sys: { id: "post-1" },
-              seoFields: {
-                pageTitle: "Test Post Title",
-                pageDescription: "Test post description",
-                nofollow: false,
-                noindex: false,
-              },
-              relatedBlogPostsCollection: {
-                items: [],
-              },
-            },
-          ],
-        },
-        pageLandingCollection: {
-          items: [{}],
-        },
-      };
-
-      mockGetContentfulClients.mockResolvedValueOnce({
-        client: {
-          pageBlogDetail: vi.fn().mockResolvedValue(blogDetailDataNoRelated),
-        },
-        previewClient: {
-          pageBlogDetail: vi.fn().mockResolvedValue(blogDetailDataNoRelated),
-        },
-      });
-
-      render(await BlogSlugPage(defaultProps));
-
-      expect(screen.queryByTestId("article-tile-grid")).not.toBeInTheDocument();
-    });
-
-    it("displays related articles from the blog post data", async () => {
-      render(await BlogSlugPage(defaultProps));
-
-      expect(screen.getByTestId("article-tile-grid")).toHaveTextContent("2 related articles");
-      expect(screen.getByTestId("article-tile-grid")).toHaveAttribute("data-locale", "en-US");
-    });
+    const ui = await Page(params);
+    render(ui);
+    expect(screen.queryByRole("region", { name: /related posts/i })).not.toBeInTheDocument();
   });
 });

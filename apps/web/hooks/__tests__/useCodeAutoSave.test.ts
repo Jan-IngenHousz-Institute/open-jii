@@ -1,15 +1,9 @@
-import "@testing-library/jest-dom/vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { useCodeAutoSave } from "../useCodeAutoSave";
+import { toast } from "@repo/ui/hooks";
 
-// ---------- Mocks ----------
-const mockToast = vi.fn();
-vi.mock("@repo/ui/hooks", () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  toast: (...args: unknown[]) => mockToast(...args),
-}));
+import { useCodeAutoSave } from "../useCodeAutoSave";
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown): { message: string } | undefined => {
@@ -20,7 +14,6 @@ vi.mock("~/util/apiError", () => ({
   },
 }));
 
-// ---------- Helpers ----------
 const defaultOptions = {
   saveFn: vi.fn(),
   buildPayload: (code: string) => ({ code }),
@@ -36,7 +29,6 @@ function renderAutoSave(overrides: Partial<typeof defaultOptions> = {}) {
   );
 }
 
-// ---------- Tests ----------
 describe("useCodeAutoSave", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,7 +40,6 @@ describe("useCodeAutoSave", () => {
     vi.useRealTimers();
   });
 
-  // ---------- startEditing ----------
   describe("startEditing", () => {
     it("sets isEditing to true and editedCode to initial value with synced status", () => {
       const { result } = renderAutoSave();
@@ -65,7 +56,6 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-  // ---------- handleChange ----------
   describe("handleChange", () => {
     it("sets syncStatus to unsynced and calls saveFn after delay with buildPayload result", () => {
       const saveFn = vi.fn();
@@ -152,7 +142,6 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-  // ---------- Debounced save callbacks ----------
   describe("debounced save callbacks", () => {
     it("transitions syncing -> synced on onSuccess and updates savedKey", () => {
       const saveFn = vi.fn();
@@ -217,14 +206,13 @@ describe("useCodeAutoSave", () => {
       });
 
       expect(result.current.syncStatus).toBe("unsynced");
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         description: "Save failed",
         variant: "destructive",
       });
     });
   });
 
-  // ---------- closeEditing ----------
   describe("closeEditing", () => {
     it("calls saveFn immediately when there are unsaved changes", () => {
       const saveFn = vi.fn();
@@ -292,7 +280,6 @@ describe("useCodeAutoSave", () => {
     });
   });
 
-  // ---------- Cleanup on unmount ----------
   describe("cleanup on unmount", () => {
     it("clears pending timeout on unmount", () => {
       const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");

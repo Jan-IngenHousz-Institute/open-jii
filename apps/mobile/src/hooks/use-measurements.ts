@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import {
+  clearMeasurements,
   getMeasurements,
   markAsSuccessful,
   removeMeasurement as removeMeasurementFromStorage,
@@ -70,6 +71,11 @@ export function useMeasurements() {
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
+  const clearSyncedMeasurements = async () => {
+    await clearMeasurements("successful");
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+  };
+
   const updateMeasurementComment = async (key: string, data: Measurement, commentText: string) => {
     const annotations = buildAnnotationsWithComment(commentText);
     const measurementResult = { ...data.measurementResult, annotations };
@@ -84,6 +90,7 @@ export function useMeasurements() {
     uploadOne,
     saveMeasurement,
     removeMeasurement,
+    clearSyncedMeasurements,
     updateMeasurementComment,
   };
 }

@@ -26,6 +26,11 @@ on:
         required: false
         type: string
         default: ""
+      languages:
+        description: "JSON array of lambda languages to deploy (e.g. '[\"python\",\"r\"]'). Defaults to all."
+        required: false
+        type: string
+        default: '["python","javascript","r"]'
 
 env:
   ENV: ${{ inputs.environment }}
@@ -36,27 +41,13 @@ permissions:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy Macro Sandbox
+    name: Build and Deploy ${{ matrix.language }} Lambda
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: python
-            dockerfile: functions/python/Dockerfile
-            ecr_repo: macro-sandbox-python
-            function_name: macro-sandbox-python
-          - language: javascript
-            dockerfile: functions/javascript/Dockerfile
-            ecr_repo: macro-sandbox-js
-            function_name: macro-sandbox-js
-          - language: r
-            dockerfile: functions/r/Dockerfile
-            ecr_repo: macro-sandbox-r
-            function_name: macro-sandbox-r
-
+        language: ${{ fromJSON(inputs.languages) }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -86,10 +77,17 @@ jobs:
 
       - name: Set environment variables
         run: |
+          # Map language name to the ECR/Lambda suffix used when resources were created
+          case "${{ matrix.language }}" in
+            javascript) SUFFIX="js" ;;
+            python)     SUFFIX="python" ;;
+            r)          SUFFIX="r" ;;
+            *) echo "Unsupported language: ${{ matrix.language }}"; exit 1 ;;
+          esac
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
-          echo "ECR_REPO=${{ matrix.ecr_repo }}-${{ env.ENV }}" >> $GITHUB_ENV
-          echo "FUNCTION_NAME=${{ matrix.function_name }}-${{ env.ENV }}" >> $GITHUB_ENV
+          echo "ECR_REPO=macro-sandbox-${SUFFIX}-${{ env.ENV }}" >> $GITHUB_ENV
+          echo "FUNCTION_NAME=macro-sandbox-${SUFFIX}-${{ env.ENV }}" >> $GITHUB_ENV
 
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
@@ -101,7 +99,7 @@ jobs:
 
           echo "Building ${{ matrix.language }} macro-sandbox..."
           docker build \
-            -f ${{ matrix.dockerfile }} \
+            -f functions/${{ matrix.language }}/Dockerfile \
             -t "${FULL_IMAGE}" \
             --platform linux/amd64 \
             .

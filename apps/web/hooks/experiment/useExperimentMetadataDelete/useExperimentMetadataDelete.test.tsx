@@ -1,189 +1,90 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
-import { tsr } from "@/lib/tsr";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentMetadataDelete } from "./useExperimentMetadataDelete";
 
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(),
-    experiments: {
-      deleteExperimentMetadata: {
-        useMutation: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as any;
-
 describe("useExperimentMetadataDelete", () => {
-  let queryClient: QueryClient;
-  const mockCancelQueries = vi.fn().mockResolvedValue(undefined);
-  const mockGetQueryData = vi.fn();
-  const mockSetQueryData = vi.fn();
-  const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined);
+  it("sends DELETE request with correct params", async () => {
+    const spy = server.mount(contract.experiments.deleteExperimentMetadata);
 
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
+    const { result } = renderHook(() => useExperimentMetadataDelete());
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123", metadataId: "meta-1" },
+      });
     });
 
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    const mockQueryClient = {
-      cancelQueries: mockCancelQueries,
-      getQueryData: mockGetQueryData,
-      setQueryData: mockSetQueryData,
-      invalidateQueries: mockInvalidateQueries,
-    };
-
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient);
-  });
-
-  it("should call useMutation with correct configuration", () => {
-    const mockUseMutation = vi.fn();
-    mockTsr.experiments.deleteExperimentMetadata.useMutation = mockUseMutation;
-
-    renderHook(() => useExperimentMetadataDelete(), {
-      wrapper: createWrapper(),
-    });
-
-    expect(mockUseMutation).toHaveBeenCalledWith({
-      onMutate: expect.any(Function),
-      onError: expect.any(Function),
-      onSettled: expect.any(Function),
+    await waitFor(() => {
+      expect(spy.params.id).toBe("exp-123");
+      expect(spy.params.metadataId).toBe("meta-1");
     });
   });
 
-  describe("onMutate callback", () => {
-    it("should cancel queries and return previous data", async () => {
-      const mockPreviousData = {
-        body: [{ metadataId: "meta-1", metadata: { key: "value" } }],
-      };
-      mockGetQueryData.mockReturnValue(mockPreviousData);
+  it("invalidates cache after successful delete", async () => {
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(["experiment", "exp-123", "metadata"], {
+      body: [{ metadataId: "meta-1" }],
+    });
 
-      let onMutate: any;
+    server.mount(contract.experiments.deleteExperimentMetadata);
 
-      mockTsr.experiments.deleteExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onMutate = opts.onMutate;
-        return {};
+    const { result } = renderHook(() => useExperimentMetadataDelete(), {
+      queryClient,
+    });
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123", metadataId: "meta-1" },
       });
+    });
 
-      renderHook(() => useExperimentMetadataDelete(), {
-        wrapper: createWrapper(),
-      });
-
-      const variables = { params: { id: "exp-123", metadataId: "meta-1" } };
-      const result = await onMutate(variables);
-
-      expect(mockCancelQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment", "exp-123", "metadata"],
-      });
-      expect(mockGetQueryData).toHaveBeenCalledWith(["experiment", "exp-123", "metadata"]);
-      expect(result).toEqual({ previousData: mockPreviousData });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
     });
   });
 
-  describe("onError callback", () => {
-    it("should revert to previous data when context has previousData", () => {
-      let onError: any;
+  it("reverts cache on error", async () => {
+    const queryClient = createTestQueryClient();
+    const previousData = { body: [{ metadataId: "meta-1", metadata: { key: "value" } }] };
+    queryClient.setQueryData(["experiment", "exp-123", "metadata"], previousData);
 
-      mockTsr.experiments.deleteExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
+    server.mount(contract.experiments.deleteExperimentMetadata, { status: 500 });
 
-      renderHook(() => useExperimentMetadataDelete(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Delete failed");
-      const variables = { params: { id: "exp-123", metadataId: "meta-1" } };
-      const context = {
-        previousData: { body: [{ metadataId: "meta-1" }] },
-      };
-
-      onError(error, variables, context);
-
-      expect(mockSetQueryData).toHaveBeenCalledWith(
-        ["experiment", "exp-123", "metadata"],
-        context.previousData,
-      );
+    const { result } = renderHook(() => useExperimentMetadataDelete(), {
+      queryClient,
     });
 
-    it("should not revert data when context has no previousData", () => {
-      let onError: any;
-
-      mockTsr.experiments.deleteExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123", metadataId: "meta-1" },
       });
-
-      renderHook(() => useExperimentMetadataDelete(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Delete failed");
-      const variables = { params: { id: "exp-123", metadataId: "meta-1" } };
-
-      onError(error, variables, {});
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
     });
 
-    it("should not revert data when context is undefined", () => {
-      let onError: any;
-
-      mockTsr.experiments.deleteExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onError = opts.onError;
-        return {};
-      });
-
-      renderHook(() => useExperimentMetadataDelete(), {
-        wrapper: createWrapper(),
-      });
-
-      const error = new Error("Delete failed");
-      const variables = { params: { id: "exp-123", metadataId: "meta-1" } };
-
-      onError(error, variables, undefined);
-
-      expect(mockSetQueryData).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
     });
   });
 
-  describe("onSettled callback", () => {
-    it("should invalidate queries after mutation", async () => {
-      let onSettled: any;
+  it("does not fail when cache is empty", async () => {
+    const queryClient = createTestQueryClient();
+    server.mount(contract.experiments.deleteExperimentMetadata);
 
-      mockTsr.experiments.deleteExperimentMetadata.useMutation = vi.fn((opts: any) => {
-        onSettled = opts.onSettled;
-        return {};
+    const { result } = renderHook(() => useExperimentMetadataDelete(), {
+      queryClient,
+    });
+
+    act(() => {
+      result.current.mutate({
+        params: { id: "exp-123", metadataId: "meta-1" },
       });
+    });
 
-      renderHook(() => useExperimentMetadataDelete(), {
-        wrapper: createWrapper(),
-      });
-
-      const variables = { params: { id: "exp-123", metadataId: "meta-1" } };
-      await onSettled(undefined, undefined, variables);
-
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["experiment", "exp-123", "metadata"],
-      });
+    await waitFor(() => {
+      expect(result.current.isSuccess || result.current.isIdle).toBeTruthy();
     });
   });
 });

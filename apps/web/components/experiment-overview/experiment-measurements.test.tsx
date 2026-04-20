@@ -1,13 +1,9 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { ExperimentMeasurements } from "./experiment-measurements";
 
-globalThis.React = React;
-
-// ---------- Hoisted mocks ----------
+// Hoisted: must precede vi.mock calls that reference these spies
 const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   return {
     useExperimentDataSpy: vi.fn(() => ({
@@ -23,35 +19,18 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   };
 });
 
-// ---------- Mocks ----------
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
+// useExperimentData — pragmatic mock (heavy: tsr query + tanstack-table column creation + cell formatting)
 vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: (...args: unknown[]) => useExperimentDataSpy(...args),
 }));
 
+// useExperimentTables — pragmatic mock (coupled with useExperimentData; tests control table metadata)
 vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
   useExperimentTables: (...args: unknown[]) => useExperimentTablesSpy(...args),
 }));
 
-vi.mock("~/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
 vi.mock("~/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
-}));
-
-vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href} data-testid="measurements-link">
-      {children}
-    </a>
-  ),
 }));
 
 describe("ExperimentMeasurements", () => {
@@ -123,8 +102,8 @@ describe("ExperimentMeasurements", () => {
 
     render(<ExperimentMeasurements experimentId="exp-456" isArchived={false} />);
 
-    const link = screen.getByTestId("measurements-link");
-    expect(link).toHaveAttribute("href", "/en/platform/experiments/exp-456/data");
+    const link = screen.getByRole("link", { name: "measurements.seeAll" });
+    expect(link).toHaveAttribute("href", "/en-US/platform/experiments/exp-456/data");
     expect(screen.getByText("measurements.seeAll")).toBeInTheDocument();
   });
 
@@ -137,8 +116,8 @@ describe("ExperimentMeasurements", () => {
 
     render(<ExperimentMeasurements experimentId="exp-789" isArchived={true} />);
 
-    const link = screen.getByTestId("measurements-link");
-    expect(link).toHaveAttribute("href", "/en/platform/experiments-archive/exp-789/data");
+    const link = screen.getByRole("link", { name: "measurements.seeAll" });
+    expect(link).toHaveAttribute("href", "/en-US/platform/experiments-archive/exp-789/data");
   });
 
   it("handles null device_id", () => {
