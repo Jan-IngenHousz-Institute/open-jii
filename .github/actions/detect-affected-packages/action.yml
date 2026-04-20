@@ -8,6 +8,9 @@ outputs:
   has_affected_apps:
     description: "Whether there are any affected apps"
     value: ${{ steps.check.outputs.has_affected_apps }}
+  macro_sandbox_languages:
+    description: "JSON array of macro-sandbox lambda languages that changed"
+    value: ${{ steps.check.outputs.macro_sandbox_languages }}
 
 runs:
   using: "composite"
@@ -41,3 +44,19 @@ runs:
           echo "has_affected_apps=false" >> $GITHUB_OUTPUT
           echo "No affected packages found"
         fi
+
+        # Detect changed macro-sandbox lambdas using the same base ref
+        shared_changed=false
+        git diff --name-only "$TURBO_REF_FILTER" HEAD -- \
+          apps/macro-sandbox/lib/ \
+          apps/macro-sandbox/package.json \
+          apps/macro-sandbox/tsconfig.json | grep -q . && shared_changed=true || true
+
+        LANGS=[]
+        for lang in python javascript r; do
+          if [[ "$shared_changed" == "true" ]] || \
+             git diff --name-only "$TURBO_REF_FILTER" HEAD -- "apps/macro-sandbox/functions/$lang/" | grep -q .; then
+            LANGS=$(echo "$LANGS" | jq --arg l "$lang" '. + [$l]')
+          fi
+        done
+        echo "macro_sandbox_languages=$(echo "$LANGS" | jq -c .)" >> $GITHUB_OUTPUT
