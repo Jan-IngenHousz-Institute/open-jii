@@ -44,6 +44,16 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: mockFailedUploads }),
 }));
 
+vi.mock("~/stores/use-upload-store", () => ({
+  useUploadStore: () => ({
+    uploadingIds: new Set<string>(),
+    isUploading: false,
+    setIsUploading: vi.fn(),
+    addUploadingIds: vi.fn(),
+    removeUploadingId: vi.fn(),
+  }),
+}));
+
 vi.mock("~/services/measurements-storage", () => ({
   getMeasurements: vi.fn().mockResolvedValue([]),
   markAsSuccessful: mockMarkAsSuccessful,
@@ -168,6 +178,60 @@ describe("useMeasurements", () => {
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-1");
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-2");
       expect(mockMarkAsSuccessful).toHaveBeenCalledTimes(2);
+    });
+
+    it("processes all items when count exceeds CONCURRENCY", async () => {
+      const uploads = Array.from({ length: 12 }, (_, i) => ({
+        key: `key-${i}`,
+        data: { ...mockUpload, topic: `test/topic${i}` },
+      }));
+      await mountWithUploads(uploads);
+      mockSendMqttEvent.mockResolvedValue(undefined);
+
+      await capturedUploadAllCallback();
+
+      expect(mockMarkAsSuccessful).toHaveBeenCalledTimes(12);
+      for (const { key } of uploads) {
+        expect(mockMarkAsSuccessful).toHaveBeenCalledWith(key);
+      }
+    });
+
+    it("completes remaining tasks when one worker fails mid-batch", async () => {
+      await mountWithUploads([
+        { key: "key-fail", data: mockUpload },
+        { key: "key-ok-1", data: { ...mockUpload, topic: "test/topic2" } },
+        { key: "key-ok-2", data: { ...mockUpload, topic: "test/topic3" } },
+      ]);
+      mockSendMqttEvent
+        .mockRejectedValueOnce(new Error("send failed"))
+        .mockResolvedValue(undefined);
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await expect(capturedUploadAllCallback()).rejects.toThrow("send failed");
+
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalledWith("key-fail");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-ok-1");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-ok-2");
+
+      consoleSpy.mockRestore();
+    });
+
+    it("throws the last rejection when multiple items fail", async () => {
+      await mountWithUploads([
+        { key: "key-1", data: mockUpload },
+        { key: "key-2", data: { ...mockUpload, topic: "test/topic2" } },
+      ]);
+      mockSendMqttEvent
+        .mockRejectedValueOnce(new Error("first error"))
+        .mockRejectedValueOnce(new Error("second error"));
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await expect(capturedUploadAllCallback()).rejects.toThrow();
+
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+      expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
+
+      consoleSpy.mockRestore();
     });
   });
 

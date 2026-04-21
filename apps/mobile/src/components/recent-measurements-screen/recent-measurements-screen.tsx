@@ -102,9 +102,13 @@ export function RecentMeasurementsScreen() {
         text: isSynced ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
-          void (() => {
-            cbRef.current.removeMeasurement(id);
-            cbRef.current.invalidate();
+          void (async () => {
+            try {
+              await cbRef.current.removeMeasurement(id);
+              cbRef.current.invalidate();
+            } catch {
+              toast.error("Failed to delete measurement. Please try again.");
+            }
           })();
         },
       },

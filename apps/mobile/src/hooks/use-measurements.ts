@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import {
@@ -13,11 +13,13 @@ import {
 } from "~/services/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/services/measurements-storage";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
+import { useUploadStore } from "~/stores/use-upload-store";
 import { buildAnnotationsWithComment } from "~/utils/measurement-annotations";
 
 export function useMeasurements() {
   const queryClient = useQueryClient();
-  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
+  const { uploadingIds, isUploading, setIsUploading, addUploadingIds, removeUploadingId } =
+    useUploadStore();
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
@@ -32,29 +34,43 @@ export function useMeasurements() {
   });
 
   const uploadAsync = useAsyncCallback(async () => {
+    const CONCURRENCY = 10;
     const items = [...failedUploads];
     setUploadProgress({ done: 0, total: items.length });
-    setUploadingIds(new Set(items.map(({ key }) => key)));
+    setIsUploading(true);
+    addUploadingIds(items.map(({ key }) => key));
 
-    const results = await Promise.allSettled(
-      items.map(async ({ key, data }) => {
-        try {
-          await sendMqttEvent(data.topic, data.measurementResult);
-          await markAsSuccessful(key);
-        } catch (error) {
-          console.warn(`Failed to upload item with key ${key}:`, error);
-          throw error;
-        } finally {
-          setUploadingIds((prev) => {
-            const next = new Set(prev);
-            next.delete(key);
-            return next;
-          });
-          setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
+    const taskFns = items.map(({ key, data }) => async () => {
+      try {
+        await sendMqttEvent(data.topic, data.measurementResult);
+        await markAsSuccessful(key);
+      } catch (error) {
+        console.warn(`Failed to upload item with key ${key}:`, error);
+        throw error;
+      } finally {
+        removeUploadingId(key);
+        setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
+      }
+    });
+
+    let next = 0;
+    const settled: PromiseSettledResult<void>[] = [];
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, taskFns.length) }, async () => {
+        while (next < taskFns.length) {
+          const fn = taskFns[next++];
+          try {
+            await fn();
+            settled.push({ status: "fulfilled", value: undefined });
+          } catch (reason) {
+            settled.push({ status: "rejected", reason });
+          }
         }
       }),
     );
+    const results = settled;
 
+    setIsUploading(false);
     setUploadProgress(null);
     await pruneExpiredMeasurements();
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
@@ -69,7 +85,7 @@ export function useMeasurements() {
     const item = failedUploads.find((u) => u.key === key);
     if (!item) return;
 
-    setUploadingIds((prev) => new Set([...prev, key]));
+    addUploadingIds([key]);
     try {
       await sendMqttEvent(item.data.topic, item.data.measurementResult);
       await markAsSuccessful(key);
@@ -77,11 +93,7 @@ export function useMeasurements() {
       console.warn(`Failed to upload item with key ${key}:`, error);
       toast.info("Failed to upload, try again later");
     } finally {
-      setUploadingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
+      removeUploadingId(key);
     }
 
     await pruneExpiredMeasurements();
@@ -114,7 +126,7 @@ export function useMeasurements() {
     failedUploads,
     uploadingIds,
     uploadProgress,
-    isUploading: uploadAsync.loading,
+    isUploading,
     uploadAll: uploadAsync.execute,
     uploadOne,
     saveMeasurement,
