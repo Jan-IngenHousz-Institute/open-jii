@@ -24,10 +24,11 @@ interface ReadyStateProps {
 }
 
 export function ReadyState({ onCardPress }: ReadyStateProps) {
-  const theme = useTheme();
-  const { classes, colors } = theme;
+  const { classes, colors, isDark } = useTheme();
   const { flowNodes, iterationCount } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore();
+
+  const cardBackground = isDark ? colors.dark.grayBackground : colors.light.grayBackground;
 
   const questionEntries: { node: FlowNode; index: number }[] = flowNodes
     .map((node, index) => ({ node, index }))
@@ -65,7 +66,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
         keyboardShouldPersistTaps="handled"
       >
         {questionEntries.map(({ node, index }, position) => {
-          const label = node.name ?? node.content?.text ?? "Question";
+          const label = node.content?.text ?? node.name ?? "Question";
           const answer = getAnswer(iterationCount, node.id);
           const hasAnswer = !!answer?.trim();
           const isAutoincrement = isAutoincrementEnabled(node.id);
@@ -78,11 +79,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               onPress={() => onCardPress(index)}
               activeOpacity={0.7}
               className="mb-2 flex-row items-stretch gap-4 rounded-xl p-4"
-              style={{
-                backgroundColor: theme.isDark
-                  ? colors.dark.grayBackground
-                  : colors.light.grayBackground,
-              }}
+              style={{ backgroundColor: cardBackground }}
             >
               <View className="items-center justify-center">
                 <LinearGradient
@@ -102,7 +99,12 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               </View>
 
               <View className="flex-1 gap-1">
-                <Text className={clsx("text-xs font-medium", classes.textSecondary)}>{label}</Text>
+                <Text
+                  className={clsx("text-xs font-medium", classes.textSecondary)}
+                  numberOfLines={1}
+                >
+                  {label}
+                </Text>
                 <View className="flex-row items-center gap-1">
                   <Text
                     numberOfLines={1}
