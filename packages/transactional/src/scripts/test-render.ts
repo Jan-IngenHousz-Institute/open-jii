@@ -1,76 +1,70 @@
 /**
- * Renders all emails using the live render functions (which hit Contentful)
- * and writes the HTML output to /tmp/email-*.html so you can open them in a browser.
+ * Renders all emails and writes the HTML output to dist/email-previews/.
  */
-import { writeFileSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
+import { join } from "path";
 
 import { renderAddedUserNotification } from "../render/added-user-notification";
-import { renderOtpEmail } from "../render/otp-email.js";
+import { renderOtpEmail } from "../render/otp-email";
 import { renderProjectTransferComplete } from "../render/project-transfer-complete";
 import { renderTransferRequestConfirmation } from "../render/transfer-request-confirmation";
 
-function withPreview(html: string, preview: string): string {
-  return (
-    `<p style="font-family:sans-serif;padding:8px 16px;"><strong>Preview:</strong> ${preview}</p>\n` +
-    html
-  );
+const outDir = join(process.cwd(), "dist/email-previews");
+const host = process.env.HOST ?? "localhost";
+const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
+
+function write(name: string, { html, preview }: { html: string; preview: string }): void {
+  const file = join(outDir, `${name}.html`);
+  const banner = `<p style="font-family:sans-serif;padding:8px 16px;"><strong>Preview:</strong> ${preview}</p>\n`;
+  writeFileSync(file, banner + html);
+  console.log(file);
 }
 
 async function main(): Promise<void> {
-  console.log("Rendering otp-email...");
-  const otp = await renderOtpEmail({
-    otp: "123456",
-    senderName: "openJII",
-    host: "localhost",
-    baseUrl: "http://localhost:3000",
-  });
-  writeFileSync("/tmp/email-otp.html", withPreview(otp.html, otp.preview));
-  console.log("  → /tmp/email-otp.html");
+  mkdirSync(outDir, { recursive: true });
 
-  console.log("Rendering added-user-notification...");
-  const addedUser = await renderAddedUserNotification({
-    host: "localhost",
-    baseUrl: "http://localhost:3000",
-    experimentName: "My Experiment",
-    experimentUrl: "http://localhost:3000/en-US/platform/experiments/123",
-    actor: "Jane Doe",
-    role: "member",
-  });
-  writeFileSync("/tmp/email-added-user.html", withPreview(addedUser.html, addedUser.preview));
-  console.log("  → /tmp/email-added-user.html");
-
-  console.log("Rendering project-transfer-complete...");
-  const transferComplete = await renderProjectTransferComplete({
-    host: "localhost",
-    baseUrl: "http://localhost:3000",
-    experimentName: "My Experiment",
-    experimentUrl: "http://localhost:3000/en-US/platform/experiments/123",
-  });
-  writeFileSync(
-    "/tmp/email-transfer-complete.html",
-    withPreview(transferComplete.html, transferComplete.preview),
+  write(
+    "otp",
+    await renderOtpEmail({
+      otp: "123456",
+      senderName: "openJII",
+      host,
+      baseUrl,
+    }),
   );
-  console.log("  → /tmp/email-transfer-complete.html");
 
-  console.log("Rendering transfer-request-confirmation...");
-  const transferRequest = await renderTransferRequestConfirmation({
-    host: "localhost",
-    baseUrl: "http://localhost:3000",
-    projectIdOld: "12345",
-    projectUrlOld: "https://photosynq.org/projects/12345",
-    userEmail: "researcher@example.com",
-  });
-  writeFileSync(
-    "/tmp/email-transfer-request.html",
-    withPreview(transferRequest.html, transferRequest.preview),
+  write(
+    "added-user",
+    await renderAddedUserNotification({
+      host,
+      baseUrl,
+      experimentName: "My Experiment",
+      experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
+      actor: "Jane Doe",
+      role: "member",
+    }),
   );
-  console.log("  → /tmp/email-transfer-request.html");
 
-  console.log("\nDone. Open with:");
-  console.log("  open /tmp/email-otp.html");
-  console.log("  open /tmp/email-added-user.html");
-  console.log("  open /tmp/email-transfer-complete.html");
-  console.log("  open /tmp/email-transfer-request.html");
+  write(
+    "transfer-complete",
+    await renderProjectTransferComplete({
+      host,
+      baseUrl,
+      experimentName: "My Experiment",
+      experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
+    }),
+  );
+
+  write(
+    "transfer-request",
+    await renderTransferRequestConfirmation({
+      host,
+      baseUrl,
+      projectIdOld: "12345",
+      projectUrlOld: "https://photosynq.org/projects/12345",
+      userEmail: "researcher@example.com",
+    }),
+  );
 }
 
 main().catch((err: unknown) => {
