@@ -29,15 +29,28 @@ vi.mock("sonner-native", () => ({
   toast: { info: mockToastInfo, success: mockToastSuccess, error: mockToastError },
 }));
 
-let capturedListener: ((state: string) => void) | null = null;
-const mockRemoveListener = vi.fn();
+let capturedAppStateListener: ((state: string) => void) | null = null;
+const mockAppStateRemove = vi.fn();
 
 vi.mock("react-native", () => ({
   AppState: {
     addEventListener: (_event: string, listener: (state: string) => void) => {
-      capturedListener = listener;
-      return { remove: mockRemoveListener };
+      capturedAppStateListener = listener;
+      return { remove: mockAppStateRemove };
     },
+  },
+}));
+
+let capturedNetworkListener: ((state: { isInternetReachable: boolean | null }) => void) | null =
+  null;
+const mockNetworkRemove = vi.fn();
+
+vi.mock("expo-network", () => ({
+  addNetworkStateListener: (
+    listener: (state: { isInternetReachable: boolean | null }) => void,
+  ) => {
+    capturedNetworkListener = listener;
+    return { remove: mockNetworkRemove };
   },
 }));
 
@@ -48,7 +61,8 @@ describe("useAutoUpload", () => {
     vi.clearAllMocks();
     mockFailedUploads = [];
     mockIsUploading = false;
-    capturedListener = null;
+    capturedAppStateListener = null;
+    capturedNetworkListener = null;
   });
 
   // ---------------------------------------------------------------------------
@@ -133,7 +147,7 @@ describe("useAutoUpload", () => {
     it("registers an AppState listener on mount", () => {
       renderHook(() => useAutoUpload());
 
-      expect(capturedListener).not.toBeNull();
+      expect(capturedAppStateListener).not.toBeNull();
     });
 
     it("triggers upload when app becomes active with unsynced measurements", async () => {
@@ -143,7 +157,7 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedListener!("active"));
+      act(() => capturedAppStateListener!("active"));
 
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
     });
@@ -152,7 +166,7 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedListener!("background"));
+      act(() => capturedAppStateListener!("background"));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -161,7 +175,7 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedListener!("active"));
+      act(() => capturedAppStateListener!("active"));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -171,7 +185,83 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [{ key: "k1", data: {} }];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedListener!("active"));
+      act(() => capturedAppStateListener!("active"));
+
+      expect(mockUploadAll).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // cleanup
+  // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // network reconnection trigger
+  // ---------------------------------------------------------------------------
+
+  describe("network reconnection trigger", () => {
+    it("registers a network state listener on mount", () => {
+      renderHook(() => useAutoUpload());
+
+      expect(capturedNetworkListener).not.toBeNull();
+    });
+
+    it("triggers upload when connection is restored (false → true)", async () => {
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+      mockUploadAll.mockClear();
+
+      act(() => capturedNetworkListener!({ isInternetReachable: false }));
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+    });
+
+    it("does not trigger when connection was already reachable", async () => {
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+      mockUploadAll.mockClear();
+
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+
+      expect(mockUploadAll).not.toHaveBeenCalled();
+    });
+
+    it("does not trigger when connection drops (true → false)", async () => {
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+      mockUploadAll.mockClear();
+
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener!({ isInternetReachable: false }));
+
+      expect(mockUploadAll).not.toHaveBeenCalled();
+    });
+
+    it("does not trigger on restore when no unsynced measurements", () => {
+      mockFailedUploads = [];
+      renderHook(() => useAutoUpload());
+
+      act(() => capturedNetworkListener!({ isInternetReachable: false }));
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+
+      expect(mockUploadAll).not.toHaveBeenCalled();
+    });
+
+    it("does not trigger on restore when already uploading", () => {
+      mockIsUploading = true;
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      act(() => capturedNetworkListener!({ isInternetReachable: false }));
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -186,7 +276,14 @@ describe("useAutoUpload", () => {
       const { unmount } = renderHook(() => useAutoUpload());
       unmount();
 
-      expect(mockRemoveListener).toHaveBeenCalledOnce();
+      expect(mockAppStateRemove).toHaveBeenCalledOnce();
+    });
+
+    it("removes network listener on unmount", () => {
+      const { unmount } = renderHook(() => useAutoUpload());
+      unmount();
+
+      expect(mockNetworkRemove).toHaveBeenCalledOnce();
     });
   });
 });
