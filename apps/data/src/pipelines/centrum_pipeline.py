@@ -697,11 +697,7 @@ def experiment_macro_data():
             "macro_result",
             F.when(
                 ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
-                execute_macro_udf(F.struct(
-                    F.col("id").cast("string").alias("id"),
-                    F.col("macro_id"),
-                    F.col("data").cast("string").alias("data"),
-                ))
+                execute_macro_udf(F.struct("id", "macro_id", "data"))
             )
         )
         .withColumn(
