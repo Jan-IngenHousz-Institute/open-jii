@@ -76,7 +76,7 @@ export const MeasurementItem = memo(function MeasurementItem({
         <View className="flex-row items-center gap-1.5">
           {!hideActions && (
             <View className="flex-row gap-1">
-              {!isSynced && (
+              {!isSynced && !isSyncing && !!onSync && (
                 <TouchableOpacity
                   onPress={(e) => {
                     e.stopPropagation();
