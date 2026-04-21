@@ -11,11 +11,13 @@ export function useAutoUpload() {
   stateRef.current = { failedUploads, uploadAll, isUploading };
 
   const initialCheckDone = useRef(false);
+  const autoUploadInFlight = useRef(false);
 
   const tryUpload = useCallback(async () => {
     const { failedUploads, uploadAll, isUploading } = stateRef.current;
-    if (failedUploads.length === 0 || isUploading) return;
+    if (autoUploadInFlight.current || failedUploads.length === 0 || isUploading) return;
 
+    autoUploadInFlight.current = true;
     const count = failedUploads.length;
     toast.info(`Uploading ${count} unsynced measurement${count !== 1 ? "s" : ""}…`);
     try {
@@ -23,6 +25,8 @@ export function useAutoUpload() {
       toast.success(`${count} measurement${count !== 1 ? "s" : ""} synced`);
     } catch {
       toast.error("Upload failed. Please try again.");
+    } finally {
+      autoUploadInFlight.current = false;
     }
   }, []);
 
@@ -46,7 +50,7 @@ export function useAutoUpload() {
     let wasReachable: boolean | null = null;
     const sub = addNetworkStateListener(({ isInternetReachable }) => {
       const restored = wasReachable === false && isInternetReachable === true;
-      wasReachable = isInternetReachable ?? null;
+      if (isInternetReachable !== null) wasReachable = isInternetReachable;
       if (restored) void tryUpload();
     });
     return () => sub.remove();
