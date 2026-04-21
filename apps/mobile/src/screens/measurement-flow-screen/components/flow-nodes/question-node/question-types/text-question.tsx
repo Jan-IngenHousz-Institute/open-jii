@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
-import { QuestionContent } from "../../../types";
+import { QuestionContent } from "../../../../types";
 
 interface TextQuestionProps {
   content: QuestionContent;
