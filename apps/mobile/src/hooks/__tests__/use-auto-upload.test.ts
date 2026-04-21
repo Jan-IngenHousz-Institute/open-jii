@@ -265,6 +265,80 @@ describe("useAutoUpload", () => {
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
+
+    it("triggers upload when null event is received between offline and online (false → null → true)", async () => {
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+      mockUploadAll.mockClear();
+
+      act(() => capturedNetworkListener!({ isInternetReachable: false }));
+      act(() => capturedNetworkListener!({ isInternetReachable: null }));
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+    });
+
+    it("does not treat null → true as a restore when no prior offline state", async () => {
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+      mockUploadAll.mockClear();
+
+      act(() => capturedNetworkListener!({ isInternetReachable: null }));
+      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+
+      expect(mockUploadAll).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // concurrent upload guard (autoUploadInFlight)
+  // ---------------------------------------------------------------------------
+
+  describe("concurrent upload guard", () => {
+    it("drops a second call while first upload is still in flight", async () => {
+      let resolveUpload!: () => void;
+      mockUploadAll.mockImplementationOnce(
+        () => new Promise<void>((res) => { resolveUpload = res; }),
+      );
+
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+
+      act(() => capturedAppStateListener!("active"));
+      expect(mockUploadAll).toHaveBeenCalledOnce();
+
+      resolveUpload();
+      await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    });
+
+    it("resets inFlight ref after success so next call can proceed", async () => {
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+      mockUploadAll.mockClear();
+
+      act(() => capturedAppStateListener!("active"));
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+    });
+
+    it("resets inFlight ref after failure so next call can proceed", async () => {
+      mockUploadAll.mockRejectedValueOnce(new Error("network error"));
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+      mockUploadAll.mockClear();
+
+      act(() => capturedAppStateListener!("active"));
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+    });
   });
 
   // ---------------------------------------------------------------------------
