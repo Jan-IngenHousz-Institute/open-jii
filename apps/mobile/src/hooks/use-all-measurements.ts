@@ -31,8 +31,9 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   const { data: allMeasurements = [] } = useQuery({
     queryKey: ["measurements"],
     queryFn: async () => {
-      const [failedEntries, successfulEntries] = await Promise.all([
+      const [failedEntries, uploadingEntries, successfulEntries] = await Promise.all([
         getMeasurements("failed"),
+        getMeasurements("uploading"),
         getMeasurements("successful"),
       ]);
 
@@ -41,6 +42,15 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         timestamp: data.metadata.timestamp,
         experimentName: data.metadata.experimentName,
         status: "unsynced" as MeasurementStatus,
+        questions: parseQuestions(data.measurementResult),
+        data,
+      }));
+
+      const syncing: MeasurementItem[] = uploadingEntries.map(([key, data]) => ({
+        key,
+        timestamp: data.metadata.timestamp,
+        experimentName: data.metadata.experimentName,
+        status: "syncing" as MeasurementStatus,
         questions: parseQuestions(data.measurementResult),
         data,
       }));
@@ -54,7 +64,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         data,
       }));
 
-      const combined = [...unsynced, ...synced];
+      const combined = [...unsynced, ...syncing, ...synced];
 
       combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -68,10 +78,15 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
       allMeasurements.filter((item) => {
         if (filter === "all") return true;
         if (filter === "synced") return item.status === "synced";
-        if (filter === "unsynced") return item.status === "unsynced";
+        if (filter === "unsynced") return item.status === "unsynced" || item.status === "syncing";
         return true;
       }),
     [allMeasurements, filter],
+  );
+
+  const uploadingCount = useMemo(
+    () => allMeasurements.filter((item) => item.status === "syncing").length,
+    [allMeasurements],
   );
 
   const invalidate = () => {
@@ -81,6 +96,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   return {
     measurements: filteredMeasurements,
     allMeasurements,
+    uploadingCount,
     invalidate,
   };
 }

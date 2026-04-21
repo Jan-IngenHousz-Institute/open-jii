@@ -3,6 +3,7 @@ import { addNetworkStateListener } from "expo-network";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
 import { useMeasurements } from "~/hooks/use-measurements";
+import { resetUploadingMeasurements } from "~/services/measurements-storage";
 
 export function useAutoUpload() {
   const { failedUploads, uploadAll, isUploading } = useMeasurements();
@@ -13,12 +14,18 @@ export function useAutoUpload() {
   const initialCheckDone = useRef(false);
   const autoUploadInFlight = useRef(false);
 
+  // Reset any items stuck in "uploading" from a previous crashed session.
+  useEffect(() => {
+    void resetUploadingMeasurements();
+  }, []);
+
   const tryUpload = useCallback(async () => {
     const { failedUploads, uploadAll, isUploading } = stateRef.current;
     if (autoUploadInFlight.current || failedUploads.length === 0 || isUploading) return;
 
     autoUploadInFlight.current = true;
     const count = failedUploads.length;
+
     toast.info(`Uploading ${count} unsynced measurement${count !== 1 ? "s" : ""}…`);
     try {
       await uploadAll();

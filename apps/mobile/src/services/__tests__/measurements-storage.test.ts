@@ -55,7 +55,7 @@ const mockMeasurement = {
 
 function insertRow(
   id: string,
-  status: "failed" | "successful",
+  status: "failed" | "uploading" | "successful",
   overrides: Partial<{ topic: string; timestamp: string; createdAt: number }> = {},
 ) {
   sqlite
@@ -189,8 +189,8 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("markAsSuccessful", () => {
-    it("transitions a failed row to successful", async () => {
-      insertRow("m1", "failed");
+    it("transitions an uploading row to successful", async () => {
+      insertRow("m1", "uploading");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("m1");
@@ -200,7 +200,7 @@ describe("measurements-storage", () => {
     });
 
     it("does not create a duplicate row", async () => {
-      insertRow("m1", "failed");
+      insertRow("m1", "uploading");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("m1");
@@ -210,15 +210,15 @@ describe("measurements-storage", () => {
     });
 
     it("does not affect other rows", async () => {
-      insertRow("target", "failed");
-      insertRow("other", "failed");
+      insertRow("target", "uploading");
+      insertRow("other", "uploading");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("target");
 
       const rows = sqlite.prepare("SELECT * FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("successful");
-      expect(rows.find((r) => r.id === "other")?.status).toBe("failed");
+      expect(rows.find((r) => r.id === "other")?.status).toBe("uploading");
     });
 
     it("is a no-op on a row that is already successful", async () => {
