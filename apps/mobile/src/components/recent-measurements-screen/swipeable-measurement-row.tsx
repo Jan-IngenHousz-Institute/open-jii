@@ -56,7 +56,7 @@ export function SwipeableMeasurementRow({
 
   useEffect(() => {
     closeRow();
-  }, [status]);
+  }, [status]); // Close the row when status changes (e.g. after syncing)
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])
