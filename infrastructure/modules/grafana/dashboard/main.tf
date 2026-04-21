@@ -9,38 +9,7 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.7"
-    }
   }
-}
-
-resource "random_password" "grafana_db" {
-  length           = 32
-  special          = true
-  override_special = "!#%*-_=+?" # URL- and shell-safe, no quoting issues in connection strings
-}
-
-resource "aws_secretsmanager_secret" "grafana_db_credentials" {
-  name                    = "openjii-grafana-db-credentials-${var.environment}"
-  description             = "Credentials for the Grafana read-only PostgreSQL user (grafana_readonly)"
-  recovery_window_in_days = var.recovery_window_in_days
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    ManagedBy   = "terraform"
-    Component   = "grafana"
-  }
-}
-
-resource "aws_secretsmanager_secret_version" "grafana_db_credentials" {
-  secret_id = aws_secretsmanager_secret.grafana_db_credentials.id
-  secret_string = jsonencode({
-    username = var.grafana_db_username
-    password = random_password.grafana_db.result
-  })
 }
 
 data "aws_caller_identity" "current" {}
@@ -98,32 +67,6 @@ resource "grafana_data_source" "cloudwatch_logs_source" {
   })
 }
 
-# PostgreSQL data source pointing at Aurora
-resource "grafana_data_source" "postgres" {
-  provider = grafana.amg
-  type     = "postgres"
-  name     = "postgresql-datasource"
-
-  url      = "${var.db_host}:${var.db_port}"
-  username = var.grafana_db_username
-
-  json_data_encoded = jsonencode({
-    database         = var.db_name
-    sslmode          = "require"
-    maxOpenConns     = 100
-    maxIdleConns     = 100
-    maxIdleConnsAuto = true
-    connMaxLifetime  = 14400
-    postgresVersion  = 1600
-    timescaledb      = false
-    timezone         = "UTC"
-  })
-
-  secure_json_data_encoded = jsonencode({
-    password = random_password.grafana_db.result
-  })
-}
-
 resource "grafana_folder" "folder" {
   provider = grafana.amg
   title    = "${var.environment} Dashboards"
@@ -138,16 +81,19 @@ resource "grafana_dashboard" "dashboard" {
   config_json = templatefile("${path.module}/dashboard.json.tftpl", local.dashboard_vars)
 }
 
-resource "grafana_dashboard" "postgres_dashboard" {
+resource "grafana_dashboard" "registrations_dashboard" {
   provider  = grafana.amg
   folder    = grafana_folder.folder.id
   overwrite = true
 
-  config_json = templatefile("${path.module}/postgres_dashboard.json.tftpl", {
-    postgres_datasource_uid = grafana_data_source.postgres.uid
-    environment             = var.environment
+  config_json = templatefile("${path.module}/registrations_dashboard.json.tftpl", {
+    datasource_uid = grafana_data_source.cloudwatch_source.uid
+    environment    = var.environment
+    aws_region     = var.aws_region
   })
 }
+
+
 
 resource "grafana_dashboard" "dora_dashboard" {
   provider  = grafana.amg

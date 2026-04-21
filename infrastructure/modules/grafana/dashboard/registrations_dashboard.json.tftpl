@@ -1,0 +1,155 @@
+{
+  "title": "${environment} User Registrations",
+  "uid": "${environment}-user-registrations",
+  "tags": ["registrations", "${environment}"],
+  "timezone": "utc",
+  "schemaVersion": 38,
+  "refresh": "1d",
+  "time": { "from": "now-1y", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Weekly New User Registrations",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 9 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "short",
+          "displayName": "New Users"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+          "queryMode": "Metrics",
+          "metricQueryType": 0,
+          "namespace": "OpenJII/UserRegistrations",
+          "metricName": "WeeklyNewUsers",
+          "statistics": ["Maximum"],
+          "period": "604800",
+          "region": "${aws_region}",
+          "dimensions": {}
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Total Registered Users",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 9 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "short",
+          "displayName": "Total Users"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+          "queryMode": "Metrics",
+          "metricQueryType": 0,
+          "namespace": "OpenJII/UserRegistrations",
+          "metricName": "TotalUsers",
+          "statistics": ["Maximum"],
+          "period": "604800",
+          "region": "${aws_region}",
+          "dimensions": {}
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Latest Total Users",
+      "gridPos": { "x": 0, "y": 9, "w": 6, "h": 5 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+          "queryMode": "Metrics",
+          "metricQueryType": 0,
+          "namespace": "OpenJII/UserRegistrations",
+          "metricName": "TotalUsers",
+          "statistics": ["Maximum"],
+          "period": "604800",
+          "region": "${aws_region}",
+          "dimensions": {}
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "New Users This Week",
+      "gridPos": { "x": 6, "y": 9, "w": 6, "h": 5 },
+      "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
+          "queryMode": "Metrics",
+          "metricQueryType": 0,
+          "namespace": "OpenJII/UserRegistrations",
+          "metricName": "WeeklyNewUsers",
+          "statistics": ["Maximum"],
+          "period": "604800",
+          "region": "${aws_region}",
+          "dimensions": {}
+        }
+      ]
+    }
+  ]
+}

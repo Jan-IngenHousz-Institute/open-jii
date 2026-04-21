@@ -71,8 +71,8 @@ variable "create_macro_sandbox_resources" {
   default     = true
 }
 
-variable "create_grafana_resources" {
-  description = "Whether to create the Grafana workspace security group and Aurora ingress rule"
+variable "create_metrics_publisher_resources" {
+  description = "Whether to create the metrics-publisher Lambda security group and Aurora ingress rule"
   type        = bool
   default     = true
 }

@@ -75,30 +75,4 @@ variable "macro_sandbox_function_names" {
   default     = {}
 }
 
-variable "grafana_db_username" {
-  description = "Grafana database username"
-  type        = string
-  default     = "grafana_readonly"
-}
 
-variable "db_host" {
-  description = "Aurora cluster writer endpoint hostname"
-  type        = string
-}
-
-variable "db_port" {
-  description = "Aurora cluster port (default 5432)"
-  type        = number
-  default     = 5432
-}
-
-variable "db_name" {
-  description = "Name of the PostgreSQL database to connect to"
-  type        = string
-}
-
-variable "recovery_window_in_days" {
-  description = "Number of days to retain the Secrets Manager secret (default 30 days)"
-  type        = number
-  default     = 30
-}

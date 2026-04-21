@@ -14,14 +14,3 @@ variable "project" {
   type        = string
   default     = "open-jii"
 }
-
-variable "private_subnets_ids" {
-  description = "List of private subnet IDs for VPC configuration (optional, required if using VPC)."
-  type        = list(string)
-}
-
-variable "security_group_ids" {
-  description = "List of security group IDs for VPC configuration (optional, required if using VPC)."
-  type        = list(string)
-}
-

@@ -187,13 +187,13 @@ resource "aws_security_group_rule" "ecs_to_aurora" {
 }
 
 # -------------------------
-# Grafana Workspace Security Group
+# Metrics Publisher Lambda Security Group
 # -------------------------
-resource "aws_security_group" "grafana_workspace_sg" {
-  count = var.create_grafana_resources && var.create_aurora_resources ? 1 : 0
+resource "aws_security_group" "metrics_publisher_lambda_sg" {
+  count = var.create_metrics_publisher_resources && var.create_aurora_resources ? 1 : 0
 
-  name        = "${var.environment}-grafana-workspace-sg"
-  description = "Security group for Amazon Managed Grafana workspace — allows outbound to Aurora"
+  name        = "${var.environment}-metrics-publisher-lambda-sg"
+  description = "Security group for metrics-publisher Lambda — allows outbound to Aurora on 5432"
   vpc_id      = aws_vpc.this.id
 
   egress {
@@ -205,21 +205,21 @@ resource "aws_security_group" "grafana_workspace_sg" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.environment}-grafana-workspace-sg"
+    Name = "${var.environment}-metrics-publisher-lambda-sg"
   })
 }
 
-# Allow Grafana workspace to connect to Aurora on 5432
-resource "aws_security_group_rule" "grafana_to_aurora" {
-  count = var.create_grafana_resources && var.create_aurora_resources ? 1 : 0
+# Allow metrics-publisher Lambda to connect to Aurora on 5432
+resource "aws_security_group_rule" "metrics_publisher_to_aurora" {
+  count = var.create_metrics_publisher_resources && var.create_aurora_resources ? 1 : 0
 
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.grafana_workspace_sg[0].id
+  source_security_group_id = aws_security_group.metrics_publisher_lambda_sg[0].id
   security_group_id        = aws_security_group.aurora_sg[0].id
-  description              = "Allow Grafana workspace to query Aurora on port 5432"
+  description              = "Allow metrics-publisher Lambda to query Aurora on port 5432"
 }
 
 # -------------------------

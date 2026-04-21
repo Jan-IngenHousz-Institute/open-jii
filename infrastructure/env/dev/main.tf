@@ -1393,11 +1393,6 @@ module "migration_runner_ecs" {
     {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
-    },
-    {
-      # Grafana read-only user credentials — created by this task after migrations
-      name      = "GRAFANA_DB_CREDENTIALS"
-      valueFrom = module.grafana_dashboard.grafana_db_credentials_secret_arn
     }
   ]
 
@@ -2032,9 +2027,6 @@ module "ssm_opennext_outputs" {
 module "managed_grafana_workspace" {
   source      = "../../modules/grafana/workspace"
   environment = var.environment
-
-  private_subnets_ids = module.vpc.private_subnets
-  security_group_ids  = [module.vpc.grafana_workspace_security_group_id]
 }
 
 module "grafana_dashboard" {
@@ -2060,18 +2052,26 @@ module "grafana_dashboard" {
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
 
-  # Use dedicated read-only Grafana DB user — managed inside the grafana dashboard module
-  db_host = module.aurora_db.cluster_endpoint
-  db_port = module.aurora_db.cluster_port
-  db_name = module.aurora_db.database_name
-
-  recovery_window_in_days = 0 # No recovery window for dev workspace
-
   providers = {
     grafana.amg = grafana.amg
   }
 
   depends_on = [module.managed_grafana_workspace]
+}
+
+module "grafana_metrics_publisher" {
+  source = "../../modules/grafana/metrics-publisher"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  db_host                    = module.aurora_db.cluster_endpoint
+  db_port                    = module.aurora_db.cluster_port
+  db_name                    = module.aurora_db.database_name
+  aurora_cluster_resource_id = module.aurora_db.cluster_resource_id
+
+  private_subnets                = module.vpc.private_subnets
+  metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
 }
 
 module "aws_inspector" {
