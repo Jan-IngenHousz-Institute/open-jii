@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from "react";
+import { addNetworkStateListener } from "expo-network";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
 import { useMeasurements } from "~/hooks/use-measurements";
@@ -36,6 +37,17 @@ export function useAutoUpload() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active") void tryUpload();
+    });
+    return () => sub.remove();
+  }, [tryUpload]);
+
+  // Trigger when connection is restored (offline → online).
+  useEffect(() => {
+    let wasReachable: boolean | null = null;
+    const sub = addNetworkStateListener(({ isInternetReachable }) => {
+      const restored = wasReachable === false && isInternetReachable === true;
+      wasReachable = isInternetReachable ?? null;
+      if (restored) void tryUpload();
     });
     return () => sub.remove();
   }, [tryUpload]);
