@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
-import { QuestionContent } from "../../../types";
+import { QuestionContent } from "../../../../types";
 
 export interface SingleChoiceQuestionProps {
   content: QuestionContent;
