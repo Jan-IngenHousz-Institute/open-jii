@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { ChevronsLeft } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, FlatList } from "react-native";
+import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
@@ -60,9 +61,14 @@ export function MeasurementsList({
         text: status === "synced" ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
-          void (() => {
-            removeMeasurement(id);
-            invalidate();
+          void (async () => {
+            try {
+              await removeMeasurement(id);
+              invalidate();
+            } catch (error) {
+              console.error("Failed to remove measurement:", error);
+              toast.error("Failed to remove measurement");
+            }
           })();
         },
       },
