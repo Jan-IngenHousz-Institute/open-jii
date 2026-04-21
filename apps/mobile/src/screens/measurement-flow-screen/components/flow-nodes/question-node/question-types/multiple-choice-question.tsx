@@ -4,9 +4,9 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
-import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-types/utils/grid-layout";
+import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-node/question-types/utils/grid-layout";
 
-import { FlowNode } from "../../../types";
+import { FlowNode } from "../../../../types";
 
 interface MultipleChoiceQuestionProps {
   node: FlowNode;
