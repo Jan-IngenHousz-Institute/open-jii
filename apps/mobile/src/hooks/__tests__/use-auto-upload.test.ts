@@ -7,11 +7,13 @@ const {
   mockToastInfo,
   mockToastSuccess,
   mockToastError,
+  mockResetUploadingMeasurements,
 } = vi.hoisted(() => ({
   mockUploadAll: vi.fn().mockResolvedValue(undefined),
   mockToastInfo: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockResetUploadingMeasurements: vi.fn().mockResolvedValue(undefined),
 }));
 
 let mockFailedUploads: { key: string; data: unknown }[] = [];
@@ -45,6 +47,10 @@ let capturedNetworkListener: ((state: { isInternetReachable: boolean | null }) =
   null;
 const mockNetworkRemove = vi.fn();
 
+vi.mock("~/services/measurements-storage", () => ({
+  resetUploadingMeasurements: mockResetUploadingMeasurements,
+}));
+
 vi.mock("expo-network", () => ({
   addNetworkStateListener: (
     listener: (state: { isInternetReachable: boolean | null }) => void,
@@ -70,6 +76,12 @@ describe("useAutoUpload", () => {
   // ---------------------------------------------------------------------------
 
   describe("initial load", () => {
+    it("calls resetUploadingMeasurements on mount", () => {
+      renderHook(() => useAutoUpload());
+
+      expect(mockResetUploadingMeasurements).toHaveBeenCalledOnce();
+    });
+
     it("triggers upload when failedUploads first becomes non-empty", async () => {
       mockFailedUploads = [{ key: "k1", data: {} }];
       renderHook(() => useAutoUpload());
@@ -157,7 +169,7 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedAppStateListener!("active"));
+      act(() => capturedAppStateListener?.("active"));
 
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
     });
@@ -166,7 +178,7 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedAppStateListener!("background"));
+      act(() => capturedAppStateListener?.("background"));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -175,7 +187,7 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedAppStateListener!("active"));
+      act(() => capturedAppStateListener?.("active"));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -185,7 +197,7 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [{ key: "k1", data: {} }];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedAppStateListener!("active"));
+      act(() => capturedAppStateListener?.("active"));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -213,8 +225,8 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedNetworkListener!({ isInternetReachable: false }));
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: false }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
 
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
     });
@@ -226,8 +238,8 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -239,8 +251,8 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
-      act(() => capturedNetworkListener!({ isInternetReachable: false }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: false }));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -249,8 +261,8 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedNetworkListener!({ isInternetReachable: false }));
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: false }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -260,8 +272,8 @@ describe("useAutoUpload", () => {
       mockFailedUploads = [{ key: "k1", data: {} }];
       renderHook(() => useAutoUpload());
 
-      act(() => capturedNetworkListener!({ isInternetReachable: false }));
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: false }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -273,9 +285,9 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedNetworkListener!({ isInternetReachable: false }));
-      act(() => capturedNetworkListener!({ isInternetReachable: null }));
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: false }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: null }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
 
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
     });
@@ -287,8 +299,8 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedNetworkListener!({ isInternetReachable: null }));
-      act(() => capturedNetworkListener!({ isInternetReachable: true }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: null }));
+      act(() => capturedNetworkListener?.({ isInternetReachable: true }));
 
       expect(mockUploadAll).not.toHaveBeenCalled();
     });
@@ -310,7 +322,7 @@ describe("useAutoUpload", () => {
 
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
 
-      act(() => capturedAppStateListener!("active"));
+      act(() => capturedAppStateListener?.("active"));
       expect(mockUploadAll).toHaveBeenCalledOnce();
 
       resolveUpload();
@@ -324,7 +336,7 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
       mockUploadAll.mockClear();
 
-      act(() => capturedAppStateListener!("active"));
+      act(() => capturedAppStateListener?.("active"));
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
     });
 
@@ -336,7 +348,7 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockToastError).toHaveBeenCalled());
       mockUploadAll.mockClear();
 
-      act(() => capturedAppStateListener!("active"));
+      act(() => capturedAppStateListener?.("active"));
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
     });
   });

@@ -53,10 +53,11 @@ describe("useAllMeasurements", () => {
   // ---------------------------------------------------------------------------
 
   describe("data fetching", () => {
-    it("fetches from both failed and successful buckets", async () => {
+    it("fetches from failed, uploading, and successful buckets", async () => {
       renderHook(() => useAllMeasurements(), { wrapper });
 
       await waitFor(() => expect(mockGetMeasurements).toHaveBeenCalledWith("failed"));
+      expect(mockGetMeasurements).toHaveBeenCalledWith("uploading");
       expect(mockGetMeasurements).toHaveBeenCalledWith("successful");
     });
 
@@ -96,7 +97,9 @@ describe("useAllMeasurements", () => {
       mockGetMeasurements.mockImplementation((status: string) => {
         if (status === "failed")
           return Promise.resolve([entry("old", "2026-01-01T08:00:00Z", "Old")]);
-        return Promise.resolve([entry("new", "2026-01-01T12:00:00Z", "New")]);
+        if (status === "successful")
+          return Promise.resolve([entry("new", "2026-01-01T12:00:00Z", "New")]);
+        return Promise.resolve([]);
       });
 
       const { result } = renderHook(() => useAllMeasurements(), { wrapper });
@@ -133,6 +136,23 @@ describe("useAllMeasurements", () => {
       expect(mockParseQuestions).toHaveBeenCalledWith(measurementResult);
     });
 
+    it("maps uploading entries to syncing items", async () => {
+      mockGetMeasurements.mockImplementation((status: string) =>
+        Promise.resolve(
+          status === "uploading" ? [entry("k3", "2026-01-01T11:00:00Z", "Exp C")] : [],
+        ),
+      );
+
+      const { result } = renderHook(() => useAllMeasurements(), { wrapper });
+
+      await waitFor(() => expect(result.current.measurements).toHaveLength(1));
+      expect(result.current.measurements[0]).toMatchObject({
+        key: "k3",
+        status: "syncing",
+        experimentName: "Exp C",
+      });
+    });
+
     it("returns empty array when no measurements exist", async () => {
       const { result } = renderHook(() => useAllMeasurements(), { wrapper });
 
@@ -149,10 +169,12 @@ describe("useAllMeasurements", () => {
       mockGetMeasurements.mockImplementation((status: string) => {
         if (status === "failed")
           return Promise.resolve([entry("u1", "2026-01-01T10:00:00Z", "Unsynced")]);
-        return Promise.resolve([
-          entry("s1", "2026-01-01T12:00:00Z", "Synced 1"),
-          entry("s2", "2026-01-01T08:00:00Z", "Synced 2"),
-        ]);
+        if (status === "successful")
+          return Promise.resolve([
+            entry("s1", "2026-01-01T12:00:00Z", "Synced 1"),
+            entry("s2", "2026-01-01T08:00:00Z", "Synced 2"),
+          ]);
+        return Promise.resolve([]);
       });
     });
 
@@ -182,6 +204,23 @@ describe("useAllMeasurements", () => {
       expect(result.current.measurements[0].status).toBe("unsynced");
     });
 
+    it("includes syncing items in the 'unsynced' filter", async () => {
+      mockGetMeasurements.mockImplementation((status: string) => {
+        if (status === "failed")
+          return Promise.resolve([entry("u1", "2026-01-01T10:00:00Z", "Unsynced")]);
+        if (status === "uploading")
+          return Promise.resolve([entry("up1", "2026-01-01T09:00:00Z", "Uploading")]);
+        return Promise.resolve([entry("s1", "2026-01-01T12:00:00Z", "Synced")]);
+      });
+
+      const { result } = renderHook(() => useAllMeasurements("unsynced"), { wrapper });
+
+      await waitFor(() => expect(result.current.measurements).toHaveLength(2));
+      const statuses = result.current.measurements.map((m) => m.status);
+      expect(statuses).toContain("unsynced");
+      expect(statuses).toContain("syncing");
+    });
+
     it("updates measurements reactively when filter changes", async () => {
       const { result, rerender } = renderHook(
         ({ filter }: { filter: "all" | "synced" | "unsynced" }) => useAllMeasurements(filter),
@@ -204,7 +243,9 @@ describe("useAllMeasurements", () => {
       mockGetMeasurements.mockImplementation((status: string) => {
         if (status === "failed")
           return Promise.resolve([entry("u1", "2026-01-01T10:00:00Z", "U")]);
-        return Promise.resolve([entry("s1", "2026-01-01T12:00:00Z", "S")]);
+        if (status === "successful")
+          return Promise.resolve([entry("s1", "2026-01-01T12:00:00Z", "S")]);
+        return Promise.resolve([]);
       });
 
       const { result } = renderHook(() => useAllMeasurements("synced"), { wrapper });
@@ -212,6 +253,40 @@ describe("useAllMeasurements", () => {
       await waitFor(() => expect(result.current.allMeasurements).toHaveLength(2));
       expect(result.current.measurements).toHaveLength(1);
       expect(result.current.measurements[0].status).toBe("synced");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // uploadingCount
+  // ---------------------------------------------------------------------------
+
+  describe("uploadingCount", () => {
+    it("counts items with syncing status", async () => {
+      mockGetMeasurements.mockImplementation((status: string) => {
+        if (status === "uploading")
+          return Promise.resolve([
+            entry("up1", "2026-01-01T10:00:00Z", "Up1"),
+            entry("up2", "2026-01-01T09:00:00Z", "Up2"),
+          ]);
+        return Promise.resolve([]);
+      });
+
+      const { result } = renderHook(() => useAllMeasurements(), { wrapper });
+
+      await waitFor(() => expect(result.current.uploadingCount).toBe(2));
+    });
+
+    it("returns zero when no items are uploading", async () => {
+      mockGetMeasurements.mockImplementation((status: string) =>
+        status === "failed"
+          ? Promise.resolve([entry("u1", "2026-01-01T10:00:00Z", "U")])
+          : Promise.resolve([]),
+      );
+
+      const { result } = renderHook(() => useAllMeasurements(), { wrapper });
+
+      await waitFor(() => expect(result.current.measurements).toHaveLength(1));
+      expect(result.current.uploadingCount).toBe(0);
     });
   });
 
