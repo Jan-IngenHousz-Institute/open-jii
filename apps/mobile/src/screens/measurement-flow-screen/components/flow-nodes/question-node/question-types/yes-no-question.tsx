@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 
-import { QuestionContent } from "../../../types";
+import { QuestionContent } from "../../../../types";
 
 export interface YesNoQuestionProps {
   content: QuestionContent;
