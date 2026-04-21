@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
-import { QuestionContent } from "../../../types";
+import { QuestionContent } from "../../../../types";
 
 interface OpenEndedQuestionProps {
   content: QuestionContent;
