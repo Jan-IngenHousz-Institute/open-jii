@@ -64,6 +64,9 @@ def make_execute_macro_udf(
     api_key_id = dbutils.secrets.get(scope=scope, key="webhook_api_key_id")
     webhook_secret = dbutils.secrets.get(scope=scope, key="webhook_secret")
 
+    # Lazily initialized per-worker client; reused across pandas batches
+    client_holder = [None]
+
     @F.pandas_udf(returnType=MACRO_RESULT_SCHEMA)
     def execute_macro_udf(pdf: pd.DataFrame) -> pd.DataFrame:
         """
@@ -79,12 +82,14 @@ def make_execute_macro_udf(
         items = []
         idx_map = []  # maps backend item index -> original DataFrame index
 
-        for pos, (df_idx, row) in enumerate(pdf.iterrows()):
+        for pos, (_, row) in enumerate(pdf.iterrows()):
             row_id = row.get("id")
             macro_id = row.get("macro_id")
             data = row.get("data")
 
-            if pd.isna(macro_id) or pd.isna(data):
+            if (pd.api.types.is_scalar(macro_id) and pd.isna(macro_id)) or (
+                pd.api.types.is_scalar(data) and pd.isna(data)
+            ):
                 errors[pos] = f"NULL macro_id or data for row {row_id}"
                 continue
 
@@ -98,8 +103,10 @@ def make_execute_macro_udf(
         if not items:
             return pd.DataFrame({"result": results, "error": errors})
 
-        # Call the backend
-        client = BackendClient(base_url, api_key_id, webhook_secret, timeout=max(timeout + 10, 60))
+        # Reuse a single BackendClient (and its requests.Session) per worker
+        if client_holder[0] is None:
+            client_holder[0] = BackendClient(base_url, api_key_id, webhook_secret, timeout=max(timeout + 10, 60))
+        client = client_holder[0]
 
         try:
             response = client.execute_macro_batch(
@@ -113,15 +120,16 @@ def make_execute_macro_udf(
                 errors[idx] = f"Backend API error: {str(e)}"
             return pd.DataFrame({"result": results, "error": errors})
 
-        # Map results back by item id
-        result_by_id = {}
+        # Map results back by (id, macro_id) to handle multiple macros per row
+        result_by_key = {}
         for r in response.get("results", []):
             rid = r.get("id")
+            rmid = r.get("macro_id")
             if rid is not None:
-                result_by_id[rid] = r
+                result_by_key[(rid, rmid)] = r
 
         for item, df_idx in zip(items, idx_map, strict=True):
-            match = result_by_id.get(item["id"])
+            match = result_by_key.get((item["id"], item["macro_id"]))
             if match is None:
                 errors[df_idx] = f"No result returned for item {item['id']}"
             elif match.get("success"):

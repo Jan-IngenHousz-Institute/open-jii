@@ -785,7 +785,6 @@ def experiment_macro_data():
 # COMMAND ----------
 
 # DBTITLE 1,Gold Layer - Experiment Macro Data (Sandbox Comparison)
-EXPERIMENT_SANDBOX_MACRO_UDF = make_execute_macro_udf(ENVIRONMENT, dbutils)
 
 @dlt.table(
     name=EXPERIMENT_MACRO_DATA_SANDBOX_TABLE,
@@ -803,11 +802,14 @@ EXPERIMENT_SANDBOX_MACRO_UDF = make_execute_macro_udf(ENVIRONMENT, dbutils)
 def experiment_macro_data_sandbox():
     """Process macros via backend API (Lambda sandbox) for comparison."""
 
+    # Create UDF inside the table function so secret lookup only happens
+    # when this table runs (not at module import time).
+    sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
+
     base_df = (
         dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
-        .filter(~F.coalesce(F.col("skip_macro_processing"), F.lit(False)))
         .select(
             "id",
             "experiment_id",
@@ -817,10 +819,12 @@ def experiment_macro_data_sandbox():
             "timezone",
             "user_id",
             "data",
+            "output_data",
             "date",
             "processed_timestamp",
             "questions_data",
             "annotations",
+            "skip_macro_processing",
             F.explode("macros").alias("macro"),
         )
         .select(
@@ -832,10 +836,12 @@ def experiment_macro_data_sandbox():
             "timezone",
             "user_id",
             "data",
+            "output_data",
             "date",
             "processed_timestamp",
             "questions_data",
             "annotations",
+            "skip_macro_processing",
             F.col("macro.id").alias("macro_id"),
             F.col("macro.name").alias("macro_name"),
             F.col("macro.filename").alias("macro_filename"),
@@ -844,20 +850,36 @@ def experiment_macro_data_sandbox():
 
     return (
         base_df
+        # Run sandbox UDF only for non-imported rows
         .withColumn(
             "sandbox_result",
-            EXPERIMENT_SANDBOX_MACRO_UDF(
-                F.struct("id", "macro_id", "data")
-            ),
+            F.when(
+                ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
+                sandbox_macro_udf(
+                    F.struct("id", "macro_id", "data")
+                ),
+            )
         )
+        # For imported rows, use pre-computed output_data; otherwise use UDF result
         .withColumn(
             "macro_output",
             F.when(
-                F.col("sandbox_result.result").isNotNull(),
-                F.expr("parse_json(sandbox_result.result)"),
+                F.col("skip_macro_processing") == True,
+                F.col("output_data")
+            ).otherwise(
+                F.when(
+                    F.col("sandbox_result.result").isNotNull(),
+                    F.expr("parse_json(sandbox_result.result)"),
+                )
             ),
         )
-        .withColumn("macro_error", F.col("sandbox_result.error"))
+        .withColumn(
+            "macro_error",
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.lit(None).cast("string")
+            ).otherwise(F.col("sandbox_result.error"))
+        )
         .withColumn(
             "macro_row_id",
             F.abs(
