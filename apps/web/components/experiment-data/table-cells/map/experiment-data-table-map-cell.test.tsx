@@ -1,57 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { ExperimentDataTableMapCell, MapExpandedContent } from "./experiment-data-table-map-cell";
-
-// Mock lucide-react icons
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => <div data-testid="chevron-down">▼</div>,
-  ChevronRight: () => <div data-testid="chevron-right">▶</div>,
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Collapsible: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="collapsible" data-open={String(open)} onClick={() => onOpenChange?.(!open)}>
-      {children}
-    </div>
-  ),
-  CollapsibleTrigger: ({
-    children,
-    asChild: _asChild,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-  }) => <div data-testid="collapsible-trigger">{children}</div>,
-  CollapsibleContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="collapsible-content">{children}</div>
-  ),
-  Button: ({
-    children,
-    variant: _variant,
-    size: _size,
-    className: _className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <button onClick={onClick} data-testid="button">
-      {children}
-    </button>
-  ),
-}));
 
 describe("ExperimentDataTableMapCell", () => {
   it("should render simple text for non-map data", () => {
@@ -105,7 +55,7 @@ describe("ExperimentDataTableMapCell", () => {
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  it("should show chevron-right when collapsed", () => {
+  it("should render collapsed state", () => {
     render(
       <ExperimentDataTableMapCell
         data='{"a": "1", "b": "2"}'
@@ -114,10 +64,11 @@ describe("ExperimentDataTableMapCell", () => {
         isExpanded={false}
       />,
     );
-    expect(screen.getByTestId("chevron-right")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByText("2 entries")).toBeInTheDocument();
   });
 
-  it("should show chevron-down when expanded", () => {
+  it("should render expanded state", () => {
     render(
       <ExperimentDataTableMapCell
         data='{"a": "1", "b": "2"}'
@@ -126,26 +77,26 @@ describe("ExperimentDataTableMapCell", () => {
         isExpanded={true}
       />,
     );
-    expect(screen.getByTestId("chevron-down")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByText("2 entries")).toBeInTheDocument();
   });
 
-  it("should handle toggle interactions", () => {
+  it("should call onToggleExpansion when button is clicked", async () => {
+    const user = userEvent.setup();
+    const onToggleExpansion = vi.fn();
     render(
       <ExperimentDataTableMapCell
         data='{"a": "1", "b": "2"}'
         columnName="test"
         rowId="test-row"
         isExpanded={false}
+        onToggleExpansion={onToggleExpansion}
       />,
     );
 
-    const collapsible = screen.getByTestId("collapsible");
-    expect(collapsible.getAttribute("data-open")).toBe("false");
+    await user.click(screen.getByRole("button"));
 
-    fireEvent.click(collapsible);
-    fireEvent.click(collapsible);
-
-    expect(screen.getByText("2 entries")).toBeInTheDocument();
+    expect(onToggleExpansion).toHaveBeenCalledWith("test-row", "test");
   });
 
   it("should parse key-value format with equals signs", () => {
@@ -173,7 +124,7 @@ describe("ExperimentDataTableMapCell", () => {
   });
 
   it("should handle null, undefined, and empty values", () => {
-    const { container } = render(
+    render(
       <ExperimentDataTableMapCell
         data={null as unknown as string}
         columnName="test"
@@ -181,7 +132,7 @@ describe("ExperimentDataTableMapCell", () => {
         isExpanded={false}
       />,
     );
-    expect(container.querySelector("span")).toBeInTheDocument();
+    expect(document.querySelector("span")).toBeInTheDocument();
   });
 
   it("should format different value types", () => {
@@ -287,8 +238,9 @@ describe("ExperimentDataTableMapCell", () => {
     expect(screen.getByText("newValue")).toBeInTheDocument();
   });
 
-  it("should handle DOM manipulation gracefully without table structure", () => {
-    const { container } = render(
+  it("should handle DOM manipulation gracefully without table structure", async () => {
+    const user = userEvent.setup();
+    render(
       <div>
         <ExperimentDataTableMapCell
           data='{"key1": "value1", "key2": "value2"}'
@@ -300,9 +252,9 @@ describe("ExperimentDataTableMapCell", () => {
     );
 
     const button = screen.getByRole("button");
-    expect(() => fireEvent.click(button)).not.toThrow();
+    await user.click(button);
 
-    const expandedRows = container.querySelectorAll(".map-expanded-row");
+    const expandedRows = document.querySelectorAll(".map-expanded-row");
     expect(expandedRows.length).toBe(0);
   });
 });
@@ -349,7 +301,7 @@ describe("MapExpandedContent", () => {
   });
 
   it("should handle empty map", () => {
-    const { container } = render(<MapExpandedContent data="{}" />);
-    expect(container.querySelector(".w-full")).toBeInTheDocument();
+    render(<MapExpandedContent data="{}" />);
+    expect(document.querySelector(".w-full")).toBeInTheDocument();
   });
 });

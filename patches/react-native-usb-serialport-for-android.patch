@@ -12,3 +12,22 @@ index 7e2028288172afdfb08e6ac0d4d07b69d5885902..a9180b049afd7d8e48900964365bb4d0
          } catch (IOException e) {
              try {
                   port.close();
+diff --git a/android/build.gradle b/android/build.gradle
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -3,7 +3,6 @@
+         repositories {
+             google()
+             mavenCentral()
+-            jcenter()
+         }
+ 
+         dependencies {
+@@ -51,7 +50,6 @@ repositories {
+     maven { url 'https://jitpack.io' }
+     google()
+     mavenCentral()
+-    jcenter()
+ }
+ 
+ dependencies {

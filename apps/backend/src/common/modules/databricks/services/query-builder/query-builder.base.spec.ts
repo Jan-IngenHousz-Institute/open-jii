@@ -114,6 +114,14 @@ describe("QueryBuilder Base", () => {
       expect(transformed).toBe("STRUCT<a: STRING, b: STRUCT<c: INT>>");
     });
 
+    it("should coerce VOID fields to STRING for from_json", () => {
+      const schema = "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>, dead: VOID>";
+      const transformed = builder.transformSchemaForFromJson(schema);
+      expect(transformed).toBe(
+        "STRUCT<phi2: DOUBLE, messages: STRUCT<text: STRING>, dead: STRING>",
+      );
+    });
+
     it("should build variant query", () => {
       const query = builder
         .from("events")

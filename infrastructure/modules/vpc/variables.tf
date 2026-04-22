@@ -64,3 +64,15 @@ variable "create_migration_resources" {
   type        = bool
   default     = true
 }
+
+variable "create_macro_sandbox_resources" {
+  description = "Whether to create macro-sandbox Lambda security group and rules"
+  type        = bool
+  default     = true
+}
+
+variable "create_metrics_publisher_resources" {
+  description = "Whether to create the metrics-publisher Lambda security group and Aurora ingress rule"
+  type        = bool
+  default     = true
+}

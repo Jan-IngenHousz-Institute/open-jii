@@ -1,32 +1,12 @@
-import "@testing-library/jest-dom";
-import { render, screen, act } from "@testing-library/react";
-import Image from "next/image";
-import React from "react";
+import { createProtocol } from "@/test/factories";
+import { act, render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Protocol } from "@repo/api";
 
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
-globalThis.React = React;
-
-// --------------------
 // Mocks
-// --------------------
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) =>
-      ({
-        "common.protocolLabel": "Protocol",
-        "common.by": "by",
-        "experiments.searchProtocols": "Search protocols…",
-      })[k] ?? k,
-  }),
-}));
 
 interface PopoverPropsCaptured {
   availableProtocols: Protocol[];
@@ -50,101 +30,11 @@ vi.mock("../protocol-search-popover", () => ({
   },
 }));
 
-vi.mock("@repo/ui/components", () => {
-  const Button = ({
-    children,
-    ...rest
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { role?: string }) => (
-    <button {...rest}>{children}</button>
-  );
-
-  const Avatar = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="avatar" className={className}>
-      {children}
-    </div>
-  );
-
-  const AvatarImage = (
-    props: React.ImgHTMLAttributes<HTMLImageElement> & { src: string; alt: string },
-  ) => {
-    const { width, height, ...rest } = props;
-    return (
-      <Image
-        data-testid="avatar-image"
-        width={typeof width === "string" ? parseInt(width, 10) : width}
-        height={typeof height === "string" ? parseInt(height, 10) : height}
-        {...rest}
-      />
-    );
-  };
-
-  const AvatarFallback = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="avatar-fallback" className={className}>
-      {children}
-    </div>
-  );
-
-  const Popover = ({ children }: React.PropsWithChildren) => <div>{children}</div>;
-  const PopoverTrigger = ({ children }: React.PropsWithChildren) => <div>{children}</div>;
-
-  return {
-    Button,
-    Avatar,
-    AvatarImage,
-    AvatarFallback,
-    Popover,
-    PopoverTrigger,
-  };
-});
-
-vi.mock("lucide-react", () => ({
-  ChevronsUpDown: ({ className }: { className?: string }) => (
-    <span data-testid="icon" className={className} />
-  ),
-  ExternalLink: ({ className }: { className?: string }) => (
-    <span data-testid="external-link-icon" className={className} />
-  ),
-}));
-
-// --------------------
 // Test data & helpers
-// --------------------
 const protocols: Protocol[] = [
-  {
-    id: "p1",
-    name: "PCR Master",
-    description: null,
-    code: [],
-    family: "multispeq",
-    createdBy: "user1",
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-    createdByName: "Ada Lovelace",
-    sortOrder: null,
-  } as Protocol,
-  {
-    id: "p2",
-    name: "RNA-Seq",
-    description: null,
-    code: [],
-    family: "ambit",
-    createdBy: "user2",
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-    createdByName: "Al Turing",
-    sortOrder: null,
-  } as Protocol,
-  {
-    id: "p3",
-    name: "CRISPR Edit",
-    description: null,
-    code: [],
-    family: "multispeq",
-    createdBy: "user3",
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-    sortOrder: null,
-  } as Protocol,
+  createProtocol({ id: "p1" }),
+  createProtocol({ id: "p2" }),
+  createProtocol({ id: "p3" }),
 ];
 
 function renderWidget(over: Partial<React.ComponentProps<typeof ProtocolSearchWithDropdown>> = {}) {
@@ -166,9 +56,7 @@ function renderWidget(over: Partial<React.ComponentProps<typeof ProtocolSearchWi
   };
 }
 
-// --------------------
 // Tests
-// --------------------
 describe("<ProtocolSearchWithDropdown />", () => {
   beforeEach(() => {
     vi.clearAllMocks();

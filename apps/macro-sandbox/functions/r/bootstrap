@@ -1,0 +1,61 @@
+#!/bin/sh
+# Lambda Runtime API bootstrap for R.
+# Polls for events, runs Rscript handler, posts response.
+
+set -eu
+
+RUNTIME_API="http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime"
+
+while true; do
+  # 1. Get next invocation event
+  HEADERS=$(mktemp)
+  EVENT=$(curl -sS -LD "$HEADERS" "${RUNTIME_API}/invocation/next")
+  REQUEST_ID=$(grep -i "Lambda-Runtime-Aws-Request-Id" "$HEADERS" | tr -d '\r' | cut -d: -f2 | xargs)
+  rm -f "$HEADERS"
+
+  if [ -z "$REQUEST_ID" ]; then
+    echo "ERROR: No request ID received" >&2
+    continue
+  fi
+
+  # 2. Write event to temp file for R to read
+  EVENT_FILE=$(mktemp /tmp/event_XXXXXX.json)
+  printf '%s' "$EVENT" > "$EVENT_FILE"
+
+  # 3. Run R handler
+  EXIT_CODE=0
+  RESPONSE=$(Rscript /var/task/handler.R "$EVENT_FILE" 2>/tmp/handler_stderr.log) || EXIT_CODE=$?
+
+  # 4. Clean up event file
+  rm -f "$EVENT_FILE"
+
+  # Signal kills (segfault=139, SIGKILL=137) -> force cold start.
+  if [ "$EXIT_CODE" -ge 128 ]; then
+    SIGNAL=$((EXIT_CODE - 128))
+    echo "FATAL: Rscript killed by signal $SIGNAL (exit $EXIT_CODE) - forcing cold start" >&2
+    curl -sS -X POST \
+      "${RUNTIME_API}/invocation/${REQUEST_ID}/error" \
+      -H "Content-Type: application/json" \
+      -d "{\"errorMessage\": \"Handler killed by signal $SIGNAL\", \"errorType\": \"FatalSignal\"}"
+    exit 1
+  fi
+
+  # 5. Post response or error
+  if [ -n "$RESPONSE" ]; then
+    curl -sS -X POST \
+      "${RUNTIME_API}/invocation/${REQUEST_ID}/response" \
+      -H "Content-Type: application/json" \
+      -d "$RESPONSE"
+  else
+    # Read stderr for error details (capture last few lines for better context)
+    ERROR_MSG=$(tail -5 /tmp/handler_stderr.log 2>/dev/null || echo "Unknown error")
+    ERROR_JSON=$(jq -n --arg msg "$ERROR_MSG" '{errorMessage: $msg, errorType: "RuntimeError"}')
+    curl -sS -X POST \
+      "${RUNTIME_API}/invocation/${REQUEST_ID}/error" \
+      -H "Content-Type: application/json" \
+      -d "$ERROR_JSON"
+  fi
+
+  # 6. Clean up
+  rm -rf /tmp/macro_* /tmp/handler_stderr.log
+done

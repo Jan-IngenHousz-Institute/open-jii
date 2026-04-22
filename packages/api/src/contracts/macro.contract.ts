@@ -12,7 +12,13 @@ import {
   zMacroProtocolList,
   zAddCompatibleProtocolsBody,
   zMacroProtocolPathParams,
+  zMacroExecutionRequestBody,
+  zMacroExecutionResponse,
+  zMacroBatchExecutionRequestBody,
+  zMacroBatchExecutionResponse,
+  zMacroBatchWebhookErrorResponse,
 } from "../schemas/macro.schema";
+import { zWebhookAuthHeader } from "../schemas/user.schema";
 
 const c = initContract();
 
@@ -48,6 +54,7 @@ export const macroContract = c.router({
     responses: {
       201: zMacro,
       400: zMacroErrorResponse,
+      409: zMacroErrorResponse,
     },
     summary: "Create a new macro",
     description:
@@ -100,9 +107,9 @@ export const macroContract = c.router({
     body: zAddCompatibleProtocolsBody,
     responses: {
       201: zMacroProtocolList,
-      400: zMacroErrorResponse,
       403: zMacroErrorResponse,
       404: zMacroErrorResponse,
+      500: zMacroErrorResponse,
     },
     summary: "Add compatible protocols to a macro",
     description: "Links protocols as compatible with this macro (creator only)",
@@ -120,5 +127,34 @@ export const macroContract = c.router({
     },
     summary: "Remove a compatible protocol from a macro",
     description: "Unlinks a protocol from this macro's compatibility list (creator only)",
+  },
+  executeMacro: {
+    method: "POST",
+    path: "/api/v1/macros/:id/execute",
+    pathParams: zMacroIdPathParam,
+    body: zMacroExecutionRequestBody,
+    responses: {
+      200: zMacroExecutionResponse,
+      400: zMacroErrorResponse,
+      404: zMacroErrorResponse,
+    },
+    summary: "Execute a macro",
+    description:
+      "Executes a single macro against one measurement / data point and returns the result",
+  },
+
+  executeMacroBatch: {
+    method: "POST",
+    path: "/api/v1/macros/execute-batch",
+    body: zMacroBatchExecutionRequestBody,
+    headers: zWebhookAuthHeader,
+    responses: {
+      200: zMacroBatchExecutionResponse,
+      400: zMacroBatchWebhookErrorResponse,
+      401: zMacroBatchWebhookErrorResponse,
+    },
+    summary: "Execute macro batch",
+    description:
+      "Accepts a batch of items with macro_ids from Databricks pipelines, groups by macro, fetches scripts, invokes Lambda functions, and returns processed results",
   },
 });

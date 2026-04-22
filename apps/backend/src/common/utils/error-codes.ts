@@ -63,6 +63,8 @@ export enum ErrorCodes {
   MACRO_PROTOCOLS_ADD_FAILED = "MACRO_PROTOCOLS_ADD_FAILED", // Failed to add compatible protocols
   MACRO_PROTOCOLS_REMOVE_FAILED = "MACRO_PROTOCOLS_REMOVE_FAILED", // Failed to remove compatible protocol
   MACRO_PROTOCOLS_LIST_FAILED = "MACRO_PROTOCOLS_LIST_FAILED", // Failed to list compatible protocols
+  MACRO_EXECUTION_FAILED = "MACRO_EXECUTION_FAILED", // Lambda macro execution failed
+  MACRO_BATCH_VALIDATION_FAILED = "MACRO_BATCH_VALIDATION_FAILED", // Batch request validation failed
 
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/
@@ -128,6 +130,13 @@ export enum ErrorCodes {
   EXPERIMENT_ANNOTATIONS_ADD_FAILED = "EXPERIMENT_ANNOTATIONS_ADD_FAILED", // Failed to add annotations
   EXPERIMENT_ANNOTATIONS_UPDATE_FAILED = "EXPERIMENT_ANNOTATIONS_UPDATE_FAILED", // Failed to update annotation
   EXPERIMENT_ANNOTATIONS_DELETE_FAILED = "EXPERIMENT_ANNOTATIONS_DELETE_FAILED", // Failed to delete annotations
+
+  // ==================== Domain Operations - Experiments Metadata ====================
+  // Location: src/experiments/application/use-cases/
+  EXPERIMENT_METADATA_CREATE_FAILED = "EXPERIMENT_METADATA_CREATE_FAILED", // Failed to create metadata
+  EXPERIMENT_METADATA_UPDATE_FAILED = "EXPERIMENT_METADATA_UPDATE_FAILED", // Failed to update metadata
+  EXPERIMENT_METADATA_DELETE_FAILED = "EXPERIMENT_METADATA_DELETE_FAILED", // Failed to delete metadata
+  EXPERIMENT_METADATA_FETCH_FAILED = "EXPERIMENT_METADATA_FETCH_FAILED", // Failed to fetch metadata
 
   // ==================== Services ====================
   // Location: src/experiments/application/services/

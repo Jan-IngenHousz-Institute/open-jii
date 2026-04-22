@@ -1,128 +1,57 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { createSession } from "@/test/factories";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
+import { getContentfulClients } from "~/lib/contentful";
 
-import InfoLayout from "./layout";
+import Layout from "./layout";
 
-globalThis.React = React;
-
-// --- Mocks ---
-const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  auth: (): unknown => mockAuth(),
-}));
-
-vi.mock("next/headers", () => ({
-  draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
-}));
-
-const mockFooterData = {
-  sys: { id: "footer-1" },
-  title: "Footer",
-  socialMediaLinksCollection: { items: [] },
-};
-
-const mockGetContentfulClients = vi.fn();
-vi.mock("~/lib/contentful", () => ({
-  getContentfulClients: (): unknown => mockGetContentfulClients(),
-}));
+const mockFooter = vi.fn();
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: ({ locale, session }: { locale: string; session: unknown }) => (
-    <div data-testid="unified-navbar">
-      Navbar - {locale} - {session ? "with session" : "no session"}
-    </div>
+  UnifiedNavbar: ({ session }: { session: unknown }) => (
+    <nav aria-label="main">{session ? "logged-in" : "guest"}</nav>
   ),
 }));
 
 vi.mock("@repo/cms", () => ({
-  HomeFooter: ({
-    footerData,
-    preview,
-    locale,
-  }: {
-    footerData: unknown;
-    preview: boolean;
-    locale: string;
-  }) => (
-    <div data-testid="home-footer">
-      Footer - {locale} - {preview ? "preview" : "published"} -{" "}
-      {footerData ? "with data" : "no data"}
-    </div>
-  ),
+  HomeFooter: () => <footer>Footer</footer>,
 }));
 
-// --- Tests ---
-describe("InfoLayout", () => {
-  const locale = "en-US";
-  const defaultProps = {
-    children: <div data-testid="test-children">Test Content</div>,
-    params: Promise.resolve({ locale }),
-  };
-
+describe("InfoGroupLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(null);
-    mockGetContentfulClients.mockResolvedValue({
-      client: {
-        footer: vi.fn().mockResolvedValue({
-          footerCollection: { items: [mockFooterData] },
-        }),
-      },
-      previewClient: {
-        footer: vi.fn().mockResolvedValue({
-          footerCollection: { items: [mockFooterData] },
-        }),
-      },
+    vi.mocked(auth).mockResolvedValue(null);
+    mockFooter.mockResolvedValue({ footerCollection: { items: [{ links: [] }] } });
+    vi.mocked(getContentfulClients).mockResolvedValue({
+      client: { footer: mockFooter },
+      previewClient: { footer: mockFooter },
+    } as never);
+  });
+
+  const renderLayout = async (session: unknown = null) => {
+    vi.mocked(auth).mockResolvedValue(session as never);
+    const ui = await Layout({
+      children: <div data-testid="child">Child content</div>,
+      params: Promise.resolve({ locale: "en-US" }),
     });
+    return render(ui);
+  };
+
+  it("renders children within navbar and footer", async () => {
+    await renderLayout();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+    expect(screen.getByTestId("child")).toHaveTextContent("Child content");
+    expect(screen.getByRole("contentinfo")).toHaveTextContent("Footer");
   });
 
-  it("renders all components with correct structure", async () => {
-    render(await InfoLayout(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toBeInTheDocument();
-    expect(screen.getByTestId("test-children")).toBeInTheDocument();
-    expect(screen.getByTestId("home-footer")).toBeInTheDocument();
+  it("shows guest state when unauthenticated", async () => {
+    await renderLayout();
+    expect(screen.getByRole("navigation")).toHaveTextContent("guest");
   });
 
-  it("passes correct locale to components", async () => {
-    render(await InfoLayout(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("en-US");
-    expect(screen.getByTestId("home-footer")).toHaveTextContent("en-US");
-  });
-
-  it("renders without session by default", async () => {
-    mockAuth.mockResolvedValue(null);
-
-    render(await InfoLayout(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("no session");
-  });
-
-  it("renders with session when authenticated", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "123", name: "Test User" } });
-
-    render(await InfoLayout(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("with session");
-  });
-
-  it("uses published client when not in preview mode", async () => {
-    render(await InfoLayout(defaultProps));
-
-    expect(screen.getByTestId("home-footer")).toHaveTextContent("published");
-  });
-
-  it("renders with correct container structure", async () => {
-    const { container } = render(await InfoLayout(defaultProps));
-
-    const mainElement = container.querySelector("main");
-    expect(mainElement).toBeInTheDocument();
-    expect(mainElement).toHaveClass("flex", "min-h-screen", "w-full", "flex-col", "px-4");
-
-    const wrapperDiv = mainElement?.parentElement;
-    expect(wrapperDiv).toHaveClass("mx-auto", "flex", "w-full", "max-w-7xl", "justify-center");
+  it("passes session to navbar when authenticated", async () => {
+    await renderLayout(createSession());
+    expect(screen.getByRole("navigation")).toHaveTextContent("logged-in");
   });
 });

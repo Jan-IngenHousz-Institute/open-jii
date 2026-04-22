@@ -50,6 +50,54 @@ export function assertSuccess<T, E>(result: Result<T, E>): asserts result is Suc
   }
 }
 
+enum CauseCode {
+  // Postgres error code 23505 = unique_violation
+  UNIQUE_VIOLATION = "23505",
+}
+
+enum CauseMessageCheck {
+  NOT_FOUND = "not found",
+  NO_ROWS = "no rows",
+  DOES_NOT_EXIST = "does not exist",
+  DUPLICATE = "duplicate",
+  UNIQUE_CONSTRAINT = "unique constraint",
+  ALREADY_EXISTS = "already exists",
+  CONFLICT = "conflict",
+  FOREIGN_KEY = "foreign key",
+  REFERENCE = "reference",
+}
+
+function getCauseCode(error: unknown): CauseCode | undefined {
+  const cause = error instanceof Error ? error.cause : undefined;
+  const causeCode =
+    cause != null && typeof cause === "object" && "code" in cause
+      ? String((cause as Record<string, unknown>).code)
+      : undefined;
+  return causeCode as CauseCode | undefined;
+}
+
+function getCauseMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  const cause = error instanceof Error ? error.cause : undefined;
+  const causeMessage =
+    cause instanceof Error ? cause.message : typeof cause === "string" ? cause : "";
+  return causeMessage ? `${message} ${causeMessage}` : message;
+}
+
+function mapErrorMessage(error: unknown): {
+  causeCode: CauseCode | undefined;
+  causeMessage: string;
+  causeMessageLower: string;
+} {
+  const causeMessage = getCauseMessage(error);
+  return {
+    causeCode: getCauseCode(error),
+    causeMessage,
+    causeMessageLower: causeMessage.toLowerCase(),
+  };
+}
+
 /**
  * Success case of Result
  */
@@ -273,34 +321,35 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   if (error instanceof AppError) {
     return error;
   }
-
-  const message = error instanceof Error ? error.message : String(error);
+  const { causeCode, causeMessage, causeMessageLower } = mapErrorMessage(error);
 
   // Check for common database error patterns
   if (
-    message.toLowerCase().includes("not found") ||
-    message.toLowerCase().includes("no rows") ||
-    message.toLowerCase().includes("does not exist")
+    causeMessageLower.includes(CauseMessageCheck.NOT_FOUND) ||
+    causeMessageLower.includes(CauseMessageCheck.NO_ROWS) ||
+    causeMessageLower.includes(CauseMessageCheck.DOES_NOT_EXIST)
   ) {
-    return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
+    return AppError.notFound(causeMessage, "REPOSITORY_NOT_FOUND");
   }
 
   if (
-    message.toLowerCase().includes("duplicate") ||
-    message.toLowerCase().includes("unique constraint") ||
-    message.toLowerCase().includes("already exists")
+    causeMessageLower.includes(CauseMessageCheck.DUPLICATE) ||
+    causeMessageLower.includes(CauseMessageCheck.UNIQUE_CONSTRAINT) ||
+    causeMessageLower.includes(CauseMessageCheck.ALREADY_EXISTS) ||
+    causeMessageLower.includes(CauseMessageCheck.CONFLICT) ||
+    causeCode === CauseCode.UNIQUE_VIOLATION
   ) {
-    return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
+    return AppError.conflict(causeMessage, "REPOSITORY_DUPLICATE");
   }
 
   if (
-    message.toLowerCase().includes("foreign key") ||
-    message.toLowerCase().includes("reference")
+    causeMessageLower.includes(CauseMessageCheck.FOREIGN_KEY) ||
+    causeMessageLower.includes(CauseMessageCheck.REFERENCE)
   ) {
-    return AppError.badRequest(message, "REPOSITORY_REFERENCE");
+    return AppError.badRequest(causeMessage, "REPOSITORY_REFERENCE");
   }
 
-  return AppError.repositoryError(message);
+  return AppError.repositoryError(causeMessage);
 }
 
 /**

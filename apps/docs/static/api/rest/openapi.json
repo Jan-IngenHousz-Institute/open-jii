@@ -2434,7 +2434,7 @@
                           },
                           "family": {
                             "type": "string",
-                            "enum": ["multispeq", "ambit"]
+                            "enum": ["multispeq", "ambit", "generic"]
                           },
                           "createdBy": {
                             "type": "string",
@@ -2595,7 +2595,7 @@
                           },
                           "family": {
                             "type": "string",
-                            "enum": ["multispeq", "ambit"]
+                            "enum": ["multispeq", "ambit", "generic"]
                           },
                           "createdBy": {
                             "type": "string",
@@ -7798,7 +7798,7 @@
                       "family": {
                         "default": "multispeq",
                         "type": "string",
-                        "enum": ["multispeq", "ambit"]
+                        "enum": ["multispeq", "ambit", "generic"]
                       },
                       "createdBy": {
                         "type": "string",
@@ -7988,6 +7988,506 @@
                     }
                   },
                   "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/metadata": {
+      "get": {
+        "description": "Retrieves all metadata records for an experiment",
+        "summary": "List experiment metadata",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.listExperimentMetadata",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "metadataId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "experimentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "metadata": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "metadataId",
+                      "experimentId",
+                      "metadata",
+                      "createdBy",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Creates a new metadata record for an experiment. Multiple metadata records can be attached to a single experiment.",
+        "summary": "Create experiment metadata",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.createExperimentMetadata",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "required": ["metadata"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "metadataId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "metadataId",
+                    "experimentId",
+                    "metadata",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/metadata/{metadataId}": {
+      "put": {
+        "description": "Replaces the metadata blob on an existing metadata record. The entire metadata object is replaced.",
+        "summary": "Update experiment metadata",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "metadataId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the metadata record"
+          }
+        ],
+        "operationId": "experiments.updateExperimentMetadata",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "required": ["metadata"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "metadataId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "metadataId",
+                    "experimentId",
+                    "metadata",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Removes a specific metadata record from an experiment",
+        "summary": "Delete experiment metadata",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "metadataId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the metadata record"
+          }
+        ],
+        "operationId": "experiments.deleteExperimentMetadata",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
                 }
               }
             }
@@ -8989,7 +9489,7 @@
                       },
                       "family": {
                         "type": "string",
-                        "enum": ["multispeq", "ambit"]
+                        "enum": ["multispeq", "ambit", "generic"]
                       },
                       "sortOrder": {
                         "type": "number",
@@ -9078,7 +9578,7 @@
                   },
                   "family": {
                     "type": "string",
-                    "enum": ["multispeq", "ambit"]
+                    "enum": ["multispeq", "ambit", "generic"]
                   }
                 },
                 "required": ["name", "code", "family"]
@@ -9114,7 +9614,7 @@
                     },
                     "family": {
                       "type": "string",
-                      "enum": ["multispeq", "ambit"]
+                      "enum": ["multispeq", "ambit", "generic"]
                     },
                     "sortOrder": {
                       "type": "number",
@@ -9218,7 +9718,7 @@
                     },
                     "family": {
                       "type": "string",
-                      "enum": ["multispeq", "ambit"]
+                      "enum": ["multispeq", "ambit", "generic"]
                     },
                     "sortOrder": {
                       "type": "number",
@@ -9316,7 +9816,7 @@
                   },
                   "family": {
                     "type": "string",
-                    "enum": ["multispeq", "ambit"]
+                    "enum": ["multispeq", "ambit", "generic"]
                   }
                 }
               }
@@ -9351,7 +9851,7 @@
                     },
                     "family": {
                       "type": "string",
-                      "enum": ["multispeq", "ambit"]
+                      "enum": ["multispeq", "ambit", "generic"]
                     },
                     "sortOrder": {
                       "type": "number",

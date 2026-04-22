@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { TextAnswerDisplay } from "./text-answer-display";
@@ -16,8 +15,8 @@ describe("TextAnswerDisplay", () => {
   });
 
   it("displays the edit icon", () => {
-    const { container } = render(<TextAnswerDisplay />);
-    const svg = container.querySelector("svg");
+    render(<TextAnswerDisplay />);
+    const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
 

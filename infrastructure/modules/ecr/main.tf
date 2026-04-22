@@ -39,12 +39,14 @@ resource "aws_ecr_repository" "this" {
 
 # Repository access policy - implements least privilege security model
 # Restricts access to specific services and enforces secure transport
+# Skipped for Lambda-only repos (Lambda authenticates via execution role, not repo policy)
 resource "aws_ecr_repository_policy" "this" {
+  count      = var.create_repository_policy ? 1 : 0
   repository = aws_ecr_repository.this.name
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = concat(
-      [
+      var.create_ecs_pull_statement ? [
         {
           Sid    = "AllowECSPull",
           Effect = "Allow",
@@ -68,7 +70,7 @@ resource "aws_ecr_repository_policy" "this" {
             }
           }
         }
-      ],
+      ] : [],
       var.ci_cd_role_arn != null ? [
         {
           Sid    = "AllowCICDPush",
@@ -93,30 +95,6 @@ resource "aws_ecr_repository_policy" "this" {
           }
         }
       ] : [],
-      [
-        {
-          Sid    = "AllowTFTesterPush",
-          Effect = "Allow",
-          Principal = {
-            AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/terraform-tester-${var.environment}"
-          },
-          # CI/CD pipeline permissions for building and pushing images
-          Action = [
-            "ecr:GetAuthorizationToken", # Get temporary credentials
-            "ecr:PutImage",              # Push complete images
-            "ecr:InitiateLayerUpload",   # Start layer upload
-            "ecr:UploadLayerPart",       # Upload layer chunks
-            "ecr:CompleteLayerUpload",   # Finalize layer upload
-            "ecr:TagResource",           # Add tags to images
-            "ecr:DescribeImages"         # List and describe images
-          ],
-          Condition = {
-            Bool = {
-              "aws:SecureTransport" = "true"
-            }
-          }
-        }
-      ]
     )
   })
 }

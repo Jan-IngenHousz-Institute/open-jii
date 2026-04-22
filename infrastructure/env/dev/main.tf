@@ -147,6 +147,42 @@ module "vpc_endpoints" {
   public_route_table_ids  = module.vpc.public_rt_ids
   private_subnet_ids      = module.vpc.private_subnets
   security_group_ids      = [module.vpc.default_sg_id]
+
+  isolated_route_table_ids    = module.vpc.isolated_rt_ids
+  isolated_subnet_ids         = module.vpc.isolated_subnets
+  isolated_security_group_ids = [module.vpc.macro_sandbox_vpc_endpoints_security_group_id]
+  create_ecr_api_endpoint     = true
+  create_ecr_dkr_endpoint     = true
+  create_logs_endpoint        = true
+}
+
+module "macro_sandbox" {
+  source = "../../modules/macro-sandbox"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  ci_cd_role_arn      = module.iam_oidc.role_arn
+  isolated_subnet_ids = module.vpc.isolated_subnets
+  lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
+
+  languages = {
+    python = { memory = 1024, timeout = 65 }
+    js     = { memory = 512, timeout = 65 }
+    r      = { memory = 1024, timeout = 65 }
+  }
+
+  # Dev overrides
+  image_tag_mutability = "IMMUTABLE"
+  force_delete         = true
+  log_retention_days   = 7
+
+  reserved_concurrent_executions = 10
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+  }
 }
 
 module "databricks_workspace_s3_policy" {
@@ -404,6 +440,25 @@ module "databricks_catalog" {
   depends_on = [module.node_service_principal]
 }
 
+resource "databricks_grants" "centrum_schema" {
+  provider = databricks.workspace
+  schema   = "${module.databricks_catalog.catalog_name}.centrum"
+
+  grant {
+    principal = module.node_service_principal.service_principal_application_id
+    privileges = [
+      "USE_SCHEMA",
+      "CREATE_TABLE",
+      "CREATE_MATERIALIZED_VIEW",
+      "CREATE_VOLUME",
+      "SELECT",
+      "MODIFY",
+    ]
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
 module "centrum_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -451,7 +506,7 @@ module "centrum_pipeline" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.node_cluster_policy]
+  depends_on = [module.node_cluster_policy, databricks_grants.centrum_schema]
 }
 
 module "pipeline_scheduler" {
@@ -666,7 +721,7 @@ module "data_downloads_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_imports_volume" {
@@ -688,7 +743,7 @@ module "data_imports_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_legacy_volume" {
@@ -710,7 +765,7 @@ module "data_legacy_volume" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -754,7 +809,7 @@ module "openjii_project_transfer_requests_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "experiment_annotations_table" {
@@ -791,7 +846,7 @@ module "experiment_annotations_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "experiment_export_metadata_table" {
@@ -828,7 +883,43 @@ module "experiment_export_metadata_table" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_catalog]
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "experiment_custom_metadata_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_custom_metadata"
+  table_type   = "MANAGED"
+  comment      = "User-uploaded custom metadata attached to experiments (1:N). Each record holds an opaque JSON blob as a VARIANT column."
+
+  columns = [
+    { name = "metadata_id", type = "STRING", nullable = false },
+    { name = "experiment_id", type = "STRING", nullable = false },
+    { name = "metadata", type = "VARIANT" },
+    { name = "created_by", type = "STRING", nullable = false },
+    { name = "created_at", type = "TIMESTAMP", nullable = false },
+    { name = "updated_at", type = "TIMESTAMP", nullable = false },
+  ]
+
+  properties = {
+    "delta.feature.variantType-preview" = "supported"
+  }
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
 }
 
 module "data_export_job" {
@@ -1620,12 +1711,25 @@ module "backend_ecs" {
     {
       name  = "NEXT_PUBLIC_API_URL"
       value = "https://${module.route53.api_domain}"
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["python"]
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_JAVASCRIPT_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["js"]
+    },
+    {
+      name  = "AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME"
+      value = module.macro_sandbox.function_names["r"]
     }
   ]
 
   # Additional IAM policies for the task role
   additional_task_role_policy_arns = [
-    module.location_service.iam_policy_arn
+    module.location_service.iam_policy_arn,
+    module.macro_sandbox.invoke_policy_arn,
   ]
 
   tags = {
@@ -1946,9 +2050,31 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
+  macro_sandbox_function_names = module.macro_sandbox.function_names
+
   providers = {
     grafana.amg = grafana.amg
   }
 
   depends_on = [module.managed_grafana_workspace]
+}
+
+module "grafana_metrics_publisher" {
+  source = "../../modules/grafana/metrics-publisher"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  db_host                    = module.aurora_db.cluster_endpoint
+  db_port                    = module.aurora_db.cluster_port
+  db_name                    = module.aurora_db.database_name
+  aurora_cluster_resource_id = module.aurora_db.cluster_resource_id
+
+  private_subnets                = module.vpc.private_subnets
+  metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
+}
+
+module "aws_inspector" {
+  source         = "../../modules/inspector"
+  resource_types = ["ECR", "LAMBDA", "LAMBDA_CODE"]
 }

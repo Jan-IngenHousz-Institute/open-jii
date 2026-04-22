@@ -977,6 +977,7 @@ export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsB
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
+export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
@@ -1075,3 +1076,32 @@ export const zProjectTransferWebhookResponse = z.object({
 export type ProjectTransferQuestionInput = z.infer<typeof zProjectTransferQuestionInput>;
 export type ProjectTransferWebhookPayload = z.infer<typeof zProjectTransferWebhookPayload>;
 export type ProjectTransferWebhookResponse = z.infer<typeof zProjectTransferWebhookResponse>;
+
+// --- Experiment Metadata Schemas ---
+
+export const zExperimentMetadata = z.object({
+  metadataId: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  metadata: z.record(z.string(), z.unknown()),
+  createdBy: z.string().uuid(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zCreateExperimentMetadataBody = z.object({
+  metadata: z.record(z.string(), z.unknown()),
+});
+
+export const zUpdateExperimentMetadataBody = z.object({
+  metadata: z.record(z.string(), z.unknown()),
+});
+
+export const zMetadataPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  metadataId: z.string().uuid().describe("ID of the metadata record"),
+});
+
+// Metadata types
+export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
+export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetadataBody>;
+export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;

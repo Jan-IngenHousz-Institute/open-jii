@@ -1,38 +1,12 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
 
+import { contract } from "@repo/api";
 import type { AnnotationType } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 import { DeleteAnnotationsDialog } from "./delete-annotations-dialog";
-
-// Hoisted mocks
-const mockDeleteAnnotationsBulk = vi.hoisted(() => vi.fn());
-const useExperimentDeleteAnnotationsBulkMock = vi.hoisted(() => vi.fn());
-
-// Mock i18n to return translation keys
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, params?: Record<string, unknown>) => {
-      if (params) {
-        return `${key}:${JSON.stringify(params)}`;
-      }
-      return key;
-    },
-  }),
-}));
-
-// Mock the hook
-vi.mock(
-  "~/hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk",
-  () => ({
-    useExperimentAnnotationDeleteBulk: useExperimentDeleteAnnotationsBulkMock,
-  }),
-);
-
-// Mock toast
-vi.mock("@repo/ui/hooks", () => ({
-  toast: vi.fn(),
-}));
 
 const mockProps = {
   experimentId: "exp-123",
@@ -44,15 +18,15 @@ const mockProps = {
   clearSelection: vi.fn(),
 };
 
-describe("DeleteAnnotationsDialog", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    useExperimentDeleteAnnotationsBulkMock.mockReturnValue({
-      mutateAsync: mockDeleteAnnotationsBulk,
-      isPending: false,
-    });
+function mountDeleteEndpoint(options = {}) {
+  return server.mount(contract.experiments.deleteAnnotationsBulk, {
+    body: { rowsAffected: 3 },
+    status: 204,
+    ...options,
   });
+}
 
+describe("DeleteAnnotationsDialog", () => {
   it("should render dialog when open", () => {
     render(<DeleteAnnotationsDialog {...mockProps} />);
 
@@ -60,7 +34,7 @@ describe("DeleteAnnotationsDialog", () => {
       screen.getByText("experimentDataAnnotations.commentDeleteDialog.title"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('experimentDataAnnotations.commentDeleteDialog.description:{"count":3}'),
+      screen.getByText("experimentDataAnnotations.commentDeleteDialog.description"),
     ).toBeInTheDocument();
   });
 
@@ -83,51 +57,50 @@ describe("DeleteAnnotationsDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("should show count in description", () => {
+  it("should show description text", () => {
     render(<DeleteAnnotationsDialog {...mockProps} />);
 
-    const description = screen.getByText(
-      /experimentDataAnnotations.commentDeleteDialog.description/,
-    );
-    expect(description.textContent).toContain('{"count":3}');
+    expect(
+      screen.getByText(/experimentDataAnnotations.commentDeleteDialog.description/),
+    ).toBeInTheDocument();
   });
 
-  it("should call setOpen when cancel is clicked", () => {
+  it("should call setOpen when cancel is clicked", async () => {
     render(<DeleteAnnotationsDialog {...mockProps} />);
 
+    const user = userEvent.setup();
     const cancelButton = screen.getByText(/common.cancel/);
-    fireEvent.click(cancelButton);
+    await user.click(cancelButton);
 
     expect(mockProps.setOpen).toHaveBeenCalledWith(false);
   });
 
-  it("should call deleteAnnotationsBulk when delete is clicked", async () => {
-    mockDeleteAnnotationsBulk.mockResolvedValue({});
+  it("should send correct request when delete is clicked", async () => {
+    const spy = mountDeleteEndpoint();
 
     render(<DeleteAnnotationsDialog {...mockProps} />);
 
+    const user = userEvent.setup();
     const deleteButton = screen.getByText("experimentDataAnnotations.commentDeleteDialog.delete");
-    fireEvent.click(deleteButton);
+    await user.click(deleteButton);
 
-    await waitFor(() => {
-      expect(mockDeleteAnnotationsBulk).toHaveBeenCalledWith({
-        params: { id: "exp-123" },
-        body: {
-          tableName: "test-table",
-          rowIds: ["1", "2", "3"],
-          type: "comment",
-        },
-      });
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.params).toMatchObject({ id: "exp-123" });
+    expect(spy.body).toMatchObject({
+      tableName: "test-table",
+      rowIds: ["1", "2", "3"],
+      type: "comment",
     });
   });
 
   it("should call clearSelection and setOpen after successful delete", async () => {
-    mockDeleteAnnotationsBulk.mockResolvedValue({});
+    mountDeleteEndpoint();
 
     render(<DeleteAnnotationsDialog {...mockProps} />);
 
+    const user = userEvent.setup();
     const deleteButton = screen.getByText("experimentDataAnnotations.commentDeleteDialog.delete");
-    fireEvent.click(deleteButton);
+    await user.click(deleteButton);
 
     await waitFor(() => {
       expect(mockProps.clearSelection).toHaveBeenCalled();
@@ -135,28 +108,30 @@ describe("DeleteAnnotationsDialog", () => {
     });
   });
 
-  it("should handle pending state", () => {
-    useExperimentDeleteAnnotationsBulkMock.mockReturnValue({
-      mutateAsync: mockDeleteAnnotationsBulk,
-      isPending: true,
-    });
+  it("should show pending state while request is in flight", async () => {
+    mountDeleteEndpoint({ delay: 500 });
 
     render(<DeleteAnnotationsDialog {...mockProps} />);
 
-    const deleteButton = screen.getByText(
-      "experimentDataAnnotations.commentDeleteDialog.deletePending",
-    );
-    expect(deleteButton).toBeDisabled();
+    const user = userEvent.setup();
+    const deleteButton = screen.getByText("experimentDataAnnotations.commentDeleteDialog.delete");
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("experimentDataAnnotations.commentDeleteDialog.deletePending"),
+      ).toBeDisabled();
+    });
   });
 
   it("should show toast on successful delete", async () => {
-    const { toast } = await import("@repo/ui/hooks");
-    mockDeleteAnnotationsBulk.mockResolvedValue({});
+    mountDeleteEndpoint();
 
     render(<DeleteAnnotationsDialog {...mockProps} />);
 
+    const user = userEvent.setup();
     const deleteButton = screen.getByText("experimentDataAnnotations.commentDeleteDialog.delete");
-    fireEvent.click(deleteButton);
+    await user.click(deleteButton);
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({

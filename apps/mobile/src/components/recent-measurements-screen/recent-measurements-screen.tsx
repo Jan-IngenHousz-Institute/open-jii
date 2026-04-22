@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Download, ChevronsLeft, UploadCloud } from "lucide-react-native";
+import { ChevronsLeft, UploadCloud, Trash2, Download } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, FlatList } from "react-native";
 import { toast } from "sonner-native";
@@ -14,10 +14,9 @@ import type {
   MeasurementFilter,
   MeasurementItem as MeasurementItemType,
 } from "~/hooks/use-all-measurements";
-import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { useMeasurements } from "~/hooks/use-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { exportMeasurementsToFile } from "~/services/export-measurements";
-import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
@@ -34,10 +33,15 @@ export function RecentMeasurementsScreen() {
   const [filter, setFilter] = useState<TabKey>("all");
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
-  const { uploadAll, isUploading, uploadOne, removeFailedUpload, updateMeasurementComment } =
-    useFailedUploads();
+  const {
+    uploadAll,
+    isUploading,
+    uploadOne,
+    removeMeasurement,
+    clearSyncedMeasurements,
+    updateMeasurementComment,
+  } = useMeasurements();
 
   const handleSyncAll = () => {
     showAlert(
@@ -97,12 +101,8 @@ export function RecentMeasurementsScreen() {
         text: status === "synced" ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
-          void (async () => {
-            if (status === "synced") {
-              await removeSuccessfulUpload(id);
-            } else {
-              await removeFailedUpload(id);
-            }
+          void (() => {
+            removeMeasurement(id);
             invalidate();
           })();
         },
@@ -114,18 +114,40 @@ export function RecentMeasurementsScreen() {
     ]);
   };
 
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-      await exportMeasurementsToFile();
-    } catch {
-      toast.error("Export failed. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
+  const handleDeleteAllSynced = () => {
+    showAlert(
+      "Delete all synced measurements",
+      `Are you sure you want to delete all ${syncedCount} synced measurements from local storage?`,
+      [
+        {
+          text: "Delete",
+          variant: "danger",
+          onPress: () => {
+            clearSyncedMeasurements()
+              .then(() => {
+                invalidate();
+              })
+              .catch(() => {
+                toast.error("Failed to delete synced measurements");
+              });
+          },
+        },
+        {
+          text: "Cancel",
+          variant: "ghost",
+        },
+      ],
+    );
   };
 
   const unsyncedCount = measurements?.filter((m) => m.status === "unsynced").length ?? 0;
+  const syncedCount = measurements?.filter((m) => m.status === "synced").length ?? 0;
+
+  const handleExport = () => {
+    void exportMeasurementsToFile().catch(() => {
+      toast.error("Export failed. Please try again.");
+    });
+  };
 
   const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
     setSelectedMeasurement(measurement);
@@ -139,10 +161,9 @@ export function RecentMeasurementsScreen() {
         <View className="flex-row gap-3">
           <Button
             variant="tertiary"
-            onPress={handleExport}
-            isLoading={isExporting}
-            isDisabled={!measurements || measurements.length === 0}
-            icon={<Download size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+            onPress={handleDeleteAllSynced}
+            isDisabled={syncedCount === 0}
+            icon={<Trash2 size={24} color={colors.primary.dark} strokeWidth={1.4} />}
             style={{ borderColor: "transparent", padding: 9 }}
           />
           <Button
@@ -179,6 +200,16 @@ export function RecentMeasurementsScreen() {
           data={measurements}
           keyExtractor={(item) => item.key}
           contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
+          ListFooterComponent={
+            <View className="px-4 pt-4">
+              <Button
+                title="Export measurements"
+                variant="tertiary"
+                onPress={handleExport}
+                icon={<Download size={16} color={colors.primary.dark} strokeWidth={1.4} />}
+              />
+            </View>
+          }
           renderItem={({ item: measurement }) => (
             <SwipeableMeasurementRow
               id={measurement.key}

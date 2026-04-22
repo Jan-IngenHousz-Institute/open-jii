@@ -1,118 +1,71 @@
-import { tsr } from "@/lib/tsr";
-import { renderHook } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createLocation } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { renderHook, waitFor } from "@/test/test-utils";
+import { describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { useExperimentLocations } from "./useExperimentLocations";
 
-// Mock the tsr module
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    experiments: {
-      getExperimentLocations: {
-        useQuery: vi.fn(),
-      },
-    },
-  },
-}));
-
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
-
 describe("useExperimentLocations", () => {
-  const mockExperimentId = "test-experiment-id";
+  it("returns empty array when no locations exist", async () => {
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    const { result } = renderHook(() => useExperimentLocations("exp-1"));
 
-  it("should call useQuery with correct parameters", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
     });
-    mockTsr.experiments.getExperimentLocations.useQuery = mockUseQuery;
 
-    renderHook(() => useExperimentLocations(mockExperimentId));
+    expect(result.current.data?.body).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: mockExperimentId } },
-      queryKey: ["experiment-locations", mockExperimentId],
+  it("returns locations on success", async () => {
+    const locations = [createLocation(), createLocation()];
+    server.mount(contract.experiments.getExperimentLocations, { body: locations });
+
+    const { result } = renderHook(() => useExperimentLocations("exp-1"));
+
+    await waitFor(() => {
+      expect(result.current.data?.body).toHaveLength(2);
     });
-  });
 
-  it("should return the result from useQuery", () => {
-    const mockReturnValue = {
-      data: {
-        body: [
-          {
-            id: "location-1",
-            name: "Berlin Office",
-            latitude: 52.52,
-            longitude: 13.405,
-            createdAt: "2023-01-01T00:00:00Z",
-            updatedAt: "2023-01-01T00:00:00Z",
-          },
-        ],
-      },
-      isLoading: false,
-      error: null,
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.getExperimentLocations.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperimentLocations(mockExperimentId));
-
-    expect(result.current).toBe(mockReturnValue);
-  });
-
-  it("should handle loading state", () => {
-    const mockReturnValue = {
-      data: undefined,
-      isLoading: true,
-      error: null,
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.getExperimentLocations.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperimentLocations(mockExperimentId));
-
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.data).toBeUndefined();
-  });
-
-  it("should handle error state", () => {
-    const mockError = new Error("Failed to fetch locations");
-    const mockReturnValue = {
-      data: undefined,
-      isLoading: false,
-      error: mockError,
-    };
-
-    const mockUseQuery = vi.fn().mockReturnValue(mockReturnValue);
-    mockTsr.experiments.getExperimentLocations.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperimentLocations(mockExperimentId));
-
-    expect(result.current.error).toBe(mockError);
+    expect(result.current.data?.body[0]).toMatchObject({
+      id: locations[0].id,
+      name: locations[0].name,
+      latitude: locations[0].latitude,
+      longitude: locations[0].longitude,
+    });
+    expect(result.current.data?.body[1]).toMatchObject({
+      id: locations[1].id,
+      name: locations[1].name,
+    });
     expect(result.current.isLoading).toBe(false);
   });
 
-  it("should pass through experiment ID correctly", () => {
-    const differentExperimentId = "another-experiment-id";
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: { body: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentLocations.useQuery = mockUseQuery;
+  it("passes experiment ID in the request path", async () => {
+    const spy = server.mount(contract.experiments.getExperimentLocations, { body: [] });
 
-    renderHook(() => useExperimentLocations(differentExperimentId));
+    const { result } = renderHook(() => useExperimentLocations("specific-exp-id"));
 
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      queryData: { params: { id: differentExperimentId } },
-      queryKey: ["experiment-locations", differentExperimentId],
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
     });
+
+    expect(spy.params.id).toBe("specific-exp-id");
+  });
+
+  it("handles 404 error", async () => {
+    server.mount(contract.experiments.getExperimentLocations, { status: 404 });
+
+    const { result } = renderHook(() => useExperimentLocations("bad-id"));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.data?.body).toBeUndefined();
   });
 });

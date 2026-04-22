@@ -1,3 +1,5 @@
+import { StatusCodes } from "http-status-codes";
+
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
@@ -107,6 +109,19 @@ describe("CreateMacroUseCase", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
+      expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
+      expect(result.error.code).toBe("REPOSITORY_DUPLICATE");
+    });
+
+    it("should return internal error when create returns no rows", async () => {
+      vi.spyOn(macroRepository, "findByName").mockResolvedValue(success(null));
+      vi.spyOn(macroRepository, "create").mockResolvedValue(success([]));
+
+      const result = await useCase.execute(mockRequest, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Failed to create macro");
     });
   });
 });

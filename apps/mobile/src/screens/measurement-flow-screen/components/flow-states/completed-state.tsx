@@ -13,9 +13,8 @@ import type {
   MeasurementFilter,
   MeasurementItem as MeasurementItemType,
 } from "~/hooks/use-all-measurements";
-import { useFailedUploads } from "~/hooks/use-failed-uploads";
+import { useMeasurements } from "~/hooks/use-measurements";
 import { useTheme } from "~/hooks/use-theme";
-import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
@@ -35,7 +34,7 @@ export function CompletedState() {
   const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
   const { startNewIteration } = useMeasurementFlowStore();
   const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
-  const { uploadOne, removeFailedUpload, updateMeasurementComment } = useFailedUploads();
+  const { uploadOne, removeMeasurement, updateMeasurementComment } = useMeasurements();
 
   const handleSync = (id: string, experimentName: string) => {
     showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
@@ -67,12 +66,8 @@ export function CompletedState() {
         text: status === "synced" ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
-          void (async () => {
-            if (status === "synced") {
-              await removeSuccessfulUpload(id);
-            } else {
-              await removeFailedUpload(id);
-            }
+          void (() => {
+            removeMeasurement(id);
             invalidate();
           })();
         },

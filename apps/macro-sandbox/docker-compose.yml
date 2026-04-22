@@ -1,0 +1,54 @@
+# Local dev: runs all three Lambda containers via RIE.
+# Ports: python=9001, javascript=9002, r=9003
+
+services:
+  python:
+    build:
+      context: .
+      dockerfile: functions/python/Dockerfile
+    ports:
+      - "${PYTHON_PORT:-9001}:8080"
+    environment:
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=1024
+    mem_limit: 1024m
+    memswap_limit: 1024m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  javascript:
+    build:
+      context: .
+      dockerfile: functions/javascript/Dockerfile
+    ports:
+      - "${JAVASCRIPT_PORT:-9002}:8080"
+    environment:
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=512
+    mem_limit: 512m
+    memswap_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  r:
+    build:
+      context: .
+      dockerfile: functions/r/Dockerfile.local
+    ports:
+      - "${R_PORT:-9003}:8080"
+    environment:
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=1024
+    mem_limit: 1024m
+    memswap_limit: 1024m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s

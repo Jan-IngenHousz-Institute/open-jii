@@ -3,7 +3,7 @@ ARG NODE_VERSION=22
 
 # Alpine image
 FROM node:${NODE_VERSION}-alpine AS alpine
-RUN apk update
+RUN apk update && apk upgrade --no-cache
 RUN apk add --no-cache libc6-compat tini
 ENV TURBO_TELEMETRY_DISABLED=1
 

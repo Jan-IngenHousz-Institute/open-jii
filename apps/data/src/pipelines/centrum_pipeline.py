@@ -16,6 +16,8 @@ from datetime import datetime
 from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
+from enrich.custom_metadata import add_custom_metadata_column
+from enrich.macro_execution import make_execute_macro_udf
 from openjii import decompress_sample
 
 # COMMAND ----------
@@ -90,6 +92,7 @@ EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
+EXPERIMENT_MACRO_DATA_SANDBOX_TABLE = "experiment_macro_data_sandbox"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
@@ -97,6 +100,8 @@ ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
 ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
 RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
+ANNOTATIONS_SOURCE_TABLE = "experiment_annotations_source"
+METADATA_SOURCE_TABLE = "experiment_metadata_source"
 
 # Legacy macro identifiers that need mapping to actual macro UUIDs.
 # Some data was sent prior to the implementation of proper macro ID handling, so we maintain a mapping of legacy identifiers to actual UUIDs for correct processing.
@@ -463,6 +468,7 @@ def experiment_status():
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported"
     }
@@ -631,6 +637,7 @@ def experiment_device_data():
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported"
     }
@@ -777,6 +784,135 @@ def experiment_macro_data():
 
 # COMMAND ----------
 
+# DBTITLE 1,Gold Layer - Experiment Macro Data (Sandbox Comparison)
+
+@dlt.table(
+    name=EXPERIMENT_MACRO_DATA_SANDBOX_TABLE,
+    comment="Gold layer: Macro processing via backend API/Lambda sandbox for comparison with local execution",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.feature.variantType-preview": "supported",
+    },
+)
+def experiment_macro_data_sandbox():
+    """Process macros via backend API (Lambda sandbox) for comparison."""
+
+    # Create UDF inside the table function so secret lookup only happens
+    # when this table runs (not at module import time).
+    sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
+
+    base_df = (
+        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
+        .filter("macros IS NOT NULL")
+        .filter("size(macros) > 0")
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "data",
+            "output_data",
+            "date",
+            "processed_timestamp",
+            "questions_data",
+            "annotations",
+            "skip_macro_processing",
+            F.explode("macros").alias("macro"),
+        )
+        .select(
+            "id",
+            "experiment_id",
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "data",
+            "output_data",
+            "date",
+            "processed_timestamp",
+            "questions_data",
+            "annotations",
+            "skip_macro_processing",
+            F.col("macro.id").alias("macro_id"),
+            F.col("macro.name").alias("macro_name"),
+            F.col("macro.filename").alias("macro_filename"),
+        )
+    )
+
+    return (
+        base_df
+        # Run sandbox UDF only for non-imported rows
+        .withColumn(
+            "sandbox_result",
+            F.when(
+                ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
+                sandbox_macro_udf(
+                    F.struct("id", "macro_id", F.col("data").cast("string").alias("data"))
+                ),
+            )
+        )
+        # For imported rows, use pre-computed output_data; otherwise use UDF result
+        .withColumn(
+            "macro_output",
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.col("output_data")
+            ).otherwise(
+                F.when(
+                    F.col("sandbox_result.result").isNotNull(),
+                    F.expr("parse_json(sandbox_result.result)"),
+                )
+            ),
+        )
+        .withColumn(
+            "macro_error",
+            F.when(
+                F.col("skip_macro_processing") == True,
+                F.lit(None).cast("string")
+            ).otherwise(F.col("sandbox_result.error"))
+        )
+        .withColumn(
+            "macro_row_id",
+            F.abs(
+                F.hash(
+                    F.col("id"),
+                    F.col("macro_filename"),
+                    F.col("processed_timestamp"),
+                )
+            ),
+        )
+        .select(
+            "experiment_id",
+            F.col("macro_row_id").alias("id"),
+            F.col("id").alias("raw_id"),
+            "device_id",
+            "device_name",
+            "timestamp",
+            "timezone",
+            "user_id",
+            "macro_id",
+            "macro_name",
+            "macro_filename",
+            "macro_output",
+            "macro_error",
+            "processed_timestamp",
+            "date",
+            "questions_data",
+            "annotations",
+        )
+    )
+
+# COMMAND ----------
+
 # DBTITLE 1,Gold Layer - Experiment Table Metadata
 @dlt.table(
     name=EXPERIMENT_TABLE_METADATA,
@@ -790,6 +926,31 @@ def experiment_macro_data():
 def experiment_table_metadata():
     """Metadata for all experiment tables."""
 
+    # Pre-compute custom_metadata_schema per experiment from the metadata source.
+    # Each experiment's metadata blob has $.rows — an array of VARIANT objects
+    # whose keys are already human-readable (remapped at upload time).
+    # We drop internal keys (_id, identifier column) from each row before schema
+    # inference so the backend doesn't expand them into duplicate query columns.
+    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
+    custom_metadata_schemas = (
+        metadata_source
+        .select(
+            F.col("experiment_id"),
+            F.expr("variant_get(metadata, '$.identifierColumnId', 'STRING')").alias("_id_col"),
+            F.expr("explode(variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row"),
+        )
+        .withColumn("_row", F.expr("""
+            parse_json(to_json(map_filter(
+                cast(_row AS MAP<STRING, VARIANT>),
+                (k, v) -> k != '_id' AND k != _id_col
+            )))
+        """))
+        .groupBy("experiment_id")
+        .agg(
+            F.expr("nullif(schema_of_variant_agg(_row), 'VOID')").alias("custom_metadata_schema")
+        )
+    )
+
     macro_metadata = (
         dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
         .filter("macro_output IS NOT NULL")
@@ -799,13 +960,15 @@ def experiment_table_metadata():
             F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
             F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
+        .join(custom_metadata_schemas, "experiment_id", "left")
         .select(
             F.col("experiment_id"),
             F.col("macro_id").alias("identifier"),
             F.lit("macro").alias("table_type"),
             F.col("row_count"),
             F.col("macro_schema"),
-            F.col("questions_schema")
+            F.col("questions_schema"),
+            F.col("custom_metadata_schema"),
         )
     )
     
@@ -816,13 +979,15 @@ def experiment_table_metadata():
             F.count("*").alias("row_count"),
             F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
         )
+        .join(custom_metadata_schemas, "experiment_id", "left")
         .select(
             F.col("experiment_id"),
             F.lit("raw_data").alias("identifier"),
             F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
-            F.col("questions_schema")
+            F.col("questions_schema"),
+            F.col("custom_metadata_schema"),
         )
     )
     
@@ -836,7 +1001,8 @@ def experiment_table_metadata():
             F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
-            F.lit(None).cast("string").alias("questions_schema")
+            F.lit(None).cast("string").alias("questions_schema"),
+            F.lit(None).cast("string").alias("custom_metadata_schema"),
         )
     )
     
@@ -850,7 +1016,8 @@ def experiment_table_metadata():
             F.lit("static").alias("table_type"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
-            F.lit(None).cast("string").alias("questions_schema")
+            F.lit(None).cast("string").alias("questions_schema"),
+            F.lit(None).cast("string").alias("custom_metadata_schema"),
         )
     )
     
@@ -871,7 +1038,9 @@ def experiment_table_metadata():
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
     }
 )
 def experiment_contributors():
@@ -889,10 +1058,43 @@ def experiment_contributors():
 
 # COMMAND ----------
 
+# DBTITLE 1,Gold Layer - Annotations Source (DLT mirror)
+@dlt.table(
+    name=ANNOTATIONS_SOURCE_TABLE,
+    comment="Gold layer: DLT-tracked mirror of the experiment_annotations table for incremental refresh support.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+    }
+)
+def experiment_annotations_source():
+    """DLT mirror of the backend-managed experiment_annotations table."""
+    return spark.read.table(f"{CATALOG_NAME}.centrum.experiment_annotations")
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Metadata Source (DLT mirror)
+@dlt.table(
+    name=METADATA_SOURCE_TABLE,
+    comment="Gold layer: DLT-tracked mirror of the experiment_metadata table for incremental refresh support.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.feature.variantType-preview": "supported",
+    }
+)
+def experiment_metadata_source():
+    """DLT mirror of the backend-managed experiment_metadata table."""
+    return spark.read.table(f"{CATALOG_NAME}.centrum.experiment_custom_metadata")
+
+# COMMAND ----------
+
 # DBTITLE 1,Gold Layer - Enriched Experiment Raw Data
 @dlt.table(
     name=ENRICHED_RAW_DATA_VIEW,
-    comment="Enriched materialized view: Raw data with questions, user struct, and annotations. Incrementally refreshed.",
+    comment="Enriched materialized view: Raw data with questions, user struct, and annotations. Qualified for incremental refresh.",
     table_properties={
         "quality": "gold",
         "delta.enableRowTracking": "true",
@@ -905,9 +1107,11 @@ def experiment_contributors():
     }
 )
 def enriched_experiment_raw_data():
-    """Enriched raw data with user profiles and annotations."""
+    """Enriched raw data with user profiles, annotations, and user metadata."""
     raw_data = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
+    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
     
     enriched = (
         raw_data
@@ -923,7 +1127,7 @@ def enriched_experiment_raw_data():
             raw_data.device_id,
             raw_data.device_name,
             raw_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
-            raw_data.timestamp.alias("timestamp_utc"),
+            raw_data.timestamp.alias("measurement_time_utc"),
             raw_data.timezone,
             raw_data.date,
             raw_data.macros,
@@ -934,35 +1138,31 @@ def enriched_experiment_raw_data():
             raw_data.processed_timestamp
         )
         .withColumn(
-            "timestamp_local",
+            "measurement_time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
             )
         )
         .withColumn(
-            "time_local",
+            "local_time",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
             )
         )
     )
-
-    return add_annotation_column(
-        enriched,
-        table_name="experiment_raw_data",
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
+    
+    enriched = add_annotation_column(enriched, annotations_source)
+    
+    return add_custom_metadata_column(enriched, metadata_source)
 
 # COMMAND ----------
 
 # DBTITLE 1,Gold Layer - Enriched Raw Ambyte Data
 @dlt.table(
     name=ENRICHED_RAW_AMBYTE_DATA_VIEW,
-    comment="Enriched materialized view: Raw ambyte data with annotations. Incrementally refreshed.",
+    comment="Enriched materialized view: Raw ambyte data with annotations. Qualified for incremental refresh.",
     table_properties={
         "quality": "gold",
         "delta.enableRowTracking": "true",
@@ -976,23 +1176,20 @@ def enriched_experiment_raw_data():
 def enriched_raw_ambyte_data():
     """Enriched ambyte data with annotations."""
     raw_ambyte = dlt.read(RAW_AMBYTE_TABLE).drop("_rescued_data")
+    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
     
-    return add_annotation_column(
-        raw_ambyte,
-        table_name="raw_ambyte_data",
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
+    return add_annotation_column(raw_ambyte, annotations_source)
 
 # COMMAND ----------
 
 # DBTITLE 1,Gold Layer - Enriched Experiment Macro Data
 @dlt.table(
     name=ENRICHED_MACRO_DATA_VIEW,
-    comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Incrementally refreshed.",
+    comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Qualified for incremental refresh.",
     table_properties={
         "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
         "delta.enableDeletionVectors": "true",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
@@ -1001,9 +1198,11 @@ def enriched_raw_ambyte_data():
     }
 )
 def enriched_experiment_macro_data():
-    """Enriched macro data with user profiles and annotations."""
+    """Enriched macro data with user profiles, annotations, and user metadata."""
     macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
+    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
     
     enriched = (
         macro_data
@@ -1020,7 +1219,7 @@ def enriched_experiment_macro_data():
             macro_data.device_id,
             macro_data.device_name,
             macro_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
-            macro_data.timestamp.alias("timestamp_utc"),
+            macro_data.timestamp.alias("measurement_time_utc"),
             macro_data.timezone,
             macro_data.date,
             contributors.user.alias("contributor"),
@@ -1034,28 +1233,24 @@ def enriched_experiment_macro_data():
             macro_data.annotations
         )
         .withColumn(
-            "timestamp_local",
+            "measurement_time_local",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
             )
         )
         .withColumn(
-            "time_local",
+            "local_time",
             F.when(
                 F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("timestamp_utc"), F.col("timezone")), "HH:mm")
+                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
             )
         )
     )
-
-    return add_annotation_column(
-        enriched,
-        table_name="experiment_macro_data",  # Generic macro data table name
-        catalog_name=CATALOG_NAME,
-        experiment_schema="centrum",
-        spark=spark
-    )
+    
+    enriched = add_annotation_column(enriched, annotations_source)
+    
+    return add_custom_metadata_column(enriched, metadata_source)
 
 # COMMAND ----------
 
@@ -1125,7 +1320,9 @@ def raw_imported_data():
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
     },
     partition_cols=["experiment_id"]
 )

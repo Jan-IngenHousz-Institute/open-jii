@@ -6,6 +6,8 @@ import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { CreateMacroDto } from "../models/macro.model";
 import { generateHashedFilename } from "../models/macro.model";
+import type { CachePort } from "../ports/cache.port";
+import { CACHE_PORT } from "../ports/cache.port";
 import { MacroRepository } from "./macro.repository";
 import type { MacroFilter } from "./macro.repository";
 
@@ -1030,45 +1032,119 @@ describe("MacroRepository", () => {
       expect(result.value).toBeInstanceOf(Map);
       expect(result.value.size).toBe(0);
     });
+  });
 
-    it("should silently exclude non-UUID identifiers", async () => {
-      // Arrange - create a macro
+  describe("findScriptById", () => {
+    it("should return a lean MacroScript for an existing macro", async () => {
       const createResult = await repository.create(
         {
-          name: "Real Macro",
-          description: "Has a proper UUID",
-          language: "python" as const,
-          code: "cHl0aG9uIGNvZGU=",
+          name: "Script Macro",
+          description: "Script test",
+          language: "python",
+          code: "cHJpbnQoJ2hlbGxvJyk=", // base64
         },
         testUserId,
       );
       assertSuccess(createResult);
-      const macro = createResult.value[0];
+      const created = createResult.value[0];
 
-      // Act - mix valid UUID with legacy non-UUID identifiers
-      const result = await repository.findNamesByIds([
-        macro.id,
-        "olivia_gh_protocol",
-        "par",
-        "macro_b511b694c985",
-      ]);
+      const result = await repository.findScriptById(created.id);
 
-      // Assert - only the valid UUID is returned, non-UUIDs are ignored
       assertSuccess(result);
-      expect(result.value.size).toBe(1);
-      expect(result.value.has(macro.id)).toBe(true);
+      expect(result.value).not.toBeNull();
+      expect(result.value).toMatchObject({
+        id: created.id,
+        name: "Script Macro",
+        language: "python",
+        code: "cHJpbnQoJ2hlbGxvJyk=",
+      });
+      // Should NOT have full MacroDto fields
+      expect(result.value).not.toHaveProperty("createdByName");
+      expect(result.value).not.toHaveProperty("filename");
+      expect(result.value).not.toHaveProperty("description");
     });
 
-    it("should return empty map when all identifiers are non-UUID", async () => {
-      const result = await repository.findNamesByIds([
-        "olivia_gh_protocol",
-        "par",
-        "unza_pirk_dirk_lightpotential14_safe",
-      ]);
+    it("should return null for a non-existent macro", async () => {
+      const result = await repository.findScriptById(faker.string.uuid());
 
       assertSuccess(result);
-      expect(result.value).toBeInstanceOf(Map);
+      expect(result.value).toBeNull();
+    });
+
+    it("should return cached value on second call", async () => {
+      const createResult = await repository.create(
+        {
+          name: "Cached Script",
+          description: "Caching test",
+          language: "javascript",
+          code: "Y29uc29sZS5sb2coJ2hpJyk=",
+        },
+        testUserId,
+      );
+      assertSuccess(createResult);
+      const created = createResult.value[0];
+
+      const cachePort = testApp.module.get<CachePort>(CACHE_PORT);
+      let fetchCallCount = 0;
+      const originalTryCache = cachePort.tryCache.bind(cachePort) as CachePort["tryCache"];
+      vi.spyOn(cachePort, "tryCache").mockImplementation(
+        <T>(key: string, fetchFn: () => Promise<T>): Promise<T> => {
+          return originalTryCache(key, () => {
+            fetchCallCount++;
+            return fetchFn();
+          });
+        },
+      );
+
+      // First call fills cache (fetchFn hits DB)
+      await repository.findScriptById(created.id);
+      // Second call returns from cache (fetchFn should not be called)
+      await repository.findScriptById(created.id);
+
+      expect(fetchCallCount).toBe(1);
+    });
+  });
+
+  describe("findScriptsByIds", () => {
+    it("should return a map of MacroScript for existing macros", async () => {
+      const r1 = await repository.create(
+        { name: "Batch A", description: "A", language: "python", code: "Y29kZTE=" },
+        testUserId,
+      );
+      assertSuccess(r1);
+      const r2 = await repository.create(
+        { name: "Batch B", description: "B", language: "r", code: "Y29kZTI=" },
+        testUserId,
+      );
+      assertSuccess(r2);
+
+      const ids = [r1.value[0].id, r2.value[0].id];
+      const result = await repository.findScriptsByIds(ids);
+
+      assertSuccess(result);
+      const map = result.value;
+      expect(map.size).toBe(2);
+      expect(map.get(ids[0])).toMatchObject({ name: "Batch A", language: "python" });
+      expect(map.get(ids[1])).toMatchObject({ name: "Batch B", language: "r" });
+    });
+
+    it("should return an empty map for non-existent IDs", async () => {
+      const result = await repository.findScriptsByIds([faker.string.uuid()]);
+
+      assertSuccess(result);
       expect(result.value.size).toBe(0);
+    });
+  });
+
+  describe("invalidateCache", () => {
+    it("should call through to the cache port", async () => {
+      const cachePort = testApp.module.get<CachePort>(CACHE_PORT);
+      const invalidateSpy = vi.spyOn(cachePort, "invalidate");
+
+      const id = faker.string.uuid();
+      await repository.invalidateCache(id);
+
+      expect(invalidateSpy).toHaveBeenCalledWith(id);
     });
   });
 });

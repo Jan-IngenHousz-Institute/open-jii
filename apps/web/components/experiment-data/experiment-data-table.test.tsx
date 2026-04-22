@@ -1,1253 +1,182 @@
-import { tsr } from "@/lib/tsr";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import type { ColumnDef } from "@tanstack/react-table";
+import { describe, it, expect, vi } from "vitest";
 
-import "../../vitest.setup";
 import { ExperimentDataTable } from "./experiment-data-table";
 
-// Mock the tsr module
-vi.mock("@/lib/tsr", () => ({
-  tsr: {
-    useQueryClient: vi.fn(() => ({
-      invalidateQueries: vi.fn(),
-    })),
-    experiments: {
-      getExperimentData: {
-        useQuery: vi.fn(),
-      },
-      addAnnotation: {
-        useMutation: vi.fn(() => ({
-          mutateAsync: vi.fn(),
-          isPending: false,
-        })),
-      },
-      addAnnotationsBulk: {
-        useMutation: vi.fn(() => ({
-          mutateAsync: vi.fn(),
-          isPending: false,
-        })),
-      },
-      deleteAnnotation: {
-        useMutation: vi.fn(() => ({
-          mutateAsync: vi.fn(),
-          isPending: false,
-        })),
-      },
-      deleteAnnotationsBulk: {
-        useMutation: vi.fn(() => ({
-          mutateAsync: vi.fn(),
-          isPending: false,
-        })),
-      },
-    },
-  },
+// useExperimentData — pragmatic mock (heavy: tsr query + tanstack-table column creation + cell formatting)
+const mockUseExperimentData = vi.fn();
+vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
+  useExperimentData: (...args: unknown[]): unknown => mockUseExperimentData(...args),
 }));
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (k: string) => k,
-  }),
-}));
-
-// Mock BulkActionsBar
 vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
-  BulkActionsBar: () => <div data-testid="bulk-actions-bar">BulkActionsBar</div>,
+  BulkActionsBar: () => <div>BulkActionsBar</div>,
 }));
-
-// Mock AddAnnotationDialog
 vi.mock("~/components/experiment-data/annotations/add-annotation-dialog", () => ({
-  AddAnnotationDialog: () => <div data-testid="add-annotation-dialog">AddAnnotationDialog</div>,
+  AddAnnotationDialog: () => null,
 }));
-
-// Mock DeleteAnnotationsDialog
 vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", () => ({
-  DeleteAnnotationsDialog: () => (
-    <div data-testid="delete-annotations-dialog">DeleteAnnotationsDialog</div>
-  ),
+  DeleteAnnotationsDialog: () => null,
 }));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <button onClick={onClick} className={className} {...props}>
-      {children}
-    </button>
-  ),
-  Checkbox: ({
-    checked,
-    onCheckedChange,
-    "aria-label": ariaLabel,
-  }: {
-    checked?: boolean | "indeterminate";
-    onCheckedChange?: (checked: boolean) => void;
-    "aria-label"?: string;
-  }) => (
-    <input
-      type="checkbox"
-      checked={checked === true}
-      onChange={(e) => onCheckedChange?.(e.target.checked)}
-      aria-label={ariaLabel}
-      data-indeterminate={checked === "indeterminate"}
-    />
-  ),
-  Dialog: ({
-    children,
-    open,
-    onOpenChange: _onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (open ? <div data-testid="dialog">{children}</div> : null),
-  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className} data-testid="dialog-content">
-      {children}
-    </div>
-  ),
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-description">{children}</div>
-  ),
-  DialogFooter: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-footer">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-title">{children}</div>
-  ),
-  Label: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
-  Pagination: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  PaginationContent: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <div className={className}>{children}</div>,
-  PaginationItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PaginationNext: ({
-    children,
-    onClick,
-    className,
-    title,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    title?: string;
-  }) => (
-    <button onClick={onClick} className={className} title={title} {...props}>
-      {children ?? "Next"}
-    </button>
-  ),
-  PaginationPrevious: ({
-    children,
-    onClick,
-    className,
-    title,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    title?: string;
-  }) => (
-    <button onClick={onClick} className={className} title={title} {...props}>
-      {children ?? "Previous"}
-    </button>
-  ),
-  Select: ({
-    children,
-    onValueChange,
-    value,
-  }: {
-    children: React.ReactNode;
-    onValueChange?: (value: string) => void;
-    value?: string;
-  }) => (
-    <select
-      data-testid="page-size-select"
-      onChange={(e) => onValueChange?.(e.target.value)}
-      value={value}
-    >
-      {children}
-    </select>
-  ),
-  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
-    <option value={value}>{children}</option>
-  ),
-  SelectTrigger: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  SelectValue: () => <span>Select value</span>,
-  Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
-  TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  TableCell: ({ children, ...props }: { children: React.ReactNode; colSpan?: number }) => (
-    <td {...props}>{children}</td>
-  ),
-  TableHead: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <th className={className}>{children}</th>
-  ),
-  TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
-  TableRow: ({ children, ...props }: { children: React.ReactNode }) => (
-    <tr {...props}>{children}</tr>
-  ),
-  Skeleton: ({ className }: { className?: string }) => (
-    <div data-testid="skeleton" className={className} />
-  ),
-  Form: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
-    <div {...props}>{children}</div>
-  ),
-  FormField: ({
-    render,
-  }: {
-    render: (field: {
-      field: { value: string; onChange: (value: string) => void };
-    }) => React.ReactNode;
-  }) => {
-    const field = { value: "csv", onChange: vi.fn() };
-    return <>{render({ field })}</>;
-  },
-  FormItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  FormLabel: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <label className={className}>{children}</label>
-  ),
-  FormControl: ({ children }: { children: React.ReactNode }) => {
-    return <>{children}</>;
-  },
-  FormMessage: () => <div />,
-}));
-
-// Mock DataExportModal
 vi.mock("./data-export-modal/data-export-modal", () => ({
-  DataExportModal: ({
-    open,
-    onOpenChange,
-    experimentId,
-    tableName,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    experimentId: string;
-    tableName: string;
-  }) =>
-    open ? (
-      <div data-testid="data-export-modal">
-        <div>
-          Download Modal for {tableName} - {experimentId}
-        </div>
-        <button onClick={() => onOpenChange(false)}>Close</button>
-      </div>
-    ) : null,
+  DataExportModal: () => null,
+}));
+vi.mock("./table-chart/experiment-data-table-chart", () => ({
+  ExperimentDataTableChart: () => <div>Chart</div>,
 }));
 
-// Mock cn utility
-vi.mock("@repo/ui/lib/utils", () => ({
-  cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
-}));
-
-// Mock experiment data utils
 vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
-  ExperimentDataRows: ({ rows, columnCount }: { rows: unknown[]; columnCount: number }) => {
-    if (rows.length === 0) {
-      return (
-        <tr data-testid="experiment-data-rows">
-          <td colSpan={columnCount}>No results found</td>
-        </tr>
-      );
-    }
-
-    return (
-      <tr data-testid="experiment-data-rows">
-        <td colSpan={columnCount}>{`${rows.length} rows`}</td>
-      </tr>
-    );
-  },
-  ExperimentTableHeader: ({ headerGroups: _ }: { headerGroups: unknown[] }) => (
-    <thead data-testid="experiment-table-header">
+  ExperimentTableHeader: ({ headerGroups }: { headerGroups: unknown[] }) => (
+    <thead>
       <tr>
-        <th>Mocked Header</th>
+        <th>Header ({headerGroups.length} groups)</th>
       </tr>
     </thead>
   ),
-  formatValue: (value: unknown, type: string) => {
-    if (type === "DOUBLE" || type === "INT") {
-      return <div className="text-right">{value as number}</div>;
-    }
-    return value as string;
-  },
-  LoadingRows: ({ rowCount, columnCount }: { rowCount: number; columnCount: number }) => (
-    <tr data-testid="loading-rows">
-      <td colSpan={columnCount}>Loading {rowCount} rows...</td>
+  ExperimentDataRows: ({ rows }: { rows: unknown[] }) => (
+    <tr>
+      <td>{rows.length} data rows</td>
     </tr>
   ),
-}));
-
-// Mock chart components
-vi.mock("./experiment-data-table-chart-cell", () => ({
-  ExperimentDataTableChartCell: ({
-    data,
-    columnName,
-    onHover,
-    onLeave,
-    onClick,
-  }: {
-    data: number[] | string;
-    columnName: string;
-    onHover?: (data: number[], columnName: string) => void;
-    onLeave?: () => void;
-    onClick?: (data: number[], columnName: string) => void;
-  }) => (
-    <div
-      data-testid="chart-cell"
-      data-column={columnName}
-      onMouseEnter={() => {
-        if (onHover) {
-          onHover([1, 2, 3], columnName);
-        }
-      }}
-      onMouseLeave={() => {
-        if (onLeave) {
-          onLeave();
-        }
-      }}
-      onClick={() => {
-        if (onClick) {
-          onClick([1, 2, 3], columnName);
-        }
-      }}
-    >
-      Chart for {columnName}: {JSON.stringify(data)}
-    </div>
+  LoadingRows: () => (
+    <tr>
+      <td>Loading rows...</td>
+    </tr>
   ),
+  formatValue: (v: unknown) => v,
 }));
 
-vi.mock("./table-chart/experiment-data-table-chart", () => ({
-  ExperimentDataTableChart: ({
-    data,
-    columnName,
-    visible,
-    isClicked,
-    onClose,
-  }: {
-    data: number[];
-    columnName: string;
-    visible: boolean;
-    isClicked?: boolean;
-    onClose?: () => void;
-  }) =>
-    visible ? (
-      <div data-testid="large-chart" data-column={columnName} data-clicked={isClicked}>
-        Large chart for {columnName}: {JSON.stringify(data)}
-        {isClicked && onClose && (
-          <button onClick={onClose} data-testid="close-chart">
-            Close
-          </button>
-        )}
-      </div>
-    ) : null,
-}));
+const mockColumns: ColumnDef<Record<string, unknown>>[] = [
+  { id: "name", accessorKey: "name", header: "Name" },
+  { id: "value", accessorKey: "value", header: "Value" },
+];
 
-const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
+const mockTableMetadata = {
+  columns: mockColumns,
+  rawColumns: [
+    { name: "name", type_name: "STRING" },
+    { name: "value", type_name: "INT" },
+  ],
+  name: "test_table",
+  totalPages: 5,
+  totalRows: 50,
+};
+
+const mockTableRows = [
+  { id: "1", name: "Row 1", value: 10 },
+  { id: "2", name: "Row 2", value: 20 },
+];
+
+function setupHook(overrides: Record<string, unknown> = {}) {
+  mockUseExperimentData.mockReturnValue({
+    tableMetadata: mockTableMetadata,
+    tableRows: mockTableRows,
+    isLoading: false,
+    error: null,
+    ...overrides,
+  });
+}
+
+const defaultProps = {
+  experimentId: "exp-1",
+  tableName: "test_table",
+  displayName: "Test Table",
+  pageSize: 10,
+  defaultSortColumn: "timestamp",
+};
 
 describe("ExperimentDataTable", () => {
-  let queryClient: QueryClient;
-
-  const createWrapper = () => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
-
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-
-  const mockTableData = {
-    columns: [
-      { name: "id", type_name: "INT", type_text: "Integer" },
-      { name: "name", type_name: "STRING", type_text: "String" },
-    ],
-    rows: [
-      { id: "1", name: "Test 1" },
-      { id: "2", name: "Test 2" },
-    ],
-    totalRows: 100,
-    truncated: false,
-  };
-
-  const mockResponse = {
-    body: [
-      {
-        name: "test_table",
-        data: mockTableData,
-        totalPages: 10,
-        totalRows: 100,
-      },
-    ],
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Add event listener mocks
-    vi.spyOn(window, "addEventListener").mockImplementation(() => {
-      // Mock implementation
-    });
-    vi.spyOn(window, "removeEventListener").mockImplementation(() => {
-      // Mock implementation
-    });
+  it("shows loading skeletons when no metadata exists yet", () => {
+    setupHook({ isLoading: true, tableMetadata: undefined, tableRows: undefined });
+    render(<ExperimentDataTable {...defaultProps} />);
+    // Skeletons render; display name is NOT in the skeleton view
+    expect(screen.queryByText("Test Table")).not.toBeInTheDocument();
   });
 
-  it("should render loading state initially", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    // Should render multiple skeleton components
-    const skeletons = screen.getAllByTestId("skeleton");
-    expect(skeletons.length).toBeGreaterThan(0);
-  });
-
-  it("should render error state", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("API Error"),
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
-    );
-
+  it("shows error message", () => {
+    setupHook({ error: new Error("fail"), tableRows: undefined, tableMetadata: undefined });
+    render(<ExperimentDataTable {...defaultProps} />);
     expect(screen.getByText("experimentDataTable.error")).toBeInTheDocument();
   });
 
-  it("should render no data state", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
-    );
-
+  it("shows no-data message when not loading and no rows", () => {
+    setupHook({ tableRows: undefined, tableMetadata: undefined });
+    render(<ExperimentDataTable {...defaultProps} />);
     expect(screen.getByText("experimentDataTable.noData")).toBeInTheDocument();
   });
 
-  it("should render table with data", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockResponse,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table Display Name"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.getByText("Test Table Display Name")).toBeInTheDocument();
-    expect(screen.getByText("experimentDataTable.totalRows: 100")).toBeInTheDocument();
-    expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-    expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
+  it("renders table with display name, total rows, and data rows", () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} />);
+    expect(screen.getByText("Test Table")).toBeInTheDocument();
+    expect(screen.getByText(/experimentDataTable.totalRows.*50/)).toBeInTheDocument();
+    expect(screen.getByText("2 data rows")).toBeInTheDocument();
   });
 
-  it("should handle page size change", async () => {
+  it("changes page size via select and resets to page 1", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} />);
+
     const user = userEvent.setup();
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockResponse,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "20" }));
 
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    const pageSizeSelect = screen.getByTestId("page-size-select");
-    await user.selectOptions(pageSizeSelect, "20");
-
-    // Should call useQuery with new page size
-    expect(mockUseQuery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        queryData: expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          query: expect.objectContaining({
-            pageSize: 20,
-            page: 1, // Should reset to page 1
-          }),
-        }),
-      }),
+    expect(mockUseExperimentData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pageSize: 20, page: 1 }),
     );
   });
 
-  it("should handle pagination navigation", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockResponse,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+  it("navigates pages via next/previous", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} />);
 
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
+    const user = userEvent.setup();
+    await user.click(screen.getByTitle("experimentDataTable.next"));
+    expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
+
+    await user.click(screen.getByTitle("experimentDataTable.previous"));
+    expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
+  });
+
+  it("disables pagination when only one page", () => {
+    setupHook({ tableMetadata: { ...mockTableMetadata, totalPages: 1, totalRows: 5 } });
+    render(<ExperimentDataTable {...defaultProps} />);
+
+    expect(screen.getByTitle("experimentDataTable.previous")).toHaveAttribute(
+      "aria-disabled",
+      "true",
     );
-
-    // Test next page button
-    const nextButton = screen.getByText("Next");
-    fireEvent.click(nextButton);
-
-    expect(mockUseQuery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        queryData: expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          query: expect.objectContaining({
-            page: 2,
-          }),
-        }),
-      }),
-    );
+    expect(screen.getByTitle("experimentDataTable.next")).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("should disable navigation buttons appropriately", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: {
-        body: [
-          {
-            name: "test_table",
-            data: mockTableData,
-            totalPages: 1, // Only one page
-            totalRows: 10,
-          },
-        ],
-      },
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+  it("navigates pages via Arrow keys", async () => {
+    setupHook();
+    const user = userEvent.setup();
+    render(<ExperimentDataTable {...defaultProps} />);
 
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
-    );
+    await user.keyboard("{ArrowRight}");
+    expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
 
-    const previousButton = screen.getByText("Previous");
-    const nextButton = screen.getByText("Next");
-
-    // Both buttons should be disabled when there's only one page and we're on page 1
-    expect(previousButton).toHaveClass("pointer-events-none");
-    expect(nextButton).toHaveClass("pointer-events-none");
+    await user.keyboard("{ArrowLeft}");
+    expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
   });
 
-  it("should show loading state while maintaining metadata", () => {
-    let isLoading = false;
-    const mockUseQuery = vi.fn().mockImplementation(() => ({
-      data: isLoading ? undefined : mockResponse,
-      isLoading,
-      error: null,
-    }));
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+  it("shows loading rows while data is refreshing (metadata persisted)", async () => {
+    setupHook({ isLoading: true, tableRows: undefined });
+    render(<ExperimentDataTable {...defaultProps} />);
 
-    // First render with data
-    const { rerender } = render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-
-    // Then simulate loading state (e.g., when changing pages)
-    isLoading = true;
-    rerender(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={10}
-      />,
-    );
-
-    // Should show loading rows but maintain table structure
-    expect(screen.getByTestId("loading-rows")).toBeInTheDocument();
-    expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-  });
-
-  it("should call useQuery with correct parameters", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockResponse,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-    render(
-      <ExperimentDataTable
-        defaultSortColumn="timestamp"
-        experimentId="experiment-123"
-        tableName="test_table"
-        displayName="Test Table"
-        pageSize={20}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(mockUseQuery).toHaveBeenCalledWith({
-      enabled: true,
-      queryData: {
-        params: { id: "experiment-123" },
-        query: {
-          tableName: "test_table",
-          page: 1,
-          pageSize: 20,
-          orderBy: "timestamp",
-          orderDirection: "DESC",
-        },
-      },
-      queryKey: ["experiment", "experiment-123", 1, 20, "test_table", "timestamp", "DESC"],
-      staleTime: 120000,
+    // After useEffect persists metadata, component renders LoadingRows instead of skeletons
+    await waitFor(() => {
+      expect(screen.getByText("Loading rows...")).toBeInTheDocument();
     });
   });
 
-  describe("Sorting functionality", () => {
-    it("should handle column sorting direction toggle", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Initial query should use DESC direction
-      expect(mockUseQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          queryData: expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            query: expect.objectContaining({
-              orderBy: "timestamp",
-              orderDirection: "DESC",
-            }),
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("Chart functionality", () => {
-    const mockTableDataWithCharts = {
-      columns: [
-        { name: "id", type_name: "INT", type_text: "Integer" },
-        { name: "chart_data", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
-        { name: "name", type_name: "STRING", type_text: "String" },
-      ],
-      rows: [
-        { id: "1", chart_data: "[1.1, 2.2, 3.3]", name: "Test 1" },
-        { id: "2", chart_data: "[4.4, 5.5, 6.6]", name: "Test 2" },
-      ],
-      totalRows: 100,
-      truncated: false,
-    };
-
-    const mockResponseWithCharts = {
-      body: [
-        {
-          name: "test_table",
-          data: mockTableDataWithCharts,
-          totalPages: 10,
-          totalRows: 100,
-        },
-      ],
-    };
-
-    it("should render table with chart data correctly", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponseWithCharts,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Should render table with chart data
-      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-      expect(screen.getByText("2 rows")).toBeInTheDocument();
-    });
-
-    it("should handle chart state management correctly", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponseWithCharts,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      const { rerender } = render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Verify the table renders correctly
-      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-
-      // Verify no chart is shown initially
-      expect(screen.queryByTestId("large-chart")).not.toBeInTheDocument();
-
-      // Re-render to ensure state management is working
-      rerender(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-      );
-
-      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-    });
-
-    it("should handle empty chart data gracefully", () => {
-      const emptyChartData = {
-        columns: [
-          { name: "id", type_name: "INT", type_text: "Integer" },
-          { name: "empty_chart", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
-        ],
-        rows: [
-          { id: "1", empty_chart: "[]" },
-          { id: "2", empty_chart: "" },
-        ],
-        totalRows: 2,
-        truncated: false,
-      };
-
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: {
-          body: [
-            {
-              tableName: "test_table",
-              totalPages: 1,
-              totalRows: 2,
-              data: emptyChartData,
-            },
-          ],
-        },
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Should render table even with empty chart data
-      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-      expect(screen.getByText("2 rows")).toBeInTheDocument();
-    });
-
-    it("should verify chart components are properly integrated", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponseWithCharts,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Verify chart components are properly mocked and accessible
-      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-
-      // The detailed chart functionality is validated through the individual component tests
-      // This integration test verifies the table renders and state management works
-      expect(screen.queryByTestId("large-chart")).not.toBeInTheDocument();
-
-      // Verify the data contains chart columns
-      expect(screen.getByText("2 rows")).toBeInTheDocument();
-    });
-  });
-
-  describe("Keyboard navigation", () => {
-    it("should set up keyboard event listeners", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      const addEventListenerSpy = vi.spyOn(window, "addEventListener");
-      const removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
-
-      const { unmount } = render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Should have added keydown listener
-      expect(addEventListenerSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
-
-      // Cleanup
-      unmount();
-
-      // Should have removed keydown listener
-      expect(removeEventListenerSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
-    });
-
-    it("should handle ArrowRight key press when next page is available", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Verify Next button is enabled (indicating we can go to next page)
-      const nextButton = screen.getByText("Next");
-      expect(nextButton).not.toHaveClass("pointer-events-none");
-
-      // Simulate ArrowRight key press
-      fireEvent.keyDown(window, { key: "ArrowRight" });
-
-      // The component should handle the key press
-      // Actual navigation is tested through button click tests
-      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-    });
-
-    it("should handle ArrowLeft key press when previous page is available", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // First navigate to page 2
-      const nextButton = screen.getByText("Next");
-      fireEvent.click(nextButton);
-
-      // Now Previous button should be enabled
-      const previousButton = screen.getByText("Previous");
-      expect(previousButton).not.toHaveClass("pointer-events-none");
-
-      // Simulate ArrowLeft key press
-      fireEvent.keyDown(window, { key: "ArrowLeft" });
-
-      // The component should handle the key press
-      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-    });
-
-    it("should ignore ArrowLeft when on first page", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      const initialCallCount = mockUseQuery.mock.calls.length;
-
-      // Simulate ArrowLeft key press when on first page
-      fireEvent.keyDown(window, { key: "ArrowLeft" });
-
-      // Should not trigger additional queries
-      expect(mockUseQuery.mock.calls.length).toBe(initialCallCount);
-    });
-
-    it("should ignore ArrowRight when on last page", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: {
-          body: [
-            {
-              name: "test_table",
-              data: mockTableData,
-              totalPages: 1, // Only one page
-              totalRows: 10,
-            },
-          ],
-        },
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      const initialCallCount = mockUseQuery.mock.calls.length;
-
-      // Simulate ArrowRight key press when on last page
-      fireEvent.keyDown(window, { key: "ArrowRight" });
-
-      // Should not trigger additional queries
-      expect(mockUseQuery.mock.calls.length).toBe(initialCallCount);
-    });
-
-    it("should ignore other key presses", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      const initialCallCount = mockUseQuery.mock.calls.length;
-
-      // Simulate various other key presses
-      fireEvent.keyDown(window, { key: "Enter" });
-      fireEvent.keyDown(window, { key: "Escape" });
-      fireEvent.keyDown(window, { key: "a" });
-
-      // Should not trigger additional queries
-      expect(mockUseQuery.mock.calls.length).toBe(initialCallCount);
-    });
-  });
-
-  describe("Chart display toggle", () => {
-    it("should show chart when chartDisplay state is set", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Initially no chart should be visible
-      expect(screen.queryByTestId("large-chart")).not.toBeInTheDocument();
-    });
-
-    it("should close pinned chart when close button is clicked", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Chart display functionality is tested through integration
-      // The component manages chart state internally
-      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-    });
-  });
-
-  describe("Row selection", () => {
-    it("should clear row selection when changing pages", async () => {
-      const user = userEvent.setup();
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Change page size, which should clear selection
-      const pageSizeSelect = screen.getByTestId("page-size-select");
-      await user.selectOptions(pageSizeSelect, "20");
-
-      // Selection should be cleared (verified through component behavior)
-      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-    });
-  });
-
-  describe("Sorting", () => {
-    it("should handle sort direction toggle", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Verify table is rendered with initial sort
-      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
-
-      // Initial query should be called with default sort (timestamp DESC)
-      expect(mockUseQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          queryData: expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            query: expect.objectContaining({
-              orderBy: "timestamp",
-              orderDirection: "DESC",
-            }),
-          }),
-        }),
-      );
-    });
-
-    it("should update query when sort parameters change", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      const { rerender } = render(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-        { wrapper: createWrapper() },
-      );
-
-      // Re-render to simulate state update
-      rerender(
-        <ExperimentDataTable
-          defaultSortColumn="timestamp"
-          experimentId="experiment-123"
-          tableName="test_table"
-          displayName="Test Table"
-          pageSize={10}
-        />,
-      );
-
-      // Component should handle sort state internally
-      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
-    });
+  it("displays page info text", () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} />);
+    expect(
+      screen.getByText(/experimentDataTable.page.*1.*experimentDataTable.pageOf.*5/),
+    ).toBeInTheDocument();
   });
 });

@@ -28,19 +28,19 @@ annotation_schema = StructType([
 ])
 
 
-def add_annotation_column(df, table_name: str, catalog_name: str, experiment_schema: str, spark):
+def add_annotation_column(df, annotations_df):
     """
-    Add annotation data as an array of structs to DataFrame by joining with the annotations table.
+    Add annotation data as an array of structs to DataFrame by joining with annotations.
     If the DataFrame already has an 'annotations' column from upstream (e.g., from the payload),
     this function will merge those annotations with annotations from the database.
     
     Args:
         df: PySpark DataFrame with 'id' column (used as row_id for joining)
             May optionally have an existing 'annotations' column to merge with
-        table_name: Name of the table being annotated (used to filter annotations)
-        catalog_name: Databricks catalog name
-        experiment_schema: Experiment schema name
-        spark: SparkSession instance
+        annotations_df: PySpark DataFrame from the annotations DLT source table
+            (passed via dlt.read() for incremental refresh support).
+            Expected columns: experiment_id, row_id, id, type, content_text,
+            flag_type, user_id, user_name, created_at, updated_at
         
     Returns:
         DataFrame with merged annotation column:
@@ -48,7 +48,7 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
             id: string,
             rowId: string,
             type: string,
-            content: struct<text: string, flagType: string, reason: string>,
+            content: struct<text: string, flagType: string>,
             createdBy: string,
             createdByName: string,
             createdAt: timestamp,
@@ -60,18 +60,13 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
         The content_text column is reused for both comment text and flag reason.
         
     Note:
-        If the annotations table doesn't exist or an error occurs,
-        the function will preserve existing annotations or add an empty array column.
+        If an error occurs, the function will preserve existing annotations
+        or add an empty array column.
     """
     try:
-        annotation_table_name = f"{catalog_name}.centrum.experiment_annotations"
-        print(f"Reading annotations from: {annotation_table_name}")
-        
-        # Read annotations table with all fields
         # Build content struct from individual columns
-        # Note: content_text is reused for both comment text and flag reason
-        annotations_df = (
-            spark.read.table(annotation_table_name)
+        annotations_structured = (
+            annotations_df
             .select(
                 F.col("experiment_id"),
                 F.col("row_id"),
@@ -91,20 +86,12 @@ def add_annotation_column(df, table_name: str, catalog_name: str, experiment_sch
             )
         )
         
-        annotation_count = annotations_df.count()
-        print(f"Found {annotation_count} annotations total")
-        
-        
         # Group by experiment_id and row_id and collect all annotations into an array
-        # Use a different alias to avoid ambiguous reference during join
         annotations_grouped = (
-            annotations_df
+            annotations_structured
             .groupBy("experiment_id", "row_id")
-            .agg(F.collect_list("annotation").alias("db_annotations"))
+            .agg(F.sort_array(F.collect_list("annotation")).alias("db_annotations"))
         )
-        
-        grouped_count = annotations_grouped.count()
-        print(f"Grouped into {grouped_count} unique row_ids")
         
         # Check if DataFrame already has an annotations column from upstream
         has_existing_annotations = "annotations" in df.columns

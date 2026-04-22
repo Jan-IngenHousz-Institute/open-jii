@@ -1,119 +1,55 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { auth } from "~/app/actions/auth";
 
-import AuthErrorPage from "./page";
-
-globalThis.React = React;
-
-// --- Mocks ---
-const mockAuth = vi.fn();
-vi.mock("~/app/actions/auth", () => ({
-  auth: (): unknown => mockAuth(),
-}));
-
-vi.mock("next/navigation", () => ({
-  notFound: vi.fn(),
-}));
+import LoginErrorPage from "./page";
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: ({ locale, session }: { locale: string; session: unknown }) => (
-    <div data-testid="unified-navbar">
-      Navbar - {locale} - {session ? "with session" : "no session"}
-    </div>
-  ),
+  UnifiedNavbar: () => <nav aria-label="main navigation" />,
 }));
-
 vi.mock("~/components/auth/auth-hero-section", () => ({
-  AuthHeroSection: ({ locale }: { locale: string }) => (
-    <div data-testid="auth-hero-section">Hero {locale}</div>
-  ),
+  AuthHeroSection: () => <section aria-label="auth hero" />,
 }));
-
 vi.mock("~/components/auth/error-content", () => ({
-  ErrorContent: ({ locale }: { locale: string; error?: string; errorDescription?: string }) => (
-    <div data-testid="error-content">Error content - {locale}</div>
+  ErrorContent: ({ error }: { error?: string }) => (
+    <section aria-label="error content">{error}</section>
   ),
 }));
 
-// --- Tests ---
-describe("AuthErrorPage", () => {
-  const locale = "en-US";
-  const defaultProps = {
-    params: Promise.resolve({ locale }),
-    searchParams: Promise.resolve({ error: "test_error" }),
-  };
-
+describe("LoginErrorPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
   });
 
-  it("renders the page with all components", async () => {
-    render(await AuthErrorPage(defaultProps));
+  const renderPage = async (searchParams: Record<string, string> = { error: "OAuthError" }) => {
+    const ui = await LoginErrorPage({
+      params: Promise.resolve({ locale: "en-US" }),
+      searchParams: Promise.resolve(searchParams),
+    });
+    return render(ui);
+  };
 
-    expect(screen.getByTestId("unified-navbar")).toBeInTheDocument();
-    expect(screen.getByTestId("auth-hero-section")).toBeInTheDocument();
-    expect(screen.getByTestId("error-content")).toBeInTheDocument();
-  });
-
-  it("passes the correct locale to components", async () => {
-    render(await AuthErrorPage(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("en-US");
-    expect(screen.getByTestId("auth-hero-section")).toHaveTextContent("en-US");
-    expect(screen.getByTestId("error-content")).toHaveTextContent("en-US");
-  });
-
-  it("renders without session", async () => {
-    mockAuth.mockResolvedValue(null);
-
-    render(await AuthErrorPage(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("no session");
-  });
-
-  it("renders with session", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "123", name: "Test User" } });
-
-    render(await AuthErrorPage(defaultProps));
-
-    expect(screen.getByTestId("unified-navbar")).toHaveTextContent("with session");
-  });
-
-  it("renders background image using Next.js Image component", async () => {
-    const mockMathRandom = vi.spyOn(Math, "random").mockReturnValue(0.5);
-
-    render(await AuthErrorPage(defaultProps));
-
-    const image = screen.getByAltText("Error background");
-    expect(image).toBeInTheDocument();
-
-    mockMathRandom.mockRestore();
-  });
-
-  it("calls notFound when no error query parameter is provided", async () => {
-    const propsWithoutError = {
-      params: Promise.resolve({ locale }),
+  it("calls notFound when no error param is present", async () => {
+    await LoginErrorPage({
+      params: Promise.resolve({ locale: "en-US" }),
       searchParams: Promise.resolve({}),
-    };
-
-    await AuthErrorPage(propsWithoutError);
-
+    });
     expect(notFound).toHaveBeenCalled();
   });
 
-  it("renders when error parameter is empty string", async () => {
-    const propsWithEmptyError = {
-      params: Promise.resolve({ locale }),
-      searchParams: Promise.resolve({ error: "" }),
-    };
+  it("renders error content when error param is present", async () => {
+    await renderPage({ error: "AccessDenied" });
+    expect(screen.getByRole("region", { name: /error content/i })).toHaveTextContent(
+      "AccessDenied",
+    );
+    expect(screen.getByRole("navigation", { name: /main/i })).toBeInTheDocument();
+    expect(screen.getByAltText(/error background/i)).toBeInTheDocument();
+  });
 
-    render(await AuthErrorPage(propsWithEmptyError));
-
-    expect(screen.getByTestId("error-content")).toBeInTheDocument();
-    expect(notFound).not.toHaveBeenCalled();
+  it("renders when error param is an empty string", async () => {
+    await renderPage({ error: "" });
+    expect(screen.getByRole("region", { name: /error content/i })).toBeInTheDocument();
   });
 });

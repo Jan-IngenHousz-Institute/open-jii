@@ -8,21 +8,55 @@ export interface IMultispeqCommandExecutor {
 }
 
 export class MultispeqCommandExecutor implements IMultispeqCommandExecutor {
-  constructor(private readonly emitter: Emitter<MultispeqStreamEvents>) {}
+  private currentResolve?: (data: object | string) => void;
+  private currentReject?: (reason: unknown) => void;
+  private readonly handler = (payload: { data: object | string; checksum: string }) => {
+    const resolve = this.currentResolve;
+    this.currentResolve = undefined;
+    this.currentReject = undefined;
+    resolve?.(payload.data);
+  };
 
-  async execute(command: string | object) {
-    await this.emitter.emit("sendCommandToDevice", command);
+  constructor(private readonly emitter: Emitter<MultispeqStreamEvents>) {
+    // Single permanent listener: prevents the emitter's history buffer from
+    // trapping replies that arrive between command/response pairs and avoids
+    // multiple in-flight execute() calls each registering their own handler
+    // (which would resolve from the same payload).
+    this.emitter.on("receivedReplyFromDevice", this.handler);
+  }
 
-    return new Promise<object | string>((resolve) => {
-      const handler = (payload: { data: object | string; checksum: string }) => {
-        resolve(payload.data);
-        this.emitter.off("receivedReplyFromDevice", handler);
-      };
-      this.emitter.on("receivedReplyFromDevice", handler);
+  execute(command: string | object): Promise<object | string> {
+    // Preempt any in-flight execute() so a follow-up call (e.g. cancel) does
+    // not race against a stale handler. The previous caller's awaited promise
+    // rejects; the new call becomes the sole owner of the next reply.
+    if (this.currentReject) {
+      const reject = this.currentReject;
+      this.currentResolve = undefined;
+      this.currentReject = undefined;
+      reject(new Error("Superseded by new execute call"));
+    }
+
+    return new Promise<object | string>((resolve, reject) => {
+      this.currentResolve = resolve;
+      this.currentReject = reject;
+      this.emitter.emit("sendCommandToDevice", command).catch((err: unknown) => {
+        if (this.currentReject === reject) {
+          this.currentResolve = undefined;
+          this.currentReject = undefined;
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      });
     });
   }
 
   destroy() {
+    this.emitter.off("receivedReplyFromDevice", this.handler);
+    if (this.currentReject) {
+      const reject = this.currentReject;
+      this.currentResolve = undefined;
+      this.currentReject = undefined;
+      reject(new Error("Executor destroyed"));
+    }
     return this.emitter.emit("destroy");
   }
 }

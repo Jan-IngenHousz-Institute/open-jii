@@ -31,7 +31,6 @@ jobs:
       github.event_name == 'workflow_call' ||
       startsWith(github.event.release.tag_name, 'mobile-v')
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -61,10 +60,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
       - name: Setup Expo CLI
         uses: expo/expo-github-action@v8

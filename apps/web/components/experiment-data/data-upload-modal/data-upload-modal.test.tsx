@@ -1,31 +1,9 @@
-import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
-import React from "react";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataUploadModal } from "./data-upload-modal";
 
-globalThis.React = React;
-
 // Mock the step components
-vi.mock("./steps/sensor-selection-step", () => ({
-  SensorSelectionStep: ({ onSensorSelect }: { onSensorSelect: (id: string) => void }) => (
-    <div data-testid="sensor-selection-step">
-      <button onClick={() => onSensorSelect("ambyte")} data-testid="select-ambyte">
-        Select Ambyte
-      </button>
-    </div>
-  ),
-  SENSOR_FAMILIES: [
-    {
-      id: "ambyte",
-      label: "Ambyte",
-      disabled: false,
-      description: "uploadModal.sensorTypes.ambyte.description",
-    },
-  ],
-}));
-
 vi.mock("./steps/file-upload-step", () => ({
   FileUploadStep: ({
     onBack,
@@ -55,27 +33,6 @@ vi.mock("./steps/success-step", () => ({
   ),
 }));
 
-// Mock translation
-vi.mock("@repo/i18n/client", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-content">{children}</div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
 describe("DataUploadModal", () => {
   const mockOnOpenChange = vi.fn();
 
@@ -83,78 +40,39 @@ describe("DataUploadModal", () => {
     vi.clearAllMocks();
   });
 
-  const renderModal = (open = true) => {
-    render(
+  function renderModal(open = true) {
+    return render(
       <DataUploadModal
         experimentId="test-experiment"
         open={open}
         onOpenChange={mockOnOpenChange}
       />,
     );
-  };
+  }
 
   it("renders modal when open", () => {
     renderModal();
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-    expect(screen.getByText("uploadModal.title")).toBeInTheDocument();
-    expect(screen.getByText("uploadModal.description")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
+    expect(screen.getByText("uploadModal.fileUpload.description")).toBeInTheDocument();
   });
 
   it("does not render modal when closed", () => {
     renderModal(false);
-    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("starts with sensor selection step", () => {
+  it("starts with file upload step", () => {
     renderModal();
-    expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
-    expect(screen.queryByTestId("file-upload-step")).not.toBeInTheDocument();
+    expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
     expect(screen.queryByTestId("success-step")).not.toBeInTheDocument();
   });
 
-  it("transitions to file upload step when sensor is selected", async () => {
-    renderModal();
-
-    const selectAmbyteButton = screen.getByTestId("select-ambyte");
-    fireEvent.click(selectAmbyteButton);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
-      expect(screen.queryByTestId("sensor-selection-step")).not.toBeInTheDocument();
-    });
-  });
-
-  it("goes back to sensor selection from file upload step", async () => {
-    renderModal();
-
-    // Go to file upload step
-    fireEvent.click(screen.getByTestId("select-ambyte"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
-    });
-
-    // Go back
-    fireEvent.click(screen.getByTestId("back-button"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
-      expect(screen.queryByTestId("file-upload-step")).not.toBeInTheDocument();
-    });
-  });
-
   it("transitions to success step when upload succeeds", async () => {
+    const user = userEvent.setup();
     renderModal();
 
-    // Go to file upload step
-    fireEvent.click(screen.getByTestId("select-ambyte"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
-    });
-
-    // Trigger upload success
-    fireEvent.click(screen.getByTestId("upload-success"));
+    await user.click(screen.getByTestId("upload-success"));
 
     await waitFor(() => {
       expect(screen.getByTestId("success-step")).toBeInTheDocument();
@@ -162,27 +80,44 @@ describe("DataUploadModal", () => {
     });
   });
 
-  it("closes modal from success step", async () => {
+  it("shows success header on success step", async () => {
+    const user = userEvent.setup();
     renderModal();
 
-    // Navigate to success step
-    fireEvent.click(screen.getByTestId("select-ambyte"));
+    await user.click(screen.getByTestId("upload-success"));
 
     await waitFor(() => {
-      fireEvent.click(screen.getByTestId("upload-success"));
+      expect(screen.getByText("uploadModal.success.title")).toBeInTheDocument();
+      expect(screen.getByText("uploadModal.success.description")).toBeInTheDocument();
     });
+  });
 
-    await waitFor(() => {
-      expect(screen.getByTestId("success-step")).toBeInTheDocument();
-    });
+  it("calls onOpenChange(false) when back is clicked", async () => {
+    const user = userEvent.setup();
+    renderModal();
 
-    // Close modal
-    fireEvent.click(screen.getByTestId("close-button"));
+    await user.click(screen.getByTestId("back-button"));
 
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("resets state when modal is closed", async () => {
+  it("closes modal from success step", async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.click(screen.getByTestId("upload-success"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("success-step")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("close-button"));
+
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("resets to file upload step when reopened", async () => {
+    const user = userEvent.setup();
     const { rerender } = render(
       <DataUploadModal
         experimentId="test-experiment"
@@ -191,50 +126,37 @@ describe("DataUploadModal", () => {
       />,
     );
 
-    // Go to file upload step
-    fireEvent.click(screen.getByTestId("select-ambyte"));
+    // Go to success step
+    await user.click(screen.getByTestId("upload-success"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
+      expect(screen.getByTestId("success-step")).toBeInTheDocument();
     });
 
     // Close modal
-    act(() => {
-      rerender(
-        <DataUploadModal
-          experimentId="test-experiment"
-          open={false}
-          onOpenChange={mockOnOpenChange}
-        />,
-      );
-    });
-
-    // Wait for reset timeout
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 350));
-    });
+    rerender(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={false}
+        onOpenChange={mockOnOpenChange}
+      />,
+    );
 
     // Reopen modal
-    act(() => {
-      rerender(
-        <DataUploadModal
-          experimentId="test-experiment"
-          open={true}
-          onOpenChange={mockOnOpenChange}
-        />,
-      );
-    });
+    rerender(
+      <DataUploadModal
+        experimentId="test-experiment"
+        open={true}
+        onOpenChange={mockOnOpenChange}
+      />,
+    );
 
-    // Should be back to sensor selection
-    expect(screen.getByTestId("sensor-selection-step")).toBeInTheDocument();
-    expect(screen.queryByTestId("file-upload-step")).not.toBeInTheDocument();
+    expect(screen.getByTestId("file-upload-step")).toBeInTheDocument();
+    expect(screen.queryByTestId("success-step")).not.toBeInTheDocument();
   });
 
   it("calls onOpenChange when dialog requests to close", () => {
     renderModal();
-
-    // The dialog component should be able to trigger onOpenChange
-    // This would be handled by the Dialog component internally
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

@@ -81,7 +81,7 @@ resource "aws_iam_role" "auth" {
 
 resource "aws_cognito_identity_pool_roles_attachment" "this" {
   identity_pool_id = aws_cognito_identity_pool.this.id
-  
+
   roles = {
     authenticated   = aws_iam_role.auth.arn
     unauthenticated = aws_iam_role.unauth.arn

@@ -1,78 +1,14 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import { createMacro, createProtocol } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, fireEvent, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { contract } from "@repo/api";
 
 import { NewProtocolForm } from "../new-protocol";
 
-globalThis.React = React;
-
-// Mock window.matchMedia (not available in jsdom)
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
-
-// Mock next/navigation
-const mockPush = vi.fn();
-const mockBack = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    back: mockBack,
-  }),
-}));
-
-// Mock hooks
-vi.mock("@/hooks/protocol/useProtocolCreate/useProtocolCreate", () => ({
-  useProtocolCreate: vi.fn(({ onSuccess }: { onSuccess: (id: string) => void }) => ({
-    mutate: vi.fn((_data) => {
-      onSuccess("new-protocol-id");
-    }),
-    isPending: false,
-  })),
-}));
-
-vi.mock("@/hooks/useLocale", () => ({
-  useLocale: () => "en",
-}));
-
-// Mock tsr (used by the details card for macro search)
-const mockMacroList = [
-  { id: "macro-1", name: "SPAD Macro", language: "python" },
-  { id: "macro-2", name: "Fluorescence Macro", language: "python" },
-];
-
-vi.mock("../../../lib/tsr", () => ({
-  tsr: {
-    macros: {
-      listMacros: {
-        useQuery: vi.fn(() => ({
-          data: { body: mockMacroList },
-          isLoading: false,
-          error: null,
-        })),
-      },
-    },
-  },
-}));
-
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
-}));
-
-vi.mock("@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro", () => ({
-  useAddCompatibleMacro: () => ({ mutateAsync: vi.fn() }),
 }));
 
 interface DropdownPropsCaptured {
@@ -94,14 +30,7 @@ vi.mock("../../macro-search-with-dropdown", () => ({
   },
 }));
 
-// Mock i18n
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Mock toast
+// Global mock only provides toast - this component also needs useBreakpoint/useIsMobile
 vi.mock("@repo/ui/hooks", () => ({
   toast: vi.fn(),
   useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
@@ -160,6 +89,17 @@ describe("NewProtocolForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lastDropdownProps = null;
+
+    server.mount(contract.macros.listMacros, {
+      body: [
+        createMacro({ id: "macro-1", name: "SPAD Macro", language: "python" }),
+        createMacro({ id: "macro-2", name: "Fluorescence Macro", language: "python" }),
+      ],
+    });
+    server.mount(contract.protocols.createProtocol, {
+      body: createProtocol({ id: "new-protocol-id", name: "Test Protocol" }),
+    });
+    server.mount(contract.protocols.addCompatibleMacros, { body: [] });
   });
 
   describe("Step 1 - Details", () => {
@@ -202,53 +142,70 @@ describe("NewProtocolForm", () => {
       expect(backButton).toBeDisabled();
     });
 
-    it("should pass available macros to the dropdown", () => {
+    it("should pass available macros to the dropdown", async () => {
       render(<NewProtocolForm />);
 
-      expect(lastDropdownProps).not.toBeNull();
-      const ids = lastDropdownProps?.availableMacros.map((m) => m.id);
-      expect(ids).toContain("macro-1");
-      expect(ids).toContain("macro-2");
+      await waitFor(() => {
+        expect(lastDropdownProps).not.toBeNull();
+        const ids = lastDropdownProps?.availableMacros.map((m) => m.id);
+        expect(ids).toContain("macro-1");
+        expect(ids).toContain("macro-2");
+      });
     });
 
-    it("should add a macro when onAddMacro is called", () => {
+    it("should add a macro when onAddMacro is called", async () => {
       render(<NewProtocolForm />);
+
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
+      });
 
       act(() => {
         lastDropdownProps?.onAddMacro("macro-1");
       });
 
-      expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("SPAD Macro")).toBeInTheDocument();
+      });
     });
 
-    it("should filter out already-selected macros from available list", () => {
+    it("should filter out already-selected macros from available list", async () => {
       render(<NewProtocolForm />);
+
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
+      });
 
       act(() => {
         lastDropdownProps?.onAddMacro("macro-1");
       });
 
-      expect(lastDropdownProps?.availableMacros.map((m) => m.id)).not.toContain("macro-1");
-      expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-2");
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).not.toContain("macro-1");
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-2");
+      });
     });
   });
 
   describe("Step 2 - Code & Test", () => {
     const goToStep2 = async () => {
+      const user = userEvent.setup();
       render(<NewProtocolForm />);
 
       // Fill in required name field
       const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      // fireEvent: controlled component (react-hook-form FormField) - userEvent.type fires per-character
       fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
       // Click next to go to step 2
       const nextButton = screen.getByRole("button", { name: /next/i });
-      await userEvent.click(nextButton);
+      await user.click(nextButton);
 
       // Wait for step 2 to render
       await waitFor(() => {
         expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
       });
+      return user;
     };
 
     it("should show code editor and IoT tester on step 2", async () => {
@@ -271,6 +228,7 @@ describe("NewProtocolForm", () => {
       const codeEditor = screen.getByTestId("code-editor");
       const newCode = JSON.stringify([{ averages: 2 }]);
 
+      // fireEvent: userEvent.type interprets curly braces as special keys
       fireEvent.change(codeEditor, { target: { value: newCode } });
 
       expect(codeEditor).toHaveValue(newCode);
@@ -284,10 +242,10 @@ describe("NewProtocolForm", () => {
     });
 
     it("should navigate back to step 1 when back is clicked", async () => {
-      await goToStep2();
+      const user = await goToStep2();
 
       const backButton = screen.getByRole("button", { name: /back/i });
-      await userEvent.click(backButton);
+      await user.click(backButton);
 
       await waitFor(() => {
         expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
@@ -297,15 +255,17 @@ describe("NewProtocolForm", () => {
 
   describe("Step 3 - Review", () => {
     const goToStep3 = async () => {
+      const user = userEvent.setup();
       render(<NewProtocolForm />);
 
       // Fill in required name field
       const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      // fireEvent: controlled component (react-hook-form FormField) - userEvent.type fires per-character
       fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
 
       // Step 1 → Step 2
       const nextButton1 = screen.getByRole("button", { name: /next/i });
-      await userEvent.click(nextButton1);
+      await user.click(nextButton1);
 
       await waitFor(() => {
         expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
@@ -313,11 +273,12 @@ describe("NewProtocolForm", () => {
 
       // Step 2 → Step 3
       const nextButton2 = screen.getByRole("button", { name: /next/i });
-      await userEvent.click(nextButton2);
+      await user.click(nextButton2);
 
       await waitFor(() => {
         expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
       });
+      return user;
     };
 
     it("should show review content on step 3", async () => {
@@ -349,13 +310,52 @@ describe("NewProtocolForm", () => {
     });
 
     it("should navigate back to step 2 when back is clicked", async () => {
-      await goToStep3();
+      const user = await goToStep3();
 
       const backButton = screen.getByRole("button", { name: /back/i });
-      await userEvent.click(backButton);
+      await user.click(backButton);
 
       await waitFor(() => {
         expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+      });
+    });
+
+    it("should link compatible macros after create then navigate", async () => {
+      const addMacrosSpy = server.mount(contract.protocols.addCompatibleMacros, { body: [] });
+      const user = userEvent.setup();
+      const { router } = render(<NewProtocolForm />);
+
+      await waitFor(() => {
+        expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
+      });
+
+      act(() => {
+        lastDropdownProps?.onAddMacro("macro-1");
+      });
+
+      const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
+
+      await user.click(screen.getByRole("button", { name: /next/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /next/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /finalizeSetup/i }));
+
+      await waitFor(() => {
+        expect(addMacrosSpy.body).toMatchObject({ macroIds: ["macro-1"] });
+      });
+
+      await waitFor(() => {
+        expect(router.push).toHaveBeenCalledWith("/en-US/platform/protocols/new-protocol-id");
       });
     });
   });
