@@ -1,0 +1,10 @@
+{
+  "name": "metrics-publisher-lambda",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.0.0",
+    "@aws-sdk/rds-signer": "^3.0.0",
+    "postgres": "^3.0.0"
+  }
+}

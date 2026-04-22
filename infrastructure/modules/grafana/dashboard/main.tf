@@ -5,6 +5,10 @@ terraform {
       version               = ">= 4.2.1"
       configuration_aliases = [grafana.amg]
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
   }
 }
 
@@ -14,22 +18,22 @@ locals {
   dashboard_json_file = file("${path.module}/dashboard.json.tftpl")
 
   dashboard_vars = {
-    datasource_uid                    = grafana_data_source.cloudwatch_source.uid
-    logs_datasource_uid               = grafana_data_source.cloudwatch_logs_source.uid
-    project                           = var.project
-    environment                       = var.environment
-    aws_region                        = var.aws_region
-    cloudfront_distribution_id        = var.cloudfront_distribution_id
-    load_balancer_dimension           = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
-    target_group_dimension            = element(split(":", var.target_group_arn), length(split(":", var.target_group_arn)) - 1)
-    ecs_cluster_name                  = var.ecs_cluster_name
-    ecs_service_name                  = var.ecs_service_name
-    server_function_name              = var.server_function_name
-    db_cluster_identifier             = var.db_cluster_identifier
-    kinesis_stream_name               = var.kinesis_stream_name
-    ecs_log_group_name                = var.ecs_log_group_name
-    iot_log_group_name                = var.iot_log_group_name
-    account_id                        = data.aws_caller_identity.current.account_id
+    datasource_uid                     = grafana_data_source.cloudwatch_source.uid
+    logs_datasource_uid                = grafana_data_source.cloudwatch_logs_source.uid
+    project                            = var.project
+    environment                        = var.environment
+    aws_region                         = var.aws_region
+    cloudfront_distribution_id         = var.cloudfront_distribution_id
+    load_balancer_dimension            = join("/", slice(split("/", var.load_balancer_arn), 1, length(split("/", var.load_balancer_arn))))
+    target_group_dimension             = element(split(":", var.target_group_arn), length(split(":", var.target_group_arn)) - 1)
+    ecs_cluster_name                   = var.ecs_cluster_name
+    ecs_service_name                   = var.ecs_service_name
+    server_function_name               = var.server_function_name
+    db_cluster_identifier              = var.db_cluster_identifier
+    kinesis_stream_name                = var.kinesis_stream_name
+    ecs_log_group_name                 = var.ecs_log_group_name
+    iot_log_group_name                 = var.iot_log_group_name
+    account_id                         = data.aws_caller_identity.current.account_id
     macro_sandbox_python_function_name = lookup(var.macro_sandbox_function_names, "python", "")
     macro_sandbox_js_function_name     = lookup(var.macro_sandbox_function_names, "js", "")
     macro_sandbox_r_function_name      = lookup(var.macro_sandbox_function_names, "r", "")
@@ -76,6 +80,21 @@ resource "grafana_dashboard" "dashboard" {
 
   config_json = templatefile("${path.module}/dashboard.json.tftpl", local.dashboard_vars)
 }
+
+resource "grafana_dashboard" "registrations_dashboard" {
+  provider  = grafana.amg
+  folder    = grafana_folder.folder.id
+  overwrite = true
+
+  config_json = templatefile("${path.module}/registrations_dashboard.json.tftpl", {
+    datasource_uid = grafana_data_source.cloudwatch_source.uid
+    environment    = var.environment
+    aws_region     = var.aws_region
+    project        = var.project
+  })
+}
+
+
 
 resource "grafana_dashboard" "dora_dashboard" {
   provider  = grafana.amg
