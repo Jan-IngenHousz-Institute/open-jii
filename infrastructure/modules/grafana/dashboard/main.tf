@@ -90,6 +90,7 @@ resource "grafana_dashboard" "registrations_dashboard" {
     datasource_uid = grafana_data_source.cloudwatch_source.uid
     environment    = var.environment
     aws_region     = var.aws_region
+    project        = var.project
   })
 }
 

@@ -193,7 +193,7 @@ resource "aws_security_group" "metrics_publisher_lambda_sg" {
   count = var.create_metrics_publisher_resources && var.create_aurora_resources ? 1 : 0
 
   name        = "${var.environment}-metrics-publisher-lambda-sg"
-  description = "Security group for metrics-publisher Lambda — allows outbound to Aurora on 5432"
+  description = "Security group for metrics-publisher Lambda - allows outbound to Aurora on 5432"
   vpc_id      = aws_vpc.this.id
 
   egress {
