@@ -63,8 +63,8 @@ export function QuestionCard({
         </div>
 
         {/* Plot / ID question hint */}
-        <p className="from-jii-medium-green/10 to-jii-dark-green/10 text-jii-dark-green mb-4 rounded-lg bg-gradient-to-r px-3 py-2 text-xs">
-          💡 If this is a <strong>plant identifier</strong> question, place it{" "}
+        <p className="from-jii-medium-green/10 to-jii-dark-green/10 text-jii-dark-green mb-6 rounded-lg bg-gradient-to-r px-3 py-2 text-xs">
+          Note: If this is a <strong>plant identifier</strong> question, place it{" "}
           <strong>first</strong> in the flow. The mobile app will show it as a confirmation banner
           throughout the iteration.
         </p>
