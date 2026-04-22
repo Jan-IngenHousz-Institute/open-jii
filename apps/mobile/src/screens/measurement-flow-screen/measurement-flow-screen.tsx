@@ -6,9 +6,10 @@ import { useKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
-import { Image, View, Text } from "react-native";
+import React, { useEffect } from "react";
+import { BackHandler, Image, View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { showAlert } from "~/components/AlertDialog";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
@@ -92,6 +93,20 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
     onEndFlowComplete?.();
     router.navigate("/(tabs)/");
   };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (!isFocused) return false;
+      showAlert("Leave Flow", "Are you sure you want to leave? All progress will be saved.", [
+        { text: "Leave", variant: "primary", onPress: () => router.back() },
+        { text: "Cancel", variant: "ghost" },
+      ]);
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => subscription.remove();
+  }, [isFocused, router]);
 
   // Get the dynamic step label
   const stepLabel = getStepLabel(

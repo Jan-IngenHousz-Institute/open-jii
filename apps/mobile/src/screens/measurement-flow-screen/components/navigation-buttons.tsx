@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
@@ -79,6 +80,17 @@ export function NavigationButtons() {
 
   const handleBackPress = () => {
     Keyboard.dismiss();
+    if (currentFlowStep === 0) {
+      showAlert(
+        "Back to experiment selection",
+        "If you go back, all progress in this flow will be lost.",
+        [
+          { text: "Continue", variant: "primary", onPress: () => previousStep() },
+          { text: "Cancel", variant: "ghost" },
+        ],
+      );
+      return;
+    }
     previousStep();
   };
 
