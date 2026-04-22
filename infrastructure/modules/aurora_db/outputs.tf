@@ -33,3 +33,8 @@ output "master_user_secret_arn" {
   description = "The ARN of the secret in AWS Secrets Manager containing master credentials"
   sensitive   = true
 }
+
+output "cluster_resource_id" {
+  value       = aws_rds_cluster.rds_cluster_aurora.cluster_resource_id
+  description = "Aurora cluster resource ID — used in IAM policies for rds-db:connect (IAM auth)"
+}
