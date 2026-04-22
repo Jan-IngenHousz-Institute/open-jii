@@ -45,16 +45,14 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
 
   const firstManualNodeId = getCachedFirstManualNodeId(iterationCount);
 
-  const firstAutoProceededWithPlot = flowNodes.find(
+  const firstAutoProceeded = flowNodes.find(
     (n) =>
       n.type === "question" &&
       isAutoincrementEnabled(n.id) &&
-      !!getAnswer(iterationCount, n.id)?.trim() &&
-      /(plot)/i.test(`${n.name ?? ""} ${n.content?.text ?? ""}`),
+      !!getAnswer(iterationCount, n.id)?.trim(),
   );
 
-  const show =
-    iterationCount > 0 && !!firstAutoProceededWithPlot && firstManualNodeId === currentNodeId;
+  const show = iterationCount > 0 && !!firstAutoProceeded && firstManualNodeId === currentNodeId;
 
   if (!show) return null;
 
@@ -79,7 +77,7 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
           ellipsizeMode="tail"
           className={clsx("flex-shrink text-base font-semibold", classes.text)}
         >
-          {getAnswer(iterationCount, firstAutoProceededWithPlot.id)}
+          {getAnswer(iterationCount, firstAutoProceeded.id)}
         </Text>
 
         <Repeat2 size={16} color={colors.neutral.black} />
