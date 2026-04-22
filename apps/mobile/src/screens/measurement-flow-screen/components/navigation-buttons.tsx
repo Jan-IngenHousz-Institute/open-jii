@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import React, { useEffect } from "react";
-import { Alert, Keyboard, View } from "react-native";
+import { Keyboard, View } from "react-native";
 import Animated, {
   useAnimatedKeyboard,
   useAnimatedStyle,
@@ -78,14 +78,7 @@ export function NavigationButtons() {
     (currentNode.content.kind === "yes_no" || currentNode.content.kind === "multi_choice");
 
   const handleBackPress = () => {
-    if (currentFlowStep === 0) {
-      Alert.alert("Leave measurement flow?", "Your current progress will not be saved.", [
-        { text: "Stay", style: "cancel" },
-        { text: "Leave", style: "destructive", onPress: () => previousStep() },
-      ]);
-    } else {
-      previousStep();
-    }
+    previousStep();
   };
 
   const handleNextPress = () => {

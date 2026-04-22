@@ -6,8 +6,8 @@ import { useKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect } from "react";
-import { Alert, BackHandler, Image, View, Text } from "react-native";
+import React from "react";
+import { Image, View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
@@ -84,30 +84,6 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
   const isFocused = useIsFocused();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (!experimentId) return;
-
-    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
-      Alert.alert("Leave measurement flow?", "Your current progress will not be saved.", [
-        { text: "Stay", style: "cancel" },
-        {
-          text: "Leave",
-          style: "destructive",
-          onPress: () => {
-            setSelectedExperimentId(undefined);
-            resetFlow();
-            clearHistory();
-            onEndFlowComplete?.();
-            router.navigate("/(tabs)/");
-          },
-        },
-      ]);
-      return true;
-    });
-
-    return () => handler.remove();
-  }, [experimentId, resetFlow, clearHistory, setSelectedExperimentId, onEndFlowComplete, router]);
 
   const handleEndFlow = () => {
     setSelectedExperimentId(undefined);
