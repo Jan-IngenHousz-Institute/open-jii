@@ -9,19 +9,17 @@ import { useState } from "react";
 
 import type { MacroCell, MacroLanguage } from "@repo/api";
 import { useSession } from "@repo/auth/client";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import {
-  Badge,
-  Button,
-  Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 interface MacroPickerProps {
   onSelect: (cell: MacroCell) => void;

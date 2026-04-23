@@ -6,15 +6,15 @@ import { BookOpen, LinkIcon } from "lucide-react";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/select";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface EmptyWorkbookStateProps {
   experimentId: string;

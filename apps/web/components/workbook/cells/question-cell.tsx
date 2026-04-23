@@ -4,16 +4,11 @@ import { CheckCircle2, Hash, HelpCircle, List, Pencil, Plus, Send, X } from "luc
 import { useCallback, useEffect, useState } from "react";
 
 import type { QuestionCell as QuestionCellType } from "@repo/api";
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Switch,
-  Textarea,
-} from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
+import { Input } from "@repo/ui/components/input";
+import { Switch } from "@repo/ui/components/switch";
+import { Textarea } from "@repo/ui/components/textarea";
 import { cn } from "@repo/ui/lib/utils";
 
 import { CellWrapper } from "../cell-wrapper";

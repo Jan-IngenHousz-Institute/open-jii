@@ -26,13 +26,15 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
-import { useIsMobile, useIsTablet, useIsLgTablet } from "@repo/ui/hooks";
+} from "@repo/ui/components/select";
+import { useIsMobile, useIsLgTablet, useIsTablet } from "@repo/ui/hooks/use-mobile";
 import { cn } from "@repo/ui/lib/utils";
 
 interface DeviceInfo {
