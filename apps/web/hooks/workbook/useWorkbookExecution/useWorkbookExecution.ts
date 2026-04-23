@@ -164,7 +164,7 @@ export function useWorkbookExecution({
     (cellId: string, state: Omit<CellExecutionState, "executionOrder">) => {
       setExecutionStates((prev) => {
         const existing = prev[cellId];
-        return { ...prev, [cellId]: { ...state, executionOrder: existing?.executionOrder } };
+        return { ...prev, [cellId]: { ...state, executionOrder: existing.executionOrder } };
       });
     },
     [],
@@ -362,7 +362,7 @@ export function useWorkbookExecution({
       const order = ++execCounterRef.current;
       setExecutionStates((prev) => {
         const existing = prev[cell.id];
-        const prevOrder = existing?.executionOrder ?? [];
+        const prevOrder = existing.executionOrder ?? [];
         return {
           ...prev,
           [cell.id]: {
