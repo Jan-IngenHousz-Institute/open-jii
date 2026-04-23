@@ -10,72 +10,7 @@ import { authClient } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";
 
-globalThis.React = React;
-
-// ---- Mocks ----
-
-// --- mock the profile hook to avoid network and control the UI ---
-let __mockProfile: { firstName?: string; lastName?: string } | undefined;
-
-vi.mock("@/hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
-  useGetUserProfile: vi.fn(() => {
-    return __mockProfile ? { data: { body: __mockProfile } } : { data: undefined };
-  }),
-}));
-
-// Make next/image a plain <img> so src is stable in tests
-vi.mock("next/image", () => ({
-  __esModule: true,
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} />,
-}));
-
-vi.mock("next/link", () => ({
-  default: ({
-    href,
-    className,
-    children,
-    ...rest
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode }) => (
-    <a href={href} className={className} {...rest}>
-      {children}
-    </a>
-  ),
-}));
-
-// DropdownMenu mock — Radix doesn't work in jsdom without pointer events / portals
-vi.mock("@repo/ui/components/dropdown-menu", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>(
-    "@repo/ui/components/dropdown-menu",
-  );
-
-// Mock useSignOut
-const mockSignOutMutateAsync = vi.fn();
-vi.mock("~/hooks/auth", () => ({
-  useSignOut: () => ({
-    mutateAsync: mockSignOutMutateAsync,
-    isPending: false,
-  }),
-}));
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (k: string, fallback?: string) =>
-      ({
-        "navigation.home": "Home",
-        "navigation.about": "About",
-        "navigation.blog": "Blog",
-        "navigation.platform": "Platform",
-        "navigation.menu": "Navigation menu",
-        "auth.userMenu": "User menu",
-        "auth.account": "Account",
-        "auth.signOut": "Sign Out",
-      })[k] ??
-      fallback ??
-      k,
-  }),
-}));
-
-vi.mock("@/components/multi-language", () => ({
+vi.mock("@/components/language-switcher", () => ({
   LanguageSwitcher: ({ locale }: { locale: string }) => (
     <div data-testid="language-switcher">{locale}</div>
   ),

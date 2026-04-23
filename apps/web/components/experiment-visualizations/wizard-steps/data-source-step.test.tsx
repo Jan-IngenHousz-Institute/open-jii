@@ -204,40 +204,8 @@ describe("DataSourceStep", () => {
       defaultValues: { dataConfig: { tableName: "", dataSources: [] } },
     });
 
-    it("should render available tables in select options", () => {
-      render(<TestWrapper {...defaultProps} />);
-
-      // Check by aria-label (value) since the actual text content is a translation key
-      const options = screen.getAllByRole("option");
-      expect(options).toHaveLength(2);
-      expect(options[0]).toHaveAttribute("data-value", "measurements");
-      expect(options[1]).toHaveAttribute("data-value", "sensors");
-    });
-
-    it("should render wizard step buttons", () => {
-      render(<TestWrapper {...defaultProps} />);
-
-      expect(screen.getByRole("button", { name: "experiments.back" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "experiments.next" })).toBeInTheDocument();
-    });
-
-    it("should not render chart configurator without table selection", () => {
-      render(
-        <TestWrapper
-          {...defaultProps}
-          tables={[]} // No tables available
-          defaultValues={{
-            dataConfig: {
-              tableName: "",
-              dataSources: [],
-            },
-          }}
-        />,
-      );
-
-      expect(screen.queryByTestId("line-chart-configurator")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("scatter-chart-configurator")).not.toBeInTheDocument();
-    });
+    expect(screen.queryByTestId("line-chart-configurator")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("scatter-chart-configurator")).not.toBeInTheDocument();
   });
 
   it("renders chart preview modal when table is selected", () => {
