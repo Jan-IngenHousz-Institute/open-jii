@@ -5,8 +5,8 @@ import type { MarkdownCell } from "@repo/api";
 
 import { MarkdownCellComponent } from "./markdown-cell";
 
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual("@repo/ui/components");
+vi.mock("@repo/ui/components/rich-textarea", async () => {
+  const actual = await vi.importActual("@repo/ui/components/rich-textarea");
   return {
     ...actual,
     RichTextarea: ({
@@ -25,6 +25,13 @@ vi.mock("@repo/ui/components", async () => {
         placeholder={placeholder}
       />
     ),
+  };
+});
+
+vi.mock("@repo/ui/components/rich-text-renderer", async () => {
+  const actual = await vi.importActual("@repo/ui/components/rich-text-renderer");
+  return {
+    ...actual,
     RichTextRenderer: ({ content }: { content: string }) => (
       <div data-testid="rich-renderer">{content}</div>
     ),

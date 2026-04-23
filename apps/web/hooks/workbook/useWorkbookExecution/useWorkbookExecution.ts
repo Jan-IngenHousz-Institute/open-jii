@@ -361,8 +361,8 @@ export function useWorkbookExecution({
       // Stamp execution order
       const order = ++execCounterRef.current;
       setExecutionStates((prev) => {
-        const existing = prev[cell.id];
-        const prevOrder = existing.executionOrder ?? [];
+        const existing = prev[cell.id] as CellExecutionState | undefined;
+        const prevOrder = existing?.executionOrder ?? [];
         return {
           ...prev,
           [cell.id]: {
