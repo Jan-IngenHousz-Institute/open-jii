@@ -96,8 +96,7 @@ resource "aws_ecr_repository_policy" "this" {
         }
       ] : [],
       # Lambda service principal needs repo-level access to pull container images.
-      # No sourceArn condition: Lambda does not reliably set it during image init.
-      # Scope is already limited to this specific repository.
+      # Scoped to this specific repository; no additional condition needed.
       var.create_lambda_pull_statement ? [
         {
           Sid    = "AllowLambdaPull",
