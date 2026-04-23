@@ -8,7 +8,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { CreateProtocolRequestBody, Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
+import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

@@ -1,7 +1,7 @@
 import { tsr } from "@/lib/tsr";
 import { useState } from "react";
 
-import type { ChartFamily } from "@repo/api";
+import type { ChartFamily } from "@repo/api/schemas/experiment.schema";
 
 export const useExperimentVisualizations = ({
   experimentId,

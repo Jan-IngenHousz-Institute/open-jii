@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import type { WizardFormProps } from "@repo/ui/components/wizard-form";
 import { toast } from "@repo/ui/hooks/use-toast";
 

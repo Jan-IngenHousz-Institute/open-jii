@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import { authClient } from "@repo/auth/client";
 import { SidebarProvider } from "@repo/ui/components/sidebar";
 

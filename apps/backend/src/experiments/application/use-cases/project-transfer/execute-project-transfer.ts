@@ -4,7 +4,7 @@ import type {
   FlowGraph,
   ProjectTransferWebhookPayload,
   ProjectTransferWebhookResponse,
-} from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";

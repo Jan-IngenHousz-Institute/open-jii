@@ -1,6 +1,6 @@
 "use client";
 
-import { zCreateExperimentVisualizationBody } from "@repo/api";
+import { zCreateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,

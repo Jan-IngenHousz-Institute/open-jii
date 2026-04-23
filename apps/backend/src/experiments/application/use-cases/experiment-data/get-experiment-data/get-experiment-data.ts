@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { ExperimentDataQuery } from "@repo/api";
+import type { ExperimentDataQuery } from "@repo/api/schemas/experiment.schema";
 
 import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../../common/utils/fp-utils";

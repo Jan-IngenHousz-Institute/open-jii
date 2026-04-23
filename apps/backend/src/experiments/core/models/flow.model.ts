@@ -1,7 +1,7 @@
 import { createSelectSchema } from "drizzle-zod";
 import type { z } from "zod";
 
-import { zFlowGraph } from "@repo/api";
+import { zFlowGraph } from "@repo/api/schemas/experiment.schema";
 import { flows } from "@repo/database";
 
 export const flowGraphSchema = zFlowGraph;

@@ -1,7 +1,7 @@
 import type {
   CreateExperimentVisualizationBody,
   UpdateExperimentVisualizationBody,
-} from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";

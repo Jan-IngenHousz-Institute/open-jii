@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 
-import type { Flow } from "@repo/api";
+import type { Flow } from "@repo/api/schemas/experiment.schema";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 interface StaticFlowViewerProps {

@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { validateAmbyteStructure, isExcludedFile } from "../data-upload-validation";
 import { FileUploadStep } from "./file-upload-step";

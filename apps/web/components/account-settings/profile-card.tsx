@@ -2,7 +2,7 @@
 
 import type { UseFormReturn } from "react-hook-form";
 
-import type { CreateUserProfileBody } from "@repo/api";
+import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@repo/ui/components/form";

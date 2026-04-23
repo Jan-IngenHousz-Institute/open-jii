@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { TestHarness } from "../../test/test-harness";
 

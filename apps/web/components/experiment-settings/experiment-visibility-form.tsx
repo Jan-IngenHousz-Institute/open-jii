@@ -4,8 +4,8 @@ import { CalendarIcon, Info } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { ExperimentVisibility } from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
+import type { ExperimentVisibility } from "@repo/api/schemas/experiment.schema";
+import { zExperimentVisibility } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Calendar } from "@repo/ui/components/calendar";

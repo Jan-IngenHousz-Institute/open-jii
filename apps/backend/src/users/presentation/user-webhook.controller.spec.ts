@@ -2,8 +2,11 @@ import { faker } from "@faker-js/faker";
 import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
-import type { UserMetadataWebhookPayload, WebhookErrorResponse } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type {
+  UserMetadataWebhookPayload,
+  WebhookErrorResponse,
+} from "@repo/api/schemas/user.schema";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";

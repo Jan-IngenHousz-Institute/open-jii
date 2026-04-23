@@ -5,7 +5,7 @@ import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExper
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useLocale } from "~/hooks/useLocale";
 
-import { ExperimentTableName } from "@repo/api";
+import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/components/card";

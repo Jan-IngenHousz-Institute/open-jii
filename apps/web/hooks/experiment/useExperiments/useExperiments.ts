@@ -2,7 +2,7 @@ import { tsr } from "@/lib/tsr";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
-import type { ExperimentStatus } from "@repo/api";
+import type { ExperimentStatus } from "@repo/api/schemas/experiment.schema";
 
 import { useDebounce } from "../../useDebounce";
 

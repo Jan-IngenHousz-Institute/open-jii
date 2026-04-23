@@ -3,7 +3,7 @@
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { Loader2 } from "lucide-react";
 
-import type { ExperimentTableMetadata } from "@repo/api";
+import type { ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 import { WizardForm } from "@repo/ui/components/wizard-form";

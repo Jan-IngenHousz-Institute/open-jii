@@ -4,8 +4,8 @@ import { LineChart, ScatterChart } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import type { ExperimentVisualization } from "@repo/api";
-import { zCreateExperimentVisualizationBody } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import { zCreateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,

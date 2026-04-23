@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "~/hooks/useLocale";
 import { parseApiError } from "~/util/apiError";
 
-import type { FlowGraph } from "@repo/api";
+import type { FlowGraph } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/components/card";

@@ -1,6 +1,9 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { AddAnnotationsBulkBody, AnnotationRowsAffected } from "@repo/api";
+import {
+  AddAnnotationsBulkBody,
+  AnnotationRowsAffected,
+} from "@repo/api/schemas/experiment.schema";
 
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";

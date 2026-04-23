@@ -10,7 +10,7 @@ import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Protocol, SensorFamily } from "@repo/api";
+import type { Protocol, SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

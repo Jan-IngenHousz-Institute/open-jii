@@ -4,7 +4,7 @@ import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
-import type { Experiment, ExperimentMember, Location } from "@repo/api";
+import type { Experiment, ExperimentMember, Location } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

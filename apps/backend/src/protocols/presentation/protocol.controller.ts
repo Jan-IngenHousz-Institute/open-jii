@@ -5,7 +5,8 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { contract, validateProtocolJson } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import { validateProtocolJson } from "@repo/api/schemas/protocol-validator";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { ErrorCodes } from "../../common/utils/error-codes";

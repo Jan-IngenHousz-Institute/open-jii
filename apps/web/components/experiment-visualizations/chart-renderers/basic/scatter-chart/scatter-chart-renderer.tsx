@@ -4,7 +4,7 @@ import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-import type { ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
 import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";

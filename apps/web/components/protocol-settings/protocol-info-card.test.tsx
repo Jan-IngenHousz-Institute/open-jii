@@ -5,7 +5,7 @@ import { formatDate } from "@/util/date";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { ProtocolInfoCard } from "./protocol-info-card";
 
