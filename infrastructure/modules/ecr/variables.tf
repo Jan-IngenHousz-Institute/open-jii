@@ -90,13 +90,7 @@ variable "create_ecs_pull_statement" {
 }
 
 variable "create_lambda_pull_statement" {
-  description = "Whether to include a Lambda pull statement in the repo policy. Required for Lambda container image functions. Only effective when create_repository_policy is true."
+  description = "Whether to include a Lambda service principal pull statement in the repo policy. Required for Lambda container image functions when create_repository_policy is true."
   type        = bool
   default     = false
-}
-
-variable "lambda_function_arn_pattern" {
-  description = "ARN pattern for Lambda functions allowed to pull from this repo (e.g. 'arn:aws:lambda:us-east-1:123456789012:function:my-func-*'). Required when create_lambda_pull_statement is true."
-  type        = string
-  default     = null
 }
