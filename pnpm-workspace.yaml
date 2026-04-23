@@ -19,7 +19,7 @@ catalog:
   "@types/nodemailer": 7.0.11
   posthog-js: 1.364.1
   posthog-node: 5.28.8
-  next: 16.2.3
+  next: 16.2.4
 
 catalogs:
   react19:

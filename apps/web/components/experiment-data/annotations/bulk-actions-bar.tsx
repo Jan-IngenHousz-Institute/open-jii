@@ -1,16 +1,16 @@
 import { MessageSquare, ChevronDown, Trash2, Download, Flag } from "lucide-react";
 import React from "react";
 
-import type { AnnotationType } from "@repo/api";
+import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dropdown-menu";
 
 import {
   parseAnnotations,

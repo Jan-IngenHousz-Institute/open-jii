@@ -4,23 +4,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import type { ExperimentVisibility } from "@repo/api";
-import { visibilitySchema } from "@repo/api";
+import type { ExperimentVisibility } from "@repo/api/schemas/experiment.schema";
+import { visibilitySchema } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
 import {
-  Button,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/dialog";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { localCalendarDateToIsoEndOfDay } from "../new-experiment/embargo-utils";

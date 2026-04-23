@@ -7,7 +7,7 @@ import {
 import type { Document } from "@contentful/rich-text-types";
 import React, { useState } from "react";
 
-import { Button } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
 
 import type { PageFaqFieldsFragment, FaqQuestionFieldsFragment } from "../lib/__generated/sdk";
 import { CtfRichText } from "./contentful/ctf-rich-text";

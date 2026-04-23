@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 
-import type { SensorFamily } from "@repo/api";
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { CommandResult, IDeviceDriver } from "@repo/iot";
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────

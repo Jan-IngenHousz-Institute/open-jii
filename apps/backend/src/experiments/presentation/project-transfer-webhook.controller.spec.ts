@@ -2,12 +2,12 @@ import { faker } from "@faker-js/faker";
 import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
+import { contract } from "@repo/api/contract";
 import type {
   ProjectTransferWebhookPayload,
   ProjectTransferWebhookResponse,
-  WebhookErrorResponse,
-} from "@repo/api";
-import { contract } from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
+import type { WebhookErrorResponse } from "@repo/api/schemas/user.schema";
 
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success } from "../../common/utils/fp-utils";

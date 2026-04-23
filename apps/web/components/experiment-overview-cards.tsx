@@ -3,9 +3,10 @@ import Link from "next/link";
 import React from "react";
 import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
-import type { Experiment } from "@repo/api";
+import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { RichTextRenderer, Skeleton } from "@repo/ui/components";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 export function ExperimentOverviewCards({
   experiments,

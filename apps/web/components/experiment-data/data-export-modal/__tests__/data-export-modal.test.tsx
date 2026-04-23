@@ -2,8 +2,8 @@ import { server } from "@/test/msw/server";
 import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { contract } from "@repo/api/contract";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DataExportModal } from "../data-export-modal";
 

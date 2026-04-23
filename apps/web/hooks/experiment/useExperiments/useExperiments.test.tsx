@@ -4,7 +4,7 @@ import { renderHook, act, waitFor } from "@/test/test-utils";
 import { useSearchParams, usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { useExperiments } from "./useExperiments";
 

@@ -2,16 +2,16 @@
 
 import { useMemo, useState } from "react";
 
-import type { Location } from "@repo/api";
+import type { Location } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
 import type { LocationPoint } from "@repo/ui/components/map";
 
 import { ExperimentLocationManagement } from "../../experiment-settings/experiment-location-management-card";

@@ -4,11 +4,14 @@ import type { ComponentType } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 
-import { validateEmbargoDate, zCreateExperimentBodyBase } from "@repo/api";
-import type { CreateExperimentBody } from "@repo/api";
+import {
+  validateEmbargoDate,
+  zCreateExperimentBodyBase,
+} from "@repo/api/schemas/experiment.schema";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { WizardStepButtons } from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 import { cva } from "@repo/ui/lib/utils";
 
 export const detailsSchema = zCreateExperimentBodyBase.pick({ name: true, description: true });

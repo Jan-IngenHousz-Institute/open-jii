@@ -88,3 +88,9 @@ variable "create_ecs_pull_statement" {
   type        = bool
   default     = true
 }
+
+variable "create_lambda_pull_statement" {
+  description = "Whether to include a Lambda service principal pull statement in the repo policy. Required for Lambda container image functions when create_repository_policy is true."
+  type        = bool
+  default     = false
+}

@@ -121,7 +121,7 @@ export const zMacroExecutionResponse = z.object({
 export const zMacroBatchExecutionItem = z.object({
   id: z.string(),
   macro_id: z.string().uuid(),
-  data: jsonStringOrValue(z.record(z.unknown())),
+  data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
 });
 
 export const zMacroBatchExecutionRequestBody = z.object({

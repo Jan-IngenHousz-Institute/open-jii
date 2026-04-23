@@ -1,4 +1,5 @@
 import { defineConfig, mergeConfig } from "vitest/config";
+
 import { uiConfig } from "@repo/vitest-config/ui";
 
 export default mergeConfig(
@@ -7,5 +8,5 @@ export default mergeConfig(
     test: {
       setupFiles: ["./vitest.setup.ts"],
     },
-  })
+  }),
 );

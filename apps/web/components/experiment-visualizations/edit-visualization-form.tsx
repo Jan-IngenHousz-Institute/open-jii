@@ -3,12 +3,14 @@
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
 import { Loader2 } from "lucide-react";
 
-import type { ExperimentTableMetadata } from "@repo/api";
-import type { ExperimentVisualization } from "@repo/api";
+import type {
+  ExperimentTableMetadata,
+  ExperimentVisualization,
+} from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { WizardForm } from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { WizardForm } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 import { getDefaultChartConfig } from "./chart-configurators/chart-configurator-util";

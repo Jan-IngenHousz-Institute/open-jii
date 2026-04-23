@@ -4,7 +4,7 @@ import { View, Text } from "react-native";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
 import { useTheme } from "~/hooks/use-theme";
 
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 
 interface AnalysisMacroResultProps {
   macro: Macro | undefined;

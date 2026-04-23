@@ -6,7 +6,7 @@ import busboy from "busboy";
 import type { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { ErrorCodes } from "../../common/utils/error-codes";

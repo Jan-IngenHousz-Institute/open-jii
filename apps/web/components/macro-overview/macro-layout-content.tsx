@@ -4,11 +4,11 @@ import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { parseApiError } from "~/util/apiError";
 
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Badge } from "@repo/ui/components/badge";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface MacroLayoutContentProps {
   id: string;

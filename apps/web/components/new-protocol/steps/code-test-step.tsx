@@ -3,11 +3,12 @@
 import { CodeTesterLayout } from "@/components/shared/code-tester-layout";
 import type { ComponentType } from "react";
 
-import type { CreateProtocolRequestBody, SensorFamily } from "@repo/api";
-import { zCreateProtocolRequestBody } from "@repo/api";
+import type { CreateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";
+import { zCreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import { FormField, WizardStepButtons } from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+import { FormField } from "@repo/ui/components/form";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
 // Validation schema for step 2 — code only
 export const codeSchema = zCreateProtocolRequestBody.pick({ code: true });

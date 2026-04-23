@@ -15,14 +15,9 @@ import { useExperimentMetadata } from "~/hooks/experiment/useExperimentMetadata/
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import { useTranslation } from "@repo/i18n/client";
-import {
-  Button,
-  NavTabs,
-  NavTabsContent,
-  NavTabsList,
-  NavTabsTrigger,
-  Skeleton,
-} from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface ExperimentDataPageProps {
   params: Promise<{ id: string; locale: string }>;

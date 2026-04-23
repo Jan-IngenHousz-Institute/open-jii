@@ -4,9 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    "./components": "./src/components/index.ts",
-    "./components/map": "./src/components/map/map.tsx",
-    "./hooks": "./src/hooks/index.ts",
+    "./components/*": "./src/components/*.tsx",
+    "./components/charts/*": "./src/components/charts/*.tsx",
+    "./components/charts/types": "./src/components/charts/types.ts",
+    "./components/charts/utils": "./src/components/charts/utils.ts",
+    "./hooks/use-toast": "./src/hooks/use-toast.ts",
+    "./hooks/use-mobile": "./src/hooks/use-mobile.tsx",
     "./lib/utils": "./src/lib/utils.ts"
   },
   "license": "MIT",

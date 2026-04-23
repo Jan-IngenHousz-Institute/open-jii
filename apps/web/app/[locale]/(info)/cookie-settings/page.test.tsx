@@ -3,7 +3,7 @@ import { usePostHog } from "posthog-js/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { setConsentStatus } from "~/lib/cookie-consent";
 
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import CookieSettingsPage from "./page";
 

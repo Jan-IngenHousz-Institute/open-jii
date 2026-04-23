@@ -3,12 +3,12 @@ import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { LineChartRenderer } from "./line-chart-renderer";
 
 // Mock the LineChart component from UI package (Plotly-based, doesn't work in jsdom)
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,
