@@ -1222,9 +1222,18 @@ importers:
 
   packages/transactional:
     dependencies:
+      '@contentful/rich-text-react-renderer':
+        specifier: 16.0.2
+        version: 16.0.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@contentful/rich-text-types':
+        specifier: 17.0.1
+        version: 17.0.1
       '@react-email/components':
         specifier: ^0.3.3
         version: 0.3.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@repo/cms':
+        specifier: workspace:*
+        version: link:../cms
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -1253,6 +1262,9 @@ importers:
       react-email:
         specifier: 5.2.10
         version: 5.2.10
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

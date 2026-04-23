@@ -1,9 +1,9 @@
 import { GraphQLClient } from "graphql-request";
 
-import { getContentfulEndpoint } from "../codegen";
-import { getSdk } from "../lib/__generated/sdk";
-import type { ContentfulConfig } from "./types";
-import { defaultConfig } from "./types";
+import { getContentfulEndpoint } from "../codegen.js";
+import { getSdk } from "../lib/__generated/sdk.js";
+import type { ContentfulConfig } from "./types.js";
+import { defaultConfig } from "./types.js";
 
 type ContentfulSdk = ReturnType<typeof getSdk>;
 
