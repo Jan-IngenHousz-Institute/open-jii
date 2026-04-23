@@ -697,7 +697,7 @@ def experiment_macro_data():
             "macro_result",
             F.when(
                 ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
-                execute_macro_udf(F.struct("id", "macro_id", F.col("data").cast("string").alias("data")))
+                execute_macro_udf(F.struct("id", "macro_id", F.col("data")))
             )
         )
         .withColumn(
@@ -821,7 +821,7 @@ def experiment_macro_data_sandbox():
             F.when(
                 ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
                 sandbox_macro_udf(
-                    F.struct("id", "macro_id", F.col("data").cast("string").alias("data"))
+                    F.struct("id", "macro_id", F.col("data"))
                 ),
             )
         )
