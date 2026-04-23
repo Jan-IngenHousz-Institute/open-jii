@@ -15,26 +15,28 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+} from "@repo/ui/components/card";
+import {
   FormControl,
   FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+} from "@repo/ui/components/form";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  WizardStepButtons,
-} from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+} from "@repo/ui/components/select";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
-import {
-  LineChartDataConfigurator,
-  ScatterChartDataConfigurator,
-} from "../chart-configurators/data";
+import LineChartDataConfigurator from "../chart-configurators/data/basic/line-chart/line-chart-data-configurator";
+import ScatterChartDataConfigurator from "../chart-configurators/data/basic/scatter-chart/scatter-chart-data-configurator";
 import { ChartPreviewModal } from "../chart-preview/chart-preview-modal";
 
 // Step 3: Data Source Selection and Configuration

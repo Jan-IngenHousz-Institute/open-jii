@@ -8,15 +8,15 @@ import { useMemo, useState } from "react";
 
 import type { MacroProtocolEntry, Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import {
-  Badge,
-  Button,
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@repo/ui/components";
+} from "@repo/ui/components/card";
 
 import { useAddCompatibleProtocol } from "../../hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol";
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";

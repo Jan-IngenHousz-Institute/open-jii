@@ -6,7 +6,7 @@ import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtoco
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 

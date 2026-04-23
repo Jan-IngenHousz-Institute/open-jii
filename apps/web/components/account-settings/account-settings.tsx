@@ -11,8 +11,9 @@ import type { CreateUserProfileBody } from "@repo/api";
 import type { User } from "@repo/api";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
-import { Form, Button } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Button } from "@repo/ui/components/button";
+import { Form } from "@repo/ui/components/form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ErrorDisplay } from "../error-display";
 import { DangerZoneCard } from "./danger-zone-card";

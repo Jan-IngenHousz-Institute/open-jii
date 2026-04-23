@@ -6,7 +6,7 @@ import Link from "next/link";
 import React from "react";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
-import { ArticleImage } from "../article";
+import { ArticleImage } from "../article/article-image";
 
 // ---- Types ---- //
 export type EmbeddedEntryType = ComponentRichImage | null;

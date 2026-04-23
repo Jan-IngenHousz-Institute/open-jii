@@ -6,7 +6,7 @@ import { env } from "~/env";
 
 import { contract } from "@repo/api";
 import { authClient } from "@repo/auth/client";
-import { SidebarProvider } from "@repo/ui/components";
+import { SidebarProvider } from "@repo/ui/components/sidebar";
 
 import { NavUser } from "./nav-user";
 

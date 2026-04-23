@@ -4,8 +4,8 @@ import * as z from "zod";
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { WizardStepButtons } from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
 import {
   detailsSchema,

@@ -5,7 +5,7 @@ import { parseApiError } from "~/util/apiError";
 
 import type { UserProfile, ExperimentMemberRole } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentMemberRoleUpdate } from "../../hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
 import { MemberDialogs } from "./member-dialogs";

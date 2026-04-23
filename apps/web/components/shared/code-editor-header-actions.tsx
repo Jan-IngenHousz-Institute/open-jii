@@ -2,13 +2,13 @@
 
 import { Check, Circle, Loader2, X } from "lucide-react";
 
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@repo/ui/components";
+} from "@repo/ui/components/tooltip";
 
 interface CodeEditorHeaderActionsProps {
   syncStatus: "synced" | "unsynced" | "syncing";

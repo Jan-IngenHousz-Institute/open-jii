@@ -8,7 +8,7 @@ import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/use
 
 import type { SensorFamily } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 import { ConnectionTypeSelector } from "./iot-connection-type-selector";

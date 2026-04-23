@@ -10,8 +10,8 @@ interface MockRichTextareaProps {
   placeholder?: string;
   isDisabled?: boolean;
 }
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual("@repo/ui/components");
+vi.mock("@repo/ui/components/rich-textarea", async () => {
+  const actual = await vi.importActual("@repo/ui/components/rich-textarea");
   return {
     ...actual,
     RichTextarea: ({ value, onChange, placeholder, isDisabled }: MockRichTextareaProps) => (

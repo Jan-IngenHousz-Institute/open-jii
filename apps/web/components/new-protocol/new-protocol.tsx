@@ -10,17 +10,17 @@ import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { CreateProtocolRequestBody, Macro } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  WizardForm,
-} from "@repo/ui/components";
-import type { WizardStep, WizardStepProps } from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
+import { WizardForm } from "@repo/ui/components/wizard-form";
+import type { WizardStep, WizardStepProps } from "@repo/ui/components/wizard-form";
 
 import { IotProtocolRunner } from "../iot/iot-protocol-runner";
 import ProtocolCodeEditor from "../protocol-code-editor";

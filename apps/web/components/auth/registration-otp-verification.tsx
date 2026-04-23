@@ -3,19 +3,12 @@
 import { Pencil } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { useSignInEmail } from "~/hooks/auth";
+import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  FormField,
-  FormItem,
-  FormControl,
-  FormMessage,
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { FormField, FormItem, FormControl, FormMessage } from "@repo/ui/components/form";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@repo/ui/components/input-otp";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import type { Registration } from "./registration-form";
 

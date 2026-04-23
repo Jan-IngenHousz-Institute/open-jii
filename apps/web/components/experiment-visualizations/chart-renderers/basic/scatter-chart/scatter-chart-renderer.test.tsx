@@ -8,7 +8,7 @@ import { contract } from "@repo/api";
 import { ScatterChartRenderer } from "./scatter-chart-renderer";
 
 // ScatterChart is Plotly-based, doesn't work in jsdom
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/charts/scatter-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,

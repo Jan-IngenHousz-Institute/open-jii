@@ -70,7 +70,7 @@ vi.mock("../../iot/iot-protocol-runner", () => ({
   IotProtocolRunner: () => <div data-testid="iot-runner" />,
 }));
 
-vi.mock("@repo/ui/hooks", async (importOriginal) => {
+vi.mock("@repo/ui/hooks/use-mobile", async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
   return {
     ...original,
@@ -81,7 +81,7 @@ vi.mock("@repo/ui/hooks", async (importOriginal) => {
   };
 });
 
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/resizable", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,

@@ -5,13 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api";
 import type { ExperimentTableMetadata } from "@repo/api";
-import type { WizardFormProps } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import type { WizardFormProps } from "@repo/ui/components/wizard-form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 import NewVisualizationForm from "./new-visualization-form";
 
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,

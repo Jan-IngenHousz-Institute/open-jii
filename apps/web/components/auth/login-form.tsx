@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  ScrollArea,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
+import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { cva } from "@repo/ui/lib/utils";
 
 import { EmailLoginForm } from "./email-login-form";

@@ -10,7 +10,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
 import { FormatDate } from "../../shared/format-date";
-import { CtfImage } from "../contentful";
+import { CtfImage } from "../contentful/ctf-image";
 import { ArticleAuthor } from "./article-author";
 import { ArticleLabel } from "./article-label";
 

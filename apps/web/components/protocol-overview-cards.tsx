@@ -6,7 +6,9 @@ import React, { useMemo, useState } from "react";
 
 import type { Protocol, ProtocolMacroEntry } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Badge, RichTextRenderer, Skeleton } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components/badge";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { cva } from "@repo/ui/lib/utils";
 
 const getFamilyColor = (family: string) => {
