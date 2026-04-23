@@ -33,7 +33,7 @@ export interface TestCase {
   name: string;
   language: string;
   script: string; // base64
-  items: { id: string; data: Record<string, unknown> }[];
+  items: { id: string; data: Record<string, unknown> | unknown[] }[];
   timeout: number;
   protocol_id: string;
   expect: TestExpectation;

@@ -18,6 +18,7 @@ import json
 from typing import Optional
 
 import pandas as pd
+from pyspark.sql.types import VariantVal
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType
 
@@ -44,7 +45,7 @@ def make_execute_macro_udf(
     The UDF expects a struct column with fields:
       - id: row identifier (string)
       - macro_id: UUID of the macro to execute (string)
-      - data: measurement data as a JSON string
+      - data: measurement data (VARIANT, string, or native object)
 
     Returns a struct<result: string, error: string> where result is JSON.
 
@@ -93,10 +94,19 @@ def make_execute_macro_udf(
                 errors[pos] = f"NULL macro_id or data for row {row_id}"
                 continue
 
+            # Convert VARIANT to native Python object; pass through if already parsed
+            if isinstance(data, VariantVal):
+                data = json.loads(data.toJson())
+            elif isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
             items.append({
                 "id": str(row_id),
                 "macro_id": str(macro_id),
-                "data": data,  # JSON string - backend's jsonStringOrValue handles parsing
+                "data": data,
             })
             idx_map.append(pos)
 

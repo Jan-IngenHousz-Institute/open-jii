@@ -315,6 +315,18 @@ describe("Macro Schema", () => {
       expect(parsed.data).toEqual({ trace: [1, 2, 3] });
     });
 
+    it("accepts array data (MultispeQ sample format)", () => {
+      const b = { data: [{ trace: [1] }, { trace: [2] }], timeout: 5 };
+      const parsed = zMacroExecutionRequestBody.parse(b);
+      expect(parsed.data).toEqual([{ trace: [1] }, { trace: [2] }]);
+    });
+
+    it("accepts array data as a JSON string", () => {
+      const b = { data: JSON.stringify([{ trace: [1] }]), timeout: 5 };
+      const parsed = zMacroExecutionRequestBody.parse(b);
+      expect(parsed.data).toEqual([{ trace: [1] }]);
+    });
+
     it("rejects data that is an invalid JSON string", () => {
       expect(() => zMacroExecutionRequestBody.parse({ data: "{bad json" })).toThrow();
     });

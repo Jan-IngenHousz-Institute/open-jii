@@ -58,11 +58,22 @@ if (macroResult !== undefined) {
 }
 `;
 
+// Clone data preserving its type (array vs plain object).
+function cloneData(data) {
+  if (Array.isArray(data)) return data.slice();
+  if (data !== null && typeof data === "object") {
+    const obj = Object.create(null);
+    Object.assign(obj, data);
+    return obj;
+  }
+  return data;
+}
+
 // 4. CREATE CONTEXT ONCE
 // Minimal sandbox: no Date, performance, setTimeout, process, require, eval
 const sandbox = {
-  json: Object.create(null),
-  input_data: Object.create(null),
+  json: null,
+  input_data: null,
   output: Object.create(null),
   console: { log: () => {} },
   Date: undefined,
@@ -131,12 +142,9 @@ let results = [];
 
 // 5. EXECUTION LOOP
 for (const item of batchItems) {
-  sandbox.json = Object.create(null);
-  sandbox.input_data = Object.create(null);
+  sandbox.json = cloneData(item.data);
+  sandbox.input_data = cloneData(item.data);
   sandbox.output = Object.create(null);
-
-  Object.assign(sandbox.json, item.data);
-  Object.assign(sandbox.input_data, item.data);
 
   try {
     script.runInContext(context, { timeout: 1000, displayErrors: false });
