@@ -1,3 +1,4 @@
+-- Custom SQL migration file, put your code below! --
 -- Create the metrics_publisher user with IAM authentication for the metrics-publisher Lambda.
 -- This user has read-only access to the users table and uses RDS IAM auth (no password).
 DO $$
