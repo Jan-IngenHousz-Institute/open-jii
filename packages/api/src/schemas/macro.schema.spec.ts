@@ -359,6 +359,18 @@ describe("Macro Schema", () => {
       const parsed = zMacroBatchExecutionItem.parse(item);
       expect(parsed.data).toEqual({ trace: [1] });
     });
+
+    it("accepts array data (MultispeQ sample format)", () => {
+      const item = { id: "m1", macro_id: uuidA, data: [{ trace: [1] }, { trace: [2] }] };
+      const parsed = zMacroBatchExecutionItem.parse(item);
+      expect(parsed.data).toEqual([{ trace: [1] }, { trace: [2] }]);
+    });
+
+    it("accepts array data as a JSON string", () => {
+      const item = { id: "m1", macro_id: uuidA, data: JSON.stringify([{ trace: [1] }]) };
+      const parsed = zMacroBatchExecutionItem.parse(item);
+      expect(parsed.data).toEqual([{ trace: [1] }]);
+    });
   });
 
   describe("zMacroBatchExecutionRequestBody", () => {
