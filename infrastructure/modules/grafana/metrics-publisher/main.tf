@@ -2,11 +2,12 @@ data "aws_caller_identity" "current" {}
 
 resource "null_resource" "npm_install" {
   triggers = {
-    package_json = filemd5("${path.module}/lambda/package.json")
+    package_json      = filemd5("${path.module}/lambda/package.json")
+    package_lock_json = filemd5("${path.module}/lambda/package-lock.json")
   }
 
   provisioner "local-exec" {
-    command     = "npm install --omit=dev"
+    command     = "npm ci --omit=dev"
     working_dir = "${path.module}/lambda"
   }
 }
