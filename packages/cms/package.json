@@ -24,6 +24,10 @@
     "./lib/__generated/sdk": {
       "types": "./dist/lib/__generated/sdk.d.ts",
       "default": "./dist/lib/__generated/sdk.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
     }
   },
   "scripts": {

@@ -15,6 +15,11 @@ on:
         required: false
         type: string
         default: ""
+      languages:
+        description: 'JSON array of lambda languages to deploy. Defaults to all.'
+        required: false
+        type: string
+        default: '["python","javascript","r"]'
   workflow_call:
     inputs:
       environment:
