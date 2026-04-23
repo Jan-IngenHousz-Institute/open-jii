@@ -25,6 +25,16 @@ import type {
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
+import type {
+  BranchCell,
+  MacroCell,
+  MarkdownCell,
+  OutputCell,
+  ProtocolCell,
+  QuestionCell,
+} from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookVersionSummary } from "@repo/api/schemas/workbook-version.schema";
+import type { Workbook } from "@repo/api/schemas/workbook.schema";
 
 // ── Experiment ──────────────────────────────────────────────────
 
@@ -42,6 +52,8 @@ export function createExperiment(overrides: Partial<Experiment> = {}): Experimen
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-15T00:00:00.000Z",
     embargoUntil: "2025-12-31T23:59:59.999Z",
+    workbookId: null,
+    workbookVersionId: null,
     ownerFirstName: "John",
     ownerLastName: "Doe",
     ...overrides,
@@ -145,6 +157,28 @@ export function createProtocol(overrides: Partial<Protocol> = {}): Protocol {
     code: [{ _protocol_set_: [] }],
     family: "multispeq",
     sortOrder: null,
+    createdBy: "user-1",
+    createdByName: "Test User",
+    createdAt: "2025-01-01T00:00:00.000Z",
+    updatedAt: "2025-01-10T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+// ── User Profile ────────────────────────────────────────────────
+
+// ── Workbook ────────────────────────────────────────────────────
+
+let workbookSeq = 0;
+
+export function createWorkbook(overrides: Partial<Workbook> = {}): Workbook {
+  workbookSeq++;
+  return {
+    id: crypto.randomUUID(),
+    name: `Workbook ${workbookSeq}`,
+    description: `Description for workbook ${workbookSeq}`,
+    cells: [],
+    metadata: {},
     createdBy: "user-1",
     createdByName: "Test User",
     createdAt: "2025-01-01T00:00:00.000Z",
@@ -384,6 +418,110 @@ export function createInvitation(overrides: Partial<Invitation> = {}): Invitatio
   };
 }
 
+// ── Workbook Cells ──────────────────────────────────────────────
+
+let cellSeq = 0;
+
+export function createMarkdownCell(overrides: Partial<MarkdownCell> = {}): MarkdownCell {
+  cellSeq++;
+  return {
+    id: `cell-md-${cellSeq}`,
+    type: "markdown",
+    content: "",
+    isCollapsed: false,
+    ...overrides,
+  };
+}
+
+export function createProtocolCell(overrides: Partial<ProtocolCell> = {}): ProtocolCell {
+  cellSeq++;
+  return {
+    id: `cell-proto-${cellSeq}`,
+    type: "protocol",
+    payload: { protocolId: crypto.randomUUID(), version: 1 },
+    isCollapsed: false,
+    ...overrides,
+  };
+}
+
+export function createMacroCell(overrides: Partial<MacroCell> = {}): MacroCell {
+  cellSeq++;
+  return {
+    id: `cell-macro-${cellSeq}`,
+    type: "macro",
+    payload: { macroId: crypto.randomUUID(), language: "python" },
+    isCollapsed: false,
+    ...overrides,
+  };
+}
+
+export function createQuestionCell(overrides: Partial<QuestionCell> = {}): QuestionCell {
+  cellSeq++;
+  return {
+    id: `cell-q-${cellSeq}`,
+    type: "question",
+    question: { kind: "open_ended", text: "Enter a value", required: false },
+    isCollapsed: false,
+    isAnswered: false,
+    ...overrides,
+  };
+}
+
+export function createOutputCell(overrides: Partial<OutputCell> = {}): OutputCell {
+  cellSeq++;
+  return {
+    id: `cell-out-${cellSeq}`,
+    type: "output",
+    producedBy: `cell-proto-${cellSeq}`,
+    isCollapsed: false,
+    ...overrides,
+  };
+}
+
+export function createBranchCell(overrides: Partial<BranchCell> = {}): BranchCell {
+  cellSeq++;
+  return {
+    id: `cell-branch-${cellSeq}`,
+    type: "branch",
+    paths: [
+      {
+        id: `path-${cellSeq}-1`,
+        label: "Yes",
+        color: "#22c55e",
+        conditions: [
+          {
+            id: `cond-${cellSeq}-1`,
+            sourceCellId: `cell-q-${cellSeq}`,
+            field: "answer",
+            operator: "eq",
+            value: "yes",
+          },
+        ],
+      },
+    ],
+    isCollapsed: false,
+    ...overrides,
+  };
+}
+
+// ── Workbook Version Summary ────────────────────────────────────
+
+let versionSeq = 0;
+
+export function createWorkbookVersionSummary(
+  overrides: Partial<WorkbookVersionSummary> = {},
+): WorkbookVersionSummary {
+  versionSeq++;
+  return {
+    id: crypto.randomUUID(),
+    workbookId: crypto.randomUUID(),
+    version: versionSeq,
+    createdAt: "2025-01-01T00:00:00.000Z",
+    createdBy: "user-1",
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 /** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
@@ -392,6 +530,7 @@ export function resetFactories() {
   transferSeq = 0;
   macroSeq = 0;
   protocolSeq = 0;
+  workbookSeq = 0;
   vizSeq = 0;
   tableSeq = 0;
   placeSeq = 0;
@@ -400,4 +539,6 @@ export function resetFactories() {
   flowSeq = 0;
   exportSeq = 0;
   invitationSeq = 0;
+  cellSeq = 0;
+  versionSeq = 0;
 }

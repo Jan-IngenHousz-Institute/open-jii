@@ -1,26 +1,28 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { FlowEditor } from "@/components/flow-editor/flow-editor";
-import type { FlowEditorHandle } from "@/components/flow-editor/flow-editor";
+import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-state";
+import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
+import { FlowEditor } from "@/components/flow-editor";
+import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
-import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
-import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
+import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
+import { GitBranch, List } from "lucide-react";
 import { notFound } from "next/navigation";
-import { use, useState, useRef, useCallback } from "react";
+import { use, useMemo } from "react";
 
+import type { WorkbookCell } from "@repo/api";
+import { cellsToFlowGraph } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
-import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/hooks/use-toast";
+import { Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components";
 
-interface ExperimentFlowPageProps {
+interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;
 }
 
-export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) {
-  const { id } = use(params);
+export default function ExperimentDesignPage({ params }: ExperimentDesignPageProps) {
+  const { id, locale } = use(params);
   const { data: experiment, isLoading, error } = useExperiment(id);
   const {
     data: accessData,
@@ -29,59 +31,52 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   } = useExperimentAccess(id);
   const { t } = useTranslation("experiments");
 
-  // Get existing flow for this experiment
   const experimentData = experiment?.body;
-  const { data: existingFlow, refetch } = useExperimentFlow(id);
-
-  // Determine if user has access to edit
   const hasAccess = accessData?.body.isAdmin ?? false;
+  const workbookId = experimentData?.workbookId;
+  const workbookVersionId = experimentData?.workbookVersionId;
 
-  // Flow state / editor ref
-  const flowEditorRef = useRef<FlowEditorHandle | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Fetch the pinned workbook version (immutable snapshot with cells)
+  const { data: pinnedVersionData } = useWorkbookVersion(
+    workbookId ?? "",
+    workbookVersionId ?? "",
+    { enabled: !!(workbookId && workbookVersionId) },
+  );
 
-  const createFlowMutation = useExperimentFlowCreate({
-    onSuccess: () => {
-      toast({ description: "Flow created successfully" });
-      setHasUnsavedChanges(false);
-      void refetch();
-    },
-    onError: (error) => {
-      console.error("Create flow error:", error);
-      toast({ description: "Failed to create flow", variant: "destructive" });
-    },
-  });
+  const versionedCells = useMemo<WorkbookCell[]>(() => {
+    if (!pinnedVersionData) return [];
+    return pinnedVersionData.cells as WorkbookCell[];
+  }, [pinnedVersionData]);
 
-  const updateFlowMutation = useExperimentFlowUpdate({
-    onSuccess: () => {
-      toast({ description: "Flow updated successfully" });
-      setHasUnsavedChanges(false);
-      void refetch();
-    },
-    onError: (error) => {
-      console.error("Update flow error:", error);
-      toast({ description: "Failed to update flow", variant: "destructive" });
-    },
-  });
-
-  const handleSave = useCallback(() => {
+  const derivedFlow = useMemo(() => {
+    if (versionedCells.length === 0) return undefined;
     try {
-      const data = flowEditorRef.current ? flowEditorRef.current.getFlowData() : null;
-      if (!data) return; // not ready
-      if (existingFlow?.body) {
-        updateFlowMutation.mutate({ params: { id }, body: data });
-      } else {
-        createFlowMutation.mutate({ params: { id }, body: data });
-      }
-    } catch (error) {
-      // Show validation errors to the user
-      const message = error instanceof Error ? error.message : "Flow validation failed";
-      toast({ description: message, variant: "destructive" });
+      const graph = cellsToFlowGraph(versionedCells);
+      if (graph.nodes.length === 0) return undefined;
+      return {
+        id: "derived",
+        experimentId: id,
+        graph,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    } catch {
+      return undefined;
     }
-  }, [createFlowMutation, updateFlowMutation, existingFlow, id]);
+  }, [versionedCells, id]);
 
   if (isLoading || accessLoading) {
-    return <div>{t("loading")}</div>;
+    return (
+      <div className="space-y-8">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
 
   if (error ?? accessError) {
@@ -92,52 +87,44 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     return <div>{t("notFound")}</div>;
   }
 
-  // Check if experiment is archived - if so, redirect to not found (should use archive route)
   if (experimentData.status === "archived") {
     notFound();
   }
 
-  const isSaving = createFlowMutation.isPending || updateFlowMutation.isPending;
+  if (!workbookId || !workbookVersionId) {
+    return <EmptyWorkbookState experimentId={id} hasAccess={hasAccess} />;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">{t("flow.title")}</h2>
-          <p className="text-muted-foreground text-sm">
-            {hasAccess ? t("flow.editDescription") : t("flow.staticDescription")}
-          </p>
-        </div>
-        <div
-          className={`flex items-center gap-2 rounded-md px-3 py-1.5 ${hasAccess ? "bg-green-50" : "bg-blue-50"}`}
-        >
-          <div
-            className={`h-2 w-2 rounded-full ${hasAccess ? "bg-green-500" : "bg-blue-500"}`}
-          ></div>
-          <span className={`text-sm font-medium ${hasAccess ? "text-green-700" : "text-blue-700"}`}>
-            {hasAccess ? t("editingMode") : t("previewMode")}
-          </span>
-        </div>
-      </div>
-
-      <FlowEditor
-        ref={flowEditorRef}
-        initialFlow={existingFlow?.body}
-        isDisabled={!hasAccess}
-        onDirtyChange={hasAccess ? () => setHasUnsavedChanges(true) : undefined}
+      <LinkedWorkbookCard
+        experimentId={id}
+        locale={locale}
+        workbookId={workbookId}
+        workbookVersionId={workbookVersionId}
+        hasAccess={hasAccess}
       />
 
-      {hasAccess && (
-        <div className="flex items-center justify-end gap-4">
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="bg-jii-dark-green hover:bg-jii-medium-green"
-          >
-            {isSaving ? t("flow.saving") : t("flow.saveFlow")}
-          </Button>
-        </div>
-      )}
+      <Tabs defaultValue="list">
+        <TabsList>
+          <TabsTrigger value="list">
+            <List className="mr-1.5 h-4 w-4" />
+            {t("flow.viewList")}
+          </TabsTrigger>
+          <TabsTrigger value="graph">
+            <GitBranch className="mr-1.5 h-4 w-4" />
+            {t("flow.viewGraph")}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" className="mt-6">
+          <WorkbookEditor cells={versionedCells} onCellsChange={() => undefined} readOnly />
+        </TabsContent>
+
+        <TabsContent value="graph" className="mt-6">
+          <FlowEditor initialFlow={derivedFlow} isDisabled />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

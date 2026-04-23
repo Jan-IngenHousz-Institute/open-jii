@@ -1,37 +1,9 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import MacroCodeEditor from "./macro-code-editor";
 
-// Monaco can't run in jsdom — provide a minimal mock
-vi.mock("@monaco-editor/react", () => ({
-  Editor: ({
-    value,
-    onChange,
-    language,
-    theme,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-    language?: string;
-    theme?: string;
-  }) => (
-    <div data-testid="monaco-editor" data-language={language} data-theme={theme}>
-      <textarea
-        data-testid="editor-textarea"
-        value={value}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
-      />
-    </div>
-  ),
-}));
-
-const mockWriteText = vi.fn().mockResolvedValue(undefined);
-Object.defineProperty(navigator, "clipboard", {
-  value: { writeText: mockWriteText },
-  writable: true,
-  configurable: true,
-});
+// CodeEditor is globally mocked in test/setup.ts (CodeMirror can't run in jsdom)
 
 const defaults = {
   value: "",
@@ -42,52 +14,60 @@ const defaults = {
 describe("MacroCodeEditor", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders the editor", () => {
-    render(<MacroCodeEditor {...defaults} />);
-    expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
-  });
+  it("renders a label, the editor, and file stats reflecting the code", () => {
+    const code = "line1\nline2";
+    render(<MacroCodeEditor {...defaults} value={code} label="Code Editor" />);
 
-  it("renders label when provided", () => {
-    render(<MacroCodeEditor {...defaults} label="Code Editor" />);
     expect(screen.getByText("Code Editor")).toBeInTheDocument();
+    expect(screen.getByTestId("code-editor")).toBeInTheDocument();
+    expect(screen.getByText(/2 lines/)).toBeInTheDocument();
   });
 
-  it("calls onChange when editor value changes", () => {
+  it("calls onChange when the user types in the editor", async () => {
     const onChange = vi.fn();
-    render(<MacroCodeEditor {...defaults} value="code" onChange={onChange} />);
-    const textarea = screen.getByTestId("editor-textarea");
-    // fireEvent works better for controlled textarea in mock
-    textarea.dispatchEvent(new Event("change", { bubbles: true }));
-    // The mock Editor wires onChange to the textarea's native change handler
+    const user = userEvent.setup();
+    render(<MacroCodeEditor {...defaults} onChange={onChange} />);
+
+    const textarea = screen.getByTestId("code-editor-textarea");
+    await user.type(textarea, "x = 1");
+
+    expect(onChange).toHaveBeenCalled();
   });
 
-  it("maps javascript to typescript in Monaco", () => {
-    render(<MacroCodeEditor {...defaults} language="javascript" />);
-    expect(screen.getByTestId("monaco-editor")).toHaveAttribute("data-language", "typescript");
+  it("copies code to clipboard when the user clicks the copy button", async () => {
+    const user = userEvent.setup();
+    const code = "print('hello')";
+    render(<MacroCodeEditor {...defaults} value={code} />);
+
+    const copyButton = screen.getByRole("button");
+    // Initially shows Copy icon
+    expect(copyButton.querySelector(".lucide-copy")).toBeInTheDocument();
+
+    await user.click(copyButton);
+
+    // After clicking, the icon changes to Check indicating success
+    await waitFor(() => {
+      expect(copyButton.querySelector(".lucide-check")).toBeInTheDocument();
+    });
   });
 
-  it("uses the provided value", () => {
-    render(<MacroCodeEditor {...defaults} value="custom code" />);
-    expect(screen.getByTestId("editor-textarea")).toHaveValue("custom code");
+  it("shows an error message when the error prop is provided", () => {
+    render(<MacroCodeEditor {...defaults} error="Syntax error on line 3" />);
+    expect(screen.getByText("Syntax error on line 3")).toBeInTheDocument();
   });
 
-  it("applies custom height", () => {
+  it("applies custom height to the editor container", () => {
     render(<MacroCodeEditor {...defaults} height="500px" />);
-    expect(screen.getByTestId("monaco-editor").parentElement).toHaveStyle({ height: "500px" });
+    expect(screen.getByTestId("code-editor").parentElement).toHaveStyle({ height: "500px" });
   });
 
-  it("uses default height when not specified", () => {
+  it("uses default height of 400px when not specified", () => {
     render(<MacroCodeEditor {...defaults} />);
-    expect(screen.getByTestId("monaco-editor").parentElement).toHaveStyle({ height: "400px" });
+    expect(screen.getByTestId("code-editor").parentElement).toHaveStyle({ height: "400px" });
   });
 
-  it("shows error message", () => {
-    render(<MacroCodeEditor {...defaults} error="Test error" />);
-    expect(screen.getByText("Test error")).toBeInTheDocument();
-  });
-
-  it("displays file stats", () => {
-    render(<MacroCodeEditor {...defaults} value="test" />);
-    expect(screen.getByText(/1 lines.*4 B/)).toBeInTheDocument();
+  it("passes the language to the CodeEditor", () => {
+    render(<MacroCodeEditor {...defaults} language="javascript" />);
+    expect(screen.getByTestId("code-editor")).toHaveAttribute("data-language", "javascript");
   });
 });

@@ -12,19 +12,21 @@ import { iconMap } from "../navigation-config";
 interface NavigationItem {
   title: string;
   url: string;
-  icon: string;
+  icon?: string;
   isActive?: boolean;
-  items: {
+  navigable?: boolean;
+  items?: {
     title: string;
     url: string;
   }[];
+  children?: NavigationItem[];
 }
 
 interface NavigationData {
   navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
-  navProtocols: NavigationItem[];
-  navMacros: NavigationItem[];
+  navWorkbooks: NavigationItem[];
+  navLibrary: NavigationItem[];
 }
 
 interface Translations {
@@ -32,8 +34,8 @@ interface Translations {
   logoAlt: string;
   signIn: string;
   experimentsTitle: string;
-  protocolTitle: string;
-  macrosTitle: string;
+  libraryTitle: string;
+  workbooksTitle: string;
 }
 
 export function AppSidebar({
@@ -60,25 +62,21 @@ export function AppSidebar({
   // };
 
   // Convert string-based icons to actual icon components
-  const processedNavDashboard = navigationData.navDashboard.map((item) => ({
-    ...item,
-    icon: iconMap[item.icon as keyof typeof iconMap],
-  }));
+  type MappedNavItem = Omit<NavigationItem, "icon" | "children"> & {
+    icon?: (typeof iconMap)[keyof typeof iconMap];
+    children?: MappedNavItem[];
+  };
 
-  const processedNavExperiments = navigationData.navExperiments.map((item) => ({
+  const mapItem = (item: NavigationItem): MappedNavItem => ({
     ...item,
-    icon: iconMap[item.icon as keyof typeof iconMap],
-  }));
+    icon: item.icon ? iconMap[item.icon as keyof typeof iconMap] : undefined,
+    children: item.children?.map(mapItem),
+  });
 
-  const processedNavProtocols = navigationData.navProtocols.map((item) => ({
-    ...item,
-    icon: iconMap[item.icon as keyof typeof iconMap],
-  }));
-
-  const processedNavMacros = navigationData.navMacros.map((item) => ({
-    ...item,
-    icon: iconMap[item.icon as keyof typeof iconMap],
-  }));
+  const processedNavDashboard = navigationData.navDashboard.map(mapItem);
+  const processedNavExperiments = navigationData.navExperiments.map(mapItem);
+  const processedNavWorkbooks = navigationData.navWorkbooks.map(mapItem);
+  const processedNavLibrary = navigationData.navLibrary.map(mapItem);
 
   return (
     <Sidebar
@@ -124,8 +122,8 @@ export function AppSidebar({
         <div className="flex flex-col gap-4 px-4 group-data-[collapsible=icon]:gap-4 group-data-[collapsible=icon]:px-0">
           <NavItems items={processedNavDashboard} />
           <NavItems items={processedNavExperiments} />
-          <NavItems items={processedNavProtocols} />
-          <NavItems items={processedNavMacros} />
+          <NavItems items={processedNavWorkbooks} />
+          <NavItems items={processedNavLibrary} />
         </div>
       </div>
       <SidebarRail />

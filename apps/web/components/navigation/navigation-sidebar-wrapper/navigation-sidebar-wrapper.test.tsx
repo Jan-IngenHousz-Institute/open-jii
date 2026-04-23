@@ -88,59 +88,70 @@ describe("NavigationSidebarWrapper", () => {
     });
   });
 
-  it("prepares protocols navigation", async () => {
+  it("prepares library navigation with protocols child", async () => {
     const Component = await NavigationSidebarWrapper({ locale: "en" });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
     const navigationData = JSON.parse(navigationDataElement.textContent) as {
-      navProtocols: {
+      navLibrary: {
         title: string;
         url: string;
         icon: string;
-        isActive: boolean;
-        items: { title: string; url: string }[];
+        navigable: boolean;
+        children: {
+          title: string;
+          url: string;
+          icon: string;
+          items: { title: string; url: string }[];
+        }[];
       }[];
     };
 
-    expect(navigationData.navProtocols).toHaveLength(1);
-    expect(navigationData.navProtocols[0]).toMatchObject({
+    expect(navigationData.navLibrary).toHaveLength(1);
+    expect(navigationData.navLibrary[0]).toMatchObject({
+      title: "sidebar.library",
+      icon: "Library",
+      navigable: false,
+    });
+
+    const protocols = navigationData.navLibrary[0].children[0];
+    expect(protocols).toMatchObject({
       title: "sidebar.protocols",
       url: "/en/platform/protocols",
       icon: "FileSliders",
-      isActive: true,
     });
-    expect(navigationData.navProtocols[0].items).toHaveLength(2);
-    expect(navigationData.navProtocols[0].items[0]).toMatchObject({
+    expect(protocols.items).toHaveLength(2);
+    expect(protocols.items[0]).toMatchObject({
       title: "sidebar.newProtocol",
       url: "/en/platform/protocols/new",
     });
   });
 
-  it("prepares macros navigation", async () => {
+  it("prepares library navigation with macros child", async () => {
     const Component = await NavigationSidebarWrapper({ locale: "en" });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
     const navigationData = JSON.parse(navigationDataElement.textContent) as {
-      navMacros: {
-        title: string;
-        url: string;
-        icon: string;
-        isActive: boolean;
-        items: { title: string; url: string }[];
+      navLibrary: {
+        children: {
+          title: string;
+          url: string;
+          icon: string;
+          items: { title: string; url: string }[];
+        }[];
       }[];
     };
 
-    expect(navigationData.navMacros).toHaveLength(1);
-    expect(navigationData.navMacros[0]).toMatchObject({
+    const macros = navigationData.navLibrary[0].children[1];
+    expect(macros).toMatchObject({
       title: "sidebar.macros",
       url: "/en/platform/macros",
       icon: "Code",
-      isActive: true,
     });
-    expect(navigationData.navMacros[0].items).toHaveLength(2);
-    expect(navigationData.navMacros[0].items[0]).toMatchObject({
+    expect(macros.items).toHaveLength(2);
+    expect(macros.items[0]).toMatchObject({
       title: "sidebar.newMacro",
       url: "/en/platform/macros/new",
     });
@@ -158,8 +169,8 @@ describe("NavigationSidebarWrapper", () => {
       logoAlt: "common.logo",
       signIn: "signIn",
       experimentsTitle: "sidebar.experiments",
-      protocolTitle: "sidebar.protocols",
-      macrosTitle: "sidebar.macros",
+      libraryTitle: "sidebar.library",
+      workbooksTitle: "sidebar.workbooks",
     });
   });
 
@@ -241,25 +252,61 @@ describe("NavigationSidebarWrapper", () => {
     expect(experimentsItems[0]).toHaveProperty("url");
   });
 
-  it("maps protocol and macro items correctly", async () => {
+  it("maps library children items correctly", async () => {
     const Wrapper = await NavigationSidebarWrapper({ locale: "en" });
     render(<SidebarProvider>{Wrapper}</SidebarProvider>);
 
     const component = Wrapper as React.ReactElement<{
       navigationData: {
-        navProtocols: { items: { title: string; url: string }[] }[];
-        navMacros: { items: { title: string; url: string }[] }[];
+        navLibrary: {
+          children: { items: { title: string; url: string }[] }[];
+        }[];
+        navWorkbooks: { items: { title: string; url: string }[] }[];
       };
     }>;
 
-    // Lines 34-35: Verify protocols items.map() executes
-    const protocolsItems = component.props.navigationData.navProtocols[0].items;
+    // Verify protocols items under library children
+    const protocolsItems = component.props.navigationData.navLibrary[0].children[0].items;
     expect(protocolsItems.length).toBeGreaterThan(0);
     expect(protocolsItems[0]).toHaveProperty("title");
 
-    // Lines 34-35: Verify macros items.map() executes
-    const macrosItems = component.props.navigationData.navMacros[0].items;
+    // Verify macros items under library children
+    const macrosItems = component.props.navigationData.navLibrary[0].children[1].items;
     expect(macrosItems.length).toBeGreaterThan(0);
     expect(macrosItems[0]).toHaveProperty("title");
+
+    // Verify workbooks items.map() executes
+    const workbooksItems = component.props.navigationData.navWorkbooks[0].items;
+    expect(workbooksItems.length).toBeGreaterThan(0);
+    expect(workbooksItems[0]).toHaveProperty("title");
+  });
+
+  it("prepares workbooks navigation", async () => {
+    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    render(Component);
+
+    const navigationDataElement = screen.getByTestId("sidebar-navigationData");
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
+      navWorkbooks: {
+        title: string;
+        url: string;
+        icon: string;
+        isActive: boolean;
+        items: { title: string; url: string }[];
+      }[];
+    };
+
+    expect(navigationData.navWorkbooks).toHaveLength(1);
+    expect(navigationData.navWorkbooks[0]).toMatchObject({
+      title: "sidebar.workbooks",
+      url: "/en/platform/workbooks",
+      icon: "BookOpen",
+      isActive: true,
+    });
+    expect(navigationData.navWorkbooks[0].items).toHaveLength(2);
+    expect(navigationData.navWorkbooks[0].items[0]).toMatchObject({
+      title: "sidebar.newWorkbook",
+      url: "/en/platform/workbooks/new",
+    });
   });
 });

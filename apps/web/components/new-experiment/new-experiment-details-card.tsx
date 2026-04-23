@@ -8,10 +8,21 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-} from "@repo/ui/components/card";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@repo/ui/components/form";
-import { Input } from "@repo/ui/components/input";
-import { RichTextarea } from "@repo/ui/components/rich-textarea";
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  Input,
+  FormMessage,
+  RichTextarea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components";
+
+import { useWorkbookList } from "../../hooks/workbook/useWorkbookList/useWorkbookList";
 
 interface NewExperimentDetailsCardProps {
   form: UseFormReturn<CreateExperimentBody>;
@@ -19,6 +30,9 @@ interface NewExperimentDetailsCardProps {
 
 export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps) {
   const { t } = useTranslation();
+
+  const { data: workbooks = [] } = useWorkbookList();
+
   return (
     <Card>
       <CardHeader>
@@ -52,6 +66,34 @@ export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps
                   placeholder={t("newExperiment.descriptionPlaceholder")}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="workbookId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("newExperiment.workbook")}</FormLabel>
+              <Select
+                onValueChange={(value) => field.onChange(value === "__none__" ? undefined : value)}
+                value={field.value ?? "__none__"}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("newExperiment.workbookPlaceholder")} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="__none__">{t("newExperiment.noWorkbook")}</SelectItem>
+                  {workbooks.map((wb) => (
+                    <SelectItem key={wb.id} value={wb.id}>
+                      {wb.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

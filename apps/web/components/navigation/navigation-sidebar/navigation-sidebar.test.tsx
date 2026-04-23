@@ -6,25 +6,40 @@ import { SidebarProvider } from "@repo/ui/components/sidebar";
 import { AppSidebar } from "./navigation-sidebar";
 
 // Mock NavItems child component
-vi.mock("./nav-items", () => ({
-  NavItems: ({ items }: { items: { title: string }[] }) => (
+vi.mock("../nav-items/nav-items", () => ({
+  NavItems: ({ items }: { items: { title: string; children?: { title: string }[] }[] }) => (
     <div data-testid="nav-items">
       {items.map((item, i) => (
-        <div key={i}>{item.title}</div>
+        <div key={i}>
+          {item.title}
+          {item.children?.map((child, j) => <div key={j}>{child.title}</div>)}
+        </div>
       ))}
     </div>
   ),
 }));
 
 const navigationData = {
-  navDashboard: [{ title: "Dashboard", url: "/en/platform", icon: "Home", items: [] }],
+  navDashboard: [{ title: "Dashboard", url: "/en/platform", icon: "LayoutDashboard", items: [] }],
   navExperiments: [
-    { title: "Experiments", url: "/en/platform/experiments", icon: "Microscope", items: [] },
+    { title: "Experiments", url: "/en/platform/experiments", icon: "Leaf", items: [] },
   ],
-  navProtocols: [
-    { title: "Protocols", url: "/en/platform/protocols", icon: "FileSliders", items: [] },
+  navWorkbooks: [
+    { title: "Workbooks", url: "/en/platform/workbooks", icon: "BookOpen", items: [] },
   ],
-  navMacros: [{ title: "Macros", url: "/en/platform/macros", icon: "Code", items: [] }],
+  navLibrary: [
+    {
+      title: "Library",
+      url: "/en/platform/protocols",
+      icon: "Library",
+      navigable: false,
+      items: [],
+      children: [
+        { title: "Protocols", url: "/en/platform/protocols", icon: "FileSliders", items: [] },
+        { title: "Macros", url: "/en/platform/macros", icon: "Code", items: [] },
+      ],
+    },
+  ],
 };
 
 const translations = {
@@ -32,8 +47,8 @@ const translations = {
   logoAlt: "openJII Logo",
   signIn: "Sign in",
   experimentsTitle: "Experiments",
-  protocolTitle: "Protocols",
-  macrosTitle: "Macros",
+  libraryTitle: "Library",
+  workbooksTitle: "Workbooks",
 };
 
 function renderSidebar() {
@@ -47,7 +62,7 @@ function renderSidebar() {
 describe("AppSidebar", () => {
   it("renders navigation items", () => {
     renderSidebar();
-    for (const text of ["Dashboard", "Experiments", "Protocols", "Macros"]) {
+    for (const text of ["Dashboard", "Experiments", "Workbooks", "Protocols", "Macros"]) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }
   });
@@ -59,9 +74,11 @@ describe("AppSidebar", () => {
 
   it("renders all navigation sections", () => {
     renderSidebar();
-    expect(screen.getByRole("link", { name: /Dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Experiments/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Protocols/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Macros/i })).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Experiments")).toBeInTheDocument();
+    expect(screen.getByText("Workbooks")).toBeInTheDocument();
+    expect(screen.getByText("Library")).toBeInTheDocument();
+    expect(screen.getByText("Protocols")).toBeInTheDocument();
+    expect(screen.getByText("Macros")).toBeInTheDocument();
   });
 });

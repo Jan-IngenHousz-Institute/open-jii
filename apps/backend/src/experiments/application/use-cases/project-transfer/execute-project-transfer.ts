@@ -18,7 +18,6 @@ import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
-import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "../flows/create-flow";
 
@@ -29,7 +28,6 @@ export class ExecuteProjectTransferUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
-    private readonly experimentProtocolRepository: ExperimentProtocolRepository,
     private readonly locationRepository: LocationRepository,
     private readonly createFlowUseCase: CreateFlowUseCase,
     private readonly createProtocolUseCase: CreateProtocolUseCase,
@@ -154,28 +152,7 @@ export class ExecuteProjectTransferUseCase {
       return addMembersResult;
     }
 
-    // 5. Associate protocol with experiment (if protocol was created)
-    if (protocolId) {
-      const addProtocolsResult = await this.experimentProtocolRepository.addProtocols(
-        experiment.id,
-        [{ protocolId, order: 0 }],
-      );
-
-      if (addProtocolsResult.isFailure()) {
-        this.logger.error({
-          msg: "Failed to associate protocol with experiment",
-          errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-          operation: "executeProjectTransfer",
-          experimentId: experiment.id,
-          error: addProtocolsResult.error,
-        });
-        return failure(
-          AppError.internal(`Failed to associate protocol: ${addProtocolsResult.error.message}`),
-        );
-      }
-    }
-
-    // 6. Add locations if provided
+    // 5. Add locations if provided
     if (data.experiment.locations && data.experiment.locations.length > 0) {
       const locations: CreateLocationDto[] = data.experiment.locations.map((loc) => ({
         ...loc,
@@ -198,7 +175,7 @@ export class ExecuteProjectTransferUseCase {
       }
     }
 
-    // 7. Create flow (non-fatal, requires both protocol and macro)
+    // 6. Create flow (non-fatal, requires both protocol and macro)
     let flowId: string | null = null;
     if (protocolId && macroId) {
       const questionNodes: FlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({

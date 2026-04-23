@@ -34,11 +34,14 @@
     "sensors": "Sensoren",
     "multispeq": "MultispeQ",
     "protocols": "Protokolle",
+    "library": "Bibliothek",
     "protocol1": "Protokoll 1",
     "otherDevices": "Andere Geräte",
     "otherDevice1": "Anderes Gerät 1",
     "hardware": "Hardware",
-    "macros": "Makros"
+    "macros": "Makros",
+    "workbooks": "Arbeitsmappen",
+    "newWorkbook": "Neue Arbeitsmappe"
   },
   "breadcrumbs": {
     "home": "Startseite",
