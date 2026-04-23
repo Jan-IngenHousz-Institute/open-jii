@@ -59,11 +59,12 @@ BEGIN
         w.depth + 1,
         w.visited || (target_node.value->>'id')
       FROM walk w
-      -- Find edges from current node
+      -- Find first unvisited edge from current node
       CROSS JOIN LATERAL (
         SELECT e.value->>'target' AS target_id
         FROM jsonb_array_elements(rec.graph->'edges') AS e(value)
         WHERE e.value->>'source' = w.node_id
+          AND NOT (e.value->>'target' = ANY(w.visited))
         LIMIT 1
       ) edge
       -- Resolve target node
@@ -73,7 +74,6 @@ BEGIN
         WHERE n.value->>'id' = edge.target_id
       ) target_node
       WHERE w.depth < 100
-        AND NOT (target_node.value->>'id' = ANY(w.visited))
     ),
     ordered_nodes AS (
       SELECT node_id, node_value, depth
