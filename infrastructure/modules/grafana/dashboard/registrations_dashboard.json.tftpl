@@ -31,12 +31,14 @@
           "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
           "queryMode": "Metrics",
           "metricQueryType": 0,
+          "metricEditorMode": 0,
           "namespace": "OpenJII/UserRegistrations",
           "metricName": "WeeklyNewUsers",
-          "statistics": ["Maximum"],
+          "statistic": "Maximum",
           "period": "604800",
           "region": "${aws_region}",
-          "dimensions": {}
+          "dimensions": {},
+          "matchExact": true
         }
       ]
     },
@@ -64,12 +66,14 @@
           "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
           "queryMode": "Metrics",
           "metricQueryType": 0,
+          "metricEditorMode": 0,
           "namespace": "OpenJII/UserRegistrations",
           "metricName": "TotalUsers",
-          "statistics": ["Maximum"],
+          "statistic": "Maximum",
           "period": "604800",
           "region": "${aws_region}",
-          "dimensions": {}
+          "dimensions": {},
+          "matchExact": true
         }
       ]
     },
@@ -103,12 +107,14 @@
           "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
           "queryMode": "Metrics",
           "metricQueryType": 0,
+          "metricEditorMode": 0,
           "namespace": "OpenJII/UserRegistrations",
           "metricName": "TotalUsers",
-          "statistics": ["Maximum"],
+          "statistic": "Maximum",
           "period": "604800",
           "region": "${aws_region}",
-          "dimensions": {}
+          "dimensions": {},
+          "matchExact": true
         }
       ]
     },
@@ -142,12 +148,14 @@
           "datasource": { "type": "cloudwatch", "uid": "${datasource_uid}" },
           "queryMode": "Metrics",
           "metricQueryType": 0,
+          "metricEditorMode": 0,
           "namespace": "OpenJII/UserRegistrations",
           "metricName": "WeeklyNewUsers",
-          "statistics": ["Maximum"],
+          "statistic": "Maximum",
           "period": "604800",
           "region": "${aws_region}",
-          "dimensions": {}
+          "dimensions": {},
+          "matchExact": true
         }
       ]
     }
