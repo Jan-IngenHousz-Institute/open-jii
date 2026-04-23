@@ -15,9 +15,10 @@ module "ecr" {
   image_tag_mutability = var.image_tag_mutability
   force_delete         = var.force_delete
 
-  create_repository_policy  = true
-  create_ecs_pull_statement = false
-  ci_cd_role_arn            = var.ci_cd_role_arn
+  create_repository_policy     = true
+  create_ecs_pull_statement    = false
+  create_lambda_pull_statement = true
+  ci_cd_role_arn               = var.ci_cd_role_arn
 
   tags = merge(local.common_tags, {
     Language = each.key

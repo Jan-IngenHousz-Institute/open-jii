@@ -182,6 +182,7 @@ resource "aws_lambda_function" "this" {
   depends_on = [
     aws_iam_role_policy.lambda_logs,
     aws_iam_role_policy.lambda_vpc,
+    aws_iam_role_policy.lambda_ecr,
     aws_cloudwatch_log_group.lambda
   ]
 }
