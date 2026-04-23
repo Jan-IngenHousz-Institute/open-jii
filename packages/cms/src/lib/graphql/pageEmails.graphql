@@ -1,0 +1,29 @@
+fragment ComponentEmailFields on ComponentEmail {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  availableVariables
+  preview
+  content {
+    json
+    links {
+      entries {
+        block {
+          ...ButtonFields
+        }
+      }
+    }
+  }
+}
+
+query componentEmailByName($internalName: String!) {
+  componentEmailCollection(limit: 1, where: { internalName: $internalName }) {
+    items {
+      ...ComponentEmailFields
+    }
+  }
+}

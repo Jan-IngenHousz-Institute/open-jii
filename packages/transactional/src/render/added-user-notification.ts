@@ -1,6 +1,8 @@
 import { render } from "@react-email/components";
 
-import { AddedUserNotification } from "../emails/added-user-notification";
+import { Email } from "../emails/email";
+import { AddedUserNotification } from "../emails/fallbacks/added-user-notification";
+import { getCmsEmail } from "../lib/contentful";
 
 export interface RenderAddedUserNotificationParams {
   host: string;
@@ -8,28 +10,60 @@ export interface RenderAddedUserNotificationParams {
   experimentUrl: string;
   actor: string;
   role: string;
+  baseUrl: string;
 }
 
 export interface RenderedEmail {
   html: string;
   text: string;
+  preview: string;
 }
 
 export async function renderAddedUserNotification(
   params: RenderAddedUserNotificationParams,
 ): Promise<RenderedEmail> {
-  const { host, experimentName, experimentUrl, actor, role } = params;
+  const { host, baseUrl, experimentName, experimentUrl, actor, role } = params;
+
+  const emailData = await getCmsEmail("added-user-notification", {
+    host,
+    baseUrl,
+    experimentName,
+    experimentUrl,
+    actor,
+    role,
+  });
+
+  if (!emailData) {
+    const html = await render(
+      AddedUserNotification({ host, experimentName, experimentUrl, actor, role, baseUrl }),
+      {},
+    );
+    const text = await render(
+      AddedUserNotification({ host, experimentName, experimentUrl, actor, role, baseUrl }),
+      { plainText: true },
+    );
+    return { html, text, preview: "You've been added to an experiment on openJII" };
+  }
 
   const html = await render(
-    AddedUserNotification({ host, experimentName, experimentUrl, actor, role }),
+    Email({
+      host,
+      baseUrl,
+      cmsPreview: emailData.preview,
+      cmsContent: emailData.content,
+    }),
     {},
   );
+
   const text = await render(
-    AddedUserNotification({ host, experimentName, experimentUrl, actor, role }),
-    {
-      plainText: true,
-    },
+    Email({
+      host,
+      baseUrl,
+      cmsPreview: emailData.preview,
+      cmsContent: emailData.content,
+    }),
+    { plainText: true },
   );
 
-  return { html, text };
+  return { html, text, preview: emailData.preview };
 }
