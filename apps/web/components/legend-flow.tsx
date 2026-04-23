@@ -23,9 +23,9 @@ export function LegendFlow({
       <CardHeader>
         <CardTitle>{t("flow.legend")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-wrap gap-3 md:flex md:flex-col md:gap-3">
+      <CardContent className="flex flex-wrap gap-3 md:flex md:flex-col md:gap-2">
         {nodeTypes.map((type) => {
-          const colorClass = `${nodeTypeColorMap[type].border} ${nodeTypeColorMap[type].bg}`;
+          const accent = nodeTypeColorMap[type].accent;
           return (
             <div
               key={type}
@@ -33,17 +33,29 @@ export function LegendFlow({
               draggable
               onDragStart={(e) => e.dataTransfer.setData("application/reactflow", type)}
               tabIndex={0}
-              className={`flex items-center rounded-lg border md:gap-2 ${colorClass} gap-1 px-2 py-1 shadow-md transition-transform hover:scale-105 md:py-2`}
+              className="flex items-center gap-2 rounded-[10px] border px-2.5 py-2 shadow-sm transition-transform hover:scale-105"
+              style={{
+                borderColor: "#EDF2F6",
+                backgroundColor: "#FFFFFF",
+                borderLeftWidth: 4,
+                borderLeftColor: accent,
+              }}
             >
-              <div className="text-slate-600">
+              <div
+                className="flex h-5 w-5 items-center justify-center rounded"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${accent} 10%, transparent)`,
+                  color: accent,
+                }}
+              >
                 {React.cloneElement(
                   nodeTypeColorMap[type].icon as React.ReactElement,
-                  { size: 20 } as Record<string, unknown>,
+                  { size: 14 } as Record<string, unknown>,
                 )}
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{t(`flow.nodeTypes.${type}`)}</span>
-              </div>
+              <span className="text-xs font-medium" style={{ color: "#011111" }}>
+                {t(`flow.nodeTypes.${type}`)}
+              </span>
             </div>
           );
         })}

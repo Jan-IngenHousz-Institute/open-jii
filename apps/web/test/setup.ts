@@ -175,6 +175,9 @@ vi.mock("posthog-js/react", () => {
 vi.mock("@repo/ui/hooks/use-toast", () => ({
   toast: vi.fn(),
   useToast: () => ({ toast: vi.fn(), toasts: [], dismiss: vi.fn() }),
+  useIsMobile: vi.fn(() => false),
+  useIsTablet: vi.fn(() => false),
+  useIsLgTablet: vi.fn(() => false),
 }));
 
 vi.mock("~/lib/contentful", () => ({
@@ -195,4 +198,30 @@ vi.mock("react", async () => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const actual = await vi.importActual<typeof import("react")>("react");
   return { ...actual, use: vi.fn(actual.use) };
+});
+
+// CodeMirror cannot run in jsdom (no getClientRects, etc.) — provide a mock
+// for the shared CodeEditor wrapper so any component that uses it can be tested.
+vi.mock("~/components/shared/code-editor", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const React = await vi.importActual<typeof import("react")>("react");
+  return {
+    CodeEditor: (props: Record<string, unknown>) =>
+      React.createElement(
+        "div",
+        {
+          "data-testid": "code-editor",
+          "data-language": props.language,
+          "data-height": props.height,
+        },
+        React.createElement("textarea", {
+          "data-testid": "code-editor-textarea",
+          value: props.value,
+          readOnly: props.readOnly,
+          onChange: (e: { target: { value: string } }) =>
+            (props.onChange as ((v: string) => void) | undefined)?.(e.target.value),
+        }),
+      ),
+    createSyntaxLinter: vi.fn(),
+  };
 });

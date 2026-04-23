@@ -1,11 +1,12 @@
 "use client";
 
-import type { Monaco, OnMount } from "@monaco-editor/react";
-import Editor from "@monaco-editor/react";
-import { Copy, Check } from "lucide-react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import type { Diagnostic } from "@codemirror/lint";
+import { Check, Copy } from "lucide-react";
 import { useFeatureFlagEnabled } from "posthog-js/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
+import { CodeEditor } from "~/components/shared/code-editor";
 import { useDebounce } from "~/hooks/useDebounce";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
@@ -37,7 +38,40 @@ interface ProtocolCodeEditorProps {
   borderless?: boolean;
   readOnly?: boolean;
 }
-type IStandaloneCodeEditor = Parameters<OnMount>[0];
+
+function computeProtocolDiagnostics(doc: string, asWarning: boolean): Diagnostic[] {
+  if (!doc.trim()) return [];
+  const diagnostics: Diagnostic[] = [];
+  try {
+    const parsed = JSON.parse(doc) as unknown;
+    const result = validateProtocolJson(parsed);
+    if (!result.success && result.error) {
+      for (const issue of result.error) {
+        const { line, message } = findProtocolErrorLine(doc, issue);
+        const docLines = doc.split("\n");
+        let from = 0;
+        for (let i = 0; i < Math.min(line - 1, docLines.length); i++) {
+          from += docLines[i].length + 1;
+        }
+        const to = from + (docLines[line - 1]?.length ?? 0);
+        diagnostics.push({ from, to, severity: asWarning ? "warning" : "error", message });
+      }
+    }
+  } catch (e) {
+    let errorPos = 0;
+    if (e instanceof SyntaxError && e.message) {
+      const posMatch = /position (\d+)/.exec(e.message);
+      if (posMatch) errorPos = parseInt(posMatch[1], 10);
+    }
+    diagnostics.push({
+      from: Math.min(errorPos, doc.length),
+      to: Math.min(errorPos + 1, doc.length),
+      severity: "error",
+      message: "Invalid JSON syntax",
+    });
+  }
+  return diagnostics;
+}
 
 const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   value,
@@ -52,11 +86,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   borderless = false,
   readOnly = false,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const { copy: copyToClipboard, copied } = useCopyToClipboard();
   const [isValidJson, setIsValidJson] = useState(true);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
-  const monacoRef = useRef<Monaco | null>(null);
-  const editorRef = useRef<IStandaloneCodeEditor | null>(null);
   const [editorCode, setEditorCode] = useState<string | undefined>(undefined);
   const [debouncedEditorCode] = useDebounce(editorCode, 200);
   const isUserEditingRef = useRef(false);
@@ -67,7 +99,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const onValidationChangeRef = useRef(onValidationChange);
   onValidationChangeRef.current = onValidationChange;
 
-  // Check feature flag for validation strategy — default to strict mode when flag hasn't resolved
+  // Check feature flag for validation strategy - default to strict mode when flag hasn't resolved
   const validationAsWarning =
     useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ?? false;
 
@@ -84,46 +116,8 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   // Use editor code for display, or fall back to prop value
   const editorValue = editorCode ?? initialEditorValue;
 
-  // Set Monaco markers (errors or warnings based on validation mode)
-  const setMarkers = (
-    messages: string[],
-    messageDetails?: { line: number; message: string }[],
-    asError = false,
-  ) => {
-    if (monacoRef.current && editorRef.current) {
-      const markerSeverityWarning = monacoRef.current.MarkerSeverity.Warning;
-      const markerSeverityError = monacoRef.current.MarkerSeverity.Error;
-      const model = editorRef.current.getModel();
-      if (model) {
-        monacoRef.current.editor.setModelMarkers(
-          model,
-          "owner",
-          (messageDetails ?? []).map((e) => ({
-            startLineNumber: e.line,
-            endLineNumber: e.line,
-            startColumn: 1,
-            endColumn: 1,
-            message: e.message,
-            // Use Error severity for JSON syntax errors or when in strict mode
-            // Use Warning severity when in warning mode
-            severity:
-              e.message === "Invalid JSON syntax" || asError
-                ? markerSeverityError
-                : markerSeverityWarning,
-          })),
-        );
-      }
-    }
-  };
-
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(editorValue);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+    await copyToClipboard(editorValue);
   };
 
   const getJsonStats = () => {
@@ -139,6 +133,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 
   const stats = getJsonStats();
 
+  // Validation effect - runs on debounced code changes
   useEffect(() => {
     if (!debouncedEditorCode) {
       onChangeRef.current(debouncedEditorCode);
@@ -155,19 +150,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       const result = validateProtocolJson(parsedValue);
 
       if (!result.success && result.error) {
-        // Set validation warnings
         setValidationWarnings(result.error.map((e) => getErrorMessage(e)));
-        const warningDetails = result.error.map((e) => {
-          return findProtocolErrorLine(debouncedEditorCode, e);
-        });
-
-        // Show as errors (red) in strict mode, warnings (yellow) in warning mode
-        const asError = !validationAsWarning;
-        setMarkers(
-          result.error.map((e) => e.message),
-          warningDetails,
-          asError,
-        );
 
         // Block save only in strict mode
         if (!validationAsWarning) {
@@ -176,9 +159,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
           return;
         }
       } else {
-        // Clear validation state when protocol is valid
         setValidationWarnings([]);
-        setMarkers([]);
       }
 
       // Always set valid in warning mode, or when validation passes
@@ -190,49 +171,29 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       } else {
         onChangeRef.current(debouncedEditorCode);
       }
-    } catch (e) {
+    } catch {
       setIsValidJson(false);
       setValidationWarnings(["Invalid JSON syntax"]);
-
-      // Try to find the actual line number where JSON parsing failed
-      let errorLine = 1;
-      if (e instanceof SyntaxError && e.message) {
-        const lineRegex = /position (\d+)/;
-        const lineMatch = lineRegex.exec(e.message);
-        if (lineMatch) {
-          const position = parseInt(lineMatch[1], 10);
-          // Calculate line number from position
-          errorLine = debouncedEditorCode.substring(0, position).split("\n").length;
-        }
-      }
-
-      setMarkers(
-        ["Invalid JSON syntax"],
-        [{ line: errorLine, message: "Invalid JSON syntax" }],
-        true, // Always show JSON errors as errors (red)
-      );
-      onChangeRef.current(undefined); // Don't save invalid JSON
+      onChangeRef.current(undefined);
       onValidationChangeRef.current?.(false);
     }
   }, [debouncedEditorCode, validationAsWarning]);
 
-  // Handle editor changes and always try to convert to array for validation
-  const handleEditorChange = (newValue: string | undefined) => {
+  const handleChange = useCallback((val: string) => {
     isUserEditingRef.current = true;
-    setEditorCode(newValue);
-  };
+    setEditorCode(val);
+  }, []);
 
-  const handleEditorMount = (editor: IStandaloneCodeEditor, monaco: Monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-  };
+  // Stable ref for the validation mode so lint source can read it without recreating
+  const validationAsWarningRef = useRef(validationAsWarning);
+  validationAsWarningRef.current = validationAsWarning;
 
-  useEffect(() => {
-    // Clear markers if error prop changes
-    if (!error && monacoRef.current && editorRef.current) {
-      setMarkers([]);
-    }
-  }, [error]);
+  const protocolLintSource = useCallback(
+    (doc: string): Diagnostic[] => computeProtocolDiagnostics(doc, validationAsWarningRef.current),
+    [],
+  );
+
+  const heightStr = typeof height === "number" ? `${height}px` : height;
 
   return (
     <div className={cn("grid w-full", borderless ? "h-full" : "gap-1.5")}>
@@ -253,7 +214,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
             {title && <span className="text-slate-300">|</span>}
             <span className="text-xs font-medium text-slate-600">JSON</span>
             <span className="text-xs text-slate-500">
-              {stats.lines} lines • {stats.size}
+              {stats.lines} lines - {stats.size}
             </span>
             {!isValidJson && <span className="text-xs text-red-600">Invalid JSON</span>}
             {validationWarnings.length > 0 && isValidJson && (
@@ -289,7 +250,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
           </div>
         </div>
 
-        {/* Monaco Editor */}
+        {/* CodeMirror Editor */}
         <div className={cn("relative", borderless && "flex-1")}>
           {/* Placeholder overlay */}
           {!editorValue && placeholder && (
@@ -297,57 +258,14 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
               {placeholder}
             </div>
           )}
-          <Editor
-            height={height}
-            language="json"
+          <CodeEditor
             value={editorValue}
-            onChange={handleEditorChange}
-            onMount={handleEditorMount}
-            loading={
-              <div className="flex h-full items-center justify-center bg-slate-50">
-                <div className="animate-pulse text-sm text-slate-600">Loading code editor...</div>
-              </div>
-            }
-            options={{
-              readOnly,
-              minimap: { enabled: false },
-              fontSize: 14,
-              fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
-              lineHeight: 1.6,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              wordWrap: "on",
-              lineNumbers: "on",
-              folding: true,
-              contextmenu: true,
-              selectOnLineNumbers: true,
-              glyphMargin: false,
-              lineDecorationsWidth: 0,
-              lineNumbersMinChars: 3,
-              renderLineHighlight: "line",
-              padding: { top: 16, bottom: 16 },
-              scrollbar: {
-                vertical: "auto",
-                horizontal: "auto",
-                verticalScrollbarSize: 10,
-                horizontalScrollbarSize: 10,
-                useShadows: true,
-              },
-              smoothScrolling: true,
-              cursorBlinking: "phase",
-              renderValidationDecorations: "on",
-              hideCursorInOverviewRuler: false,
-              suggest: {
-                showKeywords: true,
-                showSnippets: true,
-              },
-              quickSuggestions: {
-                other: true,
-                comments: false,
-                strings: true,
-              },
-            }}
-            theme="vs-light"
+            onChange={handleChange}
+            language="json"
+            height={heightStr}
+            readOnly={readOnly}
+            lintSource={protocolLintSource}
+            lintDelay={300}
           />
         </div>
       </div>

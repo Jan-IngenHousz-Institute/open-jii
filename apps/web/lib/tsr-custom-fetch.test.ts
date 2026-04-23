@@ -5,12 +5,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { tsrCustomApiFetcher } from "./tsr-custom-fetch";
 
-vi.mock("@ts-rest/core", async (importOriginal) => {
-  const actual = await importOriginal<typeof TsRestCore>();
-  return {
-    ...actual,
-    tsRestFetchApi: vi.fn(),
-  };
+vi.mock("@ts-rest/core", async () => {
+  const actual = await vi.importActual<typeof TsRestCore>("@ts-rest/core");
+  return { ...actual, tsRestFetchApi: vi.fn() };
 });
 
 describe("tsrCustomApiFetcher", () => {
@@ -22,10 +19,16 @@ describe("tsrCustomApiFetcher", () => {
     const response = { status: 200, body: { ok: true } };
     vi.mocked(tsRestFetchApi).mockResolvedValue(response as never);
 
-    const args = {
+    const args: ApiFetcherArgs = {
+      route: { method: "GET", path: "/api/x", responses: {} } as ApiFetcherArgs["route"],
       path: "/api/x",
+      method: "GET",
       headers: { Authorization: "bearer" },
-    } as ApiFetcherArgs;
+      body: undefined,
+      rawBody: undefined,
+      rawQuery: undefined,
+      contentType: undefined,
+    };
 
     await expect(tsrCustomApiFetcher(args)).resolves.toBe(response);
 

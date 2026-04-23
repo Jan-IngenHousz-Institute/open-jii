@@ -55,10 +55,6 @@ import {
   // Flow schemas
   zFlow,
   zUpsertFlowBody,
-  // Protocol schemas
-  zExperimentProtocolList,
-  zAddExperimentProtocolsBody,
-  zExperimentProtocolPathParam,
   // Visualization schemas
   zExperimentVisualization,
   zExperimentVisualizationList,
@@ -70,6 +66,7 @@ import {
   zUpdateExperimentVisualizationResponse,
 } from "../schemas/experiment.schema";
 import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
+import { zAttachWorkbookBody, zAttachWorkbookResponse } from "../schemas/workbook-version.schema";
 
 const c = initContract();
 
@@ -236,53 +233,6 @@ export const experimentContract = c.router({
       "Retrieves metadata for all tables in the experiment (names, display names, row counts)",
   },
 
-  listExperimentProtocols: {
-    method: "GET",
-    path: "/api/v1/experiments/:id/protocols",
-    pathParams: zIdPathParam,
-    responses: {
-      200: zExperimentProtocolList,
-      400: zErrorResponse,
-      401: zErrorResponse,
-      403: zErrorResponse,
-      404: zErrorResponse,
-    },
-    summary: "List protocols associated with an experiment",
-    description: "Returns a list of protocol associations for the specified experiment.",
-  },
-
-  addExperimentProtocols: {
-    method: "POST",
-    path: "/api/v1/experiments/:id/protocols",
-    pathParams: zIdPathParam,
-    body: zAddExperimentProtocolsBody,
-    responses: {
-      201: zExperimentProtocolList,
-      400: zErrorResponse,
-      401: zErrorResponse,
-      403: zErrorResponse,
-      404: zErrorResponse,
-      409: zErrorResponse,
-    },
-    summary: "Add protocols to an experiment",
-    description: "Associates one or more protocols with an experiment.",
-  },
-
-  removeExperimentProtocol: {
-    method: "DELETE",
-    path: "/api/v1/experiments/:id/protocols/:protocolId",
-    pathParams: zExperimentProtocolPathParam,
-    responses: {
-      204: null,
-      400: zErrorResponse,
-      401: zErrorResponse,
-      403: zErrorResponse,
-      404: zErrorResponse,
-    },
-    summary: "Remove a protocol from an experiment",
-    description: "Removes the association between a protocol and an experiment.",
-  },
-
   // --- Flow Endpoints ---
   getFlow: {
     method: "GET",
@@ -326,6 +276,54 @@ export const experimentContract = c.router({
     },
     summary: "Update experiment flow",
     description: "Updates the existing flow for the experiment with the provided graph.",
+  },
+
+  // --- Workbook Attachment Endpoints ---
+  attachWorkbook: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/workbook/attach",
+    pathParams: zIdPathParam,
+    body: zAttachWorkbookBody,
+    responses: {
+      200: zAttachWorkbookResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Attach a workbook to an experiment",
+    description:
+      "Attaches a workbook to the experiment, publishing a new version if cells have changed since the last publish.",
+  },
+
+  detachWorkbook: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/workbook/detach",
+    pathParams: zIdPathParam,
+    body: z.undefined(),
+    responses: {
+      200: zExperiment,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Detach the workbook from an experiment",
+    description:
+      "Detaches the current workbook from the experiment. The workbook version reference is kept for historical purposes.",
+  },
+
+  upgradeWorkbookVersion: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/workbook/upgrade",
+    pathParams: zIdPathParam,
+    body: z.undefined(),
+    responses: {
+      200: zAttachWorkbookResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Upgrade the experiment to the latest workbook version",
+    description:
+      "Publishes the latest workbook cells as a new version (or reuses the latest if unchanged) and updates the experiment to reference it.",
   },
 
   uploadExperimentData: {

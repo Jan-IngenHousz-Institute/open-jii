@@ -99,14 +99,14 @@
     "finalizeSetup": "Setup afronden",
     "detailsTitle": "Experimentdetails",
     "detailsDescription": "Stel de naam en beschrijving van je experiment in",
+    "workbook": "Werkboek",
+    "workbookPlaceholder": "Selecteer een werkboek",
+    "noWorkbook": "Geen",
     "addMembersTitle": "Leden toevoegen",
     "addMembersDescription": "Beheer wie toegang heeft tot dit experiment",
     "addMemberPlaceholder": "Lid toevoegen",
     "visibilityTitle": "Zichtbaarheidsinstellingen",
     "visibilityDescription": "Beheer de zichtbaarheid en embargo-periode van je experiment",
-    "addProtocolsTitle": "Protocollen toevoegen",
-    "addProtocolsDescription": "Beheer en sorteer experimentprotocollen",
-    "addProtocolsPlaceholder": "Protocol toevoegen",
     "locationsTitle": "Experimentlocaties",
     "locationsDescription": "Selecteer geografische locaties waar dit experiment plaatsvindt",
     "selectLocations": "Locaties selecteren",
@@ -259,7 +259,8 @@
     "error": "Fout",
     "resourceNotFoundMessage": "De bron die je zoekt kon niet worden gevonden.",
     "backToDashboard": "Terug naar Dashboard",
-    "viewExperiments": "Experimenten bekijken"
+    "viewExperiments": "Experimenten bekijken",
+    "viewWorkbook": "Werkboek bekijken"
   },
   "footer": {
     "aboutUs": "Over ons",

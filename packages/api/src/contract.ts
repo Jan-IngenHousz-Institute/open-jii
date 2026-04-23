@@ -7,6 +7,7 @@ import { iotContract } from "./contracts/iot.contract";
 import { macroContract } from "./contracts/macro.contract";
 import { protocolContract } from "./contracts/protocol.contract";
 import { userContract } from "./contracts/user.contract";
+import { workbookContract } from "./contracts/workbook.contract";
 
 // Initialize the main contract
 const c = initContract();
@@ -20,4 +21,5 @@ export const contract = c.router({
   macros: macroContract,
   protocols: protocolContract,
   users: userContract,
+  workbooks: workbookContract,
 });

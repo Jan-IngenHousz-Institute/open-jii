@@ -21,7 +21,7 @@ async function getClient() {
 interface EntityInfo {
   id: string;
   name: string;
-  type: "experiment" | "macro" | "protocol";
+  type: "experiment" | "macro" | "protocol" | "workbook";
 }
 
 /**
@@ -38,6 +38,7 @@ function detectEntityType(segments: string[], index: number): EntityInfo["type"]
   }
   if (previousSegment === "macros") return "macro";
   if (previousSegment === "protocols") return "protocol";
+  if (previousSegment === "workbooks") return "workbook";
 
   return null;
 }
@@ -77,6 +78,17 @@ async function fetchEntityName(
 
       case "protocol": {
         const response = await client.protocols.getProtocol({
+          params: { id },
+        });
+
+        if (response.status === 200) {
+          return { name: response.body.name };
+        }
+        break;
+      }
+
+      case "workbook": {
+        const response = await client.workbooks.getWorkbook({
           params: { id },
         });
 

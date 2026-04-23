@@ -1,11 +1,11 @@
 "use client";
 
-import { Editor } from "@monaco-editor/react";
-import type { OnMount } from "@monaco-editor/react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, Copy } from "lucide-react";
 import React from "react";
-import { useRef, useState } from "react";
 import type { FC } from "react";
+import { CodeEditor } from "~/components/shared/code-editor";
+import type { CodeLanguage } from "~/components/shared/code-editor";
 
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
@@ -15,8 +15,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
-
-type CodeLanguage = "python" | "r" | "javascript";
 
 interface MacroCodeEditorProps {
   value: string;
@@ -29,19 +27,6 @@ interface MacroCodeEditorProps {
   title?: React.ReactNode;
   headerActions?: React.ReactNode;
 }
-
-const getMonacoLanguage = (language: CodeLanguage): string => {
-  switch (language) {
-    case "python":
-      return "python";
-    case "r":
-      return "r";
-    case "javascript":
-      return "typescript"; // Monaco uses typescript for JavaScript with better features
-    default:
-      return "plaintext";
-  }
-};
 
 const getDefaultContent = (language: CodeLanguage, username?: string): string => {
   const date = new Date().toLocaleString("en-US", {
@@ -111,19 +96,12 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   title,
   headerActions,
 }) => {
-  const [copied, setCopied] = useState(false);
-  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const { copy: copyToClipboard, copied } = useCopyToClipboard();
 
   const editorValue = value || getDefaultContent(language, username);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(editorValue);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+    await copyToClipboard(editorValue);
   };
 
   const getCodeStats = () => {
@@ -138,39 +116,6 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   };
 
   const stats = getCodeStats();
-
-  const handleEditorMount: OnMount = (editor, monaco) => {
-    editorRef.current = editor;
-
-    // Disable semantic validation for TypeScript/JavaScript
-    // Keep syntax validation enabled
-    // Monaco editor should always have TypeScript language support
-    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-      noSemanticValidation: true, // Disable semantic validation
-      noSyntaxValidation: false, // Keep syntax validation
-    });
-
-    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-      noSemanticValidation: true,
-      noSyntaxValidation: false,
-    });
-
-    // Configure editor options
-    editor.updateOptions({
-      minimap: { enabled: stats.lines > 50 },
-      scrollBeyondLastLine: false,
-      fontSize: 14,
-      lineHeight: 20,
-      tabSize: language === "python" ? 4 : 2,
-      insertSpaces: true,
-      wordWrap: "on",
-    });
-  };
-
-  const handleEditorChange = (newValue: string | undefined) => {
-    onChange(newValue ?? "");
-  };
-
   const errorClass = error ? " border-red-500" : "";
 
   return (
@@ -185,7 +130,7 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
             {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
             {title && <span className="text-slate-300">|</span>}
             <div className="text-xs text-slate-500">
-              {stats.lines} lines • {stats.size}
+              {stats.lines} lines - {stats.size}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -211,23 +156,13 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
 
         {/* Editor */}
         <div style={{ height }}>
-          <Editor
+          <CodeEditor
             value={editorValue}
-            onChange={handleEditorChange}
-            onMount={handleEditorMount}
-            language={getMonacoLanguage(language)}
-            theme="vs"
-            options={{
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineHeight: 20,
-              tabSize: language === "python" ? 4 : 2,
-              insertSpaces: true,
-              wordWrap: "on",
-              padding: { top: 16, bottom: 16 },
-            }}
+            onChange={onChange}
+            language={language}
+            height={height}
+            syntaxLinting
+            lintDelay={500}
           />
         </div>
       </div>

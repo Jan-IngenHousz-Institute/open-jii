@@ -6,6 +6,8 @@ import { Button } from "@repo/ui/components/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
+import { useWorkbook } from "../../../../hooks/workbook/useWorkbook/useWorkbook";
+
 interface DetailsSectionProps {
   formData: CreateExperimentBody;
   onEdit: () => void;
@@ -14,6 +16,10 @@ interface DetailsSectionProps {
 
 export function DetailsSection({ formData, onEdit, className }: DetailsSectionProps) {
   const { t } = useTranslation();
+
+  const { data: workbookData } = useWorkbook(formData.workbookId ?? "");
+
+  const workbookName = formData.workbookId ? workbookData?.name : undefined;
 
   return (
     <Card className={className}>
@@ -27,7 +33,7 @@ export function DetailsSection({ formData, onEdit, className }: DetailsSectionPr
         <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
           {t("experiments.experimentName")}
         </div>
-        <div className="text-base font-medium">{formData.name || "—"}</div>
+        <div className="text-base font-medium">{formData.name || "\u2014"}</div>
 
         {formData.description && (
           <>
@@ -39,6 +45,13 @@ export function DetailsSection({ formData, onEdit, className }: DetailsSectionPr
             </div>
           </>
         )}
+
+        <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+          {t("newExperiment.workbook")}
+        </div>
+        <div className="text-base font-medium">
+          {formData.workbookId ? (workbookName ?? "...") : "\u2014"}
+        </div>
       </CardContent>
     </Card>
   );

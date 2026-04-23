@@ -8,11 +8,10 @@ import { NodeHandles, getHandlePositionClasses } from "../node-handles";
 
 vi.mock("../node-config", () => ({
   nodeTypeColorMap: {
-    QUESTION: { border: "border-red-500", bg: "bg-red-50" },
-    INSTRUCTION: { border: "border-blue-500", bg: "bg-blue-50" },
-    MEASUREMENT: { border: "border-green-500", bg: "bg-green-50" },
-    ANALYSIS: { border: "border-yellow-500", bg: "bg-yellow-50" },
-    default: { border: "border-gray-500", bg: "bg-gray-50" },
+    QUESTION: { accent: "#C58AAE" },
+    INSTRUCTION: { accent: "#6F8596" },
+    MEASUREMENT: { accent: "#2D3142" },
+    ANALYSIS: { accent: "#6C5CE7" },
   },
 }));
 
@@ -21,7 +20,7 @@ vi.mock("@xyflow/react", async () => {
   return {
     ...actual,
     Handle: (props: React.ComponentProps<"div"> & { id: string }) => (
-      <div role="handle" data-id={props.id} className={props.className} />
+      <div role="handle" data-id={props.id} className={props.className} style={props.style} />
     ),
   };
 });
@@ -84,7 +83,7 @@ describe("NodeHandles", () => {
     expect(handles).toHaveLength(2);
   });
 
-  it("applies highlight classes when selected", () => {
+  it("applies highlight styles when selected", () => {
     render(
       <NodeHandles
         hasInput
@@ -96,12 +95,11 @@ describe("NodeHandles", () => {
     );
     const handles = screen.getAllByRole("handle");
     handles.forEach((h) => {
-      expect(h.className).toMatch(/!border-jii-dark-green/);
-      expect(h.className).toMatch(/opacity-100/);
+      expect(h).toHaveStyle({ borderColor: "#005e5e" });
     });
   });
 
-  it("applies highlight classes when dragging", () => {
+  it("applies highlight styles when dragging", () => {
     render(
       <NodeHandles
         hasInput
@@ -113,12 +111,11 @@ describe("NodeHandles", () => {
     );
     const handles = screen.getAllByRole("handle");
     handles.forEach((h) => {
-      expect(h.className).toMatch(/!border-jii-dark-green/);
-      expect(h.className).toMatch(/opacity-100/);
+      expect(h).toHaveStyle({ borderColor: "#005e5e" });
     });
   });
 
-  it("applies nodeType color classes when not selected/dragging", () => {
+  it("applies nodeType accent color when not selected/dragging", () => {
     render(
       <NodeHandles
         hasInput
@@ -130,12 +127,11 @@ describe("NodeHandles", () => {
     );
     const handles = screen.getAllByRole("handle");
     handles.forEach((h) => {
-      expect(h.className).toMatch(/border-red-500/);
-      expect(h.className).toMatch(/bg-red-50/);
+      expect(h).toHaveStyle({ borderColor: "#C58AAE" });
     });
   });
 
-  it("falls back to gray when no nodeType", () => {
+  it("falls back to slate when no nodeType", () => {
     render(
       <NodeHandles
         hasInput
@@ -146,8 +142,7 @@ describe("NodeHandles", () => {
     );
     const handles = screen.getAllByRole("handle");
     handles.forEach((h) => {
-      expect(h.className).toMatch(/!border-slate-300/);
-      expect(h.className).toMatch(/!bg-slate-100/);
+      expect(h).toHaveStyle({ borderColor: "#94a3b8" });
     });
   });
 });

@@ -1,9 +1,9 @@
 "use client";
 
-import Editor from "@monaco-editor/react";
-import { Copy, Check, Pencil } from "lucide-react";
-import { useState } from "react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { Check, Copy, Pencil } from "lucide-react";
 import type { FC } from "react";
+import { CodeEditor } from "~/components/shared/code-editor";
 
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
@@ -23,19 +23,13 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
   title,
   onEditStart,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const { copy: copyToClipboard, copied } = useCopyToClipboard();
 
   // Convert value to formatted JSON string
   const jsonString = typeof value === "string" ? value : JSON.stringify(value, null, 2);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(jsonString);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+    await copyToClipboard(jsonString);
   };
 
   const getJsonStats = () => {
@@ -76,7 +70,7 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
           {title && <span className="text-slate-300">|</span>}
           <span className="text-xs font-medium text-slate-600">JSON</span>
           <span className="text-xs text-slate-500">
-            {stats.lines} lines • {stats.size}
+            {stats.lines} lines - {stats.size}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -93,48 +87,16 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
           </Button>
         </div>
       </div>
-      <Editor
-        height={`calc(${height} - 41px)`}
-        language="json"
+      <CodeEditor
         value={jsonString}
-        loading={
-          <div className="flex h-full items-center justify-center bg-slate-50">
-            <div className="animate-pulse text-sm text-slate-600">
-              Loading syntax highlighter...
-            </div>
-          </div>
-        }
-        options={{
-          readOnly: true,
-          minimap: { enabled: false },
-          fontSize: 14,
-          fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
-          lineHeight: 1.6,
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-          wordWrap: "on",
-          lineNumbers: "on",
-          folding: true,
-          contextmenu: false,
-          selectOnLineNumbers: false,
-          glyphMargin: false,
-          lineDecorationsWidth: 0,
-          lineNumbersMinChars: 3,
-          renderLineHighlight: "none",
-          padding: { top: 16, bottom: 16 },
-          scrollbar: {
-            vertical: "auto",
-            horizontal: "auto",
-            verticalScrollbarSize: 10,
-            horizontalScrollbarSize: 10,
-            useShadows: true,
-          },
-          smoothScrolling: true,
-          cursorBlinking: "phase",
-          renderValidationDecorations: "off",
-          hideCursorInOverviewRuler: true,
+        language="json"
+        height={height}
+        readOnly
+        basicSetup={{
+          highlightActiveLineGutter: false,
+          highlightActiveLine: false,
+          closeBrackets: false,
         }}
-        theme="vs-light"
       />
     </div>
   );

@@ -15,11 +15,14 @@ import { MacroModule } from "../macros/macro.module";
 import { CreateProtocolUseCase } from "../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
 import { UserModule } from "../users/user.module";
+import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
+import { DetachWorkbookUseCase } from "./application/use-cases/detach-workbook/detach-workbook";
 import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
@@ -42,9 +45,6 @@ import { CreateExperimentMetadataUseCase } from "./application/use-cases/experim
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/get-experiment-metadata";
 import { UpdateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/update-experiment-metadata";
-import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
-import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
-import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
 import { CreateExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/create-experiment-visualization";
 import { DeleteExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/delete-experiment-visualization";
 import { GetExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/get-experiment-visualization";
@@ -60,6 +60,7 @@ import { CreateTransferRequestUseCase } from "./application/use-cases/project-tr
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { ExecuteProjectTransferUseCase } from "./application/use-cases/project-transfer/execute-project-transfer";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
+import { UpgradeWorkbookVersionUseCase } from "./application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
@@ -73,7 +74,6 @@ import { ExperimentDataRepository } from "./core/repositories/experiment-data.re
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
-import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
@@ -86,22 +86,30 @@ import { ExperimentFlowsController } from "./presentation/experiment-flows.contr
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
-import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
+import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 import { ProjectTransferWebhookController } from "./presentation/project-transfer-webhook.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule, EmailModule, AnalyticsModule, UserModule, MacroModule],
+  imports: [
+    DatabricksModule,
+    AwsModule,
+    EmailModule,
+    AnalyticsModule,
+    UserModule,
+    MacroModule,
+    WorkbookModule,
+  ],
   controllers: [
     ExperimentController,
     ExperimentDataController,
     ExperimentDataExportsController,
     ExperimentFlowsController,
+    ExperimentWorkbooksController,
     ExperimentMembersController,
     ExperimentMetadataController,
-    ExperimentProtocolsController,
     ExperimentVisualizationsController,
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
@@ -135,7 +143,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentRepository,
     ExperimentMemberRepository,
     ExperimentMetadataRepository,
-    ExperimentProtocolRepository,
     ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
     ExperimentDataRepository,
@@ -183,11 +190,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     SearchPlacesUseCase,
     GeocodeLocationUseCase,
 
-    // Experiment protocol use cases
-    AddExperimentProtocolsUseCase,
-    ListExperimentProtocolsUseCase,
-    RemoveExperimentProtocolUseCase,
-
     // Experiment visualization use cases
     ListExperimentVisualizationsUseCase,
     CreateExperimentVisualizationUseCase,
@@ -199,6 +201,11 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     GetFlowUseCase,
     CreateFlowUseCase,
     UpdateFlowUseCase,
+
+    // Workbook attachment use cases
+    AttachWorkbookUseCase,
+    DetachWorkbookUseCase,
+    UpgradeWorkbookVersionUseCase,
 
     // Experiment data annotation use cases
     AddAnnotationsUseCase,
