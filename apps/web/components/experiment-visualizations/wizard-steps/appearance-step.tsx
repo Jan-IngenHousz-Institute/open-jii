@@ -10,14 +10,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  WizardStepButtons,
-} from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+} from "@repo/ui/components/card";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
-import {
-  LineChartAppearanceConfigurator,
-  ScatterChartAppearanceConfigurator,
-} from "../chart-configurators/appearance";
+import LineChartAppearanceConfigurator from "../chart-configurators/appearance/basic/line-chart/line-chart-appearance-configurator";
+import ScatterChartAppearanceConfigurator from "../chart-configurators/appearance/basic/scatter-chart/scatter-chart-appearance-configurator";
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreviewModal } from "../chart-preview/chart-preview-modal";
 

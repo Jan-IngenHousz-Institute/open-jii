@@ -4,15 +4,15 @@ import { usePostHog } from "posthog-js/react";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/card";
+import { toast } from "@repo/ui/hooks/use-toast";
 import { cva } from "@repo/ui/lib/utils";
 
 import type { ConsentStatus } from "../../../../lib/cookie-consent";

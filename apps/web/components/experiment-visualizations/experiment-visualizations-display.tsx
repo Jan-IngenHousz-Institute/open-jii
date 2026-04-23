@@ -5,18 +5,10 @@ import { useEffect, useState } from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  Skeleton,
-} from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardDescription, CardTitle } from "@repo/ui/components/card";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@repo/ui/components/select";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 

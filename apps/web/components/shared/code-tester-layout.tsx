@@ -3,8 +3,12 @@
 import { MonitorX } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@repo/ui/components";
-import { useBreakpoint } from "@repo/ui/hooks";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@repo/ui/components/resizable";
+import { useBreakpoint } from "@repo/ui/hooks/use-mobile";
 import { cn } from "@repo/ui/lib/utils";
 
 interface CodeTesterLayoutProps {

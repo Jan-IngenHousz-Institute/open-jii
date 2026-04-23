@@ -1,4 +1,4 @@
-import { NewExperimentForm } from "@/components/new-experiment";
+import { NewExperimentForm } from "@/components/new-experiment/new-experiment";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";

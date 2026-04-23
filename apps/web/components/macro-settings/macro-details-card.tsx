@@ -8,28 +8,32 @@ import { useForm } from "react-hook-form";
 
 import type { UpdateMacroRequestBody, MacroLanguage } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
+} from "@repo/ui/components/card";
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
-  RichTextarea,
+} from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import { RichTextarea } from "@repo/ui/components/rich-textarea";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/select";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useMacroUpdate } from "../../hooks/macro/useMacroUpdate/useMacroUpdate";
 import MacroCodeEditor from "../macro-code-editor";

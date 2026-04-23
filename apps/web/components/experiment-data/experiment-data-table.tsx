@@ -23,24 +23,25 @@ import {
 
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Checkbox } from "@repo/ui/components/checkbox";
+import { Form } from "@repo/ui/components/form";
+import { Label } from "@repo/ui/components/label";
 import {
-  Checkbox,
-  Form,
-  Label,
   Pagination,
   PaginationContent,
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
+} from "@repo/ui/components/pagination";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Skeleton,
-  Table,
-  TableBody,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { Table, TableBody } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
 import { DataExportModal } from "./data-export-modal/data-export-modal";

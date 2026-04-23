@@ -8,7 +8,6 @@ import { contract } from "@repo/api";
 
 import { MeasurementPanel } from "../measurement-panel";
 
-// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));

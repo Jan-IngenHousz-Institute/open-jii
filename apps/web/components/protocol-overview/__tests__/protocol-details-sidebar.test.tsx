@@ -34,7 +34,7 @@ const DialogContext = React.createContext<{
   onOpenChange?: (v: boolean) => void;
 }>({});
 
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/dialog", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
@@ -86,6 +86,13 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
         {children}
       </div>
     ),
+  };
+});
+
+vi.mock("@repo/ui/components/select", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
     Select: ({
       children,
       value,
@@ -308,7 +315,7 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("shows toast on successful family update", async () => {
     server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
-    const { toast } = await import("@repo/ui/hooks");
+    const { toast } = await import("@repo/ui/hooks/use-toast");
 
     renderComponent();
 
@@ -325,7 +332,7 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("shows destructive toast on family update error", async () => {
     server.mount(contract.protocols.updateProtocol, { status: 400 });
-    const { toast } = await import("@repo/ui/hooks");
+    const { toast } = await import("@repo/ui/hooks/use-toast");
 
     renderComponent();
 

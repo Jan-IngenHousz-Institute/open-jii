@@ -5,28 +5,24 @@ import type { UseFormReturn } from "react-hook-form";
 import type { CreateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Calendar } from "@repo/ui/components/calendar";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
+} from "@repo/ui/components/card";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@repo/ui/components/form";
+import { Popover, PopoverTrigger, PopoverContent } from "@repo/ui/components/popover";
+import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-  Button,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  Calendar,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 import { cn } from "@repo/ui/lib/utils";
 
 import {

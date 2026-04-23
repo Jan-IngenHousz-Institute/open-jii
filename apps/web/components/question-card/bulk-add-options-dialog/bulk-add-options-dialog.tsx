@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
 
 interface BulkAddOptionsDialogProps {
   open: boolean;

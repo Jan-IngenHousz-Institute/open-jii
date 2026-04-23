@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import Page from "./page";
 
-vi.mock("@/components/new-experiment", () => ({
+vi.mock("@/components/new-experiment/new-experiment", () => ({
   NewExperimentForm: () => <div data-testid="new-experiment-form" />,
 }));
 

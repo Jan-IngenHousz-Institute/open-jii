@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 import type { ExperimentVisualization } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import ExperimentVisualizationDetails from "./experiment-visualization-details";
 

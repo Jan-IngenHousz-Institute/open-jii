@@ -1,7 +1,7 @@
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardContent } from "@repo/ui/components";
+import { Card, CardContent } from "@repo/ui/components/card";
 
 import { BooleanAnswerDisplay } from "./boolean-answer-display/boolean-answer-display";
 import { NumberAnswerDisplay } from "./number-answer-display/number-answer-display";

@@ -172,8 +172,9 @@ vi.mock("posthog-js/react", () => {
   };
 });
 
-vi.mock("@repo/ui/hooks", () => ({
+vi.mock("@repo/ui/hooks/use-toast", () => ({
   toast: vi.fn(),
+  useToast: () => ({ toast: vi.fn(), toasts: [], dismiss: vi.fn() }),
 }));
 
 vi.mock("~/lib/contentful", () => ({

@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 import { ExperimentDataTableChart } from "./experiment-data-table-chart";
 
 // Mock the LineChart component from @repo/ui/components
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,

@@ -3,7 +3,7 @@ import React from "react";
 
 import type { LocationList } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import type { LocationPoint } from "@repo/ui/components/map";
 
 import { Map } from "../map";

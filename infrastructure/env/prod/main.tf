@@ -1575,6 +1575,14 @@ module "backend_ecs" {
       name      = "EMAIL_FROM"
       valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_FROM::"
     },
+    {
+      name      = "CONTENTFUL_SPACE_ID"
+      valueFrom = "${module.contentful_secrets.secret_arn}:CONTENTFUL_SPACE_ID::"
+    },
+    {
+      name      = "CONTENTFUL_ACCESS_TOKEN"
+      valueFrom = "${module.contentful_secrets.secret_arn}:CONTENTFUL_ACCESS_TOKEN::"
+    },
   ]
 
   # Environment variables for the backend service

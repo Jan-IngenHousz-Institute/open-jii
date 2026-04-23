@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import initTranslations from "@repo/i18n/server";
-import { Button } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
 
 export const metadata: Metadata = {
   title: "Macros",
