@@ -35,7 +35,7 @@ def make_execute_macro_udf(
     environment: str,
     dbutils,
     timeout: int = 30,
-    max_batch_size: int = 500,
+    max_batch_size: int = 200,
     scope_override: Optional[str] = None,
 ):
     """
