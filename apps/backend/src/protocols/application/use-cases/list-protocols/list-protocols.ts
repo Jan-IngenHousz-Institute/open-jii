@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import { ProtocolFilter } from "@repo/api";
+import { ProtocolFilter } from "@repo/api/schemas/protocol.schema";
 
 import { Result } from "../../../../common/utils/fp-utils";
 import { ProtocolDto } from "../../../core/models/protocol.model";

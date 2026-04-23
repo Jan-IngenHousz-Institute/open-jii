@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { ExperimentProtocol } from "@repo/api";
+import type { ExperimentProtocol } from "@repo/api/schemas/experiment.schema";
 
 /**
  * Hook to remove a protocol from an experiment, bound to a specific experimentId

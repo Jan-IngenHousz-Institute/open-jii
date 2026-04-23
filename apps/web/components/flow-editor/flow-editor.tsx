@@ -8,8 +8,7 @@ import "@xyflow/react/dist/style.css";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
-import type { Flow } from "@repo/api";
-import type { UpsertFlowBody } from "@repo/api";
+import type { Flow, UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 

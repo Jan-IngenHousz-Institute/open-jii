@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { Protocol } from "@repo/api";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,

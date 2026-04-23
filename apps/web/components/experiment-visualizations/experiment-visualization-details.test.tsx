@@ -8,8 +8,8 @@ import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
-import type { ExperimentVisualization } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import ExperimentVisualizationDetails from "./experiment-visualization-details";

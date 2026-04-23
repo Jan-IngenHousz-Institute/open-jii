@@ -4,7 +4,11 @@ import type React from "react";
 import { useMemo } from "react";
 import { tsr } from "~/lib/tsr";
 
-import type { ExperimentData, AnnotationType, DataColumn } from "@repo/api";
+import type {
+  ExperimentData,
+  AnnotationType,
+  DataColumn,
+} from "@repo/api/schemas/experiment.schema";
 import {
   isTimestampType,
   isStringType,
@@ -16,7 +20,7 @@ import {
   isDecimalType,
   isWellKnownType,
   isStructType,
-} from "@repo/api";
+} from "@repo/api/utils/column-type-utils";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (

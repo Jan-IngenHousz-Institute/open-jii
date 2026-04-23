@@ -19,7 +19,7 @@ import { useListExports } from "~/hooks/experiment/useListExports/useListExports
 import { parseApiError } from "~/util/apiError";
 import { formatFileSize } from "~/util/format-file-size";
 
-import type { ExportRecord } from "@repo/api";
+import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";

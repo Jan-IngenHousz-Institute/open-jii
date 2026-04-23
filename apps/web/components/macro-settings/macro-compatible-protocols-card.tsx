@@ -6,7 +6,8 @@ import { ExternalLink, FileJson2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { MacroProtocolEntry, Protocol } from "@repo/api";
+import type { MacroProtocolEntry } from "@repo/api/schemas/macro.schema";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";

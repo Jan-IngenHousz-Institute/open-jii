@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { MacroInfoCard } from "./macro-info-card";
 

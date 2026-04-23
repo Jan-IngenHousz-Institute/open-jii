@@ -3,7 +3,7 @@
 import { formatDate } from "@/util/date";
 import { useEffect, useRef, useState } from "react";
 
-import type { Protocol } from "@repo/api";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@repo/ui/components/select";

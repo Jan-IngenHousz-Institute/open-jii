@@ -3,7 +3,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentDelete } from "./experiment-delete";

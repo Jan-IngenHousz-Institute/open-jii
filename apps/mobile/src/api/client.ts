@@ -1,6 +1,6 @@
 import { initClient } from "@ts-rest/core";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { baseClientOptions } from "./fetcher";
 

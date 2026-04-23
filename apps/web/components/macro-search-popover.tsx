@@ -5,7 +5,7 @@ import { SearchX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import {

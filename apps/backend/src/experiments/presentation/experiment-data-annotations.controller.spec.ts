@@ -1,13 +1,13 @@
 import { StatusCodes } from "http-status-codes";
 
+import { contract } from "@repo/api/contract";
 import type {
   AddAnnotationBody,
   AddAnnotationsBulkBody,
   AnnotationRowsAffected,
   DeleteAnnotationsBulkBody,
   UpdateAnnotationBody,
-} from "@repo/api";
-import { contract } from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";

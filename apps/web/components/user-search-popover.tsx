@@ -4,7 +4,7 @@ import { Mail, Search, X } from "lucide-react";
 import React, { useState } from "react";
 import { z } from "zod";
 
-import type { UserProfile } from "@repo/api";
+import type { UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";

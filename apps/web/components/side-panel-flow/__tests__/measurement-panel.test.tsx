@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { MeasurementPanel } from "../measurement-panel";
 

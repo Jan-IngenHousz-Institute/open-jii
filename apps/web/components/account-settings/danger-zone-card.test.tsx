@@ -2,8 +2,8 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { CreateUserProfileBody } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
 import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 

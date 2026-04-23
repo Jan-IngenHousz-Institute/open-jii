@@ -1,7 +1,7 @@
 import { renderWithForm, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { CreateExperimentBody } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 
 import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
 

@@ -10,7 +10,7 @@ import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Macro, MacroLanguage } from "@repo/api";
+import type { Macro, MacroLanguage } from "@repo/api/schemas/macro.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

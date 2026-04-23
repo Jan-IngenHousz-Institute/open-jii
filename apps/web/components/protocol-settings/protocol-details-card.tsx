@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api";
+import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

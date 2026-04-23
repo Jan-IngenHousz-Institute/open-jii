@@ -21,7 +21,7 @@ import {
   LoadingRows,
 } from "~/components/experiment-data/experiment-data-utils";
 
-import type { AnnotationType } from "@repo/api";
+import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { Form } from "@repo/ui/components/form";

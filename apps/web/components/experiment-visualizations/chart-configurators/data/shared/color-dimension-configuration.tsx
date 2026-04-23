@@ -3,7 +3,7 @@
 import React from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { DataColumn } from "@repo/api";
+import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Checkbox } from "@repo/ui/components/checkbox";

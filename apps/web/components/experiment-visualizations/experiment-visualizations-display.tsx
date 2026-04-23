@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import type { ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardDescription, CardTitle } from "@repo/ui/components/card";

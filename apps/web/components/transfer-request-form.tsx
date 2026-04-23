@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useTransferRequestCreate } from "~/hooks/useTransferRequestCreate/useTransferRequestCreate";
 
-import { zCreateTransferRequestBody } from "@repo/api";
+import { zCreateTransferRequestBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";

@@ -3,7 +3,7 @@
 import React from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { CreateMacroRequestBody } from "@repo/api";
+import type { CreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { FormControl, FormField, FormItem, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";

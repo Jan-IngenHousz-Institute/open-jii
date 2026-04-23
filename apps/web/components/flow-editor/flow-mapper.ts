@@ -2,15 +2,15 @@ import type { Node, Edge } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import type { z } from "zod";
 
-import type { Flow, UpsertFlowBody } from "@repo/api";
+import type { Flow, UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
 import {
   zFlowGraph,
   zQuestionContent,
   zInstructionContent,
   zMeasurementContent,
   zAnalysisContent,
-} from "@repo/api";
-import type { zQuestionKind } from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
+import type { zQuestionKind } from "@repo/api/schemas/experiment.schema";
 
 import type { NodeType } from "../react-flow/node-config";
 import { nodeTypeColorMap } from "../react-flow/node-config";

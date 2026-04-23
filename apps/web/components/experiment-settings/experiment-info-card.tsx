@@ -3,7 +3,7 @@
 import { useFeatureFlagEnabled } from "posthog-js/react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Experiment, ExperimentMember } from "@repo/api";
+import type { Experiment, ExperimentMember } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 

@@ -5,7 +5,7 @@ import React from "react";
 import { MacroOverviewCards } from "~/components/macro-overview-cards";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 
-import type { MacroLanguage } from "@repo/api";
+import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
 import {

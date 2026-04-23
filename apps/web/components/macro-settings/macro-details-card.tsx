@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import React from "react";
 import { useForm } from "react-hook-form";
 
-import type { UpdateMacroRequestBody, MacroLanguage } from "@repo/api";
+import type { UpdateMacroRequestBody, MacroLanguage } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

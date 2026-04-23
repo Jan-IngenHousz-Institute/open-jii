@@ -2,7 +2,7 @@
 
 import type { UseFormReturn } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { useExperimentVisualizationData } from "../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";

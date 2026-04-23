@@ -6,8 +6,9 @@ import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import { zCreateExperimentVisualizationBody, isValidAxisSource } from "@repo/api";
-import type { DataColumn } from "@repo/api";
+import { zCreateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
+import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import { isValidAxisSource } from "@repo/api/utils/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,

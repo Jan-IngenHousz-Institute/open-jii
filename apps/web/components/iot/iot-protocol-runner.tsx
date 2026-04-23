@@ -6,7 +6,7 @@ import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 
-import type { SensorFamily } from "@repo/api";
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
