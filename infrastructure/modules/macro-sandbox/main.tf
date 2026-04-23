@@ -4,6 +4,8 @@ locals {
   })
 }
 
+data "aws_caller_identity" "current" {}
+
 module "ecr" {
   source   = "../ecr"
   for_each = var.languages
@@ -15,9 +17,11 @@ module "ecr" {
   image_tag_mutability = var.image_tag_mutability
   force_delete         = var.force_delete
 
-  create_repository_policy  = true
-  create_ecs_pull_statement = false
-  ci_cd_role_arn            = var.ci_cd_role_arn
+  create_repository_policy     = true
+  create_ecs_pull_statement    = false
+  create_lambda_pull_statement = true
+  lambda_function_arn_pattern  = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:macro-sandbox-*-${var.environment}"
+  ci_cd_role_arn               = var.ci_cd_role_arn
 
   tags = merge(local.common_tags, {
     Language = each.key
