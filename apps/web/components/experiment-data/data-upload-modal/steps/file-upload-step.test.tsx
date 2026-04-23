@@ -10,62 +10,6 @@ import { contract } from "@repo/api/contract";
 import { validateAmbyteStructure, isExcludedFile } from "../data-upload-validation";
 import { FileUploadStep } from "./file-upload-step";
 
-globalThis.React = React;
-
-// Mock hooks
-vi.mock("@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload", () => ({
-  useExperimentDataUpload: vi.fn(),
-}));
-
-vi.mock("@repo/ui/components/file-upload", async (importOriginal) => {
-  const actual: Record<string, unknown> = await importOriginal();
-  return {
-    ...actual,
-    FileUpload: ({
-      onFilesChange,
-      validationErrors,
-      isUploading,
-      uploadError,
-    }: {
-      onFilesChange: (files: FileList | null) => void;
-      validationErrors?: string[];
-      isUploading?: boolean;
-      uploadError?: { title: string; message: string };
-    }) => (
-      <div>
-        <button
-          aria-label="select files"
-          onClick={() => {
-            const file = new File(["content"], "data.txt", { type: "text/plain" });
-            Object.defineProperty(file, "webkitRelativePath", { value: "Ambyte_1/data.txt" });
-            const fileList = Object.assign([file], {
-              item: (i: number) => [file][i] ?? null,
-            }) as unknown as FileList;
-            onFilesChange(fileList);
-          }}
-          disabled={isUploading}
-        >
-          Select Files
-        </button>
-        {validationErrors && validationErrors.length > 0 && (
-          <ul aria-label="validation errors">
-            {validationErrors.map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
-        )}
-        {uploadError && <p>{uploadError.message}</p>}
-      </div>
-    ),
-  };
-});
-
-// Mock utility
-vi.mock("~/util/apiError", () => ({
-  parseApiError: (error: { message: string }) => ({ message: error.message }),
-}));
-
-// Mock validation
 vi.mock("../data-upload-validation", () => ({
   validateAmbyteStructure: vi.fn().mockReturnValue({ isValid: true, errors: [] }),
   isExcludedFile: vi.fn().mockReturnValue(false),
