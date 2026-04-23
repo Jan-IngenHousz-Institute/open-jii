@@ -9,16 +9,16 @@ import { useState } from "react";
 import type { Workbook } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Dialog,
-  DialogTrigger,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@repo/ui/components";
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@repo/ui/components/dialog";
 
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 

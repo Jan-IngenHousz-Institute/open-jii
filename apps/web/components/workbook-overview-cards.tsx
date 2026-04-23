@@ -5,7 +5,9 @@ import React from "react";
 
 import type { Workbook } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Badge, RichTextRenderer, Skeleton } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components/badge";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface WorkbookOverviewCardsProps {
   workbooks: Workbook[] | undefined;

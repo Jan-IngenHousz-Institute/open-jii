@@ -4,23 +4,21 @@ import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  Input,
-  FormMessage,
-  RichTextarea,
+} from "@repo/ui/components/card";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import { RichTextarea } from "@repo/ui/components/rich-textarea";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 import { useWorkbookList } from "../../hooks/workbook/useWorkbookList/useWorkbookList";
 

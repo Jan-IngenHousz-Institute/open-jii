@@ -3,13 +3,13 @@
 import { BookOpen, Code, FileText, GitBranch, HelpCircle, Microscope } from "lucide-react";
 
 import type { WorkbookCell } from "@repo/api";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@repo/ui/components";
+} from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
 import { MacroPicker } from "./macro-picker";

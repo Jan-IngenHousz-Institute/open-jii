@@ -11,7 +11,7 @@ import { parseApiError } from "~/util/apiError";
 
 import type { QuestionCell, WorkbookCell } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface WorkbookOverviewPageProps {
   params: Promise<{ id: string }>;

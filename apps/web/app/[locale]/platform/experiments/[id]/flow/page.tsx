@@ -3,7 +3,7 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-state";
 import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
-import { FlowEditor } from "@/components/flow-editor";
+import { FlowEditor } from "@/components/flow-editor/flow-editor";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -15,7 +15,8 @@ import { use, useMemo } from "react";
 import type { WorkbookCell } from "@repo/api";
 import { cellsToFlowGraph } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
-import { Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
 interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;

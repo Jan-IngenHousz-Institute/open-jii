@@ -4,7 +4,9 @@ import { Edit3, Eye, FileText } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import type { MarkdownCell as MarkdownCellType } from "@repo/api";
-import { Button, RichTextarea, RichTextRenderer } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { RichTextarea } from "@repo/ui/components/rich-textarea";
 
 import { CellWrapper } from "../cell-wrapper";
 

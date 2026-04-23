@@ -9,19 +9,21 @@ import type {
   BranchPath,
   WorkbookCell,
 } from "@repo/api";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import {
-  Badge,
-  Button,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  Input,
+} from "@repo/ui/components/collapsible";
+import { Input } from "@repo/ui/components/input";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 import { CellWrapper } from "../cell-wrapper";
 

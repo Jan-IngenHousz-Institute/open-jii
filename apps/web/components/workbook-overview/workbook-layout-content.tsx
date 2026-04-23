@@ -10,7 +10,7 @@ import { parseApiError } from "~/util/apiError";
 import type { Workbook } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface WorkbookLayoutContentProps {
   id: string;

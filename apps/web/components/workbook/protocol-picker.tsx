@@ -7,19 +7,17 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import type { ProtocolCell } from "@repo/api";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import {
-  Badge,
-  Button,
-  Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 type SensorFamily = "multispeq" | "ambit" | "generic";
 

@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { EmptyWorkbookState } from "./empty-workbook-state";
 

@@ -7,7 +7,7 @@ import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
 
 import type { ProtocolCell as ProtocolCellType } from "@repo/api";
-import { Button } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
 
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";

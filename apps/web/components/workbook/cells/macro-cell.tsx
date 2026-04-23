@@ -11,14 +11,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MacroCell as MacroCellType } from "@repo/api";
 import type { MacroLanguage } from "@repo/api";
 import { useSession } from "@repo/auth/client";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 import { CellWrapper } from "../cell-wrapper";
 import type { EditorLanguage } from "../workbook-code-editor";

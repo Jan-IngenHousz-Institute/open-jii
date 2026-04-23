@@ -6,14 +6,14 @@ import { WorkbookOverviewCards } from "~/components/workbook-overview-cards";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
+import { Input } from "@repo/ui/components/input";
 import {
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 export function ListWorkbooks() {
   const { data: workbooks, isLoading, filter, setFilter, search, setSearch } = useWorkbooks({});

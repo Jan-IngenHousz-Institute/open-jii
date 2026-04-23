@@ -11,7 +11,9 @@ import type { ReactNode } from "react";
 
 import type { WorkbookCell } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardTitle, Skeleton } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardTitle } from "@repo/ui/components/card";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface ExperimentLinkedWorkbookProps {
   workbookId: string | null;

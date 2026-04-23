@@ -1,6 +1,6 @@
 import { ArrowUpCircle } from "lucide-react";
 
-import { Badge } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components/badge";
 
 interface WorkbookVersionBadgeProps {
   /** The version number currently pinned */

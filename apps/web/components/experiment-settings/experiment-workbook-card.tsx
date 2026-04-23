@@ -2,15 +2,14 @@
 
 import type { Experiment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { CardContent, CardHeader } from "@repo/ui/components/card";
 import {
-  CardContent,
-  CardHeader,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 import { useAttachWorkbook } from "../../hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useDetachWorkbook } from "../../hooks/experiment/useDetachWorkbook/useDetachWorkbook";

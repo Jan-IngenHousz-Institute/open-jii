@@ -13,7 +13,7 @@ import {
 import { Fragment, useMemo } from "react";
 
 import type { WorkbookCell } from "@repo/api";
-import { Button } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 interface FlowchartSidebarProps {
