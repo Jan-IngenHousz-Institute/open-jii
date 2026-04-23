@@ -8,7 +8,7 @@ import type { Document } from "@contentful/rich-text-types";
 import type { FC } from "react";
 
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
-import { CtfRichText } from "../contentful";
+import { CtfRichText } from "../contentful/ctf-rich-text";
 import type { EmbeddedEntryType } from "../contentful/ctf-rich-text";
 
 interface ArticleContentProps {

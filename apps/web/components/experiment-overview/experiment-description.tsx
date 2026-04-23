@@ -4,7 +4,7 @@ import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useE
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { InlineEditableDescription } from "../shared/inline-editable-description";
 

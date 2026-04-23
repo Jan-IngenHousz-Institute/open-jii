@@ -6,8 +6,10 @@ import type { CreateMacroRequestBody } from "@repo/api";
 import { NewMacroDetailsCard } from "./new-macro-details-card";
 
 // RichTextarea uses Quill (needs browser DOM) — mock with plain textarea
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
+vi.mock("@repo/ui/components/rich-textarea", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>(
+    "@repo/ui/components/rich-textarea",
+  );
   return {
     ...actual,
     RichTextarea: (props: {

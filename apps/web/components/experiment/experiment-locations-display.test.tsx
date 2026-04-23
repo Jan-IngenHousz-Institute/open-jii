@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { ExperimentLocationsDisplay } from "./experiment-locations-display";
 
-// Leaflet map cannot render in jsdom (canvas/WebGL) — pragmatic exception.
+// Leaflet map cannot render in jsdom (canvas/WebGL)
 // The mock exposes received props so we can verify the component passes
 // the right data to the map without needing a real map renderer.
 interface MockMapProps {

@@ -4,20 +4,16 @@ import type { UseFormReturn } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
 import {
-  Badge,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 

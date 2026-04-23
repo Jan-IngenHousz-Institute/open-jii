@@ -3,7 +3,8 @@
 import { AlertCircle, Battery, CheckCircle2, Loader2, Zap } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
-import { Alert, AlertDescription, Button } from "@repo/ui/components";
+import { Alert, AlertDescription } from "@repo/ui/components/alert";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 interface DeviceInfo {

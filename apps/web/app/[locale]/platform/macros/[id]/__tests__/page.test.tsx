@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 import { useSession } from "@repo/auth/client";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import MacroOverviewPage from "../page";
 

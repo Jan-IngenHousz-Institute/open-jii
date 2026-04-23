@@ -13,8 +13,8 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Protocol, SensorFamily } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -22,13 +22,15 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+} from "@repo/ui/components/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/select";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";

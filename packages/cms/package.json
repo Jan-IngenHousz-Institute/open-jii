@@ -18,8 +18,8 @@
       "default": "./dist/shared/container.js"
     },
     "./contentful": {
-      "types": "./dist/features/contentful/index.d.ts",
-      "default": "./dist/features/contentful/index.js"
+      "types": "./dist/features/contentful/ctf-preview-provider.d.ts",
+      "default": "./dist/features/contentful/ctf-preview-provider.js"
     },
     "./lib/__generated/sdk": {
       "types": "./dist/lib/__generated/sdk.d.ts",

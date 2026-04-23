@@ -4,8 +4,14 @@ import { useMemo, useState } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components/card";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentProtocolAdd } from "../../hooks/experiment/useExperimentProtocolAdd/useExperimentProtocolAdd";
 import { useExperimentProtocolRemove } from "../../hooks/experiment/useExperimentProtocolRemove/useExperimentProtocolRemove";

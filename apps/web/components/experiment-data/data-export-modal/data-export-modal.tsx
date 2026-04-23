@@ -12,8 +12,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/dialog";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExportListStep } from "./steps/export-list-step";
 

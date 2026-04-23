@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CreateUserProfileBody } from "@repo/api";
 import { contract } from "@repo/api";
 import { authClient } from "@repo/auth/client";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DangerZoneCard } from "./danger-zone-card";
 

@@ -21,20 +21,22 @@ import { formatFileSize } from "~/util/format-file-size";
 
 import type { ExportRecord } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
+import { Button } from "@repo/ui/components/button";
+import { DialogFooter } from "@repo/ui/components/dialog";
 import {
-  Button,
-  DialogFooter,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  ScrollArea,
-  Skeleton,
+} from "@repo/ui/components/dropdown-menu";
+import { ScrollArea } from "@repo/ui/components/scroll-area";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@repo/ui/components";
+} from "@repo/ui/components/tooltip";
 
 import type { CreationStatus } from "../data-export-modal";
 

@@ -4,21 +4,17 @@ import { LineChart } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
+import { Checkbox } from "@repo/ui/components/checkbox";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import {
-  Badge,
-  Checkbox,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Slider,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
+import { Slider } from "@repo/ui/components/slider";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import DisplayOptionsSection from "../../shared/display-options-section";

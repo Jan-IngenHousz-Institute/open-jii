@@ -5,13 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  RichTextRenderer,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@repo/ui/components";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@repo/ui/components/select";
 
 import { useProtocol } from "../../../hooks/protocol/useProtocol/useProtocol";
 

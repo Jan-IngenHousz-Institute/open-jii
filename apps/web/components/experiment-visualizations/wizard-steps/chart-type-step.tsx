@@ -13,15 +13,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  RadioGroup,
-  RadioGroupItem,
-  WizardStepButtons,
-} from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+} from "@repo/ui/components/card";
+import { FormControl, FormField, FormItem, FormLabel } from "@repo/ui/components/form";
+import { RadioGroup, RadioGroupItem } from "@repo/ui/components/radio-group";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import {

@@ -5,7 +5,13 @@ import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components/card";
 import type { LocationPoint } from "@repo/ui/components/map";
 
 import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";

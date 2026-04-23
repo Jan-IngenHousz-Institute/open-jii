@@ -3,7 +3,9 @@
 import { Check, ChevronDown, ChevronUp, Pencil, X } from "lucide-react";
 import { useState } from "react";
 
-import { Button, RichTextarea, RichTextRenderer } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { RichTextarea } from "@repo/ui/components/rich-textarea";
 import { cva } from "@repo/ui/lib/utils";
 
 interface InlineEditableDescriptionProps {

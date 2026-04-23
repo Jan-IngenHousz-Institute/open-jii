@@ -2,14 +2,9 @@
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  RichTextRenderer,
-} from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
 interface DetailsSectionProps {
   formData: CreateExperimentBody;

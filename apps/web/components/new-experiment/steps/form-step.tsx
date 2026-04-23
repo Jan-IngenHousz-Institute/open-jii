@@ -7,8 +7,8 @@ import { z } from "zod";
 import { validateEmbargoDate, zCreateExperimentBodyBase } from "@repo/api";
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { WizardStepButtons } from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 import { cva } from "@repo/ui/lib/utils";
 
 export const detailsSchema = zCreateExperimentBodyBase.pick({ name: true, description: true });

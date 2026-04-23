@@ -9,7 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
-import { Button } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
 
 import type { PageHomeHeroFieldsFragment, ButtonFieldsFragment } from "../../lib/__generated/sdk";
 

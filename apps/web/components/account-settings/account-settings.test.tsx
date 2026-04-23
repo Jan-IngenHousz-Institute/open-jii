@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api";
 import type { Session } from "@repo/auth/types";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { AccountSettings } from "./account-settings";
 
