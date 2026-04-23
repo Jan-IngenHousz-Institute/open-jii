@@ -2059,6 +2059,21 @@ module "grafana_dashboard" {
   depends_on = [module.managed_grafana_workspace]
 }
 
+module "grafana_metrics_publisher" {
+  source = "../../modules/grafana/metrics-publisher"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  db_host                    = module.aurora_db.cluster_endpoint
+  db_port                    = module.aurora_db.cluster_port
+  db_name                    = module.aurora_db.database_name
+  aurora_cluster_resource_id = module.aurora_db.cluster_resource_id
+
+  private_subnets                = module.vpc.private_subnets
+  metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
+}
+
 module "aws_inspector" {
   source         = "../../modules/inspector"
   resource_types = ["ECR", "LAMBDA", "LAMBDA_CODE"]
