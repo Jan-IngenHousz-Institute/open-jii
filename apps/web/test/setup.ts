@@ -109,46 +109,44 @@ const { mocks } = vi.hoisted(() => {
       };
     };
   };
-  if (!g.__jiiWebTestMocks) {
-    g.__jiiWebTestMocks = {
-      mockRouter: {
-        push: vi.fn(),
-        replace: vi.fn(),
-        back: vi.fn(),
-        forward: vi.fn(),
-        refresh: vi.fn(),
-        prefetch: vi.fn(),
+  g.__jiiWebTestMocks ??= {
+    mockRouter: {
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+      prefetch: vi.fn(),
+    },
+    authClient: {
+      signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
+      emailOtp: {
+        sendVerificationOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
       },
-      authClient: {
-        signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
-        emailOtp: {
-          sendVerificationOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
-        },
-        signIn: {
-          emailOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
-          social: vi.fn().mockResolvedValue({ data: null, error: null }),
-          oauth2: vi.fn().mockResolvedValue({ data: null, error: null }),
-        },
-        updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
-        getSession: vi.fn().mockResolvedValue({ data: null, error: null }),
+      signIn: {
+        emailOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
+        social: vi.fn().mockResolvedValue({ data: null, error: null }),
+        oauth2: vi.fn().mockResolvedValue({ data: null, error: null }),
       },
-      posthog: {
-        init: vi.fn(),
-        capture: vi.fn(),
-        identify: vi.fn(),
-        reset: vi.fn(),
-        opt_in_capturing: vi.fn(),
-        opt_out_capturing: vi.fn(),
-        __loaded: false,
-      },
-      posthogReact: {
-        opt_in_capturing: vi.fn(),
-        opt_out_capturing: vi.fn(),
-        reset: vi.fn(),
-        capture: vi.fn(),
-      },
-    };
-  }
+      updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
+      getSession: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
+    posthog: {
+      init: vi.fn(),
+      capture: vi.fn(),
+      identify: vi.fn(),
+      reset: vi.fn(),
+      opt_in_capturing: vi.fn(),
+      opt_out_capturing: vi.fn(),
+      __loaded: false,
+    },
+    posthogReact: {
+      opt_in_capturing: vi.fn(),
+      opt_out_capturing: vi.fn(),
+      reset: vi.fn(),
+      capture: vi.fn(),
+    },
+  };
   return { mocks: g.__jiiWebTestMocks };
 });
 
