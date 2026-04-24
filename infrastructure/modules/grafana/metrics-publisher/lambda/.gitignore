@@ -1,4 +1,6 @@
 metrics_publisher.zip
+node_modules/
+!function.zip
 test-local.js
 src/
 dist/
