@@ -2,6 +2,22 @@
  * Helpers for measurement annotations (comments) compatible with the pipeline
  * (centrum_pipeline expects annotations array with type "comment", content: { text, flagType }).
  */
+import type { AnnotationFlagType } from "@repo/api";
+
+export const FLAG_TYPE_LABELS: Record<AnnotationFlagType, string> = {
+  outlier: "Outlier",
+  needs_review: "Needs Review",
+};
+
+interface CommentAnnotation {
+  type: "comment";
+  content: { text: string; flagType: null };
+}
+interface FlagAnnotation {
+  type: "flag";
+  content: { text: string; flagType: AnnotationFlagType };
+}
+type MeasurementAnnotation = CommentAnnotation | FlagAnnotation;
 
 export function getCommentFromMeasurementResult(
   measurementResult: Record<string, unknown>,
@@ -14,16 +30,31 @@ export function getCommentFromMeasurementResult(
   return comment?.content?.text ?? "";
 }
 
-/** Build annotations array with a single comment (replaces any existing comment). */
-export function buildAnnotationsWithComment(text: string): {
-  type: string;
-  content: { text: string; flagType: null };
-}[] {
-  if (!text.trim()) return [];
-  return [
-    {
-      type: "comment",
-      content: { text: text.trim(), flagType: null },
-    },
-  ];
+export function getFlagTypeFromMeasurementResult(
+  measurementResult: Record<string, unknown>,
+): AnnotationFlagType | null {
+  const annotations = measurementResult?.annotations as
+    | { type?: string; content?: { flagType?: AnnotationFlagType } }[]
+    | undefined;
+  if (!Array.isArray(annotations)) return null;
+  const flag = annotations.find((a) => a?.type === "flag");
+  return flag?.content?.flagType ?? null;
+}
+
+/** Build annotations array from optional comment text and/or flag type. */
+export function buildAnnotations(
+  commentText?: string,
+  flagType?: AnnotationFlagType | null,
+): MeasurementAnnotation[] {
+  const annotations: MeasurementAnnotation[] = [];
+
+  if (commentText?.trim()) {
+    annotations.push({ type: "comment", content: { text: commentText.trim(), flagType: null } });
+  }
+
+  if (flagType) {
+    annotations.push({ type: "flag", content: { text: "", flagType } });
+  }
+
+  return annotations;
 }

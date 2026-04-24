@@ -4,6 +4,9 @@ import { useMeasurements } from "~/hooks/use-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
+import { buildAnnotations } from "~/utils/measurement-annotations";
+
+import type { AnnotationFlagType } from "@repo/api";
 
 export function useQuestionsUpload() {
   const { saveMeasurement } = useMeasurements();
@@ -16,6 +19,8 @@ export function useQuestionsUpload() {
       experimentId,
       userId,
       questions,
+      commentText,
+      flagType,
     }: {
       timestamp: string;
       timezone: string;
@@ -23,6 +28,8 @@ export function useQuestionsUpload() {
       experimentId: string;
       userId: string;
       questions: AnswerData[];
+      commentText?: string;
+      flagType?: AnnotationFlagType | null;
     }) => {
       const topic = getMultispeqMqttTopic({ experimentId, protocolId: "questions" });
 
@@ -33,6 +40,7 @@ export function useQuestionsUpload() {
         timestamp,
         timezone,
         user_id: userId,
+        annotations: buildAnnotations(commentText, flagType),
       };
 
       const failedUploadData = {

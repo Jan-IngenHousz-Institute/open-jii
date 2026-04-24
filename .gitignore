@@ -12,6 +12,11 @@ node_modules
 .pnpm-store
 .pnp.js
 
+# AI Generated Files
+.wolf/
+CLAUDE.md
+.claude/
+
 # Local env files
 .env
 .env.local
