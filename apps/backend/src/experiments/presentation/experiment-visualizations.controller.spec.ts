@@ -94,8 +94,6 @@ describe("ExperimentVisualizationsController", () => {
     getExperimentVisualizationUseCase = testApp.module.get(GetExperimentVisualizationUseCase);
     updateExperimentVisualizationUseCase = testApp.module.get(UpdateExperimentVisualizationUseCase);
     deleteExperimentVisualizationUseCase = testApp.module.get(DeleteExperimentVisualizationUseCase);
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {

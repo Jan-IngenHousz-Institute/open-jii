@@ -23,8 +23,6 @@ describe("ExperimentMembersController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {

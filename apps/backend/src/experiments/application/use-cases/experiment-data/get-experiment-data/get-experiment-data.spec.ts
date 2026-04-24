@@ -30,8 +30,6 @@ describe("GetExperimentDataUseCase", () => {
     useCase = testApp.module.get(GetExperimentDataUseCase);
     experimentDataRepository = testApp.module.get(ExperimentDataRepository);
     experimentRepository = testApp.module.get(ExperimentRepository);
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {

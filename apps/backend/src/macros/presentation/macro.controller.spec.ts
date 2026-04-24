@@ -48,8 +48,6 @@ describe("MacroController", () => {
     listMacrosUseCase = testApp.module.get(ListMacrosUseCase);
     updateMacroUseCase = testApp.module.get(UpdateMacroUseCase);
     deleteMacroUseCase = testApp.module.get(DeleteMacroUseCase);
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {
