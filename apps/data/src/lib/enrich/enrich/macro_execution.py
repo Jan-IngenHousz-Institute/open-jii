@@ -94,14 +94,11 @@ def make_execute_macro_udf(
                 errors[pos] = f"NULL macro_id or data for row {row_id}"
                 continue
 
-            # Convert VARIANT to native Python object; pass through if already parsed
+            # Send data as a JSON string
             if isinstance(data, VariantVal):
-                data = json.loads(data.toJson())
-            elif isinstance(data, str):
-                try:
-                    data = json.loads(data)
-                except (json.JSONDecodeError, ValueError):
-                    pass
+                data = data.toJson()
+            elif not isinstance(data, str):
+                data = json.dumps(data)
 
             items.append({
                 "id": str(row_id),
