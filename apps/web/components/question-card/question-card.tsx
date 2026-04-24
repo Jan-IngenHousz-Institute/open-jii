@@ -62,6 +62,13 @@ export function QuestionCard({
           />
         </div>
 
+        {/* Plot / ID question hint */}
+        <p className="from-jii-medium-green/10 to-jii-dark-green/10 text-jii-dark-green mb-6 rounded-lg bg-gradient-to-r px-3 py-2 text-xs">
+          Note: If this is a <strong>plant identifier</strong> question, place it{" "}
+          <strong>first</strong> in the flow. The mobile app will show it as a confirmation banner
+          throughout the iteration.
+        </p>
+
         {/* Required Toggle */}
         <div className="mb-6">
           <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">

@@ -42,6 +42,7 @@ How to build the flow:
 Notes:
 - For now, a valid flow should include at least one Measurement node and one Analysis node. More advanced flow options will be added over time.
 - Unconnected nodes are ignored when the flow runs.
+- If your flow includes a question asking for a plant identifier, place it **first** among the Question nodes. The mobile app displays the answer to the first ID question as a contextual banner on subsequent questions, helping field operators confirm which plot they are measuring.
 
 ![Measurement flow example](image-1.png)
 

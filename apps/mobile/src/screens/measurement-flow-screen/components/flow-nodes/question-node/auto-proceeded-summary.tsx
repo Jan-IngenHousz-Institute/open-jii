@@ -45,14 +45,14 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
 
   const firstManualNodeId = getCachedFirstManualNodeId(iterationCount);
 
-  const autoProceededWithAnswers = flowNodes
-    .filter((n) => n.type === "question" && isAutoincrementEnabled(n.id))
-    .filter((n) => !!getAnswer(iterationCount, n.id)?.trim());
+  const firstAutoProceeded = flowNodes.find(
+    (n) =>
+      n.type === "question" &&
+      isAutoincrementEnabled(n.id) &&
+      !!getAnswer(iterationCount, n.id)?.trim(),
+  );
 
-  const show =
-    iterationCount > 0 &&
-    autoProceededWithAnswers.length > 0 &&
-    firstManualNodeId === currentNodeId;
+  const show = iterationCount > 0 && !!firstAutoProceeded && firstManualNodeId === currentNodeId;
 
   if (!show) return null;
 
@@ -71,21 +71,17 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
         Your current plot
       </Text>
 
-      {autoProceededWithAnswers.map((n) => (
-        <View key={n.id}>
-          <View className="flex-row items-center gap-1">
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              className={clsx("flex-shrink text-base font-semibold", classes.text)}
-            >
-              {getAnswer(iterationCount, n.id)}
-            </Text>
+      <View className="flex-row items-center gap-1">
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          className={clsx("flex-shrink text-base font-semibold", classes.text)}
+        >
+          {getAnswer(iterationCount, firstAutoProceeded.id)}
+        </Text>
 
-            <Repeat2 size={16} color={colors.neutral.black} />
-          </View>
-        </View>
-      ))}
+        <Repeat2 size={16} color={colors.neutral.black} />
+      </View>
     </View>
   );
 }
