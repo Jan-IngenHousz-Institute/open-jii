@@ -237,7 +237,6 @@ describe("GetExperimentAccessUseCase", () => {
         expect(result.error).toBe(mockError);
       }
 
-      // Restore original method
       experimentRepository.checkAccess = originalCheckAccess;
     });
 
@@ -275,7 +274,6 @@ describe("GetExperimentAccessUseCase", () => {
       expect(error.statusCode).toBe(404);
       expect(error.message).toBe(`Experiment with ID ${testExperimentId} not found`);
 
-      // Restore original method
       experimentRepository.checkAccess = originalCheckAccess;
     });
 

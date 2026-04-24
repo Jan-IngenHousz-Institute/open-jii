@@ -18,8 +18,6 @@ describe("AddExperimentMembersUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(AddExperimentMembersUseCase);
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {

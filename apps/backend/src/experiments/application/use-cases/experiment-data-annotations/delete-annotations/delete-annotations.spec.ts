@@ -23,8 +23,6 @@ describe("DeleteAnnotations", () => {
     testUserId = await testApp.createTestUser({});
 
     useCase = testApp.module.get(DeleteAnnotationsUseCase);
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {

@@ -219,7 +219,6 @@ describe("AddExperimentLocationsUseCase", () => {
       expect(result.error.message).toContain("Failed to create locations");
       expect(result.error.message).toContain("Database connection failed");
     } finally {
-      // Restore original method
     }
   });
 });

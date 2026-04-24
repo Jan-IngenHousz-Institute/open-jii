@@ -17,8 +17,6 @@ describe("SearchPlacesUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(SearchPlacesUseCase);
     awsPort = testApp.module.get(AWS_PORT);
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {

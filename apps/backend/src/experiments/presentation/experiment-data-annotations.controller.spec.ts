@@ -34,8 +34,6 @@ describe("ExperimentDataAnnotationsController", () => {
     addAnnotationsUseCase = testApp.module.get(AddAnnotationsUseCase);
     updateAnnotationUseCase = testApp.module.get(UpdateAnnotationUseCase);
     deleteAnnotationsUseCase = testApp.module.get(DeleteAnnotationsUseCase);
-
-    // Reset any mocks before each test
   });
 
   afterEach(() => {

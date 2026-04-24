@@ -361,7 +361,6 @@ describe("UpdateExperimentLocationsUseCase", () => {
       expect(result.error.message).toContain("Failed to update locations");
       expect(result.error.message).toContain("Database transaction failed");
     } finally {
-      // Restore original method
     }
   });
 });
