@@ -59,7 +59,7 @@ export class NotificationsService {
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
         const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
-        const transport = createTransport(this.emailConfigService.getServer());
+        const transport = this.createMailTransport(this.emailConfigService.getServer());
 
         const { html, text } = await this.renderAddedUserNotificationEmail({
           host,
@@ -137,7 +137,7 @@ export class NotificationsService {
 
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
-        const transport = createTransport(this.emailConfigService.getServer());
+        const transport = this.createMailTransport(this.emailConfigService.getServer());
 
         const { html, text } = await this.renderTransferRequestConfirmationEmail({
           host,
@@ -211,7 +211,7 @@ export class NotificationsService {
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
         const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
-        const transport = createTransport(this.emailConfigService.getServer());
+        const transport = this.createMailTransport(this.emailConfigService.getServer());
 
         const { html, text } = await this.renderProjectTransferCompleteEmail({
           host,

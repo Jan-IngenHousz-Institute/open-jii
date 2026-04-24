@@ -4,12 +4,16 @@ import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 import { server } from "./msw/server";
 
-beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: "warn" });
+});
+
 afterEach(() => {
   server.resetHandlers();
   cleanup();
   vi.clearAllMocks();
 });
+
 afterAll(() => {
   server.close();
   // `isolate: false` shares the module cache across files in a worker.

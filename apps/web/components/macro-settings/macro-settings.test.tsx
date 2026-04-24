@@ -1,7 +1,7 @@
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -19,6 +19,13 @@ vi.mock("./macro-info-card", () => ({
 }));
 
 describe("MacroSettings", () => {
+  beforeEach(() => {
+    // The settings page lists both "compatible" protocols for the macro and
+    // the overall protocol catalog (for the "add compatible" picker).
+    server.mount(contract.macros.listCompatibleProtocols, { body: [] });
+    server.mount(contract.protocols.listProtocols, { body: [] });
+  });
+
   it("shows loading then resolves to cards", async () => {
     const macro = createMacro({ id: "m-1", name: "Test Macro", description: "Desc" });
     server.mount(contract.macros.getMacro, { body: macro });

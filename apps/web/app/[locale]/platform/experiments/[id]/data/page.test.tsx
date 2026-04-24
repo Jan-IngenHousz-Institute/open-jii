@@ -107,6 +107,9 @@ describe("ExperimentDataPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(use).mockReturnValue({ id: experimentId, locale: "en-US" });
+    // The page fetches metadata too; default to "none" so tests that don't
+    // care about metadata don't generate unhandled-request warnings.
+    server.mount(contract.experiments.listExperimentMetadata, { body: [] });
   });
 
   it("renders the experiment data page with tabs when loaded", async () => {
@@ -214,7 +217,7 @@ describe("ExperimentDataPage", () => {
     server.mount(contract.experiments.getExperimentTables, {
       body: [
         createExperimentTable({
-          name: ExperimentTableName.DEVICE,
+          identifier: ExperimentTableName.DEVICE,
           displayName: "Device Metadata",
           totalRows: 50,
         }),
@@ -272,7 +275,7 @@ describe("ExperimentDataPage", () => {
     server.mount(contract.experiments.getExperimentTables, {
       body: [
         createExperimentTable({
-          name: longTableName,
+          identifier: longTableName,
           displayName: "Very Long Table Name That Should Be Truncated",
           totalRows: 100,
         }),
