@@ -108,7 +108,7 @@ patchedDependencies:
     hash: 96812310a27a5ba65b9a67eab72ae6b1a1aa5e5b29107190ea75147ed5fe467a
     path: patches/@better-auth__expo@1.5.6.patch
   react-native-usb-serialport-for-android:
-    hash: 31811a12742cd056af7e4b2a51aad7cd18865488fff2380ae09d7a063b330dbb
+    hash: eb6f43839c09154480e4be78153e9f36fcf27e90193169b73475274b0d61e64b
     path: patches/react-native-usb-serialport-for-android.patch
 
 importers:
@@ -628,7 +628,7 @@ importers:
         version: 2.3.3(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       react-native-usb-serialport-for-android:
         specifier: ^0.5.0
-        version: 0.5.0(patch_hash=31811a12742cd056af7e4b2a51aad7cd18865488fff2380ae09d7a063b330dbb)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        version: 0.5.0(patch_hash=eb6f43839c09154480e4be78153e9f36fcf27e90193169b73475274b0d61e64b)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       react-native-vector-icons:
         specifier: ^10.3.0
         version: 10.3.0
@@ -1193,7 +1193,7 @@ importers:
         version: 1.73.0-rc.13(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))
       react-native-usb-serialport-for-android:
         specifier: ^0.5.0
-        version: 0.5.0(patch_hash=31811a12742cd056af7e4b2a51aad7cd18865488fff2380ae09d7a063b330dbb)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        version: 0.5.0(patch_hash=eb6f43839c09154480e4be78153e9f36fcf27e90193169b73475274b0d61e64b)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -27773,7 +27773,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.32.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
+      vitest: 3.2.4(@types/debug@4.1.13)(@types/node@25.5.0)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.32.0)(msw@2.13.3(@types/node@25.5.0)(typescript@5.9.3))(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
   '@vitest/utils@3.2.4':
     dependencies:
@@ -37121,7 +37121,7 @@ snapshots:
       react: 19.2.4
       react-native: 0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
 
-  react-native-usb-serialport-for-android@0.5.0(patch_hash=31811a12742cd056af7e4b2a51aad7cd18865488fff2380ae09d7a063b330dbb)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4):
+  react-native-usb-serialport-for-android@0.5.0(patch_hash=eb6f43839c09154480e4be78153e9f36fcf27e90193169b73475274b0d61e64b)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4):
     dependencies:
       react: 19.2.4
       react-native: 0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
