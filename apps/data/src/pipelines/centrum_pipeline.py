@@ -904,6 +904,7 @@ def experiment_macro_data_sandbox():
             "macro_filename",
             "macro_output",
             "macro_error",
+            F.col("data").alias("raw_data"),
             "processed_timestamp",
             "date",
             "questions_data",
