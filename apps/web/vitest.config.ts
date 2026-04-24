@@ -19,6 +19,7 @@ const aliasConfig = defineConfig({
 const webConfig = defineConfig({
   test: {
     isolate: false,
+    pool: "threads",
     setupFiles: ["./test/setup.ts"],
     coverage: {
       exclude: [
