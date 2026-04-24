@@ -120,6 +120,11 @@ describe("useIotCommunication", () => {
     });
 
     it("errors when connecting multispeq via bluetooth (BLE not supported)", async () => {
+      // The hook logs the thrown connection error via console.error; expected here.
+      vi.spyOn(console, "error").mockImplementation(() => {
+        // no-op
+      });
+
       const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
       void result.current.connect();
@@ -215,6 +220,11 @@ describe("useIotCommunication", () => {
 
   describe("device disconnect", () => {
     it("resets state when device disconnects via transport status change", async () => {
+      // The hook logs the disconnect via console.debug; expected here.
+      vi.spyOn(console, "debug").mockImplementation(() => {
+        // no-op
+      });
+
       // Capture the onStatusChanged callback so we can trigger it
       let statusCallback: ((connected: boolean, error?: Error) => void) | undefined;
       const { WebSerialAdapter } = await import("@repo/iot/transport/web");
