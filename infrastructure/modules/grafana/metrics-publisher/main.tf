@@ -1,26 +1,5 @@
 data "aws_caller_identity" "current" {}
 
-resource "null_resource" "npm_install" {
-  triggers = {
-    package_json      = filemd5("${path.module}/lambda/package.json")
-    package_lock_json = filemd5("${path.module}/lambda/package-lock.json")
-  }
-
-  provisioner "local-exec" {
-    command     = "npm ci --omit=dev"
-    working_dir = "${path.module}/lambda"
-  }
-}
-
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda"
-  output_path = "${path.module}/lambda/metrics_publisher.zip"
-  excludes    = ["metrics_publisher.zip"]
-
-  depends_on = [null_resource.npm_install]
-}
-
 # -------------------------
 # IAM Role
 # -------------------------
@@ -96,8 +75,8 @@ resource "aws_iam_role_policy" "metrics_publisher" {
 # Lambda Function
 # -------------------------
 resource "aws_lambda_function" "metrics_publisher" {
-  filename         = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  filename         = "${path.module}/lambda/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambda/function.zip")
   function_name    = "${var.environment}-metrics-publisher"
   role             = aws_iam_role.metrics_publisher.arn
   handler          = "index.handler"
