@@ -1,4 +1,4 @@
-import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -376,16 +376,12 @@ describe("RegistrationForm", () => {
 
       await user.type(screen.getByLabelText("registration.email"), "notanemail");
 
-      // Use direct form submit to bypass HTML5 email validation in jsdom.
-      // Wrapped in act so react-hook-form's Controller validation updates
-      // flush before we wait for the error message.
+      // fireEvent.submit bypasses HTML5 email validation in jsdom and is auto-wrapped in act.
       const form = screen
         .getByRole("button", { name: "registration.continueWithEmailVerification" })
         .closest("form");
-      await act(async () => {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      });
+      if (!form) throw new Error("form not found");
+      fireEvent.submit(form);
 
       await waitFor(() => {
         expect(screen.getByText("registration.emailInvalid")).toBeInTheDocument();

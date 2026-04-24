@@ -1,8 +1,8 @@
 import * as Sharing from "expo-sharing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getMeasurements } from "~/services/measurements-storage";
 
 import { exportMeasurementsToFile, exportSingleMeasurementToFile } from "../export-measurements";
-import { getMeasurements } from "~/services/measurements-storage";
 
 const mockCreate = vi.fn();
 const mockWrite = vi.fn();
@@ -26,7 +26,9 @@ vi.mock("~/services/measurements-storage", () => ({
 
 const mockGetMeasurements = vi.mocked(getMeasurements);
 
-const mockStoredMeasurement = (overrides?: Partial<{ experimentName: string; timestamp: string }>) => ({
+const mockStoredMeasurement = (
+  overrides?: Partial<{ experimentName: string; timestamp: string }>,
+) => ({
   topic: "test/topic",
   measurementResult: { value: 42 },
   metadata: {
@@ -63,7 +65,9 @@ describe("exportMeasurementsToFile", () => {
     await exportMeasurementsToFile();
 
     const writtenData = JSON.parse(mockWrite.mock.calls[0][0]);
-    const unsynced = writtenData.measurements.find((m: { status: string }) => m.status === "unsynced");
+    const unsynced = writtenData.measurements.find(
+      (m: { status: string }) => m.status === "unsynced",
+    );
     const synced = writtenData.measurements.find((m: { status: string }) => m.status === "synced");
 
     expect(unsynced.experimentName).toBe("Exp A");

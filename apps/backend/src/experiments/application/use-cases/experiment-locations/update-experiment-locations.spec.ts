@@ -351,16 +351,13 @@ describe("UpdateExperimentLocationsUseCase", () => {
       failure(AppError.internal("Database transaction failed")),
     );
 
-    try {
-      // Act
-      const result = await useCase.execute(experiment.id, locationsToUpdate, testUserId);
+    // Act
+    const result = await useCase.execute(experiment.id, locationsToUpdate, testUserId);
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to update locations");
-      expect(result.error.message).toContain("Database transaction failed");
-    } finally {
-    }
+    // Assert
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to update locations");
+    expect(result.error.message).toContain("Database transaction failed");
   });
 });
