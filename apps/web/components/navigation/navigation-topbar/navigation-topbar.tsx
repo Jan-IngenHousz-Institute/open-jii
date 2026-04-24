@@ -160,7 +160,7 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
                     <input
                       type="text"
                       placeholder="Search by keyword..."
-                      className="placeholder:text-sidebar-search-placeholder h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20 focus:outline-hidden"
+                      className="placeholder:text-sidebar-search-placeholder focus:outline-hidden h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20"
                     />
                     <Search className="text-sidebar-search-icon absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2" />
                   </div>

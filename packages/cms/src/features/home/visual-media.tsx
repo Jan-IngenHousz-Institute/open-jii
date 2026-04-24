@@ -117,7 +117,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
                   alt={img.title ?? "Partner visual"}
                   width={900}
                   height={400}
-                  className="h-full w-full rounded-2xl object-cover shadow-xs"
+                  className="shadow-xs h-full w-full rounded-2xl object-cover"
                   priority={idx === 0}
                   onClick={() => scrollToIdx(idx)}
                   style={{ cursor: "pointer" }}

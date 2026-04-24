@@ -153,7 +153,7 @@ export function ChartTypeStep({
                             </FormControl>
                             <FormLabel
                               htmlFor={chartType.type}
-                              className={`group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 bg-white p-6 shadow-xs transition-all duration-200 hover:border-gray-300 hover:shadow-md ${
+                              className={`shadow-xs group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 bg-white p-6 transition-all duration-200 hover:border-gray-300 hover:shadow-md ${
                                 selectedChartType === chartType.type
                                   ? "border-primary bg-primary/5 shadow-md"
                                   : "border-gray-200"

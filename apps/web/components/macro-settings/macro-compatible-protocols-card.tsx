@@ -113,7 +113,7 @@ export function MacroCompatibleProtocolsCard({
           {compatibleProtocols.map((entry) => (
             <div
               key={entry.protocol.id}
-              className="group rounded-lg border border-gray-200 bg-white p-3 shadow-xs transition-shadow hover:shadow-md"
+              className="shadow-xs group rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">

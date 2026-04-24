@@ -109,7 +109,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
           {/* Badge */}
           {currentHero.badge && (
             <div
-              className="mb-6 inline-flex items-center rounded-full bg-white/10 px-4 py-1.5 text-sm text-white ring-1 ring-white/20 backdrop-blur-xs"
+              className="backdrop-blur-xs mb-6 inline-flex items-center rounded-full bg-white/10 px-4 py-1.5 text-sm text-white ring-1 ring-white/20"
               {...inspectorProps({ fieldId: "badge" })}
             >
               {currentHero.badge}

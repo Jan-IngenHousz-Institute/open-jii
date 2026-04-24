@@ -207,7 +207,7 @@ export function ExperimentSidePanel({
                 onChange={handleTitleChange}
                 placeholder={t("sidePanelFlow.labelPlaceholder")}
                 disabled={isDisabled}
-                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+                className="focus:border-jii-dark-green focus:ring-jii-dark-green focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </CardContent>
           </Card>
@@ -263,7 +263,7 @@ export function ExperimentSidePanel({
                           ))
                       }
                     />
-                    <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-hidden peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
+                    <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer-focus:outline-hidden peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
                   </label>
                 </div>
               </CardContent>

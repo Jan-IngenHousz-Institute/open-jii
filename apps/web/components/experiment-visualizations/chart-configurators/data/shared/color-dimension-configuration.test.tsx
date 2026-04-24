@@ -339,7 +339,7 @@ describe("ColorDimensionConfiguration", () => {
     });
 
     it("should display gradient preview bar", () => {
-      renderColorDimension({
+      const { container } = renderColorDimension({
         colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
       });
 

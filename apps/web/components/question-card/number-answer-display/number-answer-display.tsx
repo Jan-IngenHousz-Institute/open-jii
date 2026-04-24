@@ -7,7 +7,7 @@ export function NumberAnswerDisplay() {
 
   return (
     <div className="rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 p-6 text-center">
-      <div className="mx-auto mb-3 w-fit rounded-full bg-white p-3 shadow-xs">
+      <div className="shadow-xs mx-auto mb-3 w-fit rounded-full bg-white p-3">
         <svg
           className="h-5 w-5 text-blue-600"
           fill="none"

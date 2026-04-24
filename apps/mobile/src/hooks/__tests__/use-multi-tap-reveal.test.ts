@@ -27,13 +27,21 @@ describe("useMultiTapReveal", () => {
   it("becomes visible after 4 taps (default) within the window", () => {
     const { result } = renderHook(() => useMultiTapReveal());
 
-    act(() => { result.current.handleTap(); });
+    act(() => {
+      result.current.handleTap();
+    });
     vi.setSystemTime(1500);
-    act(() => { result.current.handleTap(); });
+    act(() => {
+      result.current.handleTap();
+    });
     vi.setSystemTime(2000);
-    act(() => { result.current.handleTap(); });
+    act(() => {
+      result.current.handleTap();
+    });
     vi.setSystemTime(2500);
-    act(() => { result.current.handleTap(); }); // 4th tap → visible
+    act(() => {
+      result.current.handleTap();
+    }); // 4th tap → visible
 
     expect(result.current.isVisible).toBe(true);
   });
@@ -41,11 +49,17 @@ describe("useMultiTapReveal", () => {
   it("remains hidden before reaching tapsRequired", () => {
     const { result } = renderHook(() => useMultiTapReveal());
 
-    act(() => { result.current.handleTap(); });
+    act(() => {
+      result.current.handleTap();
+    });
     vi.setSystemTime(1500);
-    act(() => { result.current.handleTap(); });
+    act(() => {
+      result.current.handleTap();
+    });
     vi.setSystemTime(2000);
-    act(() => { result.current.handleTap(); }); // only 3 of 4
+    act(() => {
+      result.current.handleTap();
+    }); // only 3 of 4
 
     expect(result.current.isVisible).toBe(false);
   });
@@ -53,9 +67,13 @@ describe("useMultiTapReveal", () => {
   it("respects custom tapsRequired", () => {
     const { result } = renderHook(() => useMultiTapReveal({ tapsRequired: 2 }));
 
-    act(() => { result.current.handleTap(); });
+    act(() => {
+      result.current.handleTap();
+    });
     vi.setSystemTime(1500);
-    act(() => { result.current.handleTap(); }); // 2nd tap → visible
+    act(() => {
+      result.current.handleTap();
+    }); // 2nd tap → visible
 
     expect(result.current.isVisible).toBe(true);
   });
@@ -63,9 +81,13 @@ describe("useMultiTapReveal", () => {
   it("respects custom intervalMs", () => {
     const { result } = renderHook(() => useMultiTapReveal({ tapsRequired: 2, intervalMs: 200 }));
 
-    act(() => { result.current.handleTap(); }); // tap 1 at 1000ms
+    act(() => {
+      result.current.handleTap();
+    }); // tap 1 at 1000ms
     vi.setSystemTime(1300); // +300ms > 200ms, window expired → resets
-    act(() => { result.current.handleTap(); }); // count=1 (reset)
+    act(() => {
+      result.current.handleTap();
+    }); // count=1 (reset)
 
     expect(result.current.isVisible).toBe(false);
   });

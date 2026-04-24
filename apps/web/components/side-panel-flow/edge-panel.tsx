@@ -100,7 +100,7 @@ export function EdgeSidePanel({
                 onChange={handleLabelChange}
                 placeholder={t("edgePanel.labelPlaceholder")}
                 disabled={isDisabled}
-                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+                className="focus:border-jii-dark-green focus:ring-jii-dark-green focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </CardContent>
           </Card>

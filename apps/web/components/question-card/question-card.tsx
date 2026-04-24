@@ -45,7 +45,7 @@ export function QuestionCard({
   const { t } = useTranslation(["experiments"]);
 
   return (
-    <Card className="group relative overflow-hidden border border-gray-200 bg-white shadow-xs transition-all hover:border-gray-300 hover:shadow-lg">
+    <Card className="shadow-xs group relative overflow-hidden border border-gray-200 bg-white transition-all hover:border-gray-300 hover:shadow-lg">
       {/* Subtle accent line */}
       <div className="from-jii-dark-green to-jii-medium-green absolute left-0 top-0 h-full w-1 bg-gradient-to-b"></div>
 
@@ -58,7 +58,7 @@ export function QuestionCard({
             onChange={(e) => onUpdateText?.(e.target.value)}
             placeholder={t("questionCard.placeholder")}
             disabled={disabled}
-            className="focus:border-jii-dark-green w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:outline-hidden focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50"
+            className="focus:border-jii-dark-green focus:outline-hidden w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50"
           />
         </div>
 
@@ -77,7 +77,7 @@ export function QuestionCard({
                 disabled={disabled}
                 className="peer sr-only"
               />
-              <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-hidden peer-focus:ring-4"></div>
+              <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer-focus:outline-hidden peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4"></div>
             </label>
           </div>
         </div>
