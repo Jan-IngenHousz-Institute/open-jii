@@ -31,10 +31,10 @@ export const EmailLayout = ({
       <Tailwind>
         <Head />
         <Preview>{preview}</Preview>
-        <Body className="bg-[#005E5E]/15 font-sans">
+        <Body className="bg-[#005E5E]/15 pb-6 pt-4 font-sans">
           <Section className="w-full text-center">
             <Img
-              src={`${baseUrl}/openJII_logo_RGB_horizontal_yellow.png`}
+              src={`${baseUrl}/openJII_logo_RGB_horizontal_green_yellow.svg`}
               alt="openJII"
               width={205}
               className="mx-auto"
