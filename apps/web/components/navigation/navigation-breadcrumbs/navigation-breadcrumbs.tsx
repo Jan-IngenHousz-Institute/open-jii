@@ -10,7 +10,7 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbSeparator,
-} from "@repo/ui/components";
+} from "@repo/ui/components/breadcrumb";
 
 interface BreadcrumbsProps {
   locale: string;

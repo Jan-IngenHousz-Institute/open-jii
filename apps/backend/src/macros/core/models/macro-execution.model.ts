@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export interface LambdaExecutionItem {
   id: string;
-  data: Record<string, unknown>;
+  data: Record<string, unknown> | unknown[];
 }
 
 export interface LambdaExecutionPayload {

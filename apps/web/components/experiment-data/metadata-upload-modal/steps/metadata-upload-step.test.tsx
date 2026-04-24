@@ -12,7 +12,7 @@ const mockUpdateMutateAsync = vi.fn();
 const mockDeleteMutateAsync = vi.fn();
 let mockExistingMetadata: unknown[] = [];
 
-vi.mock("@/components/metadata-table", () => ({
+vi.mock("@/components/metadata-table/metadata-table", () => ({
   MetadataTable: (props: {
     columns: unknown[];
     rows: unknown[];
@@ -74,7 +74,7 @@ vi.mock("@/hooks/experiment/useExperimentMetadata/useExperimentMetadata", () => 
 
 // Stub UI components - this test validates data flow via data-testid callbacks
 // on mocked MetadataTable, so Radix Select/Input must be simplified.
-vi.mock("@repo/ui/components", () => ({
+vi.mock("@repo/ui/components/button", () => ({
   Button: ({
     children,
     disabled,
@@ -88,7 +88,13 @@ vi.mock("@repo/ui/components", () => ({
       {children}
     </button>
   ),
+}));
+
+vi.mock("@repo/ui/components/dialog", () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@repo/ui/components/input", () => ({
   Input: ({
     id,
     value,
@@ -102,9 +108,15 @@ vi.mock("@repo/ui/components", () => ({
   }) => (
     <input id={id} value={value} onChange={onChange} placeholder={placeholder} data-testid={id} />
   ),
+}));
+
+vi.mock("@repo/ui/components/label", () => ({
   Label: ({ children, ...props }: { children: React.ReactNode; htmlFor?: string }) => (
     <label {...props}>{children}</label>
   ),
+}));
+
+vi.mock("@repo/ui/components/select", () => ({
   Select: ({
     children,
     onValueChange,
@@ -131,6 +143,9 @@ vi.mock("@repo/ui/components", () => ({
   ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
+}));
+
+vi.mock("@repo/ui/components/scroll-area", () => ({
   ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 

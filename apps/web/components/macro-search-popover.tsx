@@ -5,9 +5,9 @@ import { SearchX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components/badge";
 import {
   Command,
   CommandEmpty,
@@ -15,8 +15,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@repo/ui/components";
-import { PopoverContent } from "@repo/ui/components";
+} from "@repo/ui/components/command";
+import { PopoverContent } from "@repo/ui/components/popover";
 import { cva } from "@repo/ui/lib/utils";
 
 const macroItemVariants = cva(

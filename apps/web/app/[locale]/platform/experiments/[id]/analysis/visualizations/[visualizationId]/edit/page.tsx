@@ -10,7 +10,8 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent } from "@repo/ui/components/card";
 
 export default function EditVisualizationPage() {
   const { t } = useTranslation("experimentVisualizations");

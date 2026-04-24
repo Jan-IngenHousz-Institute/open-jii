@@ -9,15 +9,17 @@ import { useState } from "react";
 import React from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
+} from "@repo/ui/components/card";
+import {
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -25,7 +27,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
 
 interface MacroInfoCardProps {
   macroId: string;

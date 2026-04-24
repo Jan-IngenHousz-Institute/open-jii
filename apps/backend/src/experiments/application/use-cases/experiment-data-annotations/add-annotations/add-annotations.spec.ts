@@ -1,4 +1,4 @@
-import type { AddAnnotationsBulkBody } from "@repo/api";
+import type { AddAnnotationsBulkBody } from "@repo/api/schemas/experiment.schema";
 
 import {
   assertFailure,

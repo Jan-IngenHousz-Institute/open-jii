@@ -1,8 +1,9 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import type { ErrorResponse, UserList, UserProfileList, User } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { ErrorResponse } from "@repo/api/schemas/experiment.schema";
+import type { UserList, UserProfileList, User } from "@repo/api/schemas/user.schema";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";

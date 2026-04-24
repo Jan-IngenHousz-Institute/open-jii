@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, fireEvent, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { NewProtocolForm } from "../new-protocol";
 
@@ -31,8 +31,11 @@ vi.mock("../../macro-search-with-dropdown", () => ({
 }));
 
 // Global mock only provides toast - this component also needs useBreakpoint/useIsMobile
-vi.mock("@repo/ui/hooks", () => ({
+vi.mock("@repo/ui/hooks/use-toast", () => ({
   toast: vi.fn(),
+}));
+
+vi.mock("@repo/ui/hooks/use-mobile", () => ({
   useBreakpoint: () => ({ isMobile: false, isTablet: false, isLgTablet: false }),
   useIsMobile: () => false,
 }));

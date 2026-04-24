@@ -4,7 +4,9 @@ import { Check, Pencil, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { Button, CardTitle, Input } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { CardTitle } from "@repo/ui/components/card";
+import { Input } from "@repo/ui/components/input";
 import { cva } from "@repo/ui/lib/utils";
 
 interface InlineEditableTitleProps {

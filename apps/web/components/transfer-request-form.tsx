@@ -7,14 +7,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useTransferRequestCreate } from "~/hooks/useTransferRequestCreate/useTransferRequestCreate";
 
-import { zCreateTransferRequestBody } from "@repo/api";
+import { zCreateTransferRequestBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
+import { Button } from "@repo/ui/components/button";
+import { Checkbox } from "@repo/ui/components/checkbox";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Checkbox,
   Form,
   FormControl,
   FormDescription,
@@ -22,8 +20,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
-} from "@repo/ui/components";
+} from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
 
 const transferRequestSchema = zCreateTransferRequestBody.extend({
   consent: z.boolean().refine((val) => val === true, {

@@ -4,7 +4,8 @@ import Link from "next/link";
 import React from "react";
 
 import initTranslations from "@repo/i18n/server";
-import { Button, Card, CardContent } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent } from "@repo/ui/components/card";
 
 /**
  * Global 404 Not Found Page with Locale Detection

@@ -4,7 +4,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import type { User } from "@repo/auth/types";
-import { useSidebar } from "@repo/ui/components";
+import { useSidebar } from "@repo/ui/components/sidebar";
 
 import { NavigationTopbar } from "./navigation-topbar";
 
@@ -13,8 +13,7 @@ vi.mock("../nav-user/nav-user", () => ({
   NavUser: () => <span>nav-user</span>,
 }));
 
-// useSidebar — pragmatic mock (requires SidebarProvider context not in test wrapper)
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/sidebar", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,

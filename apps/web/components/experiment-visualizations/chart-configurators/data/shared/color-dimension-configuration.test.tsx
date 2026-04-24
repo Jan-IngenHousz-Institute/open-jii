@@ -1,7 +1,7 @@
 import { renderWithForm, screen, userEvent, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DataColumn } from "@repo/api";
+import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 
 import type { ChartFormValues } from "../../chart-configurator-util";
 import ColorDimensionConfiguration from "./color-dimension-configuration";

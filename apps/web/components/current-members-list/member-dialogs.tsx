@@ -8,7 +8,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@repo/ui/components";
+} from "@repo/ui/components/alert-dialog";
 
 interface MemberDialogsProps {
   showLastAdminDialog: boolean;

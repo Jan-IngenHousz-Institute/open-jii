@@ -4,10 +4,11 @@ import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
-import type { Experiment, ExperimentMember, Location } from "@repo/api";
+import type { Experiment, ExperimentMember, Location } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
 
 import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
 import { ExperimentMemberManagement } from "../../experiment-settings/experiment-member-management-card";

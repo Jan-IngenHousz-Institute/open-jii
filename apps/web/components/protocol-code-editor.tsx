@@ -9,15 +9,19 @@ import type { FC } from "react";
 import { useDebounce } from "~/hooks/useDebounce";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { findProtocolErrorLine, getErrorMessage, validateProtocolJson } from "@repo/api";
 import {
-  Button,
-  Label,
+  findProtocolErrorLine,
+  getErrorMessage,
+  validateProtocolJson,
+} from "@repo/api/schemas/protocol-validator";
+import { Button } from "@repo/ui/components/button";
+import { Label } from "@repo/ui/components/label";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@repo/ui/components";
+} from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
 interface ProtocolCodeEditorProps {

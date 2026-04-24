@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
 
 import { MetadataUploadStep } from "./steps/metadata-upload-step";
 

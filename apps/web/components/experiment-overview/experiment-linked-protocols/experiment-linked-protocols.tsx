@@ -5,9 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "~/hooks/useLocale";
 import { parseApiError } from "~/util/apiError";
 
-import type { FlowGraph } from "@repo/api";
+import type { FlowGraph } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardContent, CardTitle, Skeleton } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardTitle } from "@repo/ui/components/card";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { useExperimentFlow } from "../../../hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useProtocol } from "../../../hooks/protocol/useProtocol/useProtocol";

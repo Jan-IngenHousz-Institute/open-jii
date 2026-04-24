@@ -5,17 +5,10 @@ import { useTransferRequests } from "~/hooks/useTransferRequests/useTransferRequ
 import { formatDate } from "~/util/date";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Skeleton,
-} from "@repo/ui/components";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
+import { Badge } from "@repo/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { cva } from "@repo/ui/lib/utils";
 
 const statusBadgeVariants = cva("", {

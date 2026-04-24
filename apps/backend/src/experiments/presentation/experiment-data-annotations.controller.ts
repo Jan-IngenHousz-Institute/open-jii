@@ -3,7 +3,8 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 
-import { AddAnnotationsBulkBody, contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { AddAnnotationsBulkBody } from "@repo/api/schemas/experiment.schema";
 
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/add-annotations/add-annotations";

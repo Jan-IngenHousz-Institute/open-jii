@@ -5,21 +5,21 @@ import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 
-import type { CreateExperimentBody } from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import { zExperimentVisibility } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  WizardForm,
-} from "@repo/ui/components";
-import type { WizardStep, WizardStepProps } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/dialog";
+import { WizardForm } from "@repo/ui/components/wizard-form";
+import type { WizardStep, WizardStepProps } from "@repo/ui/components/wizard-form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
 import { NewExperimentLocationsCard } from "./new-experiment-locations-card";

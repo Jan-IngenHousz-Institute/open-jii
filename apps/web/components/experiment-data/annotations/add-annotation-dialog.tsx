@@ -4,11 +4,11 @@ import { useForm } from "react-hook-form";
 import { useExperimentAnnotationAdd } from "~/hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd";
 import { useExperimentAnnotationAddBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk";
 
-import type { AnnotationContent, AnnotationType } from "@repo/api";
-import { zAnnotationContent } from "@repo/api";
+import type { AnnotationContent, AnnotationType } from "@repo/api/schemas/experiment.schema";
+import { zAnnotationContent } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Dialog,
   DialogClose,
   DialogContent,
@@ -16,20 +16,24 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+} from "@repo/ui/components/dialog";
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+} from "@repo/ui/components/form";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/select";
+import { Textarea } from "@repo/ui/components/textarea";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 export interface AddAnnotationDialogProps {
   experimentId: string;

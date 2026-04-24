@@ -3,17 +3,20 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { ProtocolCard, ProtocolSelector } from "./protocol-card";
 
-vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    RichTextRenderer: ({ content }: { content: string }) => <span>{content}</span>,
-  };
-});
+vi.mock(
+  "@repo/ui/components/rich-text-renderer",
+  async (importOriginal: () => Promise<Record<string, unknown>>) => {
+    const actual = await importOriginal();
+    return {
+      ...actual,
+      RichTextRenderer: ({ content }: { content: string }) => <span>{content}</span>,
+    };
+  },
+);
 
 function mockOverflow({
   scrollHeight,

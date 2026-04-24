@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { useEffect, useImperativeHandle, forwardRef, use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import ExperimentFlowPage from "./page";
 

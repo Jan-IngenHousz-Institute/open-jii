@@ -1,7 +1,7 @@
 import React from "react";
 
 import { useTranslation } from "@repo/i18n/client";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 import type { NodeType } from "./react-flow/node-config";
 import { nodeTypeColorMap } from "./react-flow/node-config";

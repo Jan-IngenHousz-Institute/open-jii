@@ -3,8 +3,8 @@ import { server } from "@/test/msw/server";
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { contract } from "@repo/api/contract";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ProtocolDetailsCard } from "./protocol-details-card";
 
@@ -25,9 +25,9 @@ vi.mock("../iot/iot-protocol-runner", () => ({
   ),
 }));
 
-// Mock ResizablePanelGroup (renders children in a simple div)
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
+// Mock Collapsible (renders children in a simple div)
+vi.mock("@repo/ui/components/collapsible", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components/collapsible");
   return {
     ...actual,
     Collapsible: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -35,6 +35,14 @@ vi.mock("@repo/ui/components", async () => {
     CollapsibleTrigger: ({ children }: { children: React.ReactNode }) => (
       <button type="button">{children}</button>
     ),
+  };
+});
+
+// Mock ResizablePanelGroup (renders children in a simple div)
+vi.mock("@repo/ui/components/resizable", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components/resizable");
+  return {
+    ...actual,
     ResizablePanelGroup: ({
       children,
       ...props

@@ -3,14 +3,13 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api";
-import type { CreateExperimentBody } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { contract } from "@repo/api/contract";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { NewExperimentForm } from "../new-experiment";
 
-// WizardForm — pragmatic mock (complex multi-step wizard orchestration)
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,

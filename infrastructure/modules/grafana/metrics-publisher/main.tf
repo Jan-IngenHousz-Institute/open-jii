@@ -1,10 +1,24 @@
 data "aws_caller_identity" "current" {}
 
+resource "null_resource" "npm_install" {
+  triggers = {
+    package_json      = filemd5("${path.module}/lambda/package.json")
+    package_lock_json = filemd5("${path.module}/lambda/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command     = "npm ci --omit=dev"
+    working_dir = "${path.module}/lambda"
+  }
+}
+
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/lambda"
   output_path = "${path.module}/lambda/metrics_publisher.zip"
   excludes    = ["metrics_publisher.zip"]
+
+  depends_on = [null_resource.npm_install]
 }
 
 # -------------------------

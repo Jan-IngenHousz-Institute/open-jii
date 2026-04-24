@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
-import type { WizardFormProps } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { contract } from "@repo/api/contract";
+import type { WizardFormProps } from "@repo/ui/components/wizard-form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 import EditVisualizationForm from "./edit-visualization-form";
 
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,

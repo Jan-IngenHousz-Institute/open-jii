@@ -11,7 +11,7 @@ import type {
   PageHomePartnersFieldsFragment,
   PartnerFieldsFragment,
 } from "../../lib/__generated/sdk";
-import { CtfImage } from "../contentful";
+import { CtfImage } from "../contentful/ctf-image";
 
 interface HomePartnersProps {
   partnersData: PageHomePartnersFieldsFragment;

@@ -6,17 +6,17 @@ import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import {
-  Badge,
-  Button,
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@repo/ui/components";
+} from "@repo/ui/components/card";
 
 import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";

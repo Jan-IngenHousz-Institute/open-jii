@@ -7,15 +7,17 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Protocol } from "@repo/api";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
+} from "@repo/ui/components/card";
+import {
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -23,7 +25,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
 
 import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
 

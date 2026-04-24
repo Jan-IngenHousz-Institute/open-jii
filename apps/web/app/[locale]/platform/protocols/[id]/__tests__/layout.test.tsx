@@ -5,9 +5,9 @@ import { notFound, useParams, usePathname } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import ProtocolLayout from "../layout";
 

@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { ExperimentTableName, contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
 import ExperimentDataPage from "./page";
 

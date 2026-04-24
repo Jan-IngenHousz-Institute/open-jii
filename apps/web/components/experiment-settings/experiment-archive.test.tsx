@@ -3,8 +3,8 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { contract } from "@repo/api/contract";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentArchive } from "./experiment-archive";
 

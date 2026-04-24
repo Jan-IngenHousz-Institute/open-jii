@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
-import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components";
+import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
 interface AnalysisLayoutProps {
   children: React.ReactNode;
