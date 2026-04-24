@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react-native";
-import React from "react";
+import React, { memo } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -22,13 +22,13 @@ interface SwipeableMeasurementRowProps {
   experimentName: string;
   status: MeasurementStatus;
   questions?: AnswerData[];
-  onPress?: () => void;
+  onPress?: (id: string) => void;
   onComment?: (id: string) => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
-export function SwipeableMeasurementRow({
+export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   id,
   timestamp,
   experimentName,
@@ -132,4 +132,4 @@ export function SwipeableMeasurementRow({
       </GestureDetector>
     </View>
   );
-}
+});

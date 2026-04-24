@@ -14,7 +14,7 @@ const LEGACY_PREFIXES = [
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export type MeasurementStatus = "failed" | "successful";
+export type MeasurementStatus = "failed" | "uploading" | "successful";
 
 export interface Measurement {
   topic: string;
@@ -151,12 +151,50 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
   }
 }
 
+export async function markAsUploading(keys: string[]): Promise<void> {
+  await ensureMigrated();
+  try {
+    for (const key of keys) {
+      db.update(measurements)
+        .set({ status: "uploading" })
+        .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
+        .run();
+    }
+  } catch (error) {
+    console.error("Failed to mark measurements as uploading:", error);
+  }
+}
+
+export async function markAsFailed(key: string): Promise<void> {
+  await ensureMigrated();
+  try {
+    db.update(measurements)
+      .set({ status: "failed" })
+      .where(and(eq(measurements.id, key), eq(measurements.status, "uploading")))
+      .run();
+  } catch (error) {
+    console.error("Failed to revert measurement to failed:", error);
+  }
+}
+
+export async function resetUploadingMeasurements(): Promise<void> {
+  await ensureMigrated();
+  try {
+    db.update(measurements)
+      .set({ status: "failed" })
+      .where(eq(measurements.status, "uploading"))
+      .run();
+  } catch (error) {
+    console.error("Failed to reset uploading measurements:", error);
+  }
+}
+
 export async function markAsSuccessful(key: string): Promise<void> {
   await ensureMigrated();
   try {
     db.update(measurements)
       .set({ status: "successful" })
-      .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
+      .where(and(eq(measurements.id, key), eq(measurements.status, "uploading")))
       .run();
   } catch (error) {
     console.error("Failed to mark measurement as successful:", error);

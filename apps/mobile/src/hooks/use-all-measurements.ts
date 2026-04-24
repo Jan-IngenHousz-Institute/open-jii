@@ -1,13 +1,17 @@
+import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMeasurements } from "~/services/measurements-storage";
+import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
+import type { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 
-export type MeasurementStatus = "synced" | "unsynced";
+export type MeasurementStatus = "synced" | "unsynced" | "syncing";
 
 export interface MeasurementItem {
   key: string;
   timestamp: string;
   experimentName: string;
   status: MeasurementStatus;
+  questions: AnswerData[];
   data: {
     topic: string;
     measurementResult: object;
@@ -27,8 +31,9 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   const { data: allMeasurements = [] } = useQuery({
     queryKey: ["measurements"],
     queryFn: async () => {
-      const [failedEntries, successfulEntries] = await Promise.all([
+      const [failedEntries, uploadingEntries, successfulEntries] = await Promise.all([
         getMeasurements("failed"),
+        getMeasurements("uploading"),
         getMeasurements("successful"),
       ]);
 
@@ -37,6 +42,16 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         timestamp: data.metadata.timestamp,
         experimentName: data.metadata.experimentName,
         status: "unsynced" as MeasurementStatus,
+        questions: parseQuestions(data.measurementResult),
+        data,
+      }));
+
+      const syncing: MeasurementItem[] = uploadingEntries.map(([key, data]) => ({
+        key,
+        timestamp: data.metadata.timestamp,
+        experimentName: data.metadata.experimentName,
+        status: "syncing" as MeasurementStatus,
+        questions: parseQuestions(data.measurementResult),
         data,
       }));
 
@@ -45,29 +60,34 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         timestamp: data.metadata.timestamp,
         experimentName: data.metadata.experimentName,
         status: "synced" as MeasurementStatus,
+        questions: parseQuestions(data.measurementResult),
         data,
       }));
 
-      const combined = [...unsynced, ...synced];
+      const combined = [...unsynced, ...syncing, ...synced];
 
-      // Sort by timestamp (newest first)
-      combined.sort((a, b) => {
-        const timeA = new Date(a.timestamp).getTime();
-        const timeB = new Date(b.timestamp).getTime();
-        return timeB - timeA;
-      });
+      combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       return combined;
     },
     networkMode: "always",
   });
 
-  const filteredMeasurements = allMeasurements.filter((item) => {
-    if (filter === "all") return true;
-    if (filter === "synced") return item.status === "synced";
-    if (filter === "unsynced") return item.status === "unsynced";
-    return true;
-  });
+  const filteredMeasurements = useMemo(
+    () =>
+      allMeasurements.filter((item) => {
+        if (filter === "all") return true;
+        if (filter === "synced") return item.status === "synced";
+        if (filter === "unsynced") return item.status === "unsynced" || item.status === "syncing";
+        return true;
+      }),
+    [allMeasurements, filter],
+  );
+
+  const uploadingCount = useMemo(
+    () => allMeasurements.filter((item) => item.status === "syncing").length,
+    [allMeasurements],
+  );
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["measurements"] });
@@ -76,6 +96,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   return {
     measurements: filteredMeasurements,
     allMeasurements,
+    uploadingCount,
     invalidate,
   };
 }

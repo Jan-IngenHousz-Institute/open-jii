@@ -1,8 +1,13 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 
 const {
-  mockInvalidateQueries,
   mockMarkAsSuccessful,
+  mockMarkAsUploading,
+  mockMarkAsFailed,
   mockRemoveMeasurement,
   mockSaveMeasurement,
   mockUpdateMeasurement,
@@ -11,8 +16,9 @@ const {
   mockPruneExpiredMeasurements,
   mockToastInfo,
 } = vi.hoisted(() => ({
-  mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
   mockMarkAsSuccessful: vi.fn().mockResolvedValue(undefined),
+  mockMarkAsUploading: vi.fn().mockResolvedValue(undefined),
+  mockMarkAsFailed: vi.fn().mockResolvedValue(undefined),
   mockRemoveMeasurement: vi.fn().mockResolvedValue(undefined),
   mockSaveMeasurement: vi.fn().mockResolvedValue(undefined),
   mockUpdateMeasurement: vi.fn().mockResolvedValue(undefined),
@@ -22,17 +28,11 @@ const {
   mockToastInfo: vi.fn(),
 }));
 
-let mockFailedUploads: { key: string; data: any }[] = [];
-let capturedUploadAllCallback: () => Promise<any>;
-
-vi.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
-  useQuery: () => ({ data: mockFailedUploads }),
-}));
-
 vi.mock("~/services/measurements-storage", () => ({
   getMeasurements: vi.fn().mockResolvedValue([]),
   markAsSuccessful: mockMarkAsSuccessful,
+  markAsUploading: mockMarkAsUploading,
+  markAsFailed: mockMarkAsFailed,
   removeMeasurement: mockRemoveMeasurement,
   saveMeasurement: mockSaveMeasurement,
   updateMeasurement: mockUpdateMeasurement,
@@ -52,14 +52,10 @@ vi.mock("sonner-native", () => ({
   toast: { info: mockToastInfo },
 }));
 
-vi.mock("react-async-hook", () => ({
-  useAsyncCallback: (fn: () => Promise<any>) => {
-    capturedUploadAllCallback = fn;
-    return { loading: false, execute: fn };
-  },
-}));
+import { useMeasurements } from "../use-measurements";
+import { getMeasurements } from "~/services/measurements-storage";
 
-const mockUpload = {
+const mockMeasurement = {
   topic: "test/topic",
   measurementResult: { value: 42 },
   metadata: {
@@ -69,18 +65,23 @@ const mockUpload = {
   },
 };
 
-async function mountWithUploads(uploads: { key: string; data: any }[]) {
-  mockFailedUploads = uploads;
-  const { useMeasurements } = await import("../use-measurements");
-  // All hooks are fully mocked above, so this is a plain function call in test context.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useMeasurements();
+let queryClient: QueryClient;
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(QueryClientProvider, { client: queryClient }, children);
+}
+
+function renderMeasurements(failedUploads: { key: string; data: typeof mockMeasurement }[] = []) {
+  vi.mocked(getMeasurements).mockResolvedValue(
+    failedUploads.map(({ key, data }) => [key, data]),
+  );
+  return renderHook(() => useMeasurements(), { wrapper });
 }
 
 describe("useMeasurements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFailedUploads = [];
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 
   // ---------------------------------------------------------------------------
@@ -89,71 +90,177 @@ describe("useMeasurements", () => {
 
   describe("uploadAll", () => {
     it("marks each upload as successful in-place", async () => {
-      await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockResolvedValueOnce(undefined);
 
-      await capturedUploadAllCallback();
+      await act(() => result.current.uploadAll());
 
       expect(mockSendMqttEvent).toHaveBeenCalledWith(
-        mockUpload.topic,
-        mockUpload.measurementResult,
+        mockMeasurement.topic,
+        mockMeasurement.measurementResult,
       );
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("upload-key-1");
     });
 
+    it("calls markAsUploading with all keys at batch start", async () => {
+      const { result } = renderMeasurements([
+        { key: "key-1", data: mockMeasurement },
+        { key: "key-2", data: { ...mockMeasurement, topic: "test/topic2" } },
+      ]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(2));
+      mockSendMqttEvent.mockResolvedValue(undefined);
+
+      await act(() => result.current.uploadAll());
+
+      expect(mockMarkAsUploading).toHaveBeenCalledWith(["key-1", "key-2"]);
+    });
+
     it("does not call removeMeasurement", async () => {
-      await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockResolvedValueOnce(undefined);
 
-      await capturedUploadAllCallback();
+      await act(() => result.current.uploadAll());
 
       expect(mockRemoveMeasurement).not.toHaveBeenCalled();
     });
 
     it("prunes expired uploads after uploading", async () => {
-      await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockResolvedValueOnce(undefined);
 
-      await capturedUploadAllCallback();
+      await act(() => result.current.uploadAll());
 
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
     });
 
-    it("invalidates failedUploads and allMeasurements queries", async () => {
-      await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+    it("calls setQueryData with synced status on per-item success", async () => {
+      const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockResolvedValueOnce(undefined);
 
-      await capturedUploadAllCallback();
+      await act(() => result.current.uploadAll());
 
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(setQueryDataSpy).toHaveBeenCalledWith(
+        ["measurements"],
+        expect.any(Function),
+      );
+      // Verify the updater flips the right key to "synced"
+      const updater = setQueryDataSpy.mock.calls.find(
+        ([key]) => Array.isArray(key) && key[0] === "measurements",
+      )?.[1] as (old: { key: string; status: string }[]) => { key: string; status: string }[];
+      const old = [{ key: "upload-key-1", status: "syncing" }];
+      expect(updater(old)).toEqual([{ key: "upload-key-1", status: "synced" }]);
     });
 
-    it("prunes and invalidates even when a send fails", async () => {
-      await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+    it("calls markAsFailed and setQueryData with unsynced status on per-item failure", async () => {
+      const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockRejectedValueOnce(new Error("network error"));
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
-      await expect(capturedUploadAllCallback()).rejects.toThrow("network error");
+      await act(() => result.current.uploadAll().catch(() => {}));
+
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("upload-key-1");
+
+      const updater = setQueryDataSpy.mock.calls
+        .reverse()
+        .find(([key]) => Array.isArray(key) && key[0] === "measurements")?.[1] as (
+        old: { key: string; status: string }[],
+      ) => { key: string; status: string }[];
+      const old = [{ key: "upload-key-1", status: "syncing" }];
+      expect(updater(old)).toEqual([{ key: "upload-key-1", status: "unsynced" }]);
+
+      consoleSpy.mockRestore();
+    });
+
+    it("prunes and invalidates even when a send fails", async () => {
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockRejectedValueOnce(new Error("network error"));
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await act(() => result.current.uploadAll().catch(() => {}));
 
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
 
       consoleSpy.mockRestore();
     });
 
     it("marks multiple uploads in one pass", async () => {
-      await mountWithUploads([
-        { key: "key-1", data: mockUpload },
-        { key: "key-2", data: { ...mockUpload, topic: "test/topic2" } },
+      const { result } = renderMeasurements([
+        { key: "key-1", data: mockMeasurement },
+        { key: "key-2", data: { ...mockMeasurement, topic: "test/topic2" } },
       ]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(2));
       mockSendMqttEvent.mockResolvedValue(undefined);
 
-      await capturedUploadAllCallback();
+      await act(() => result.current.uploadAll());
 
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-1");
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-2");
       expect(mockMarkAsSuccessful).toHaveBeenCalledTimes(2);
+    });
+
+    it("processes all items when count exceeds CONCURRENCY", async () => {
+      const uploads = Array.from({ length: 12 }, (_, i) => ({
+        key: `key-${i}`,
+        data: { ...mockMeasurement, topic: `test/topic${i}` },
+      }));
+      const { result } = renderMeasurements(uploads);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(12));
+      mockSendMqttEvent.mockResolvedValue(undefined);
+
+      await act(() => result.current.uploadAll());
+
+      expect(mockMarkAsSuccessful).toHaveBeenCalledTimes(12);
+      for (const { key } of uploads) {
+        expect(mockMarkAsSuccessful).toHaveBeenCalledWith(key);
+      }
+    });
+
+    it("completes remaining tasks when one worker fails mid-batch", async () => {
+      const { result } = renderMeasurements([
+        { key: "key-fail", data: mockMeasurement },
+        { key: "key-ok-1", data: { ...mockMeasurement, topic: "test/topic2" } },
+        { key: "key-ok-2", data: { ...mockMeasurement, topic: "test/topic3" } },
+      ]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(3));
+      mockSendMqttEvent
+        .mockRejectedValueOnce(new Error("send failed"))
+        .mockResolvedValue(undefined);
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await act(() => result.current.uploadAll().catch(() => {}));
+
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalledWith("key-fail");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-ok-1");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-ok-2");
+
+      consoleSpy.mockRestore();
+    });
+
+    it("prunes after all items fail", async () => {
+      const { result } = renderMeasurements([
+        { key: "key-1", data: mockMeasurement },
+        { key: "key-2", data: { ...mockMeasurement, topic: "test/topic2" } },
+      ]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(2));
+      mockSendMqttEvent
+        .mockRejectedValueOnce(new Error("first error"))
+        .mockRejectedValueOnce(new Error("second error"));
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await act(() => result.current.uploadAll().catch(() => {}));
+
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+      expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -163,42 +270,47 @@ describe("useMeasurements", () => {
 
   describe("uploadOne", () => {
     it("marks the matching upload as successful", async () => {
-      const { uploadOne } = await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockResolvedValueOnce(undefined);
 
-      await uploadOne("upload-key-1");
+      await act(() => result.current.uploadOne("upload-key-1"));
 
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("upload-key-1");
       expect(mockRemoveMeasurement).not.toHaveBeenCalled();
     });
 
     it("prunes after a single upload", async () => {
-      const { uploadOne } = await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockResolvedValueOnce(undefined);
 
-      await uploadOne("upload-key-1");
+      await act(() => result.current.uploadOne("upload-key-1"));
 
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
     });
 
-    it("invalidates failedUploads and allMeasurements after upload", async () => {
-      const { uploadOne } = await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+    it("invalidates measurements after upload", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockResolvedValueOnce(undefined);
 
-      await uploadOne("upload-key-1");
+      await act(() => result.current.uploadOne("upload-key-1"));
 
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
 
-    it("shows toast, skips mark, and still prunes when MQTT send fails", async () => {
-      const { uploadOne } = await mountWithUploads([{ key: "upload-key-1", data: mockUpload }]);
+    it("shows toast, calls markAsFailed, and still prunes when MQTT send fails", async () => {
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockRejectedValueOnce(new Error("timeout"));
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
-      await uploadOne("upload-key-1");
+      await act(() => result.current.uploadOne("upload-key-1"));
 
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("upload-key-1");
       expect(mockToastInfo).toHaveBeenCalledWith("Failed to upload, try again later");
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
 
@@ -206,9 +318,10 @@ describe("useMeasurements", () => {
     });
 
     it("does nothing when key is not found", async () => {
-      const { uploadOne } = await mountWithUploads([]);
+      const { result } = renderMeasurements([]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(0));
 
-      await uploadOne("non-existent-key");
+      await act(() => result.current.uploadOne("non-existent-key"));
 
       expect(mockSendMqttEvent).not.toHaveBeenCalled();
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
@@ -221,23 +334,24 @@ describe("useMeasurements", () => {
   // ---------------------------------------------------------------------------
 
   describe("saveMeasurement", () => {
-    it("saves as failed and invalidates failedUploads + allMeasurements", async () => {
-      const { saveMeasurement } = await mountWithUploads([]);
+    it("saves as failed and invalidates measurements", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([]);
 
-      await saveMeasurement(mockUpload, "failed");
+      await act(() => result.current.saveMeasurement(mockMeasurement, "failed"));
 
-      expect(mockSaveMeasurement).toHaveBeenCalledWith(mockUpload, "failed");
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(mockSaveMeasurement).toHaveBeenCalledWith(mockMeasurement, "failed");
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
 
     it("saves as successful and invalidates measurements", async () => {
-      const { saveMeasurement } = await mountWithUploads([]);
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([]);
 
-      await saveMeasurement(mockUpload, "successful");
+      await act(() => result.current.saveMeasurement(mockMeasurement, "successful"));
 
-      expect(mockSaveMeasurement).toHaveBeenCalledWith(mockUpload, "successful");
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(mockSaveMeasurement).toHaveBeenCalledWith(mockMeasurement, "successful");
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });
 
@@ -246,22 +360,14 @@ describe("useMeasurements", () => {
   // ---------------------------------------------------------------------------
 
   describe("removeMeasurement", () => {
-    it("removes a failed measurement and invalidates measurements", async () => {
-      const { removeMeasurement } = await mountWithUploads([]);
+    it("removes a measurement and invalidates", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([]);
 
-      await removeMeasurement("key-1");
-
-      expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
-    });
-
-    it("removes a successful measurement and invalidates measurements", async () => {
-      const { removeMeasurement } = await mountWithUploads([]);
-
-      await removeMeasurement("key-1");
+      await act(() => result.current.removeMeasurement("key-1"));
 
       expect(mockRemoveMeasurement).toHaveBeenCalledWith("key-1");
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });
 
@@ -271,12 +377,13 @@ describe("useMeasurements", () => {
 
   describe("clearSyncedMeasurements", () => {
     it("clears successful measurements and invalidates", async () => {
-      const { clearSyncedMeasurements } = await mountWithUploads([]);
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([]);
 
-      await clearSyncedMeasurements();
+      await act(() => result.current.clearSyncedMeasurements());
 
       expect(mockClearMeasurements).toHaveBeenCalledWith("successful");
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });
 
@@ -286,18 +393,19 @@ describe("useMeasurements", () => {
 
   describe("updateMeasurementComment", () => {
     it("updates measurement with built annotations and invalidates", async () => {
-      const { updateMeasurementComment } = await mountWithUploads([]);
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([]);
 
-      await updateMeasurementComment("key-1", mockUpload, "a comment");
+      await act(() => result.current.updateMeasurementComment("key-1", mockMeasurement, "a comment"));
 
       expect(mockUpdateMeasurement).toHaveBeenCalledWith("key-1", {
-        ...mockUpload,
+        ...mockMeasurement,
         measurementResult: {
-          ...mockUpload.measurementResult,
+          ...mockMeasurement.measurementResult,
           annotations: { comment: "a comment" },
         },
       });
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });
 });
