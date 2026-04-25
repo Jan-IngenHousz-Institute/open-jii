@@ -86,12 +86,21 @@ exports.handler = async (event) => {
           maxBuffer: 10 * 1024 * 1024, // 10MB output buffer
         },
         (error, stdout, stderr) => {
-          if (error && error.killed) {
-            const isMaxBuffer = error.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER";
+          // maxBuffer overflow can fire without setting error.killed/error.signal,
+          // so check the code first.
+          if (error?.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
             resolve({
               status: "error",
               results: [],
-              errors: [isMaxBuffer ? "Wrapper output exceeds 10MB limit" : "Execution timed out"],
+              errors: ["Wrapper output exceeds 10MB limit"],
+            });
+            return;
+          }
+          if (error && error.killed) {
+            resolve({
+              status: "error",
+              results: [],
+              errors: ["Execution timed out"],
             });
             return;
           }
