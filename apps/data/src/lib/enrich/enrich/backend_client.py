@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import json
 import time
+from operator import itemgetter
 from typing import Dict, Any, List, Optional
 from urllib.parse import urljoin
 
@@ -235,28 +236,46 @@ class BackendClient:
         """
         if not items:
             return {"results": []}
-        
+
+        # Sort by macro_id so each HTTP chunk is homogeneous: the backend's
+        # internal groupBy(macro_id) then produces fewer Lambda invocations
+        # per request, and any chunk-level failure is scoped to items sharing
+        # a macro_id rather than a random mix.
+        sorted_items = sorted(items, key=itemgetter("macro_id"))
+
         all_results: List[Dict[str, Any]] = []
         all_errors: List[str] = []
-        
+
         # Chunk into batches to avoid payload size limits
-        for i in range(0, len(items), max_batch_size):
-            batch = items[i : i + max_batch_size]
+        for i in range(0, len(sorted_items), max_batch_size):
+            batch = sorted_items[i : i + max_batch_size]
             payload = {"items": batch, "timeout": timeout}
-            
+
             try:
                 result = self._make_request(self.WEBHOOK_MACRO_BATCH_PATH, payload)
                 all_results.extend(result.get("results", []))
                 batch_errors = result.get("errors", [])
                 if batch_errors:
                     all_errors.extend(batch_errors)
-            except BackendIntegrationError:
-                raise
+            except BackendIntegrationError as e:
+                # Don't lose other chunks: synthesize per-item failure entries
+                # so the caller can map them back via (id, macro_id), and keep
+                # iterating. A transient 5xx on one chunk shouldn't take down
+                # the rest of the partition.
+                chunk_error = f"Chunk failed: {str(e)[:500]}"
+                for item in batch:
+                    all_results.append({
+                        "id": item.get("id"),
+                        "macro_id": item.get("macro_id"),
+                        "success": False,
+                        "error": chunk_error,
+                    })
+                all_errors.append(chunk_error)
             except Exception as e:
                 raise BackendIntegrationError(
                     f"Unexpected error in macro batch execution: {str(e)}"
                 ) from e
-        
+
         response: Dict[str, Any] = {"results": all_results}
         if all_errors:
             response["errors"] = all_errors
