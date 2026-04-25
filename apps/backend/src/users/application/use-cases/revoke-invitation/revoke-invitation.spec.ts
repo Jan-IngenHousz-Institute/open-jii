@@ -33,8 +33,6 @@ describe("RevokeInvitationUseCase", () => {
     createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
-
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -55,8 +53,6 @@ describe("RevokeInvitationUseCase", () => {
       "member",
       testUserId,
     );
-
-    vi.restoreAllMocks();
 
     assertSuccess(result);
     return result.value;

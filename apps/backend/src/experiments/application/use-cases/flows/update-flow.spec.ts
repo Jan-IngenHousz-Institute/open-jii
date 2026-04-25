@@ -109,20 +109,16 @@ describe("UpdateFlowUseCase", () => {
       }),
     );
 
-    try {
-      const updatedGraph: ReturnType<typeof testApp.sampleFlowGraph> = {
-        ...graph,
-        edges: [{ id: "e1", source: "n1", target: "n1" }],
-      };
+    const updatedGraph: ReturnType<typeof testApp.sampleFlowGraph> = {
+      ...graph,
+      edges: [{ id: "e1", source: "n1", target: "n1" }],
+    };
 
-      const result = await useCase.execute(experiment.id, ownerId, updatedGraph);
+    const result = await useCase.execute(experiment.id, ownerId, updatedGraph);
 
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.statusCode).toBe(403);
-      expect(result.error.message).toContain("You do not have access to this experiment");
-    } finally {
-      vi.restoreAllMocks();
-    }
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 });

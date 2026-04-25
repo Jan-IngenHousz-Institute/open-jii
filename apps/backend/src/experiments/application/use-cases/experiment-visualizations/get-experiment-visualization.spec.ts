@@ -24,8 +24,6 @@ describe("GetExperimentVisualizationUseCase", () => {
     useCase = testApp.module.get(GetExperimentVisualizationUseCase);
     experimentRepository = testApp.module.get(ExperimentRepository);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
-
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

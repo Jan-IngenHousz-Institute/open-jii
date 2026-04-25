@@ -209,18 +209,13 @@ describe("AddExperimentLocationsUseCase", () => {
       failure(AppError.internal("Database connection failed")),
     );
 
-    try {
-      // Act
-      const result = await useCase.execute(experiment.id, locationsToAdd, testUserId);
+    // Act
+    const result = await useCase.execute(experiment.id, locationsToAdd, testUserId);
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to create locations");
-      expect(result.error.message).toContain("Database connection failed");
-    } finally {
-      // Restore original method
-      vi.restoreAllMocks();
-    }
+    // Assert
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to create locations");
+    expect(result.error.message).toContain("Database connection failed");
   });
 });

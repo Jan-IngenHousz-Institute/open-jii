@@ -19,7 +19,6 @@ describe("ExperimentMetadataController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

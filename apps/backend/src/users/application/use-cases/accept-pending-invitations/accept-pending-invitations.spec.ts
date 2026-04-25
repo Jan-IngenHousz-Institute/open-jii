@@ -31,8 +31,6 @@ describe("AcceptPendingInvitationsUseCase", () => {
     createUseCase = testApp.module.get(CreateInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
-
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -61,8 +59,6 @@ describe("AcceptPendingInvitationsUseCase", () => {
 
     await createUseCase.execute("experiment", experiment.id, inviteeEmail, "member", testUserId);
 
-    vi.restoreAllMocks();
-
     // Simulate new user registration accepting their invitations
     const newUserId = await testApp.createTestUser({ email: inviteeEmail });
     const result = await useCase.execute(newUserId, inviteeEmail);
@@ -88,8 +84,6 @@ describe("AcceptPendingInvitationsUseCase", () => {
     await createUseCase.execute("experiment", exp1.id, inviteeEmail, "member", testUserId);
     await createUseCase.execute("experiment", exp2.id, inviteeEmail, "admin", testUserId);
 
-    vi.restoreAllMocks();
-
     const newUserId = await testApp.createTestUser({ email: inviteeEmail });
     const result = await useCase.execute(newUserId, inviteeEmail);
 
@@ -107,8 +101,6 @@ describe("AcceptPendingInvitationsUseCase", () => {
     vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
     await createUseCase.execute("experiment", experiment.id, inviteeEmail, "member", testUserId);
-
-    vi.restoreAllMocks();
 
     const newUserId = await testApp.createTestUser({ email: inviteeEmail });
     const firstResult = await useCase.execute(newUserId, inviteeEmail);
@@ -148,8 +140,6 @@ describe("AcceptPendingInvitationsUseCase", () => {
 
     await createUseCase.execute("experiment", exp1.id, inviteeEmail, "member", testUserId);
     await createUseCase.execute("experiment", exp2.id, inviteeEmail, "admin", testUserId);
-
-    vi.restoreAllMocks();
 
     const newUserId = await testApp.createTestUser({ email: inviteeEmail });
 

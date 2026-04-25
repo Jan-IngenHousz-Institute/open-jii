@@ -10,6 +10,7 @@ import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
+import { auth } from "@repo/auth/server";
 import type { DatabaseInstance } from "@repo/database";
 import {
   experimentMembers,
@@ -30,7 +31,6 @@ import {
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
-import { mockGetSession } from "./setup";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -154,11 +154,8 @@ export class TestHarness {
    * Clean up after each test
    */
   public afterEach() {
-    // Reset the mock to default state (no session)
-    mockGetSession.mockResolvedValue({
-      session: null,
-      user: null,
-    });
+    // Reset auth to unauthenticated state
+    vi.mocked(auth.api.getSession).mockResolvedValue(null);
   }
 
   /**
@@ -254,8 +251,7 @@ export class TestHarness {
 
   // Mock the Better Auth session for testing
   private mockUserSession(userId: string) {
-    // Update the exported mock function's return value
-    mockGetSession.mockResolvedValue({
+    vi.mocked(auth.api.getSession).mockResolvedValue({
       session: {
         id: `session-${userId}`,
         userId,
@@ -281,8 +277,7 @@ export class TestHarness {
 
   // Mock no session for unauthorized tests
   private mockNoSession() {
-    // Update the exported mock function's return value
-    mockGetSession.mockResolvedValue(null);
+    vi.mocked(auth.api.getSession).mockResolvedValue(null);
   }
 
   // HTTP request methods

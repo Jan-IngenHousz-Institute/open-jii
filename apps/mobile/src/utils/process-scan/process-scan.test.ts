@@ -22,10 +22,14 @@ vi.mock("expo-asset", () => ({
   },
 }));
 
+// `new File(path)` is invoked with `new`. Arrow functions aren't constructible,
+// so we declare a class.
 vi.mock("expo-file-system", () => ({
-  File: vi.fn().mockImplementation(() => ({
-    text: vi.fn(() => Promise.resolve("")),
-  })),
+  File: class {
+    text() {
+      return Promise.resolve("");
+    }
+  },
 }));
 
 const encode = (code: string) => Buffer.from(code, "utf8").toString("base64");

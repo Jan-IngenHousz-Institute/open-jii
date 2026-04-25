@@ -1,20 +1,20 @@
 import * as Sharing from "expo-sharing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getMeasurements } from "~/services/measurements-storage";
 
 import { exportMeasurementsToFile, exportSingleMeasurementToFile } from "../export-measurements";
-import { getMeasurements } from "~/services/measurements-storage";
 
 const mockCreate = vi.fn();
 const mockWrite = vi.fn();
 
-vi.mock("expo-file-system", () => ({
-  File: vi.fn().mockImplementation(() => ({
-    create: mockCreate,
-    write: mockWrite,
-    uri: "file:///cache/test-file.json",
-  })),
-  Paths: { cache: "/cache" },
-}));
+vi.mock("expo-file-system", () => {
+  const MockFile = vi.fn(function (this: any) {
+    this.create = mockCreate;
+    this.write = mockWrite;
+    this.uri = "file:///cache/test-file.json";
+  });
+  return { File: MockFile, Paths: { cache: "/cache" } };
+});
 
 vi.mock("expo-sharing", () => ({
   shareAsync: vi.fn(),
@@ -26,7 +26,9 @@ vi.mock("~/services/measurements-storage", () => ({
 
 const mockGetMeasurements = vi.mocked(getMeasurements);
 
-const mockStoredMeasurement = (overrides?: Partial<{ experimentName: string; timestamp: string }>) => ({
+const mockStoredMeasurement = (
+  overrides?: Partial<{ experimentName: string; timestamp: string }>,
+) => ({
   topic: "test/topic",
   measurementResult: { value: 42 },
   metadata: {
@@ -63,7 +65,9 @@ describe("exportMeasurementsToFile", () => {
     await exportMeasurementsToFile();
 
     const writtenData = JSON.parse(mockWrite.mock.calls[0][0]);
-    const unsynced = writtenData.measurements.find((m: { status: string }) => m.status === "unsynced");
+    const unsynced = writtenData.measurements.find(
+      (m: { status: string }) => m.status === "unsynced",
+    );
     const synced = writtenData.measurements.find((m: { status: string }) => m.status === "synced");
 
     expect(unsynced.experimentName).toBe("Exp A");

@@ -26,9 +26,6 @@ describe("ListTransferRequests", () => {
 
     useCase = testApp.module.get(ListTransferRequestsUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

@@ -30,9 +30,6 @@ describe("UserWebhookController", () => {
     await testApp.beforeEach();
     userRepository = testApp.module.get(UserRepository);
     getUsersMetadataUseCase = testApp.module.get(GetUsersMetadataUseCase);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

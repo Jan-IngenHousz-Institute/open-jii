@@ -1,13 +1,28 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+
+import { server } from "./msw/server";
+
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: "warn" });
+});
 
 afterEach(() => {
+  server.resetHandlers();
   cleanup();
   vi.clearAllMocks();
 });
 
-// ResizeObserver is not implemented in jsdom but used by Radix UI / shadcn
+afterAll(() => {
+  server.close();
+  // `isolate: false` shares the module cache across files in a worker.
+  // Flushing it between files stops one file's `vi.mock` from poisoning
+  // the next. See apps/web/TESTING.md for the full rationale.
+  vi.resetModules();
+});
+
+// jsdom is missing these; Radix / cmdk / charts all touch them.
 global.ResizeObserver = class ResizeObserver {
   observe() {
     // noop
@@ -19,17 +34,10 @@ global.ResizeObserver = class ResizeObserver {
     // noop
   }
 };
-
-// scrollIntoView is not implemented in jsdom but used by cmdk, charts, etc.
 Element.prototype.scrollIntoView = vi.fn();
-
-// Pointer-capture methods are not implemented in jsdom but used by Radix UI
-// Select / Popover / DropdownMenu pointer-event handling.
 Element.prototype.hasPointerCapture = vi.fn(() => false);
 Element.prototype.setPointerCapture = vi.fn();
 Element.prototype.releasePointerCapture = vi.fn();
-
-// window.matchMedia is not implemented in jsdom but used by Radix UI / shadcn
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
@@ -43,6 +51,19 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Hoisted so `next/navigation`'s factory and the `beforeEach` below
+// share the same reference.
+const { mockRouter } = vi.hoisted(() => ({
+  mockRouter: {
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  },
+}));
 
 vi.mock("@repo/i18n", () => ({
   useTranslation: (_ns?: string) => ({
@@ -72,34 +93,38 @@ vi.mock("@repo/i18n/client", () => ({
     children ?? i18nKey ?? null,
 }));
 
-const initTranslationsMock = vi.fn().mockResolvedValue({
-  t: (key: string) => key,
-  i18n: { t: (key: string) => key },
-  resources: {},
+vi.mock("@repo/i18n/server", () => {
+  const initTranslations = vi.fn().mockResolvedValue({
+    t: (key: string) => key,
+    i18n: { t: (key: string) => key },
+    resources: {},
+  });
+  return { default: initTranslations, initTranslations };
 });
 
-vi.mock("@repo/i18n/server", () => ({
-  default: initTranslationsMock,
-  initTranslations: initTranslationsMock,
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(() => mockRouter),
+  usePathname: vi.fn(() => "/platform/experiments"),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+  useParams: vi.fn(() => ({ locale: "en-US" })),
+  redirect: vi.fn(),
+  notFound: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => {
-  const router = {
-    push: vi.fn(),
-    replace: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    prefetch: vi.fn(),
-  };
-  return {
-    useRouter: vi.fn(() => router),
-    usePathname: vi.fn(() => "/platform/experiments"),
-    useSearchParams: vi.fn(() => new URLSearchParams()),
-    useParams: vi.fn(() => ({ locale: "en-US" })),
-    redirect: vi.fn(),
-    notFound: vi.fn(),
-  };
+// `clearAllMocks` leaves per-test `mockReturnValue(...)` in place, so
+// re-apply defaults here. The try/catch handles files that override
+// `next/navigation` with a partial mock — vitest's mock proxy throws
+// on access to exports the factory didn't return.
+beforeEach(async () => {
+  try {
+    const nav = await import("next/navigation");
+    vi.mocked(nav.useRouter).mockReturnValue(mockRouter as never);
+    vi.mocked(nav.usePathname).mockReturnValue("/platform/experiments");
+    vi.mocked(nav.useSearchParams).mockReturnValue(new URLSearchParams() as never);
+    vi.mocked(nav.useParams).mockReturnValue({ locale: "en-US" });
+  } catch {
+    // Partial override of next/navigation; leave it alone.
+  }
 });
 
 vi.mock("next/headers", () => ({
@@ -118,7 +143,6 @@ vi.mock("next/headers", () => ({
   draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
 }));
 
-// Default: unauthenticated. Override per test: vi.mocked(auth).mockResolvedValue(createSession())
 vi.mock("~/app/actions/auth", () => ({
   auth: vi.fn().mockResolvedValue(null),
   providerMap: [],
@@ -159,14 +183,14 @@ vi.mock("posthog-js", () => ({
 }));
 
 vi.mock("posthog-js/react", () => {
-  const posthogInstance = {
+  const posthog = {
     opt_in_capturing: vi.fn(),
     opt_out_capturing: vi.fn(),
     reset: vi.fn(),
     capture: vi.fn(),
   };
   return {
-    usePostHog: vi.fn(() => posthogInstance),
+    usePostHog: vi.fn(() => posthog),
     useFeatureFlagEnabled: vi.fn().mockReturnValue(false),
     PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
   };
@@ -184,13 +208,11 @@ vi.mock("~/lib/contentful", () => ({
   }),
 }));
 
-// vi.fn() so tests can override: vi.mocked(useLocale).mockReturnValue("de-DE")
 vi.mock("@/hooks/useLocale", () => ({
   useLocale: vi.fn(() => "en-US"),
 }));
 
-// Wraps React.use in a spy so tests can override:
-//   vi.mocked(use).mockReturnValue({ id: "exp-123", locale: "en-US" })
+// Spy on React.use so tests can override via vi.mocked(use).mockReturnValue(...)
 vi.mock("react", async () => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const actual = await vi.importActual<typeof import("react")>("react");

@@ -1,12 +1,13 @@
-import http from "http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchSecret, getSecret, isLambdaEnvironment } from "./secrets";
 
-vi.mock("http");
+const { mockGet } = vi.hoisted(() => ({ mockGet: vi.fn() }));
 
-const mockGet = vi.fn();
-vi.mocked(http.get).mockImplementation(mockGet);
+vi.mock("http", () => ({
+  default: { get: mockGet },
+  get: mockGet,
+}));
 
 function makeMockResponse(statusCode: number, body: string) {
   const res = {
@@ -43,10 +44,15 @@ describe("fetchSecret", () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "my-function");
     vi.stubEnv("AWS_SESSION_TOKEN", "test-token");
     vi.clearAllMocks();
+    // Tests below exercise retry/failure paths that log via console.error.
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // no-op
+    });
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it("returns empty object in non-Lambda environment", async () => {

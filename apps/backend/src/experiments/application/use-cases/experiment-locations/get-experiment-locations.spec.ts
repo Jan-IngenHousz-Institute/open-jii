@@ -243,17 +243,12 @@ describe("GetExperimentLocationsUseCase", () => {
       failure(AppError.internal("Database query failed")),
     );
 
-    try {
-      // Act
-      const result = await useCase.execute(experiment.id, testUserId);
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId);
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Database query failed");
-    } finally {
-      // Restore original method
-      vi.restoreAllMocks();
-    }
+    // Assert
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.message).toContain("Database query failed");
   });
 });

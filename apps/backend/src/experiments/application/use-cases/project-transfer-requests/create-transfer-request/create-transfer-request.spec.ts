@@ -29,9 +29,6 @@ describe("CreateTransferRequest", () => {
     useCase = testApp.module.get(CreateTransferRequestUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
     emailAdapter = testApp.module.get(EmailAdapter);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

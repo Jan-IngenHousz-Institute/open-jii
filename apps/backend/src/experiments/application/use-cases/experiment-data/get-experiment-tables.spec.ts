@@ -32,9 +32,6 @@ describe("GetExperimentTablesUseCase", () => {
     useCase = testApp.module.get(GetExperimentTablesUseCase);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
     macroRepository = testApp.module.get(MacroRepository);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

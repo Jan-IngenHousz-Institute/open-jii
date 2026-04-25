@@ -31,9 +31,6 @@ describe("UploadAmbyteDataUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(UploadAmbyteDataUseCase);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

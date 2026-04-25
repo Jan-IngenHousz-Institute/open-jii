@@ -28,9 +28,6 @@ describe("ProjectTransferRequestsController", () => {
 
     createTransferRequestUseCase = testApp.module.get(CreateTransferRequestUseCase);
     listTransferRequestsUseCase = testApp.module.get(ListTransferRequestsUseCase);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
