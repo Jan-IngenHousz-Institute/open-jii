@@ -3,7 +3,7 @@
 import { CheckCircle2, Hash, HelpCircle, List, Pencil, Plus, Send, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import type { QuestionCell as QuestionCellType } from "@repo/api";
+import type { QuestionCell as QuestionCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";

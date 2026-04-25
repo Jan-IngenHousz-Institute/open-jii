@@ -9,7 +9,7 @@ import { BookOpen, Code, FlaskConical, GitBranch, HelpCircle, FileText } from "l
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/components/card";

@@ -2,7 +2,7 @@
 
 import { BookOpen, Code, FileText, GitBranch, HelpCircle, Microscope } from "lucide-react";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import {
   Tooltip,

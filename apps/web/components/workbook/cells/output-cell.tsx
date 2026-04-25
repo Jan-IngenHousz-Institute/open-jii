@@ -2,7 +2,7 @@
 
 import { AlertCircle, CheckCircle2, Clock, Info, X } from "lucide-react";
 
-import type { OutputCell as OutputCellType } from "@repo/api";
+import type { OutputCell as OutputCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
 interface OutputCellProps {

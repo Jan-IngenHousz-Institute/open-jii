@@ -6,7 +6,7 @@ import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import type { ProtocolCell } from "@repo/api";
+import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";

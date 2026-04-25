@@ -7,7 +7,7 @@ import {
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { FlowchartSidebar } from "./flowchart-sidebar";
 

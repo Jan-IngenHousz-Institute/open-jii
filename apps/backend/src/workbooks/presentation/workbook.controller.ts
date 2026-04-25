@@ -4,7 +4,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
-import { workbookContract } from "@repo/api";
+import { workbookContract } from "@repo/api/contracts/workbook.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure, isSuccess } from "../../common/utils/fp-utils";

@@ -3,7 +3,7 @@
 import { GripVertical } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";

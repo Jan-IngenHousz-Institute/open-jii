@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import { useCallback } from "react";
 
-import type { SensorFamily, WorkbookCell } from "@repo/api";
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 

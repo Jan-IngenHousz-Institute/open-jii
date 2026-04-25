@@ -3,7 +3,7 @@ import { BookOpen, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-import type { Workbook } from "@repo/api";
+import type { Workbook } from "@repo/api/schemas/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";

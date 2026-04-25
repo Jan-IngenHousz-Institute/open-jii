@@ -3,7 +3,7 @@
 import { GripVertical, List, PanelRightClose } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cn } from "@repo/ui/lib/utils";
 
 /** Accent color per cell type, matching the cell components. */

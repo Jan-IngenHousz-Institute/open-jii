@@ -2,7 +2,7 @@ import { createMarkdownCell, createProtocolCell, createQuestionCell } from "@/te
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { WorkbookSidebar } from "./workbook-sidebar";
 

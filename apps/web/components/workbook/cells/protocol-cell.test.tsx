@@ -3,8 +3,8 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { ProtocolCell } from "@repo/api";
-import { contract } from "@repo/api";
+import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
+import { contract } from "@repo/api/contract";
 
 import { ProtocolCellComponent } from "./protocol-cell";
 

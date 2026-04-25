@@ -12,8 +12,8 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import type { WorkbookCell } from "@repo/api";
-import { contract } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { contract } from "@repo/api/contract";
 
 import { CellRenderer } from "./cell-renderer";
 

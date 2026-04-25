@@ -6,7 +6,7 @@ import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { Workbook } from "@repo/api";
+import type { Workbook } from "@repo/api/schemas/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

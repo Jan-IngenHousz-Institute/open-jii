@@ -1,7 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { BranchCell, WorkbookCell } from "@repo/api";
+import type { BranchCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { BranchCellComponent } from "./branch-cell";
 
