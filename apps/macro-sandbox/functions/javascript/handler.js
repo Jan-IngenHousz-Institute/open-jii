@@ -2,6 +2,18 @@ const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const zlib = require("zlib");
+
+// AWS Lambda sync responses are capped at 6 MB. Compress every response so
+// macro outputs of ~25-50 MB raw can still fit. Callers detect the
+// {encoding, payload} wrapper and decompress.
+function compressResponse(envelope) {
+  const json = JSON.stringify(envelope);
+  return {
+    encoding: "gzip+base64",
+    payload: zlib.gzipSync(json).toString("base64"),
+  };
+}
 
 // Limits
 const MAX_SCRIPT_SIZE = 1 * 1024 * 1024; // 1MB
@@ -26,6 +38,11 @@ function cleanupStaleTmp() {
 }
 
 exports.handler = async (event) => {
+  const result = await _runMacroBatch(event);
+  return compressResponse(result);
+};
+
+async function _runMacroBatch(event) {
   let tmpdir;
 
   try {
@@ -144,4 +161,4 @@ exports.handler = async (event) => {
       fs.rmSync(tmpdir, { recursive: true, force: true });
     }
   }
-};
+}

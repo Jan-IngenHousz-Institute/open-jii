@@ -3,6 +3,7 @@ import { createDecipheriv } from "crypto";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { gunzipSync } from "zlib";
 
 const INVOKE_PATH = "/2015-03-31/functions/function/invocations";
 
@@ -54,6 +55,19 @@ export interface LambdaResponse {
   errors?: string[];
 }
 
+function decompress(payload: unknown): unknown {
+  if (payload === null || typeof payload !== "object") {
+    return payload;
+  }
+  const record = payload as Record<string, unknown>;
+  if (record.encoding !== "gzip+base64" || typeof record.payload !== "string") {
+    return payload;
+  }
+  const compressed = Buffer.from(record.payload, "base64");
+  const json = gunzipSync(compressed).toString("utf8");
+  return JSON.parse(json);
+}
+
 // Invocation
 
 /** Invoke a Lambda with the given test case payload. */
@@ -87,7 +101,8 @@ export async function invokeLambda(
       signal: controller.signal,
     });
 
-    const body = (await res.json()) as LambdaResponse;
+    const raw = (await res.json()) as unknown;
+    const body = decompress(raw) as LambdaResponse;
     const durationMs = performance.now() - start;
 
     return { response: body, status: res.status, durationMs };
