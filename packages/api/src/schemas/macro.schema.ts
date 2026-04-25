@@ -105,7 +105,7 @@ export const zMacroProtocolPathParams = z.object({
 // ── Single Macro Execution ───────────────────────────────────────────
 
 export const zMacroExecutionRequestBody = z.object({
-  data: jsonStringOrValue(z.record(z.unknown())),
+  data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
   timeout: z.number().int().min(1).max(60).optional(),
 });
 

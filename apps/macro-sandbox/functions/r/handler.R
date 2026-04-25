@@ -121,4 +121,21 @@ result <- tryCatch({
 # Clean up
 unlink(tmpdir, recursive = TRUE)
 
-cat(toJSON(result, auto_unbox = TRUE))
+# Produce true gzip bytes (with 0x1f 0x8b magic) for the given text.
+# memCompress(., "gzip") emits zlib-format output despite the name, which
+# Node's gunzipSync rejects ("incorrect header check"); we route through a
+# gzfile connection instead.
+gzip_text <- function(text) {
+  path <- tempfile()
+  on.exit(unlink(path), add = TRUE)
+  con <- gzfile(path, "wb")
+  writeBin(charToRaw(text), con)
+  close(con)
+  readBin(path, what = "raw", n = file.info(path)$size)
+}
+
+# AWS Lambda sync responses are capped at 6 MB. Compress every response so
+# macro outputs of ~25-50 MB raw can still fit. Callers detect the
+# {encoding, payload} wrapper and decompress.
+payload <- jsonlite::base64_enc(gzip_text(toJSON(result, auto_unbox = TRUE)))
+cat(toJSON(list(encoding = "gzip+base64", payload = payload), auto_unbox = TRUE))

@@ -2,6 +2,18 @@ const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const zlib = require("zlib");
+
+// AWS Lambda sync responses are capped at 6 MB. Compress every response so
+// macro outputs of ~25-50 MB raw can still fit. Callers detect the
+// {encoding, payload} wrapper and decompress.
+function compressResponse(envelope) {
+  const json = JSON.stringify(envelope);
+  return {
+    encoding: "gzip+base64",
+    payload: zlib.gzipSync(json).toString("base64"),
+  };
+}
 
 // Limits
 const MAX_SCRIPT_SIZE = 1 * 1024 * 1024; // 1MB
@@ -26,6 +38,11 @@ function cleanupStaleTmp() {
 }
 
 exports.handler = async (event) => {
+  const result = await _runMacroBatch(event);
+  return compressResponse(result);
+};
+
+async function _runMacroBatch(event) {
   let tmpdir;
 
   try {
@@ -86,12 +103,21 @@ exports.handler = async (event) => {
           maxBuffer: 10 * 1024 * 1024, // 10MB output buffer
         },
         (error, stdout, stderr) => {
-          if (error && error.killed) {
-            const isMaxBuffer = error.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER";
+          // maxBuffer overflow can fire without setting error.killed/error.signal,
+          // so check the code first.
+          if (error?.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
             resolve({
               status: "error",
               results: [],
-              errors: [isMaxBuffer ? "Wrapper output exceeds 10MB limit" : "Execution timed out"],
+              errors: ["Wrapper output exceeds 10MB limit"],
+            });
+            return;
+          }
+          if (error && error.killed) {
+            resolve({
+              status: "error",
+              results: [],
+              errors: ["Execution timed out"],
             });
             return;
           }
@@ -100,11 +126,16 @@ exports.handler = async (event) => {
           if (output) {
             try {
               resolve(JSON.parse(output));
-            } catch {
+            } catch (parseErr) {
+              const code = error?.code ?? "unknown";
+              const signal = error?.signal ?? "none";
+              const stderrHead = (stderr || "").trim().slice(0, 300);
               resolve({
                 status: "error",
                 results: [],
-                errors: ["Wrapper returned invalid JSON"],
+                errors: [
+                  `Wrapper returned invalid JSON (parse: ${parseErr.message}; exit: ${code}; signal: ${signal}; stdoutLen: ${output.length}; stderrHead: ${stderrHead})`,
+                ],
               });
             }
           } else {
@@ -130,4 +161,4 @@ exports.handler = async (event) => {
       fs.rmSync(tmpdir, { recursive: true, force: true });
     }
   }
-};
+}

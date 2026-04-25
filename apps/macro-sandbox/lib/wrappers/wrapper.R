@@ -181,7 +181,14 @@ for (item in batch_items) {
   lockBinding(".GlobalEnv", run_env)
 
   # Inject Data
-  run_env$json <- item$data
+  # Macros expect `json` to be the single measurement object. Unwrap a
+  # non-empty, unnamed list (JSON array) down to its first element,
+  # matching the legacy multispeq R executor.
+  measurement <- item$data
+  if (is.list(measurement) && length(measurement) > 0 && is.null(names(measurement))) {
+    measurement <- measurement[[1]]
+  }
+  run_env$json <- measurement
   # Use an environment (reference semantics) so output$key <- val works in-place.
   run_env$output <- new.env(parent = emptyenv())
   
