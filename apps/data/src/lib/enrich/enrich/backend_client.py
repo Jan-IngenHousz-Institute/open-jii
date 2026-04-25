@@ -142,8 +142,11 @@ class BackendClient:
                 
         except requests.RequestException as e:
             error_msg = f"Request failed: {str(e)}"
-            if hasattr(e, 'response') and e.response:
-                error_msg += f" | Response status: {e.response.status_code} | Response body: {e.response.text}"
+            # bool(Response) is False for 4xx/5xx — must use `is not None` here.
+            err_response = getattr(e, 'response', None)
+            if err_response is not None:
+                body = (err_response.text or '')[:2000]
+                error_msg += f" | Response status: {err_response.status_code} | Response body: {body}"
             raise BackendIntegrationError(error_msg)
             
     def get_user_metadata(self, user_ids: List[str]) -> Dict[str, Dict[str, Any]]:
