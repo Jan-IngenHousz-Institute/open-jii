@@ -13,7 +13,7 @@
     "build:preview": "dotenv -- pnpm dlx eas-cli build -p android --profile preview --local",
     "build:production": "dotenv -- pnpm dlx eas-cli build -p android --profile production --local",
     "build:submit": "pnpm dlx eas-cli build -p android --profile production --clear-cache --non-interactive --auto-submit",
-    "generate-native": "expo prebuild",
+    "prebuild:check": "expo prebuild --platform android --no-install --skip-dependency-update",
     "lint": "eslint 'src/**/*' --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
