@@ -22,8 +22,8 @@ vi.mock("expo-asset", () => ({
   },
 }));
 
-// `new File(path)` is invoked with `new`. Vitest v4 no longer lets an
-// arrow function stand in for a constructor, so declare a class.
+// `new File(path)` is invoked with `new`. Arrow functions aren't constructible,
+// so we declare a class.
 vi.mock("expo-file-system", () => ({
   File: class {
     text() {

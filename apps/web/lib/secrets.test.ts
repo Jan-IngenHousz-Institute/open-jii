@@ -44,8 +44,7 @@ describe("fetchSecret", () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "my-function");
     vi.stubEnv("AWS_SESSION_TOKEN", "test-token");
     vi.clearAllMocks();
-    // These tests deliberately exercise the retry / failure paths which
-    // call console.error in production code; silence the expected noise.
+    // Tests below exercise retry/failure paths that log via console.error.
     vi.spyOn(console, "error").mockImplementation(() => {
       // no-op
     });
@@ -53,6 +52,7 @@ describe("fetchSecret", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it("returns empty object in non-Lambda environment", async () => {

@@ -16,15 +16,20 @@ const LAYER_ORDER: [string, number][] = [
   ["/guards/", 1],
   ["/services/", 2],
   ["/repositories/", 3],
+  [".adapter.spec.", 3],
   ["/use-cases/", 4],
   ["/presentation/", 5],
+  [".controller.spec.", 5],
 ];
 
 function layerPriority(filepath: string): number {
   for (const [segment, priority] of LAYER_ORDER) {
     if (filepath.includes(segment)) return priority;
   }
-  return 3;
+  console.warn(
+    `[vitest] LayerSequencer: unclassified test file "${filepath}", add a matching segment to LAYER_ORDER.`,
+  );
+  return Number.MAX_SAFE_INTEGER;
 }
 
 /**

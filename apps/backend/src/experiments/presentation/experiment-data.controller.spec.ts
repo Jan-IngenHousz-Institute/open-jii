@@ -252,8 +252,8 @@ describe("ExperimentDataController", () => {
       return handler({ params: { id }, body: {} as never, headers: {} });
     };
 
-    // Execute mock that drains the file stream so busboy can finish
-    const drainExecute = (fileData: { stream?: { resume?: () => void } }) => {
+    // Drains the file stream so busboy can finish.
+    const drainExecute = async (fileData: { stream?: { resume?: () => void } }) => {
       fileData.stream?.resume?.();
     };
 

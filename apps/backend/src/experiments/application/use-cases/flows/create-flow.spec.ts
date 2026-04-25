@@ -83,16 +83,12 @@ describe("CreateFlowUseCase", () => {
 
     const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
 
-    try {
-      const result = await useCase.execute(experiment.id, ownerId, graph);
+    const result = await useCase.execute(experiment.id, ownerId, graph);
 
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.statusCode).toBe(403);
-      expect(result.error.message).toContain("You do not have access to this experiment");
-    } finally {
-      // cleanup handled by afterEach
-    }
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("creates flow when user is admin and no existing flow", async () => {
