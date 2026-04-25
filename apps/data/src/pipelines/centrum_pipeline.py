@@ -884,7 +884,7 @@ def experiment_macro_data_sandbox():
                 F.col("skip_macro_processing") == True,
                 F.lit(None).cast("string")
             ).when(
-                ~F.col("macro_id").rlike(r"(?i)\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z"),
+                ~F.col("macro_id").rlike(MACRO_ID_UUID_PATTERN),
                 F.concat(F.lit("Invalid macro_id (not UUID): "), F.col("macro_id"))
             ).otherwise(F.col("sandbox_result.error"))
         )
