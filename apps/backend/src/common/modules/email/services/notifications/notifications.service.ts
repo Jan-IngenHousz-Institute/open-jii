@@ -16,22 +16,26 @@ export class NotificationsService {
 
   constructor(private readonly emailConfigService: EmailConfigService) {}
 
+  /* v8 ignore next 3 */
   protected createMailTransport(serverConfig: string) {
     return createTransport(serverConfig);
   }
 
+  /* v8 ignore next 5 */
   protected renderAddedUserNotificationEmail(
     ...args: Parameters<typeof renderAddedUserNotification>
   ) {
     return renderAddedUserNotification(...args);
   }
 
+  /* v8 ignore next 5 */
   protected renderTransferRequestConfirmationEmail(
     ...args: Parameters<typeof renderTransferRequestConfirmation>
   ) {
     return renderTransferRequestConfirmation(...args);
   }
 
+  /* v8 ignore next 5 */
   protected renderProjectTransferCompleteEmail(
     ...args: Parameters<typeof renderProjectTransferComplete>
   ) {
