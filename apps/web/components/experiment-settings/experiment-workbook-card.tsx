@@ -1,6 +1,6 @@
 "use client";
 
-import type { Experiment } from "@repo/api";
+import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { CardContent, CardHeader } from "@repo/ui/components/card";
 import {

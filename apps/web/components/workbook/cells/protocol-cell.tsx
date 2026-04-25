@@ -6,7 +6,7 @@ import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
 
-import type { ProtocolCell as ProtocolCellType } from "@repo/api";
+import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 
 import { CellWrapper } from "../cell-wrapper";

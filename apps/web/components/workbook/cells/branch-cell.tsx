@@ -8,7 +8,7 @@ import type {
   BranchCondition,
   BranchPath,
   WorkbookCell,
-} from "@repo/api";
+} from "@repo/api/schemas/workbook-cells.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {

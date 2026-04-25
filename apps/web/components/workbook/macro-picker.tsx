@@ -7,7 +7,8 @@ import { Code, Loader2, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import type { MacroCell, MacroLanguage } from "@repo/api";
+import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
+import type { MacroCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";

@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { LinkedWorkbookCard } from "./linked-workbook-card";

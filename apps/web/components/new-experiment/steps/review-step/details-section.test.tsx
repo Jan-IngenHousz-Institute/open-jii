@@ -3,8 +3,8 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { CreateExperimentBody } from "@repo/api";
-import { contract } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import { contract } from "@repo/api/contract";
 
 import { DetailsSection } from "./details-section";
 

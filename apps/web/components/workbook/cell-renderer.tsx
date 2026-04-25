@@ -1,6 +1,6 @@
 "use client";
 
-import type { WorkbookCell } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { BranchCellComponent } from "./cells/branch-cell";
 import { MacroCellComponent } from "./cells/macro-cell";

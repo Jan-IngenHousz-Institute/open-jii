@@ -1,7 +1,7 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import type { CreateExperimentBody } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 
 import { FormStep } from "./form-step";
 

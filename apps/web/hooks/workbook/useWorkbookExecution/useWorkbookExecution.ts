@@ -5,16 +5,16 @@ import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommu
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 import { tsr } from "~/lib/tsr";
 
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type {
   BranchCell,
   MacroCell,
   OutputCell,
   ProtocolCell,
   QuestionCell,
-  SensorFamily,
   WorkbookCell,
-} from "@repo/api";
-import { evaluateBranch, validateBranchCell } from "@repo/api";
+} from "@repo/api/schemas/workbook-cells.schema";
+import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 

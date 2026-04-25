@@ -12,8 +12,8 @@ import { GitBranch, List } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use, useMemo } from "react";
 
-import type { WorkbookCell } from "@repo/api";
-import { cellsToFlowGraph } from "@repo/api";
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 import { useTranslation } from "@repo/i18n/client";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
