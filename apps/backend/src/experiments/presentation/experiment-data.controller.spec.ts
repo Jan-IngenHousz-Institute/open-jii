@@ -253,7 +253,7 @@ describe("ExperimentDataController", () => {
     };
 
     // Drains the file stream so busboy can finish.
-    const drainExecute = async (fileData: { stream?: { resume?: () => void } }) => {
+    const drainExecute = (fileData: { stream?: { resume?: () => void } }) => {
       fileData.stream?.resume?.();
     };
 
