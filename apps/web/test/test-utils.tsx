@@ -178,6 +178,28 @@ function renderWithForm<T extends FieldValues>(
   return render(<FormWrapper />, renderOptions);
 }
 
+// ── Assertions ──────────────────────────────────────────────────
+
+/**
+ * Asserts that `value` is non-null and non-undefined, narrowing the type for
+ * the rest of the scope. Prefer this over the `!` non-null assertion: when a
+ * test selector breaks, the failure points at the assertion line with a
+ * meaningful message instead of a downstream `Cannot read properties of
+ * undefined`.
+ *
+ * @example
+ * ```ts
+ * const btn = svg.closest("button");
+ * assertExists(btn, "delete button not found");
+ * await user.click(btn); // narrowed to HTMLButtonElement
+ * ```
+ */
+function assertExists<T>(value: T, message?: string): asserts value is NonNullable<T> {
+  if (value === null || value === undefined) {
+    throw new Error(message ?? `Expected value to exist, got ${String(value)}`);
+  }
+}
+
 // ── Re-exports ──────────────────────────────────────────────────
 
 // Re-export everything from RTL except render and renderHook (we provide custom versions)
@@ -248,4 +270,12 @@ export {
 } from "@testing-library/react";
 
 // Export our custom versions
-export { render, renderHook, renderWithForm, userEvent, AllProviders, createTestQueryClient };
+export {
+  render,
+  renderHook,
+  renderWithForm,
+  userEvent,
+  AllProviders,
+  createTestQueryClient,
+  assertExists,
+};
