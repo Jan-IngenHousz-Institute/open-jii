@@ -15,6 +15,7 @@ ran unsandboxed code on Databricks workers.
 """
 
 import json
+import re
 from typing import Optional
 
 import pandas as pd
@@ -23,6 +24,9 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType
 
 from .backend_client import BackendClient, BackendIntegrationError
+
+# Backend rejects non-UUID macro_id with 400, killing the whole batch.
+_UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
 # Schema returned by the pandas UDF
@@ -36,7 +40,7 @@ def make_execute_macro_udf(
     environment: str,
     dbutils,
     timeout: int = 30,
-    max_batch_size: int = 200,
+    max_batch_size: int = 25,
     scope_override: Optional[str] = None,
 ):
     """
@@ -92,6 +96,11 @@ def make_execute_macro_udf(
                 pd.api.types.is_scalar(data) and pd.isna(data)
             ):
                 errors[pos] = f"NULL macro_id or data for row {row_id}"
+                continue
+
+            macro_id_str = str(macro_id)
+            if not _UUID_RE.match(macro_id_str):
+                errors[pos] = f"Invalid macro_id (not UUID): {macro_id_str[:60]} for row {row_id}"
                 continue
 
             # Send data as a JSON string
