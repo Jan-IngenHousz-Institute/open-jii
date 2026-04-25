@@ -129,10 +129,21 @@ export default {
           "75%": { content: '"..."' },
           "100%": { content: '""' },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        "version-pop": {
+          "0%": { transform: "scale(0.95)", opacity: "0" },
+          "60%": { transform: "scale(1.03)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        shimmer: "shimmer 1.5s ease-in-out infinite",
+        "version-pop": "version-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
       },
       fontFamily: {
         poppins: ["Poppins", "sans-serif"],

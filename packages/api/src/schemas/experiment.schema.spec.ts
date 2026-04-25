@@ -35,12 +35,6 @@ import {
   zAnnotationDeleteBulkPathParam,
   zAnnotationDeleteBulkBody,
   zAnnotationRowsAffected,
-  // Protocol associations
-  zExperimentProtocolDetails,
-  zExperimentProtocol,
-  zExperimentProtocolList,
-  zExperimentProtocolPathParam,
-  zAddExperimentProtocolsBody,
   // Flow
   zFlowNodeType,
   zQuestionKind,
@@ -136,6 +130,8 @@ describe("Experiment Schema", () => {
       status: "active",
       visibility: "private",
       embargoUntil: isoTime,
+      workbookId: null,
+      workbookVersionId: null,
       createdBy: uuidB,
       createdAt: isoTime,
       updatedAt: isoTime2,
@@ -209,6 +205,8 @@ describe("Experiment Schema", () => {
         status: "active",
         visibility: "public",
         embargoUntil: isoTime,
+        workbookId: null,
+        workbookVersionId: null,
         createdBy: uuidB,
         createdAt: isoTime,
         updatedAt: isoTime2,
@@ -219,44 +217,6 @@ describe("Experiment Schema", () => {
         isAdmin: false,
       };
       expect(zExperimentAccess.parse(access)).toEqual(access);
-    });
-  });
-
-  // ----- Protocol associations -----
-  describe("Protocol associations", () => {
-    it("zExperimentProtocolDetails valid", () => {
-      const det = { id: uuidA, name: "Fv/FM", family: "multispeq", createdBy: uuidB };
-      expect(zExperimentProtocolDetails.parse(det)).toEqual(det);
-    });
-
-    it("zExperimentProtocol valid", () => {
-      const assoc = {
-        experimentId: uuidA,
-        order: 2,
-        addedAt: isoTime,
-        protocol: { id: uuidB, name: "AMB", family: "ambit", createdBy: uuidC },
-      };
-      expect(zExperimentProtocol.parse(assoc)).toEqual(assoc);
-    });
-
-    it("zExperimentProtocolList valid", () => {
-      const assoc = {
-        experimentId: uuidA,
-        order: 1,
-        addedAt: isoTime,
-        protocol: { id: uuidB, name: "P1", family: "multispeq", createdBy: uuidC },
-      };
-      expect(zExperimentProtocolList.parse([assoc])).toEqual([assoc]);
-    });
-
-    it("zExperimentProtocolPathParam valid", () => {
-      const params = { id: uuidA, protocolId: uuidB };
-      expect(zExperimentProtocolPathParam.parse(params)).toEqual(params);
-    });
-
-    it("zAddExperimentProtocolsBody valid", () => {
-      const body = { protocols: [{ protocolId: uuidA, order: 1 }, { protocolId: uuidB }] };
-      expect(zAddExperimentProtocolsBody.parse(body)).toEqual(body);
     });
   });
 
@@ -388,17 +348,15 @@ describe("Experiment Schema", () => {
       expect(zCreateExperimentBody.parse(body)).toEqual(body);
     });
 
-    it("zCreateExperimentBody full with members/protocols", () => {
+    it("zCreateExperimentBody full with members", () => {
       const body = {
         name: "Big Exp",
         description: "optional",
         status: "active",
         visibility: "public",
         members: [{ userId: uuidA, role: "admin" }, { userId: uuidB }],
-        protocols: [{ protocolId: uuidA, order: 1 }, { protocolId: uuidB }],
       };
       const parsed = zCreateExperimentBody.parse(body);
-      // role default on second member is handled at consumer side (schema default is for AddMembers body)
       expect(parsed).toEqual(body);
     });
 

@@ -198,8 +198,8 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           target: params.target,
           sourceHandle: params.sourceHandle ?? null,
           targetHandle: params.targetHandle ?? null,
-          animated: true,
-          markerEnd: { type: MarkerType.ArrowClosed },
+          animated: false,
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
         };
         setEdges((eds) => addEdge(newEdge, eds));
       },
@@ -347,7 +347,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                         fitView={isDisabled}
                         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                         defaultEdgeOptions={{
-                          markerEnd: { type: MarkerType.ArrowClosed },
+                          markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
                         }}
                       />
                     </FlowContextProvider>

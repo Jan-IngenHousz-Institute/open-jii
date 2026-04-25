@@ -1,7 +1,8 @@
 "use client";
 
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
-import React, { useState } from "react";
+import React from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -70,7 +71,7 @@ export function ExperimentDataTableVariantCell({
 // Expanded content component for rendering in table rows
 export function VariantExpandedContent({ data }: { data: string }) {
   const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
+  const { copy: copyToClipboard, copied } = useCopyToClipboard();
   let formatted: string;
   try {
     const parsed: unknown = JSON.parse(data);
@@ -82,13 +83,7 @@ export function VariantExpandedContent({ data }: { data: string }) {
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(data);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+    await copyToClipboard(data);
   };
 
   return (

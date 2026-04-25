@@ -58,11 +58,20 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
     : allLocales.filter((l) => l.code === "en");
 
   // Build navigation items from config for mobile
-  const allNavItems = Object.values(mainNavigation).map((nav) => ({
-    title: t(nav.titleKey, { ns: nav.namespace }),
-    url: nav.url(locale),
-    icon: nav.icon,
-  }));
+  const allNavItems = Object.values(mainNavigation).flatMap((nav) => {
+    if ("children" in nav && nav.children.length > 0 && nav.navigable === false) {
+      return nav.children.map((child) => ({
+        title: t(child.titleKey, { ns: child.namespace }),
+        url: child.url(locale),
+        icon: child.icon,
+      }));
+    }
+    return {
+      title: t(nav.titleKey, { ns: nav.namespace }),
+      url: nav.url(locale),
+      icon: nav.icon,
+    };
+  });
 
   return (
     <>

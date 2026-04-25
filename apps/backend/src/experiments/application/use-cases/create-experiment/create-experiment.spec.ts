@@ -1,8 +1,6 @@
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { LocationRepository } from "../../../../experiments/core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
-import { ExperimentProtocolRepository } from "../../../../experiments/core/repositories/experiment-protocol.repository";
-import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { UserDto } from "../../../../users/core/models/user.model";
 import { CreateExperimentUseCase } from "./create-experiment";
@@ -12,9 +10,7 @@ describe("CreateExperimentUseCase", () => {
   let testUserId: string;
   let useCase: CreateExperimentUseCase;
   let experimentMemberRepository: ExperimentMemberRepository;
-  let experimentProtocolRepository: ExperimentProtocolRepository;
   let locationRepository: LocationRepository;
-  let protocolRepository: ProtocolRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -25,9 +21,7 @@ describe("CreateExperimentUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentUseCase);
     experimentMemberRepository = testApp.module.get(ExperimentMemberRepository);
-    experimentProtocolRepository = testApp.module.get(ExperimentProtocolRepository);
     locationRepository = testApp.module.get(LocationRepository);
-    protocolRepository = testApp.module.get(ProtocolRepository);
 
     // Mock the Databricks service
   });
@@ -97,22 +91,9 @@ describe("CreateExperimentUseCase", () => {
     });
   });
 
-  it("should create an experiment with protocols and locations", async () => {
-    // 1. Create a protocol
-    const protocolDto = {
-      name: "Test Protocol",
-      description: "Desc",
-      code: [{}],
-      duration: "1h",
-      family: "multispeq" as const,
-    };
-    const protocolResult = await protocolRepository.create(protocolDto, testUserId);
-    assertSuccess(protocolResult);
-    const protocolId = protocolResult.value[0].id;
-
+  it("should create an experiment with locations", async () => {
     const experimentData = {
       name: "Complex Experiment",
-      protocols: [{ protocolId }],
       locations: [
         {
           name: "Loc 1",
@@ -127,20 +108,11 @@ describe("CreateExperimentUseCase", () => {
     assertSuccess(result);
     const createdExperiment = result.value;
 
-    // Verify protocols
-    const protocolsResult = await experimentProtocolRepository.listProtocols(createdExperiment.id);
-    assertSuccess(protocolsResult);
-    expect(protocolsResult.value).toHaveLength(1);
-    expect(protocolsResult.value[0].protocol.id).toBe(protocolId);
-
     // Verify locations
     const locationsResult = await locationRepository.findByExperimentId(createdExperiment.id);
     assertSuccess(locationsResult);
     expect(locationsResult.value).toHaveLength(1);
     expect(locationsResult.value[0].name).toBe("Loc 1");
-    // Latitude stored as string in DB usually, but repository might convert or not.
-    // Looking at repository code: it inserts using .toString(), returns standard DTO.
-    // If DTO has string, then it matches.
     expect(Number(locationsResult.value[0].latitude)).toBe(10);
   });
 
@@ -219,33 +191,6 @@ describe("CreateExperimentUseCase", () => {
     );
 
     // Verify Databricks job was not triggered
-  });
-
-  it("should fail validation if protocols association fails", async () => {
-    // Mock failure
-    vi.spyOn(experimentProtocolRepository, "addProtocols").mockResolvedValue(
-      failure(AppError.badRequest("Database error", "DATABASE_ERROR")),
-    );
-
-    const protocolDto = {
-      name: "Test Protocol",
-      description: "Desc",
-      code: [{}],
-      duration: "1h",
-      family: "multispeq" as const,
-    };
-    const protocolResult = await protocolRepository.create(protocolDto, testUserId);
-    assertSuccess(protocolResult);
-    const protocolId = protocolResult.value[0].id;
-
-    const experimentData = {
-      name: "Bad Protocol Experiment",
-      protocols: [{ protocolId }],
-    };
-
-    const result = await useCase.execute(experimentData, testUserId);
-    assertFailure(result);
-    expect(result.error.message).toContain("Failed to associate protocols");
   });
 
   it("should fail validation if locations creation fails", async () => {

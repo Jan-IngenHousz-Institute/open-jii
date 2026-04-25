@@ -14,7 +14,11 @@ import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 import { cva } from "@repo/ui/lib/utils";
 
-export const detailsSchema = zCreateExperimentBodyBase.pick({ name: true, description: true });
+export const detailsSchema = zCreateExperimentBodyBase.pick({
+  name: true,
+  description: true,
+  workbookId: true,
+});
 
 const membersVisibilityBase = zCreateExperimentBodyBase.pick({
   members: true,
@@ -46,8 +50,6 @@ export const membersVisibilitySchema = z.object({
     },
   ),
 });
-
-export const protocolsSchema = zCreateExperimentBodyBase.pick({ protocols: true });
 
 export const locationsSchema = zCreateExperimentBodyBase.pick({ locations: true });
 

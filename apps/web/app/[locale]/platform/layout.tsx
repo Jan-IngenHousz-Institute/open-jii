@@ -49,8 +49,10 @@ export default async function AppLayout({
       <SidebarInset>
         <NavigationTopbar locale={locale} user={session.user} />
         <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
-          <div className="mx-auto w-full max-w-7xl">
-            <Breadcrumbs locale={locale} />
+          <div className="mx-auto w-full max-w-7xl has-[.workbook-page]:flex has-[.workbook-page]:max-w-none has-[.workbook-page]:flex-1 has-[.workbook-page]:flex-col">
+            <div className="mx-auto w-full max-w-7xl">
+              <Breadcrumbs locale={locale} />
+            </div>
             <Suspense>{children}</Suspense>
           </div>
         </div>

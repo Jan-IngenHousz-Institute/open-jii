@@ -24,9 +24,6 @@ export const createExperimentSchema = createInsertSchema(experiments)
       )
       .min(1)
       .optional(),
-    protocols: z
-      .array(z.object({ protocolId: z.string(), order: z.number().optional() }))
-      .optional(),
     locations: z
       .array(
         z.object({

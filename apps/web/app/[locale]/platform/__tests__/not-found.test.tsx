@@ -48,6 +48,17 @@ describe("PlatformNotFound", () => {
     );
   });
 
+  it("should show workbooks navigation when pathname includes /workbooks", () => {
+    vi.mocked(usePathname).mockReturnValue("/en-US/platform/workbooks/invalid-id");
+
+    render(<PlatformNotFound />);
+
+    expect(screen.getByRole("link", { name: /sidebar.workbooks/ })).toHaveAttribute(
+      "href",
+      "/platform/workbooks",
+    );
+  });
+
   it("should show experiments navigation by default", () => {
     vi.mocked(usePathname).mockReturnValue("/en-US/platform/some-unknown-path");
 

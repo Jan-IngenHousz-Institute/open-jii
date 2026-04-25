@@ -72,11 +72,11 @@ export function InlineEditableTitle({
   return (
     <div className="flex items-center justify-between">
       {isEditing ? (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2">
           <Input
             value={editedTitle}
             onChange={(e) => setEditedTitle(e.target.value)}
-            className="text-2xl font-semibold"
+            className="min-w-[300px] flex-1 text-2xl font-semibold"
             disabled={isPending}
             autoFocus
             onBlur={handleBlur}

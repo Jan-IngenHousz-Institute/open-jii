@@ -10,7 +10,7 @@ import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
 import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
-import { ExperimentLinkedProtocols } from "~/components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols";
+import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
 import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
 import type { Experiment } from "@repo/api/schemas/experiment.schema";
@@ -81,8 +81,10 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           description={experiment.description ?? ""}
           hasAccess={hasAccess}
         />
-        <ExperimentLinkedProtocols experimentId={id} hasAccess={hasAccess} />
-
+        <ExperimentLinkedWorkbook
+          workbookId={experiment.workbookId}
+          workbookVersionId={experiment.workbookVersionId}
+        />
         <ExperimentMeasurements experimentId={id} />
 
         <ExperimentVisualizationsDisplay

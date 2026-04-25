@@ -47,11 +47,10 @@ vi.mock("../node-content", () => ({
 
 vi.mock("../node-config", () => ({
   nodeTypeColorMap: {
-    QUESTION: { border: "border-red-500" },
-    INSTRUCTION: { border: "border-blue-500" },
-    MEASUREMENT: { border: "border-green-500" },
-    ANALYSIS: { border: "border-yellow-500" },
-    default: { border: "border-gray-500" },
+    QUESTION: { accent: "#C58AAE" },
+    INSTRUCTION: { accent: "#6F8596" },
+    MEASUREMENT: { accent: "#2D3142" },
+    ANALYSIS: { accent: "#6C5CE7" },
   },
 }));
 
@@ -158,10 +157,10 @@ describe("BaseNode", () => {
       />,
     );
 
-    const wrapper = document.querySelector(".text-card-foreground");
-    expect(wrapper).toHaveClass("!border-jii-dark-green");
-    expect(wrapper).toHaveClass("!bg-jii-dark-green/10");
-    expect(wrapper?.className).toMatch(/border/);
+    const wrapper = screen.getByTestId("node-card");
+    expect(wrapper).toHaveClass("ring-2");
+    expect(wrapper).toHaveClass("ring-jii-dark-green");
+    expect(wrapper).toHaveStyle({ borderColor: "#005e5e" });
   });
 
   it("applies styles when dragging", () => {
@@ -175,9 +174,9 @@ describe("BaseNode", () => {
       />,
     );
 
-    const wrapper = document.querySelector(".text-card-foreground");
-    expect(wrapper).toHaveClass("!border-jii-dark-green");
-    expect(wrapper).toHaveClass("!bg-jii-dark-green/10");
-    expect(wrapper?.className).toMatch(/border/);
+    const wrapper = screen.getByTestId("node-card");
+    expect(wrapper).toHaveClass("ring-2");
+    expect(wrapper).toHaveClass("ring-jii-dark-green");
+    expect(wrapper).toHaveStyle({ borderColor: "#005e5e" });
   });
 });

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { primaryKey, check } from "drizzle-orm/pg-core";
+import { primaryKey, check, index, unique } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -153,6 +153,10 @@ export const experiments = pgTable("experiments", {
   embargoUntil: timestamp("embargo_until")
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
     .notNull(),
+  workbookId: uuid("workbook_id").references(() => workbooks.id, { onDelete: "set null" }),
+  workbookVersionId: uuid("workbook_version_id").references(() => workbookVersions.id, {
+    onDelete: "set null",
+  }),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -207,28 +211,6 @@ export const invitations = pgTable(
       "resource_id_check",
       sql`(${table.resourceType} = 'platform' AND ${table.resourceId} IS NULL) OR (${table.resourceType} != 'platform' AND ${table.resourceId} IS NOT NULL)`,
     ),
-  ],
-);
-
-// Associative table: Experiment Protocols
-export const experimentProtocols = pgTable(
-  "experiment_protocols",
-  {
-    experimentId: uuid("experiment_id")
-      .references(() => experiments.id, { onDelete: "cascade" })
-      .notNull(),
-    protocolId: uuid("protocol_id")
-      .references(() => protocols.id)
-      .notNull(),
-    order: integer("order").default(0).notNull(),
-    addedAt: timestamp("added_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
-      .notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.experimentId, table.protocolId] }),
-    // Add index on experimentId for faster lookups
-    { index: { columns: [table.experimentId] } },
   ],
 );
 
@@ -378,3 +360,44 @@ export const experimentVisualizations = pgTable("experiment_visualizations", {
     .notNull(),
   ...timestamps,
 });
+
+// Workbooks Table - notebook-style composition of protocols, macros, questions, and branching
+export const workbooks = pgTable(
+  "workbooks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    cells: jsonb("cells").notNull().default([]),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [index("workbooks_created_by_idx").on(table.createdBy)],
+);
+
+// Workbook Versions Table - immutable cell snapshots published when a workbook is attached to an experiment
+export const workbookVersions = pgTable(
+  "workbook_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workbookId: uuid("workbook_id")
+      .notNull()
+      .references(() => workbooks.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    cells: jsonb("cells").notNull(),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+  },
+  (table) => [
+    unique("workbook_versions_workbook_version_uniq").on(table.workbookId, table.version),
+    index("workbook_versions_workbook_id_idx").on(table.workbookId),
+  ],
+);

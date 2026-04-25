@@ -1,7 +1,5 @@
 import { faker } from "@faker-js/faker";
 
-import { experimentProtocols } from "@repo/database";
-
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -31,45 +29,6 @@ describe("UpdateProtocolUseCase", () => {
 
   afterAll(async () => {
     await testApp.teardown();
-  });
-
-  it("should return forbidden error if protocol is assigned to an experiment", async () => {
-    // Arrange
-    const protocolData = {
-      name: "Assigned Protocol",
-      description: "Protocol assigned to experiment",
-      code: [{ steps: [{ name: "Step 1", action: "test" }] }],
-      family: "multispeq" as const,
-    };
-    // Create protocol
-    const createResult = await protocolRepository.create(protocolData, testUserId);
-    assertSuccess(createResult);
-    const createdProtocol = createResult.value[0];
-
-    // Create experiment and assign protocol
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      userId: testUserId,
-    });
-    await testApp.database.insert(experimentProtocols).values({
-      protocolId: createdProtocol.id,
-      experimentId: experiment.id,
-    });
-
-    // Try to update
-    const updateData = {
-      name: "Should Not Update",
-    };
-    const result = await useCase.execute(createdProtocol.id, updateData);
-
-    // Assert
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error).toMatchObject({
-      code: "FORBIDDEN",
-      message: "Cannot update protocol assigned to an experiment",
-      statusCode: 403,
-    });
   });
 
   it("should update a protocol with valid data", async () => {

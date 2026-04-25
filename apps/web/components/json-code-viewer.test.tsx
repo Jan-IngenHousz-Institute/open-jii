@@ -4,27 +4,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { JsonCodeViewer } from "./json-code-viewer";
 
-// Mock Monaco Editor (default export)
-vi.mock("@monaco-editor/react", () => ({
-  default: ({
-    value,
-    language,
-    theme,
-    height,
-  }: {
-    value: string;
-    language?: string;
-    theme?: string;
-    height?: string;
-  }) => (
-    <div data-testid="monaco-editor">
-      <div data-testid="editor-language">{language}</div>
-      <div data-testid="editor-theme">{theme}</div>
-      <div data-testid="editor-value">{value}</div>
-      <div data-testid="editor-height">{height}</div>
-    </div>
-  ),
-}));
+// CodeEditor is globally mocked in test/setup.ts (CodeMirror can't run in jsdom)
 
 // Mock clipboard API
 const mockClipboard = {
@@ -67,7 +47,7 @@ describe("JsonCodeViewer", () => {
   it("should render the editor container", () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("code-editor")).toBeInTheDocument();
   });
 
   it("should display JSON language label in header", () => {
@@ -85,36 +65,30 @@ describe("JsonCodeViewer", () => {
   it("should pass json language to editor", () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    expect(screen.getByTestId("editor-language")).toHaveTextContent("json");
-  });
-
-  it("should use vs-light theme", () => {
-    render(<JsonCodeViewer {...defaultProps} />);
-
-    expect(screen.getByTestId("editor-theme")).toHaveTextContent("vs-light");
+    expect(screen.getByTestId("code-editor")).toHaveAttribute("data-language", "json");
   });
 
   it("should convert an object value to formatted JSON string in editor", () => {
     render(<JsonCodeViewer value={sampleObject} />);
 
-    const editorValue = screen.getByTestId("editor-value");
-    expect(editorValue).toHaveTextContent('"name": "test"');
-    expect(editorValue).toHaveTextContent('"value": 42');
+    const textarea = screen.getByTestId("code-editor-textarea");
+    expect((textarea as HTMLTextAreaElement).value).toContain('"name": "test"');
+    expect((textarea as HTMLTextAreaElement).value).toContain('"value": 42');
   });
 
   it("should convert an array value to formatted JSON string in editor", () => {
     render(<JsonCodeViewer value={sampleArray} />);
 
-    const editorValue = screen.getByTestId("editor-value");
-    expect(editorValue).toHaveTextContent('"id": 1');
-    expect(editorValue).toHaveTextContent('"id": 2');
+    const textarea = screen.getByTestId("code-editor-textarea");
+    expect((textarea as HTMLTextAreaElement).value).toContain('"id": 1');
+    expect((textarea as HTMLTextAreaElement).value).toContain('"id": 2');
   });
 
   it("should pass a string value through as-is to the editor", () => {
     render(<JsonCodeViewer value={sampleString} />);
 
-    const editorValue = screen.getByTestId("editor-value");
-    expect(editorValue).toHaveTextContent('{"key": "value"}');
+    const textarea = screen.getByTestId("code-editor-textarea");
+    expect(textarea).toHaveValue('{"key": "value"}');
   });
 
   it("should display code statistics (lines and size)", () => {
@@ -193,15 +167,13 @@ describe("JsonCodeViewer", () => {
   it("should use default height of 400px", () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    const editorHeight = screen.getByTestId("editor-height");
-    expect(editorHeight).toHaveTextContent("calc(400px - 41px)");
+    expect(screen.getByTestId("code-editor")).toHaveAttribute("data-height", "400px");
   });
 
   it("should apply custom height when provided", () => {
     render(<JsonCodeViewer {...defaultProps} height="600px" />);
 
-    const editorHeight = screen.getByTestId("editor-height");
-    expect(editorHeight).toHaveTextContent("calc(600px - 41px)");
+    expect(screen.getByTestId("code-editor")).toHaveAttribute("data-height", "600px");
   });
 
   it("should render pencil overlay when onEditStart is provided", () => {
@@ -277,7 +249,7 @@ describe("JsonCodeViewer", () => {
 
     // Should log the error and not crash
     await vi.waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to copy:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to copy to clipboard:", expect.any(Error));
     });
 
     consoleSpy.mockRestore();

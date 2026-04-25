@@ -48,27 +48,32 @@ export async function NavigationSidebarWrapper({
         })),
       },
     ],
-    navProtocols: [
+    navWorkbooks: [
       {
-        title: tNavigation(mainNavigation.protocols.titleKey),
-        url: mainNavigation.protocols.url(locale),
-        icon: mainNavigation.protocols.icon,
+        title: tNavigation(mainNavigation.workbooks.titleKey),
+        url: mainNavigation.workbooks.url(locale),
+        icon: mainNavigation.workbooks.icon,
         isActive: true,
-        items: mainNavigation.protocols.items.map((item) => ({
+        items: mainNavigation.workbooks.items.map((item) => ({
           title: tNavigation(item.titleKey, { ns: item.namespace }),
           url: item.url(locale),
         })),
       },
     ],
-    navMacros: [
+    navLibrary: [
       {
-        title: tNavigation(mainNavigation.macros.titleKey),
-        url: mainNavigation.macros.url(locale),
-        icon: mainNavigation.macros.icon,
-        isActive: true,
-        items: mainNavigation.macros.items.map((item) => ({
-          title: tNavigation(item.titleKey, { ns: item.namespace }),
-          url: item.url(locale),
+        title: tNavigation(mainNavigation.library.titleKey),
+        url: mainNavigation.library.url(locale),
+        icon: mainNavigation.library.icon,
+        navigable: false,
+        children: mainNavigation.library.children.map((child) => ({
+          title: tNavigation(child.titleKey, { ns: child.namespace }),
+          url: child.url(locale),
+          icon: child.icon,
+          items: child.items?.map((item) => ({
+            title: tNavigation(item.titleKey, { ns: item.namespace }),
+            url: item.url(locale),
+          })),
         })),
       },
     ],
@@ -79,8 +84,8 @@ export async function NavigationSidebarWrapper({
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
     experimentsTitle: tNavigation(mainNavigation.experiments.titleKey),
-    protocolTitle: tNavigation(mainNavigation.protocols.titleKey),
-    macrosTitle: tNavigation(mainNavigation.macros.titleKey),
+    libraryTitle: tNavigation(mainNavigation.library.titleKey),
+    workbooksTitle: tNavigation(mainNavigation.workbooks.titleKey),
   };
 
   return (

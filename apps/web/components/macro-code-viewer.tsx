@@ -1,15 +1,14 @@
 "use client";
 
-import { Editor } from "@monaco-editor/react";
-import type { OnMount } from "@monaco-editor/react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, Copy, Pencil } from "lucide-react";
-import React, { useRef, useState } from "react";
+import React from "react";
 import type { FC } from "react";
+import { CodeEditor } from "~/components/shared/code-editor";
+import type { CodeLanguage } from "~/components/shared/code-editor";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-
-type CodeLanguage = "python" | "r" | "javascript";
 
 interface MacroCodeViewerProps {
   value: string;
@@ -19,19 +18,6 @@ interface MacroCodeViewerProps {
   title?: React.ReactNode;
   onEditStart?: () => void;
 }
-
-const getMonacoLanguage = (language: CodeLanguage): string => {
-  switch (language) {
-    case "python":
-      return "python";
-    case "r":
-      return "r";
-    case "javascript":
-      return "typescript"; // Monaco uses typescript for JavaScript with better features
-    default:
-      return "plaintext";
-  }
-};
 
 const getLanguageLabel = (language: CodeLanguage): string => {
   switch (language) {
@@ -54,18 +40,11 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
   title,
   onEditStart,
 }) => {
-  const [copied, setCopied] = useState(false);
-  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const { copy: copyToClipboard, copied } = useCopyToClipboard();
   const { t } = useTranslation();
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+    await copyToClipboard(value);
   };
 
   const getCodeStats = () => {
@@ -80,23 +59,6 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
   };
 
   const stats = getCodeStats();
-
-  const handleEditorMount: OnMount = (editor, _monaco) => {
-    editorRef.current = editor;
-
-    // Configure editor options
-    editor.updateOptions({
-      minimap: { enabled: stats.lines > 50 },
-      scrollBeyondLastLine: false,
-      fontSize: 14,
-      lineHeight: 20,
-      tabSize: language === "python" ? 4 : 2,
-      readOnly: true,
-      domReadOnly: true,
-      insertSpaces: true,
-      wordWrap: "on",
-    });
-  };
 
   return (
     <div className={`grid w-full gap-1.5 ${className}`}>
@@ -119,7 +81,7 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
             {title && <span className="text-slate-300">|</span>}
             <span className="text-xs font-medium text-slate-600">{getLanguageLabel(language)}</span>
             <div className="text-xs text-slate-500">
-              {stats.lines} {t("common.lines")} • {stats.size}
+              {stats.lines} {t("common.lines")} - {stats.size}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -140,22 +102,15 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
 
         {/* Editor */}
         <div style={{ height }}>
-          <Editor
+          <CodeEditor
             value={value}
-            onMount={handleEditorMount}
-            language={getMonacoLanguage(language)}
-            theme="vs"
-            options={{
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-              readOnly: true,
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineHeight: 20,
-              tabSize: language === "python" ? 4 : 2,
-              insertSpaces: true,
-              wordWrap: "on",
-              padding: { top: 16, bottom: 16 },
+            language={language}
+            height={height}
+            readOnly
+            basicSetup={{
+              highlightActiveLineGutter: false,
+              highlightActiveLine: false,
+              closeBrackets: false,
             }}
           />
         </div>

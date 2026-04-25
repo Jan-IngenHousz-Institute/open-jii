@@ -13,7 +13,6 @@ import { ProtocolRepository } from "../../../../protocols/core/repositories/prot
 import { TestHarness } from "../../../../test/test-harness";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
-import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { ExecuteProjectTransferUseCase } from "./execute-project-transfer";
 
@@ -207,19 +206,6 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-    });
-
-    it("should fail when experiment protocol association fails", async () => {
-      vi.spyOn(ExperimentProtocolRepository.prototype, "addProtocols").mockResolvedValue(
-        failure(AppError.internal("Association failed")),
-      );
-
-      const payload = buildPayload();
-      const result = await useCase.execute(payload);
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to associate protocol");
     });
 
     it("should handle multi_choice questions in flow", async () => {

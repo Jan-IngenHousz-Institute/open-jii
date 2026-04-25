@@ -9,8 +9,8 @@ export const ALL_NODE_TYPES = ["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYS
 export type NodeType = (typeof ALL_NODE_TYPES)[number];
 
 export interface NodeTypeConfig {
-  border: string;
-  bg: string;
+  /** Hex accent color used for left bar, badge tint, and handle color */
+  accent: string;
   icon: React.ReactNode;
   hasInput: boolean;
   hasOutput: boolean;
@@ -18,38 +18,41 @@ export interface NodeTypeConfig {
   defaultTargetPosition?: Position;
 }
 
+/**
+ * Node type visual config aligned with workbook cell accent colors:
+ *   MEASUREMENT ↔ Protocol (#2D3142)
+ *   ANALYSIS    ↔ Macro    (#6C5CE7)
+ *   QUESTION    ↔ Question (#C58AAE)
+ *   INSTRUCTION ↔ Markdown (#6F8596)
+ */
 export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
   INSTRUCTION: {
-    border: "!border-yellow-400",
-    bg: "!bg-yellow-50",
-    icon: React.createElement(BookText, { size: 32, strokeWidth: 2 }),
+    accent: "#6F8596",
+    icon: React.createElement(BookText, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
     defaultSourcePosition: Position.Right,
     defaultTargetPosition: Position.Left,
   },
   QUESTION: {
-    border: "!border-purple-400",
-    bg: "!bg-purple-50",
-    icon: React.createElement(HelpCircle, { size: 32, strokeWidth: 2 }),
+    accent: "#C58AAE",
+    icon: React.createElement(HelpCircle, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
     defaultSourcePosition: Position.Right,
     defaultTargetPosition: Position.Left,
   },
   MEASUREMENT: {
-    border: "!border-green-400",
-    bg: "!bg-green-50",
-    icon: React.createElement(Cpu, { size: 32, strokeWidth: 2 }),
+    accent: "#2D3142",
+    icon: React.createElement(Cpu, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
     defaultSourcePosition: Position.Right,
     defaultTargetPosition: Position.Left,
   },
   ANALYSIS: {
-    border: "!border-red-400",
-    bg: "!bg-red-50",
-    icon: React.createElement(ChartColumn, { size: 32, strokeWidth: 2 }),
+    accent: "#6C5CE7",
+    icon: React.createElement(ChartColumn, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
     defaultSourcePosition: Position.Right,
@@ -61,7 +64,7 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
 export function getStyledEdges(edges: Edge[], selectedEdgeId: string | null): Edge[] {
   return edges.map((edge) =>
     edge.id === selectedEdgeId
-      ? { ...edge, style: { ...(edge.style ?? {}), stroke: "#49e06d", strokeWidth: 2 } }
-      : { ...edge, style: { ...(edge.style ?? {}), stroke: "#005e5e", strokeWidth: 2 } },
+      ? { ...edge, style: { ...(edge.style ?? {}), stroke: "#005e5e", strokeWidth: 2 } }
+      : { ...edge, style: { ...(edge.style ?? {}), stroke: "#CDD5DB", strokeWidth: 1.5 } },
   );
 }

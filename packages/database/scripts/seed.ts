@@ -9,7 +9,6 @@ import {
   protocolMacros,
   experiments,
   experimentMembers,
-  experimentProtocols,
   flows,
 } from "../src/schema";
 
@@ -24,7 +23,7 @@ async function clearSeedData() {
   if (seedExpIds.length > 0) {
     // Delete experimentMembers (no cascade) before experiments
     await db.delete(experimentMembers).where(inArray(experimentMembers.experimentId, seedExpIds));
-    // Experiments cascade-delete: flows, experimentProtocols
+    // Experiments cascade-delete: flows
     await db.delete(experiments).where(inArray(experiments.id, seedExpIds));
   }
 
@@ -350,32 +349,8 @@ async function main() {
 
   console.log(`  Created ${createdExperiments.length} experiments`);
 
-  // 6. Link experiments ↔ protocols
+  // 6. Create flows for 3 experiments
   const ex = createdExperiments;
-  const expProtocolLinks = [
-    // Corn trial → Chlorophyll Fluorescence, Leaf Thickness, PAR
-    { experimentId: ex[0].id, protocolId: p[0].id, order: 0 },
-    { experimentId: ex[0].id, protocolId: p[1].id, order: 1 },
-    { experimentId: ex[0].id, protocolId: p[3].id, order: 2 },
-    // Soybean study → Chlorophyll Fluorescence, ECS
-    { experimentId: ex[1].id, protocolId: p[0].id, order: 0 },
-    { experimentId: ex[1].id, protocolId: p[4].id, order: 1 },
-    // Lighting calibration → Ambient Light & Temp
-    { experimentId: ex[2].id, protocolId: p[7].id, order: 0 },
-    // Winter Wheat → SPAD Index, Leaf Reflectance NDVI, Leaf Thickness
-    { experimentId: ex[3].id, protocolId: p[2].id, order: 0 },
-    { experimentId: ex[3].id, protocolId: p[5].id, order: 1 },
-    { experimentId: ex[3].id, protocolId: p[1].id, order: 2 },
-    // Soil Health → Soil Moisture, Soil EC & pH, Canopy Temperature
-    { experimentId: ex[4].id, protocolId: p[6].id, order: 0 },
-    { experimentId: ex[4].id, protocolId: p[8].id, order: 1 },
-    { experimentId: ex[4].id, protocolId: p[9].id, order: 2 },
-  ];
-
-  await db.insert(experimentProtocols).values(expProtocolLinks);
-  console.log(`  Created ${expProtocolLinks.length} experiment-protocol links`);
-
-  // 7. Create flows for 3 experiments
   const flowGraphs = [
     {
       experimentId: ex[0].id,

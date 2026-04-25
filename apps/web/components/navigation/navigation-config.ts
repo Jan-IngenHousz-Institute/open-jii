@@ -8,6 +8,7 @@ import {
   FileSliders,
   HelpCircle,
   LifeBuoy,
+  Library,
   LogOut,
   RadioReceiver,
   Settings,
@@ -22,6 +23,8 @@ export interface NavLink {
   icon?: string; // Icon name that maps to Lucide icons
   external?: boolean; // Whether the link opens in a new tab
   items?: NavLink[]; // Optional sub-navigation items
+  navigable?: boolean; // Whether the item itself is a link (default true)
+  children?: NavLink[]; // Nested nav groups (non-navigable parent)
 }
 
 export interface NavSection {
@@ -42,6 +45,7 @@ export const iconMap = {
   CirclePlus,
   Archive,
   BookOpen,
+  Library,
   RadioReceiver,
   Webcam,
   LifeBuoy,
@@ -77,43 +81,74 @@ export const mainNavigation = {
       },
     ] as NavLink[],
   },
-  protocols: {
-    titleKey: "sidebar.protocols",
+  workbooks: {
+    titleKey: "sidebar.workbooks",
+    namespace: "navigation",
+    url: (locale: string) => `/${locale}/platform/workbooks`,
+    icon: "BookOpen",
+    items: [
+      {
+        titleKey: "sidebar.newWorkbook",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/workbooks/new`,
+      },
+      {
+        titleKey: "sidebar.overview",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/workbooks`,
+      },
+    ] as NavLink[],
+  },
+  library: {
+    titleKey: "sidebar.library",
     namespace: "navigation",
     url: (locale: string) => `/${locale}/platform/protocols`,
-    icon: "FileSliders",
-    items: [
+    icon: "Library",
+    navigable: false,
+    children: [
       {
-        titleKey: "sidebar.newProtocol",
-        namespace: "navigation",
-        url: (locale: string) => `/${locale}/platform/protocols/new`,
-      },
-      {
-        titleKey: "sidebar.overview",
+        titleKey: "sidebar.protocols",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/protocols`,
+        icon: "FileSliders",
+        items: [
+          {
+            titleKey: "sidebar.newProtocol",
+            namespace: "navigation",
+            url: (locale: string) => `/${locale}/platform/protocols/new`,
+          },
+          {
+            titleKey: "sidebar.overview",
+            namespace: "navigation",
+            url: (locale: string) => `/${locale}/platform/protocols`,
+          },
+        ] as NavLink[],
       },
-    ] as NavLink[],
-  },
-  macros: {
-    titleKey: "sidebar.macros",
-    namespace: "navigation",
-    url: (locale: string) => `/${locale}/platform/macros`,
-    icon: "Code",
-    items: [
       {
-        titleKey: "sidebar.newMacro",
-        namespace: "navigation",
-        url: (locale: string) => `/${locale}/platform/macros/new`,
-      },
-      {
-        titleKey: "sidebar.overview",
+        titleKey: "sidebar.macros",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/macros`,
+        icon: "Code",
+        items: [
+          {
+            titleKey: "sidebar.newMacro",
+            namespace: "navigation",
+            url: (locale: string) => `/${locale}/platform/macros/new`,
+          },
+          {
+            titleKey: "sidebar.overview",
+            namespace: "navigation",
+            url: (locale: string) => `/${locale}/platform/macros`,
+          },
+        ] as NavLink[],
       },
     ] as NavLink[],
+    items: [] as NavLink[],
   },
 };
+
+// Note: Object property order defines sidebar rendering order:
+// dashboard - experiments - workbooks - library
 
 /**
  * User menu items (desktop dropdown, mobile settings section)
