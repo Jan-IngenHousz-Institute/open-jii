@@ -100,11 +100,16 @@ exports.handler = async (event) => {
           if (output) {
             try {
               resolve(JSON.parse(output));
-            } catch {
+            } catch (parseErr) {
+              const code = error?.code ?? "unknown";
+              const signal = error?.signal ?? "none";
+              const stderrHead = (stderr || "").trim().slice(0, 300);
               resolve({
                 status: "error",
                 results: [],
-                errors: ["Wrapper returned invalid JSON"],
+                errors: [
+                  `Wrapper returned invalid JSON (parse: ${parseErr.message}; exit: ${code}; signal: ${signal}; stdoutLen: ${output.length}; stderrHead: ${stderrHead})`,
+                ],
               });
             }
           } else {
