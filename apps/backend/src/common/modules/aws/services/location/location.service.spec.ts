@@ -185,14 +185,17 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown errors", async () => {
-      locationMock.on(SearchPlaceIndexForSuggestionsCommand).rejects("Unknown error");
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).callsFake(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw "boom";
+      });
 
       await expect(
         service.searchPlaces({
           query: "test",
           maxResults: 5,
         }),
-      ).rejects.toThrow("Place search failed: Unknown error");
+      ).rejects.toThrow("Place search failed: boom");
     });
   });
 
@@ -254,14 +257,17 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown geocoding errors", async () => {
-      locationMock.on(SearchPlaceIndexForPositionCommand).rejects("Unknown geocoding error");
+      locationMock.on(SearchPlaceIndexForPositionCommand).callsFake(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw "boom";
+      });
 
       await expect(
         service.geocodeLocation({
           latitude: 40.7128,
           longitude: -74.006,
         }),
-      ).rejects.toThrow("Geocoding failed: Unknown geocoding error");
+      ).rejects.toThrow("Geocoding failed: boom");
     });
 
     it("should handle extreme coordinates", async () => {
@@ -419,14 +425,18 @@ describe("AwsLocationService", () => {
     });
 
     it("should handle unknown errors", async () => {
-      locationMock.on(SearchPlaceIndexForSuggestionsCommand).rejects("Unknown error");
+      // .rejects(string) would wrap into an Error; use callsFake to throw raw.
+      locationMock.on(SearchPlaceIndexForSuggestionsCommand).callsFake(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw "boom";
+      });
 
       await expect(
         service.searchPlaces({
           query: "test",
           maxResults: 5,
         }),
-      ).rejects.toThrow("Place search failed: Unknown error");
+      ).rejects.toThrow("Place search failed: boom");
     });
   });
 });

@@ -334,17 +334,13 @@ describe("CreateExperimentVisualizationUseCase", () => {
         }),
       );
 
-      try {
-        // Act
-        const result = await useCase.execute(experiment.id, mockRequest, testUserId);
+      // Act
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
 
-        // Assert
-        expect(result.isFailure()).toBe(true);
-        assertFailure(result);
-        expect(result.error.message).toContain("You do not have access to this experiment");
-      } finally {
-        // cleanup handled by afterEach
-      }
+      // Assert
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("You do not have access to this experiment");
     });
   });
 });

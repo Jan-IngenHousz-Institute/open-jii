@@ -1,13 +1,16 @@
 import { render } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import RootLayout, { metadata } from "../layout";
 
 describe("RootLayout", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders children", () => {
-    // RootLayout renders <html>/<body>. In jsdom the test container is a
-    // <div>, which triggers a React "cannot be a child of <div>" hydration
-    // warning that's meaningless for this test.
+    // RootLayout renders <html>/<body> inside jsdom's <div>, which logs a
+    // hydration warning. Silence it for this test.
     vi.spyOn(console, "error").mockImplementation(() => {
       // no-op
     });

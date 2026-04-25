@@ -6,6 +6,8 @@ import { TestHarness } from "../../../../../test/test-harness";
 import { AnalyticsConfigService } from "../config/config.service";
 import { FlagsService } from "./flags.service";
 
+// `keyof T` would be tighter but excludes `protected` members, which is the
+// whole point of this helper.
 function spyOnProtected(instance: object, method: string): MockInstance {
   return vi.spyOn(instance as unknown as Record<string, unknown>, method as never);
 }
@@ -37,7 +39,7 @@ describe("FlagsService", () => {
       isFeatureEnabled: vi.fn().mockResolvedValue(true),
       shutdown: vi.fn().mockResolvedValue(undefined),
     });
-    mockShutdownPostHog = spyOnProtected(service, "doShutdownPostHog").mockResolvedValue(undefined);
+    mockShutdownPostHog = spyOnProtected(service, "shutdownPostHogClient").mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -138,7 +140,7 @@ describe("FlagsService", () => {
         getPostHogServerConfig: vi.fn(),
       } as unknown as AnalyticsConfigService;
       const freshService = new FlagsService(mockConfig);
-      const freshShutdownSpy = spyOnProtected(freshService, "doShutdownPostHog");
+      const freshShutdownSpy = spyOnProtected(freshService, "shutdownPostHogClient");
 
       await freshService.onModuleInit();
       await freshService.onModuleDestroy();

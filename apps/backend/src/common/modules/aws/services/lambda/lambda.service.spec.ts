@@ -110,8 +110,11 @@ describe("AwsLambdaService", () => {
       expect(result.error.code).toBe("AWS_OPERATION_FAILED");
     });
 
-    it("should handle non-Error thrown values with 'Unknown error' message", async () => {
-      lambdaMock.on(InvokeCommand).rejects("something unexpected");
+    it("wraps non-Error throws from the SDK into AWS_OPERATION_FAILED", async () => {
+      lambdaMock.on(InvokeCommand).callsFake(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw "something unexpected";
+      });
 
       const result = await service.invoke({
         functionName: "my-function",

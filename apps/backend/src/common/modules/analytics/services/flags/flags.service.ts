@@ -32,7 +32,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /* v8 ignore next 3 */
-  protected doShutdownPostHog() {
+  protected shutdownPostHogClient() {
     return shutdownPostHog();
   }
 
@@ -84,7 +84,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     if (this.initialized) {
-      await this.doShutdownPostHog();
+      await this.shutdownPostHogClient();
       this.logger.log({
         msg: "PostHog shutdown completed",
         operation: "onModuleDestroy",
