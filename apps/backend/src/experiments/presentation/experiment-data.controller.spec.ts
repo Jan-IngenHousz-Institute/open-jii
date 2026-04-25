@@ -255,6 +255,7 @@ describe("ExperimentDataController", () => {
     // Drains the file stream so busboy can finish.
     const drainExecute = (fileData: { stream?: { resume?: () => void } }) => {
       fileData.stream?.resume?.();
+      return Promise.resolve();
     };
 
     // Minimal request for tests where preexecute fails before busboy runs
