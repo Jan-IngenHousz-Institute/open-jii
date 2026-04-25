@@ -44,6 +44,12 @@ describe("ExperimentLocationsDisplay", () => {
     expect(screen.queryByTestId("map-component")).not.toBeInTheDocument();
   });
 
+  it("should not render map component when loading", () => {
+    render(<ExperimentLocationsDisplay locations={[createLocation()]} isLoading={true} />);
+
+    expect(screen.queryByTestId("map-component")).not.toBeInTheDocument();
+  });
+
   it("renders empty state when no locations", () => {
     render(<ExperimentLocationsDisplay locations={[]} isLoading={false} />);
 

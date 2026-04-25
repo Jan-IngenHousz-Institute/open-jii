@@ -15,7 +15,7 @@ export async function AuthHeroSection({ locale }: AuthHeroSectionProps) {
 
   return (
     <div className="hidden h-full w-full flex-col items-start justify-center text-white md:flex">
-      <h2 className="text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
+      <h2 className="text-4xl font-bold sm:text-5xl md:text-6xl">
         {t("auth.heroTitle").split(" ").slice(0, 3).join(" ")} <br />{" "}
         {t("auth.heroTitle").split(" ").slice(3).join(" ")}
       </h2>

@@ -107,7 +107,7 @@ function MetadataCard({
       )}
       style={deleteStatus !== "deleted" ? { maxHeight: 200 } : undefined}
     >
-      <div className="flex-shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
+      <div className="shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
         <TableProperties className="h-4 w-4 text-gray-500 dark:text-gray-400" />
       </div>
 
@@ -144,7 +144,7 @@ function MetadataCard({
         </div>
       </div>
 
-      <div className="flex flex-shrink-0 gap-1">
+      <div className="flex shrink-0 gap-1">
         <Button
           variant="ghost"
           size="icon"

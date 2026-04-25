@@ -123,7 +123,7 @@ export const FileUploadStep: React.FC<FileUploadStepProps> = ({
       {excludedFiles.length > 0 && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
           <div className="flex">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <svg
                 className="h-5 w-5 text-amber-400"
                 viewBox="0 0 20 20"
@@ -141,7 +141,7 @@ export const FileUploadStep: React.FC<FileUploadStepProps> = ({
               <p className="text-sm text-amber-800">
                 <strong>{t("uploadModal.excludedFiles.note")}</strong>{" "}
                 {t("uploadModal.excludedFiles.warningMessage", { count: excludedFiles.length })}{" "}
-                <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">
+                <code className="rounded-sm bg-amber-100 px-1 py-0.5 text-xs">
                   {excludedFiles.join(", ")}
                 </code>
               </p>

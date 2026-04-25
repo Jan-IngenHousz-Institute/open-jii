@@ -129,7 +129,7 @@ export default async function AccountSettingsLayout({
                     {/* underline indicator */}
                     <span
                       className={[
-                        "absolute -bottom-[1px] left-0 h-0.5 w-full rounded",
+                        "absolute -bottom-[1px] left-0 h-0.5 w-full rounded-sm",
                         active ? "bg-jii-dark-green" : "bg-transparent",
                       ].join(" ")}
                       aria-hidden="true"

@@ -195,10 +195,10 @@ export function ExperimentMemberManagement({
       <Card className="animate-pulse">
         <CardHeader>
           <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
-          <div className="bg-muted/40 h-6 w-32 rounded" />
+          <div className="bg-muted/40 h-6 w-32 rounded-sm" />
         </CardHeader>
         <CardContent>
-          <div className="bg-muted/40 h-64 rounded" />
+          <div className="bg-muted/40 h-64 rounded-sm" />
         </CardContent>
       </Card>
     );
@@ -294,17 +294,17 @@ export function ExperimentMemberManagement({
             </h4>
             <div className="max-h-[120px] space-y-3 overflow-y-auto">
               {invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between rounded">
+                <div key={invitation.id} className="flex items-center justify-between rounded-sm">
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="text-foreground text-sm font-medium">{invitation.email}</span>
                     <span className="flex items-center gap-x-1">
-                      <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+                      <Mail className="text-muted-foreground h-3 w-3 shrink-0" />
                       <span className="text-muted-foreground text-sm">
                         {t("experimentSettings.pendingInvite")}
                       </span>
                     </span>
                   </div>
-                  <div className="flex flex-shrink-0 pl-4">
+                  <div className="flex shrink-0 pl-4">
                     <Select
                       value={invitation.role}
                       disabled={isArchived || currentUserRole !== "admin"}

@@ -5,7 +5,7 @@ export const ExperimentStatusBadge = ({ status }: { status: string }) => {
   const { t } = useTranslation("experiments");
 
   const baseClasses =
-    "h-6 gap-2.5 rounded border-0 px-2 py-1 text-[#011111] shadow-none hover:bg-[--bg-color] pointer-events-none";
+    "h-6 gap-2.5 rounded-sm border-0 px-2 py-1 text-[#011111] shadow-none hover:bg-(--bg-color) pointer-events-none";
 
   switch (status) {
     case "active":

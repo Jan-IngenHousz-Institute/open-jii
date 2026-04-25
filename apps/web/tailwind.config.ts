@@ -23,20 +23,20 @@ export default {
         "jii-light-blue": "#afd7f4", // Same as accent
         "jii-light-yellow": "#fff381", // Same as highlight
         // System colors
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
         primary: {
           DEFAULT: "#005e5e", // Dark teal
           light: "#007575",
           dark: "#005151",
-          foreground: "hsl(var(--primary-foreground))",
+          foreground: "var(--primary-foreground)",
         },
         secondary: {
           DEFAULT: "#49e06d", // Bright green
-          foreground: "hsl(var(--secondary-foreground))",
+          foreground: "var(--secondary-foreground)",
         },
         tertiary: {
           DEFAULT: "#76b465", // Medium green
@@ -60,9 +60,9 @@ export default {
           foreground: "#000000",
         },
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          background: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
+          DEFAULT: "var(--sidebar-background)",
+          background: "var(--sidebar-background)",
+          foreground: "var(--sidebar-foreground)",
           "gradient-from": "#002F2F",
           "gradient-to": "#005E5E",
           "search-icon": "#638A8A",
@@ -87,21 +87,21 @@ export default {
           foreground: "#000000",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
           dark: "#011111",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
         },
         checkbox: {
           DEFAULT: "#09B732",

@@ -44,13 +44,13 @@ export function StaticFlowViewer({
           {flow.graph.nodes.map((node, index) => (
             <div key={node.id} className="rounded-lg border p-3">
               <div className="flex items-center gap-2">
-                <span className="bg-muted rounded px-2 py-1 font-mono text-sm">{index + 1}</span>
+                <span className="bg-muted rounded-sm px-2 py-1 font-mono text-sm">{index + 1}</span>
                 <span className="text-sm font-medium">{node.name}</span>
-                <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                <span className="rounded-sm bg-blue-100 px-2 py-1 text-xs text-blue-800">
                   {node.type}
                 </span>
                 {node.isStart && (
-                  <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
+                  <span className="rounded-sm bg-green-100 px-2 py-1 text-xs text-green-800">
                     Start
                   </span>
                 )}

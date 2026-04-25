@@ -16,7 +16,7 @@ const cardVariants = cva(
   {
     variants: {
       featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm",
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs",
         false: "border-gray-200 bg-white",
       },
     },
@@ -71,7 +71,7 @@ function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enable
       {protocols.map((entry) => (
         <span
           key={entry.protocol.id}
-          className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+          className="inline-block truncate rounded-sm bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
         >
           {entry.protocol.name}
         </span>

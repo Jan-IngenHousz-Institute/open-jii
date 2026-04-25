@@ -414,14 +414,14 @@ export const Map = ({
             )}
           >
             {/* Sidebar Header */}
-            <div className="flex flex-shrink-0 items-center justify-between border-b p-3">
+            <div className="flex shrink-0 items-center justify-between border-b p-3">
               <h3 className={cn("text-sm font-semibold", isSidebarCollapsed && "truncate")}>
                 {sidebarTitle}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="ml-2 flex-shrink-0 rounded p-1 transition-colors hover:bg-gray-100"
+                className="ml-2 shrink-0 rounded-sm p-1 transition-colors hover:bg-gray-100"
                 title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {isSidebarCollapsed ? (
@@ -492,7 +492,7 @@ export const Map = ({
               iconCreateFunction={(cluster: any) => {
                 const count = cluster.getChildCount();
                 return L.divIcon({
-                  html: `<div style="background: hsl(var(--primary)); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${count}</div>`,
+                  html: `<div style="background: var(--primary); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${count}</div>`,
                   className: "custom-cluster-icon",
                   iconSize: [40, 40],
                 });
@@ -505,7 +505,7 @@ export const Map = ({
                     key={location.id || index}
                     position={[location.latitude, location.longitude]}
                     icon={createCustomMarker(
-                      isSelected ? "hsl(var(--tertiary))" : "hsl(var(--primary))",
+                    isSelected ? "var(--tertiary)" : "var(--primary)",
                       isSelected,
                     )}
                     draggable={selectionMode && !disabled}
@@ -544,7 +544,7 @@ export const Map = ({
                   key={location.id || index}
                   position={[location.latitude, location.longitude]}
                   icon={createCustomMarker(
-                    isSelected ? "hsl(var(--tertiary))" : "hsl(var(--primary))",
+                    isSelected ? "var(--tertiary)" : "var(--primary)",
                     isSelected,
                   )}
                   draggable={selectionMode && !disabled}

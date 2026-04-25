@@ -1,10 +1,7 @@
-// Tailwind config in plain CJS for Metro/EAS compatibility
-const nativewind = require("nativewind/preset");
-const baseConfig = require("@repo/tailwind-config/native");
+// Tailwind v4 uses CSS-based configuration (see global.css).
+// This file is kept for tooling compatibility only.
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{ts,tsx}"],
-  presets: [baseConfig, nativewind],
+  content: ["./src/**/*.{ts,tsx}", "./index.tsx"],
 };
-

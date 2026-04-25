@@ -339,12 +339,12 @@ describe("ColorDimensionConfiguration", () => {
     });
 
     it("should display gradient preview bar", () => {
-      renderColorDimension({
+      const { container } = renderColorDimension({
         colorAxisDataSources: [{ field: { columnName: "temperature", role: "color" }, index: 0 }],
       });
 
       // The preview div has a gradient background - check it exists
-      const previewDiv = document.querySelector(".h-6.w-full.rounded.border");
+      const previewDiv = container.querySelector(".h-6.w-full.rounded-sm.border");
       expect(previewDiv).toBeInTheDocument();
     });
   });

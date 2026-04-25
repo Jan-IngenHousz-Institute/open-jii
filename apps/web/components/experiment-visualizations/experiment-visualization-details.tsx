@@ -192,7 +192,7 @@ export default function ExperimentVisualizationDetails({
                       className="flex cursor-default items-center justify-between hover:bg-transparent focus:bg-transparent"
                     >
                       <code className="break-all font-mono text-sm">{ds.columnName}</code>
-                      <Badge variant="outline" className="ml-2 flex-shrink-0 text-xs">
+                      <Badge variant="outline" className="ml-2 shrink-0 text-xs">
                         {ds.role}
                       </Badge>
                     </DropdownMenuItem>

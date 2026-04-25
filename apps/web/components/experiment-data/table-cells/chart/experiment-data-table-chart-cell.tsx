@@ -82,7 +82,7 @@ export function ExperimentDataTableChartCell({
 
   return (
     <div
-      className="hover:bg-muted/30 relative flex h-8 w-20 cursor-pointer items-center justify-center rounded p-1 transition-colors"
+      className="hover:bg-muted/30 relative flex h-8 w-20 cursor-pointer items-center justify-center rounded-sm p-1 transition-colors"
       onClick={handleClick}
     >
       <svg width="80" height="24" viewBox="0 0 80 24" className="overflow-visible">

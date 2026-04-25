@@ -2616,7 +2616,7 @@ export type ImageTransformOptions = {
   backgroundColor?: InputMaybe<Scalars["HexColor"]["input"]>;
   /**
    * Desired corner radius in pixels.
-   *         Results in an image with rounded corners (pass `-1` for a full circle/ellipse).
+   *         Results in an image with rounded-sm corners (pass `-1` for a full circle/ellipse).
    *         Defaults to `0`. Uses desired background color as padding color,
    *         unless the format is `JPG` or `JPG_PROGRESSIVE` and resize strategy is `PAD`, then defaults to white.
    */

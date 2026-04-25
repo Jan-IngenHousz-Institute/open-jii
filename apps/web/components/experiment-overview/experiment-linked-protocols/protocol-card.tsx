@@ -33,7 +33,7 @@ export function ProtocolCard({
   }, [protocol?.description]);
 
   if (isLoading) {
-    return <div className="h-[140px] animate-pulse rounded bg-gray-200" />;
+    return <div className="h-[140px] animate-pulse rounded-sm bg-gray-200" />;
   }
 
   if (error || !protocol) {

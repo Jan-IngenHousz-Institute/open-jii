@@ -65,6 +65,15 @@ jobs:
                   web-base-origin: ${{ vars.WEB_BASE_ORIGIN }}
                   posthog-key: ${{ secrets.POSTHOG_KEY }}
 
+    mobile:
+        name: Expo Prebuild Check (Mobile)
+        runs-on: ubuntu-latest
+        if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'mobile')
+        steps:
+            - uses: actions/checkout@v6
+            - uses: ./.github/actions/setup-nodejs-pnpm
+            - run: pnpm --filter mobile prebuild:check
+
     dependency-scan:
         name: Scan Dependencies & Licenses
         runs-on: ubuntu-latest

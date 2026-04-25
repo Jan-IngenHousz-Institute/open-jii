@@ -101,7 +101,7 @@ export const MacroCodeViewer: FC<MacroCodeViewerProps> = ({
   return (
     <div className={`grid w-full gap-1.5 ${className}`}>
       <div
-        className={`group/viewer relative overflow-hidden rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md ${onEditStart ? "cursor-pointer" : ""}`}
+        className={`group/viewer shadow-xs relative overflow-hidden rounded-md border border-slate-200 transition-shadow duration-200 hover:shadow-md ${onEditStart ? "cursor-pointer" : ""}`}
         onClick={onEditStart}
       >
         {/* Hover edit overlay */}

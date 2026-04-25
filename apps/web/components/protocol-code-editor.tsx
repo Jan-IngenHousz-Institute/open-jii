@@ -242,7 +242,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
           "overflow-hidden",
           borderless
             ? "flex h-full flex-col"
-            : "rounded-md border border-slate-200 shadow-sm transition-shadow duration-200 hover:shadow-md",
+            : "shadow-xs rounded-md border border-slate-200 transition-shadow duration-200 hover:shadow-md",
           error && !borderless && "border-destructive",
         )}
       >

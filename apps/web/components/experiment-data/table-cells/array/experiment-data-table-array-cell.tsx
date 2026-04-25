@@ -123,7 +123,7 @@ export function ArrayExpandedContent({ data }: ArrayExpandedContentProps) {
         {items.map((item, index) => (
           <div
             key={index}
-            className="rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
+            className="rounded-sm border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
           >
             <div className="space-y-1">
               {Object.entries(item).map(([key, value]) => (

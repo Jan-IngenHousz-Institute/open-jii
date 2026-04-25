@@ -63,7 +63,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
       >
         <Button
           variant="secondary"
-          className="group px-5 py-6 font-semibold shadow transition-all duration-300 ease-out hover:scale-[1.03] hover:bg-white"
+          className="group px-5 py-6 font-semibold shadow-sm transition-all duration-300 ease-out hover:scale-[1.03] hover:bg-white"
           {...buttonInspectorProps({ fieldId: "label" })}
         >
           <div className="flex items-center space-x-2">
@@ -109,7 +109,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
           {/* Badge */}
           {currentHero.badge && (
             <div
-              className="mb-6 inline-flex items-center rounded-full bg-white/10 px-4 py-1.5 text-sm text-white ring-1 ring-white/20 backdrop-blur-sm"
+              className="backdrop-blur-xs mb-6 inline-flex items-center rounded-full bg-white/10 px-4 py-1.5 text-sm text-white ring-1 ring-white/20"
               {...inspectorProps({ fieldId: "badge" })}
             >
               {currentHero.badge}
