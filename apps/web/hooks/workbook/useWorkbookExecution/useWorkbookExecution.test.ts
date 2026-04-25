@@ -11,8 +11,8 @@ import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { contract } from "@repo/api/contract";
+import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { useWorkbookExecution } from "./useWorkbookExecution";
 
