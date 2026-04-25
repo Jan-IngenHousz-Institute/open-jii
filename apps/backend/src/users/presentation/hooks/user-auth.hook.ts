@@ -62,6 +62,7 @@ export class UserAuthHook {
     await this.acceptInvitationsForNewUser(ctx);
   }
 
+  /* v8 ignore next 3 */
   protected async getSessionFromCtx(ctx: AuthHookContext) {
     return getSessionFromCtx(ctx);
   }

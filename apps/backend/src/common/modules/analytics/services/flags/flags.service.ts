@@ -21,14 +21,17 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly configService: AnalyticsConfigService) {}
 
+  /* v8 ignore next 3 */
   protected initializePostHog(...args: Parameters<typeof initializePostHogServer>) {
     return initializePostHogServer(...args);
   }
 
+  /* v8 ignore next 3 */
   protected getPostHogClient(): ReturnType<typeof getPostHogServerClient> {
     return getPostHogServerClient();
   }
 
+  /* v8 ignore next 3 */
   protected doShutdownPostHog() {
     return shutdownPostHog();
   }
