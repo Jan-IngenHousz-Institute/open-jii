@@ -486,26 +486,22 @@ def experiment_raw_data():
         def sanitize_label(label):
             if not label:
                 return "question_empty"
-            
-            # Convert to lowercase
-            sanitized = label.lower()
-            
-            # Replace invalid characters with underscores
-            invalid_chars = ' ,;{}()\n\t=.'
-            for char in invalid_chars:
-                sanitized = sanitized.replace(char, '_')
-            
-            # Remove leading/trailing underscores
-            sanitized = sanitized.strip('_')
-            
-            # Collapse multiple underscores to single
+
+            # Allowlist: lowercase ASCII letters, digits, underscore.
+            # Anything else collapses to a single underscore so the result is
+            # safe as a Spark identifier and as a JSON/VARIANT key, regardless
+            # of where it gets rendered downstream (SQL, CSV, Excel, UI).
+            sanitized = ''.join(
+                c if (c == '_' or (c.isascii() and c.isalnum())) else '_'
+                for c in label.lower()
+            )
             while '__' in sanitized:
                 sanitized = sanitized.replace('__', '_')
-            
-            # Ensure it's not empty and doesn't start with a number
+            sanitized = sanitized.strip('_')
+
             if not sanitized or sanitized[0].isdigit():
                 sanitized = f"question_{sanitized}"
-            
+
             return sanitized
         
         def sanitize_questions_array(questions_array):
