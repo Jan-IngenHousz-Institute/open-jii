@@ -20,7 +20,7 @@ vi.mock("react-native-reanimated", () => {
   const Animated = {
     View: React.forwardRef<unknown, { children?: React.ReactNode; style?: unknown }>(
       ({ children, style: _style, ...rest }, ref) =>
-        React.createElement(View, { ...rest, ref }, children),
+        React.createElement(View, { ...rest, ref } as any, children),
     ),
   };
   return {
@@ -28,7 +28,7 @@ vi.mock("react-native-reanimated", () => {
     default: Animated,
     useAnimatedKeyboard: () => ({ height: { value: 0 } }),
     useAnimatedStyle: (fn: () => unknown) => fn(),
-    useSharedValue: <T,>(initial: T) => ({ value: initial }),
+    useSharedValue: <T>(initial: T) => ({ value: initial }),
   };
 });
 

@@ -4,50 +4,53 @@
  * maintainer with no active support channel, so we keep the code in-tree.
  *
  * Two things live in this single file:
- *   1. Side-effects (on import): pirates require-hooks + jest-style mocks
+ *   1. Side-effects (on import): Node require-hooks + jest-style mocks
  *      for react-native core modules, so RN imports resolve in Node.
  *   2. `reactNative()` — a vite plugin that strips Flow from RN packages,
  *      sets the right resolve conditions, and self-registers this file as
  *      a `setupFiles` entry so the side-effects run in every worker.
  */
-import { addHook } from "pirates";
-import removeTypes from "flow-remove-types";
+import _react from "@vitejs/plugin-react";
 import * as esbuild from "esbuild";
+import removeTypes from "flow-remove-types";
 import fs from "fs";
-import os from "os";
 import { existsSync } from "fs";
+import Module from "module";
 import { createRequire } from "module";
+import os from "os";
 import path, { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+
 var createTurboModuleProxy = () => {
-  return (name) => {
+  return (name: string) => {
     if (name === "NativeReactNativeFeatureFlagsCxx") {
       return new Proxy(
         {},
         {
-          get: (_target, prop) => typeof prop === "string" ? () => false : void 0
-        }
+          get: (_target, prop) => (typeof prop === "string" ? () => false : void 0),
+        },
       );
     }
     return null;
   };
 };
 var turboModuleProxy = createTurboModuleProxy();
-var g = globalThis;
+var g = globalThis as any;
 g.__turboModuleProxy = turboModuleProxy;
 g.nativeModuleProxy = new Proxy(
   {},
   {
-    get: (_target, name) => turboModuleProxy(name)
-  }
+    get: (_target: any, name: string) => turboModuleProxy(name),
+  },
 );
 g.__DEV__ = true;
 g.IS_REACT_ACT_ENVIRONMENT = true;
 g.IS_REACT_NATIVE_TEST_ENVIRONMENT = true;
 g.nativeFabricUIManager = {};
 g.window = globalThis;
-g.cancelAnimationFrame = (id) => clearTimeout(id);
-g.requestAnimationFrame = (callback) => setTimeout(() => callback(Date.now()), 0);
+g.cancelAnimationFrame = (id: any) => clearTimeout(id);
+g.requestAnimationFrame = (callback: (t: number) => void) =>
+  setTimeout(() => callback(Date.now()), 0);
 g.performance = globalThis.performance || { now: Date.now };
 var require2 = createRequire(import.meta.url);
 var reactNativeVersion = "0.83.0";
@@ -55,13 +58,11 @@ var pluginVersion = "0.2.0";
 try {
   const reactNativePkg = require2("react-native/package.json");
   reactNativeVersion = reactNativePkg.version;
-} catch {
-}
+} catch {}
 try {
   const pluginPkg = require2("./package.json");
   pluginVersion = pluginPkg.version;
-} catch {
-}
+} catch {}
 var tmpDir = os.tmpdir();
 var cacheDirBase = path.join(tmpDir, "vrn");
 var version = `${reactNativeVersion}_${pluginVersion}`;
@@ -75,39 +76,36 @@ try {
     if (folder !== version) {
       try {
         fs.rmSync(path.join(cacheDirBase, folder), { recursive: true });
-      } catch {
-      }
+      } catch {}
     }
   });
-} catch {
-}
+} catch {}
 var root = process.cwd();
-var mocked = [];
-var getMocked = (filePath) => mocked.find((entry) => filePath.includes(entry.path));
-var transformCode = (code) => {
+var mocked: Array<{ path: string; code: string }> = [];
+var getMocked = (filePath: string) => mocked.find((entry) => filePath.includes(entry.path));
+var transformCode = (code: string) => {
   const result = removeTypes(code, { all: true }).toString();
   return esbuild.transformSync(result, {
     loader: "jsx",
     format: "cjs",
-    platform: "node"
+    platform: "node",
   }).code;
 };
-var normalize = (p) => p.replace(/\\/g, "/");
-var cacheExists = (cachePath) => fs.existsSync(cachePath);
-var readFromCache = (cachePath) => fs.readFileSync(cachePath, "utf-8");
-var writeToCache = (cachePath, code) => fs.writeFileSync(cachePath, code);
-addHook(
-  (code) => {
-    const b64 = Buffer.from(code).toString("base64");
-    return `module.exports = Buffer.from("${b64}", "base64")`;
-  },
-  {
-    exts: [".png", ".jpg", ".jpeg", ".gif", ".webp"],
-    ignoreNodeModules: false
-  }
-);
+var normalize = (p: string) => p.replace(/\\/g, "/");
+var cacheExists = (cachePath: string) => fs.existsSync(cachePath);
+var readFromCache = (cachePath: string) => fs.readFileSync(cachePath, "utf-8");
+var writeToCache = (cachePath: string, code: string) => fs.writeFileSync(cachePath, code);
+// Hook: convert image requires into base64 Buffers so they don't crash Node.
+var imageExts = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
+for (var ext of imageExts) {
+  (Module as any)._extensions[ext] = function (_mod: any, filename: string) {
+    var content = fs.readFileSync(filename);
+    var b64 = content.toString("base64");
+    _mod._compile(`module.exports = Buffer.from("${b64}", "base64")`, filename);
+  };
+}
 require2.extensions[".ios.js"] = require2.extensions[".js"];
-var processReactNative = (code, filename) => {
+var processReactNative = (code: string, filename: string) => {
   const cacheName = normalize(path.relative(root, filename)).replace(/\//g, "_");
   const cachePath = path.join(cacheDir, cacheName);
   if (cacheExists(cachePath)) {
@@ -115,10 +113,12 @@ var processReactNative = (code, filename) => {
   }
   const mock2 = getMocked(filename);
   if (mock2) {
-    const original = mock2.code.includes("__vitest__original__") ? `const __vitest__original__ = ((module, exports) => {
+    const original = mock2.code.includes("__vitest__original__")
+      ? `const __vitest__original__ = ((module, exports) => {
       ${transformCode(code)}
       return module.exports
-    })(module, exports);` : "";
+    })(module, exports);`
+      : "";
     const mockCode = `${original}
 ${mock2.code}`;
     writeToCache(cachePath, mockCode);
@@ -128,22 +128,40 @@ ${mock2.code}`;
   writeToCache(cachePath, transformed);
   return transformed;
 };
-addHook((code, filename) => processReactNative(code, filename), {
-  exts: [".js", ".ios.js"],
-  ignoreNodeModules: false,
-  matcher: (id) => {
-    const p = normalize(id);
-    return (p.includes("/node_modules/react-native/") || p.includes("/node_modules/@react-native/") || p.includes("/node_modules/@react-native-community/")) && !p.includes("Renderer/implementations");
-  }
-});
+// Hook: intercept require() for react-native / @react-native packages,
+// strip Flow types, apply mock overrides, and transpile JSX → CJS.
+var rnMatcher = (id: string): boolean => {
+  var p = normalize(id);
+  return (
+    (p.includes("/node_modules/react-native/") ||
+      p.includes("/node_modules/@react-native/") ||
+      p.includes("/node_modules/@react-native-community/")) &&
+    !p.includes("Renderer/implementations")
+  );
+};
+var rnExts = [".js", ".ios.js"];
+for (var rnExt of rnExts) {
+  var originalHandler = (Module as any)._extensions[rnExt] || (Module as any)._extensions[".js"];
+  // Use an IIFE to capture `originalHandler` per-iteration (avoid closure over var).
+  (function (orig: any) {
+    (Module as any)._extensions[rnExt] = function (mod: any, filename: string) {
+      if (!rnMatcher(filename)) {
+        return orig(mod, filename);
+      }
+      var code = fs.readFileSync(filename, "utf8");
+      var transformed = processReactNative(code, filename);
+      mod._compile(transformed, filename);
+    };
+  })(originalHandler);
+}
 // (upstream also tried to load @react-native/polyfills and regenerator-runtime
 // here — both wrapped in try/catch. Dropped to keep the dep surface minimal;
 // our tests don't depend on either.)
-var mock = (modulePath, mockCode) => {
-  const code = typeof mockCode === "function" ? mockCode() : mockCode;
+var mock = (modulePath: string, mockCode: string | (() => string)) => {
+  var code = typeof mockCode === "function" ? mockCode() : mockCode;
   mocked.push({ path: modulePath, code: `module.exports = ${code}` });
 };
-var createAccessibleTouchableMock = (displayName) => `(() => {
+var createAccessibleTouchableMock = (displayName: string) => `(() => {
   const React = require('react');
   const ${displayName} = React.forwardRef((props, ref) => {
     const { disabled, accessibilityState, ...rest } = props;
@@ -173,7 +191,7 @@ mock(
     dismissRedbox: vi.fn(),
     reportException: vi.fn(),
   }
-}`
+}`,
 );
 mock(
   "react-native/Libraries/TurboModule/TurboModuleRegistry",
@@ -193,7 +211,7 @@ mock(
       },
     });
   },
-}`
+}`,
 );
 mock(
   "react-native/src/private/featureflags/ReactNativeFeatureFlags",
@@ -206,7 +224,7 @@ mock(
       return undefined;
     },
   });
-})()`
+})()`,
 );
 mock(
   "react-native/src/private/featureflags/ReactNativeFeatureFlagsBase",
@@ -214,14 +232,14 @@ mock(
   createJavaScriptFlagGetter: (configGetter, flagName, defaultValue) => () => defaultValue,
   createNativeFlagGetter: (flagName, defaultValue) => () => defaultValue,
   setOverrides: () => {},
-}`
+}`,
 );
 mock(
   "react-native/src/private/featureflags/specs/NativeReactNativeFeatureFlags",
   () => `{
   __esModule: true,
   default: global.__turboModuleProxy ? global.__turboModuleProxy('NativeReactNativeFeatureFlagsCxx') : {},
-}`
+}`,
 );
 mock(
   "react-native/Libraries/StyleSheet/StyleSheet",
@@ -242,7 +260,7 @@ mock(
     setStyleAttributePreprocessor: () => {},
   };
   return { __esModule: true, default: StyleSheet, ...StyleSheet };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Utilities/Platform",
@@ -264,7 +282,7 @@ mock(
     },
   };
   return { __esModule: true, default: Platform, ...Platform };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/ReactNative/UIManager",
@@ -296,7 +314,7 @@ mock(
     ScrollView: { Constants: {} },
     View: { Constants: {} },
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/BatchedBridge/NativeModules",
@@ -400,7 +418,7 @@ mock(
       getConstants: () => ({ isRTL: false, doLeftAndRightSwapInRTL: true, localeIdentifier: 'en_US' }),
     },
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/NativeComponent/NativeComponentRegistry",
@@ -414,7 +432,7 @@ mock(
     return requireNativeComponent(name);
   },
   setRuntimeConfigProvider: () => {},
-}`
+}`,
 );
 mock(
   "react-native/Libraries/ReactNative/requireNativeComponent",
@@ -439,7 +457,7 @@ mock(
     return Component;
   };
   return { __esModule: true, default: requireNativeComponent };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/View/View",
@@ -452,7 +470,7 @@ mock(
   });
   View.displayName = 'View';
   return { __esModule: true, default: View };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/View/ViewNativeComponent",
@@ -465,7 +483,7 @@ mock(
   });
   ViewNativeComponent.displayName = 'View';
   return { __esModule: true, default: ViewNativeComponent };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Text/Text",
@@ -476,7 +494,7 @@ mock(
   });
   Text.displayName = 'Text';
   return { __esModule: true, default: Text };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/TextInput/TextInput",
@@ -493,7 +511,7 @@ mock(
     blurTextInput: vi.fn(),
   };
   return { __esModule: true, default: TextInput };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Image/Image",
@@ -510,7 +528,7 @@ mock(
   Image.queryCache = vi.fn(() => Promise.resolve({}));
   Image.resolveAssetSource = vi.fn((source) => source);
   return { __esModule: true, default: Image };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Modal/Modal",
@@ -526,21 +544,21 @@ mock(
   }
   Modal.displayName = 'Modal';
   return { __esModule: true, default: Modal };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Modal/NativeModalManager",
   () => `{
   __esModule: true,
   default: null,
-}`
+}`,
 );
 mock(
   "react-native/src/private/specs_DEPRECATED/modules/NativeModalManager",
   () => `{
   __esModule: true,
   default: null,
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/ScrollView/ScrollView",
@@ -564,7 +582,7 @@ mock(
   }
   ScrollView.displayName = 'ScrollView';
   return { __esModule: true, default: ScrollView };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/ActivityIndicator/ActivityIndicator",
@@ -575,7 +593,7 @@ mock(
   });
   ActivityIndicator.displayName = 'ActivityIndicator';
   return { __esModule: true, default: ActivityIndicator };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/Pressable/Pressable",
@@ -603,15 +621,13 @@ mock(
   });
   Pressable.displayName = 'Pressable';
   return { __esModule: true, default: Pressable };
-})()`
+})()`,
 );
-mock(
-  "react-native/Libraries/Components/Touchable/TouchableOpacity",
-  () => createAccessibleTouchableMock("TouchableOpacity")
+mock("react-native/Libraries/Components/Touchable/TouchableOpacity", () =>
+  createAccessibleTouchableMock("TouchableOpacity"),
 );
-mock(
-  "react-native/Libraries/Components/Touchable/TouchableHighlight",
-  () => createAccessibleTouchableMock("TouchableHighlight")
+mock("react-native/Libraries/Components/Touchable/TouchableHighlight", () =>
+  createAccessibleTouchableMock("TouchableHighlight"),
 );
 mock(
   "react-native/Libraries/Components/SafeAreaView/SafeAreaView",
@@ -622,7 +638,7 @@ mock(
   });
   SafeAreaView.displayName = 'SafeAreaView';
   return { __esModule: true, default: SafeAreaView };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/StatusBar/StatusBar",
@@ -641,7 +657,7 @@ mock(
     render() { return null; }
   }
   return { __esModule: true, default: StatusBar };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/Switch/Switch",
@@ -661,7 +677,7 @@ mock(
   });
   Switch.displayName = 'Switch';
   return { __esModule: true, default: Switch };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Lists/FlatList",
@@ -709,7 +725,7 @@ mock(
   }
   FlatList.displayName = 'FlatList';
   return { __esModule: true, default: FlatList };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Lists/SectionList",
@@ -766,7 +782,7 @@ mock(
   }
   SectionList.displayName = 'SectionList';
   return { __esModule: true, default: SectionList };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Utilities/Dimensions",
@@ -782,7 +798,7 @@ mock(
     set: vi.fn(),
     addEventListener: vi.fn(() => ({ remove: vi.fn() })),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Utilities/PixelRatio",
@@ -794,7 +810,7 @@ mock(
     getPixelSizeForLayoutSize: (size) => size * 2,
     roundToNearestPixel: (size) => Math.round(size * 2) / 2,
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/AppState/AppState",
@@ -805,7 +821,7 @@ mock(
     currentState: 'active',
     isAvailable: true,
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Linking/Linking",
@@ -819,7 +835,7 @@ mock(
     getInitialURL: vi.fn(() => Promise.resolve(null)),
     sendIntent: vi.fn(() => Promise.resolve()),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo",
@@ -841,7 +857,7 @@ mock(
     sendAccessibilityEvent: vi.fn(),
     getRecommendedTimeoutMillis: vi.fn(() => Promise.resolve(0)),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/Clipboard/Clipboard",
@@ -852,7 +868,7 @@ mock(
     setString: vi.fn(),
     hasString: vi.fn(() => Promise.resolve(false)),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/RefreshControl/RefreshControl",
@@ -863,7 +879,7 @@ mock(
   });
   RefreshControl.displayName = 'RefreshControl';
   return { __esModule: true, default: RefreshControl };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Vibration/Vibration",
@@ -873,7 +889,7 @@ mock(
     vibrate: vi.fn(),
     cancel: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Alert/Alert",
@@ -883,7 +899,7 @@ mock(
     alert: vi.fn(),
     prompt: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Share/Share",
@@ -892,7 +908,7 @@ mock(
   default: {
     share: vi.fn(() => Promise.resolve({ action: 'sharedAction' })),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/Keyboard/Keyboard",
@@ -907,7 +923,7 @@ mock(
     isVisible: vi.fn(() => false),
     metrics: vi.fn(() => null),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/LayoutAnimation/LayoutAnimation",
@@ -925,7 +941,7 @@ mock(
       spring: { duration: 700, type: 'spring', springDamping: 0.4 },
     },
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Interaction/InteractionManager",
@@ -944,7 +960,7 @@ mock(
     clearInteractionHandle: vi.fn(),
     setDeadline: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Interaction/PanResponder",
@@ -965,7 +981,7 @@ mock(
       },
     })),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/EventEmitter/NativeEventEmitter",
@@ -979,7 +995,7 @@ mock(
     emit(eventType, ...args) {}
   }
   return { __esModule: true, default: NativeEventEmitter };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Animated/Animated",
@@ -1076,7 +1092,7 @@ mock(
     diffClamp: vi.fn(),
     createAnimatedComponent: vi.fn((Component) => Component),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/Button",
@@ -1099,7 +1115,7 @@ mock(
     );
   }
   return { __esModule: true, default: Button };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Image/ImageBackground",
@@ -1110,7 +1126,7 @@ mock(
   });
   ImageBackground.displayName = 'ImageBackground';
   return { __esModule: true, default: ImageBackground };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Components/Keyboard/KeyboardAvoidingView",
@@ -1121,15 +1137,14 @@ mock(
   });
   KeyboardAvoidingView.displayName = 'KeyboardAvoidingView';
   return { __esModule: true, default: KeyboardAvoidingView };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Utilities/verifyComponentAttributeEquivalence",
-  () => `{ __esModule: true, default: () => {} }`
+  () => `{ __esModule: true, default: () => {} }`,
 );
-mock(
-  "react-native/Libraries/Components/Touchable/TouchableWithoutFeedback",
-  () => createAccessibleTouchableMock("TouchableWithoutFeedback")
+mock("react-native/Libraries/Components/Touchable/TouchableWithoutFeedback", () =>
+  createAccessibleTouchableMock("TouchableWithoutFeedback"),
 );
 mock(
   "react-native/Libraries/Lists/VirtualizedList",
@@ -1179,7 +1194,7 @@ mock(
   }
   VirtualizedList.displayName = 'VirtualizedList';
   return { __esModule: true, default: VirtualizedList };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Utilities/BackHandler",
@@ -1192,7 +1207,7 @@ mock(
     })),
     removeEventListener: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/DrawerAndroid/DrawerLayoutAndroid",
@@ -1210,7 +1225,7 @@ mock(
   DrawerLayoutAndroid.displayName = 'DrawerLayoutAndroid';
   DrawerLayoutAndroid.positions = { Left: 'left', Right: 'right' };
   return { __esModule: true, default: DrawerLayoutAndroid };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/PermissionsAndroid/PermissionsAndroid",
@@ -1260,7 +1275,7 @@ mock(
     request: vi.fn(() => Promise.resolve('granted')),
     requestMultiple: vi.fn(() => Promise.resolve({})),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/ToastAndroid/ToastAndroid",
@@ -1276,7 +1291,7 @@ mock(
     showWithGravity: vi.fn(),
     showWithGravityAndOffset: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/Touchable/TouchableNativeFeedback",
@@ -1302,7 +1317,7 @@ mock(
   TouchableNativeFeedback.Ripple = vi.fn((color, borderless) => ({}));
   TouchableNativeFeedback.canUseNativeForeground = vi.fn(() => false);
   return { __esModule: true, default: TouchableNativeFeedback };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/ActionSheetIOS/ActionSheetIOS",
@@ -1312,7 +1327,7 @@ mock(
     showActionSheetWithOptions: vi.fn(),
     showShareActionSheetWithOptions: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Components/TextInput/InputAccessoryView",
@@ -1323,7 +1338,7 @@ mock(
   };
   InputAccessoryView.displayName = 'InputAccessoryView';
   return { __esModule: true, default: InputAccessoryView };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Utilities/Appearance",
@@ -1332,7 +1347,7 @@ mock(
   getColorScheme: vi.fn(() => 'light'),
   setColorScheme: vi.fn(),
   addChangeListener: vi.fn(() => ({ remove: vi.fn() })),
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Utilities/NativeAppearance",
@@ -1344,21 +1359,21 @@ mock(
     addListener: vi.fn(),
     removeListeners: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Utilities/useColorScheme",
   () => `{
   __esModule: true,
   default: vi.fn(() => 'light'),
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Utilities/useWindowDimensions",
   () => `{
   __esModule: true,
   default: vi.fn(() => ({ width: 750, height: 1334, scale: 2, fontScale: 2 })),
-}`
+}`,
 );
 mock(
   "react-native/Libraries/Performance/Systrace",
@@ -1373,7 +1388,7 @@ mock(
     endAsyncEvent: vi.fn(),
     counterEvent: vi.fn(),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/EventEmitter/RCTDeviceEventEmitter",
@@ -1406,7 +1421,7 @@ mock(
     }
   }
   return { __esModule: true, default: new DeviceEventEmitter() };
-})()`
+})()`,
 );
 mock(
   "react-native/Libraries/Settings/Settings",
@@ -1418,14 +1433,14 @@ mock(
     watchKeys: vi.fn((keys, callback) => 0),
     clearWatch: vi.fn((watchId) => {}),
   },
-}`
+}`,
 );
 mock(
   "react-native/Libraries/StyleSheet/processTransform",
   () => `{
   __esModule: true,
   default: (transform) => transform,
-}`
+}`,
 );
 mock(
   "react-native/Libraries/PushNotificationIOS/PushNotificationIOS",
@@ -1453,18 +1468,16 @@ mock(
       ResultFailed: 'UIBackgroundFetchResultFailed',
     },
   },
-}`
+}`,
 );
 try {
   const files = fs.readdirSync(cacheDir);
   files.forEach((file) => {
     try {
       fs.unlinkSync(path.join(cacheDir, file));
-    } catch {
-    }
+    } catch {}
   });
-} catch {
-}
+} catch {}
 try {
   const { configure } = require2("@testing-library/react-native");
   configure({
@@ -1475,11 +1488,10 @@ try {
       switch: "Switch",
       scrollView: "ScrollView",
       modal: "Modal",
-      image: "Image"
-    }
+      image: "Image",
+    },
   });
-} catch {
-}
+} catch {}
 
 // Consumer apps supply their own vitest.setup.ts with `vi.mock(...)` calls
 // for whatever native-wrapper packages they actually import (expo-linear-
@@ -1497,14 +1509,21 @@ const __selfFile = fileURLToPath(import.meta.url);
 
 /**
  * Absolute path to this file, intended to be passed as a `setupFiles` entry
- * so the pirates hooks + RN mocks above register in each test worker.
+ * so the require hooks + RN mocks above register in each test worker.
  */
 export const rnSetupFile = __selfFile;
 
 // Re-export so consumer apps don't need @vitejs/plugin-react as a direct dep.
-export { default as react } from "@vitejs/plugin-react";
+// Typed as `() => any` to prevent a vite-instance structural mismatch when
+// pnpm resolves two copies of the same vite version (differing peer deps).
+export const react = _react as () => any;
 
-export function reactNative(options = {}) {
+export function reactNative(
+  options: {
+    additionalExtensions?: string[];
+    transformPackages?: string[];
+  } = {},
+) {
   const { additionalExtensions = [], transformPackages = [] } = options;
   const defaultExtensions = [
     ".ios.js",
@@ -1521,7 +1540,7 @@ export function reactNative(options = {}) {
     ".ts",
     ".jsx",
     ".tsx",
-    ".json"
+    ".json",
   ];
   const extensions = [...additionalExtensions, ...defaultExtensions];
   return {
@@ -1531,23 +1550,23 @@ export function reactNative(options = {}) {
       return {
         resolve: {
           extensions,
-          conditions: ["react-native"]
+          conditions: ["react-native"],
         },
         test: {
           setupFiles: [__selfFile],
           globals: true,
           server: {
             deps: {
-              inline: ["react-native", /react-native/, /@react-native/, /@react-native-community/]
-            }
-          }
-        }
+              inline: ["react-native", /react-native/, /@react-native/, /@react-native-community/],
+            },
+          },
+        },
       };
     },
     // Resolve extensionless imports from node_modules packages that ship
     // TypeScript source (e.g., @d11/react-native-fast-image).
     // Node's require() doesn't try .ts/.tsx extensions, so these fail at runtime.
-    resolveId(source, importer) {
+    resolveId(source: string, importer: string | undefined) {
       if (!importer || !source.startsWith(".") || !importer.includes("node_modules")) return;
       const lastSegment = source.split("/").pop() || "";
       if (lastSegment.includes(".")) return;
@@ -1561,9 +1580,16 @@ export function reactNative(options = {}) {
         if (existsSync(candidate)) return candidate;
       }
     },
-    transform(code, id) {
+    transform(code: string, id: string) {
       const normalized = id.replace(/\\/g, "/");
-      const rnSpecificExts = [".ios.js", ".ios.jsx", ".android.js", ".android.jsx", ".native.js", ".native.jsx"];
+      const rnSpecificExts = [
+        ".ios.js",
+        ".ios.jsx",
+        ".android.js",
+        ".android.jsx",
+        ".native.js",
+        ".native.jsx",
+      ];
       const transformableExts = [".js", ".jsx", ...rnSpecificExts];
       if (!transformableExts.some((ext) => normalized.endsWith(ext))) return;
       if (!normalized.includes("/node_modules/")) return;
@@ -1573,16 +1599,22 @@ export function reactNative(options = {}) {
       const segments = depPath.split("/");
       const pkgName = segments[0]?.startsWith("@") ? `${segments[0]}/${segments[1]}` : segments[0];
       if (!pkgName) return;
-      const isRNPackage = pkgName === "react-native" || pkgName.startsWith("@react-native/") || pkgName.includes("react-native") || rnSpecificExts.some((ext) => normalized.endsWith(ext));
-      const isExtraPackage = transformPackages.length > 0 && transformPackages.some((pkg) => pkgName === pkg || pkgName.startsWith(pkg + "/"));
+      const isRNPackage =
+        pkgName === "react-native" ||
+        pkgName.startsWith("@react-native/") ||
+        pkgName.includes("react-native") ||
+        rnSpecificExts.some((ext) => normalized.endsWith(ext));
+      const isExtraPackage =
+        transformPackages.length > 0 &&
+        transformPackages.some((pkg) => pkgName === pkg || pkgName.startsWith(pkg + "/"));
       if (!isRNPackage && !isExtraPackage) return;
       const flowStripped = removeTypes(code, { all: true }).toString();
       const result = esbuild.transformSync(flowStripped, {
         loader: "jsx",
-        sourcefile: id
+        sourcefile: id,
       });
       return { code: result.code, map: null };
-    }
+    },
   };
 }
 export default reactNative;

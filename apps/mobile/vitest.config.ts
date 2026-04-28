@@ -1,9 +1,9 @@
 import { resolve } from "path";
 import { defineConfig } from "vitest/config";
+
 // React-Native test harness lives in @repo/vitest-config/mobile. It ships
-// everything needed to run RNTL component tests under vitest (Flow stripping,
-// jest-style RN module mocks, self-registered setup file).
-// @ts-expect-error — the vendored harness is plain .mjs without .d.ts
+// everything needed to run React Native Testing Library (RNTL) component tests
+// under vitest (Flow stripping, jest-style RN module mocks, self-registered setup file).
 import { react, reactNative, rnSetupFile } from "@repo/vitest-config/mobile";
 
 const srcAlias = {
@@ -18,10 +18,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
-      reporter: [
-        ["json", { file: "../coverage.json" }],
-        "text",
-      ],
+      reporter: [["json", { file: "../coverage.json" }], "text"],
       enabled: true,
       exclude: ["**/node_modules/**", "**/dist/**", "**/*.config.*", "**/*.setup.*"],
     },
