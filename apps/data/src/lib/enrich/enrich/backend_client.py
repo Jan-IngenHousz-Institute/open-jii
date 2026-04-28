@@ -146,8 +146,12 @@ class BackendClient:
             # bool(Response) is False for 4xx/5xx — must use `is not None` here.
             err_response = getattr(e, 'response', None)
             if err_response is not None:
+                error_msg += f" | Response status: {err_response.status_code}"
+                # Body goes to executor logs for diagnosis, not into error_msg
+                # since that propagates into the Delta `macro_error` column.
                 body = (err_response.text or '')[:2000]
-                error_msg += f" | Response status: {err_response.status_code} | Response body: {body}"
+                if body:
+                    print(f"[BackendClient] HTTP {err_response.status_code} body: {body}")
             raise BackendIntegrationError(error_msg)
             
     def get_user_metadata(self, user_ids: List[str]) -> Dict[str, Dict[str, Any]]:

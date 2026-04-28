@@ -64,7 +64,8 @@ function decompress(payload: unknown): unknown {
     return payload;
   }
   const compressed = Buffer.from(record.payload, "base64");
-  const json = gunzipSync(compressed).toString("utf8");
+  // Same cap as the backend's lambda.service.maybeDecompress.
+  const json = gunzipSync(compressed, { maxOutputLength: 50 * 1024 * 1024 }).toString("utf8");
   return JSON.parse(json);
 }
 

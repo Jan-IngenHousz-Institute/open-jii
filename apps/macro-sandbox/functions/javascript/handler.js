@@ -129,12 +129,18 @@ async function _runMacroBatch(event) {
             } catch (parseErr) {
               const code = error?.code ?? "unknown";
               const signal = error?.signal ?? "none";
-              const stderrHead = (stderr || "").trim().slice(0, 300);
+              // Stderr goes to CloudWatch via console.error, not into the
+              // response. The response propagates into the macro_error column
+              // downstream and shouldn't carry server internals.
+              const stderrTrimmed = (stderr || "").trim();
+              if (stderrTrimmed) {
+                console.error("[handler] wrapper stderr:", stderrTrimmed.slice(0, 4000));
+              }
               resolve({
                 status: "error",
                 results: [],
                 errors: [
-                  `Wrapper returned invalid JSON (parse: ${parseErr.message}; exit: ${code}; signal: ${signal}; stdoutLen: ${output.length}; stderrHead: ${stderrHead})`,
+                  `Wrapper returned invalid JSON (parse: ${parseErr.message}; exit: ${code}; signal: ${signal}; stdoutLen: ${output.length}; stderrLen: ${stderrTrimmed.length})`,
                 ],
               });
             }
