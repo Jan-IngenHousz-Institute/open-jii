@@ -53,6 +53,7 @@ describe("fetchSecret", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("returns empty object in non-Lambda environment", async () => {

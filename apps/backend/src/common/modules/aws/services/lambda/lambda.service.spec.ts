@@ -141,6 +141,14 @@ describe("AwsLambdaService", () => {
 
       assertSuccess(result);
       expect(result.value.statusCode).toBe(202);
+
+      const calls = lambdaMock.commandCalls(InvokeCommand);
+      expect(calls[0].args[0].input).toEqual(
+        expect.objectContaining({
+          FunctionName: "my-function",
+          InvocationType: "Event",
+        }),
+      );
     });
 
     it("should default invocationType to RequestResponse", async () => {
