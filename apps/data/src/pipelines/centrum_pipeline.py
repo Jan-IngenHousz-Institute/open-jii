@@ -512,22 +512,41 @@ def experiment_raw_data():
             if questions_array is None or len(questions_array) == 0:
                 return []
 
+            # Disambiguate duplicate sanitized labels so downstream
+            # map_from_arrays doesn't collapse them and lose answers.
+            # Strategy:
+            #   - unique label in row -> bare label
+            #   - label collides, texts differ -> "<label>__<text>"
+            #   - label and text both collide -> positional fallback "_2", "_3"
+            # The text-based suffix gives stable, meaningful column names
+            # across rows whenever question_text differs between duplicates.
+            base_labels = [
+                sanitize_label(q.get('question_label')) if q else None
+                for q in questions_array
+            ]
+            label_total: dict[str, int] = {}
+            for bl in base_labels:
+                if bl is not None:
+                    label_total[bl] = label_total.get(bl, 0) + 1
+
+            key_counts: dict[str, int] = {}
             result = []
-            # Disambiguate duplicate sanitized labels within the same payload by
-            # appending a 1-based occurrence suffix (e.g. label, label_2, label_3).
-            # Without this, downstream map_from_arrays collapses duplicates and
-            # only the last answer survives.
-            label_counts: dict[str, int] = {}
-            for q in questions_array:
-                if q:
-                    base_label = sanitize_label(q.get('question_label'))
-                    count = label_counts.get(base_label, 0) + 1
-                    label_counts[base_label] = count
-                    label = base_label if count == 1 else f"{base_label}_{count}"
-                    result.append({
-                        'question_label': label,
-                        'question_answer': q.get('question_answer')
-                    })
+            for i, q in enumerate(questions_array):
+                if not q:
+                    continue
+                base = base_labels[i]
+                if label_total.get(base, 0) <= 1:
+                    key = base
+                else:
+                    text_part = sanitize_label(q.get('question_text'))
+                    candidate = f"{base}__{text_part}"
+                    count = key_counts.get(candidate, 0) + 1
+                    key_counts[candidate] = count
+                    key = candidate if count == 1 else f"{candidate}_{count}"
+                result.append({
+                    'question_label': key,
+                    'question_answer': q.get('question_answer')
+                })
             return result
 
         return questions.apply(sanitize_questions_array)
