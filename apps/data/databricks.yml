@@ -37,6 +37,11 @@ artifacts:
     path: ./src/lib/openjii
     build: python3 -m build
 
+  data_repair_wheel:
+    type: whl
+    path: ./src/lib/data_repair
+    build: python3 -m build
+
 # Sync configuration for notebooks
 sync:
   # Only sync notebooks, pipelines, and tasks - exclude everything else

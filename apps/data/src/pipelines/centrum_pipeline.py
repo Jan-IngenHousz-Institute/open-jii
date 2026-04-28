@@ -19,6 +19,7 @@ from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
 from enrich.macro_execution import make_execute_macro_udf
 from openjii import decompress_sample
+from data_repair import apply_function_repairs
 
 # COMMAND ----------
 
@@ -603,6 +604,7 @@ def experiment_raw_data():
             "processed_timestamp",
             "skip_macro_processing"
         )
+        .transform(lambda df: apply_function_repairs(df, EXPERIMENT_RAW_DATA_TABLE))
     )
 
 # COMMAND ----------
