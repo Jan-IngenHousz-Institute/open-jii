@@ -502,6 +502,10 @@ module "centrum_pipeline" {
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
       permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
