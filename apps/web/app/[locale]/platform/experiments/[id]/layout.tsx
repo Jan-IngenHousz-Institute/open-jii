@@ -8,7 +8,7 @@ import { notFound, usePathname, useParams } from "next/navigation";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
 import { useTranslation } from "@repo/i18n";
-import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components";
+import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
 interface ExperimentLayoutProps {
   children: React.ReactNode;

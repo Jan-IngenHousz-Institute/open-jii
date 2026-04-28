@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import React from "react";
 
-import type { ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { LineChartRenderer } from "./chart-renderers/basic/line-chart/line-chart-renderer";

@@ -4,7 +4,7 @@ import type {
   MacroBatchExecutionRequestBody,
   MacroBatchExecutionResponse,
   MacroBatchExecutionResultItem,
-} from "@repo/api";
+} from "@repo/api/schemas/macro.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";

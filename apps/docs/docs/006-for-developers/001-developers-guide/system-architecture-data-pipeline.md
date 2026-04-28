@@ -83,7 +83,7 @@ end
 subgraph "Databricks — centrum schema"
 B["Bronze<br/>raw_data<br/>raw_imported_data"]
 SV["Silver<br/>clean_data"]
-G["Gold<br/>experiment_raw_data<br/>experiment_device_data<br/>experiment_macro_data"]
+G["Gold<br/>experiment_raw_data<br/>experiment_device_data<br/>experiment_macro_data<br/>experiment_macro_data_sandbox"]
 EV["Enriched Views"]
 META["experiment_table_metadata"]
 end

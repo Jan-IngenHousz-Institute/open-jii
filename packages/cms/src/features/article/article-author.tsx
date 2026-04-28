@@ -7,7 +7,7 @@ import {
 import type { FC } from "react";
 
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
-import { CtfImage } from "../contentful";
+import { CtfImage } from "../contentful/ctf-image";
 
 interface ArticleAuthorProps {
   article: PageBlogPostFieldsFragment;

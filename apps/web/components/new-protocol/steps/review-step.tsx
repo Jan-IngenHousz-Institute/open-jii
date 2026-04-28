@@ -3,18 +3,14 @@
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import * as z from "zod";
 
-import type { CreateProtocolRequestBody, Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
+import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  RichTextRenderer,
-  WizardStepButtons,
-} from "@repo/ui/components";
-import type { WizardStepProps } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { WizardStepButtons } from "@repo/ui/components/wizard-form";
+import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
 import { codeSchema } from "./code-test-step";
 import { detailsSchema } from "./details-step";

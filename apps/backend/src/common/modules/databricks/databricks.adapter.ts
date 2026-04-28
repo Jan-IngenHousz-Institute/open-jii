@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Readable } from "stream";
 
-import { ExperimentTableName } from "@repo/api";
+import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
 import type { ExportMetadata } from "../../../experiments/core/models/experiment-data-exports.model";
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";

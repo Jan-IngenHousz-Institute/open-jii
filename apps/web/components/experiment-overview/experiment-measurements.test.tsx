@@ -19,12 +19,10 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   };
 });
 
-// useExperimentData — pragmatic mock (heavy: tsr query + tanstack-table column creation + cell formatting)
 vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: (...args: unknown[]) => useExperimentDataSpy(...args),
 }));
 
-// useExperimentTables — pragmatic mock (coupled with useExperimentData; tests control table metadata)
 vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
   useExperimentTables: (...args: unknown[]) => useExperimentTablesSpy(...args),
 }));

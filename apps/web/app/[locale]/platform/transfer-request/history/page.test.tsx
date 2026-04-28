@@ -3,8 +3,8 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { TransferRequestStatus } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { TransferRequestStatus } from "@repo/api/schemas/experiment.schema";
 
 import TransferRequestHistoryPage from "./page";
 

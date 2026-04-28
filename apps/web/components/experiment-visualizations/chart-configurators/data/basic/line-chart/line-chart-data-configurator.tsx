@@ -3,7 +3,7 @@
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 
-import type { DataColumn } from "@repo/api";
+import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 
 import type { ChartFormValues } from "../../../chart-configurator-util";
 import XAxisConfiguration from "../../shared/x-axis-configuration";

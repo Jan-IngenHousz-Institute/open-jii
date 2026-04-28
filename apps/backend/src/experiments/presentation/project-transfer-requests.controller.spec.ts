@@ -1,7 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 
-import type { CreateTransferRequestBody, TransferRequest } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type {
+  CreateTransferRequestBody,
+  TransferRequest,
+} from "@repo/api/schemas/experiment.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";

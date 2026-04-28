@@ -1,7 +1,7 @@
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
-import type { MacroLanguage } from "@repo/api";
+import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
 
 import { tsr } from "../../../lib/tsr";
 import { useDebounce } from "../../useDebounce";

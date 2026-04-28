@@ -1,4 +1,4 @@
-import type { PlaceSearchResult } from "@repo/api";
+import type { PlaceSearchResult } from "@repo/api/schemas/experiment.schema";
 
 import type { Result } from "../../../common/utils/fp-utils";
 

@@ -1,7 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { zChartConfig, zChartDataConfig } from "@repo/api";
+import { zChartConfig, zChartDataConfig } from "@repo/api/schemas/experiment.schema";
 import { experimentVisualizations } from "@repo/database";
 
 // Create schemas for database operations

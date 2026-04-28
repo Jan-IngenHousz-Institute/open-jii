@@ -3,8 +3,9 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import type { ExperimentData } from "@repo/api";
-import { WellKnownColumnTypes, contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { ExperimentData } from "@repo/api/schemas/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 
 import { getColumnWidth, useExperimentData } from "./useExperimentData";
 

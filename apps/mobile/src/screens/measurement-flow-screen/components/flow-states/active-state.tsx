@@ -5,7 +5,7 @@ import { FlowNode } from "../../types";
 import { AnalysisNode } from "../flow-nodes/analysis-node/analysis-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
-import { QuestionNode } from "../flow-nodes/question-node";
+import { QuestionNode } from "../flow-nodes/question-node/question-node";
 
 interface ActiveStateProps {
   currentNode: FlowNode;

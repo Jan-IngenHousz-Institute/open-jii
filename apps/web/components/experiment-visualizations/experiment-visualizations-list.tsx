@@ -5,9 +5,9 @@ import { Calendar, ChevronRight, User } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-import type { ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { Skeleton } from "@repo/ui/components";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface ExperimentVisualizationsListProps {
   visualizations: ExperimentVisualization[];

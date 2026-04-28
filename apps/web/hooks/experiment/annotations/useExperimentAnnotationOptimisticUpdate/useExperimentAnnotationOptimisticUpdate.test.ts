@@ -2,7 +2,11 @@
 import { renderHook } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import type { ExperimentDataResponse, AnnotationType, AnnotationContent } from "@repo/api";
+import type {
+  ExperimentDataResponse,
+  AnnotationType,
+  AnnotationContent,
+} from "@repo/api/schemas/experiment.schema";
 
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
 

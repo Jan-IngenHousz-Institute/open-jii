@@ -3,7 +3,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { formatDate } from "~/util/date";
 
-import type { Annotation } from "@repo/api";
+import type { Annotation } from "@repo/api/schemas/experiment.schema";
 
 import { ExperimentDataTableAnnotationsCell } from "./experiment-data-table-annotations-cell";
 

@@ -1,8 +1,8 @@
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { RichTextarea } from "@repo/ui/components";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { RichTextarea } from "@repo/ui/components/rich-textarea";
 
 interface InstructionPanelProps {
   value: string;

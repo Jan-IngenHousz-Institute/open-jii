@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract, ExperimentTableName } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
 import ExperimentDataPage from "./page";
 
@@ -33,8 +34,8 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ),
 }));
 
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual("@repo/ui/components");
+vi.mock("@repo/ui/components/nav-tabs", async () => {
+  const actual = await vi.importActual("@repo/ui/components/nav-tabs");
   return {
     ...actual,
     NavTabs: ({ children }: { children: React.ReactNode }) => (
@@ -49,6 +50,13 @@ vi.mock("@repo/ui/components", async () => {
     NavTabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => (
       <div data-testid={`nav-tab-content-${value}`}>{children}</div>
     ),
+  };
+});
+
+vi.mock("@repo/ui/components/skeleton", async () => {
+  const actual = await vi.importActual("@repo/ui/components/skeleton");
+  return {
+    ...actual,
     Skeleton: ({ className }: { className?: string }) => (
       <div data-testid="skeleton" className={className} />
     ),

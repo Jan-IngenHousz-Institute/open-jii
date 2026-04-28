@@ -1,8 +1,8 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { FlowEditor } from "@/components/flow-editor";
-import type { FlowEditorHandle } from "@/components/flow-editor";
+import { FlowEditor } from "@/components/flow-editor/flow-editor";
+import type { FlowEditorHandle } from "@/components/flow-editor/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
@@ -12,8 +12,8 @@ import { notFound } from "next/navigation";
 import { use, useState, useRef, useCallback } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
-import { Button } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Button } from "@repo/ui/components/button";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface ExperimentFlowPageProps {
   params: Promise<{ id: string; locale: string }>;

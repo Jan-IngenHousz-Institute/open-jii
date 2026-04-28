@@ -1,0 +1,6 @@
+node_modules/
+!function.zip
+test-local.js
+src/
+dist/
+tsconfig.json

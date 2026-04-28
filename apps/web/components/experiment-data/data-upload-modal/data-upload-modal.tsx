@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
 
 import { FileUploadStep } from "./steps/file-upload-step";
 import { SuccessStep } from "./steps/success-step";

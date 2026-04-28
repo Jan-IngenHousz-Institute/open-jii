@@ -1,7 +1,7 @@
 "use client";
 
-import { MetadataTable } from "@/components/metadata-table";
-import type { MetadataColumn, MetadataRow } from "@/components/metadata-table";
+import { MetadataTable } from "@/components/metadata-table/metadata-table";
+import type { MetadataColumn, MetadataRow } from "@/components/metadata-table/types";
 import {
   parseClipboard,
   parseClipboardText,
@@ -29,20 +29,20 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { ExperimentMetadata } from "@repo/api";
+import type { ExperimentMetadata } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
+import { Button } from "@repo/ui/components/button";
+import { DialogFooter } from "@repo/ui/components/dialog";
+import { Input } from "@repo/ui/components/input";
+import { Label } from "@repo/ui/components/label";
+import { ScrollArea } from "@repo/ui/components/scroll-area";
 import {
-  Button,
-  DialogFooter,
-  Input,
-  Label,
-  ScrollArea,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 import { cn } from "@repo/ui/lib/utils";
 
 /**

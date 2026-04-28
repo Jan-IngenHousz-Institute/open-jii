@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { useParams } from "next/navigation";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import ExperimentVisualizationsPage from "./page";
 

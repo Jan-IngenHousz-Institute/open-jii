@@ -2,9 +2,9 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
-import type { AnnotationType } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
+import { contract } from "@repo/api/contract";
+import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { AddAnnotationDialog } from "./add-annotation-dialog";
 

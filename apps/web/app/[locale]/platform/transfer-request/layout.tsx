@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components";
+import { Card } from "@repo/ui/components/card";
+import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
 interface TransferRequestLayoutProps {
   children: React.ReactNode;

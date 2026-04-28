@@ -2,8 +2,8 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { contract } from "@repo/api";
-import type { MacroProtocolList } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { MacroProtocolList } from "@repo/api/schemas/macro.schema";
 import { protocols } from "@repo/database";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";

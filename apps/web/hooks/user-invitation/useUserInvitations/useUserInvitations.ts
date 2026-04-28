@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { InvitationResourceType } from "@repo/api";
+import type { InvitationResourceType } from "@repo/api/schemas/user.schema";
 
 /**
  * Hook to fetch pending invitations for a resource.

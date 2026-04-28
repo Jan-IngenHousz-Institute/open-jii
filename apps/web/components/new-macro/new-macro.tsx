@@ -12,24 +12,21 @@ import React, { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
-import type { CreateMacroRequestBody, Protocol } from "@repo/api";
-import { zCreateMacroRequestBody } from "@repo/api";
+import type { CreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
+import { zCreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Form, FormField, FormItem, FormControl, FormMessage } from "@repo/ui/components/form";
 import {
-  Button,
-  Form,
-  FormField,
-  FormItem,
-  FormControl,
-  FormMessage,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Skeleton,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";

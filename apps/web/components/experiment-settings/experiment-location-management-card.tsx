@@ -5,7 +5,7 @@ import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
 import type { LocationPoint } from "@repo/ui/components/map";
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentLocations } from "../../hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentLocationsUpdate } from "../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";

@@ -3,7 +3,7 @@ import { render, screen } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExperimentMember } from "@repo/api";
+import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
 
 import { ExperimentInfoCard } from "./experiment-info-card";

@@ -8,7 +8,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import EditVisualizationPage from "./page";
 

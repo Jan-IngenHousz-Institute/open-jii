@@ -5,7 +5,7 @@ import { Copy, Check, Pencil } from "lucide-react";
 import { useState } from "react";
 import type { FC } from "react";
 
-import { Button } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 interface JsonCodeViewerProps {

@@ -3,13 +3,8 @@
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 
-import {
-  Alert,
-  AlertDescription,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@repo/ui/components";
+import { Alert, AlertDescription } from "@repo/ui/components/alert";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import { cn } from "@repo/ui/lib/utils";
 
 interface ExperimentDataTableErrorCellProps {

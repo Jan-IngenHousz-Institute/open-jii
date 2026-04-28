@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { Experiment } from "@repo/api";
+import type { Experiment } from "@repo/api/schemas/experiment.schema";
 
 /**
  * Hook to delete an experiment

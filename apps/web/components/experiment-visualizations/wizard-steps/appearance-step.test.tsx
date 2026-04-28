@@ -5,18 +5,26 @@ import type { ChartFormValues } from "../chart-configurators/chart-configurator-
 import { AppearanceStep } from "./appearance-step";
 
 // Mock the appearance configurators
-vi.mock("../chart-configurators/appearance", () => ({
-  LineChartAppearanceConfigurator: () => (
-    <div data-testid="line-chart-appearance-configurator">
-      <div>Line Chart Appearance Configurator</div>
-    </div>
-  ),
-  ScatterChartAppearanceConfigurator: () => (
-    <div data-testid="scatter-chart-appearance-configurator">
-      <div>Scatter Chart Appearance Configurator</div>
-    </div>
-  ),
-}));
+vi.mock(
+  "../chart-configurators/appearance/basic/line-chart/line-chart-appearance-configurator",
+  () => ({
+    default: () => (
+      <div data-testid="line-chart-appearance-configurator">
+        <div>Line Chart Appearance Configurator</div>
+      </div>
+    ),
+  }),
+);
+vi.mock(
+  "../chart-configurators/appearance/basic/scatter-chart/scatter-chart-appearance-configurator",
+  () => ({
+    default: () => (
+      <div data-testid="scatter-chart-appearance-configurator">
+        <div>Scatter Chart Appearance Configurator</div>
+      </div>
+    ),
+  }),
+);
 
 // Mock the chart preview modal
 vi.mock("../chart-preview/chart-preview-modal", () => ({

@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 
 interface ExperimentVisualizationUpdateProps {
   experimentId: string;

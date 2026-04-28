@@ -6,7 +6,7 @@ import type {
   AnnotationContent,
   ExperimentDataResponse,
   DataColumn,
-} from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
 
 // The type string for the annotations column
 const ANNOTATIONS_COLUMN_TYPE =

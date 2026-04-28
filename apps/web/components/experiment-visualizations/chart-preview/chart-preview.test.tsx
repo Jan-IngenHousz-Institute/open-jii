@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreview } from "./chart-preview";

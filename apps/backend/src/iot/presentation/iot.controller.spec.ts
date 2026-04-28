@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { ErrorCodes } from "../../common/utils/error-codes";

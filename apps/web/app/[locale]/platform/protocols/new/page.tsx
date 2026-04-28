@@ -1,4 +1,4 @@
-import { NewProtocolForm } from "@/components/new-protocol";
+import { NewProtocolForm } from "@/components/new-protocol/new-protocol";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

@@ -1,6 +1,6 @@
 import { tsr } from "~/lib/tsr";
 
-import type { ExperimentDataResponse } from "@repo/api";
+import type { ExperimentDataResponse } from "@repo/api/schemas/experiment.schema";
 
 import { useExperimentAnnotationOptimisticUpdate } from "../useExperimentAnnotationOptimisticUpdate/useExperimentAnnotationOptimisticUpdate";
 

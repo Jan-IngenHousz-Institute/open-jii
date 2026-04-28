@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dialog";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
 import { ChartPreview } from "./chart-preview";

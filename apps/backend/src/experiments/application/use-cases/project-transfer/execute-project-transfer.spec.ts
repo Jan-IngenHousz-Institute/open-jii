@@ -1,4 +1,4 @@
-import type { ProjectTransferWebhookPayload } from "@repo/api";
+import type { ProjectTransferWebhookPayload } from "@repo/api/schemas/experiment.schema";
 
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import {
