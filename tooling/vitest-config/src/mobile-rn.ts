@@ -1470,14 +1470,7 @@ mock(
   },
 }`,
 );
-try {
-  const files = fs.readdirSync(cacheDir);
-  files.forEach((file) => {
-    try {
-      fs.unlinkSync(path.join(cacheDir, file));
-    } catch {}
-  });
-} catch {}
+
 try {
   const { configure } = require2("@testing-library/react-native");
   configure({

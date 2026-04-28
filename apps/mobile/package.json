@@ -130,7 +130,7 @@
     "expo-dev-client": "~55.0.24",
     "expo-drizzle-studio-plugin": "^0.2.1",
     "jsdom": "catalog:testing",
-    "react-test-renderer": "^19.2.4",
+    "react-test-renderer": "19.2.4",
     "typescript": "catalog:",
     "vitest": "catalog:testing"
   },
