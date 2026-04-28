@@ -81,8 +81,3 @@ to `"apply"` (the default).
 - Repairs typically stay forever. Removing one risks re-corrupting any
   new row that ever matches. Narrow the predicate instead (e.g. add a
   `processed_timestamp` cutoff) once the upstream is fixed.
-- Drop a sibling `_YYYY_MM_<short_name>.sql` next to the `.py` with two
-  sections: `-- before:` queries that scope the corruption pre-deploy, and
-  `-- after:` queries that confirm the repair landed (e.g. corrupted-row
-  count = 0). Convention only; the framework doesn't read these. Keeps
-  the verification recipe colocated with the code.
