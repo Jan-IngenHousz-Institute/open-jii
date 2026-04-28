@@ -511,16 +511,25 @@ def experiment_raw_data():
         def sanitize_questions_array(questions_array):
             if questions_array is None or len(questions_array) == 0:
                 return []
-            
+
             result = []
+            # Disambiguate duplicate sanitized labels within the same payload by
+            # appending a 1-based occurrence suffix (e.g. label, label_2, label_3).
+            # Without this, downstream map_from_arrays collapses duplicates and
+            # only the last answer survives.
+            label_counts: dict[str, int] = {}
             for q in questions_array:
                 if q:
+                    base_label = sanitize_label(q.get('question_label'))
+                    count = label_counts.get(base_label, 0) + 1
+                    label_counts[base_label] = count
+                    label = base_label if count == 1 else f"{base_label}_{count}"
                     result.append({
-                        'question_label': sanitize_label(q.get('question_label')),
+                        'question_label': label,
                         'question_answer': q.get('question_answer')
                     })
             return result
-        
+
         return questions.apply(sanitize_questions_array)
     
     return (
@@ -543,11 +552,8 @@ def experiment_raw_data():
                     parse_json(
                         to_json(
                             map_from_arrays(
-                                array_distinct(transform(questions_sanitized, q -> q.question_label)),
-                                transform(
-                                    array_distinct(transform(questions_sanitized, q -> q.question_label)),
-                                    label -> element_at(filter(questions_sanitized, q -> q.question_label = label), -1).question_answer
-                                )
+                                transform(questions_sanitized, q -> q.question_label),
+                                transform(questions_sanitized, q -> q.question_answer)
                             )
                         )
                     )

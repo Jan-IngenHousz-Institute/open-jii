@@ -356,6 +356,35 @@ describe("Experiment Schema", () => {
       expect(() => zFlowGraph.parse(twoStart)).toThrow();
     });
 
+    it("zFlowGraph rejects duplicate node labels", () => {
+      const graph = {
+        nodes: [
+          {
+            id: "n1",
+            type: "question",
+            name: "Question Node",
+            content: { kind: "yes_no", text: "ok?", required: false },
+            isStart: true,
+          },
+          {
+            id: "n2",
+            type: "question",
+            name: "Question Node",
+            content: { kind: "yes_no", text: "again?", required: false },
+            isStart: false,
+          },
+        ],
+        edges: [{ id: "e1", source: "n1", target: "n2", label: null }],
+      };
+      const result = zFlowGraph.safeParse(graph);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "nodes.1.name");
+        expect(issue?.message).toContain("Question Node");
+        expect(issue?.message).toContain("unique");
+      }
+    });
+
     it("zFlow and zUpsertFlowBody valid", () => {
       const graph = {
         nodes: [

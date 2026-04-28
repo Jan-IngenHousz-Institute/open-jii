@@ -435,6 +435,21 @@ export const zFlowGraph = z
         path: ["nodes"],
       });
     }
+
+    // Reject duplicate node labels. The data pipeline derives column keys from
+    // these names; without uniqueness, columns collide across rows.
+    const seen = new Map<string, number>();
+    graph.nodes.forEach((node, index) => {
+      if (seen.has(node.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Node label "${node.name}" must be unique`,
+          path: ["nodes", index, "name"],
+        });
+        return;
+      }
+      seen.set(node.name, index);
+    });
   });
 
 export const zFlow = z.object({
