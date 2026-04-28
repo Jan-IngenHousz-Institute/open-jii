@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 import { authClient } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";
@@ -17,8 +17,10 @@ vi.mock("@/components/language-switcher", () => ({
 }));
 
 // DropdownMenu mock — Radix doesn't work in jsdom without pointer events / portals
-vi.mock("@repo/ui/components", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@repo/ui/components");
+vi.mock("@repo/ui/components/dropdown-menu", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>(
+    "@repo/ui/components/dropdown-menu",
+  );
 
   const DropdownMenu = ({
     children,

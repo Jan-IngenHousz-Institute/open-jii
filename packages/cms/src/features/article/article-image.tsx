@@ -6,7 +6,7 @@ import type { ReactElement } from "react";
 import { cn, cva } from "@repo/ui/lib/utils";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
-import { CtfImage } from "../contentful";
+import { CtfImage } from "../contentful/ctf-image";
 
 interface ArticleImageProps {
   image: ComponentRichImage;

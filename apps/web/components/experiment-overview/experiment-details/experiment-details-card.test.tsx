@@ -4,7 +4,7 @@ import { formatDate } from "@/util/date";
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import type { ExperimentMember } from "@repo/api";
+import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
 
 import { ExperimentDetailsCard } from "./experiment-details-card";

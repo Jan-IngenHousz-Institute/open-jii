@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import ExperimentFlowPage from "./page";
 
@@ -17,7 +17,7 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-vi.mock("@/components/flow-editor", () => ({
+vi.mock("@/components/flow-editor/flow-editor", () => ({
   FlowEditor: ({
     initialFlow,
     isDisabled,

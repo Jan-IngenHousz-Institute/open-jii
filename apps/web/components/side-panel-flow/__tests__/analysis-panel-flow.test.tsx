@@ -6,12 +6,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
 
-// useDebounce — pragmatic mock (timer utility)
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
 }));
 
-// Test data — factory provides all required Macro fields
 const mockMacros = [
   createMacro({
     name: "Plot Temperature",

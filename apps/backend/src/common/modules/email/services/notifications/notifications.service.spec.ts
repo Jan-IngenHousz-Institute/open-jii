@@ -120,6 +120,7 @@ describe("NotificationsService", () => {
       // Verify email render function was called
       expect(mockRenderAddedUserNotification).toHaveBeenCalledWith({
         host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
         experimentName: MOCK_EXPERIMENT_NAME,
         experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
         actor: MOCK_ACTOR,
@@ -436,6 +437,7 @@ describe("NotificationsService", () => {
       // Verify email render function was called
       expect(mockRenderTransferRequestConfirmation).toHaveBeenCalledWith({
         host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
         projectIdOld: MOCK_PROJECT_ID_OLD,
         projectUrlOld: MOCK_PROJECT_URL_OLD,
         userEmail: MOCK_EMAIL,
@@ -733,6 +735,7 @@ describe("NotificationsService", () => {
       // Verify email render function was called
       expect(mockRenderProjectTransferComplete).toHaveBeenCalledWith({
         host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
         experimentName: MOCK_EXPERIMENT_NAME,
         experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
       });

@@ -1,8 +1,9 @@
 "use client";
 
-import type { CreateExperimentBody } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button, Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import { cva } from "@repo/ui/lib/utils";
 
 interface LocationsSectionProps {

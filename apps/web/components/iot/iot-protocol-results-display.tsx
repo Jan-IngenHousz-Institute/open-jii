@@ -4,7 +4,9 @@ import { AlertCircle, Check, CheckCircle2, Copy, Play } from "lucide-react";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Alert, AlertDescription, Badge, Button } from "@repo/ui/components";
+import { Alert, AlertDescription } from "@repo/ui/components/alert";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 interface TestResult {

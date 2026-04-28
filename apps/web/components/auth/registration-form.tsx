@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { useSignInEmail, useVerifyEmail } from "~/hooks/auth";
+import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
+import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
 import { useTranslation } from "@repo/i18n";
-import { Button, Form } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Button } from "@repo/ui/components/button";
+import { Form } from "@repo/ui/components/form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { RegistrationFields } from "./registration-fields";
 import { RegistrationOtpVerification } from "./registration-otp-verification";

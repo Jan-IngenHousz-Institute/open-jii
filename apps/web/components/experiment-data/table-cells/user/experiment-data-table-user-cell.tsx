@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
 
 interface ExperimentDataTableUserCellProps {
   data: string; // JSON string representation of the user object

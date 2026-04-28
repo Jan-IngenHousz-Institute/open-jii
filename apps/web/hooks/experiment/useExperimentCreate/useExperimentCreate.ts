@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { Experiment } from "@repo/api";
+import type { Experiment } from "@repo/api/schemas/experiment.schema";
 
 interface ExperimentCreateProps {
   onSuccess?: (id: string) => void;

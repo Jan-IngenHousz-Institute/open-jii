@@ -95,6 +95,21 @@ resource "aws_ecr_repository_policy" "this" {
           }
         }
       ] : [],
+      # Lambda service principal needs repo-level access to pull container images.
+      # Scoped to this specific repository; no additional condition needed.
+      var.create_lambda_pull_statement ? [
+        {
+          Sid    = "AllowLambdaPull",
+          Effect = "Allow",
+          Principal = {
+            Service = "lambda.amazonaws.com"
+          },
+          Action = [
+            "ecr:BatchGetImage",
+            "ecr:GetDownloadUrlForLayer"
+          ]
+        }
+      ] : [],
     )
   })
 }

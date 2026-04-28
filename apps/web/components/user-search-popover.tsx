@@ -4,20 +4,18 @@ import { Mail, Search, X } from "lucide-react";
 import React, { useState } from "react";
 import { z } from "zod";
 
-import type { UserProfile } from "@repo/api";
+import type { UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
+import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui/components/popover";
 import {
-  Input,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  Button,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
+} from "@repo/ui/components/select";
 
 const emailSchema = z.string().email();
 

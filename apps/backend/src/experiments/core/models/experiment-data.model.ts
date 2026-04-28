@@ -1,4 +1,4 @@
-import { ExperimentTableName } from "@repo/api";
+import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
 type VariantColumn = "macro_output" | "questions_data" | "custom_metadata";
 

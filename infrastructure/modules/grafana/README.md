@@ -20,7 +20,8 @@ Dashboard Visualization
 
 1. **Workspace Module** (`workspace/`) - AMG workspace with service account
 2. **Dashboard Module** (`dashboard/`) - Pre-configured monitoring dashboards
-3. **Token Rotation** (`TOKEN_ROTATION.md`) - Automated token management
+3. **Metrics Publisher** (`metrics-publisher/`) - Weekly Lambda that publishes user registration stats to CloudWatch
+4. **Token Rotation** (`TOKEN_ROTATION.md`) - Automated token management
 
 ### Monitored Metrics
 
@@ -81,6 +82,23 @@ Alerts are routed to Slack via webhook with severity-based policies:
 - `web` - Next.js frontend (Lambda/CloudFront)
 - `docs` - Documentation site (S3/CloudFront)
 - `database` - Migration deployments
+
+## Metrics Publisher
+
+A Lambda that runs every Monday at 06:00 UTC, queries Aurora for user registration counts, and publishes `TotalUsers` and `WeeklyNewUsers` metrics to CloudWatch under the `OpenJII/UserRegistrations` namespace. These metrics power the user registrations dashboard in Grafana.
+
+The Lambda is deployed from a committed `lambda/function.zip` that contains `index.js` and `node_modules`. The zip is committed to git so CI never needs to install dependencies.
+
+### Rebuilding the zip
+
+Run this whenever you change `index.js` or update `package.json`:
+
+```bash
+cd metrics-publisher/lambda
+npm run build
+git add function.zip
+git commit -m "build: rebuild metrics-publisher function.zip"
+```
 
 ## Setup Instructions
 

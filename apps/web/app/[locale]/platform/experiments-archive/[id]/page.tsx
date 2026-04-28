@@ -13,7 +13,7 @@ import { ExperimentDetailsCard } from "~/components/experiment-overview/experime
 import { ExperimentLinkedProtocols } from "~/components/experiment-overview/experiment-linked-protocols/experiment-linked-protocols";
 import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
-import type { Experiment } from "@repo/api";
+import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 interface ExperimentOverviewPageProps {

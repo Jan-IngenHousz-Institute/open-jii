@@ -2,7 +2,12 @@
 
 import React from "react";
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@repo/ui/components";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
 
 interface ExperimentDataTableTextCellProps {
   text: string;

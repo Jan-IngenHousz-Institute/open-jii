@@ -5,8 +5,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Badge } from "@repo/ui/components/badge";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { InlineEditableTitle } from "../shared/inline-editable-title";
 

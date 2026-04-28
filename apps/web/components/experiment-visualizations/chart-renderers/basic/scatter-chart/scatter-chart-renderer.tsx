@@ -4,11 +4,12 @@ import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-import type { ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
-import type { PlotlyChartConfig, ScatterSeriesData } from "@repo/ui/components";
-import { ScatterChart } from "@repo/ui/components";
+import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";
+import { ScatterChart } from "@repo/ui/components/charts/scatter-chart";
+import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 

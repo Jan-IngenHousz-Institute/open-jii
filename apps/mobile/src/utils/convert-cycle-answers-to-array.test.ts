@@ -23,9 +23,9 @@ describe("convertCycleAnswersToArray", () => {
 
     // Insert answers in a different order than flowNodes
     const cycleAnswers: Record<string, string> = {};
-    cycleAnswers["q1"] = "Solanum";
-    cycleAnswers["q2"] = "Healthy";
-    cycleAnswers["q3"] = "Plot-7";
+    cycleAnswers.q1 = "Solanum";
+    cycleAnswers.q2 = "Healthy";
+    cycleAnswers.q3 = "Plot-7";
 
     const result = convertCycleAnswersToArray(cycleAnswers, flowNodes);
 
@@ -68,7 +68,12 @@ describe("convertCycleAnswersToArray", () => {
   });
 
   it("uses default text when node content has no text", () => {
-    const node = { id: "q1", type: "question", name: "Plot", content: { kind: "text" } } as FlowNode;
+    const node = {
+      id: "q1",
+      type: "question",
+      name: "Plot",
+      content: { kind: "text" },
+    } as FlowNode;
     const result = convertCycleAnswersToArray({ q1: "answer" }, [node]);
 
     expect(result[0].question_text).toBe("question text");
@@ -88,9 +93,7 @@ describe("parseQuestions", () => {
 
   it("parses valid measurement result", () => {
     const result = parseQuestions({
-      questions: [
-        { question_label: "Plot", question_text: "Which?", question_answer: "1" },
-      ],
+      questions: [{ question_label: "Plot", question_text: "Which?", question_answer: "1" }],
     });
     expect(result).toHaveLength(1);
     expect(result[0].question_label).toBe("Plot");

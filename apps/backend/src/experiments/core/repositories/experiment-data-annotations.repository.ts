@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { SafeParseReturnType, z } from "zod";
 
-import { AnnotationRowsAffected } from "@repo/api";
+import { AnnotationRowsAffected } from "@repo/api/schemas/experiment.schema";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";

@@ -8,31 +8,37 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api";
+import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+} from "@repo/ui/components/collapsible";
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
+} from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-  RichTextarea,
+} from "@repo/ui/components/resizable";
+import { RichTextarea } from "@repo/ui/components/rich-textarea";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/select";
+import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 import { useProtocolUpdate } from "../../hooks/protocol/useProtocolUpdate/useProtocolUpdate";

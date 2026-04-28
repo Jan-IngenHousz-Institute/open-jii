@@ -1,7 +1,10 @@
 /**
  * Experiment annotation interfaces for storing comments and flags on experiment data
  */
-import type { AnnotationCommentContent, AnnotationFlagContent } from "@repo/api";
+import type {
+  AnnotationCommentContent,
+  AnnotationFlagContent,
+} from "@repo/api/schemas/experiment.schema";
 
 // Type guards
 export function isCommentContent(content: unknown): content is AnnotationCommentContent {

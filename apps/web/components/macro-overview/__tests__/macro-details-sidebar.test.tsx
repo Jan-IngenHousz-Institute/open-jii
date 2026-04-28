@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Macro } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useSession } from "@repo/auth/client";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";
@@ -66,8 +66,7 @@ vi.mock("../../shared/details-sidebar-card", () => ({
   ),
 }));
 
-// Mock UI components (pragmatic: keep Dialog + Select which use Radix portals)
-vi.mock("@repo/ui/components", async (importOriginal) => {
+vi.mock("@repo/ui/components/dialog", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
 
   const Dialog = ({
@@ -131,6 +130,21 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
     </div>
   );
 
+  return {
+    ...actual,
+    Dialog,
+    DialogTrigger,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+  };
+});
+
+vi.mock("@repo/ui/components/select", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+
   const Select = ({
     children,
     value,
@@ -189,13 +203,6 @@ vi.mock("@repo/ui/components", async (importOriginal) => {
 
   return {
     ...actual,
-    Dialog,
-    DialogTrigger,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
     Select,
     SelectContent,
     SelectItem,
@@ -412,7 +419,7 @@ describe("<MacroDetailsSidebar />", () => {
       const selectEl = screen.getByTestId("select-native");
       await userEvent.selectOptions(selectEl, "javascript");
 
-      const { toast } = await import("@repo/ui/hooks");
+      const { toast } = await import("@repo/ui/hooks/use-toast");
       await waitFor(() => {
         expect(toast).toHaveBeenCalledWith({
           description: "macros.macroUpdated",
@@ -428,7 +435,7 @@ describe("<MacroDetailsSidebar />", () => {
       const selectEl = screen.getByTestId("select-native");
       await userEvent.selectOptions(selectEl, "r");
 
-      const { toast } = await import("@repo/ui/hooks");
+      const { toast } = await import("@repo/ui/hooks/use-toast");
       await waitFor(
         () => {
           expect(toast).toHaveBeenCalledWith({

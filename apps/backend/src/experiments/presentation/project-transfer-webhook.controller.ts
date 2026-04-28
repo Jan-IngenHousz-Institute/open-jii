@@ -3,7 +3,7 @@ import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { HmacGuard } from "../../common/guards/hmac.guard";
 import { handleFailure } from "../../common/utils/fp-utils";

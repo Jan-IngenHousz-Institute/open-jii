@@ -9,9 +9,11 @@ import type {
   AnnotationFlagContent,
   AnnotationType,
   AnnotationFlagType,
-} from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge, Button, Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
 const FLAG_TYPE_COLORS: Record<AnnotationFlagType, { bg: string; text: string; border: string }> = {
   outlier: {

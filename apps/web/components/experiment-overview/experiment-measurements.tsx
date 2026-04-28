@@ -5,21 +5,19 @@ import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExper
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useLocale } from "~/hooks/useLocale";
 
-import { ExperimentTableName } from "@repo/api";
+import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardTitle } from "@repo/ui/components/card";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import {
-  Button,
-  Card,
-  CardContent,
-  CardTitle,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@repo/ui/components";
+} from "@repo/ui/components/table";
 
 interface ExperimentMeasurementsProps {
   experimentId: string;

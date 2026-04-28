@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { env } from "~/env";
 
-import { toast } from "@repo/ui/hooks";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 // Create a client-side QueryClient instance
 const queryClient = new QueryClient({

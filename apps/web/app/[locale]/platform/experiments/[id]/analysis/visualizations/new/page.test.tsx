@@ -5,7 +5,7 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import NewVisualizationPage from "./page";
 

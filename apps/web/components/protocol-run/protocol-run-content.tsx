@@ -7,7 +7,7 @@ import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolCodeAutoSave } from "@/hooks/useProtocolCodeAutoSave";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { SensorFamily } from "@repo/api";
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 

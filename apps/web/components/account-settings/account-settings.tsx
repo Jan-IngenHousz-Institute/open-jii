@@ -6,13 +6,13 @@ import { useForm } from "react-hook-form";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
-import { zCreateUserProfileBody } from "@repo/api";
-import type { CreateUserProfileBody } from "@repo/api";
-import type { User } from "@repo/api";
+import { zCreateUserProfileBody } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody, User } from "@repo/api/schemas/user.schema";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
-import { Form, Button } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+import { Button } from "@repo/ui/components/button";
+import { Form } from "@repo/ui/components/form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ErrorDisplay } from "../error-display";
 import { DangerZoneCard } from "./danger-zone-card";

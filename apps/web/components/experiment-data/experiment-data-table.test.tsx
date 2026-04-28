@@ -4,7 +4,6 @@ import { describe, it, expect, vi } from "vitest";
 
 import { ExperimentDataTable } from "./experiment-data-table";
 
-// useExperimentData — pragmatic mock (heavy: tsr query + tanstack-table column creation + cell formatting)
 const mockUseExperimentData = vi.fn();
 vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
   useExperimentData: (...args: unknown[]): unknown => mockUseExperimentData(...args),

@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { ExperimentFilter, ExperimentStatus } from "@repo/api";
+import { ExperimentFilter, ExperimentStatus } from "@repo/api/schemas/experiment.schema";
 import {
   desc,
   eq,

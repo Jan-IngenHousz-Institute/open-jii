@@ -2,9 +2,13 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { ErrorResponse, Experiment, ExperimentMemberList } from "@repo/api";
-import type { ExperimentList } from "@repo/api";
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
+import type {
+  ErrorResponse,
+  Experiment,
+  ExperimentMemberList,
+  ExperimentList,
+} from "@repo/api/schemas/experiment.schema";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";

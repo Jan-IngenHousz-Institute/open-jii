@@ -19,7 +19,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams) {
 
   const transport = createTransport(emailServer);
 
-  const { html, text } = await renderOtpEmail({ otp, senderName, host });
+  const { html, text } = await renderOtpEmail({ otp, senderName, host, baseUrl });
 
   await transport.sendMail({
     to,

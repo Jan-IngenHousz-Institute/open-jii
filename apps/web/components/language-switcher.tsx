@@ -6,13 +6,13 @@ import { usePathname } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
+import { Button } from "@repo/ui/components/button";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dropdown-menu";
 
 const allLocales = [
   { code: "en-US" as const, name: "English", flag: "🇺🇸" },

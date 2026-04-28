@@ -5,19 +5,16 @@ import { notFound, useRouter } from "next/navigation";
 import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Badge,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
+} from "@repo/ui/components/dropdown-menu";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentAccess } from "../../hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";

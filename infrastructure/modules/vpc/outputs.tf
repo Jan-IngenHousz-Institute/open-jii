@@ -61,6 +61,11 @@ output "ecs_security_group_id" {
   value       = var.create_ecs_resources ? aws_security_group.ecs_sg[0].id : null
 }
 
+output "metrics_publisher_lambda_sg_id" {
+  description = "ID of the metrics-publisher Lambda security group — attach to the Lambda for Aurora access"
+  value       = var.create_metrics_publisher_resources && var.create_aurora_resources ? aws_security_group.metrics_publisher_lambda_sg[0].id : null
+}
+
 output "macro_sandbox_lambda_security_group_id" {
   description = "ID of the macro-sandbox Lambda security group (isolated, no inbound, HTTPS to VPC endpoints only)"
   value       = var.create_macro_sandbox_resources ? aws_security_group.macro_sandbox_lambda[0].id : null

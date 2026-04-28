@@ -89,47 +89,54 @@ resource "aws_iam_role_policy" "lambda_deny" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Sid    = "DenyAllDangerousServices"
-      Effect = "Deny"
-      Action = [
-        "s3:*",
-        "rds:*",
-        "rds-data:*",
-        "ssm:*",
-        "iam:*",
-        "sts:AssumeRole",
-        "ecs:*",
-        "dynamodb:*",
-        "sqs:*",
-        "sns:*",
-        "kinesis:*",
-        "kms:*",
-        "secretsmanager:*",
-        "events:*",
-        "states:*",
-        "execute-api:*",
-        "es:*",
-        "elasticache:*",
-        "redshift:*",
-        "kafka:*",
-        "organizations:*",
-        "cloudformation:*",
-        "cloudtrail:*",
-        "route53:*",
-        "elasticloadbalancing:*",
-        "autoscaling:*",
-        "cloudfront:*",
-        "apigateway:*",
-        "cognito-idp:*",
-        "cognito-identity:*",
-        "lambda:*",
-        "ec2:RunInstances",
-        "ec2:TerminateInstances",
-        "ec2:ModifyInstanceAttribute"
-      ]
-      Resource = "*"
-    }]
+    Statement = [
+      {
+        Sid    = "DenyAllDangerousServices"
+        Effect = "Deny"
+        Action = [
+          "s3:*",
+          "rds:*",
+          "rds-data:*",
+          "ssm:*",
+          "iam:*",
+          "sts:AssumeRole",
+          "ecs:*",
+          "dynamodb:*",
+          "sqs:*",
+          "sns:*",
+          "kinesis:*",
+          "secretsmanager:*",
+          "events:*",
+          "states:*",
+          "execute-api:*",
+          "es:*",
+          "elasticache:*",
+          "redshift:*",
+          "kafka:*",
+          "organizations:*",
+          "cloudformation:*",
+          "cloudtrail:*",
+          "route53:*",
+          "elasticloadbalancing:*",
+          "autoscaling:*",
+          "cloudfront:*",
+          "apigateway:*",
+          "cognito-idp:*",
+          "cognito-identity:*",
+          "lambda:*",
+          "ec2:RunInstances",
+          "ec2:TerminateInstances",
+          "ec2:ModifyInstanceAttribute"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid       = "DenyAllKMSExceptDecrypt"
+        Effect    = "Deny"
+        NotAction = ["kms:Decrypt"]
+        Resource  = "*"
+      }
+    ]
   })
 }
 
@@ -182,6 +189,7 @@ resource "aws_lambda_function" "this" {
   depends_on = [
     aws_iam_role_policy.lambda_logs,
     aws_iam_role_policy.lambda_vpc,
+    aws_iam_role_policy.lambda_ecr,
     aws_cloudwatch_log_group.lambda
   ]
 }

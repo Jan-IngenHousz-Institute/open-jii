@@ -8,10 +8,9 @@ import type {
   TableMetadata,
 } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { AnnotationType } from "@repo/api";
+import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
+import { WellKnownColumnTypes, ColumnPrimitiveType } from "@repo/api/schemas/experiment.schema";
 import {
-  WellKnownColumnTypes,
-  ColumnPrimitiveType,
   isNumericType,
   isMapType,
   isStructType,
@@ -21,9 +20,10 @@ import {
   isSortableType,
   isWellKnownSortableType,
   getWellKnownSortField,
-} from "@repo/api";
+} from "@repo/api/utils/column-type-utils";
 import { useTranslation } from "@repo/i18n";
-import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
 import { ExperimentDataTableCellCollapsible } from "./experiment-data-table-cell-collapsible";

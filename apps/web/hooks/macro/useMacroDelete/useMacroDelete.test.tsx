@@ -4,7 +4,7 @@ import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-uti
 import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { useMacroDelete } from "./useMacroDelete";
 

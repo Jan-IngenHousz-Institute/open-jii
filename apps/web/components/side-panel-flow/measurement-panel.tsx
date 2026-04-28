@@ -4,9 +4,9 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useState } from "react";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
-import type { Protocol } from "@repo/api";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 

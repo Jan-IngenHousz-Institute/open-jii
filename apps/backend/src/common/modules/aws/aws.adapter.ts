@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { PlaceSearchResult } from "@repo/api";
+import type { PlaceSearchResult } from "@repo/api/schemas/experiment.schema";
 
 import { AwsLocationService } from "../../../common/modules/aws/services/location/location.service";
 import { ErrorCodes } from "../../../common/utils/error-codes";

@@ -5,9 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
-import type { Protocol, CreateExperimentBody } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components/card";
 
 import { ProtocolList } from "../current-protocols-list";
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";

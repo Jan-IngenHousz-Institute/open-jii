@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { TransferRequest } from "@repo/api";
+import type { TransferRequest } from "@repo/api/schemas/experiment.schema";
 
 interface TransferRequestCreateProps {
   onSuccess?: (requestId: string) => void;

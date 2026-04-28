@@ -3,38 +3,51 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api";
+import { contract } from "@repo/api/contract";
 
 import { ExperimentDescription } from "./experiment-description";
 
-vi.mock("@repo/ui/components", async (importOriginal: () => Promise<Record<string, unknown>>) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    RichTextarea: ({
-      value,
-      onChange,
-      placeholder,
-      isDisabled,
-    }: {
-      value: string;
-      onChange: (val: string) => void;
-      placeholder: string;
-      isDisabled: boolean;
-    }) => (
-      <textarea
-        data-testid="rich-textarea"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        disabled={isDisabled}
-      />
-    ),
-    RichTextRenderer: ({ content }: { content: string }) => (
-      <div data-testid="rich-text-renderer">{content}</div>
-    ),
-  };
-});
+vi.mock(
+  "@repo/ui/components/rich-textarea",
+  async (importOriginal: () => Promise<Record<string, unknown>>) => {
+    const actual = await importOriginal();
+    return {
+      ...actual,
+      RichTextarea: ({
+        value,
+        onChange,
+        placeholder,
+        isDisabled,
+      }: {
+        value: string;
+        onChange: (val: string) => void;
+        placeholder: string;
+        isDisabled: boolean;
+      }) => (
+        <textarea
+          data-testid="rich-textarea"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={isDisabled}
+        />
+      ),
+    };
+  },
+);
+
+vi.mock(
+  "@repo/ui/components/rich-text-renderer",
+  async (importOriginal: () => Promise<Record<string, unknown>>) => {
+    const actual = await importOriginal();
+    return {
+      ...actual,
+      RichTextRenderer: ({ content }: { content: string }) => (
+        <div data-testid="rich-text-renderer">{content}</div>
+      ),
+    };
+  },
+);
 
 function renderComponent(
   props: {

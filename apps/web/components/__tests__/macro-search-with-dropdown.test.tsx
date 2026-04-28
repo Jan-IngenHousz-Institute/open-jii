@@ -2,7 +2,7 @@ import { createMacro } from "@/test/factories";
 import { act, render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 

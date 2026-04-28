@@ -6,9 +6,9 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { Macro } from "@repo/api";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";

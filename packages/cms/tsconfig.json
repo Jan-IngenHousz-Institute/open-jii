@@ -13,6 +13,7 @@
     "isolatedModules": true,
 
     /** Keep TSC performant in monorepos */
+    "composite": true,
     "incremental": true,
     "disableSourceOfProjectReferenceRedirect": true,
     "tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json",

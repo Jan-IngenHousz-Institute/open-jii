@@ -15,22 +15,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
-import { useSignOut } from "~/hooks/auth";
+import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@repo/ui/components";
+} from "@repo/ui/components/dropdown-menu";
 import { cva } from "@repo/ui/lib/utils";
 
 interface UnifiedNavbarProps {

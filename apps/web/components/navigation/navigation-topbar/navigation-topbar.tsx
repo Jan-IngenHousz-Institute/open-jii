@@ -9,22 +9,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
-import { useSignOut } from "~/hooks/auth";
+import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { User } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { ScrollArea } from "@repo/ui/components/scroll-area";
 import {
-  Button,
-  ScrollArea,
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SidebarTrigger,
-  useSidebar,
-} from "@repo/ui/components";
+} from "@repo/ui/components/sheet";
+import { SidebarTrigger, useSidebar } from "@repo/ui/components/sidebar";
 
 import { NavUser } from "../nav-user/nav-user";
 

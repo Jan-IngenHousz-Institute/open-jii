@@ -5,17 +5,17 @@ import { SearchX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
-import type { Protocol } from "@repo/api";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import {
-  Badge,
   Command,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@repo/ui/components";
-import { PopoverContent } from "@repo/ui/components";
+} from "@repo/ui/components/command";
+import { PopoverContent } from "@repo/ui/components/popover";
 import { cva } from "@repo/ui/lib/utils";
 
 const protocolItemVariants = cva(

@@ -2,13 +2,13 @@ import { faker } from "@faker-js/faker";
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-return */
 import { StatusCodes } from "http-status-codes";
 
+import { contract } from "@repo/api/contract";
 import type {
   ErrorResponse,
   LocationList,
   AddExperimentLocationsBody,
   UpdateExperimentLocationsBody,
-} from "@repo/api";
-import { contract } from "@repo/api";
+} from "@repo/api/schemas/experiment.schema";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
