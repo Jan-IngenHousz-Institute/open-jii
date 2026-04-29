@@ -58,9 +58,7 @@ export const ArticleImage = ({ image, imageClassName }: ArticleImageProps): Reac
         />
       </div>
       {image.caption && (
-        <figcaption className="mt-4" {...inspectorProps({ fieldId: "caption" })}>
-          {image.caption}
-        </figcaption>
+        <figcaption {...inspectorProps({ fieldId: "caption" })}>{image.caption}</figcaption>
       )}
     </figure>
   );

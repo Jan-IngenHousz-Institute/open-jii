@@ -56,9 +56,7 @@ export const ArticleVideo = ({ video, videoClassName }: ArticleVideoProps): Reac
         />
       </div>
       {video.caption && (
-        <figcaption className="mt-4" {...inspectorProps({ fieldId: "caption" })}>
-          {video.caption}
-        </figcaption>
+        <figcaption {...inspectorProps({ fieldId: "caption" })}>{video.caption}</figcaption>
       )}
     </figure>
   );
