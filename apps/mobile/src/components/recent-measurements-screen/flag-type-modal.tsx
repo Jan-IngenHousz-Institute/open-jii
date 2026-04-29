@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
 import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 
-import type { AnnotationFlagType } from "@repo/api";
+import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
 const FLAG_OPTIONS: { value: AnnotationFlagType; label: string }[] = (
   Object.entries(FLAG_TYPE_LABELS) as [AnnotationFlagType, string][]

@@ -6,7 +6,7 @@ import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 import { buildAnnotations } from "~/utils/measurement-annotations";
 
-import type { AnnotationFlagType } from "@repo/api";
+import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
 export function useQuestionsUpload() {
   const { saveMeasurement } = useMeasurements();

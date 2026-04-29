@@ -1,22 +1,23 @@
-import React from "react";
-import { View } from "react-native";
+import clsx from "clsx";
+import { Flag, MessageCircle } from "lucide-react-native";
+import React, { useRef, useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 import { Button } from "~/components/Button";
 import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
 import { FlagTypeModal } from "~/components/recent-measurements-screen/flag-type-modal";
-import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
-import { MeasurementItem } from "~/hooks/use-all-measurements";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useQuestionsUpload } from "~/hooks/use-questions-upload";
 import { useSession } from "~/hooks/use-session";
+import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
 import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/utils/time-sync";
 
-import type { AnnotationFlagType } from "@repo/api";
+import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
-import { AnalysisSummaryCard } from "./analysis-node/analysis-summary-card";
+import { ReadyState } from "./measurement-node/components/ready-state";
 
 export function QuestionsOnlySubmitNode() {
   const {
@@ -33,7 +34,6 @@ export function QuestionsOnlySubmitNode() {
   const { getCycleAnswers } = useFlowAnswersStore();
   const { isUploading, uploadQuestions } = useQuestionsUpload();
 
-  const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [flagPickerVisible, setFlagPickerVisible] = useState(false);
   const [measurementComment, setMeasurementComment] = useState("");
@@ -98,7 +98,7 @@ export function QuestionsOnlySubmitNode() {
   return (
     <View className="flex-1">
       <ReadyState onCardPress={handleCardPress} />
-      <View className="flex-row gap-4 py-2">
+      <View className="flex-row gap-4 px-4 py-2">
         <TouchableOpacity
           onPress={() => setCommentModalVisible(true)}
           className="flex-row items-center gap-1.5 py-1"
@@ -137,12 +137,6 @@ export function QuestionsOnlySubmitNode() {
           style={{ flex: 1, height: 44 }}
         />
       </View>
-
-      <MeasurementQuestionsModal
-        visible={questionsModalVisible}
-        measurement={currentMeasurement}
-        onClose={() => setQuestionsModalVisible(false)}
-      />
 
       <FlagTypeModal
         visible={flagPickerVisible}
