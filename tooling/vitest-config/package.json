@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.7.0",
-    "esbuild": "^0.27.4",
+    "esbuild": "^0.27.5",
     "flow-remove-types": "^2.257.1",
     "vitest": "catalog:testing"
   },
