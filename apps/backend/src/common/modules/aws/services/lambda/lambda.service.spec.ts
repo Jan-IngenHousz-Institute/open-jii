@@ -175,7 +175,7 @@ describe("AwsLambdaService", () => {
       };
       const compressed = zlib.gzipSync(JSON.stringify(originalEnvelope)).toString("base64");
 
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
         Payload: new TextEncoder().encode(
           JSON.stringify({ encoding: "gzip+base64", payload: compressed }),
@@ -194,7 +194,7 @@ describe("AwsLambdaService", () => {
     it("should pass through non-compressed payloads unchanged (legacy compat)", async () => {
       const responsePayload = { status: "success", results: [], extra: 123 };
 
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
         Payload: new TextEncoder().encode(JSON.stringify(responsePayload)),
       });
@@ -213,7 +213,7 @@ describe("AwsLambdaService", () => {
       const huge = Buffer.alloc(60 * 1024 * 1024, 0);
       const compressed = zlib.gzipSync(huge).toString("base64");
 
-      mockSend.mockResolvedValue({
+      lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
         Payload: new TextEncoder().encode(
           JSON.stringify({ encoding: "gzip+base64", payload: compressed }),
