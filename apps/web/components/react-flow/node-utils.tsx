@@ -31,14 +31,15 @@ export function toPosition(pos?: string | Position): Position | undefined {
   }
 }
 
-// Factory for a new node with minimal placeholder spec (validated/enriched elsewhere)
+// Factory for a new node with minimal placeholder spec (validated/enriched elsewhere).
 export function createNewNode(
   type: string,
   position: { x: number; y: number },
   title?: string,
 ): Node {
   const cfg = nodeTypeColorMap[type as keyof typeof nodeTypeColorMap];
-  const displayTitle = title ?? `${type.charAt(0)}${type.slice(1).toLowerCase()} Node`;
+  const defaultTitle =
+    type === "QUESTION" ? "" : `${type.charAt(0)}${type.slice(1).toLowerCase()} Node`;
   const stepSpecification =
     DEFAULT_STEP_SPECIFICATIONS[type as keyof typeof DEFAULT_STEP_SPECIFICATIONS];
   return {
@@ -48,7 +49,7 @@ export function createNewNode(
     sourcePosition: cfg.defaultSourcePosition,
     targetPosition: cfg.defaultTargetPosition,
     data: {
-      title: displayTitle,
+      title: title ?? defaultTitle,
       description: type === "INSTRUCTION" ? "" : undefined,
       stepSpecification,
       isStartNode: false,
