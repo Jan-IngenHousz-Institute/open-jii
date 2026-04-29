@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getMeasurements } from "~/services/measurements-storage";
+
+import { useMeasurements } from "../use-measurements";
 
 const {
   mockMarkAsSuccessful,
@@ -53,9 +56,6 @@ vi.mock("sonner-native", () => ({
   toast: { info: mockToastInfo },
 }));
 
-import { useMeasurements } from "../use-measurements";
-import { getMeasurements } from "~/services/measurements-storage";
-
 const mockMeasurement = {
   topic: "test/topic",
   measurementResult: { value: 42 },
@@ -73,9 +73,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 }
 
 function renderMeasurements(failedUploads: { key: string; data: typeof mockMeasurement }[] = []) {
-  vi.mocked(getMeasurements).mockResolvedValue(
-    failedUploads.map(({ key, data }) => [key, data]),
-  );
+  vi.mocked(getMeasurements).mockResolvedValue(failedUploads.map(({ key, data }) => [key, data]));
   return renderHook(() => useMeasurements(), { wrapper });
 }
 
@@ -146,10 +144,7 @@ describe("useMeasurements", () => {
 
       await act(() => result.current.uploadAll());
 
-      expect(setQueryDataSpy).toHaveBeenCalledWith(
-        ["measurements"],
-        expect.any(Function),
-      );
+      expect(setQueryDataSpy).toHaveBeenCalledWith(["measurements"], expect.any(Function));
       // Verify the updater flips the right key to "synced"
       const updater = setQueryDataSpy.mock.calls.find(
         ([key]) => Array.isArray(key) && key[0] === "measurements",
@@ -165,7 +160,7 @@ describe("useMeasurements", () => {
       mockSendMqttEvent.mockRejectedValueOnce(new Error("network error"));
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
-      await act(() => result.current.uploadAll().catch(() => {}));
+      await act(() => result.current.uploadAll().catch(() => undefined));
 
       expect(mockMarkAsFailed).toHaveBeenCalledWith("upload-key-1");
 
@@ -186,7 +181,7 @@ describe("useMeasurements", () => {
       mockSendMqttEvent.mockRejectedValueOnce(new Error("network error"));
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
-      await act(() => result.current.uploadAll().catch(() => {}));
+      await act(() => result.current.uploadAll().catch(() => undefined));
 
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
 
@@ -237,7 +232,7 @@ describe("useMeasurements", () => {
         .mockResolvedValue(undefined);
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
-      await act(() => result.current.uploadAll().catch(() => {}));
+      await act(() => result.current.uploadAll().catch(() => undefined));
 
       expect(mockMarkAsSuccessful).not.toHaveBeenCalledWith("key-fail");
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-ok-1");
@@ -257,7 +252,7 @@ describe("useMeasurements", () => {
         .mockRejectedValueOnce(new Error("second error"));
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
-      await act(() => result.current.uploadAll().catch(() => {}));
+      await act(() => result.current.uploadAll().catch(() => undefined));
 
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
@@ -361,9 +356,7 @@ describe("useMeasurements", () => {
     it("releases the in-flight key on failure", async () => {
       const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
       await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
-      mockSendMqttEvent
-        .mockRejectedValueOnce(new Error("boom"))
-        .mockResolvedValueOnce(undefined);
+      mockSendMqttEvent.mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce(undefined);
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
       await act(() => result.current.uploadOne("upload-key-1"));
@@ -469,7 +462,9 @@ describe("useMeasurements", () => {
       const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
       const { result } = renderMeasurements([]);
 
-      await act(() => result.current.updateMeasurementComment("key-1", mockMeasurement, "a comment"));
+      await act(() =>
+        result.current.updateMeasurementComment("key-1", mockMeasurement, "a comment"),
+      );
 
       expect(mockUpdateMeasurement).toHaveBeenCalledWith("key-1", {
         ...mockMeasurement,
