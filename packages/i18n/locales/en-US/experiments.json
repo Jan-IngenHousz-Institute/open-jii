@@ -79,7 +79,8 @@
       "title": "Data Column Name",
       "description": "This label will become a column in your data analysis:",
       "defaultColumnName": "question_name"
-    }
+    },
+    "untitledNode": "(Untitled)"
   },
   "overview": "Overview",
   "data": "Data",
@@ -189,6 +190,7 @@
     "nodePanel": "Node Panel",
     "label": "Label",
     "labelPlaceholder": "Enter node title...",
+    "labelHint": "Must be unique within this flow.",
     "nodeProperties": "Node Properties",
     "startNode": "Start Node",
     "startNodeLimit": "Limited to one per flow",

@@ -420,6 +420,20 @@ export const zFlowEdge = z.object({
   label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
 });
 
+/**
+ * Canonicalize a flow node label to the column key the data pipeline emits
+ * for `questions_data`. Allowlist: lowercase ASCII letters, digits, underscore;
+ * everything else collapses to `_`. Mirrors `sanitize_label` in
+ * apps/data/src/pipelines/centrum_pipeline.py — keep them in sync.
+ */
+export function sanitizeQuestionLabel(label: string): string {
+  if (!label) return "question_empty";
+  let s = label.toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  s = s.replace(/^_+|_+$/g, "");
+  if (!s || /^\d/.test(s)) s = `question_${s}`;
+  return s;
+}
+
 export const zFlowGraph = z
   .object({
     nodes: z.array(zFlowNode).min(1, "At least one node is required to create a flow"),
@@ -435,6 +449,27 @@ export const zFlowGraph = z
         path: ["nodes"],
       });
     }
+
+    // Reject duplicate question-node labels. Only question nodes need this:
+    // their labels become column keys in `questions_data`, so duplicates collide
+    // and lose answers downstream. Other node types' labels are display-only.
+    // Compare on the canonicalized form so labels that only differ by
+    // punctuation/whitespace (and would collapse to the same column key)
+    // are also caught.
+    const seen = new Map<string, number>();
+    graph.nodes.forEach((node, index) => {
+      if (node.type !== "question") return;
+      const canonical = sanitizeQuestionLabel(node.name);
+      if (seen.has(canonical)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Question node label "${node.name}" must be unique`,
+          path: ["nodes", index, "name"],
+        });
+        return;
+      }
+      seen.set(canonical, index);
+    });
   });
 
 export const zFlow = z.object({
