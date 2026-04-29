@@ -356,6 +356,90 @@ describe("Experiment Schema", () => {
       expect(() => zFlowGraph.parse(twoStart)).toThrow();
     });
 
+    it("zFlowGraph rejects duplicate question-node labels", () => {
+      const graph = {
+        nodes: [
+          {
+            id: "n1",
+            type: "question",
+            name: "Question Node",
+            content: { kind: "yes_no", text: "ok?", required: false },
+            isStart: true,
+          },
+          {
+            id: "n2",
+            type: "question",
+            name: "Question Node",
+            content: { kind: "yes_no", text: "again?", required: false },
+            isStart: false,
+          },
+        ],
+        edges: [{ id: "e1", source: "n1", target: "n2", label: null }],
+      };
+      const result = zFlowGraph.safeParse(graph);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "nodes.1.name");
+        expect(issue?.message).toContain("Question Node");
+        expect(issue?.message).toContain("unique");
+      }
+    });
+
+    it("zFlowGraph allows duplicate labels across node types", () => {
+      // Only question-node labels become column keys downstream — other types
+      // can share labels with each other or with a question without conflict.
+      const graph = {
+        nodes: [
+          {
+            id: "n1",
+            type: "question",
+            name: "Plot",
+            content: { kind: "open_ended", text: "Which plot?", required: false },
+            isStart: true,
+          },
+          {
+            id: "n2",
+            type: "instruction",
+            name: "Plot",
+            content: { text: "Walk to the plot." },
+            isStart: false,
+          },
+        ],
+        edges: [{ id: "e1", source: "n1", target: "n2", label: null }],
+      };
+      expect(zFlowGraph.parse(graph)).toEqual(graph);
+    });
+
+    it("zFlowGraph rejects question labels that collide after canonicalization", () => {
+      // "Question Node" and "QUESTION-node!" both reduce to `question_node`,
+      // i.e. the same pipeline column key.
+      const graph = {
+        nodes: [
+          {
+            id: "n1",
+            type: "question",
+            name: "Question Node",
+            content: { kind: "yes_no", text: "a?", required: false },
+            isStart: true,
+          },
+          {
+            id: "n2",
+            type: "question",
+            name: "QUESTION-node!",
+            content: { kind: "yes_no", text: "b?", required: false },
+            isStart: false,
+          },
+        ],
+        edges: [{ id: "e1", source: "n1", target: "n2", label: null }],
+      };
+      const result = zFlowGraph.safeParse(graph);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "nodes.1.name");
+        expect(issue?.message).toContain("QUESTION-node!");
+      }
+    });
+
     it("zFlow and zUpsertFlowBody valid", () => {
       const graph = {
         nodes: [

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { sanitizeQuestionLabel } from "@repo/api/schemas/experiment.schema";
 import type { ExperimentMetadata } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
@@ -44,25 +45,6 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 import { cn } from "@repo/ui/lib/utils";
-
-/**
- * Sanitize a question label to match the pipeline's `questions_data` key format.
- * Must stay in sync with `sanitize_label` in centrum_pipeline.py.
- */
-function sanitizeQuestionLabel(label: string): string {
-  if (!label) return "question_empty";
-
-  let s = label.toLowerCase();
-  s = s.replace(/[ ,;{}()\n\t=.]+/g, "_");
-  s = s.replace(/^_+|_+$/g, "");
-  s = s.replace(/_+/g, "_");
-
-  if (!s || /^\d/.test(s)) {
-    s = `question_${s}`;
-  }
-
-  return s;
-}
 
 type SaveStatus = "idle" | "saving" | "saved";
 
