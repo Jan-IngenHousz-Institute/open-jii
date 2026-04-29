@@ -231,6 +231,16 @@ describe("measurements-storage", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0].status).toBe("successful");
     });
+
+    it("is a no-op on a failed row", async () => {
+      insertRow("m1", "failed");
+
+      const mod = await import("../measurements-storage");
+      await mod.markAsSuccessful("m1");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.status).toBe("failed");
+    });
   });
 
   // ---------------------------------------------------------------------------

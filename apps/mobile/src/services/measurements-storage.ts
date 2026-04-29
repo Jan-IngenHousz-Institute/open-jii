@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, inArray } from "drizzle-orm";
 import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
@@ -152,14 +152,14 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
 }
 
 export async function markAsUploading(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
   await ensureMigrated();
   try {
-    for (const key of keys) {
-      db.update(measurements)
-        .set({ status: "uploading" })
-        .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
-        .run();
-    }
+    await db
+      .update(measurements)
+      .set({ status: "uploading" })
+      .where(and(inArray(measurements.id, keys), eq(measurements.status, "failed")))
+      .run();
   } catch (error) {
     console.error("Failed to mark measurements as uploading:", error);
   }

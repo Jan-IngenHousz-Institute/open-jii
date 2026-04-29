@@ -82,6 +82,7 @@ function renderMeasurements(failedUploads: { key: string; data: typeof mockMeasu
 describe("useMeasurements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSendMqttEvent.mockReset();
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 

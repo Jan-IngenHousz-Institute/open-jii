@@ -80,8 +80,13 @@ export function RecentMeasurementsScreen() {
         variant: "primary",
         onPress: () => {
           void (async () => {
-            await cbRef.current.uploadOne(id);
-            cbRef.current.invalidate();
+            try {
+              await cbRef.current.uploadOne(id);
+            } catch {
+              toast.error("Failed to upload measurement. Please try again.");
+            } finally {
+              cbRef.current.invalidate();
+            }
           })();
         },
       },

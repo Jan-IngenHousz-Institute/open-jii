@@ -14,6 +14,10 @@ import {
   pruneExpiredMeasurements,
 } from "~/services/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/services/measurements-storage";
+import type {
+  MeasurementItem,
+  MeasurementStatus as MeasurementUiStatus,
+} from "~/hooks/use-all-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { useUploadStore } from "~/stores/use-upload-store";
 import {
@@ -53,16 +57,24 @@ export function useMeasurements() {
         await markAsSuccessful(key);
         queryClient.setQueryData(
           ["measurements"],
-          (old: { key: string; status: string }[] | undefined) =>
-            old?.map((item) => (item.key === key ? { ...item, status: "synced" } : item)),
+          (old: MeasurementItem[] | undefined) =>
+            old?.map((item) =>
+              item.key === key
+                ? { ...item, status: "synced" satisfies MeasurementUiStatus }
+                : item,
+            ),
         );
       } catch (error) {
         console.warn(`Failed to upload item with key ${key}:`, error);
         await markAsFailed(key);
         queryClient.setQueryData(
           ["measurements"],
-          (old: { key: string; status: string }[] | undefined) =>
-            old?.map((item) => (item.key === key ? { ...item, status: "unsynced" } : item)),
+          (old: MeasurementItem[] | undefined) =>
+            old?.map((item) =>
+              item.key === key
+                ? { ...item, status: "unsynced" satisfies MeasurementUiStatus }
+                : item,
+            ),
         );
         throw error;
       } finally {
@@ -101,7 +113,7 @@ export function useMeasurements() {
     if (!item) return;
 
     await markAsUploading([key]);
-    queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
 
     try {
       await sendMqttEvent(item.data.topic, item.data.measurementResult);
