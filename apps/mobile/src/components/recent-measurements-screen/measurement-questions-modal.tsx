@@ -9,7 +9,11 @@ import type { MeasurementItem } from "~/hooks/use-all-measurements";
 import { useMeasurements } from "~/hooks/use-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
-import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
+import {
+  FLAG_TYPE_LABELS,
+  getCommentFromMeasurementResult,
+  getFlagTypeFromMeasurementResult,
+} from "~/utils/measurement-annotations";
 
 interface MeasurementQuestionsModalProps {
   visible: boolean;
@@ -58,6 +62,7 @@ export function MeasurementQuestionsModal({
   const isUnsynced = measurement.status === "unsynced";
 
   const currentComment = getCommentFromMeasurementResult(measurementResult);
+  const currentFlagType = getFlagTypeFromMeasurementResult(measurementResult);
 
   const handleSaveComment = async (text: string) => {
     await updateMeasurementComment(measurement.key, measurement.data, text);
@@ -149,6 +154,47 @@ export function MeasurementQuestionsModal({
           }}
           nestedScrollEnabled
         >
+          {(currentFlagType !== null || currentComment !== "") && (
+            <View className="mb-4 gap-2">
+              <Text
+                className={clsx(
+                  "text-xs font-semibold uppercase tracking-wider",
+                  classes.textMuted,
+                )}
+              >
+                Annotations
+              </Text>
+
+              {currentFlagType && (
+                <View
+                  className={clsx(
+                    "flex-row items-center gap-2 rounded-xl border px-3 py-2",
+                    classes.card,
+                    classes.border,
+                  )}
+                >
+                  <Flag size={14} color={colors.primary.dark} />
+                  <Text className={clsx("text-sm font-semibold", classes.text)}>
+                    {FLAG_TYPE_LABELS[currentFlagType]}
+                  </Text>
+                </View>
+              )}
+
+              {currentComment !== "" && (
+                <View
+                  className={clsx(
+                    "flex-row items-start gap-2 rounded-xl border px-3 py-2",
+                    classes.card,
+                    classes.border,
+                  )}
+                >
+                  <MessageCircle size={14} color={colors.primary.dark} style={{ marginTop: 2 }} />
+                  <Text className={clsx("flex-1 text-sm", classes.text)}>{currentComment}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {questions.length === 0 ? (
             <View className="items-center justify-center py-8">
               <Text className={clsx("text-center", classes.textSecondary)}>

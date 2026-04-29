@@ -23,6 +23,7 @@ export function NavigationButtons() {
     experimentId,
     previousStep,
     isFromOverview,
+    isQuestionsSubmitPending,
     returnToOverview,
   } = useMeasurementFlowStore();
 
@@ -64,8 +65,9 @@ export function NavigationButtons() {
   const isInstructionOrQuestion =
     currentNode?.type === "instruction" || currentNode?.type === "question";
 
-  // Show navigation buttons only for instruction/question nodes
-  const shouldShowNavigationButtons = !!experimentId && isInstructionOrQuestion;
+  // Show navigation buttons only for instruction/question nodes, not on the submit/review screen
+  const shouldShowNavigationButtons =
+    !!experimentId && isInstructionOrQuestion && !isQuestionsSubmitPending;
 
   if (!shouldShowNavigationButtons) {
     return null;

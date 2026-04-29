@@ -61,7 +61,8 @@
       "title": "Datenspaltenname",
       "description": "Diese Bezeichnung wird zu einer Spalte in Ihrer Datenanalyse:",
       "defaultColumnName": "frage_name"
-    }
+    },
+    "untitledNode": "(Ohne Titel)"
   },
   "overview": "Übersicht",
   "data": "Daten",
@@ -164,6 +165,7 @@
     "nodePanel": "Knoten-Panel",
     "label": "Bezeichnung",
     "labelPlaceholder": "Knotentitel eingeben...",
+    "labelHint": "Muss innerhalb dieses Flows eindeutig sein.",
     "nodeProperties": "Knoteneigenschaften",
     "startNode": "Startknoten",
     "startNodeLimit": "Auf einen pro Flow begrenzt",
