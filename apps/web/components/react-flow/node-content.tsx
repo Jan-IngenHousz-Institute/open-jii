@@ -60,12 +60,18 @@ export function NodeContent({
           </div>
           {/* Label inside the node */}
           <div className="text-center">
-            <span
-              className="text-md inline-block max-w-[250px] truncate font-medium text-slate-700"
-              title={title}
-            >
-              {title}
-            </span>
+            {title ? (
+              <span
+                className="text-md inline-block max-w-[250px] truncate font-medium text-slate-700"
+                title={title}
+              >
+                {title}
+              </span>
+            ) : (
+              <span className="text-md inline-block max-w-[250px] truncate font-medium italic text-slate-400">
+                {t("flow.untitledNode")}
+              </span>
+            )}
           </div>
         </div>
       </div>
