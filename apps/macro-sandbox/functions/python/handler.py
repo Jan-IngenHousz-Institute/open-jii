@@ -1,9 +1,22 @@
 import json
 import base64
+import gzip
 import subprocess
 import os
 import shutil
 import tempfile
+
+
+# AWS Lambda sync responses are capped at 6 MB. Compress every response so
+# macro outputs of ~25-50 MB raw can still fit. Callers detect the
+# {encoding, payload} wrapper and decompress.
+def _compress_response(envelope):
+    body = json.dumps(envelope).encode("utf-8")
+    compressed = gzip.compress(body)
+    return {
+        "encoding": "gzip+base64",
+        "payload": base64.b64encode(compressed).decode("ascii"),
+    }
 
 # Limits
 MAX_SCRIPT_SIZE = 1 * 1024 * 1024  # 1MB
@@ -24,14 +37,15 @@ def _cleanup_stale_tmp():
 
 def handler(event, context):
     try:
-        return _execute(event)
+        result = _execute(event)
     except Exception as e:
-    # Never leak internal details to caller
-        return {
+        # Never leak internal details to caller
+        result = {
             "status": "error",
             "results": [],
             "errors": [f"Handler error: {type(e).__name__}"],
         }
+    return _compress_response(result)
 
 
 def _execute(event):
