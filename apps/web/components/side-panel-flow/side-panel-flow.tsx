@@ -207,8 +207,13 @@ export function ExperimentSidePanel({
                 onChange={handleTitleChange}
                 placeholder={t("sidePanelFlow.labelPlaceholder")}
                 disabled={isDisabled}
+                required={displayNodeType === "QUESTION"}
+                aria-required={displayNodeType === "QUESTION"}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
+              {displayNodeType === "QUESTION" && (
+                <p className="mt-1.5 text-xs text-gray-500">{t("sidePanelFlow.labelHint")}</p>
+              )}
             </CardContent>
           </Card>
 
