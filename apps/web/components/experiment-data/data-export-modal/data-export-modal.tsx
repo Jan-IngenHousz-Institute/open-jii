@@ -66,7 +66,7 @@ export function DataExportModal({
         params: { id: experimentId },
         body: {
           tableName,
-          format: format as "csv" | "ndjson" | "json-array" | "parquet",
+          format: format as "csv" | "ndjson" | "json-array" | "parquet" | "xlsx",
         },
       },
       {

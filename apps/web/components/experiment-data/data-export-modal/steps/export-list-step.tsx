@@ -115,6 +115,7 @@ const FORMAT_LABELS: Record<string, string> = {
   ndjson: "NDJSON",
   "json-array": "JSON Array",
   parquet: "Parquet",
+  xlsx: "Excel (.xlsx)",
 };
 
 const formatDateTime = (dateString: string | null): string => {
@@ -356,6 +357,9 @@ export function ExportListStep({
                 JSON Array
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateExport("xlsx")}>
+                Excel (.xlsx)
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

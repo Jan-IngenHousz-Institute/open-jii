@@ -1,6 +1,6 @@
 # Databricks notebook source
 # DBTITLE 1,Data Export Task
-# Standalone task to export experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet)
+# Standalone task to export experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, XLSX)
 # This task runs independently and outputs files to Unity Catalog volumes
 
 # COMMAND ----------
@@ -18,7 +18,9 @@ from pyspark.dbutils import DBUtils
 # Import openjii utilities
 import sys
 sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/openjii")
+sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/exports")
 from openjii.helpers import load_experiment_table
+from exports.xlsx import write_xlsx
 
 # Use print() for logging — Databricks captures stdout/stderr from the
 # driver on the compute cluster, but the Python logging module is often
@@ -33,7 +35,7 @@ def log(msg: str, level: str = "INFO"):
 EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 TABLE_NAME = dbutils.widgets.get("TABLE_NAME")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
-FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, or parquet
+FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, parquet, or xlsx
 USER_ID = dbutils.widgets.get("USER_ID")  # User who initiated the export
 ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT") if dbutils.widgets.get("ENVIRONMENT") else "DEV"
 
@@ -130,6 +132,18 @@ def export_data(df):
             dbutils.fs.put(f"{OUTPUT_PATH}/_SUCCESS", "", overwrite=True)
         elif FORMAT == "parquet":
             df.coalesce(1).write.mode("overwrite").parquet(OUTPUT_PATH)
+        elif FORMAT == "xlsx":
+            # Native Excel workbook for spreadsheet users — opens cleanly on
+            # double-click without CSV's quoted-JSON parsing problems.
+            # write_xlsx owns all preprocessing and the row-count guard;
+            # see exports.xlsx for the contract.
+            local_tmp = f"/tmp/{EXPORT_ID}.xlsx"
+            report = write_xlsx(df, local_tmp, TABLE_NAME)
+            log(f"xlsx written: {report['row_count']} rows → sheet '{report['sheet_name']}'")
+
+            dbutils.fs.mkdirs(OUTPUT_PATH)
+            dbutils.fs.cp(f"file:{local_tmp}", f"{OUTPUT_PATH}/part-00000.xlsx")
+            dbutils.fs.put(f"{OUTPUT_PATH}/_SUCCESS", "", overwrite=True)
         else:
             raise ValueError(f"Unsupported format: {FORMAT}")
         

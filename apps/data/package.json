@@ -12,6 +12,7 @@
     "build:ambyte": "cd src/lib/ambyte && python3 -m build",
     "build:enrich": "cd src/lib/enrich && python3 -m build",
     "build:openjii": "cd src/lib/openjii && python3 -m build",
+    "test:docker": "docker build -f Dockerfile.test -t openjii-data-tests . && docker run --rm openjii-data-tests",
     "validate": "databricks bundle validate",
     "validate:dev": "databricks bundle validate -t dev",
     "validate:prod": "databricks bundle validate -t prod",

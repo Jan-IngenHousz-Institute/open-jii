@@ -83,6 +83,7 @@ export function FormatSelectionStep({
                         <SelectItem value="csv">CSV</SelectItem>
                         <SelectItem value="json">JSON</SelectItem>
                         <SelectItem value="parquet">Parquet</SelectItem>
+                        <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

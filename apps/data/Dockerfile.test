@@ -1,0 +1,45 @@
+# Reproducible environment for running the apps/data Python test suite —
+# specifically the Spark-backed integration tests that need a JVM and
+# pyspark, which most dev machines don't have set up natively.
+#
+# Build:  docker build -f Dockerfile.test -t openjii-data-tests apps/data
+# Run:    docker run --rm openjii-data-tests
+#
+# Iterating on tests: mount the host's apps/data over the image's /app so
+# you don't rebuild on every change:
+#
+#   docker run --rm -v "$(pwd)/apps/data:/app" openjii-data-tests
+
+FROM eclipse-temurin:17-jdk-jammy
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python deps first so the layer caches across source edits.
+# Pinned to known-good versions; bump deliberately, not opportunistically.
+RUN pip install --no-cache-dir \
+        pyspark==4.0.2 \
+        pytest==8.4.2 \
+        openpyxl==3.1.5 \
+        pandas==2.2.3 \
+        pyarrow==17.0.0
+
+# Only copy what the test suite needs. Avoids invalidating the pip-deps
+# layer on unrelated edits (notebooks, other libs, data).
+COPY src/lib/exports /app/src/lib/exports
+COPY tests /app/tests
+
+# Editable install so the test code imports the package by name
+# (`from exports.xlsx import ...`) just like it does in production.
+RUN pip install --no-cache-dir -e /app/src/lib/exports
+
+# pytest discovery: point at /app/tests directly so we don't need the
+# repo's pyproject.toml (which pulls in path deps not present in the image).
+CMD ["python3", "-m", "pytest", "/app/tests", "-v"]
