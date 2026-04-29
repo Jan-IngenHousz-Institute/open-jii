@@ -28,7 +28,7 @@ function confirmAndRun({ title, message, confirmText, variant, errorMessage, run
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
-  const { measurements, uploadingCount, invalidate } = useAllMeasurements(filter);
+  const { measurements, allMeasurements, uploadingCount, invalidate } = useAllMeasurements(filter);
   const {
     uploadAll,
     isUploading,
@@ -38,8 +38,8 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     updateMeasurementComment,
   } = useMeasurements();
 
-  const unsyncedCount = measurements.filter(({ status }) => status === "unsynced").length;
-  const syncedCount = measurements.filter(({ status }) => status === "synced").length;
+  const unsyncedCount = allMeasurements.filter(({ status }) => status === "unsynced").length;
+  const syncedCount = allMeasurements.filter(({ status }) => status === "synced").length;
 
   const confirmSync = (m: MeasurementItem) =>
     confirmAndRun({

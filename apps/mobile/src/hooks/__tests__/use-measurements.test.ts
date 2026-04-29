@@ -17,7 +17,7 @@ const {
   mockToastInfo,
 } = vi.hoisted(() => ({
   mockMarkAsSuccessful: vi.fn().mockResolvedValue(undefined),
-  mockMarkAsUploading: vi.fn().mockResolvedValue(undefined),
+  mockMarkAsUploading: vi.fn().mockImplementation((keys: string[]) => Promise.resolve(keys)),
   mockMarkAsFailed: vi.fn().mockResolvedValue(undefined),
   mockRemoveMeasurement: vi.fn().mockResolvedValue(undefined),
   mockSaveMeasurement: vi.fn().mockResolvedValue(undefined),
@@ -328,6 +328,77 @@ describe("useMeasurements", () => {
       expect(mockSendMqttEvent).not.toHaveBeenCalled();
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
       expect(mockPruneExpiredMeasurements).not.toHaveBeenCalled();
+    });
+
+    it("short-circuits concurrent uploadOne calls for the same key", async () => {
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValueOnce(undefined);
+
+      await act(async () => {
+        const first = result.current.uploadOne("upload-key-1");
+        const second = result.current.uploadOne("upload-key-1");
+        await Promise.all([first, second]);
+      });
+
+      expect(mockSendMqttEvent).toHaveBeenCalledTimes(1);
+      expect(mockMarkAsUploading).toHaveBeenCalledTimes(1);
+      expect(mockMarkAsSuccessful).toHaveBeenCalledTimes(1);
+    });
+
+    it("releases the in-flight key on success so it can be retried", async () => {
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValue(undefined);
+
+      await act(() => result.current.uploadOne("upload-key-1"));
+      await act(() => result.current.uploadOne("upload-key-1"));
+
+      expect(mockMarkAsUploading).toHaveBeenCalledTimes(2);
+      expect(mockSendMqttEvent).toHaveBeenCalledTimes(2);
+    });
+
+    it("releases the in-flight key on failure", async () => {
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent
+        .mockRejectedValueOnce(new Error("boom"))
+        .mockResolvedValueOnce(undefined);
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await act(() => result.current.uploadOne("upload-key-1"));
+      await act(() => result.current.uploadOne("upload-key-1"));
+
+      expect(mockMarkAsUploading).toHaveBeenCalledTimes(2);
+      expect(mockSendMqttEvent).toHaveBeenCalledTimes(2);
+
+      consoleSpy.mockRestore();
+    });
+
+    it("skips sendMqttEvent when markAsUploading reports no transition", async () => {
+      mockMarkAsUploading.mockResolvedValueOnce([]);
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+
+      await act(() => result.current.uploadOne("upload-key-1"));
+
+      expect(mockSendMqttEvent).not.toHaveBeenCalled();
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      expect(mockPruneExpiredMeasurements).not.toHaveBeenCalled();
+    });
+
+    it("releases the in-flight key when transition is rejected", async () => {
+      mockMarkAsUploading.mockResolvedValueOnce([]).mockResolvedValueOnce(["upload-key-1"]);
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValueOnce(undefined);
+
+      await act(() => result.current.uploadOne("upload-key-1"));
+      await act(() => result.current.uploadOne("upload-key-1"));
+
+      expect(mockMarkAsUploading).toHaveBeenCalledTimes(2);
+      expect(mockSendMqttEvent).toHaveBeenCalledTimes(1);
     });
   });
 

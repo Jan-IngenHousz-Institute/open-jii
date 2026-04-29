@@ -151,17 +151,20 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
   }
 }
 
-export async function markAsUploading(keys: string[]): Promise<void> {
-  if (keys.length === 0) return;
+export async function markAsUploading(keys: string[]): Promise<string[]> {
+  if (keys.length === 0) return [];
   await ensureMigrated();
   try {
-    await db
+    const rows = db
       .update(measurements)
       .set({ status: "uploading" })
       .where(and(inArray(measurements.id, keys), eq(measurements.status, "failed")))
-      .run();
+      .returning({ id: measurements.id })
+      .all();
+    return rows.map((r) => r.id);
   } catch (error) {
     console.error("Failed to mark measurements as uploading:", error);
+    return [];
   }
 }
 

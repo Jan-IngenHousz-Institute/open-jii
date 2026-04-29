@@ -30,6 +30,7 @@ export function useMeasurements() {
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const uploadingKeysRef = useRef<Set<string>>(new Set());
 
   const { data: failedUploads = [] } = useQuery({
     queryKey: ["measurements", "failed"],
@@ -46,12 +47,13 @@ export function useMeasurements() {
   const uploadAsync = useAsyncCallback(async () => {
     const CONCURRENCY = 10;
     const items = [...failedUploadsRef.current];
-    setUploadProgress({ done: 0, total: items.length });
 
-    await markAsUploading(items.map(({ key }) => key));
+    const transitioned = new Set(await markAsUploading(items.map(({ key }) => key)));
+    const itemsToUpload = items.filter(({ key }) => transitioned.has(key));
+    setUploadProgress({ done: 0, total: itemsToUpload.length });
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
 
-    const taskFns = items.map(({ key, data }) => async () => {
+    const taskFns = itemsToUpload.map(({ key, data }) => async () => {
       try {
         await sendMqttEvent(data.topic, data.measurementResult);
         await markAsSuccessful(key);
@@ -109,22 +111,30 @@ export function useMeasurements() {
   });
 
   const uploadOne = async (key: string) => {
+    if (uploadingKeysRef.current.has(key)) return;
     const item = failedUploads.find((u) => u.key === key);
     if (!item) return;
 
-    await markAsUploading([key]);
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    uploadingKeysRef.current.add(key);
 
     try {
-      await sendMqttEvent(item.data.topic, item.data.measurementResult);
-      await markAsSuccessful(key);
-    } catch (error) {
-      console.warn(`Failed to upload item with key ${key}:`, error);
-      await markAsFailed(key);
-      toast.info("Failed to upload, try again later");
-    } finally {
-      await pruneExpiredMeasurements();
+      const transitioned = await markAsUploading([key]);
+      if (transitioned.length === 0) return;
       await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+
+      try {
+        await sendMqttEvent(item.data.topic, item.data.measurementResult);
+        await markAsSuccessful(key);
+      } catch (error) {
+        console.warn(`Failed to upload item with key ${key}:`, error);
+        await markAsFailed(key);
+        toast.info("Failed to upload, try again later");
+      } finally {
+        await pruneExpiredMeasurements();
+        await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      }
+    } finally {
+      uploadingKeysRef.current.delete(key);
     }
   };
 

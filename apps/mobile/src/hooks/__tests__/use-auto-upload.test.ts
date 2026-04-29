@@ -8,12 +8,18 @@ const {
   mockToastSuccess,
   mockToastError,
   mockResetUploadingMeasurements,
+  mockInvalidateQueries,
 } = vi.hoisted(() => ({
   mockUploadAll: vi.fn().mockResolvedValue(undefined),
   mockToastInfo: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
   mockResetUploadingMeasurements: vi.fn().mockResolvedValue(undefined),
+  mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
 let mockFailedUploads: { key: string; data: unknown }[] = [];
@@ -74,6 +80,59 @@ describe("useAutoUpload", () => {
   // ---------------------------------------------------------------------------
   // initial load
   // ---------------------------------------------------------------------------
+
+  describe("startup reset sequence", () => {
+    it("calls invalidateQueries after reset so recovered rows are visible", async () => {
+      renderHook(() => useAutoUpload());
+
+      await waitFor(() =>
+        expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] }),
+      );
+      // Reset must complete before invalidate runs.
+      const resetOrder = mockResetUploadingMeasurements.mock.invocationCallOrder[0];
+      const invalidateOrder = mockInvalidateQueries.mock.invocationCallOrder[0];
+      expect(resetOrder).toBeLessThan(invalidateOrder);
+    });
+
+    it("does not fire initial upload before reset completes", async () => {
+      let resolveReset!: () => void;
+      mockResetUploadingMeasurements.mockImplementationOnce(
+        () => new Promise<void>((res) => { resolveReset = res; }),
+      );
+
+      mockFailedUploads = [{ key: "k1", data: {} }];
+      renderHook(() => useAutoUpload());
+
+      // Reset is pending — uploadAll must not run yet even though failedUploads is non-empty.
+      await new Promise((r) => setTimeout(r, 0));
+      expect(mockUploadAll).not.toHaveBeenCalled();
+
+      resolveReset();
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+    });
+
+    it("uses recovered rows for the first upload when reset reveals them", async () => {
+      let resolveReset!: () => void;
+      mockResetUploadingMeasurements.mockImplementationOnce(
+        () => new Promise<void>((res) => { resolveReset = res; }),
+      );
+
+      // Simulate query cache only exposing recovered rows after reset+invalidate.
+      mockFailedUploads = [];
+      const { rerender } = renderHook(() => useAutoUpload());
+
+      await new Promise((r) => setTimeout(r, 0));
+      expect(mockUploadAll).not.toHaveBeenCalled();
+
+      resolveReset();
+      await waitFor(() => expect(mockInvalidateQueries).toHaveBeenCalled());
+
+      mockFailedUploads = [{ key: "recovered", data: {} }];
+      rerender();
+
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
+    });
+  });
 
   describe("initial load", () => {
     it("calls resetUploadingMeasurements on mount", () => {

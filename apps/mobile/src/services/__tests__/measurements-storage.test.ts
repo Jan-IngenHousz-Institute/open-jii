@@ -244,6 +244,56 @@ describe("measurements-storage", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // markAsUploading
+  // ---------------------------------------------------------------------------
+
+  describe("markAsUploading", () => {
+    it("returns an empty array for an empty key list", async () => {
+      const mod = await import("../measurements-storage");
+      const ids = await mod.markAsUploading([]);
+      expect(ids).toEqual([]);
+    });
+
+    it("returns the ids of rows transitioned from failed to uploading", async () => {
+      insertRow("m1", "failed");
+      insertRow("m2", "failed");
+
+      const mod = await import("../measurements-storage");
+      const ids = await mod.markAsUploading(["m1", "m2"]);
+
+      expect([...ids].sort()).toEqual(["m1", "m2"]);
+      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
+      expect(rows.map((r) => r.status)).toEqual(["uploading", "uploading"]);
+    });
+
+    it("returns an empty array when the row is already uploading", async () => {
+      insertRow("m1", "uploading");
+
+      const mod = await import("../measurements-storage");
+      const ids = await mod.markAsUploading(["m1"]);
+
+      expect(ids).toEqual([]);
+    });
+
+    it("returns an empty array when the row does not exist", async () => {
+      const mod = await import("../measurements-storage");
+      const ids = await mod.markAsUploading(["does-not-exist"]);
+      expect(ids).toEqual([]);
+    });
+
+    it("returns only failed rows when given a mixed batch", async () => {
+      insertRow("m1", "failed");
+      insertRow("m2", "uploading");
+      insertRow("m3", "successful");
+
+      const mod = await import("../measurements-storage");
+      const ids = await mod.markAsUploading(["m1", "m2", "m3"]);
+
+      expect(ids).toEqual(["m1"]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // removeMeasurement
   // ---------------------------------------------------------------------------
 

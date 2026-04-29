@@ -1,4 +1,5 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { addNetworkStateListener } from "expo-network";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
@@ -7,17 +8,24 @@ import { resetUploadingMeasurements } from "~/services/measurements-storage";
 
 export function useAutoUpload() {
   const { failedUploads, uploadAll, isUploading } = useMeasurements();
+  const queryClient = useQueryClient();
 
   const stateRef = useRef({ failedUploads, uploadAll, isUploading });
   stateRef.current = { failedUploads, uploadAll, isUploading };
 
   const initialCheckDone = useRef(false);
   const autoUploadInFlight = useRef(false);
+  const [resetDone, setResetDone] = useState(false);
 
-  // Reset any items stuck in "uploading" from a previous crashed session.
+  // Reset any items stuck in "uploading" from a previous crashed session,
+  // then invalidate so failedUploads includes recovered rows before first upload.
   useEffect(() => {
-    void resetUploadingMeasurements();
-  }, []);
+    void (async () => {
+      await resetUploadingMeasurements();
+      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      setResetDone(true);
+    })();
+  }, [queryClient]);
 
   const tryUpload = useCallback(async () => {
     const { failedUploads, uploadAll, isUploading } = stateRef.current;
@@ -37,12 +45,13 @@ export function useAutoUpload() {
     }
   }, []);
 
-  // Trigger once when data first loads with unsynced measurements.
+  // Trigger once when data first loads with unsynced measurements,
+  // after stuck-row reset has flushed into the query cache.
   useEffect(() => {
-    if (initialCheckDone.current || failedUploads.length === 0) return;
+    if (!resetDone || initialCheckDone.current || failedUploads.length === 0) return;
     initialCheckDone.current = true;
     void tryUpload();
-  }, [failedUploads.length, tryUpload]);
+  }, [resetDone, failedUploads.length, tryUpload]);
 
   // Trigger on every foreground transition.
   useEffect(() => {
