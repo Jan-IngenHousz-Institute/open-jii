@@ -147,11 +147,19 @@ export function MeasurementsList({
 
       <CommentModal
         visible={!!selectedForComment}
-        initialText={getCommentFromMeasurementResult(
-          selectedForComment?.data.measurementResult as Record<string, unknown>,
-        )}
+        initialText={
+          selectedForComment?.data.measurementResult
+            ? getCommentFromMeasurementResult(
+                selectedForComment.data.measurementResult as Record<string, unknown>,
+              )
+            : ""
+        }
         experimentName={selectedForComment?.experimentName ?? ""}
-        questions={parseQuestions(selectedForComment?.data.measurementResult)}
+        questions={
+          selectedForComment?.data.measurementResult
+            ? parseQuestions(selectedForComment.data.measurementResult)
+            : []
+        }
         timestamp={selectedForComment?.timestamp ?? ""}
         onSave={async (text) => {
           if (!selectedForComment) return;
