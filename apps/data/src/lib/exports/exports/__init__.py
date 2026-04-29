@@ -1,9 +1,8 @@
-"""Export-format helpers for the openJII data export task.
+"""
+Export-format helpers for the openJII data export task.
 
-One submodule per format. Public names are re-exported here so callers can
-do either ``from exports import write_xlsx`` or
-``from exports.xlsx import write_xlsx`` — pick whichever reads better at the
-call site.
+This package provide helper function for exporting databricks datatables
+to various formats
 """
 
 from .xlsx import (

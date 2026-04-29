@@ -1,9 +1,5 @@
-"""xlsx export helpers.
-
-Pure pandas-only functions so they can be unit-tested without a
-Spark/Databricks runtime. The Databricks notebook
-(apps/data/src/tasks/data_export_task.py) loads data and writes to the
-Unity Catalog volume; these helpers just prepare the workbook.
+"""
+xlsx export helpers
 """
 
 from __future__ import annotations
@@ -29,7 +25,9 @@ def sanitize_sheet_name(name: Optional[str]) -> str:
     return cleaned or "data"
 
 
-def truncate_long_strings(pdf: pd.DataFrame, limit: int = EXCEL_CELL_CHAR_LIMIT) -> pd.DataFrame:
+def truncate_long_strings(
+    pdf: pd.DataFrame, limit: int = EXCEL_CELL_CHAR_LIMIT
+) -> pd.DataFrame:
     """Truncate string cells longer than Excel's per-cell limit.
 
     Mutates and returns the same DataFrame. Non-string and missing values
