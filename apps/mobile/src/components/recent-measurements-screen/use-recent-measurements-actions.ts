@@ -114,6 +114,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
 
   return {
     measurements,
+    hasAnyMeasurements: allMeasurements.length > 0,
     syncedCount,
     unsyncedCount,
     uploadingCount,

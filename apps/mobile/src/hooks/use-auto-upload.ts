@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { addNetworkStateListener } from "expo-network";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
 import { useMeasurements } from "~/hooks/use-measurements";
@@ -66,7 +66,7 @@ export function useAutoUpload() {
     let wasReachable: boolean | null = null;
     const sub = addNetworkStateListener(({ isInternetReachable }) => {
       const restored = wasReachable === false && isInternetReachable === true;
-      if (isInternetReachable !== null) wasReachable = isInternetReachable;
+      if (isInternetReachable !== undefined) wasReachable = isInternetReachable;
       if (restored) void tryUpload();
     });
     return () => sub.remove();

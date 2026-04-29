@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor, act } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+import { useAllMeasurements } from "../use-all-measurements";
 
 const { mockGetMeasurements, mockParseQuestions } = vi.hoisted(() => ({
   mockGetMeasurements: vi.fn().mockResolvedValue([]),
@@ -16,8 +18,6 @@ vi.mock("~/services/measurements-storage", () => ({
 vi.mock("~/utils/convert-cycle-answers-to-array", () => ({
   parseQuestions: mockParseQuestions,
 }));
-
-import { useAllMeasurements } from "../use-all-measurements";
 
 let queryClient: QueryClient;
 
@@ -224,7 +224,10 @@ describe("useAllMeasurements", () => {
     it("updates measurements reactively when filter changes", async () => {
       const { result, rerender } = renderHook(
         ({ filter }: { filter: "all" | "synced" | "unsynced" }) => useAllMeasurements(filter),
-        { wrapper, initialProps: { filter: "all" as const } },
+        {
+          wrapper,
+          initialProps: { filter: "all" as "all" | "synced" | "unsynced" },
+        },
       );
 
       await waitFor(() => expect(result.current.measurements).toHaveLength(3));
@@ -241,8 +244,7 @@ describe("useAllMeasurements", () => {
   describe("allMeasurements", () => {
     it("is unfiltered while measurements respects the active filter", async () => {
       mockGetMeasurements.mockImplementation((status: string) => {
-        if (status === "failed")
-          return Promise.resolve([entry("u1", "2026-01-01T10:00:00Z", "U")]);
+        if (status === "failed") return Promise.resolve([entry("u1", "2026-01-01T10:00:00Z", "U")]);
         if (status === "successful")
           return Promise.resolve([entry("s1", "2026-01-01T12:00:00Z", "S")]);
         return Promise.resolve([]);

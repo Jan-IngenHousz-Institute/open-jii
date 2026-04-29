@@ -19,6 +19,7 @@ export function RecentMeasurementsScreen() {
 
   const {
     measurements,
+    hasAnyMeasurements,
     syncedCount,
     unsyncedCount,
     uploadingCount,
@@ -99,7 +100,7 @@ export function RecentMeasurementsScreen() {
               title="Export measurements"
               variant="tertiary"
               onPress={handleExport}
-              isDisabled={!hasItems}
+              isDisabled={!hasAnyMeasurements}
               icon={<Download size={16} color={colors.primary.dark} strokeWidth={1.4} />}
             />
           </View>

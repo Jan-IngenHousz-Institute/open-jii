@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { useAutoUpload } from "../use-auto-upload";
 
 const {
   mockUploadAll,
@@ -58,15 +60,11 @@ vi.mock("~/services/measurements-storage", () => ({
 }));
 
 vi.mock("expo-network", () => ({
-  addNetworkStateListener: (
-    listener: (state: { isInternetReachable: boolean | null }) => void,
-  ) => {
+  addNetworkStateListener: (listener: (state: { isInternetReachable: boolean | null }) => void) => {
     capturedNetworkListener = listener;
     return { remove: mockNetworkRemove };
   },
 }));
-
-import { useAutoUpload } from "../use-auto-upload";
 
 describe("useAutoUpload", () => {
   beforeEach(() => {
@@ -97,7 +95,10 @@ describe("useAutoUpload", () => {
     it("does not fire initial upload before reset completes", async () => {
       let resolveReset!: () => void;
       mockResetUploadingMeasurements.mockImplementationOnce(
-        () => new Promise<void>((res) => { resolveReset = res; }),
+        () =>
+          new Promise<void>((res) => {
+            resolveReset = res;
+          }),
       );
 
       mockFailedUploads = [{ key: "k1", data: {} }];
@@ -114,7 +115,10 @@ describe("useAutoUpload", () => {
     it("uses recovered rows for the first upload when reset reveals them", async () => {
       let resolveReset!: () => void;
       mockResetUploadingMeasurements.mockImplementationOnce(
-        () => new Promise<void>((res) => { resolveReset = res; }),
+        () =>
+          new Promise<void>((res) => {
+            resolveReset = res;
+          }),
       );
 
       // Simulate query cache only exposing recovered rows after reset+invalidate.
@@ -169,7 +173,10 @@ describe("useAutoUpload", () => {
 
       await waitFor(() => expect(mockUploadAll).toHaveBeenCalledOnce());
 
-      mockFailedUploads = [{ key: "k1", data: {} }, { key: "k2", data: {} }];
+      mockFailedUploads = [
+        { key: "k1", data: {} },
+        { key: "k2", data: {} },
+      ];
       rerender();
 
       expect(mockUploadAll).toHaveBeenCalledOnce();
@@ -191,7 +198,10 @@ describe("useAutoUpload", () => {
     });
 
     it("uses plural form for multiple measurements", async () => {
-      mockFailedUploads = [{ key: "k1", data: {} }, { key: "k2", data: {} }];
+      mockFailedUploads = [
+        { key: "k1", data: {} },
+        { key: "k2", data: {} },
+      ];
       renderHook(() => useAutoUpload());
 
       await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
@@ -373,7 +383,10 @@ describe("useAutoUpload", () => {
     it("drops a second call while first upload is still in flight", async () => {
       let resolveUpload!: () => void;
       mockUploadAll.mockImplementationOnce(
-        () => new Promise<void>((res) => { resolveUpload = res; }),
+        () =>
+          new Promise<void>((res) => {
+            resolveUpload = res;
+          }),
       );
 
       mockFailedUploads = [{ key: "k1", data: {} }];

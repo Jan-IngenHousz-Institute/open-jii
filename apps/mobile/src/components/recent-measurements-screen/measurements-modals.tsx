@@ -17,9 +17,7 @@ interface Props {
 
 export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
   if (state.kind === "questions") {
-    return (
-      <MeasurementQuestionsModal visible measurement={state.measurement} onClose={onClose} />
-    );
+    return <MeasurementQuestionsModal visible measurement={state.measurement} onClose={onClose} />;
   }
 
   if (state.kind === "comment") {

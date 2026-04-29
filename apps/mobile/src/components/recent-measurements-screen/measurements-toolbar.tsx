@@ -46,6 +46,9 @@ export function MeasurementsToolbar({
           isDisabled={syncedCount === 0}
           icon={<Trash2 size={24} color={colors.primary.dark} strokeWidth={1.4} />}
           style={{ borderColor: "transparent", padding: 9 }}
+          accessibilityRole="button"
+          accessibilityLabel="Delete all synced measurements"
+          accessibilityHint="Removes measurements that have already been uploaded"
         />
         <View>
           <Button
@@ -55,6 +58,9 @@ export function MeasurementsToolbar({
             isDisabled={unsyncedCount === 0}
             icon={<UploadCloud size={24} color={colors.primary.dark} strokeWidth={1.4} />}
             style={{ borderColor: "transparent", padding: 9 }}
+            accessibilityRole="button"
+            accessibilityLabel="Sync all measurements"
+            accessibilityHint="Uploads all unsynced measurements"
           />
           {uploadingCount > 0 && (
             <View

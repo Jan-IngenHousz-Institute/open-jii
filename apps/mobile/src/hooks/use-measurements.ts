@@ -2,6 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
+import type {
+  MeasurementItem,
+  MeasurementStatus as MeasurementUiStatus,
+} from "~/hooks/use-all-measurements";
 import {
   clearMeasurements,
   getMeasurements,
@@ -14,14 +18,9 @@ import {
   pruneExpiredMeasurements,
 } from "~/services/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/services/measurements-storage";
-import type {
-  MeasurementItem,
-  MeasurementStatus as MeasurementUiStatus,
-} from "~/hooks/use-all-measurements";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
-import { useUploadStore } from "~/stores/use-upload-store";
 import {
-  buildAnnotationsWithComment,
+  buildAnnotations,
   getFlagTypeFromMeasurementResult,
 } from "~/utils/measurement-annotations";
 
@@ -57,26 +56,18 @@ export function useMeasurements() {
       try {
         await sendMqttEvent(data.topic, data.measurementResult);
         await markAsSuccessful(key);
-        queryClient.setQueryData(
-          ["measurements"],
-          (old: MeasurementItem[] | undefined) =>
-            old?.map((item) =>
-              item.key === key
-                ? { ...item, status: "synced" satisfies MeasurementUiStatus }
-                : item,
-            ),
+        queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
+          old?.map((item) =>
+            item.key === key ? { ...item, status: "synced" satisfies MeasurementUiStatus } : item,
+          ),
         );
       } catch (error) {
         console.warn(`Failed to upload item with key ${key}:`, error);
         await markAsFailed(key);
-        queryClient.setQueryData(
-          ["measurements"],
-          (old: MeasurementItem[] | undefined) =>
-            old?.map((item) =>
-              item.key === key
-                ? { ...item, status: "unsynced" satisfies MeasurementUiStatus }
-                : item,
-            ),
+        queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
+          old?.map((item) =>
+            item.key === key ? { ...item, status: "unsynced" satisfies MeasurementUiStatus } : item,
+          ),
         );
         throw error;
       } finally {

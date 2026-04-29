@@ -469,7 +469,7 @@ describe("useMeasurements", () => {
       expect(mockUpdateMeasurement).toHaveBeenCalledWith("key-1", {
         ...mockMeasurement,
         measurementResult: {
-          ...mockUpload.measurementResult,
+          ...mockMeasurement.measurementResult,
           annotations: { comment: "a comment", flagType: null },
         },
       });
