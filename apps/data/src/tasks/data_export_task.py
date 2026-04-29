@@ -1,6 +1,6 @@
 # Databricks notebook source
 # DBTITLE 1,Data Export Task
-# Standalone task to export experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet)
+# Standalone task to export experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, XLSX)
 # This task runs independently and outputs files to Unity Catalog volumes
 
 # COMMAND ----------
@@ -10,6 +10,7 @@ import json
 import uuid
 from datetime import datetime
 from typing import Optional
+import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import to_json, col, lit
 from pyspark.sql.types import StructType, ArrayType, MapType, VariantType
@@ -33,7 +34,7 @@ def log(msg: str, level: str = "INFO"):
 EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 TABLE_NAME = dbutils.widgets.get("TABLE_NAME")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
-FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, or parquet
+FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, parquet, or xlsx
 USER_ID = dbutils.widgets.get("USER_ID")  # User who initiated the export
 ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT") if dbutils.widgets.get("ENVIRONMENT") else "DEV"
 
@@ -130,6 +131,37 @@ def export_data(df):
             dbutils.fs.put(f"{OUTPUT_PATH}/_SUCCESS", "", overwrite=True)
         elif FORMAT == "parquet":
             df.coalesce(1).write.mode("overwrite").parquet(OUTPUT_PATH)
+        elif FORMAT == "xlsx":
+            # Native Excel workbook. Excel's "double-click open" path mis-parses
+            # quoted JSON in CSV; xlsx avoids that entirely. Convert complex types
+            # (struct/array/map/variant) to JSON strings so they appear as a single
+            # readable cell instead of being split. Numeric and timestamp columns
+            # keep their dtypes through pandas → openpyxl.
+            for field in df.schema.fields:
+                if isinstance(field.dataType, (StructType, ArrayType, MapType)):
+                    df = df.withColumn(field.name, to_json(col(field.name)))
+                elif isinstance(field.dataType, VariantType):
+                    df = df.withColumn(field.name, col(field.name).cast("string"))
+
+            pdf = df.toPandas()
+
+            # Excel cell hard limit is 32,767 chars. Truncate longer JSON strings
+            # so the workbook stays valid; full data remains available via CSV/NDJSON.
+            EXCEL_CELL_LIMIT = 32767
+            for col_name in pdf.select_dtypes(include=["object"]).columns:
+                pdf[col_name] = pdf[col_name].map(
+                    lambda v: v[:EXCEL_CELL_LIMIT] if isinstance(v, str) and len(v) > EXCEL_CELL_LIMIT else v
+                )
+
+            local_tmp = f"/tmp/{EXPORT_ID}.xlsx"
+            with pd.ExcelWriter(local_tmp, engine="openpyxl") as writer:
+                # Excel sheet name max 31 chars and disallows : \ / ? * [ ]
+                sheet_name = TABLE_NAME[:31].translate(str.maketrans({c: "_" for c in r":\/?*[]"}))
+                pdf.to_excel(writer, sheet_name=sheet_name or "data", index=False)
+
+            dbutils.fs.mkdirs(OUTPUT_PATH)
+            dbutils.fs.cp(f"file:{local_tmp}", f"{OUTPUT_PATH}/part-00000.xlsx")
+            dbutils.fs.put(f"{OUTPUT_PATH}/_SUCCESS", "", overwrite=True)
         else:
             raise ValueError(f"Unsupported format: {FORMAT}")
         

@@ -1,7 +1,7 @@
 /**
  * Export format types
  */
-export type ExportFormat = "csv" | "ndjson" | "json-array" | "parquet";
+export type ExportFormat = "csv" | "ndjson" | "json-array" | "parquet" | "xlsx";
 
 /**
  * Export status types
