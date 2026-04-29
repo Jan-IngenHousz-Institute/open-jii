@@ -435,6 +435,23 @@ export const zFlowGraph = z
         path: ["nodes"],
       });
     }
+
+    // Reject duplicate question-node labels. Only question nodes need this:
+    // their labels become column keys in `questions_data`, so duplicates collide
+    // and lose answers downstream. Other node types' labels are display-only.
+    const seen = new Map<string, number>();
+    graph.nodes.forEach((node, index) => {
+      if (node.type !== "question") return;
+      if (seen.has(node.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Question node label "${node.name}" must be unique`,
+          path: ["nodes", index, "name"],
+        });
+        return;
+      }
+      seen.set(node.name, index);
+    });
   });
 
 export const zFlow = z.object({

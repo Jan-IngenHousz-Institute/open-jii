@@ -473,41 +473,72 @@ def experiment_raw_data():
         def sanitize_label(label):
             if not label:
                 return "question_empty"
-            
-            # Convert to lowercase
-            sanitized = label.lower()
-            
-            # Replace invalid characters with underscores
-            invalid_chars = ' ,;{}()\n\t=.'
-            for char in invalid_chars:
-                sanitized = sanitized.replace(char, '_')
-            
-            # Remove leading/trailing underscores
-            sanitized = sanitized.strip('_')
-            
-            # Collapse multiple underscores to single
+
+            # Allowlist: lowercase ASCII letters, digits, underscore.
+            # Anything else collapses to a single underscore so the result is
+            # safe as a Spark identifier and as a JSON/VARIANT key, regardless
+            # of where it gets rendered downstream (SQL, CSV, Excel, UI).
+            sanitized = ''.join(
+                c if (c == '_' or (c.isascii() and c.isalnum())) else '_'
+                for c in label.lower()
+            )
             while '__' in sanitized:
                 sanitized = sanitized.replace('__', '_')
-            
-            # Ensure it's not empty and doesn't start with a number
+            sanitized = sanitized.strip('_')
+
             if not sanitized or sanitized[0].isdigit():
                 sanitized = f"question_{sanitized}"
-            
+
             return sanitized
         
         def sanitize_questions_array(questions_array):
             if questions_array is None or len(questions_array) == 0:
                 return []
-            
+
+            # Disambiguate duplicate sanitized labels so downstream
+            # map_from_arrays doesn't collapse them and lose answers.
+            # Strategy:
+            #   - unique label in row -> bare label
+            #   - label collides, sanitized text differs from sanitized label
+            #       -> "<label>__<text>"
+            #   - label collides but text adds nothing (empty, or same as label
+            #       after sanitization, e.g. uncustomized default)
+            #       -> positional fallback "_2", "_3" on bare label
+            #   - label and text both collide
+            #       -> positional fallback on the combined "<label>__<text>" key
+            base_labels = [
+                sanitize_label(q.get('question_label')) if q else None
+                for q in questions_array
+            ]
+            label_total: dict[str, int] = {}
+            for bl in base_labels:
+                if bl is not None:
+                    label_total[bl] = label_total.get(bl, 0) + 1
+
+            key_counts: dict[str, int] = {}
             result = []
-            for q in questions_array:
-                if q:
-                    result.append({
-                        'question_label': sanitize_label(q.get('question_label')),
-                        'question_answer': q.get('question_answer')
-                    })
+            for i, q in enumerate(questions_array):
+                if not q:
+                    continue
+                base = base_labels[i]
+                if label_total.get(base, 0) <= 1:
+                    key = base
+                else:
+                    text = q.get('question_text')
+                    text_part = sanitize_label(text) if text else None
+                    if not text_part or text_part == base:
+                        candidate = base
+                    else:
+                        candidate = f"{base}__{text_part}"
+                    count = key_counts.get(candidate, 0) + 1
+                    key_counts[candidate] = count
+                    key = candidate if count == 1 else f"{candidate}_{count}"
+                result.append({
+                    'question_label': key,
+                    'question_answer': q.get('question_answer')
+                })
             return result
-        
+
         return questions.apply(sanitize_questions_array)
     
     return (
@@ -530,11 +561,8 @@ def experiment_raw_data():
                     parse_json(
                         to_json(
                             map_from_arrays(
-                                array_distinct(transform(questions_sanitized, q -> q.question_label)),
-                                transform(
-                                    array_distinct(transform(questions_sanitized, q -> q.question_label)),
-                                    label -> element_at(filter(questions_sanitized, q -> q.question_label = label), -1).question_answer
-                                )
+                                transform(questions_sanitized, q -> q.question_label),
+                                transform(questions_sanitized, q -> q.question_answer)
                             )
                         )
                     )
