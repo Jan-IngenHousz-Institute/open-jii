@@ -1,0 +1,25 @@
+# Don't ship build artifacts, virtualenvs, caches, or unrelated libs into
+# the test image — keeps the build context small and the layers cacheable.
+
+**/.venv
+**/__pycache__
+**/*.egg-info
+**/dist
+**/build
+**/.pytest_cache
+.cache
+.turbo
+node_modules
+
+# Other libs aren't needed by the exports tests.
+src/lib/ambyte
+src/lib/enrich
+src/lib/multispeq
+src/lib/openjii
+
+# Pipelines, notebooks, and Databricks-only files.
+src/notebooks
+src/pipelines
+src/tasks
+databricks.yml
+poetry.lock

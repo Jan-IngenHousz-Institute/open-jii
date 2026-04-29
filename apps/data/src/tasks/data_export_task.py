@@ -10,7 +10,6 @@ import json
 import uuid
 from datetime import datetime
 from typing import Optional
-import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import to_json, col, lit
 from pyspark.sql.types import StructType, ArrayType, MapType, VariantType
@@ -19,6 +18,7 @@ from pyspark.dbutils import DBUtils
 # Import openjii utilities
 import sys
 sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/openjii")
+sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/exports")
 from openjii.helpers import load_experiment_table
 from exports.xlsx import write_xlsx
 
@@ -133,21 +133,13 @@ def export_data(df):
         elif FORMAT == "parquet":
             df.coalesce(1).write.mode("overwrite").parquet(OUTPUT_PATH)
         elif FORMAT == "xlsx":
-            # Native Excel workbook. Excel's "double-click open" path mis-parses
-            # quoted JSON in CSV; xlsx avoids that entirely. Convert complex types
-            # (struct/array/map/variant) to JSON strings so they appear as a single
-            # readable cell instead of being split. Numeric and timestamp columns
-            # keep their dtypes through pandas → openpyxl.
-            for field in df.schema.fields:
-                if isinstance(field.dataType, (StructType, ArrayType, MapType)):
-                    df = df.withColumn(field.name, to_json(col(field.name)))
-                elif isinstance(field.dataType, VariantType):
-                    df = df.withColumn(field.name, col(field.name).cast("string"))
-
-            pdf = df.toPandas()
-
+            # Native Excel workbook for spreadsheet users — opens cleanly on
+            # double-click without CSV's quoted-JSON parsing problems.
+            # write_xlsx owns all preprocessing and the row-count guard;
+            # see exports.xlsx for the contract.
             local_tmp = f"/tmp/{EXPORT_ID}.xlsx"
-            write_xlsx(pdf, local_tmp, TABLE_NAME)
+            report = write_xlsx(df, local_tmp, TABLE_NAME)
+            log(f"xlsx written: {report['row_count']} rows → sheet '{report['sheet_name']}'")
 
             dbutils.fs.mkdirs(OUTPUT_PATH)
             dbutils.fs.cp(f"file:{local_tmp}", f"{OUTPUT_PATH}/part-00000.xlsx")
