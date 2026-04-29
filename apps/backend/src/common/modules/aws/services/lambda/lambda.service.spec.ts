@@ -1,3 +1,5 @@
+import * as zlib from "node:zlib";
+
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { AwsLambdaService } from "./lambda.service";
@@ -162,6 +164,67 @@ describe("AwsLambdaService", () => {
       expect(InvokeCommand).toHaveBeenCalledWith(
         expect.objectContaining({ InvocationType: "RequestResponse" }),
       );
+    });
+
+    it("should decompress payloads wrapped as {encoding: gzip+base64, payload}", async () => {
+      const originalEnvelope = {
+        status: "success",
+        results: [{ id: "item-1", success: true, output: { foo: "bar" } }],
+      };
+      const compressed = zlib.gzipSync(JSON.stringify(originalEnvelope)).toString("base64");
+
+      mockSend.mockResolvedValue({
+        StatusCode: 200,
+        Payload: new TextEncoder().encode(
+          JSON.stringify({ encoding: "gzip+base64", payload: compressed }),
+        ),
+      });
+
+      const result = await service.invoke({
+        functionName: "my-function",
+        payload: {},
+      });
+
+      assertSuccess(result);
+      expect(result.value.payload).toEqual(originalEnvelope);
+    });
+
+    it("should pass through non-compressed payloads unchanged (legacy compat)", async () => {
+      const responsePayload = { status: "success", results: [], extra: 123 };
+
+      mockSend.mockResolvedValue({
+        StatusCode: 200,
+        Payload: new TextEncoder().encode(JSON.stringify(responsePayload)),
+      });
+
+      const result = await service.invoke({
+        functionName: "my-function",
+        payload: {},
+      });
+
+      assertSuccess(result);
+      expect(result.value.payload).toEqual(responsePayload);
+    });
+
+    it("should apply the decompression cap", async () => {
+      // 60 MB of repeated zeros
+      const huge = Buffer.alloc(60 * 1024 * 1024, 0);
+      const compressed = zlib.gzipSync(huge).toString("base64");
+
+      mockSend.mockResolvedValue({
+        StatusCode: 200,
+        Payload: new TextEncoder().encode(
+          JSON.stringify({ encoding: "gzip+base64", payload: compressed }),
+        ),
+      });
+
+      const result = await service.invoke({
+        functionName: "my-function",
+        payload: {},
+      });
+
+      assertFailure(result);
+      expect(result.error.code).toBe("AWS_OPERATION_FAILED");
     });
   });
 });

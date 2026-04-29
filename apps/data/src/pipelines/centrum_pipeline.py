@@ -121,6 +121,10 @@ def _load_legacy_macro_id_map() -> dict[str, str]:
 
 LEGACY_MACRO_ID_MAP: dict[str, str] = _load_legacy_macro_id_map()
 
+# Backend's macro batch endpoint requires UUID macro_ids; non-UUIDs trigger
+# request-wide 400s. Gate at gold so bad rows never reach the UDF.
+MACRO_ID_UUID_PATTERN = r"(?i)\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z"
+
 # COMMAND ----------
 
 # DBTITLE 1,Bronze Layer - Raw Data Processing
@@ -850,13 +854,18 @@ def experiment_macro_data_sandbox():
 
     return (
         base_df
-        # Run sandbox UDF only for non-imported rows
+        # Run sandbox UDF only for non-imported rows with a valid UUID macro_id.
+        # NULL.rlike(...) returns NULL (treated as false in F.when), so an
+        # explicit isNotNull() guard is required — otherwise null macro_ids
+        # would silently land with no output and no error.
         .withColumn(
             "sandbox_result",
             F.when(
-                ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
+                F.col("macro_id").isNotNull()
+                & F.col("macro_id").rlike(MACRO_ID_UUID_PATTERN)
+                & ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
                 sandbox_macro_udf(
-                    F.struct("id", "macro_id", F.col("data").cast("string").alias("data"))
+                    F.struct("id", "macro_id", F.col("data"))
                 ),
             )
         )
@@ -878,6 +887,12 @@ def experiment_macro_data_sandbox():
             F.when(
                 F.col("skip_macro_processing") == True,
                 F.lit(None).cast("string")
+            ).when(
+                F.col("macro_id").isNull(),
+                F.lit("Invalid macro_id (null)")
+            ).when(
+                ~F.col("macro_id").rlike(MACRO_ID_UUID_PATTERN),
+                F.concat(F.lit("Invalid macro_id (not UUID): "), F.col("macro_id"))
             ).otherwise(F.col("sandbox_result.error"))
         )
         .withColumn(
@@ -904,6 +919,7 @@ def experiment_macro_data_sandbox():
             "macro_filename",
             "macro_output",
             "macro_error",
+            F.col("data").alias("raw_data"),
             "processed_timestamp",
             "date",
             "questions_data",

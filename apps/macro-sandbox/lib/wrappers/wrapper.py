@@ -263,6 +263,12 @@ for item in batch_items:
     row_data = item.get("data")
     row_id = item.get("id")
 
+    # Macros expect `json` to be the single measurement object. Unwrap a
+    # non-empty list down to its first element, matching the legacy
+    # multispeq Python executor.
+    if isinstance(row_data, list) and len(row_data) > 0:
+        row_data = row_data[0]
+
     scope = {
         "__builtins__": {
             "abs": abs, "min": min, "max": max, "len": len, "sum": sum,
