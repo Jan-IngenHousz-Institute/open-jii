@@ -77,10 +77,10 @@ export default function ExperimentVisualizationsList({
             key={visualization.id}
             href={`/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`}
           >
-            <div className="relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
+            <div className="bg-card relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
               <div className="mb-auto">
                 <div className="mb-2 flex items-start gap-2">
-                  <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-base font-semibold text-gray-900 md:text-lg">
+                  <h3 className="text-foreground line-clamp-2 min-w-0 flex-1 break-words text-base font-semibold md:text-lg">
                     {visualization.name}
                   </h3>
                 </div>
@@ -91,7 +91,7 @@ export default function ExperimentVisualizationsList({
                 >
                   {getChartTypeDisplay(visualization.chartType, t)}
                 </span>
-                <div className="mt-2 space-y-2 text-sm text-gray-500">
+                <div className="text-muted-foreground mt-2 space-y-2 text-sm">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
                     <span>
@@ -107,14 +107,17 @@ export default function ExperimentVisualizationsList({
                   </div>
                 </div>
                 {visualization.description && (
-                  <p className="mt-2 line-clamp-2 text-sm text-gray-600">
+                  <p
+                    data-testid="visualization-description"
+                    className="text-muted-foreground mt-2 line-clamp-2 text-sm"
+                  >
                     {visualization.description.length > 120
                       ? `${visualization.description.substring(0, 120)}...`
                       : visualization.description}
                   </p>
                 )}
               </div>
-              <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+              <ChevronRight className="text-foreground absolute bottom-5 right-5 h-6 w-6 md:hidden" />
             </div>
           </Link>
         ))}

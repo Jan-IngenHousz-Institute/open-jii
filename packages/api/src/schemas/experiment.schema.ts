@@ -555,11 +555,12 @@ export const zChartType = z.enum([
   "alluvial",
 ]);
 
-// Data source configuration schema
+// Data source configuration schema. tableName and columnName allow empty
+// strings so a freshly-created visualization can persist in a draft state
+// until the user picks a table and columns in the editor.
 export const zDataSourceConfig = z.object({
-  tableName: z.string().min(1, "Table name is required"),
-  columnName: z.string().min(1, "Column name is required"),
-  // Role defines how this data source is used (e.g., "x", "y", "y1", "y2", "color", "size", "a", "b", "c", "labels", "values", etc.)
+  tableName: z.string(),
+  columnName: z.string(),
   role: z.string().min(1, "Role is required"),
   // Optional series name for multiple series with same role
   seriesName: z.string().optional(),
@@ -595,11 +596,10 @@ export const zChartDisplayOptions = z
 // Generic chart config - allows any props to be passed to chart components
 export const zChartConfig = z.record(z.string(), z.unknown()).optional();
 
-// Data configuration schema for visualization data sources
+// Data configuration schema for visualization data sources. tableName allows
+// empty strings to match the draft state of zDataSourceConfig.
 export const zChartDataConfig = z.object({
-  // Primary data table for the visualization
-  tableName: z.string().min(1),
-  // Additional data source configurations specific to chart type
+  tableName: z.string(),
   dataSources: z.array(zDataSourceConfig).min(1),
   // Optional filtering/aggregation settings
   filters: z

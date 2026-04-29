@@ -1,23 +1,15 @@
-import { notFound } from "next/navigation";
+"use client";
 
-import ExperimentVisualizationDetails from "../../../../../../../../components/experiment-visualizations/experiment-visualization-details";
+import { VisualizationWorkspace } from "@/components/experiment-visualizations/workspace/visualization-workspace";
+import { useParams } from "next/navigation";
 
-interface PageProps {
-  params: Promise<{
-    locale: string;
+export default function VisualizationEditorPage() {
+  const { id: experimentId, visualizationId } = useParams<{
     id: string;
     visualizationId: string;
-  }>;
-}
-
-export default async function VisualizationDetailPage({ params }: PageProps) {
-  const { id: experimentId, visualizationId } = await params;
-
-  if (!experimentId || !visualizationId) {
-    notFound();
-  }
+  }>();
 
   return (
-    <ExperimentVisualizationDetails experimentId={experimentId} visualizationId={visualizationId} />
+    <VisualizationWorkspace experimentId={experimentId} visualizationId={visualizationId} />
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
+import { lineChartType } from "@/components/experiment-visualizations/charts/line";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { useLocale } from "@/hooks/useLocale";
-import { PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import ExperimentVisualizationsList from "~/components/experiment-visualizations/experiment-visualizations-list";
 
@@ -12,12 +14,11 @@ import { Button } from "@repo/ui/components/button";
 
 export default function ExperimentVisualizationsPage() {
   const { t } = useTranslation("experimentVisualizations");
-  const { id } = useParams<{ id: string }>();
+  const { id: experimentId } = useParams<{ id: string }>();
   const router = useRouter();
   const locale = useLocale();
 
-  // Check if experiment is archived - if so, redirect to not found (should use archive route)
-  const { data: accessData } = useExperimentAccess(id);
+  const { data: accessData } = useExperimentAccess(experimentId);
   const experimentData = accessData?.body.experiment;
   const hasAccess = accessData?.body.isAdmin;
 
@@ -26,28 +27,54 @@ export default function ExperimentVisualizationsPage() {
   }
 
   const { data: visualizationsData, isLoading } = useExperimentVisualizations({
-    experimentId: id,
+    experimentId,
     initialChartFamily: undefined,
   });
+
+  const { mutate: createVisualization, isPending: isCreating } = useExperimentVisualizationCreate({
+    experimentId,
+    onSuccess: (created) => {
+      router.push(
+        `/${locale}/platform/experiments/${experimentId}/analysis/visualizations/${created.id}`,
+      );
+    },
+  });
+
+  const handleCreate = () => {
+    const defaultName = `${t("workspace.layout.untitled")} - ${new Date().toLocaleDateString(locale, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+    createVisualization({
+      params: { id: experimentId },
+      body: {
+        name: defaultName,
+        chartFamily: lineChartType.family,
+        chartType: lineChartType.type,
+        config: lineChartType.defaultConfig() as unknown as Record<string, unknown>,
+        dataConfig: lineChartType.defaultDataConfig(),
+      },
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">{t("ui.title")}</h1>
-        <Button
-          onClick={() =>
-            router.push(`/${locale}/platform/experiments/${id}/analysis/visualizations/new`)
-          }
-          disabled={!hasAccess}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
+        <Button onClick={handleCreate} disabled={!hasAccess || isCreating}>
+          {isCreating ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <PlusCircle className="mr-2 h-4 w-4" />
+          )}
           {t("ui.actions.create")}
         </Button>
       </div>
 
       <ExperimentVisualizationsList
         visualizations={visualizationsData?.body ?? []}
-        experimentId={id}
+        experimentId={experimentId}
         isLoading={isLoading}
       />
     </div>

@@ -133,7 +133,7 @@ describe("ExperimentVisualizationsList", () => {
         experimentId={expId}
       />,
     );
-    expect(document.querySelector("p.text-gray-600")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("visualization-description")).not.toBeInTheDocument();
   });
 
   it("renders chevron icons for navigation", () => {

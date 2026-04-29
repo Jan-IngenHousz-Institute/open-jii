@@ -4,6 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { contract } from "@repo/api/contract";
 
 import VisualizationsPage from "./page";
@@ -34,7 +35,7 @@ const accessPayload = createExperimentAccess({
   isAdmin: true,
 });
 
-function mountDefaults(visualizations: unknown[] = []) {
+function mountDefaults(visualizations: ExperimentVisualization[] = []) {
   server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
   server.mount(contract.experiments.listExperimentVisualizations, {
     body: visualizations,
@@ -99,9 +100,12 @@ describe("VisualizationsPage", () => {
   });
 
   describe("Navigation", () => {
-    it("should navigate to new visualization page when create button is clicked", async () => {
+    it("creates a draft visualization and navigates to its editor when Create is clicked", async () => {
       const user = userEvent.setup();
       mountDefaults();
+      server.mount(contract.experiments.createExperimentVisualization, {
+        body: createVisualization({ id: "new-viz-id" }),
+      });
 
       render(<VisualizationsPage />);
 
@@ -109,14 +113,14 @@ describe("VisualizationsPage", () => {
         expect(screen.getByRole("button", { name: /create/ })).not.toBeDisabled();
       });
 
-      const createButton = screen.getByRole("button", { name: /create/ });
-      await user.click(createButton);
+      await user.click(screen.getByRole("button", { name: /create/ }));
 
       const mockRouter = vi.mocked(useRouter)();
-      expect(mockRouter.push).toHaveBeenCalledWith(expect.stringContaining("exp-123"));
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        expect.stringContaining("analysis/visualizations/new"),
-      );
+      await waitFor(() => {
+        expect(mockRouter.push).toHaveBeenCalledWith(
+          expect.stringContaining("analysis/visualizations/new-viz-id"),
+        );
+      });
     });
   });
 

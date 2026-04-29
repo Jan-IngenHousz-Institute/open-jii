@@ -207,5 +207,156 @@
 
   "selector": {
     "noVisualizations": "Keine Visualisierungen für dieses Experiment verfügbar"
+  },
+
+  "workspace": {
+    "layout": {
+      "untitled": "Untitled visualization",
+      "namePlaceholder": "Untitled visualization",
+      "descriptionTitle": "Description",
+      "descriptionPlaceholder": "Add a description",
+      "saving": "Saving...",
+      "allChangesSaved": "All changes saved",
+      "saveFailed": "Couldn't save your changes"
+    },
+    "detailsSidebar": {
+      "title": "Details",
+      "collapsedSummary": "Updated {{updatedAt}}",
+      "visualizationId": "Visualization ID",
+      "dataSource": "Data source",
+      "noDataSource": "No table selected",
+      "columns": "Columns",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "createdBy": "Created by",
+      "deleteVisualization": "Delete visualization",
+      "deleteWarning": "Once deleted, this visualization cannot be recovered.",
+      "deleteConfirm": "Delete"
+    },
+    "canvas": {
+      "noTable": "No data source selected",
+      "selectTable": "Pick a table from the inspector to start.",
+      "noColumns": "No columns configured",
+      "configureColumns": "Choose at least one column in the Data tab to render the chart.",
+      "loading": "Loading chart data...",
+      "previewName": "Preview"
+    },
+    "inspector": {
+      "dataset": "Dataset",
+      "selectTable": "Select a table",
+      "noTables": "No tables available",
+      "failedToLoadTables": "Failed to load tables",
+      "failedToLoadColumns": "Failed to load columns",
+      "loadingColumns": "Loading columns...",
+      "selectTableFirst": "Select a table to see its columns.",
+      "noValidColumns": "No columns suitable for axes were found in this table.",
+      "tabs": {
+        "data": "Data",
+        "style": "Style"
+      },
+      "collapse": "Collapse panel",
+      "expand": "Expand panel",
+      "expandLabel": "Configuration"
+    },
+    "shelves": {
+      "xAxis": "X axis",
+      "yAxis": "Y axis",
+      "colorDimension": "Color dimension",
+      "column": "Column",
+      "selectColumn": "Select a column",
+      "axisTitle": "Axis title",
+      "axisTitlePlaceholder": "Axis title",
+      "axisType": "Axis type",
+      "series": "Series {{index}}",
+      "removeSeries": "Remove series",
+      "addSeries": "Add series",
+      "seriesName": "Series name",
+      "seriesNamePlaceholder": "Series name",
+      "color": "Color",
+      "colorPlaceholder": "Color column",
+      "noColorMapping": "None",
+      "colorScale": "Color scale",
+      "colorAxisTitle": "Color axis title",
+      "colorAxisTitlePlaceholder": "Color axis title",
+      "colorAxisTitlePosition": "Title position",
+      "showColorbar": "Show colorbar",
+      "preview": "Preview"
+    },
+    "axisTypes": {
+      "linear": "Linear",
+      "log": "Logarithmic",
+      "date": "Date"
+    },
+    "positions": {
+      "top": "Top",
+      "right": "Right",
+      "bottom": "Bottom"
+    },
+    "modes": {
+      "lines": "Lines",
+      "markers": "Markers",
+      "linesMarkers": "Lines + markers"
+    },
+    "markerSymbols": {
+      "circle": "Circle",
+      "square": "Square",
+      "diamond": "Diamond",
+      "cross": "Cross",
+      "x": "X"
+    },
+    "style": {
+      "display": "Display",
+      "chartTitle": "Chart title",
+      "chartTitlePlaceholder": "Chart title",
+      "showLegend": "Show legend",
+      "showGrid": "Show grid",
+      "lineOptions": "Line options",
+      "scatterOptions": "Scatter options",
+      "mode": "Drawing mode",
+      "connectGaps": "Connect gaps",
+      "smoothing": "Line smoothing",
+      "markerSize": "Marker size",
+      "markerShape": "Marker shape"
+    },
+    "charts": {
+      "pickerLabel": "Choose chart type",
+      "switchConfirmTitle": "Switch chart type?",
+      "switchConfirmDescription": "Switching to a different chart type resets your column choices and style settings. This change saves automatically.",
+      "switchConfirm": "Switch",
+      "types": {
+        "line": "Line",
+        "scatter": "Scatter"
+      },
+      "descriptions": {
+        "line": "Data points connected by line segments",
+        "scatter": "Data plotted as points on x and y coordinates"
+      }
+    },
+    "families": {
+      "basic": "Basic",
+      "statistical": "Statistical",
+      "scientific": "Scientific",
+      "3d": "3D"
+    },
+    "colorscales": {
+      "viridis": "Viridis",
+      "cividis": "Cividis",
+      "blues": "Blues",
+      "reds": "Reds",
+      "greens": "Greens",
+      "greys": "Greys",
+      "ylgnbu": "Yellow-Green-Blue",
+      "ylord": "Yellow-Orange-Red",
+      "rdbu": "Red-Blue",
+      "picnic": "Picnic",
+      "rainbow": "Rainbow",
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Hot",
+      "blackbody": "Blackbody",
+      "earth": "Earth",
+      "electric": "Electric",
+      "bluered": "Blue-Red"
+    }
   }
 }

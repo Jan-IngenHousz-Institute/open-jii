@@ -415,7 +415,13 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     }
 
     return (
-      <div ref={ref} className={cn("plotly-container w-full", className)}>
+      <div
+        ref={ref}
+        className={cn(
+          "plotly-container relative h-full min-h-0 w-full flex-1",
+          className,
+        )}
+      >
         <Suspense fallback={<PlotLoadingComponent />}>
           <Plot
             data={safeData}

@@ -109,13 +109,13 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
     title: title
       ? {
           text: title,
-          font: { size: 16, family: "Inter, sans-serif", color: textColor },
+          font: { size: 14, family: "var(--font-inter), Inter, sans-serif", color: textColor },
         }
       : undefined,
 
     xaxis: {
       title: xAxisTitle
-        ? { text: xAxisTitle, font: { size: 14, color: textColor, family: "Inter, sans-serif" } }
+        ? { text: xAxisTitle, font: { size: 14, color: textColor, family: "var(--font-inter), Inter, sans-serif" } }
         : undefined,
       gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
       showgrid: showGrid,
@@ -129,7 +129,7 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
 
     yaxis: {
       title: yAxisTitle
-        ? { text: yAxisTitle, font: { size: 14, color: textColor, family: "Inter, sans-serif" } }
+        ? { text: yAxisTitle, font: { size: 14, color: textColor, family: "var(--font-inter), Inter, sans-serif" } }
         : undefined,
       gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
       showgrid: showGrid,
@@ -149,10 +149,13 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
       bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
       bordercolor: gridColor,
       borderwidth: 1,
-      font: { color: textColor, family: "Inter, sans-serif" },
+      font: { color: textColor, family: "var(--font-inter), Inter, sans-serif" },
     },
 
-    margin: { l: 60, r: 40, t: title ? 60 : 20, b: 60 },
+    // Reserve a fixed top strip so the modebar always has room. The chart
+    // title (when present) renders into the same space, so we don't waste
+    // vertical room when both are visible.
+    margin: { l: 48, r: 24, t: 40, b: 36 },
     autosize: !width && !height, // Enable autosize when no fixed dimensions
     ...(width && { width }), // Only include width if it's defined
     ...(height && { height }), // Only include height if it's defined
@@ -160,7 +163,7 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
     paper_bgcolor: paperBgColor,
 
     font: {
-      family: "Inter, sans-serif",
+      family: "var(--font-inter), Inter, sans-serif",
       color: textColor,
       size: 12,
     },
@@ -170,7 +173,7 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
       font: {
         color: ann.font?.color || textColor,
         size: ann.font?.size || 12,
-        family: ann.font?.family || "Inter, sans-serif",
+        family: ann.font?.family || "var(--font-inter), Inter, sans-serif",
       },
       bgcolor: ann.bgcolor || (isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)"),
       bordercolor: gridColor,
