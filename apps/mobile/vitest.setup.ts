@@ -29,6 +29,7 @@ vi.mock("react-native-reanimated", () => {
     useAnimatedKeyboard: () => ({ height: { value: 0 } }),
     useAnimatedStyle: (fn: () => unknown) => fn(),
     useSharedValue: <T>(initial: T) => ({ value: initial }),
+    withSpring: (v: unknown) => v,
   };
 });
 
