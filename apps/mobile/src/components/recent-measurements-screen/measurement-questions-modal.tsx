@@ -154,7 +154,7 @@ export function MeasurementQuestionsModal({
           }}
           nestedScrollEnabled
         >
-          {(currentFlagType || currentComment) && (
+          {(currentFlagType !== null || currentComment !== "") && (
             <View className="mb-4 gap-2">
               <Text
                 className={clsx(
