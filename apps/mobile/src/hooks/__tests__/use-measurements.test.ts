@@ -41,7 +41,8 @@ vi.mock("~/services/measurements-storage", () => ({
 }));
 
 vi.mock("~/utils/measurement-annotations", () => ({
-  buildAnnotationsWithComment: (text: string) => ({ comment: text }),
+  buildAnnotations: (text: string, flagType: string | null) => ({ comment: text, flagType }),
+  getFlagTypeFromMeasurementResult: () => null,
 }));
 
 vi.mock("~/services/mqtt/send-mqtt-event", () => ({
@@ -294,7 +295,7 @@ describe("useMeasurements", () => {
         ...mockUpload,
         measurementResult: {
           ...mockUpload.measurementResult,
-          annotations: { comment: "a comment" },
+          annotations: { comment: "a comment", flagType: null },
         },
       });
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["measurements"] });
