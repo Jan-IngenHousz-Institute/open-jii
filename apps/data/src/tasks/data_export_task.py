@@ -20,6 +20,7 @@ from pyspark.dbutils import DBUtils
 import sys
 sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/openjii")
 from openjii.helpers import load_experiment_table
+from exports.xlsx import write_xlsx
 
 # Use print() for logging — Databricks captures stdout/stderr from the
 # driver on the compute cluster, but the Python logging module is often
@@ -145,19 +146,8 @@ def export_data(df):
 
             pdf = df.toPandas()
 
-            # Excel cell hard limit is 32,767 chars. Truncate longer JSON strings
-            # so the workbook stays valid; full data remains available via CSV/NDJSON.
-            EXCEL_CELL_LIMIT = 32767
-            for col_name in pdf.select_dtypes(include=["object"]).columns:
-                pdf[col_name] = pdf[col_name].map(
-                    lambda v: v[:EXCEL_CELL_LIMIT] if isinstance(v, str) and len(v) > EXCEL_CELL_LIMIT else v
-                )
-
             local_tmp = f"/tmp/{EXPORT_ID}.xlsx"
-            with pd.ExcelWriter(local_tmp, engine="openpyxl") as writer:
-                # Excel sheet name max 31 chars and disallows : \ / ? * [ ]
-                sheet_name = TABLE_NAME[:31].translate(str.maketrans({c: "_" for c in r":\/?*[]"}))
-                pdf.to_excel(writer, sheet_name=sheet_name or "data", index=False)
+            write_xlsx(pdf, local_tmp, TABLE_NAME)
 
             dbutils.fs.mkdirs(OUTPUT_PATH)
             dbutils.fs.cp(f"file:{local_tmp}", f"{OUTPUT_PATH}/part-00000.xlsx")
