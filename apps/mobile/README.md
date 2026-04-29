@@ -66,6 +66,123 @@ This uses the `preview` profile in your `eas.json` and creates a local build.
 
 ---
 
+## 🚢 Release Flow (OTA + Play Tracks)
+
+The mobile app ships through four progressively-wider stages. Each stage has a **Play track** (where the AAB lives) and a matching **EAS Update channel** (where JS-only OTA patches are published).
+
+| Stage | Audience | Play track | OTA channel | Trigger |
+|---|---|---|---|---|
+| **preview** | devs | _(APK only)_ | `preview` | every push to `main` affecting mobile |
+| **internal** | internal QA + selected testers | `internal` | `internal` | semantic-release tag `mobile-vX.Y.Z` |
+| **beta** | extended testers (closed/open testing) | `beta` | `beta` | manual promotion |
+| **production** | general public | `production` | `production` | manual promotion + Play staged rollout |
+
+### How OTA vs. AAB is decided
+
+Runtime version uses Expo's `fingerprint` policy. Each release workflow:
+
+1. Computes the current native fingerprint
+2. Compares it to the last build's fingerprint on that track
+3. **Same fingerprint** → JS-only change → publishes OTA, skips AAB build
+4. **Different fingerprint** → native delta → builds AAB + submits + then OTAs
+
+This means: pure JS/asset changes ship in minutes via OTA; native dep / plugin / `app.json` changes always go through a store rebuild.
+
+### Stage 1 — Preview (automatic)
+
+Triggered on every push to `main` when `mobile` is in the affected packages list (Turborepo).
+
+- Workflow: `.github/workflows/mobile-preview-ota.yml`
+- Publishes: `eas update --branch preview`
+- **Drift gate:** if the native fingerprint changed since the last `preview` AAB, the workflow **skips the OTA** and posts a warning that a new APK must be distributed manually:
+  ```bash
+  pnpm run build-apk            # local APK build
+  # or
+  eas build --profile preview --platform android
+  ```
+- Manual override available via `workflow_dispatch` with `force=true`.
+
+Local equivalent:
+
+```bash
+pnpm run update:preview
+```
+
+### Stage 2 — Internal (automatic on release)
+
+Triggered when `release.yml` creates a `mobile-vX.Y.Z` tag (semantic-release picks up `feat:` / `fix:` commits affecting mobile).
+
+- Workflow: `.github/workflows/mobile-release.yml`
+- Sets `app.json` version, generates Play release notes from the GitHub release body.
+- Builds AAB to Play `internal` track (only if fingerprint changed) and publishes OTA to the `internal` channel.
+
+Local equivalent:
+
+```bash
+pnpm run update:internal
+pnpm run submit-to-google-play   # only when a fresh AAB is needed
+```
+
+### Stage 3 — Beta (manual)
+
+Run after the internal build has soaked (suggested 24–48h, no critical bug reports).
+
+```bash
+gh workflow run mobile-promote.yml \
+  --field track=beta \
+  --field version=1.2.0      # optional, defaults to latest mobile-v* tag
+```
+
+- Workflow: `.github/workflows/mobile-promote.yml`
+- Builds AAB to Play `beta` track (gated on fingerprint) and publishes OTA to the `beta` channel.
+
+Local equivalent:
+
+```bash
+pnpm run update:beta
+```
+
+### Stage 4 — Production (manual)
+
+Run after beta has soaked.
+
+```bash
+gh workflow run mobile-promote.yml \
+  --field track=production \
+  --field version=1.2.0
+```
+
+- Workflow: same `mobile-promote.yml`
+- Builds AAB to Play `production` track (gated) and publishes OTA to the `production` channel.
+- **Manual step in Play Console:** configure staged rollout (start 10–20%, ramp over 24–48h).
+
+Local equivalent:
+
+```bash
+pnpm run update:production
+```
+
+### Rollback
+
+OTA is reversible at any stage:
+
+```bash
+eas update:rollback --branch <preview|internal|beta|production>
+```
+
+This re-points the channel to the previous update. Clients fetch it on next launch. Native AABs roll back via Play Console (halt rollout / promote previous version).
+
+### Summary cheat-sheet
+
+```
+push main         →  preview OTA              (Stage 1, auto)
+mobile-vX.Y.Z tag →  internal AAB + OTA       (Stage 2, auto via release.yml)
+gh workflow run mobile-promote.yml track=beta        →  beta AAB + OTA       (Stage 3)
+gh workflow run mobile-promote.yml track=production  →  production AAB + OTA (Stage 4)
+```
+
+---
+
 ## 🗄️ Local Database (Drizzle + Expo SQLite)
 
 The app uses [Drizzle ORM](https://orm.drizzle.team/) with [Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/) for on-device storage (measurement uploads). The schema is defined in `src/services/db/schema.ts` and migrations are managed by Drizzle Kit.

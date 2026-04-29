@@ -18,6 +18,7 @@ import { PythonMacroProvider } from "~/components/python-macro-provider";
 import { TimeSyncProvider } from "~/components/time-sync-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useAutoUpload } from "~/hooks/use-auto-upload";
+import { useOtaUpdate } from "~/hooks/use-ota-update";
 import { useTheme } from "~/hooks/use-theme";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 import { db } from "~/services/db/client";
@@ -137,6 +138,7 @@ function AutoUploadEffect() {
 
 function RootLayoutContent() {
   const theme = useTheme();
+  useOtaUpdate();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
