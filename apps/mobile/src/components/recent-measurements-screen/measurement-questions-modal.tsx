@@ -1,6 +1,6 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
-import { Clock, FlaskConical, MessageCircleMore, X } from "lucide-react-native";
+import { Clock, Flag, FlaskConical, MessageCircleMore, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -188,7 +188,11 @@ export function MeasurementQuestionsModal({
                     classes.border,
                   )}
                 >
-                  <MessageCircle size={14} color={colors.primary.dark} style={{ marginTop: 2 }} />
+                  <MessageCircleMore
+                    size={14}
+                    color={colors.primary.dark}
+                    style={{ marginTop: 2 }}
+                  />
                   <Text className={clsx("flex-1 text-sm", classes.text)}>{currentComment}</Text>
                 </View>
               )}
