@@ -66,7 +66,9 @@ export function useAutoUpload() {
     let wasReachable: boolean | null = null;
     const sub = addNetworkStateListener(({ isInternetReachable }) => {
       const restored = wasReachable === false && isInternetReachable === true;
-      if (isInternetReachable !== undefined) wasReachable = isInternetReachable;
+      if (isInternetReachable === true || isInternetReachable === false) {
+        wasReachable = isInternetReachable;
+      }
       if (restored) void tryUpload();
     });
     return () => sub.remove();
