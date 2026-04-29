@@ -61,11 +61,14 @@ export function MeasurementQuestionsModal({
   const timestamp = new Date(measurement.timestamp).toLocaleString();
   const isUnsynced = measurement.status === "unsynced";
 
-  const currentComment = getCommentFromMeasurementResult(measurementResult);
+  const [currentComment, setCurrentComment] = useState(() =>
+    getCommentFromMeasurementResult(measurementResult),
+  );
   const currentFlagType = getFlagTypeFromMeasurementResult(measurementResult);
 
   const handleSaveComment = async (text: string) => {
     await updateMeasurementComment(measurement.key, measurement.data, text);
+    setCurrentComment(text);
     setCommentModalVisible(false);
   };
 
@@ -123,7 +126,7 @@ export function MeasurementQuestionsModal({
           </View>
 
           <View className="flex-row items-center gap-2">
-            {(isUnsynced || !!currentComment) && (
+            {isUnsynced && (
               <TouchableOpacity
                 onPress={() => setCommentModalVisible(true)}
                 className="h-10 min-w-[44px] items-center justify-center rounded-full px-2"
@@ -287,7 +290,6 @@ export function MeasurementQuestionsModal({
         timestamp={measurement.timestamp}
         onSave={handleSaveComment}
         onCancel={() => setCommentModalVisible(false)}
-        readOnly={!isUnsynced}
       />
     </>
   );

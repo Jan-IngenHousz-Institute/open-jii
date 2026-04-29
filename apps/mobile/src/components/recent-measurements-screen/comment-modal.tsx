@@ -33,7 +33,6 @@ interface CommentModalProps {
   experimentName: string;
   questions: AnswerData[];
   timestamp: string;
-  readOnly?: boolean;
 }
 
 export function CommentModal({
@@ -44,7 +43,6 @@ export function CommentModal({
   experimentName,
   questions,
   timestamp,
-  readOnly = false,
 }: CommentModalProps) {
   const { colors, classes } = useTheme();
   const [text, setText] = useState(initialText);
@@ -99,9 +97,7 @@ export function CommentModal({
     >
       <BottomSheetView className="gap-4 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <View className="flex-row items-center justify-between">
-          <Text className={clsx("text-lg font-bold", classes.text)}>
-            {readOnly ? "View comment" : "Add comment"}
-          </Text>
+          <Text className={clsx("text-lg font-bold", classes.text)}>Add comment</Text>
 
           <TouchableOpacity onPress={onCancel} className="p-1">
             <X size={24} color={colors.neutral.black} />
@@ -151,8 +147,7 @@ export function CommentModal({
         </View>
         <BottomSheetTextInput
           value={text}
-          onChangeText={readOnly ? undefined : setText}
-          editable={!readOnly}
+          onChangeText={setText}
           placeholder="Enter your comment here..."
           placeholderTextColor={colors.inactive}
           multiline
@@ -164,11 +159,11 @@ export function CommentModal({
             classes.text,
           )}
           style={{
-            backgroundColor: readOnly ? colors.surface : colors.background,
-            color: readOnly ? colors.inactive : colors.onSurface,
+            backgroundColor: colors.background,
+            color: colors.onSurface,
           }}
         />
-        {!readOnly && <Button title="Save comment" onPress={handleSave} />}
+        <Button title="Save comment" onPress={handleSave} />
       </BottomSheetView>
     </BottomSheetModal>
   );
