@@ -15,6 +15,7 @@ const {
   useSession,
   useQuestionsUpload,
   getSyncedUtcISO,
+  getSyncedLocalISO,
   getTimeSyncState,
 } = vi.hoisted(() => ({
   uploadQuestions: vi.fn(),
@@ -22,6 +23,7 @@ const {
   useSession: vi.fn(),
   useQuestionsUpload: vi.fn(),
   getSyncedUtcISO: vi.fn(),
+  getSyncedLocalISO: vi.fn(),
   getTimeSyncState: vi.fn(),
 }));
 
@@ -36,6 +38,7 @@ vi.mock("~/hooks/use-questions-upload", () => ({
 }));
 vi.mock("~/utils/time-sync", () => ({
   getSyncedUtcISO: () => getSyncedUtcISO(),
+  getSyncedLocalISO: () => getSyncedLocalISO(),
   getTimeSyncState: () => getTimeSyncState(),
 }));
 
@@ -72,6 +75,7 @@ beforeEach(() => {
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
   useQuestionsUpload.mockReturnValue({ isUploading: false, uploadQuestions });
   getSyncedUtcISO.mockReturnValue("2026-04-20T10:00:00.000Z");
+  getSyncedLocalISO.mockReturnValue("2026-04-20T12:00:00.000+02:00");
   getTimeSyncState.mockReturnValue({ timezone: "Europe/Amsterdam" });
 });
 
