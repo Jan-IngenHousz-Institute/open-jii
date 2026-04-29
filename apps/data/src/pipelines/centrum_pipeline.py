@@ -512,10 +512,13 @@ def experiment_raw_data():
             # map_from_arrays doesn't collapse them and lose answers.
             # Strategy:
             #   - unique label in row -> bare label
-            #   - label collides, texts differ -> "<label>__<text>"
-            #   - label and text both collide -> positional fallback "_2", "_3"
-            # The text-based suffix gives stable, meaningful column names
-            # across rows whenever question_text differs between duplicates.
+            #   - label collides, sanitized text differs from sanitized label
+            #       -> "<label>__<text>"
+            #   - label collides but text adds nothing (empty, or same as label
+            #       after sanitization, e.g. uncustomized default)
+            #       -> positional fallback "_2", "_3" on bare label
+            #   - label and text both collide
+            #       -> positional fallback on the combined "<label>__<text>" key
             base_labels = [
                 sanitize_label(q.get('question_label')) if q else None
                 for q in questions_array
@@ -534,8 +537,12 @@ def experiment_raw_data():
                 if label_total.get(base, 0) <= 1:
                     key = base
                 else:
-                    text_part = sanitize_label(q.get('question_text'))
-                    candidate = f"{base}__{text_part}"
+                    text = q.get('question_text')
+                    text_part = sanitize_label(text) if text else None
+                    if not text_part or text_part == base:
+                        candidate = base
+                    else:
+                        candidate = f"{base}__{text_part}"
                     count = key_counts.get(candidate, 0) + 1
                     key_counts[candidate] = count
                     key = candidate if count == 1 else f"{candidate}_{count}"
