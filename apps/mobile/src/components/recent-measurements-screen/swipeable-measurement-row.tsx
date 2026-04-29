@@ -82,9 +82,7 @@ export function SwipeableMeasurementRow({
   }));
 
   const handleComment = () => onComment?.(id);
-  const handleSync = () => {
-    onSync?.(id);
-  };
+  const handleSync = () => onSync?.(id);
   const handleDelete = () => onDelete?.(id);
 
   return (
