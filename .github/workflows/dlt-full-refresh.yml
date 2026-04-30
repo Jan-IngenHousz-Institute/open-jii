@@ -48,6 +48,17 @@ jobs:
             exit 1
           fi
 
+      - name: Validate table selection
+        run: |
+          IFS=',' read -ra REQ <<< "$TABLES"
+          for t in "${REQ[@]}"; do
+            case "$(echo "$t" | xargs)" in raw_data)
+                echo "::error::Table '$t' is forbidden from full-refresh"
+                exit 1
+                ;;
+            esac
+          done
+
       - name: Stop active continuous update
         if: inputs.environment == 'prod'
         run: |
