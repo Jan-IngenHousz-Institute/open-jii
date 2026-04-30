@@ -1,11 +1,10 @@
 "use client";
 
+import ExperimentDashboardsDisplay from "@/components/experiment-dashboards/experiment-dashboards-display";
 import { ErrorDisplay } from "@/components/error-display";
-import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
-import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
@@ -40,10 +39,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
     isError: isMembersError,
   } = useExperimentMembers(id);
   const members = membersData?.body ?? [];
-
-  // Visualizations
-  const { data: visualizationsData, isLoading: visualizationsLoading } =
-    useExperimentVisualizations({ experimentId: id });
 
   const initialStatusRef = useRef<Experiment["status"] | null>(null);
 
@@ -87,12 +82,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         />
         <ExperimentMeasurements experimentId={id} />
 
-        <ExperimentVisualizationsDisplay
-          experimentId={id}
-          visualizations={visualizationsData?.body ?? []}
-          isLoading={visualizationsLoading}
-          hasAccess={hasAccess}
-        />
+        <ExperimentDashboardsDisplay experimentId={id} hasAccess={hasAccess} />
       </div>
     </div>
   );

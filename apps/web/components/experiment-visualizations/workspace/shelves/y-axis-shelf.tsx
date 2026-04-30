@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
-import { useFieldArray } from "react-hook-form";
+import { useFieldArray, useWatch } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -20,6 +20,7 @@ import {
 
 import {
   dataSourcesByRole,
+  defaultAxisTypeFor,
   getDefaultSeriesColor,
   makeDataSource,
 } from "../../charts/form-values";
@@ -40,7 +41,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
     name: "dataConfig.dataSources",
   });
 
-  const sources = form.watch("dataConfig.dataSources");
+  const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const ySources = dataSourcesByRole(sources, "y");
   const colorSources = dataSourcesByRole(sources, "color");
   const isColorMapped = colorSources.length > 0 && Boolean(colorSources[0].source.columnName);
@@ -48,13 +49,22 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
   const handleColumnChange = (value: string, seriesIndex: number) => {
     if (seriesIndex === 0) {
       form.setValue("config.yAxisTitle", value);
+      // Auto-pick the Y axis scale based on the picked column's data type.
+      // Only do this for the first Y series since that's what defines the
+      // axis; subsequent series just add traces against the same axis.
+      const picked = columns.find((c) => c.name === value);
+      form.setValue("config.yAxisType", defaultAxisTypeFor(picked?.type_text), {
+        shouldDirty: true,
+      });
     }
     const yEntry = ySources[seriesIndex];
     if (!yEntry) return;
+    // Refresh the series alias whenever the column changes — the previous
+    // guard ("only set if empty") meant a series whose alias was already
+    // populated from a prior column kept that stale label after the user
+    // switched columns. Users can still rename the series freely afterwards.
     const aliasKey = `dataConfig.dataSources.${yEntry.index}.alias` as const;
-    if (!form.getValues(aliasKey)) {
-      form.setValue(aliasKey, value);
-    }
+    form.setValue(aliasKey, value);
   };
 
   const handleAddSeries = () => {
@@ -66,7 +76,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
     if (Array.isArray(currentColors)) {
       form.setValue("config.color", [...currentColors, next]);
     } else {
-      form.setValue("config.color", [(currentColors as string | undefined) ?? "#3b82f6", next]);
+      form.setValue("config.color", [currentColors ?? "#3b82f6", next]);
     }
   };
 
@@ -85,7 +95,10 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
           const dsIndex = entry.index;
           const canRemove = ySources.length > 1;
           return (
-            <div key={entry.source.role + dsIndex} className="bg-muted/30 space-y-3 rounded-md border p-3">
+            <div
+              key={entry.source.role + dsIndex}
+              className="bg-muted/30 space-y-3 rounded-md border p-3"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-medium">
                   {t("workspace.shelves.series", { index: seriesIndex + 1 })}
@@ -145,11 +158,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
                 )}
               />
 
-              <div
-                className={
-                  showSeriesColor ? "grid grid-cols-2 gap-3" : ""
-                }
-              >
+              <div className={showSeriesColor ? "grid grid-cols-2 gap-3" : ""}>
                 <FormField
                   control={form.control}
                   name={`dataConfig.dataSources.${dsIndex}.alias` as const}
@@ -187,7 +196,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
                             <Input
                               type="color"
                               className="h-9 w-12 shrink-0 p-1"
-                              value={(field.value as string) ?? "#3b82f6"}
+                              value={field.value! ?? "#3b82f6"}
                               onChange={field.onChange}
                               disabled={isColorMapped}
                             />
@@ -195,7 +204,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
                               type="text"
                               className="min-w-0 font-mono text-sm"
                               placeholder="#000000"
-                              value={(field.value as string) ?? ""}
+                              value={field.value! ?? ""}
                               onChange={field.onChange}
                               disabled={isColorMapped}
                             />
@@ -218,11 +227,13 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
           name="config.yAxisTitle"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs font-medium">{t("workspace.shelves.axisTitle")}</FormLabel>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.shelves.axisTitle")}
+              </FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("workspace.shelves.axisTitlePlaceholder")}
-                  value={(field.value as string | undefined) ?? ""}
+                  value={field.value ?? ""}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   name={field.name}
@@ -239,7 +250,9 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
           name="config.yAxisType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs font-medium">{t("workspace.shelves.axisType")}</FormLabel>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.shelves.axisType")}
+              </FormLabel>
               <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
                 <FormControl>
                   <SelectTrigger>
@@ -250,6 +263,9 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
                   <SelectItem value="linear">{t("workspace.axisTypes.linear")}</SelectItem>
                   <SelectItem value="log">{t("workspace.axisTypes.log")}</SelectItem>
                   <SelectItem value="date">{t("workspace.axisTypes.date")}</SelectItem>
+                  <SelectItem value="category">
+                    {t("workspace.axisTypes.category", "Category")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

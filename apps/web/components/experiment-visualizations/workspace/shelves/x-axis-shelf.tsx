@@ -1,6 +1,7 @@
 "use client";
 
 import type { UseFormReturn } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -15,7 +16,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { firstDataSourceByRole } from "../../charts/form-values";
+import { defaultAxisTypeFor, firstDataSourceByRole } from "../../charts/form-values";
 import type { ChartFormValues } from "../../charts/form-values";
 
 interface XAxisShelfProps {
@@ -26,7 +27,7 @@ interface XAxisShelfProps {
 export function XAxisShelf({ form, columns }: XAxisShelfProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const sources = form.watch("dataConfig.dataSources");
+  const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const indexed = firstDataSourceByRole(sources, "x");
   const xIndex = indexed?.index ?? 0;
 
@@ -34,6 +35,13 @@ export function XAxisShelf({ form, columns }: XAxisShelfProps) {
     const tableName = form.getValues("dataConfig.tableName");
     form.setValue(`dataConfig.dataSources.${xIndex}.tableName`, tableName);
     form.setValue("config.xAxisTitle", value);
+    // Auto-pick the axis scale for the picked column's data type. Strings
+    // become category axes, timestamps/dates become date axes, numerics
+    // stay linear. Users can still override via the "Axis type" select.
+    const picked = columns.find((c) => c.name === value);
+    form.setValue("config.xAxisType", defaultAxisTypeFor(picked?.type_text), {
+      shouldDirty: true,
+    });
   };
 
   return (
@@ -85,7 +93,9 @@ export function XAxisShelf({ form, columns }: XAxisShelfProps) {
           name="config.xAxisTitle"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs font-medium">{t("workspace.shelves.axisTitle")}</FormLabel>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.shelves.axisTitle")}
+              </FormLabel>
               <FormControl>
                 <Input placeholder={t("workspace.shelves.axisTitlePlaceholder")} {...field} />
               </FormControl>
@@ -99,7 +109,9 @@ export function XAxisShelf({ form, columns }: XAxisShelfProps) {
           name="config.xAxisType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs font-medium">{t("workspace.shelves.axisType")}</FormLabel>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.shelves.axisType")}
+              </FormLabel>
               <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
                 <FormControl>
                   <SelectTrigger>
@@ -110,6 +122,9 @@ export function XAxisShelf({ form, columns }: XAxisShelfProps) {
                   <SelectItem value="linear">{t("workspace.axisTypes.linear")}</SelectItem>
                   <SelectItem value="log">{t("workspace.axisTypes.log")}</SelectItem>
                   <SelectItem value="date">{t("workspace.axisTypes.date")}</SelectItem>
+                  <SelectItem value="category">
+                    {t("workspace.axisTypes.category", "Category")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

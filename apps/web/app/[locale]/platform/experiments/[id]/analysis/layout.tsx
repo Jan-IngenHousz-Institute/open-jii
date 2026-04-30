@@ -17,18 +17,20 @@ export default function AnalysisLayout({ children }: AnalysisLayoutProps) {
   const locale = useLocale();
   const { t } = useTranslation("experiments");
 
-  // Determine active tab from URL
+  // Determine active tab from URL. Dashboards is the headline tab now;
+  // Visualizations stays for users who want a single chart at a time.
   const getActiveTab = () => {
+    if (pathname.includes("/dashboards")) return "dashboards";
     if (pathname.includes("/visualizations")) return "visualizations";
     if (pathname.includes("/notebooks")) return "notebooks";
-    return "visualizations"; // Default to visualizations
+    return "dashboards";
   };
 
-  // Check if we should show the full analysis layout (only for main pages, not sub-pages)
+  // Hide the sub-tab bar on detail/edit pages so they get the full canvas.
+  // Only the main list pages keep the tabs.
   const shouldShowAnalysisLayout = () => {
-    // Show layout for: /analysis/visualizations (main list page)
-    // Don't show for: /analysis/visualizations/new, /analysis/visualizations/[id], /analysis/visualizations/[id]/edit
     return (
+      pathname === `/${locale}/platform/experiments/${id}/analysis/dashboards` ||
       pathname === `/${locale}/platform/experiments/${id}/analysis/visualizations` ||
       pathname === `/${locale}/platform/experiments/${id}/analysis/notebooks`
     );
@@ -51,6 +53,11 @@ export default function AnalysisLayout({ children }: AnalysisLayoutProps) {
 
       <NavTabs value={activeTab}>
         <NavTabsList>
+          <NavTabsTrigger value="dashboards" asChild>
+            <Link href={`/${locale}/platform/experiments/${id}/analysis/dashboards`}>
+              {t("analysis.dashboards", "Dashboards")}
+            </Link>
+          </NavTabsTrigger>
           <NavTabsTrigger value="visualizations" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/analysis/visualizations`}>
               {t("analysis.visualizations")}

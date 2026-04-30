@@ -1,7 +1,7 @@
 "use client";
 
 import "quill/dist/quill.snow.css";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useQuill } from "react-quilljs";
 
 export function RichTextarea({
@@ -11,6 +11,8 @@ export function RichTextarea({
   isDisabled,
   autoFocus,
   onBlur,
+  releaseTabKey,
+  compact,
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -18,19 +20,50 @@ export function RichTextarea({
   isDisabled?: boolean;
   autoFocus?: boolean;
   onBlur?: (e: React.FocusEvent) => void;
+  /**
+   * When true, Tab and Shift+Tab move focus to the next/previous
+   * focusable element instead of being captured by Quill (which would
+   * otherwise indent/outdent lists or insert tab characters). Use this
+   * inside form-like flows where consistent Tab navigation matters more
+   * than list indentation — e.g. inside a dashboard editor where Tab
+   * should walk between widgets.
+   */
+  releaseTabKey?: boolean;
+  /**
+   * When true, the editor fills its parent (instead of the default
+   * 300px-tall textarea look) and the toolbar is forced into a single
+   * horizontally-scrollable row. Use inside layouts where the editor
+   * has to live in a small, resizable container — e.g. a dashboard
+   * widget — so the toolbar doesn't wrap to four rows and the editor
+   * doesn't bleed past its container's height.
+   */
+  compact?: boolean;
 }) {
   const { quill, quillRef } = useQuill({
     theme: "snow",
     modules: {
-      toolbar: [
-        ["bold", "italic", "underline"],
-        [{ header: [1, 2, 3, false] }],
-        [{ list: "ordered" }, { list: "bullet" }],
-        ["link"],
-        ["code"],
-        ["blockquote"],
-        ["clean"],
-      ],
+      // The header dropdown is replaced with two toggle buttons in compact
+      // mode. Quill's picker opens its options as `position: absolute;
+      // top: 100%`, which gets clipped if the toolbar wraps or has any
+      // overflow management. Toggle buttons sidestep the entire popover
+      // problem and read fine at narrow widths.
+      toolbar: compact
+        ? [
+            ["bold", "italic", "underline"],
+            [{ header: 1 }, { header: 2 }, { header: 3 }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            ["link", "code", "blockquote"],
+            ["clean"],
+          ]
+        : [
+            ["bold", "italic", "underline"],
+            [{ header: [1, 2, 3, false] }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            ["link"],
+            ["code"],
+            ["blockquote"],
+            ["clean"],
+          ],
     },
     formats: [
       "header",
@@ -46,58 +79,126 @@ export function RichTextarea({
     placeholder: isDisabled ? "" : (placeholder ?? "Write something awesome..."),
   });
 
+  // Hold the latest onChange in a ref so the text-change handler can stay
+  // bound for the lifetime of the editor — re-registering on every render
+  // (the previous shape) caused the focus + selection to reset on each
+  // keystroke, which manifested as cursor jumping and dropped characters.
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Disable the toolbar buttons stealing focus on click — keeps the
+  // selection inside the editor while the user formats.
   useEffect(() => {
     if (!quill) return;
 
     const toolbar = quill.getModule("toolbar") as { container: HTMLElement };
-
     const preventFocus = (e: MouseEvent) => {
       e.preventDefault();
     };
-
     toolbar.container.addEventListener("mousedown", preventFocus);
-
     return () => {
       toolbar.container.removeEventListener("mousedown", preventFocus);
     };
   }, [quill]);
 
+  // Mount-time setup: seed the initial content, autofocus once, register
+  // the text-change handler exactly once. Reading from the ref avoids
+  // re-registering when the parent re-renders.
   useEffect(() => {
     if (!quill) return;
 
-    // Set initial value if provided
     if (value && quill.root.innerHTML !== value) {
       quill.root.innerHTML = value;
     }
 
     const handleTextChange = () => {
       const html = quill.root.innerHTML;
-      if (html !== value) {
-        onChange(html);
-      }
+      onChangeRef.current(html);
     };
 
-    quill.enable(!isDisabled);
     quill.on("text-change", handleTextChange);
 
-    // Handle autofocus
     if (autoFocus) {
       quill.focus();
+      // Place the caret at the end so typing doesn't insert at position 0
+      // (Quill defaults the cursor to the start on initial focus).
+      const length = quill.getLength();
+      quill.setSelection(length, 0);
     }
 
     return () => {
       quill.off("text-change", handleTextChange);
     };
-  }, [quill, onChange, value, isDisabled, autoFocus]);
+    // Intentionally only depend on `quill`. `value`/`autoFocus` are seed
+    // inputs — re-running this effect on every value change would reset
+    // the cursor and detach/reattach listeners on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quill]);
+
+  // Sync external value changes (programmatic reset, prefill from server,
+  // etc.) — but only when the incoming value genuinely differs from what
+  // Quill already shows. The user's own keystrokes go through this branch
+  // a no-op because Quill is already the source of `value` upstream.
+  useEffect(() => {
+    if (!quill) return;
+    if (quill.root.innerHTML === value) return;
+    // Preserve cursor position when the user is mid-edit. Snapshot before,
+    // restore after.
+    const selection = quill.getSelection();
+    quill.root.innerHTML = value || "";
+    if (selection) {
+      const length = quill.getLength();
+      const safeIndex = Math.min(selection.index, length);
+      quill.setSelection(safeIndex, selection.length);
+    }
+  }, [quill, value]);
+
+  // Enable/disable in its own effect so toggling isDisabled doesn't tear
+  // down the text-change handler.
+  useEffect(() => {
+    if (!quill) return;
+    quill.enable(!isDisabled);
+  }, [quill, isDisabled]);
+
+  // Optionally let Tab leave the editor. Quill's keyboard module has
+  // multiple default bindings on Tab (indent/outdent in lists, table
+  // navigation, etc.), so the cleanest hook is to intercept the keydown
+  // in the capture phase on `quill.root` and stop it before Quill's
+  // listener runs — without preventing default, so the browser still
+  // moves focus to the next/previous focusable element.
+  useEffect(() => {
+    if (!quill || !releaseTabKey) return;
+    const root = quill.root;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        e.stopImmediatePropagation();
+      }
+    };
+    root.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      root.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [quill, releaseTabKey]);
 
   return (
     <div
-      className="border-input focus-visible:ring-ring flex w-full flex-col overflow-hidden rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+      // In compact mode the wrapper fills its parent; in default mode it
+      // keeps the legacy 300px-tall textarea look.
+      className={
+        compact
+          ? "border-input focus-visible:ring-ring flex h-full w-full flex-col overflow-hidden rounded-md border bg-transparent text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+          : "border-input focus-visible:ring-ring flex w-full flex-col overflow-hidden rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+      }
+      data-rta-compact={compact ? "" : undefined}
       onBlur={onBlur}
     >
       <div
         ref={quillRef}
-        className="max-h-[300px] min-h-[300px] w-full overflow-hidden"
+        className={
+          compact
+            ? "min-h-0 w-full flex-1 overflow-hidden"
+            : "max-h-[300px] min-h-[300px] w-full overflow-hidden"
+        }
         role="textbox"
         aria-label={placeholder ?? "Rich text editor"}
         aria-placeholder={placeholder ?? "Write something awesome..."}
@@ -148,6 +249,45 @@ export function RichTextarea({
             padding: 10px;
             border-radius: 5px;
             overflow-x: auto;
+          }
+
+          /* Compact mode: smaller buttons + a single-row, horizontally-
+             scrollable toolbar so it never eats more than ~32px of vertical
+             space regardless of widget width. Safe to scroll horizontally
+             now that the heading dropdown is replaced with toggle buttons
+             — there are no popovers that would get clipped by the
+             scroll container's overflow management. */
+          [data-rta-compact] .ql-toolbar {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 4px 6px;
+            scrollbar-width: thin;
+          }
+          [data-rta-compact] .ql-toolbar::-webkit-scrollbar {
+            height: 4px;
+          }
+          [data-rta-compact] .ql-toolbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 2px;
+          }
+          [data-rta-compact] .ql-toolbar .ql-formats {
+            display: inline-flex;
+            flex-shrink: 0;
+            margin-right: 6px;
+          }
+          [data-rta-compact] .ql-toolbar .ql-formats:last-child {
+            margin-right: 0;
+          }
+          [data-rta-compact] .ql-toolbar button {
+            width: 24px;
+            height: 24px;
+            padding: 2px;
+          }
+          [data-rta-compact] .ql-editor {
+            padding: 8px 10px;
+            font-size: 13px;
           }
         `}
       </style>

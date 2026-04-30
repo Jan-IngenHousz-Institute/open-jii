@@ -13,6 +13,8 @@ export function scatterDefaultConfig(): ChartFormConfig {
     useWebGL: false,
     mode: "markers",
     color: [DEFAULT_PRIMARY_COLOR],
+    colorMode: "continuous",
+    colorMap: {},
     marker: {
       size: 6,
       symbol: "circle",

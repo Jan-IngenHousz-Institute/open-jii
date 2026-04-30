@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 
+import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+
 import {
   DEFAULT_PRIMARY_COLOR,
   dataSourcesByRole,
@@ -9,7 +11,7 @@ import {
 } from "../form-values";
 
 describe("form-values accessors", () => {
-  const sources = [
+  const sources: DataSourceConfig[] = [
     { tableName: "t", columnName: "time", role: "x" },
     { tableName: "t", columnName: "a", role: "y" },
     { tableName: "t", columnName: "b", role: "y" },

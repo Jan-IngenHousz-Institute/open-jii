@@ -12,7 +12,6 @@ export const scatterChartType: ChartTypeDef = {
   labelKey: "workspace.charts.types.scatter",
   descriptionKey: "workspace.charts.descriptions.scatter",
   icon: ScatterChart,
-  requiredRoles: ["x", "y"],
   defaultConfig: scatterDefaultConfig,
   defaultDataConfig: scatterDefaultDataConfig,
   DataPanel: ScatterDataPanel,

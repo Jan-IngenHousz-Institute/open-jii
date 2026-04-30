@@ -6,9 +6,9 @@ import { ChartTypePicker } from "../chart-type-picker";
 describe("ChartTypePicker", () => {
   it("renders the active chart type as the trigger label", () => {
     render(<ChartTypePicker value="line" onChange={() => {}} />);
-    expect(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ })).toHaveTextContent(
-      "workspace.charts.types.line",
-    );
+    expect(
+      screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }),
+    ).toHaveTextContent("workspace.charts.types.line");
   });
 
   it("opens a popover with all registered chart types grouped by family", async () => {
@@ -31,9 +31,10 @@ describe("ChartTypePicker", () => {
       name: /workspace\.charts\.types\.scatter/,
     });
     expect(scatterTile).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: /workspace\.charts\.types\.line/ }),
-    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /workspace\.charts\.types\.line/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("invokes onChange and closes the popover when a tile is clicked", async () => {

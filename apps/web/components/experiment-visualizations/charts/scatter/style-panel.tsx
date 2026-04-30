@@ -41,9 +41,7 @@ export function ScatterStylePanel({ form }: ChartPanelProps) {
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="markers">{t("workspace.modes.markers")}</SelectItem>
-                  <SelectItem value="lines+markers">
-                    {t("workspace.modes.linesMarkers")}
-                  </SelectItem>
+                  <SelectItem value="lines+markers">{t("workspace.modes.linesMarkers")}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

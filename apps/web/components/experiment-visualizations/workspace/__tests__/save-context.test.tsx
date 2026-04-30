@@ -8,24 +8,25 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe("VisualizationSaveContext", () => {
-  it("starts as not-dirty, not-saving, no error", () => {
+  it("starts as not-saving, not-dirty, no error", () => {
     const { result } = renderHook(() => useVisualizationSaveStatus(), { wrapper });
-    expect(result.current.isDirty).toBe(false);
     expect(result.current.isSaving).toBe(false);
+    expect(result.current.isDirty).toBe(false);
     expect(result.current.hasError).toBe(false);
   });
 
-  it("markDirty flips isDirty true and clears error", () => {
+  it("markChanged sets isDirty and clears error", () => {
     const { result } = renderHook(() => useVisualizationSaveStatus(), { wrapper });
     act(() => result.current.markFailed());
     expect(result.current.hasError).toBe(true);
-    act(() => result.current.markDirty());
+    act(() => result.current.markChanged());
     expect(result.current.isDirty).toBe(true);
     expect(result.current.hasError).toBe(false);
   });
 
-  it("markSaving sets isSaving true and clears error", () => {
+  it("markSaving sets isSaving and clears error", () => {
     const { result } = renderHook(() => useVisualizationSaveStatus(), { wrapper });
+    act(() => result.current.markFailed());
     act(() => result.current.markSaving());
     expect(result.current.isSaving).toBe(true);
     expect(result.current.hasError).toBe(false);
@@ -34,7 +35,7 @@ describe("VisualizationSaveContext", () => {
   it("markSaved clears isSaving + isDirty + error", () => {
     const { result } = renderHook(() => useVisualizationSaveStatus(), { wrapper });
     act(() => {
-      result.current.markDirty();
+      result.current.markChanged();
       result.current.markSaving();
     });
     expect(result.current.isSaving).toBe(true);
@@ -46,11 +47,24 @@ describe("VisualizationSaveContext", () => {
     expect(result.current.hasError).toBe(false);
   });
 
+  it("markSavingDone clears isSaving but preserves isDirty for in-flight edits", () => {
+    const { result } = renderHook(() => useVisualizationSaveStatus(), { wrapper });
+    act(() => {
+      result.current.markChanged();
+      result.current.markSaving();
+    });
+    expect(result.current.isSaving).toBe(true);
+    expect(result.current.isDirty).toBe(true);
+
+    act(() => result.current.markSavingDone());
+    expect(result.current.isSaving).toBe(false);
+    expect(result.current.isDirty).toBe(true);
+    expect(result.current.hasError).toBe(false);
+  });
+
   it("markFailed clears isSaving and sets hasError", () => {
     const { result } = renderHook(() => useVisualizationSaveStatus(), { wrapper });
     act(() => result.current.markSaving());
-    expect(result.current.isSaving).toBe(true);
-
     act(() => result.current.markFailed());
     expect(result.current.isSaving).toBe(false);
     expect(result.current.hasError).toBe(true);

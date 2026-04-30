@@ -12,6 +12,7 @@ import {
   integer,
   bigint,
   decimal,
+  index,
 } from "drizzle-orm/pg-core";
 
 // UTC timestamps helper

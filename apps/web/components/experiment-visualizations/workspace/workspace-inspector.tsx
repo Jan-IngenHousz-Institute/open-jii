@@ -1,20 +1,14 @@
 "use client";
 
 import { AlertCircle, Database, Loader2, Palette } from "lucide-react";
+import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 
 import type { DataColumn, ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
-import { Separator } from "@repo/ui/components/separator";
-import { cn } from "@repo/ui/lib/utils";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@repo/ui/components/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import {
   Select,
   SelectContent,
@@ -22,7 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Separator } from "@repo/ui/components/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
+import { cn } from "@repo/ui/lib/utils";
 
 import type { ChartFormValues } from "../charts/form-values";
 import { getChartTypeDef } from "../charts/registry";
@@ -55,12 +51,20 @@ export function WorkspaceInspector({
 }: WorkspaceInspectorProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const chartType = form.watch("chartType");
+  const chartType = useWatch({ control: form.control, name: "chartType" });
   const def = getChartTypeDef(chartType);
+  // Persist the active tab across chart-type switches; the previous default
+  // had Tabs uncontrolled, so any re-render that remounted the inspector
+  // (notably switching chart type) sent the user back to "data".
+  const [activeTab, setActiveTab] = useState<"data" | "style">("data");
 
   return (
     <Card className="overflow-hidden shadow-none md:sticky md:top-6 md:flex md:max-h-[calc(100vh-3rem)] md:flex-col">
-      <Tabs defaultValue="data" className="w-full md:flex md:min-h-0 md:flex-1 md:flex-col">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "data" | "style")}
+        className="w-full md:flex md:min-h-0 md:flex-1 md:flex-col"
+      >
         <div className="border-b px-4 md:shrink-0">
           <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-0 bg-transparent p-0">
             <TabsTrigger value="data" className={tabTriggerClass}>

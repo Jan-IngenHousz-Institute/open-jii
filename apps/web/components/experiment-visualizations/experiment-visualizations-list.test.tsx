@@ -41,7 +41,7 @@ describe("ExperimentVisualizationsList", () => {
     expect(screen.getByText("Test Visualization")).toBeInTheDocument();
     expect(screen.getByText("A test desc")).toBeInTheDocument();
     expect(screen.getByText("Test User")).toBeInTheDocument();
-    expect(screen.getByText("charts.types.line")).toBeInTheDocument();
+    expect(screen.getByText("workspace.charts.types.line")).toBeInTheDocument();
   });
 
   it("renders multiple items", () => {
@@ -64,10 +64,8 @@ describe("ExperimentVisualizationsList", () => {
   });
 
   it.each([
-    ["line", "charts.types.line"],
-    ["lineplot", "charts.types.line"],
-    ["scatter", "charts.types.scatter"],
-    ["scatterplot", "charts.types.scatter"],
+    ["line", "workspace.charts.types.line"],
+    ["scatter", "workspace.charts.types.scatter"],
     ["customChart", "customChart"],
   ] as const)("displays chart type %s as '%s'", (chartType, expected) => {
     render(
@@ -80,8 +78,11 @@ describe("ExperimentVisualizationsList", () => {
   });
 
   it.each([
-    ["line", "charts.types.line", "bg-badge-published"],
-    ["scatter", "charts.types.scatter", "bg-badge-stale"],
+    // Both line and scatter are in the "basic" family — color is family-keyed
+    // so the list scales to 20+ chart types without per-type bookkeeping.
+    ["line", "workspace.charts.types.line", "bg-badge-published"],
+    ["scatter", "workspace.charts.types.scatter", "bg-badge-published"],
+    // Unregistered chart types fall back to the neutral badge.
     ["unknown", "unknown", "bg-badge-archived"],
   ] as const)("badge for %s has class %s", (chartType, label, className) => {
     render(

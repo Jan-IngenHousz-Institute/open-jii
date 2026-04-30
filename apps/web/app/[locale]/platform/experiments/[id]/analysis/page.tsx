@@ -6,6 +6,7 @@ interface AnalysisPageProps {
 
 export default async function AnalysisPage({ params }: AnalysisPageProps) {
   const { locale, id } = await params;
-  // Redirect to visualizations as the default analysis page
-  redirect(`/${locale}/platform/experiments/${id}/analysis/visualizations`);
+  // Dashboards are now the headline Analysis surface. Standalone
+  // visualizations remain available via the Visualizations sub-tab.
+  redirect(`/${locale}/platform/experiments/${id}/analysis/dashboards`);
 }

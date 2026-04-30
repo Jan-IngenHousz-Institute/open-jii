@@ -21,10 +21,11 @@ export default function ExperimentVisualizationReadOnly({ experimentId, visualiz
   const router = useRouter();
   const locale = useLocale();
 
-  const { data: visualizationResponse, isLoading, error } = useExperimentVisualization(
-    visualizationId,
-    experimentId,
-  );
+  const {
+    data: visualizationResponse,
+    isLoading,
+    error,
+  } = useExperimentVisualization(visualizationId, experimentId);
   const visualization = visualizationResponse?.body;
 
   const handleBack = () => {

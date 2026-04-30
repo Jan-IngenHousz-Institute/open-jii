@@ -1,7 +1,7 @@
 "use client";
 
 import type { Layout, Config, PlotData, Data, PlotMarker, ColorScale, Font } from "plotly.js";
-import React, { useEffect, useRef, useState, useCallback, Suspense, lazy } from "react";
+import React, { useEffect, useRef, useState, Suspense, lazy } from "react";
 import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
@@ -35,6 +35,14 @@ interface SafeConfig extends Partial<Config> {
 // WebGL trace types that require special handling
 type WebGLTraceType = "scatter3d" | "surface" | "mesh3d" | "scattergl" | "scattermapbox";
 
+const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = [
+  "scatter3d",
+  "surface",
+  "mesh3d",
+  "scattergl",
+  "scattermapbox",
+];
+
 // Regular trace types
 type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "violin";
 
@@ -65,12 +73,14 @@ export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   error?: string;
 }
 
-// WebGL context management
+// Browsers cap concurrent WebGL contexts (~8–16 per tab). Stay conservative so
+// a dashboard of charts degrades to "queued" instead of crashing the GPU
+// process. Charts not in the queue render via SVG immediately.
 class WebGLContextManager {
   private static instance: WebGLContextManager;
   private activeContexts = new Set<string>();
-  private readonly maxContexts = 8; // Conservative limit to prevent browser crashes
   private pendingCharts = new Map<string, () => void>();
+  private readonly maxContexts = 8;
 
   static getInstance(): WebGLContextManager {
     if (!WebGLContextManager.instance) {
@@ -83,28 +93,36 @@ class WebGLContextManager {
     return this.activeContexts.size < this.maxContexts;
   }
 
+  // Idempotent: if `chartId` already holds a slot, fire the callback and
+  // return true without double-counting against the cap.
   requestContext(chartId: string, callback: () => void): boolean {
-    if (this.canCreateContext()) {
+    if (this.activeContexts.has(chartId)) {
+      callback();
+      return true;
+    }
+    if (this.activeContexts.size < this.maxContexts) {
       this.activeContexts.add(chartId);
       callback();
       return true;
-    } else {
-      this.pendingCharts.set(chartId, callback);
-      return false;
     }
+    this.pendingCharts.set(chartId, callback);
+    return false;
   }
 
+  // Releasing both clears any pending callback for this chart (avoids the
+  // dead-component leak where an unmounted chart's pending callback would
+  // later be promoted into `activeContexts` with nothing left to release it)
+  // and only promotes the next waiter when a slot was actually freed.
   releaseContext(chartId: string): void {
-    this.activeContexts.delete(chartId);
+    this.pendingCharts.delete(chartId);
+    if (!this.activeContexts.delete(chartId)) return;
 
-    // Process next pending chart
     const nextEntry = this.pendingCharts.entries().next();
-    if (!nextEntry.done) {
-      const [nextChartId, nextCallback] = nextEntry.value;
-      this.pendingCharts.delete(nextChartId);
-      this.activeContexts.add(nextChartId);
-      nextCallback();
-    }
+    if (nextEntry.done) return;
+    const [nextChartId, nextCallback] = nextEntry.value;
+    this.pendingCharts.delete(nextChartId);
+    this.activeContexts.add(nextChartId);
+    nextCallback();
   }
 
   getActiveCount(): number {
@@ -241,7 +259,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     const [isWebGLEnabled, setIsWebGLEnabled] = useState(true);
     const [isContextAvailable, setIsContextAvailable] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
-    const chartIdRef = useRef<string>(`chart-${Math.random().toString(36).substr(2, 9)}`);
+    const chartIdRef = useRef<string>(`chart-${Math.random().toString(36).slice(2, 11)}`);
     const contextManager = WebGLContextManager.getInstance();
 
     // Validate and sanitize data
@@ -250,52 +268,40 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
-    // Determine if this chart should use WebGL
-    const shouldUseWebGL = useCallback(() => {
+    // Stable boolean drives the context-management effect. Using a memoized
+    // primitive (rather than a `useCallback`) means the effect only re-runs
+    // when WebGL relevance actually flips, not on every data-array identity
+    // change — the previous shape caused release→reacquire churn on every
+    // keystroke in the editor.
+    const needsWebGL = React.useMemo(() => {
       if (!isWebGLEnabled) return false;
-
-      // Check if any trace type requires WebGL
-      const hasWebGLTraces = safeData?.some((trace: PlotData) => {
-        const type = trace.type || "scatter";
-        const webglTypes: WebGLTraceType[] = [
-          "scatter3d",
-          "surface",
-          "mesh3d",
-          "scattergl",
-          "scattermapbox",
-        ];
-        return webglTypes.includes(type as WebGLTraceType);
+      return safeData.some((trace: PlotData) => {
+        const type = (trace.type ?? "scatter") as WebGLTraceType;
+        return WEBGL_TRACE_TYPES.includes(type);
       });
+    }, [safeData, isWebGLEnabled]);
 
-      return hasWebGLTraces;
-    }, [safeData, isWebGLEnabled]); // Handle WebGL context management
     useEffect(() => {
-      const needsWebGL = shouldUseWebGL();
       const chartId = chartIdRef.current;
 
       if (!needsWebGL) {
         setIsContextAvailable(true);
+        // Defensive release covers the WebGL→non-WebGL transition; the
+        // manager treats this as a no-op when nothing was held.
+        contextManager.releaseContext(chartId);
         return;
       }
 
-      const requestContext = () => {
-        const success = contextManager.requestContext(chartId, () => {
-          setIsContextAvailable(true);
-        });
-
-        if (!success) {
-          setIsContextAvailable(false);
-        }
-      };
-
-      requestContext();
+      let cancelled = false;
+      contextManager.requestContext(chartId, () => {
+        if (!cancelled) setIsContextAvailable(true);
+      });
 
       return () => {
-        if (needsWebGL) {
-          contextManager.releaseContext(chartId);
-        }
+        cancelled = true;
+        contextManager.releaseContext(chartId);
       };
-    }, [shouldUseWebGL, contextManager]);
+    }, [needsWebGL, contextManager]);
 
     // Handle WebGL errors gracefully
     useEffect(() => {
@@ -401,7 +407,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     }
 
     // Show waiting state for WebGL charts when context not available
-    if (shouldUseWebGL() && !isContextAvailable) {
+    if (needsWebGL && !isContextAvailable) {
       return (
         <div ref={ref} className={cn("flex h-full items-center justify-center", className)}>
           <div className="text-center">

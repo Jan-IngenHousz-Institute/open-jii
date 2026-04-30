@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
@@ -12,7 +13,6 @@ import {
 } from "@repo/ui/components/select";
 import { Separator } from "@repo/ui/components/separator";
 import { Slider } from "@repo/ui/components/slider";
-import { useTranslation } from "@repo/i18n";
 
 import { DisplayOptionsSection } from "../../workspace/style-sections/display-options-section";
 import type { ChartPanelProps } from "../types";
@@ -43,9 +43,7 @@ export function LineStylePanel({ form }: ChartPanelProps) {
                 <SelectContent>
                   <SelectItem value="lines">{t("workspace.modes.lines")}</SelectItem>
                   <SelectItem value="markers">{t("workspace.modes.markers")}</SelectItem>
-                  <SelectItem value="lines+markers">
-                    {t("workspace.modes.linesMarkers")}
-                  </SelectItem>
+                  <SelectItem value="lines+markers">{t("workspace.modes.linesMarkers")}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -76,7 +74,7 @@ export function LineStylePanel({ form }: ChartPanelProps) {
           control={form.control}
           name="config.line.smoothing"
           render={({ field }) => {
-            const smoothing = (field.value as number | undefined) ?? 0;
+            const smoothing = field.value ?? 0;
             return (
               <FormItem>
                 <div className="flex items-center justify-between">

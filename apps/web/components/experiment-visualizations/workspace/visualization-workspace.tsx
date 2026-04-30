@@ -1,11 +1,11 @@
 "use client";
 
-import { isValidAxisSource } from "@repo/api/utils/column-type-utils";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ChartType } from "@repo/api/schemas/experiment.schema";
+import { isPlottableColumn } from "@repo/api/utils/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -48,7 +48,8 @@ export function VisualizationWorkspace({
     error: tablesError,
   } = useExperimentTables(experimentId);
 
-  const tableName = form.watch("dataConfig.tableName") ?? "";
+  const tableName = useWatch({ control: form.control, name: "dataConfig.tableName" });
+  const watchedChartType = useWatch({ control: form.control, name: "chartType" });
 
   const {
     tableMetadata,
@@ -62,8 +63,11 @@ export function VisualizationWorkspace({
     enabled: Boolean(tableName),
   });
 
+  // One plottable column list (complex types stripped). Each chart's
+  // data-panel applies per-role kind filtering on top via
+  // `filterColumnsForRole` from the visualization contracts.
   const columns = useMemo(
-    () => (tableMetadata?.rawColumns ?? []).filter((col) => isValidAxisSource(col.type_text)),
+    () => (tableMetadata?.rawColumns ?? []).filter((col) => isPlottableColumn(col.type_text)),
     [tableMetadata],
   );
 
@@ -83,17 +87,16 @@ export function VisualizationWorkspace({
   const applyChartType = (type: ChartType) => {
     const def = getChartTypeDef(type);
     if (!def) return;
-    const current = form.getValues();
-    form.reset(
-      {
-        ...current,
-        chartType: type,
-        chartFamily: def.family,
-        config: def.defaultConfig(),
-        dataConfig: def.defaultDataConfig(current.dataConfig?.tableName),
-      },
-      { keepDefaultValues: true, keepDirty: true },
-    );
+    // Drive each field through `setValue` so the autosave watch sees a
+    // `change` event for every modified slice; the trailing chartType update
+    // ensures the debounce ends with a snapshot containing all four values.
+    // The previous `reset` + trailing `setValue` combo only emitted a single
+    // change event for `chartType`, leaving autosave's snapshot internally
+    // consistent only by accident of RHF's synchronous read semantics.
+    const tableName = form.getValues("dataConfig.tableName");
+    form.setValue("chartFamily", def.family, { shouldDirty: true });
+    form.setValue("config", def.defaultConfig(), { shouldDirty: true });
+    form.setValue("dataConfig", def.defaultDataConfig(tableName), { shouldDirty: true });
     form.setValue("chartType", type, { shouldDirty: true });
   };
 
@@ -123,7 +126,7 @@ export function VisualizationWorkspace({
   return (
     <div className="space-y-4 pb-6">
       <div className="flex items-center justify-between gap-2">
-        <ChartTypePicker value={form.watch("chartType")} onChange={handleChartTypeChange} />
+        <ChartTypePicker value={watchedChartType} onChange={handleChartTypeChange} />
 
         <Button
           type="button"
@@ -150,7 +153,7 @@ export function VisualizationWorkspace({
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <WorkspaceCanvas
-            form={form}
+            control={form.control}
             experimentId={experimentId}
             visualizationId={visualizationId}
           />

@@ -1,23 +1,23 @@
 "use client";
 
-import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
-import { VisualizationLayoutContent } from "@/components/experiment-visualizations/workspace/visualization-layout-content";
+import type { ChartFormValues } from "@/components/experiment-visualizations/charts/form-values";
+import { lineChartType } from "@/components/experiment-visualizations/charts/line";
+import { getChartTypeDef } from "@/components/experiment-visualizations/charts/registry";
 import { VisualizationSaveProvider } from "@/components/experiment-visualizations/workspace/save-context";
 import { useAutosave } from "@/components/experiment-visualizations/workspace/use-autosave";
+import { VisualizationLayoutContent } from "@/components/experiment-visualizations/workspace/visualization-layout-content";
+import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { notFound, useParams } from "next/navigation";
 import { useMemo } from "react";
-import { FormProvider, useForm, type Resolver } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
+import type { Resolver } from "react-hook-form";
 
 import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { zCreateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-
-import type { ChartFormValues } from "@/components/experiment-visualizations/charts/form-values";
-import { lineChartType } from "@/components/experiment-visualizations/charts/line";
-import { getChartTypeDef } from "@/components/experiment-visualizations/charts/registry";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -84,14 +84,15 @@ function VisualizationFormShell({
 
   const form = useForm<ChartFormValues>({
     defaultValues: defaults,
-    resolver: zodResolver(zCreateExperimentVisualizationBody) as unknown as Resolver<ChartFormValues>,
+    resolver: zodResolver(
+      zCreateExperimentVisualizationBody,
+    ) as unknown as Resolver<ChartFormValues>,
     mode: "onChange",
   });
 
-  useAutosave({ form, experimentId, visualizationId: visualization.id });
-
   return (
     <VisualizationSaveProvider>
+      <AutosaveBinding form={form} experimentId={experimentId} visualizationId={visualization.id} />
       <FormProvider {...form}>
         <VisualizationLayoutContent experimentId={experimentId} visualization={visualization}>
           {children}
@@ -99,4 +100,21 @@ function VisualizationFormShell({
       </FormProvider>
     </VisualizationSaveProvider>
   );
+}
+
+// Mounted inside `VisualizationSaveProvider` so `useVisualizationSaveStatus()`
+// inside `useAutosave` resolves to the provider state, not the default
+// noop value. Without this seam, every save was firing but the indicator
+// never updated.
+function AutosaveBinding({
+  form,
+  experimentId,
+  visualizationId,
+}: {
+  form: ReturnType<typeof useForm<ChartFormValues>>;
+  experimentId: string;
+  visualizationId: string;
+}) {
+  useAutosave({ form, experimentId, visualizationId });
+  return null;
 }

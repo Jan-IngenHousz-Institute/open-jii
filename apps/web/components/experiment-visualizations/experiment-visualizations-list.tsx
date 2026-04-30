@@ -5,9 +5,15 @@ import { Calendar, ChevronRight, User } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type {
+  ChartFamily,
+  ChartType,
+  ExperimentVisualization,
+} from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
+
+import { getChartTypeDef } from "./charts/registry";
 
 interface ExperimentVisualizationsListProps {
   visualizations: ExperimentVisualization[];
@@ -16,31 +22,20 @@ interface ExperimentVisualizationsListProps {
   isArchived?: boolean;
 }
 
-const getChartTypeDisplay = (chartType: string, t: (key: string) => string) => {
-  switch (chartType.toLowerCase()) {
-    case "line":
-    case "lineplot":
-      return t("charts.types.line");
-    case "scatter":
-    case "scatterplot":
-      return t("charts.types.scatter");
-    default:
-      return chartType;
-  }
+// Badge color is keyed off the chart family so the list scales to all 20+
+// chart types without per-type bookkeeping. Unsupported types fall through
+// to the neutral "archived" token.
+const FAMILY_BADGE_CLASS: Record<ChartFamily, string> = {
+  basic: "bg-badge-published",
+  statistical: "bg-badge-stale",
+  scientific: "bg-badge-archived",
+  "3d": "bg-badge-archived",
 };
 
-const getChartTypeColor = (chartType: string) => {
-  switch (chartType.toLowerCase()) {
-    case "line":
-    case "lineplot":
-      return "bg-badge-published";
-    case "scatter":
-    case "scatterplot":
-      return "bg-badge-stale";
-    default:
-      return "bg-badge-archived";
-  }
-};
+function getChartTypeBadgeClass(chartType: ChartType): string {
+  const family = getChartTypeDef(chartType)?.family;
+  return family ? FAMILY_BADGE_CLASS[family] : "bg-badge-archived";
+}
 
 export default function ExperimentVisualizationsList({
   visualizations,
@@ -85,11 +80,14 @@ export default function ExperimentVisualizationsList({
                   </h3>
                 </div>
                 <span
-                  className={`text-muted-dark mb-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${getChartTypeColor(
+                  className={`text-muted-dark mb-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${getChartTypeBadgeClass(
                     visualization.chartType,
                   )}`}
                 >
-                  {getChartTypeDisplay(visualization.chartType, t)}
+                  {(() => {
+                    const def = getChartTypeDef(visualization.chartType);
+                    return def ? t(def.labelKey) : visualization.chartType;
+                  })()}
                 </span>
                 <div className="text-muted-foreground mt-2 space-y-2 text-sm">
                   <div className="flex items-center gap-2">

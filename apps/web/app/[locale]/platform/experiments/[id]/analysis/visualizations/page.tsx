@@ -41,11 +41,14 @@ export default function ExperimentVisualizationsPage() {
   });
 
   const handleCreate = () => {
-    const defaultName = `${t("workspace.layout.untitled")} - ${new Date().toLocaleDateString(locale, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })}`;
+    const defaultName = `${t("workspace.layout.untitled")} - ${new Date().toLocaleDateString(
+      locale,
+      {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      },
+    )}`;
     createVisualization({
       params: { id: experimentId },
       body: {

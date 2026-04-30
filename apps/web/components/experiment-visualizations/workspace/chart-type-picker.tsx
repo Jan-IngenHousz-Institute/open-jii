@@ -36,12 +36,8 @@ export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
           className="h-9 gap-2"
           aria-label={t("workspace.charts.pickerLabel")}
         >
-          {TriggerIcon ? (
-            <TriggerIcon className="size-4" />
-          ) : null}
-          <span className="text-sm font-medium">
-            {current ? t(current.labelKey) : value}
-          </span>
+          {TriggerIcon ? <TriggerIcon className="size-4" /> : null}
+          <span className="text-sm font-medium">{current ? t(current.labelKey) : value}</span>
           <ChevronDown className="text-muted-foreground size-4" />
         </Button>
       </PopoverTrigger>

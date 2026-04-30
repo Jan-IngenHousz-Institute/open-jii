@@ -278,7 +278,7 @@ describe("WebBluetoothAdapter", () => {
         byteOffset: 0,
       };
       // Override TextDecoder to throw
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       const origDecode = TextDecoder.prototype.decode;
       TextDecoder.prototype.decode = () => {
         throw new Error("decode error");

@@ -108,13 +108,26 @@ export function LineChart({
   const layout = createBaseLayout(config);
   const plotConfig = createPlotlyConfig(config);
 
-  // Check if we have categorical x data (non-numeric strings)
+  // Detect categorical axis data (non-numeric strings). Numeric-looking
+  // strings have already been coerced by the renderer; anything still a
+  // string here is genuinely categorical — override the axis type so we
+  // don't try to plot text on a linear scale.
   const hasCategoricalX = data.some(
     (series) => series.x && series.x.some((val) => typeof val === "string" && isNaN(Number(val))),
   );
   if (hasCategoricalX) {
     layout.xaxis = {
       ...layout.xaxis,
+      type: "category",
+      categoryorder: "category ascending",
+    };
+  }
+  const hasCategoricalY = data.some(
+    (series) => series.y && series.y.some((val) => typeof val === "string" && isNaN(Number(val))),
+  );
+  if (hasCategoricalY) {
+    layout.yaxis = {
+      ...layout.yaxis,
       type: "category",
       categoryorder: "category ascending",
     };

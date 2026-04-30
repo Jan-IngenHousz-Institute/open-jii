@@ -122,9 +122,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
               </Link>
             </NavTabsTrigger>
             <NavTabsTrigger value="flow" asChild>
-              <Link href={`/${locale}/platform/experiments/${id}/flow`}>
-                {t("flow.tabLabel")}
-              </Link>
+              <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
             </NavTabsTrigger>
           </NavTabsList>
         </div>

@@ -9,7 +9,5 @@ export default function VisualizationEditorPage() {
     visualizationId: string;
   }>();
 
-  return (
-    <VisualizationWorkspace experimentId={experimentId} visualizationId={visualizationId} />
-  );
+  return <VisualizationWorkspace experimentId={experimentId} visualizationId={visualizationId} />;
 }

@@ -26,8 +26,11 @@ export const useExperimentVisualizationData = (
   dataConfig: VisualizationDataConfig,
   enabled = true,
 ) => {
-  // Serialize columns for stable queryKey (avoid new array reference each render)
-  const columnsKey = dataConfig.columns?.join(",");
+  // Drop empty entries (a draft data source with no column picked yet) before
+  // serializing the query key — passing them through would invalidate the URL
+  // and cause the API to error on a column literally named "".
+  const cleanedColumns = dataConfig.columns?.filter((name) => name.length > 0);
+  const columnsKey = cleanedColumns?.join(",");
 
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {

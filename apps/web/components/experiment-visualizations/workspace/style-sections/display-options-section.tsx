@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
@@ -15,6 +16,8 @@ interface DisplayOptionsSectionProps {
 
 export function DisplayOptionsSection({ form }: DisplayOptionsSectionProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const showLegendId = useId();
+  const showGridId = useId();
 
   return (
     <section className="space-y-3">
@@ -29,7 +32,7 @@ export function DisplayOptionsSection({ form }: DisplayOptionsSectionProps) {
             <FormControl>
               <Input
                 placeholder={t("workspace.style.chartTitlePlaceholder")}
-                value={(field.value as string | undefined) ?? ""}
+                value={field.value ?? ""}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 name={field.name}
@@ -49,12 +52,12 @@ export function DisplayOptionsSection({ form }: DisplayOptionsSectionProps) {
             <FormItem className="flex items-center gap-2 space-y-0">
               <FormControl>
                 <Checkbox
-                  id="showLegend"
+                  id={showLegendId}
                   checked={Boolean(field.value)}
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormLabel htmlFor="showLegend" className="text-xs font-medium">
+              <FormLabel htmlFor={showLegendId} className="text-xs font-medium">
                 {t("workspace.style.showLegend")}
               </FormLabel>
             </FormItem>
@@ -68,12 +71,12 @@ export function DisplayOptionsSection({ form }: DisplayOptionsSectionProps) {
             <FormItem className="flex items-center gap-2 space-y-0">
               <FormControl>
                 <Checkbox
-                  id="showGrid"
+                  id={showGridId}
                   checked={Boolean(field.value)}
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormLabel htmlFor="showGrid" className="text-xs font-medium">
+              <FormLabel htmlFor={showGridId} className="text-xs font-medium">
                 {t("workspace.style.showGrid")}
               </FormLabel>
             </FormItem>

@@ -4,13 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import AnalysisPage from "./page";
 
 describe("AnalysisPage", () => {
-  it("should redirect to visualizations page", async () => {
+  it("should redirect to dashboards page", async () => {
     const mockParams = Promise.resolve({ locale: "en", id: "exp-123" });
 
     await AnalysisPage({ params: mockParams });
 
     expect(redirect).toHaveBeenCalledWith(
-      "/en/platform/experiments/exp-123/analysis/visualizations",
+      "/en/platform/experiments/exp-123/analysis/dashboards",
     );
   });
 
@@ -20,7 +20,7 @@ describe("AnalysisPage", () => {
     await AnalysisPage({ params: mockParams });
 
     expect(redirect).toHaveBeenCalledWith(
-      "/de/platform/experiments/exp-456/analysis/visualizations",
+      "/de/platform/experiments/exp-456/analysis/dashboards",
     );
   });
 
@@ -30,7 +30,7 @@ describe("AnalysisPage", () => {
     await AnalysisPage({ params: mockParams });
 
     expect(redirect).toHaveBeenCalledWith(
-      "/en/platform/experiments/test-experiment-789/analysis/visualizations",
+      "/en/platform/experiments/test-experiment-789/analysis/dashboards",
     );
   });
 
@@ -44,6 +44,6 @@ describe("AnalysisPage", () => {
     expect(redirectCall).toContain("fr");
     expect(redirectCall).toContain("exp-999");
     expect(redirectCall).toContain("/platform/experiments/");
-    expect(redirectCall).toContain("/analysis/visualizations");
+    expect(redirectCall).toContain("/analysis/dashboards");
   });
 });

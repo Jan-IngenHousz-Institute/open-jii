@@ -74,11 +74,7 @@ export function InlineEditableTitle({
 
   return (
     <div
-      className={
-        actionsInline
-          ? "flex items-center gap-2"
-          : "flex items-center justify-between"
-      }
+      className={actionsInline ? "flex items-center gap-2" : "flex items-center justify-between"}
     >
       {isEditing ? (
         <div className="flex flex-1 items-center gap-2">

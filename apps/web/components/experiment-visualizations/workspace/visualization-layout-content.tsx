@@ -4,10 +4,10 @@ import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
-import { AlertCircle, CheckCircle2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, Eraser, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
@@ -25,11 +25,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Textarea } from "@repo/ui/components/textarea";
 
 import type { ChartFormValues } from "../charts/form-values";
+import { getChartTypeDef } from "../charts/registry";
 import { useVisualizationSaveStatus } from "./save-context";
 
 interface VisualizationLayoutContentProps {
@@ -48,8 +50,8 @@ export function VisualizationLayoutContent({
   const form = useFormContext<ChartFormValues>();
 
   const isCreator = session?.user.id === visualization.createdBy;
-  const name = form.watch("name") ?? "";
-  const description = form.watch("description") ?? "";
+  const name = useWatch({ control: form.control, name: "name" }) ?? "";
+  const description = useWatch({ control: form.control, name: "description" }) ?? "";
 
   const handleTitleSave = async (newName: string) => {
     form.setValue("name", newName, { shouldDirty: true, shouldTouch: true });
@@ -58,40 +60,37 @@ export function VisualizationLayoutContent({
   return (
     <div className="flex flex-1 flex-col">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <div className="flex flex-col gap-3">
-          <div className="space-y-2">
-            <InlineEditableTitle
-              name={name || t("workspace.layout.untitled")}
-              hasAccess={isCreator}
-              onSave={handleTitleSave}
-              actionsInline
-              actions={
-                isCreator ? (
-                  <SettingsMenu
-                    experimentId={experimentId}
-                    visualization={visualization}
-                  />
-                ) : undefined
-              }
-            />
-
-            <Textarea
-              value={description}
-              onChange={(e) => {
-                form.setValue("description", e.target.value, {
-                  shouldDirty: true,
-                  shouldTouch: true,
-                });
-              }}
-              placeholder={t("workspace.layout.descriptionPlaceholder")}
-              aria-label={t("workspace.layout.descriptionTitle")}
-              disabled={!isCreator}
-              rows={1}
-              className="min-h-0 resize-none border-0 bg-transparent p-0 text-base text-[#68737B] shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <InlineEditableTitle
+                name={name || t("workspace.layout.untitled")}
+                hasAccess={isCreator}
+                onSave={handleTitleSave}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <SaveIndicator />
+              {isCreator && (
+                <SettingsMenu experimentId={experimentId} visualization={visualization} />
+              )}
+            </div>
           </div>
 
-          <SaveIndicator />
+          <Textarea
+            value={description}
+            onChange={(e) => {
+              form.setValue("description", e.target.value, {
+                shouldDirty: true,
+                shouldTouch: true,
+              });
+            }}
+            placeholder={t("workspace.layout.descriptionPlaceholder")}
+            aria-label={t("workspace.layout.descriptionTitle")}
+            disabled={!isCreator}
+            rows={1}
+            className="min-h-0 resize-none border-0 bg-transparent p-0 text-base text-[#68737B] shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
         </div>
 
         <div className="flex items-start gap-10 border-b border-[#EDF2F6] pb-8">
@@ -109,10 +108,7 @@ export function VisualizationLayoutContent({
           />
           <MetaField
             label={t("workspace.detailsSidebar.dataSource")}
-            value={
-              visualization.dataConfig.tableName ||
-              t("workspace.detailsSidebar.noDataSource")
-            }
+            value={visualization.dataConfig.tableName || t("workspace.detailsSidebar.noDataSource")}
             mono
           />
         </div>
@@ -134,9 +130,7 @@ function MetaField({ label, value, mono }: { label: string; value: string; mono?
       <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
         {label}
       </span>
-      <span
-        className={`text-sm leading-[21px] text-[#68737B] ${mono ? "font-mono" : ""}`}
-      >
+      <span className={`text-sm leading-[21px] text-[#68737B] ${mono ? "font-mono" : ""}`}>
         {value}
       </span>
     </div>
@@ -183,7 +177,9 @@ function SettingsMenu({ experimentId, visualization }: SettingsMenuProps) {
   const { t: tCommon } = useTranslation("common");
   const router = useRouter();
   const locale = useLocale();
+  const form = useFormContext<ChartFormValues>();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isClearOpen, setIsClearOpen] = useState(false);
 
   const { mutate: deleteVisualization, isPending: isDeleting } = useExperimentVisualizationDelete({
     experimentId,
@@ -193,29 +189,73 @@ function SettingsMenu({ experimentId, visualization }: SettingsMenuProps) {
     },
   });
 
+  // "Clear" resets data + style to the active chart type's defaults while
+  // preserving the visualization's identity (name, description, chart type).
+  // Same pattern as the chart-type switch: setValue per top-level field so
+  // the autosave watch sees consistent change events and persists the new
+  // state. Re-using `getChartTypeDef(currentChartType)` means clearing
+  // stays in sync if the registry changes its defaults.
+  const handleClear = () => {
+    const currentChartType = form.getValues("chartType");
+    const def = getChartTypeDef(currentChartType);
+    if (!def) {
+      setIsClearOpen(false);
+      return;
+    }
+    const tableName = form.getValues("dataConfig.tableName");
+    form.setValue("config", def.defaultConfig(), { shouldDirty: true });
+    form.setValue("dataConfig", def.defaultDataConfig(tableName), { shouldDirty: true });
+    setIsClearOpen(false);
+  };
+
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("ui.actions.title")}
-            className="text-muted-foreground hover:text-foreground shrink-0"
-          >
-            <MoreHorizontal className="size-5" />
+          <Button variant="outline" size="sm" aria-label={t("ui.actions.title")}>
+            {t("ui.actions.title")}
+            <ChevronDown className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={() => setIsClearOpen(true)}>
+            <Eraser className="mr-2 h-4 w-4" />
+            {t("workspace.detailsSidebar.clearVisualization", "Clear visualization")}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
             onClick={() => setIsDeleteOpen(true)}
+            className="focus:text-destructive focus:bg-destructive/10 group"
           >
-            <Trash2 className="mr-2 size-4" />
+            <Trash2 className="text-muted-foreground group-focus:text-destructive mr-2 h-4 w-4" />
             {t("workspace.detailsSidebar.deleteVisualization")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={isClearOpen} onOpenChange={setIsClearOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t("workspace.detailsSidebar.clearVisualization", "Clear visualization")}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "workspace.detailsSidebar.clearWarning",
+                "This resets the data sources and style to defaults. The name, description, and chart type are kept.",
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsClearOpen(false)}>
+              {tCommon("common.cancel")}
+            </Button>
+            <Button onClick={handleClear}>
+              {t("workspace.detailsSidebar.clearConfirm", "Clear")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>

@@ -555,13 +555,39 @@ export const zChartType = z.enum([
   "alluvial",
 ]);
 
+// Roles a data source can play in a chart. Add a new entry only when a chart
+// type genuinely needs it — the role contract per chart type lives in
+// `@repo/api/utils/visualization-contracts` and decides which of these are
+// required, optional, single, or many.
+export const zRole = z.enum([
+  // Cartesian axes
+  "x",
+  "y",
+  "z",
+  // Visual encodings
+  "color",
+  "size",
+  // Categorical (pie, donut)
+  "labels",
+  "values",
+  // Network / sankey
+  "source",
+  "target",
+  "value",
+  // Geographic
+  "lat",
+  "lon",
+  // Statistical grouping
+  "groupBy",
+]);
+
 // Data source configuration schema. tableName and columnName allow empty
 // strings so a freshly-created visualization can persist in a draft state
 // until the user picks a table and columns in the editor.
 export const zDataSourceConfig = z.object({
   tableName: z.string(),
   columnName: z.string(),
-  role: z.string().min(1, "Role is required"),
+  role: zRole,
   // Optional series name for multiple series with same role
   seriesName: z.string().optional(),
   // Optional alias for display
@@ -682,6 +708,96 @@ export const zExperimentVisualizationPathParam = z.object({
 // Visualization responses
 export const zCreateExperimentVisualizationResponse = zExperimentVisualization;
 export const zUpdateExperimentVisualizationResponse = zExperimentVisualization;
+
+// --- Dashboard Schemas ---
+
+// Per-widget grid placement. Coordinates are 0-indexed; a widget at
+// `{ col: 0, row: 0, colSpan: 6, rowSpan: 4 }` on a 12-column grid takes the
+// left half of rows 0..3.
+export const zWidgetLayout = z.object({
+  col: z.number().int().min(0),
+  row: z.number().int().min(0),
+  colSpan: z.number().int().min(1).max(24),
+  rowSpan: z.number().int().min(1).max(48),
+});
+
+const zWidgetBase = z.object({
+  id: z.string().uuid(),
+  layout: zWidgetLayout,
+});
+
+// Visualization widget — references an existing chart by id (BI pattern).
+// `visualizationId` is optional so a freshly added widget can persist in a
+// draft state until the user picks a chart in the inspector; the renderer
+// shows an empty-pick affordance in the meantime.
+export const zVisualizationWidget = zWidgetBase.extend({
+  type: z.literal("visualization"),
+  config: z.object({
+    visualizationId: z.string().uuid().optional(),
+    showTitle: z.boolean().optional().default(true),
+    showDescription: z.boolean().optional().default(false),
+  }),
+});
+
+// Rich-text widget — stores Quill-produced HTML inline.
+export const zRichTextWidget = zWidgetBase.extend({
+  type: z.literal("richText"),
+  config: z.object({
+    html: z.string().default(""),
+  }),
+});
+
+export const zDashboardWidget = z.discriminatedUnion("type", [
+  zVisualizationWidget,
+  zRichTextWidget,
+]);
+
+// Dashboard-level grid configuration.
+export const zDashboardLayout = z.object({
+  columns: z.number().int().min(1).max(24).default(12),
+  rowHeight: z.number().int().min(20).max(400).default(80),
+  gap: z.number().int().min(0).max(64).default(16),
+});
+
+export const zExperimentDashboard = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().nullable(),
+  layout: zDashboardLayout,
+  widgets: z.array(zDashboardWidget),
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zExperimentDashboardList = z.array(zExperimentDashboard);
+
+export const zCreateExperimentDashboardBody = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  layout: zDashboardLayout.partial().optional(),
+  widgets: z.array(zDashboardWidget).optional(),
+});
+
+// Update body: every top-level field is optional. When `widgets` is supplied
+// the array fully replaces existing — simplest mental model and matches how
+// the editor saves a whole snapshot.
+export const zUpdateExperimentDashboardBody = zCreateExperimentDashboardBody.partial();
+
+export const zListExperimentDashboardsQuery = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+
+export const zExperimentDashboardPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  dashboardId: z.string().uuid().describe("ID of the dashboard"),
+});
+
+export const zCreateExperimentDashboardResponse = zExperimentDashboard;
+export const zUpdateExperimentDashboardResponse = zExperimentDashboard;
 
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
@@ -1059,14 +1175,28 @@ export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataR
 // Visualization types
 export type ChartFamily = z.infer<typeof zChartFamily>;
 export type ChartType = z.infer<typeof zChartType>;
+export type Role = z.infer<typeof zRole>;
 export type DataSourceConfig = z.infer<typeof zDataSourceConfig>;
 export type AxisConfig = z.infer<typeof zAxisConfig>;
 export type ChartConfig = z.infer<typeof zChartConfig>;
+export type ChartDataConfig = z.infer<typeof zChartDataConfig>;
 export type ExperimentVisualization = z.infer<typeof zExperimentVisualization>;
 export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizationList>;
 export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
 export type UpdateExperimentVisualizationBody = z.infer<typeof zUpdateExperimentVisualizationBody>;
 export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVisualizationsQuery>;
+
+// Dashboard types
+export type WidgetLayout = z.infer<typeof zWidgetLayout>;
+export type VisualizationWidget = z.infer<typeof zVisualizationWidget>;
+export type RichTextWidget = z.infer<typeof zRichTextWidget>;
+export type DashboardWidget = z.infer<typeof zDashboardWidget>;
+export type DashboardLayout = z.infer<typeof zDashboardLayout>;
+export type ExperimentDashboard = z.infer<typeof zExperimentDashboard>;
+export type ExperimentDashboardList = z.infer<typeof zExperimentDashboardList>;
+export type CreateExperimentDashboardBody = z.infer<typeof zCreateExperimentDashboardBody>;
+export type UpdateExperimentDashboardBody = z.infer<typeof zUpdateExperimentDashboardBody>;
+export type ListExperimentDashboardsQuery = z.infer<typeof zListExperimentDashboardsQuery>;
 
 // Annotation types
 export type AnnotationType = z.infer<typeof zAnnotationType>;

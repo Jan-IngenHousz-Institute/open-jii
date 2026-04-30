@@ -12,6 +12,13 @@ import type { ChartFormConfig, ChartFormDataConfig, ChartFormValues } from "./fo
 
 export interface ChartPanelProps {
   form: UseFormReturn<ChartFormValues>;
+  /**
+   * All plottable columns from the active table (complex types already
+   * stripped). Each chart's data-panel further filters per role via
+   * `filterColumnsForRole` before passing into individual shelves — that
+   * way roles like `z` on a 3D scatter or `labels` on a pie can demand
+   * a narrower kind set without changing this surface.
+   */
   columns: DataColumn[];
 }
 
@@ -31,8 +38,6 @@ export interface ChartTypeDef {
   labelKey: string;
   descriptionKey: string;
   icon: ComponentType<ChartTypeIconProps>;
-  /** Roles that must be configured before the canvas attempts to render. */
-  requiredRoles: readonly string[];
   defaultConfig: () => ChartFormConfig;
   defaultDataConfig: (tableName?: string) => ChartFormDataConfig;
   DataPanel: ComponentType<ChartPanelProps>;

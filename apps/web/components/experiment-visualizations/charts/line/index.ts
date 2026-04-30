@@ -12,7 +12,6 @@ export const lineChartType: ChartTypeDef = {
   labelKey: "workspace.charts.types.line",
   descriptionKey: "workspace.charts.descriptions.line",
   icon: LineChart,
-  requiredRoles: ["x", "y"],
   defaultConfig: lineDefaultConfig,
   defaultDataConfig: lineDefaultDataConfig,
   DataPanel: LineDataPanel,

@@ -1,9 +1,11 @@
 "use client";
 
-import type { UseFormReturn } from "react-hook-form";
-import { useFieldArray } from "react-hook-form";
+import { useId } from "react";
+import type { Control, UseFormReturn } from "react-hook-form";
+import { useFieldArray, useWatch } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import { isCategoricalColumnType } from "@repo/api/utils/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Checkbox } from "@repo/ui/components/checkbox";
@@ -17,7 +19,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { dataSourcesByRole, makeDataSource } from "../../charts/form-values";
+import { CATEGORY_PALETTE, dataSourcesByRole, makeDataSource } from "../../charts/form-values";
 import type { ChartFormValues } from "../../charts/form-values";
 
 const COLORSCALES: { value: string; translationKey: string; gradient: string }[] = [
@@ -136,35 +138,52 @@ interface ColorDimensionShelfProps {
 
 export function ColorDimensionShelf({ form, columns }: ColorDimensionShelfProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const showColorbarId = useId();
 
-  const { append, remove } = useFieldArray({
+  const { append, update, remove } = useFieldArray({
     control: form.control,
     name: "dataConfig.dataSources",
   });
 
-  const sources = form.watch("dataConfig.dataSources");
+  const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const colorEntry = dataSourcesByRole(sources, "color")[0];
   const colorColumn = colorEntry?.source.columnName ?? "";
+  const watchedColorMode = useWatch({ control: form.control, name: "config.colorMode" });
+  const colorMode: "continuous" | "categorical" =
+    watchedColorMode === "categorical" ? "categorical" : "continuous";
+
+  const colorscale = useWatch({ control: form.control, name: "config.marker.colorscale" }) as
+    | string
+    | undefined;
+  const previewGradient =
+    COLORSCALES.find((c) => c.value === colorscale)?.gradient ?? COLORSCALES[0].gradient;
 
   const handleColumnChange = (value: string) => {
-    if (colorEntry) remove(colorEntry.index);
+    const isPickingColumn = value && value !== "none";
+    const tableName = form.getValues("dataConfig.tableName");
 
-    if (value && value !== "none") {
-      const tableName = form.getValues("dataConfig.tableName");
-      append({ ...makeDataSource(tableName, "color"), columnName: value });
-
+    if (isPickingColumn) {
+      const next = { ...makeDataSource(tableName, "color"), columnName: value };
+      if (colorEntry) {
+        update(colorEntry.index, next);
+      } else {
+        append(next);
+      }
       const titleKey = "config.marker.colorbar.title.text";
       if (!form.getValues(titleKey)) {
         form.setValue(titleKey, value);
       }
+      // Auto-pick the encoding mode based on the column type. Strings and
+      // booleans become categorical buckets; numerics/timestamps stay on
+      // a continuous gradient. The user can override via the toggle below.
+      const picked = columns.find((c) => c.name === value);
+      const inferred = isCategoricalColumnType(picked?.type_text) ? "categorical" : "continuous";
+      form.setValue("config.colorMode", inferred, { shouldDirty: true });
     } else {
+      if (colorEntry) remove(colorEntry.index);
       form.setValue("config.marker.colorbar.title.text", "");
     }
   };
-
-  const colorscale = (form.watch("config.marker.colorscale") as string) ?? "Viridis";
-  const previewGradient =
-    COLORSCALES.find((c) => c.value === colorscale)?.gradient ?? COLORSCALES[0].gradient;
 
   return (
     <section className="space-y-3">
@@ -178,7 +197,9 @@ export function ColorDimensionShelf({ form, columns }: ColorDimensionShelfProps)
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">
-              <span className="text-muted-foreground italic">{t("workspace.shelves.noColorMapping")}</span>
+              <span className="text-muted-foreground italic">
+                {t("workspace.shelves.noColorMapping")}
+              </span>
             </SelectItem>
             {columns.map((column) => (
               <SelectItem key={column.name} value={column.name}>
@@ -199,113 +220,206 @@ export function ColorDimensionShelf({ form, columns }: ColorDimensionShelfProps)
 
       {colorColumn && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <FormField
-              control={form.control}
-              name="config.marker.colorscale"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-medium">{t("workspace.shelves.colorScale")}</FormLabel>
-                  <Select
-                    value={(field.value as string) ?? "Viridis"}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {COLORSCALES.map((cs) => (
-                        <SelectItem key={cs.value} value={cs.value}>
-                          <div className="flex items-center gap-3">
-                            <div className="h-4 w-8 rounded border" style={{ background: cs.gradient }} />
-                            {t(`workspace.colorscales.${cs.translationKey}`)}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="config.marker.colorbar.title.text"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-medium">{t("workspace.shelves.colorAxisTitle")}</FormLabel>
+          <FormField
+            control={form.control}
+            name="config.colorMode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.shelves.colorMode", "Mode")}
+                </FormLabel>
+                <Select
+                  value={(field.value as string | undefined) ?? "continuous"}
+                  onValueChange={(v) => field.onChange(v)}
+                >
                   <FormControl>
-                    <Input
-                      placeholder={t("workspace.shelves.colorAxisTitlePlaceholder")}
-                      value={(field.value as string | undefined) ?? ""}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    />
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                  <SelectContent>
+                    <SelectItem value="continuous">
+                      {t("workspace.shelves.colorModeContinuous", "Continuous (gradient)")}
+                    </SelectItem>
+                    <SelectItem value="categorical">
+                      {t("workspace.shelves.colorModeCategorical", "Categorical (per value)")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <div className="grid grid-cols-2 gap-3">
-            <FormField
+          {colorMode === "categorical" ? (
+            <CategoricalColorPreview />
+          ) : (
+            <ContinuousColorSettings
               control={form.control}
-              name="config.marker.colorbar.title.side"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-medium">{t("workspace.shelves.colorAxisTitlePosition")}</FormLabel>
-                  <Select value={String(field.value ?? "right")} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="top">{t("workspace.positions.top")}</SelectItem>
-                      <SelectItem value="right">{t("workspace.positions.right")}</SelectItem>
-                      <SelectItem value="bottom">{t("workspace.positions.bottom")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              previewGradient={previewGradient}
+              showColorbarId={showColorbarId}
             />
-
-            <FormField
-              control={form.control}
-              name="config.marker.showscale"
-              render={({ field }) => (
-                <FormItem className="flex items-end gap-2 pb-1">
-                  <FormControl>
-                    <Checkbox
-                      checked={Boolean(field.value)}
-                      onCheckedChange={field.onChange}
-                      id="showColorbar"
-                    />
-                  </FormControl>
-                  <FormLabel htmlFor="showColorbar" className="text-xs font-medium">
-                    {t("workspace.shelves.showColorbar")}
-                  </FormLabel>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div>
-            <div className="text-muted-foreground mb-1 text-xs font-medium">
-              {t("workspace.shelves.preview")}
-            </div>
-            <div className="h-5 w-full rounded border" style={{ background: previewGradient }} />
-          </div>
+          )}
         </div>
       )}
     </section>
+  );
+}
+
+function CategoricalColorPreview() {
+  const { t } = useTranslation("experimentVisualizations");
+  return (
+    <div>
+      <div className="text-muted-foreground mb-1 text-xs font-medium">
+        {t("workspace.shelves.preview", "Preview")}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {CATEGORY_PALETTE.slice(0, 12).map((color) => (
+          <div
+            key={color}
+            className="h-4 w-4 rounded-sm border border-black/10"
+            style={{ background: color }}
+          />
+        ))}
+      </div>
+      <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+        {t(
+          "workspace.shelves.colorModeCategoricalHelp",
+          "Each unique value gets its own color. The chart legend will list each category.",
+        )}
+      </p>
+    </div>
+  );
+}
+
+interface ContinuousColorSettingsProps {
+  control: Control<ChartFormValues>;
+  previewGradient: string;
+  showColorbarId: string;
+}
+
+function ContinuousColorSettings({
+  control,
+  previewGradient,
+  showColorbarId,
+}: ContinuousColorSettingsProps) {
+  const { t } = useTranslation("experimentVisualizations");
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField
+          control={control}
+          name="config.marker.colorscale"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.shelves.colorScale")}
+              </FormLabel>
+              <Select
+                value={(field.value as string) ?? "Viridis"}
+                onValueChange={field.onChange}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {COLORSCALES.map((cs) => (
+                    <SelectItem key={cs.value} value={cs.value}>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-4 w-8 rounded border"
+                          style={{ background: cs.gradient }}
+                        />
+                        {t(`workspace.colorscales.${cs.translationKey}`)}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="config.marker.colorbar.title.text"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.shelves.colorAxisTitle")}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  placeholder={t("workspace.shelves.colorAxisTitlePlaceholder")}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  ref={field.ref}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <FormField
+          control={control}
+          name="config.marker.colorbar.title.side"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.shelves.colorAxisTitlePosition")}
+              </FormLabel>
+              <Select value={String(field.value ?? "right")} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="top">{t("workspace.positions.top")}</SelectItem>
+                  <SelectItem value="right">{t("workspace.positions.right")}</SelectItem>
+                  <SelectItem value="bottom">{t("workspace.positions.bottom")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="config.marker.showscale"
+          render={({ field }) => (
+            <FormItem className="flex items-end gap-2 pb-1">
+              <FormControl>
+                <Checkbox
+                  checked={Boolean(field.value)}
+                  onCheckedChange={field.onChange}
+                  id={showColorbarId}
+                />
+              </FormControl>
+              <FormLabel htmlFor={showColorbarId} className="text-xs font-medium">
+                {t("workspace.shelves.showColorbar")}
+              </FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div>
+        <div className="text-muted-foreground mb-1 text-xs font-medium">
+          {t("workspace.shelves.preview")}
+        </div>
+        <div className="h-5 w-full rounded border" style={{ background: previewGradient }} />
+      </div>
+    </>
   );
 }
