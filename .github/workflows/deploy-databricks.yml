@@ -72,7 +72,7 @@ jobs:
         run: pip install --upgrade pip build
 
       - name: Setup Databricks CLI
-        uses: databricks/setup-cli@main
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b  # v0.298.0
 
       - name: Validate bundle
         working-directory: apps/data

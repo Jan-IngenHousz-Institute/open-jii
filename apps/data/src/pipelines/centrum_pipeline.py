@@ -17,6 +17,7 @@ from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
 from openjii import decompress_sample
+from data_repair import apply_inline_repairs
 
 # COMMAND ----------
 
@@ -585,6 +586,7 @@ def experiment_raw_data():
             "processed_timestamp",
             "skip_macro_processing"
         )
+        .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_RAW_DATA_TABLE))
     )
 
 # COMMAND ----------
@@ -737,6 +739,7 @@ def experiment_macro_data():
     
     return (
         base_df
+        .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_MACRO_DATA_TABLE))
         # Run macro UDF only for non-imported rows (skip_macro_processing != true)
         .withColumn(
             "macro_result",
