@@ -48,11 +48,11 @@ describe("NodeContent", () => {
 
   it("shows the start indicator when isStartNode is true", () => {
     render(<NodeContent {...baseProps} title="Q" isStartNode />);
-    expect(screen.getByText("start")).toBeInTheDocument();
+    expect(screen.getByTitle("start")).toBeInTheDocument();
   });
 
   it("does not show the start indicator by default", () => {
     render(<NodeContent {...baseProps} title="Q" />);
-    expect(screen.queryByText("start")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("start")).not.toBeInTheDocument();
   });
 });
