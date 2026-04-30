@@ -7,8 +7,16 @@ Mobile pre-v1.16.8 leaked the mutation into bronze. Server re-runs the
 de-interleave a second time, producing unphysical NPQt/FvP_FmP/Phi2. We
 re-interleave at gold before the macro UDF.
 
-The inverse is not self-idempotent. Single application relies on
-full-refresh-once after deploy + streaming-append semantics thereafter.
+Two layers of gating:
+  1. Framework predicate: macro_id IN (RIDES 2.0, 2.1).
+  2. Content signature inside _reinvert_pam_payload: halves of PAM.data_raw
+     are in disjoint value ranges <=> data was de-interleaved by the macro.
+     Already-interleaved (clean) data has channels mixed each step, so any
+     halving spans both ranges. Self-skipping if the macro never ran.
+
+Stale clients on pre-v1.16.8 mobile keep producing corrupt uploads after
+v1.16.8 ships, so a processed_timestamp cutoff is unreliable. The signature
+discriminates per-row regardless of upload time.
 """
 from __future__ import annotations
 
@@ -44,9 +52,31 @@ def _reinterleave(arr: list) -> list:
     return out
 
 
+def _looks_de_interleaved(arr: list) -> bool:
+    """Count how often adjacent samples cross the array's median.
+    Interleaved (clean) data alternates channels every step, so almost
+    every pair crosses (~N-1 crossings). De-interleaved (corrupt) data
+    walks within one channel for long runs, so crossings only occur at
+    segment boundaries (~few). Threshold n//4 sits between the two regimes
+    with no parameter tuning."""
+    n = len(arr)
+    if n < 4:
+        return False
+    median = sorted(arr)[n // 2]
+    crossings = 0
+    above = arr[0] >= median
+    for x in arr[1:]:
+        new_above = x >= median
+        if new_above != above:
+            crossings += 1
+            above = new_above
+    return crossings < n // 4
+
+
 def _reinvert_pam_payload(value) -> str | None:
-    """Re-interleave PAM.data_raw in the VARIANT payload. Returns a JSON
-    string; the caller wraps with parse_json on the Spark side."""
+    """Re-interleave PAM.data_raw in the VARIANT payload, only on rows whose
+    layout signature still looks de-interleaved. Returns a JSON string;
+    the caller wraps with parse_json on the Spark side."""
     if value is None:
         return None
     try:
@@ -58,7 +88,7 @@ def _reinvert_pam_payload(value) -> str | None:
         for s in (elem.get("set") or []):
             if s.get("label") == "PAM":
                 raw = s.get("data_raw")
-                if raw and len(raw) >= 2:
+                if raw and _looks_de_interleaved(raw):
                     s["data_raw"] = _reinterleave(raw)
     return json.dumps(obj)
 
@@ -76,13 +106,13 @@ def _reinvert_pam_udf(data: pd.Series) -> pd.Series:
         "re-weaves the two halves before the macro UDF runs."
     ),
     severity="apply",
+    predicate=lambda: F.col("macro_id").isin(list(_RIDES_MACRO_IDS)),
 )
-def rides_pam_reinterleave(df):
-    affected = F.col("macro_id").isin(list(_RIDES_MACRO_IDS))
+def rides_pam_reinterleave(df, *, gate):
     return (
         df.withColumn(
             "_rides_repaired_json",
-            F.when(affected, _reinvert_pam_udf(F.col("data"))),
+            F.when(gate, _reinvert_pam_udf(F.col("data"))),
         )
         .withColumn(
             "data",
