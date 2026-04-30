@@ -1,10 +1,16 @@
 name: DEV Release Workflow
+run-name: "${{ inputs.title || (github.event_name == 'push' && format('DEV auto-deploy: {0}', github.event.head_commit.message)) || format('DEV release by @{0}', github.actor) }}"
 
 on:
     push:
         branches: [main]
     workflow_dispatch:
         inputs:
+            title:
+                description: "Release title shown in run history (e.g. 'testing macro-sandbox fix')"
+                required: false
+                type: string
+                default: ""
             environment:
                 description: "Target environment for production deployment"
                 required: true
