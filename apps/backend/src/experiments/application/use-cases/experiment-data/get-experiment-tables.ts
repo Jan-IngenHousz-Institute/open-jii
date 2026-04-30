@@ -10,8 +10,8 @@ import {
 } from "../../../core/models/experiment-data.model";
 import type { ExperimentTableMetadata } from "../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { DELTA_PORT } from "../../../core/ports/delta.port";
+import type { DeltaPort } from "../../../core/ports/delta.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 export interface TableMetadataDto {
@@ -31,7 +31,7 @@ export class GetExperimentTablesUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    @Inject(DELTA_PORT) private readonly deltaPort: DeltaPort,
     private readonly macroRepository: MacroRepository,
   ) {}
 
@@ -77,7 +77,7 @@ export class GetExperimentTablesUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+        const metadataResult = await this.deltaPort.getExperimentTableMetadata(experimentId, {
           includeSchemas: false,
         });
 

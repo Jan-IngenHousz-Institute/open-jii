@@ -1,20 +1,26 @@
 import { faker } from "@faker-js/faker";
-import { expect } from "vitest";
 
-import { AppError, success, failure, assertSuccess } from "../../../common/utils/fp-utils";
+import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
+import {
+  AppError,
+  success,
+  failure,
+  assertSuccess,
+  assertFailure,
+} from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 import type { ExperimentDto } from "../models/experiment.model";
-import { DATABRICKS_PORT } from "../ports/databricks.port";
-import type { DatabricksPort } from "../ports/databricks.port";
-import { ExperimentDataRepository } from "./experiment-data.repository";
+import { DELTA_PORT } from "../ports/delta.port";
+import type { DeltaPort, DeltaQueryOptions } from "../ports/delta.port";
+import { ExperimentDataRepository, parseVariantSchema } from "./experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
 describe("ExperimentDataRepository", () => {
   const testApp = TestHarness.App;
   let repository: ExperimentDataRepository;
-  let databricksPort: DatabricksPort;
+  let deltaPort: DeltaPort;
 
   const mockExperiment: ExperimentDto = {
     id: faker.string.uuid(),
@@ -28,6 +34,12 @@ describe("ExperimentDataRepository", () => {
     createdBy: faker.string.uuid(),
   } as ExperimentDto;
 
+  const baseColumns: SchemaData["columns"] = [
+    { name: "id", type_name: "STRING", type_text: "STRING", position: 0 },
+    { name: "experiment_id", type_name: "STRING", type_text: "STRING", position: 1 },
+    { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 2 },
+  ];
+
   beforeAll(async () => {
     await testApp.setup();
   });
@@ -35,7 +47,8 @@ describe("ExperimentDataRepository", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     repository = testApp.module.get(ExperimentDataRepository);
-    databricksPort = testApp.module.get(DATABRICKS_PORT);
+    deltaPort = testApp.module.get(DELTA_PORT);
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -48,521 +61,290 @@ describe("ExperimentDataRepository", () => {
 
   describe("getTableData", () => {
     const experimentId = faker.string.uuid();
-
     const baseParams = {
       experimentId,
       experiment: mockExperiment,
       tableName: "raw_data",
     };
 
-    it("should successfully get table data with pagination", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "raw_data",
-          tableType: "static",
-          rowCount: 100,
-          macroSchema: null,
-          questionsSchema: null,
-          customMetadataSchema: null,
-        },
-      ];
-
-      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_DATA_TABLE_NAME} LIMIT 5 OFFSET 0`;
-      const mockSchemaData = {
-        columns: [
-          { name: "id", type_name: "string", type_text: "string", position: 0 },
-          { name: "value", type_name: "number", type_text: "int", position: 1 },
-        ],
-        rows: [
-          ["1", "100"],
-          ["2", "200"],
-        ],
-        totalRows: 2,
-        truncated: false,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
-
-      const result = await repository.getTableData({
-        ...baseParams,
-        page: 1,
-        pageSize: 5,
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(1);
-      expect(result.value[0]).toMatchObject({
-        name: "raw_data",
-        catalog_name: "Test Experiment",
-        schema_name: databricksPort.CENTRUM_SCHEMA_NAME,
-        page: 1,
-        pageSize: 5,
-        totalRows: 100,
-        totalPages: 20,
-      });
-      expect(result.value[0].data?.rows).toEqual([
-        { id: "1", value: "100" },
-        { id: "2", value: "200" },
-      ]);
-
-      expect(databricksPort.getExperimentTableMetadata).toHaveBeenCalledWith(experimentId, {
+    const mockMetadata = (
+      overrides: Partial<ExperimentTableMetadata> = {},
+    ): ExperimentTableMetadata[] => [
+      {
         identifier: "raw_data",
-        includeSchemas: true,
-      });
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "raw_data",
         tableType: "static",
-        experimentId,
-        columns: undefined,
-        variants: undefined,
-        exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
-    });
+        rowCount: 2,
+        macroSchema: null,
+        questionsSchema: null,
+        customMetadataSchema: null,
+        ...overrides,
+      },
+    ];
 
-    it("should return failure when table not found", async () => {
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
-
-      const result = await repository.getTableData({
-        ...baseParams,
-        tableName: "nonexistent_table",
-      });
-
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error.message).toContain("Table 'nonexistent_table' not found");
-        expect(result.error.statusCode).toBe(404);
-      }
-    });
-
-    it("should return failure when getExperimentTableMetadata fails", async () => {
-      const error = AppError.internal("Databricks error");
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(failure(error));
+    it("returns failure when the table is not found", async () => {
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
 
       const result = await repository.getTableData(baseParams);
 
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error).toBe(error);
-      }
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
     });
 
-    it("should get full table data when specific columns are requested", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "raw_data",
-          tableType: "static",
-          rowCount: 100,
-          macroSchema: null,
-          questionsSchema: "STRUCT<q1: STRING, q2: INT>",
-          customMetadataSchema: null,
-        },
-      ];
-
-      const mockQuery = `SELECT id, value FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_DATA_TABLE_NAME}`;
-      const mockSchemaData = {
-        columns: [
-          { name: "id", type_name: "string", type_text: "string", position: 0 },
-          { name: "value", type_name: "number", type_text: "int", position: 1 },
-        ],
-        rows: [
-          ["1", "100"],
-          ["2", "200"],
-          ["3", "300"],
-        ],
-        totalRows: 3,
-        truncated: false,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
-
-      const result = await repository.getTableData({
-        ...baseParams,
-        columns: ["id", "value"],
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toHaveLength(1);
-      expect(result.value[0]).toMatchObject({
-        name: "raw_data",
-        catalog_name: "Test Experiment",
-        schema_name: process.env.DATABRICKS_CENTRUM_SCHEMA_NAME ?? "default",
-        page: 1,
-        pageSize: 3,
-        totalRows: 3,
-        totalPages: 1,
-      });
-
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId,
-        columns: ["id", "value"],
-        variants: [{ columnName: "questions_data", schema: "STRUCT<q1: STRING, q2: INT>" }],
-        exceptColumns: ["experiment_id", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: undefined,
-        offset: undefined,
-      });
-    });
-
-    it("should handle macro tables with both schemas", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "macro_123",
-          tableType: "macro",
-          rowCount: 50,
-          macroSchema: "STRUCT<output: STRING>",
-          questionsSchema: "STRUCT<q1: STRING>",
-          customMetadataSchema: null,
-        },
-      ];
-
-      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.MACRO_DATA_TABLE_NAME}`;
-      const mockSchemaData = {
-        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
-        rows: [["1"]],
-        totalRows: 1,
-        truncated: false,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
-
-      const result = await repository.getTableData({
-        ...baseParams,
-        tableName: "macro_123",
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "macro_123",
-        tableType: "macro",
-        experimentId,
-        columns: undefined,
-        variants: [
-          { columnName: "macro_output", schema: "STRUCT<output: STRING>" },
-          { columnName: "questions_data", schema: "STRUCT<q1: STRING>" },
-        ],
-        exceptColumns: [
-          "experiment_id",
-          "raw_id",
-          "macro_id",
-          "macro_name",
-          "macro_filename",
-          "date",
-          "custom_metadata",
-        ],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
-    });
-
-    it("should exclude macro_output when schema is missing for macro tables", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "macro_123",
-          tableType: "macro",
-          rowCount: 50,
-          macroSchema: null,
-          questionsSchema: "STRUCT<q1: STRING>",
-          customMetadataSchema: null,
-        },
-      ];
-
-      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.MACRO_DATA_TABLE_NAME}`;
-      const mockSchemaData = {
-        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
-        rows: [["1"]],
-        totalRows: 1,
-        truncated: false,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
-
-      const result = await repository.getTableData({
-        ...baseParams,
-        tableName: "macro_123",
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "macro_123",
-        tableType: "macro",
-        experimentId,
-        columns: undefined,
-        variants: [{ columnName: "questions_data", schema: "STRUCT<q1: STRING>" }],
-        exceptColumns: [
-          "experiment_id",
-          "raw_id",
-          "macro_id",
-          "macro_name",
-          "macro_filename",
-          "date",
-          "macro_output",
-          "custom_metadata",
-        ],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
-    });
-
-    it("should exclude questions_data when schema is missing", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "raw_data",
-          tableType: "static",
-          rowCount: 100,
-          macroSchema: null,
-          questionsSchema: null,
-          customMetadataSchema: null,
-        },
-      ];
-
-      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_DATA_TABLE_NAME}`;
-      const mockSchemaData = {
-        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
-        rows: [["1"]],
-        totalRows: 1,
-        truncated: false,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
+    it("propagates metadata fetch errors", async () => {
+      const error = AppError.internal("metadata down");
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(failure(error));
 
       const result = await repository.getTableData(baseParams);
-
-      expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId,
-        columns: undefined,
-        variants: undefined,
-        exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
+      assertFailure(result);
+      expect(result.error).toBe(error);
     });
 
-    it("should handle device table type correctly", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "device",
-          tableType: "static",
-          rowCount: 10,
-          macroSchema: null,
-          questionsSchema: null,
-          customMetadataSchema: null,
-        },
-      ];
-
-      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.DEVICE_DATA_TABLE_NAME}`;
-      const mockSchemaData = {
-        columns: [{ name: "device_id", type_name: "string", type_text: "string", position: 0 }],
-        rows: [["device1"]],
-        totalRows: 1,
-        truncated: false,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
-
-      const result = await repository.getTableData({
-        ...baseParams,
-        tableName: "device",
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "device",
-        tableType: "static",
-        experimentId,
-        columns: undefined,
-        variants: undefined,
-        exceptColumns: ["experiment_id"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
-    });
-
-    it("should return failure when executeSqlQuery fails for full table data", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "raw_data",
-          tableType: "static",
-          rowCount: 100,
-          macroSchema: null,
-          questionsSchema: null,
-          customMetadataSchema: null,
-        },
-      ];
-
-      const error = AppError.internal("SQL execution failed");
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
-        success(`SELECT * FROM table`),
-      );
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
-
-      const result = await repository.getTableData({
-        ...baseParams,
-        columns: ["id", "value"],
-      });
-
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error).toBe(error);
-      }
-    });
-  });
-
-  describe("edge cases and error paths", () => {
-    const experimentId = faker.string.uuid();
-
-    it("should handle exceptColumns being empty", async () => {
-      // Test case where all variant columns have schemas, resulting in empty exceptColumns
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "raw_ambyte_data",
-          tableType: "static",
-          rowCount: 10,
-          macroSchema: null,
-          questionsSchema: null,
-          customMetadataSchema: null,
-        },
-      ];
-
-      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_AMBYTE_DATA_TABLE_NAME}`;
-      const mockSchemaData = {
-        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
-        rows: [["1"]],
-        totalRows: 1,
-        truncated: false,
-      };
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
-
-      const result = await repository.getTableData({
-        experimentId,
-        experiment: mockExperiment,
-        tableName: "raw_ambyte_data",
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      // Verify that exceptColumns is passed (even if it contains only the default experiment_id)
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tableType: "static",
-          exceptColumns: ["experiment_id"],
+    it("scopes static-table reads to the experiment via filters and resolves the physical table", async () => {
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success(mockMetadata()));
+      const dataSpy = vi.spyOn(deltaPort, "getTableData").mockResolvedValue(
+        success({
+          columns: baseColumns,
+          rows: [
+            { id: "1", experiment_id: experimentId, timestamp: "2024-01-01" },
+            { id: "2", experiment_id: experimentId, timestamp: "2024-01-02" },
+          ],
+          totalRows: 2,
+          truncated: false,
         }),
       );
+
+      const result = await repository.getTableData(baseParams);
+
+      assertSuccess(result);
+      expect(dataSpy).toHaveBeenCalledWith(deltaPort.RAW_DATA_TABLE_NAME, {
+        filters: { experiment_id: experimentId },
+      });
     });
 
-    it("should handle SQL execution failure in getTableDataPage", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "raw_data",
-          tableType: "static",
-          rowCount: 100,
-          macroSchema: null,
-          questionsSchema: null,
-          customMetadataSchema: null,
-        },
-      ];
-
-      const error = AppError.internal("SQL execution failed");
-
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
+    it("scopes macro-table reads to (experiment_id, macro_id) on the shared macro table", async () => {
+      const macroId = faker.string.uuid();
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata({ identifier: macroId, tableType: "macro" })),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
-        success(`SELECT * FROM table`),
+      const dataSpy = vi
+        .spyOn(deltaPort, "getTableData")
+        .mockResolvedValue(
+          success({ columns: baseColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+
+      const result = await repository.getTableData({ ...baseParams, tableName: macroId });
+
+      assertSuccess(result);
+      expect(dataSpy).toHaveBeenCalledWith(deltaPort.MACRO_DATA_TABLE_NAME, {
+        filters: { experiment_id: experimentId, macro_id: macroId },
+      });
+    });
+
+    it("drops exceptColumns from rows + column metadata in the response", async () => {
+      // experiment_id is in STATIC_TABLE_CONFIG.raw_data.exceptColumns
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success(mockMetadata()));
+      vi.spyOn(deltaPort, "getTableData").mockResolvedValue(
+        success({
+          columns: baseColumns,
+          rows: [{ id: "1", experiment_id: experimentId, timestamp: "2024-01-01" }],
+          totalRows: 1,
+          truncated: false,
+        }),
       );
-      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
+
+      const result = await repository.getTableData(baseParams);
+
+      assertSuccess(result);
+      const data = result.value[0].data!;
+      expect(data.columns.map((c) => c.name)).not.toContain("experiment_id");
+      expect(data.rows[0]).not.toHaveProperty("experiment_id");
+      expect(data.rows[0]).toHaveProperty("id", "1");
+    });
+
+    it("flattens variant columns using the schema from metadata", async () => {
+      const questionsSchema = "OBJECT<question_one: STRING, question_two: STRING>";
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata({ questionsSchema })),
+      );
+      vi.spyOn(deltaPort, "getTableData").mockResolvedValue(
+        success({
+          columns: [
+            ...baseColumns,
+            {
+              name: "questions_data",
+              type_name: "VARIANT",
+              type_text: "VARIANT",
+              position: 3,
+            },
+          ],
+          rows: [
+            {
+              id: "1",
+              experiment_id: experimentId,
+              timestamp: "2024-01-01",
+              questions_data: { question_one: "yes", question_two: "no" },
+            },
+          ],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData(baseParams);
+
+      assertSuccess(result);
+      const data = result.value[0].data!;
+      expect(data.columns.map((c) => c.name)).toEqual(
+        expect.arrayContaining(["question_one", "question_two"]),
+      );
+      expect(data.columns.map((c) => c.name)).not.toContain("questions_data");
+      expect(data.rows[0]).toMatchObject({
+        question_one: "yes",
+        question_two: "no",
+      });
+      expect(data.rows[0]).not.toHaveProperty("questions_data");
+    });
+
+    it("drops a variant column whose schema is null on this experiment", async () => {
+      // raw_data has questions_data and custom_metadata variants; passing null
+      // schemas should remove both columns entirely (matches the SQL builder's
+      // `exceptColumns.push(variant)` fallback).
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata({ questionsSchema: null, customMetadataSchema: null })),
+      );
+      vi.spyOn(deltaPort, "getTableData").mockResolvedValue(
+        success({
+          columns: [
+            ...baseColumns,
+            { name: "questions_data", type_name: "VARIANT", type_text: "VARIANT", position: 3 },
+            { name: "custom_metadata", type_name: "VARIANT", type_text: "VARIANT", position: 4 },
+          ],
+          rows: [
+            {
+              id: "1",
+              experiment_id: experimentId,
+              timestamp: "2024-01-01",
+              questions_data: { something: "ignored" },
+              custom_metadata: { other: "ignored" },
+            },
+          ],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData(baseParams);
+
+      assertSuccess(result);
+      const cols = result.value[0].data!.columns.map((c) => c.name);
+      expect(cols).not.toContain("questions_data");
+      expect(cols).not.toContain("custom_metadata");
+    });
+
+    it("paginates client-side and reports correct totals", async () => {
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success(mockMetadata()));
+      const allRows = Array.from({ length: 12 }, (_, i) => ({
+        id: String(i),
+        experiment_id: experimentId,
+        timestamp: `2024-01-${String(i + 1).padStart(2, "0")}`,
+      }));
+      vi.spyOn(deltaPort, "getTableData").mockResolvedValue(
+        success({ columns: baseColumns, rows: allRows, totalRows: 12, truncated: false }),
+      );
+
+      const result = await repository.getTableData({ ...baseParams, page: 2, pageSize: 5 });
+
+      assertSuccess(result);
+      const tableData = result.value[0];
+      expect(tableData.totalRows).toBe(12);
+      expect(tableData.totalPages).toBe(3);
+      expect(tableData.page).toBe(2);
+      expect(tableData.data!.rows).toHaveLength(5);
+      expect(tableData.data!.rows[0]).toMatchObject({ id: "5" });
+    });
+
+    it("sorts client-side by orderBy/orderDirection", async () => {
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success(mockMetadata()));
+      vi.spyOn(deltaPort, "getTableData").mockResolvedValue(
+        success({
+          columns: baseColumns,
+          rows: [
+            { id: "b", experiment_id: experimentId, timestamp: "2024-01-02" },
+            { id: "a", experiment_id: experimentId, timestamp: "2024-01-01" },
+            { id: "c", experiment_id: experimentId, timestamp: "2024-01-03" },
+          ],
+          totalRows: 3,
+          truncated: false,
+        }),
+      );
 
       const result = await repository.getTableData({
-        experimentId,
-        experiment: mockExperiment,
-        tableName: "raw_data",
+        ...baseParams,
+        orderBy: "id",
+        orderDirection: "DESC",
+        pageSize: 10,
+      });
+
+      assertSuccess(result);
+      const ids = result.value[0].data!.rows.map((r) => r.id);
+      expect(ids).toEqual(["c", "b", "a"]);
+    });
+
+    it("returns the full filtered set without pagination when specific columns are requested", async () => {
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success(mockMetadata()));
+      vi.spyOn(deltaPort, "getTableData").mockResolvedValue(
+        success({
+          columns: baseColumns,
+          rows: [
+            { id: "1", experiment_id: experimentId, timestamp: "2024-01-01" },
+            { id: "2", experiment_id: experimentId, timestamp: "2024-01-02" },
+          ],
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData({
+        ...baseParams,
+        columns: ["id"],
         page: 1,
-        pageSize: 5,
+        pageSize: 1,
       });
 
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error).toBe(error);
-      }
+      assertSuccess(result);
+      const tableData = result.value[0];
+      expect(tableData.totalPages).toBe(1);
+      expect(tableData.page).toBe(1);
+      expect(tableData.pageSize).toBe(2);
+      expect(tableData.data!.rows).toHaveLength(2);
+      expect(tableData.data!.columns.map((c) => c.name)).toEqual(["id"]);
+      // Argument forwarded to deltaPort
+      const lastCall = vi.mocked(deltaPort.getTableData).mock.calls.at(-1)!;
+      const opts = lastCall[1] as DeltaQueryOptions;
+      expect(opts.filters).toEqual({ experiment_id: experimentId });
     });
+  });
+});
 
-    it("should return failure when table config is not found for unknown static table", async () => {
-      const mockMetadata: ExperimentTableMetadata[] = [
-        {
-          identifier: "unknown_table",
-          tableType: "static",
-          rowCount: 10,
-          macroSchema: null,
-          questionsSchema: null,
-          customMetadataSchema: null,
-        },
-      ];
+describe("parseVariantSchema", () => {
+  it("parses simple top-level fields", () => {
+    expect(parseVariantSchema("OBJECT<a: STRING, b: BIGINT>")).toEqual([
+      { name: "a", type: "STRING" },
+      { name: "b", type: "BIGINT" },
+    ]);
+  });
 
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
+  it("respects depth — commas inside nested OBJECT/ARRAY don't split fields", () => {
+    expect(parseVariantSchema("OBJECT<a: ARRAY<STRING>, b: OBJECT<x: STRING, y: BIGINT>>")).toEqual(
+      [
+        { name: "a", type: "ARRAY<STRING>" },
+        { name: "b", type: "OBJECT<x: STRING, y: BIGINT>" },
+      ],
+    );
+  });
 
-      const result = await repository.getTableData({
-        experimentId,
-        experiment: mockExperiment,
-        tableName: "unknown_table",
-      });
-
-      expect(result.isSuccess()).toBe(false);
-      if (result.isFailure()) {
-        expect(result.error.code).toBe("UNKNOWN_TABLE_CONFIG");
-      }
-    });
+  it("returns empty for non-OBJECT inputs", () => {
+    expect(parseVariantSchema("STRING")).toEqual([]);
+    expect(parseVariantSchema("")).toEqual([]);
   });
 });

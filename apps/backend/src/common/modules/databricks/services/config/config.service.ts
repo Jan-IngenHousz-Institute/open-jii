@@ -144,32 +144,4 @@ export class DatabricksConfigService {
   getCentrumSchemaName(): string {
     return this.config.centrumSchemaName;
   }
-
-  /**
-   * Returns the raw data table name
-   */
-  getRawDataTableName(): string {
-    return this.config.rawDataTableName;
-  }
-
-  /**
-   * Returns the device data table name
-   */
-  getDeviceDataTableName(): string {
-    return this.config.deviceDataTableName;
-  }
-
-  /**
-   * Returns the raw ambyte data table name
-   */
-  getRawAmbyteDataTableName(): string {
-    return this.config.rawAmbyteDataTableName;
-  }
-
-  /**
-   * Returns the macro data table name
-   */
-  getMacroDataTableName(): string {
-    return this.config.macroDataTableName;
-  }
 }

@@ -67,9 +67,14 @@ export class DeltaDataService {
     _metadata: DeltaMetadata,
     limitHint?: number,
     options?: ParquetReadOptions,
+    rowFilters?: Record<string, string>,
   ): Promise<Result<SchemaData>> {
     try {
       this.logger.debug(`Processing ${files.length} Delta files`);
+
+      const filterEntries = rowFilters ? Object.entries(rowFilters) : [];
+      const matchesFilter = (row: Record<string, unknown>): boolean =>
+        filterEntries.every(([col, value]) => row[col] === value);
 
       const allRows: Record<string, unknown>[] = [];
       let totalRows = 0;
@@ -98,8 +103,10 @@ export class DeltaDataService {
           columnsResolved = true;
         }
 
-        allRows.push(...fileRows);
-        totalRows += fileRows.length;
+        const matchingRows = filterEntries.length === 0 ? fileRows : fileRows.filter(matchesFilter);
+
+        allRows.push(...matchingRows);
+        totalRows += matchingRows.length;
 
         // Respect limit hint if provided
         if (limitHint && totalRows >= limitHint) {
@@ -275,6 +282,39 @@ export class DeltaDataService {
     }
 
     return totalRows;
+  }
+
+  /**
+   * Prune files whose min/max column stats prove an equality filter cannot match.
+   * Files without parseable stats are kept (conservative).
+   *
+   * Delta Sharing returns these stats inline in the query response — pruning here
+   * is free in bytes and turns "download every file in centrum" into "download
+   * only files whose experiment_id range covers ours" without needing the table
+   * to be partitioned.
+   */
+  pruneFilesByEquality(files: DeltaFile[], filters: Record<string, string>): DeltaFile[] {
+    const filterEntries = Object.entries(filters);
+    if (filterEntries.length === 0) return files;
+
+    return files.filter((file) => {
+      if (!file.stats) return true;
+      let stats: { minValues?: Record<string, unknown>; maxValues?: Record<string, unknown> };
+      try {
+        stats = JSON.parse(file.stats) as typeof stats;
+      } catch {
+        return true;
+      }
+      const { minValues, maxValues } = stats;
+      if (!minValues || !maxValues) return true;
+
+      return filterEntries.every(([col, value]) => {
+        const min = minValues[col];
+        const max = maxValues[col];
+        if (min === undefined || max === undefined) return true;
+        return value >= String(min) && value <= String(max);
+      });
+    });
   }
 
   /**

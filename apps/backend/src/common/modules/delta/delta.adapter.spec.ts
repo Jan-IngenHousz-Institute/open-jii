@@ -10,7 +10,7 @@ describe("DeltaAdapter", () => {
   const shareName = process.env.DELTA_SHARE_NAME || "open_jii_test";
   const schemaName = process.env.DELTA_SCHEMA_NAME || "centrum";
 
-  let deltaAdapter: DeltaAdapter;
+  let adapter: DeltaAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -18,7 +18,7 @@ describe("DeltaAdapter", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    deltaAdapter = testApp.module.get(DeltaAdapter);
+    adapter = testApp.module.get(DeltaAdapter);
     nock.cleanAll();
   });
 
@@ -31,362 +31,240 @@ describe("DeltaAdapter", () => {
     await testApp.teardown();
   });
 
-  describe("listTables", () => {
-    it("should successfully list tables for an experiment", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-
-      const mockTablesResponse = {
-        items: [
-          {
-            name: "sensor_data",
-            schema: schemaName,
-            share: shareName,
-            shareId: "share-uuid",
-            id: "table-uuid-1",
+  /** Build an NDJSON Delta Sharing query response with an empty schema. */
+  const minimalNdjson = (
+    files: { stats?: string; partitionValues?: Record<string, string> }[] = [],
+  ): string => {
+    const lines = [
+      `{"protocol":{"minReaderVersion":1}}`,
+      `{"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{\\"type\\":\\"struct\\",\\"fields\\":[]}","partitionColumns":[]}}`,
+      ...files.map((f, i) =>
+        JSON.stringify({
+          file: {
+            url: `https://example.com/file${i}.parquet`,
+            id: `file${i}`,
+            partitionValues: f.partitionValues ?? {},
+            size: 1024,
+            stats: f.stats,
           },
-          {
-            name: "measurements",
-            schema: schemaName,
-            share: shareName,
-            id: "table-uuid-2",
-          },
-        ],
-      };
-
-      nock(deltaEndpoint)
-        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
-        .reply(200, mockTablesResponse);
-
-      const result = await deltaAdapter.listTables(experimentName, experimentId);
-
-      assertSuccess(result);
-      expect(result.value.tables).toHaveLength(2);
-      expect(result.value.tables[0].name).toBe("sensor_data");
-      expect(result.value.tables[0].catalog_name).toBe(shareName);
-      expect(result.value.tables[0].schema_name).toBe(schemaName);
-      expect(result.value.tables[0].table_type).toBe("TABLE");
-      expect(result.value.tables[1].name).toBe("measurements");
-    });
-
-    it("should use configured share name regardless of experiment name", async () => {
-      const experimentName = "My Test Experiment";
-      const experimentId = "exp-456";
-
-      const mockTablesResponse = {
-        items: [
-          {
-            name: "data_table",
-            schema: schemaName,
-            share: shareName,
-          },
-        ],
-      };
-
-      nock(deltaEndpoint)
-        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
-        .reply(200, mockTablesResponse);
-
-      const result = await deltaAdapter.listTables(experimentName, experimentId);
-
-      assertSuccess(result);
-      expect(result.value.tables).toHaveLength(1);
-    });
-
-    it("should return empty tables list when share has no tables", async () => {
-      const experimentName = "Empty Experiment";
-      const experimentId = "exp-789";
-
-      const mockTablesResponse = {
-        items: [],
-      };
-
-      nock(deltaEndpoint)
-        .get(/\/shares\/.*\/schemas\/.*\/tables/)
-        .reply(200, mockTablesResponse);
-
-      const result = await deltaAdapter.listTables(experimentName, experimentId);
-
-      assertSuccess(result);
-      expect(result.value.tables).toHaveLength(0);
-    });
-
-    it("should handle errors when listing tables fails", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-999";
-
-      nock(deltaEndpoint)
-        .get(/\/shares\/.*\/schemas\/.*\/tables/)
-        .reply(404, { errorCode: "SHARE_NOT_FOUND", message: "Share not found" });
-
-      const result = await deltaAdapter.listTables(experimentName, experimentId);
-
-      assertFailure(result);
-    });
-  });
+        }),
+      ),
+    ];
+    return lines.join("\n");
+  };
 
   describe("getTableData", () => {
-    it("should successfully get table data with pagination", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-
-      const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
-{"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{\\"type\\":\\"struct\\",\\"fields\\":[{\\"name\\":\\"id\\",\\"type\\":\\"integer\\",\\"nullable\\":false},{\\"name\\":\\"value\\",\\"type\\":\\"double\\",\\"nullable\\":true}]}","partitionColumns":[]}}
-{"file":{"url":"https://example.com/file1.parquet","id":"file1","partitionValues":{},"size":1024,"stats":"{\\"numRecords\\":100}"}}`;
+    it("sends predicate hints derived from filters and forwards limit hint", async () => {
+      const tableName = "enriched_experiment_macro_data";
+      let receivedBody: { predicateHints?: string[]; limitHint?: number } = {};
 
       nock(deltaEndpoint)
-        .post(`/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`, {
-          limitHint: 100,
-        })
-        .reply(200, ndjsonResponse, {
-          "delta-table-version": "5",
-        });
+        .post(
+          `/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`,
+          (body: { predicateHints?: string[]; limitHint?: number }) => {
+            receivedBody = body;
+            return true;
+          },
+        )
+        .reply(200, minimalNdjson());
 
-      // Mock the parquet file download
+      const result = await adapter.getTableData(tableName, {
+        filters: { experiment_id: "exp-1", macro_id: "macro-9" },
+        limitHint: 50,
+      });
+
+      assertSuccess(result);
+      expect(receivedBody.predicateHints).toEqual([
+        "experiment_id = 'exp-1'",
+        "macro_id = 'macro-9'",
+      ]);
+      expect(receivedBody.limitHint).toBe(50);
+    });
+
+    it("escapes single quotes in filter values to prevent broken predicate strings", async () => {
+      const tableName = "enriched_experiment_raw_data";
+      let receivedBody: { predicateHints?: string[] } = {};
+
+      nock(deltaEndpoint)
+        .post(
+          `/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`,
+          (body: { predicateHints?: string[] }) => {
+            receivedBody = body;
+            return true;
+          },
+        )
+        .reply(200, minimalNdjson());
+
+      const result = await adapter.getTableData(tableName, {
+        filters: { experiment_id: "o'malley" },
+      });
+
+      assertSuccess(result);
+      expect(receivedBody.predicateHints).toEqual(["experiment_id = 'o''malley'"]);
+    });
+
+    it("prunes files whose min/max stats prove the filter cannot match (no download attempted)", async () => {
+      const tableName = "enriched_experiment_raw_data";
+
+      const ndjson = minimalNdjson([
+        // experiment_id range covers our id — should be downloaded
+        {
+          stats: JSON.stringify({
+            numRecords: 10,
+            minValues: { experiment_id: "exp-001" },
+            maxValues: { experiment_id: "exp-999" },
+          }),
+        },
+        // experiment_id range does NOT cover our id — should be pruned
+        {
+          stats: JSON.stringify({
+            numRecords: 5,
+            minValues: { experiment_id: "exp-aaa" },
+            maxValues: { experiment_id: "exp-zzz" },
+          }),
+        },
+      ]);
+
+      nock(deltaEndpoint)
+        .post(`/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`)
+        .reply(200, ndjson);
+
+      // Only the first file's URL is mocked. If the adapter tried to download
+      // file1 too, nock would error.
+      nock("https://example.com").get("/file0.parquet").reply(200, Buffer.from([]));
+
+      const result = await adapter.getTableData(tableName, {
+        filters: { experiment_id: "exp-500" },
+      });
+
+      assertSuccess(result);
+      expect(nock.pendingMocks()).toEqual([]);
+    });
+
+    it("keeps files that have no parsable stats (conservative pruning)", async () => {
+      const tableName = "enriched_experiment_raw_data";
+
+      const ndjson = minimalNdjson([{ stats: "not-json" }, { stats: undefined }]);
+
+      nock(deltaEndpoint)
+        .post(`/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`)
+        .reply(200, ndjson);
+
+      // Both files must be downloaded — stats can't prove they don't match.
+      nock("https://example.com").get("/file0.parquet").reply(200, Buffer.from([]));
       nock("https://example.com").get("/file1.parquet").reply(200, Buffer.from([]));
 
-      const result = await deltaAdapter.getTableData(
-        experimentName,
-        experimentId,
-        tableName,
-        1,
-        100,
-      );
+      const result = await adapter.getTableData(tableName, {
+        filters: { experiment_id: "exp-1" },
+      });
 
       assertSuccess(result);
-      expect(result.value.columns).toBeDefined();
-      expect(result.value.rows).toBeDefined();
+      expect(nock.pendingMocks()).toEqual([]);
     });
 
-    it("should use default pagination parameters", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-
-      const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
-{"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{\\"type\\":\\"struct\\",\\"fields\\":[]}","partitionColumns":[]}}`;
+    it("returns failure when the table query endpoint errors", async () => {
+      const tableName = "nonexistent";
 
       nock(deltaEndpoint)
-        .post(`/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`, {
-          limitHint: 100,
-        })
-        .reply(200, ndjsonResponse);
-
-      const result = await deltaAdapter.getTableData(experimentName, experimentId, tableName);
-
-      assertSuccess(result);
-    });
-
-    it("should handle errors when querying table fails", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "nonexistent_table";
-
-      nock(deltaEndpoint)
-        .post(/\/shares\/.*\/schemas\/.*\/tables\/.*\/query/)
+        .post(`/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`)
         .reply(404, { errorCode: "TABLE_NOT_FOUND", message: "Table not found" });
 
-      const result = await deltaAdapter.getTableData(experimentName, experimentId, tableName);
+      const result = await adapter.getTableData(tableName);
 
       assertFailure(result);
     });
   });
 
-  describe("getTableColumns", () => {
-    it("should successfully get specific columns from table", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-      const columns = ["id", "value"];
+  describe("getExperimentTableMetadata", () => {
+    /**
+     * Mock the underlying getTableData call by intercepting the metadata table's
+     * query endpoint. The adapter's metadata path goes through getTableData →
+     * tablesService.queryTable, which we can stub via nock as the data path.
+     *
+     * For these tests we spy on getTableData directly to skip the parquet
+     * decode dance — the row-shape mapping is what we want to verify.
+     */
+    it("maps snake_case row columns from the metadata table to camelCase port shape", async () => {
+      vi.spyOn(adapter, "getTableData").mockResolvedValue({
+        isSuccess: () => true,
+        isFailure: () => false,
+        value: {
+          columns: [],
+          rows: [
+            {
+              experiment_id: "exp-1",
+              identifier: "raw_data",
+              table_type: "static",
+              row_count: 42,
+              macro_schema: null,
+              questions_schema: "OBJECT<q1: STRING>",
+              custom_metadata_schema: null,
+            },
+          ],
+          totalRows: 1,
+          truncated: false,
+        },
+      } as never);
 
-      const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
-{"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{\\"type\\":\\"struct\\",\\"fields\\":[{\\"name\\":\\"id\\",\\"type\\":\\"integer\\",\\"nullable\\":false},{\\"name\\":\\"value\\",\\"type\\":\\"double\\",\\"nullable\\":true},{\\"name\\":\\"timestamp\\",\\"type\\":\\"string\\",\\"nullable\\":true}]}","partitionColumns":[]}}`;
-
-      nock(deltaEndpoint)
-        .post(`/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`, {})
-        .reply(200, ndjsonResponse);
-
-      const result = await deltaAdapter.getTableColumns(
-        experimentName,
-        experimentId,
-        tableName,
-        columns,
-      );
-
-      assertSuccess(result);
-      expect(result.value.columns).toBeDefined();
-      // Columns should be filtered to only include requested ones
-      const columnNames = result.value.columns.map((col) => col.name);
-      expect(columnNames).toContain("id");
-      expect(columnNames).toContain("value");
-      expect(columnNames).not.toContain("timestamp");
-    });
-
-    it("should handle errors when getting columns fails", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-      const columns = ["id"];
-
-      nock(deltaEndpoint)
-        .post(/\/shares\/.*\/schemas\/.*\/tables\/.*\/query/)
-        .reply(500, { error: "Internal server error" });
-
-      const result = await deltaAdapter.getTableColumns(
-        experimentName,
-        experimentId,
-        tableName,
-        columns,
-      );
-
-      assertFailure(result);
-    });
-  });
-
-  describe("getTableRowCount", () => {
-    it("should successfully get row count from file stats", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-
-      const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
-{"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{}","partitionColumns":[]}}
-{"file":{"url":"https://example.com/file1.parquet","id":"file1","partitionValues":{},"size":1024,"stats":"{\\"numRecords\\":100}"}}
-{"file":{"url":"https://example.com/file2.parquet","id":"file2","partitionValues":{},"size":2048,"stats":"{\\"numRecords\\":150}"}}`;
-
-      nock(deltaEndpoint)
-        .post(`/shares/${shareName}/schemas/${schemaName}/tables/${tableName}/query`, {})
-        .reply(200, ndjsonResponse);
-
-      const result = await deltaAdapter.getTableRowCount(experimentName, experimentId, tableName);
+      const result = await adapter.getExperimentTableMetadata("exp-1");
 
       assertSuccess(result);
-      expect(result.value).toBe(250); // 100 + 150
+      expect(result.value).toEqual([
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          rowCount: 42,
+          macroSchema: null,
+          questionsSchema: "OBJECT<q1: STRING>",
+          customMetadataSchema: null,
+        },
+      ]);
     });
 
-    it("should return 0 when no files have stats", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
+    it("omits schema fields when includeSchemas is false", async () => {
+      vi.spyOn(adapter, "getTableData").mockResolvedValue({
+        isSuccess: () => true,
+        isFailure: () => false,
+        value: {
+          columns: [],
+          rows: [
+            {
+              experiment_id: "exp-1",
+              identifier: "raw_data",
+              table_type: "static",
+              row_count: 7,
+              macro_schema: null,
+              questions_schema: "OBJECT<q1: STRING>",
+              custom_metadata_schema: "OBJECT<m: STRING>",
+            },
+          ],
+          totalRows: 1,
+          truncated: false,
+        },
+      } as never);
 
-      const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
-{"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{}","partitionColumns":[]}}
-{"file":{"url":"https://example.com/file1.parquet","id":"file1","partitionValues":{},"size":1024}}`;
-
-      nock(deltaEndpoint)
-        .post(/\/shares\/.*\/schemas\/.*\/tables\/.*\/query/)
-        .reply(200, ndjsonResponse);
-
-      const result = await deltaAdapter.getTableRowCount(experimentName, experimentId, tableName);
+      const result = await adapter.getExperimentTableMetadata("exp-1", { includeSchemas: false });
 
       assertSuccess(result);
-      expect(result.value).toBe(0);
+      expect(result.value[0]).toEqual({
+        identifier: "raw_data",
+        tableType: "static",
+        rowCount: 7,
+      });
     });
 
-    it("should handle malformed stats gracefully", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
+    it("forwards experiment_id and (optionally) identifier as filters to getTableData", async () => {
+      const dataSpy = vi.spyOn(adapter, "getTableData").mockResolvedValue({
+        isSuccess: () => true,
+        isFailure: () => false,
+        value: { columns: [], rows: [], totalRows: 0, truncated: false },
+      } as never);
 
-      const ndjsonResponse = `{"protocol":{"minReaderVersion":1}}
-{"metaData":{"id":"table-uuid","format":{"provider":"parquet"},"schemaString":"{}","partitionColumns":[]}}
-{"file":{"url":"https://example.com/file1.parquet","id":"file1","partitionValues":{},"size":1024,"stats":"invalid json"}}
-{"file":{"url":"https://example.com/file2.parquet","id":"file2","partitionValues":{},"size":2048,"stats":"{\\"numRecords\\":50}"}}`;
+      await adapter.getExperimentTableMetadata("exp-1", { identifier: "raw_data" });
 
-      nock(deltaEndpoint)
-        .post(/\/shares\/.*\/schemas\/.*\/tables\/.*\/query/)
-        .reply(200, ndjsonResponse);
-
-      const result = await deltaAdapter.getTableRowCount(experimentName, experimentId, tableName);
-
-      assertSuccess(result);
-      expect(result.value).toBe(50); // Only count the valid one
-    });
-
-    it("should handle errors when querying fails", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-
-      nock(deltaEndpoint)
-        .post(/\/shares\/.*\/schemas\/.*\/tables\/.*\/query/)
-        .reply(500, { error: "Internal server error" });
-
-      const result = await deltaAdapter.getTableRowCount(experimentName, experimentId, tableName);
-
-      assertFailure(result);
-    });
-  });
-
-  describe("tableExists", () => {
-    it("should return true when table exists", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-
-      const mockTablesResponse = {
-        items: [
-          {
-            name: "sensor_data",
-            schema: schemaName,
-            share: shareName,
-          },
-          {
-            name: "other_table",
-            schema: schemaName,
-            share: shareName,
-          },
-        ],
-      };
-
-      nock(deltaEndpoint)
-        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
-        .reply(200, mockTablesResponse);
-
-      const result = await deltaAdapter.tableExists(experimentName, experimentId, tableName);
-
-      assertSuccess(result);
-      expect(result.value).toBe(true);
-    });
-
-    it("should return false when table does not exist", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "nonexistent_table";
-
-      const mockTablesResponse = {
-        items: [
-          {
-            name: "sensor_data",
-            schema: schemaName,
-            share: shareName,
-          },
-        ],
-      };
-
-      nock(deltaEndpoint)
-        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
-        .reply(200, mockTablesResponse);
-
-      const result = await deltaAdapter.tableExists(experimentName, experimentId, tableName);
-
-      assertSuccess(result);
-      expect(result.value).toBe(false);
-    });
-
-    it("should handle errors when listing tables fails", async () => {
-      const experimentName = "Test Experiment";
-      const experimentId = "exp-123";
-      const tableName = "sensor_data";
-
-      nock(deltaEndpoint)
-        .get(`/shares/${shareName}/schemas/${schemaName}/tables`)
-        .reply(403, { error: "Forbidden" });
-
-      const result = await deltaAdapter.tableExists(experimentName, experimentId, tableName);
-
-      assertFailure(result);
+      expect(dataSpy).toHaveBeenCalledWith("experiment_table_metadata", {
+        filters: { experiment_id: "exp-1", identifier: "raw_data" },
+      });
     });
   });
 });

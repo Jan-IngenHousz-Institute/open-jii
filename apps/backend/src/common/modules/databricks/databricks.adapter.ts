@@ -1,10 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Readable } from "stream";
 
-import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
-
 import type { ExportMetadata } from "../../../experiments/core/models/experiment-data-exports.model";
-import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
@@ -22,15 +19,10 @@ import type { SchemaData } from "./services/sql/sql.types";
 export class DatabricksAdapter implements ExperimentDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
-  // Schema and catalog names exposed to repository
+  // Schema and catalog names — used by repositories that issue writes
+  // (annotations, metadata, transfer requests) and by the exports flow.
   readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
-
-  // Physical Databricks table names exposed to repository
-  readonly RAW_DATA_TABLE_NAME: string;
-  readonly DEVICE_DATA_TABLE_NAME: string;
-  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
-  readonly MACRO_DATA_TABLE_NAME: string;
 
   constructor(
     private readonly jobsService: DatabricksJobsService,
@@ -41,10 +33,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   ) {
     this.CATALOG_NAME = this.configService.getCatalogName();
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
-    this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
-    this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
-    this.RAW_AMBYTE_DATA_TABLE_NAME = this.configService.getRawAmbyteDataTableName();
-    this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
   }
 
   /**
@@ -389,187 +377,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }, []);
 
     return success(failedExports);
-  }
-
-  /**
-   * Get consolidated experiment table metadata (row counts and schemas) from the
-   * experiment_table_metadata cache table. This is a single-query optimization
-   * that replaces multiple separate queries.
-   *
-   * Returns metadata for all tables in an experiment:
-   * - Raw data table (identifier: 'raw_data', tableType: 'static')
-   * - Device data table (identifier: 'device', tableType: 'static')
-   * - Ambyte data table (identifier: 'raw_ambyte_data', tableType: 'static')
-   * - All macro tables (identifier: macro_id UUID, tableType: 'macro')
-   *
-   * @param experimentId - The experiment identifier
-   * @param options - Optional configuration
-   * @param options.identifier - If provided, only return metadata for this specific table (static name or macro_id)
-   * @param options.includeSchemas - If false, exclude macro_schema, questions_schema, and custom_metadata_schema columns (default: true)
-   * @returns Result containing array of table metadata with identifiers, types, and row counts
-   */
-  async getExperimentTableMetadata(
-    experimentId: string,
-    options?: {
-      identifier?: string;
-      includeSchemas?: boolean;
-    },
-  ): Promise<Result<ExperimentTableMetadata[]>> {
-    const catalog = this.configService.getCatalogName();
-    const schema = this.configService.getCentrumSchemaName();
-
-    const includeSchemas = options?.includeSchemas !== false; // Default to true
-    const columns = includeSchemas
-      ? [
-          "identifier",
-          "table_type",
-          "row_count",
-          "macro_schema",
-          "questions_schema",
-          "custom_metadata_schema",
-        ]
-      : ["identifier", "table_type", "row_count"];
-
-    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
-    if (options?.identifier) {
-      whereConditions.push(["identifier", options.identifier]);
-    }
-
-    const query = this.queryBuilder.buildQuery({
-      table: `${catalog}.${schema}.experiment_table_metadata`,
-      columns,
-      whereConditions,
-    });
-
-    this.logger.debug({
-      msg: "Querying experiment table metadata",
-      operation: "getExperimentTableMetadata",
-      experimentId,
-      identifier: options?.identifier,
-      includeSchemas,
-    });
-
-    const result = await this.sqlService.executeSqlQuery(schema, query);
-
-    if (result.isFailure()) {
-      return failure(result.error);
-    }
-
-    // Transform rows into structured data
-    if (!("rows" in result.value)) {
-      return failure(AppError.internal("Invalid query result format", "INVALID_QUERY_RESULT"));
-    }
-
-    const metadata = result.value.rows.map((row) => {
-      const base = {
-        // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
-        identifier: row[0] as string,
-        tableType: (row[1] ?? "static") as "static" | "macro",
-        rowCount: row[2] ? parseInt(row[2], 10) : 0,
-      };
-
-      if (includeSchemas) {
-        return {
-          ...base,
-          macroSchema: row[3],
-          questionsSchema: row[4],
-          customMetadataSchema: row[5],
-        };
-      }
-
-      return base;
-    });
-
-    return success(metadata);
-  }
-
-  /**
-   * Build a SQL query for experiment data with optional VARIANT parsing
-   * Automatically handles both simple SELECT and VARIANT parsing based on variants parameter
-   */
-  buildExperimentQuery(params: {
-    tableName: string;
-    tableType: "static" | "macro";
-    experimentId: string;
-    columns?: string[];
-    variants?: { columnName: string; schema: string }[];
-    exceptColumns?: string[];
-    orderBy?: string;
-    orderDirection?: "ASC" | "DESC";
-    limit?: number;
-    offset?: number;
-  }): Result<string> {
-    const {
-      tableName,
-      tableType,
-      experimentId,
-      columns,
-      variants,
-      exceptColumns,
-      orderBy,
-      orderDirection,
-      limit,
-      offset,
-    } = params;
-
-    const catalog = this.configService.getCatalogName();
-    const schema = this.configService.getCentrumSchemaName();
-
-    if (tableType === "macro") {
-      // Macro tables: query the shared macro data table, filter by experiment_id AND macro_id
-      const table = `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
-      const whereConditions: [string, string][] = [
-        ["experiment_id", experimentId],
-        ["macro_id", tableName],
-      ];
-
-      return success(
-        this.queryBuilder.buildQuery({
-          table,
-          columns,
-          variants,
-          exceptColumns,
-          whereConditions,
-          orderBy,
-          orderDirection,
-          limit,
-          offset,
-        }),
-      );
-    }
-
-    // Static tables: map identifier to physical table name
-    const staticTableMapping: Record<string, string> = {
-      [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
-      [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
-      [ExperimentTableName.RAW_AMBYTE_DATA]: this.RAW_AMBYTE_DATA_TABLE_NAME,
-    };
-
-    const physicalTable = staticTableMapping[tableName];
-    if (!physicalTable) {
-      return failure(
-        AppError.internal(
-          `No physical table mapping found for static table '${tableName}'`,
-          "UNKNOWN_TABLE_MAPPING",
-        ),
-      );
-    }
-    const table = `${catalog}.${schema}.${physicalTable}`;
-    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
-
-    return success(
-      this.queryBuilder.buildQuery({
-        table,
-        columns,
-        variants,
-        exceptColumns,
-        whereConditions,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      }),
-    );
   }
 
   /**

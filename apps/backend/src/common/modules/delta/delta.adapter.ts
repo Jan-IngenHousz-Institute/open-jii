@@ -1,178 +1,111 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { DeltaPort } from "../../../experiments/core/ports/delta.port";
+import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
+import type { DeltaPort, DeltaQueryOptions } from "../../../experiments/core/ports/delta.port";
 import { Result, success, failure } from "../../utils/fp-utils";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
-import type { ListTablesResponse } from "../databricks/services/tables/tables.types";
 import { DeltaConfigService } from "./services/config/config.service";
 import { DeltaDataService } from "./services/data/data.service";
-import { DeltaSharesService } from "./services/shares/shares.service";
-import type { Table } from "./services/shares/shares.types";
 import { DeltaTablesService } from "./services/tables/tables.service";
+
+/**
+ * Row shape of the centrum.experiment_table_metadata table.
+ * Columns mirror the DLT pipeline definition in centrum_pipeline.py.
+ */
+interface MetadataRow {
+  experiment_id: string;
+  identifier: string;
+  table_type: string;
+  row_count: number | bigint;
+  macro_schema: string | null;
+  questions_schema: string | null;
+  custom_metadata_schema: string | null;
+}
 
 @Injectable()
 export class DeltaAdapter implements DeltaPort {
   private readonly logger = new Logger(DeltaAdapter.name);
 
+  readonly CENTRUM_SCHEMA_NAME: string;
+  readonly RAW_DATA_TABLE_NAME: string;
+  readonly DEVICE_DATA_TABLE_NAME: string;
+  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
+  readonly MACRO_DATA_TABLE_NAME: string;
+
   constructor(
     private readonly configService: DeltaConfigService,
-    private readonly sharesService: DeltaSharesService,
     private readonly tablesService: DeltaTablesService,
     private readonly dataService: DeltaDataService,
-  ) {}
+  ) {
+    this.CENTRUM_SCHEMA_NAME = this.configService.getSchemaName();
+    this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
+    this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
+    this.RAW_AMBYTE_DATA_TABLE_NAME = this.configService.getRawAmbyteDataTableName();
+    this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
+  }
 
-  /**
-   * List tables available for an experiment using Delta Sharing
-   * Uses the configured share and centrum schema
-   */
-  async listTables(
-    experimentName: string,
+  async getExperimentTableMetadata(
     experimentId: string,
-  ): Promise<Result<ListTablesResponse>> {
-    const shareName = this.configService.getShareName();
-    const schemaName = this.configService.getSchemaName();
+    options: { identifier?: string; includeSchemas?: boolean } = {},
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    const { identifier, includeSchemas = true } = options;
 
-    this.logger.debug(
-      `Listing tables for experiment ${experimentId} using share: ${shareName}.${schemaName}`,
-    );
+    const filters: Record<string, string> = { experiment_id: experimentId };
+    if (identifier) filters.identifier = identifier;
 
-    const tablesResult = await this.sharesService.listTables(shareName, schemaName);
+    const dataResult = await this.getTableData(this.configService.getMetadataTableName(), {
+      filters,
+    });
+    if (dataResult.isFailure()) return failure(dataResult.error);
 
-    if (tablesResult.isFailure()) {
-      return failure(tablesResult.error);
-    }
-
-    // Convert Delta Sharing table format to Databricks format for compatibility
-    const compatibleTables = tablesResult.value.items.map((table: Table) => ({
-      name: table.name,
-      catalog_name: table.share,
-      schema_name: table.schema,
-      table_type: "TABLE",
-      created_at: Date.now(), // Use current timestamp as placeholder
+    const rows = dataResult.value.rows as unknown as MetadataRow[];
+    const result: ExperimentTableMetadata[] = rows.map((row) => ({
+      identifier: row.identifier,
+      tableType: row.table_type === "macro" ? "macro" : "static",
+      rowCount: typeof row.row_count === "bigint" ? Number(row.row_count) : row.row_count,
+      ...(includeSchemas
+        ? {
+            macroSchema: row.macro_schema,
+            questionsSchema: row.questions_schema,
+            customMetadataSchema: row.custom_metadata_schema,
+          }
+        : {}),
     }));
 
-    return success({
-      tables: compatibleTables,
+    return success(result);
+  }
+
+  async getTableData(tableName: string, opts: DeltaQueryOptions = {}): Promise<Result<SchemaData>> {
+    const shareName = this.configService.getShareName();
+    const schemaName = this.configService.getSchemaName();
+    const { filters, columns, limitHint } = opts;
+
+    this.logger.debug(
+      `Querying ${shareName}.${schemaName}.${tableName} (filters=${JSON.stringify(filters)}, limitHint=${limitHint})`,
+    );
+
+    const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {
+      predicateHints: filters ? this.buildPredicateHints(filters) : undefined,
+      limitHint,
     });
-  }
+    if (queryResult.isFailure()) return failure(queryResult.error);
 
-  /**
-   * Get data from a table using Delta Sharing with pagination support
-   */
-  async getTableData(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-    page = 1,
-    pageSize = 100,
-  ): Promise<Result<SchemaData>> {
-    const shareName = this.configService.getShareName();
-    const schemaName = this.configService.getSchemaName();
+    const prunedFiles = filters
+      ? this.dataService.pruneFilesByEquality(queryResult.value.files, filters)
+      : queryResult.value.files;
 
-    this.logger.debug(
-      `Getting table data for ${tableName} in experiment ${experimentId} (page ${page}, size ${pageSize})`,
-    );
+    this.logger.debug(`File pruning: ${queryResult.value.files.length} → ${prunedFiles.length}`);
 
-    // Query all files to get accurate total row count
-    const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {});
-
-    if (queryResult.isFailure()) {
-      return failure(queryResult.error);
-    }
-
-    const allFiles = queryResult.value.files;
-    const estimatedTotal = this.dataService.estimateTotalRows(allFiles);
-
-    // Apply client-side pagination using file selection
-    const selectedFiles = this.dataService.applyLimitHint(allFiles, pageSize);
-
-    // Process the files to create SchemaData
-    const result = await this.dataService.processFiles(
-      selectedFiles,
+    return this.dataService.processFiles(
+      prunedFiles,
       queryResult.value.metadata,
-      pageSize,
-    );
-
-    // Fix totalRows to reflect the full table, not just the returned page
-    if (result.isSuccess()) {
-      result.value.totalRows = estimatedTotal;
-      result.value.truncated = estimatedTotal > result.value.rows.length;
-    }
-
-    return result;
-  }
-
-  /**
-   * Get specific columns from a table using Delta Sharing
-   */
-  async getTableColumns(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-    columns: string[],
-  ): Promise<Result<SchemaData>> {
-    const shareName = this.configService.getShareName();
-    const schemaName = this.configService.getSchemaName();
-
-    this.logger.debug(
-      `Getting columns [${columns.join(", ")}] from table ${tableName} in experiment ${experimentId}`,
-    );
-
-    // Query the table — use limitHint=0 to keep it light, no row limit needed here
-    const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {});
-
-    if (queryResult.isFailure()) {
-      return failure(queryResult.error);
-    }
-
-    // Process files with column selection pushed into hyparquet
-    return await this.dataService.processFiles(
-      queryResult.value.files,
-      queryResult.value.metadata,
-      undefined,
-      { columns },
+      limitHint,
+      columns ? { columns } : undefined,
+      filters,
     );
   }
 
-  /**
-   * Get the total row count for a table
-   */
-  async getTableRowCount(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-  ): Promise<Result<number>> {
-    const shareName = this.configService.getShareName();
-    const schemaName = this.configService.getSchemaName();
-
-    this.logger.debug(`Getting row count for table ${tableName} in experiment ${experimentId}`);
-
-    const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {});
-
-    if (queryResult.isFailure()) {
-      return failure(queryResult.error);
-    }
-
-    // Delegate to data service to avoid duplicating stats-parsing logic
-    const totalRows = this.dataService.estimateTotalRows(queryResult.value.files);
-    return success(totalRows);
-  }
-
-  /**
-   * Check if a table exists in the experiment
-   */
-  async tableExists(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-  ): Promise<Result<boolean>> {
-    const tablesResult = await this.listTables(experimentName, experimentId);
-
-    if (tablesResult.isFailure()) {
-      return failure(tablesResult.error);
-    }
-
-    const exists = tablesResult.value.tables.some((table) => table.name === tableName);
-    return success(exists);
+  private buildPredicateHints(filters: Record<string, string>): string[] {
+    return Object.entries(filters).map(([col, value]) => `${col} = '${value.replace(/'/g, "''")}'`);
   }
 }

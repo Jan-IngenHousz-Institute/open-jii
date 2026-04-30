@@ -8,7 +8,6 @@ import type {
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportMetadata } from "../models/experiment-data-exports.model";
-import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 
 /**
  * Injection token for the Databricks port
@@ -16,69 +15,20 @@ import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
 
 /**
- * Port interface for Databricks operations in the experiments domain
- * This interface defines the contract for external Databricks services
+ * Port interface for Databricks operations that aren't covered by Delta Sharing —
+ * primarily writes (annotations, metadata, transfer requests), exports, and job
+ * triggers. The experiment-data read path lives on `DeltaPort` instead.
  */
 export interface DatabricksPort {
-  // Schema and catalog names
+  // Schema and catalog names — still used by repositories that issue writes
+  // against the metadata/annotations/transfer-request tables.
   readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
-
-  // Physical Databricks table names (only those consumed by repository)
-  readonly RAW_DATA_TABLE_NAME: string;
-  readonly DEVICE_DATA_TABLE_NAME: string;
-  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
-  readonly MACRO_DATA_TABLE_NAME: string;
 
   /**
    * Check if the Databricks service is available and responding
    */
   healthCheck(): Promise<Result<DatabricksHealthCheck>>;
-
-  /**
-   * Get consolidated experiment table metadata (row counts and schemas) from the
-   * experiment_table_metadata cache table. This is a single-query optimization
-   * that replaces multiple separate queries.
-   *
-   * Returns metadata for all tables in an experiment:
-   * - Raw data table (identifier: 'raw_data', tableType: 'static')
-   * - Device data table (identifier: 'device', tableType: 'static')
-   * - Ambyte data table (identifier: 'raw_ambyte_data', tableType: 'static')
-   * - All macro tables (identifier: macro_id UUID, tableType: 'macro')
-   *
-   * @param experimentId - The experiment identifier
-   * @param options - Optional configuration
-   * @param options.identifier - If provided, only return metadata for this specific table (static name or macro_id)
-   * @param options.includeSchemas - If false, exclude macro_schema, questions_schema, and custom_metadata_schema columns (default: true)
-   * @returns Result containing array of table metadata with identifiers, types, and row counts
-   */
-  getExperimentTableMetadata(
-    experimentId: string,
-    options?: {
-      identifier?: string;
-      includeSchemas?: boolean;
-    },
-  ): Promise<Result<ExperimentTableMetadata[]>>;
-
-  /**
-   * Build a SQL query for experiment data with optional VARIANT parsing
-   * Consolidates simple queries and VARIANT parsing into one method
-   *
-   * @param params - Query parameters including table name, experiment ID, columns, variants, ordering, pagination
-   * @returns Result containing the SQL query string or an error
-   */
-  buildExperimentQuery(params: {
-    tableName: string;
-    tableType: "static" | "macro";
-    experimentId: string;
-    columns?: string[];
-    variants?: { columnName: string; schema: string }[];
-    exceptColumns?: string[];
-    orderBy?: string;
-    orderDirection?: "ASC" | "DESC";
-    limit?: number;
-    offset?: number;
-  }): Result<string>;
 
   /**
    * Execute a SQL query in a specific schema.

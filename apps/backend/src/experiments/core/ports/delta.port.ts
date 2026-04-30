@@ -1,59 +1,54 @@
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
-import type { ListTablesResponse } from "../../../common/modules/databricks/services/tables/tables.types";
 import type { Result } from "../../../common/utils/fp-utils";
+import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 
-/**
- * Injection token for the Delta Sharing port
- */
 export const DELTA_PORT = Symbol("DELTA_PORT");
 
+export interface DeltaQueryOptions {
+  /**
+   * Equality filters by column. Each entry is sent as a `predicateHints` SQL
+   * string AND re-applied client-side — Delta Sharing's predicate handling is
+   * best-effort file-level only, so the spec requires the client to filter rows
+   * itself.
+   *
+   * Files whose min/max stats prove the predicate cannot match are pruned before
+   * download. With autoOptimize-clustered writes, this typically eliminates most
+   * files even on unpartitioned tables.
+   */
+  filters?: Record<string, string>;
+  /** Columns to keep in the result. Others are dropped from rows + column metadata. */
+  columns?: string[];
+  /** Hint for server-side file selection. Re-applied client-side after sort. */
+  limitHint?: number;
+}
+
 /**
- * Port interface for Delta Sharing operations in the experiments domain
- * This interface defines the contract for Delta Sharing data access
+ * Port for reading experiment data via Delta Sharing. The Delta-shared centrum
+ * schema replaces the SQL warehouse for all read traffic — both the metadata
+ * cache table and the per-experiment data tables are pulled as parquet files
+ * and decoded locally via hyparquet.
  */
 export interface DeltaPort {
-  /**
-   * List tables available for an experiment using Delta Sharing
-   * Maps experiment to share/schema and lists tables
-   */
-  listTables(experimentName: string, experimentId: string): Promise<Result<ListTablesResponse>>;
+  readonly CENTRUM_SCHEMA_NAME: string;
+  readonly RAW_DATA_TABLE_NAME: string;
+  readonly DEVICE_DATA_TABLE_NAME: string;
+  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
+  readonly MACRO_DATA_TABLE_NAME: string;
 
   /**
-   * Get data from a table using Delta Sharing with pagination support
+   * Read consolidated experiment table metadata from the `experiment_table_metadata`
+   * cache table — same shape and semantics as the Databricks SQL equivalent it
+   * replaces. Results are filtered by experiment_id at the protocol layer (best
+   * effort) and re-filtered client-side.
    */
-  getTableData(
-    experimentName: string,
+  getExperimentTableMetadata(
     experimentId: string,
-    tableName: string,
-    page?: number,
-    pageSize?: number,
-  ): Promise<Result<SchemaData>>;
+    options?: { identifier?: string; includeSchemas?: boolean },
+  ): Promise<Result<ExperimentTableMetadata[]>>;
 
   /**
-   * Get specific columns from a table using Delta Sharing
+   * Read a Delta Sharing table. The server applies hints best-effort; this method
+   * always re-applies filters and limits client-side per the protocol contract.
    */
-  getTableColumns(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-    columns: string[],
-  ): Promise<Result<SchemaData>>;
-
-  /**
-   * Get the total row count for a table
-   */
-  getTableRowCount(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-  ): Promise<Result<number>>;
-
-  /**
-   * Check if a table exists in the experiment
-   */
-  tableExists(
-    experimentName: string,
-    experimentId: string,
-    tableName: string,
-  ): Promise<Result<boolean>>;
+  getTableData(tableName: string, opts?: DeltaQueryOptions): Promise<Result<SchemaData>>;
 }

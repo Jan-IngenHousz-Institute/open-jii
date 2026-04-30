@@ -8,6 +8,11 @@ interface DeltaConfig {
   schemaName: string;
   requestTimeout: number;
   maxRetries: number;
+  rawDataTableName: string;
+  deviceDataTableName: string;
+  rawAmbyteDataTableName: string;
+  macroDataTableName: string;
+  metadataTableName: string;
 }
 
 @Injectable()
@@ -54,6 +59,9 @@ export class DeltaConfigService {
       }
     }
 
+    // Physical table names — reuse the existing databricks.* namespace so we don't
+    // duplicate env vars. These point at the Delta-shared centrum tables (e.g.
+    // enriched_experiment_raw_data, enriched_experiment_macro_data).
     return {
       endpoint: endpoint ?? "",
       bearerToken: bearerToken ?? "",
@@ -61,6 +69,12 @@ export class DeltaConfigService {
       schemaName: schemaName ?? "centrum",
       requestTimeout,
       maxRetries,
+      rawDataTableName: this.configService.get<string>("databricks.rawDataTableName") ?? "",
+      deviceDataTableName: this.configService.get<string>("databricks.deviceDataTableName") ?? "",
+      rawAmbyteDataTableName:
+        this.configService.get<string>("databricks.rawAmbyteDataTableName") ?? "",
+      macroDataTableName: this.configService.get<string>("databricks.macroDataTableName") ?? "",
+      metadataTableName: "experiment_table_metadata",
     };
   }
 
@@ -120,5 +134,25 @@ export class DeltaConfigService {
    */
   getSchemaName(): string {
     return this.config.schemaName;
+  }
+
+  getRawDataTableName(): string {
+    return this.config.rawDataTableName;
+  }
+
+  getDeviceDataTableName(): string {
+    return this.config.deviceDataTableName;
+  }
+
+  getRawAmbyteDataTableName(): string {
+    return this.config.rawAmbyteDataTableName;
+  }
+
+  getMacroDataTableName(): string {
+    return this.config.macroDataTableName;
+  }
+
+  getMetadataTableName(): string {
+    return this.config.metadataTableName;
   }
 }
