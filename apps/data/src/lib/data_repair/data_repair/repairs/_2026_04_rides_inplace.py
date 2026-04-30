@@ -52,7 +52,7 @@ def _reinvert_pam_payload(value) -> str | None:
     try:
         raw_json = value.toJson() if hasattr(value, "toJson") else value
         obj = json.loads(raw_json)
-    except Exception:
+    except (json.JSONDecodeError, TypeError):
         return None
     for elem in obj or []:
         for s in (elem.get("set") or []):
