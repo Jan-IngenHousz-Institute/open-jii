@@ -82,11 +82,18 @@ export class DeltaConfigService {
    * Validates the loaded configuration
    */
   private validateConfig(): void {
-    if (!this.config.endpoint || !this.config.bearerToken || !this.config.shareName) {
+    const missing: string[] = [];
+    if (!this.config.endpoint) missing.push("DELTA_ENDPOINT");
+    if (!this.config.bearerToken) missing.push("DELTA_BEARER_TOKEN");
+    if (!this.config.shareName) missing.push("DELTA_SHARE_NAME");
+    if (missing.length > 0) {
       this.logger.error("Invalid Delta Sharing configuration");
-      throw new Error(
-        "Invalid Delta Sharing configuration: DELTA_ENDPOINT, DELTA_BEARER_TOKEN, and DELTA_SHARE_NAME are required",
-      );
+      const list =
+        missing.length === 1
+          ? missing[0]
+          : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+      const verb = missing.length === 1 ? "is" : "are";
+      throw new Error(`Invalid Delta Sharing configuration: ${list} ${verb} required`);
     }
     this.logger.debug("Delta Sharing configuration validated successfully");
   }

@@ -49,11 +49,12 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
       expect(() => new DeltaConfigService(mockConfigService)).toThrow(
-        "Invalid Delta Sharing configuration: DELTA_ENDPOINT and DELTA_BEARER_TOKEN are required",
+        "Invalid Delta Sharing configuration: DELTA_ENDPOINT is required",
       );
 
       getSpy.mockRestore();
@@ -66,11 +67,12 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "";
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
       expect(() => new DeltaConfigService(mockConfigService)).toThrow(
-        "Invalid Delta Sharing configuration: DELTA_ENDPOINT and DELTA_BEARER_TOKEN are required",
+        "Invalid Delta Sharing configuration: DELTA_BEARER_TOKEN is required",
       );
 
       getSpy.mockRestore();
@@ -83,6 +85,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return undefined;
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -107,6 +110,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -124,6 +128,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -156,6 +161,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return undefined;
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -173,6 +179,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "60000";
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -190,6 +197,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "invalid";
         if (key === "delta.maxRetries") return "3";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -215,6 +223,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return undefined;
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -232,6 +241,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return "5";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
@@ -249,6 +259,7 @@ describe("DeltaConfigService", () => {
         if (key === "delta.bearerToken") return "valid-token";
         if (key === "delta.requestTimeout") return "30000";
         if (key === "delta.maxRetries") return "invalid";
+        if (key === "delta.shareName") return "test-share";
         return undefined;
       });
 
