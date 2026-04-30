@@ -1,32 +1,14 @@
 """
-2026_04_rides_inplace.py: OJD-571 / GH#1056
+OJD-571 / GH#1056. RIDES 2.0/2.1 mutate PAM.data_raw in place:
 
-The RIDES 2.0 (macro_63d68236e245) and RIDES 2.1 (macro_28cfc86e2530) macros
-do an in-place de-interleave on `PAM.data_raw`:
+    [a0, b0, a1, b1, ...]  ->  [a0, a1, ..., b0, b1, ...]
 
-    [a0, b0, a1, b1, ..., aN, bN]  ->  [a0, a1, ..., aN, b0, b1, ..., bN]
+Mobile pre-v1.16.8 leaked the mutation into bronze. Server re-runs the
+de-interleave a second time, producing unphysical NPQt/FvP_FmP/Phi2. We
+re-interleave at gold before the macro UDF.
 
-Mobile pre-v1.16.8 ran macros via `new Function("json", code)(json)` in the
-caller's heap, so `PAM.data_raw = temp1` leaks into the uploaded sample.
-Bronze stores the de-interleaved version. Server-side re-derivation runs the
-same de-interleave a second time on already-de-interleaved input -- producing
-scrambled values and unphysical derived parameters (negative Phi2, NPQt,
-FvP/FmP).
-
-The mobile fix in v1.16.8 was meant to ship 2026-04-19 but as of 2026-04-28,
-100% of post-cutoff RIDES rows in prod are still corrupt (Q6 of
-scope_ojd571_rides_corruption.sql). Fix did not actually ship. This repair
-fires on every row whose macro_id is RIDES 2.0/2.1 -- no time/version gate.
-
-Repair point: `experiment_macro_data` (gold), just before the macro UDF
-runs. Full-refresh experiment_macro_data after deploy to retroactively
-correct the ~4400 historical rows; experiment_raw_data is untouched.
-
-Predicate: macro_id IN (RIDES 2.0, RIDES 2.1).
-Idempotency: the inverse is not self-idempotent (re-applying it would
-re-corrupt). Single application is enforced by full-refresh-once + the
-streaming nature of the table thereafter; once a row is written with
-corrected macro_output, it is not re-processed.
+The inverse is not self-idempotent. Single application relies on
+full-refresh-once after deploy + streaming-append semantics thereafter.
 """
 from __future__ import annotations
 
@@ -39,9 +21,7 @@ from pyspark.sql.types import StringType
 from ..manifest import inline_repair
 
 
-# Prod UUIDs. Dev assigns different IDs per insert, so the predicate is a
-# no-op there, which is fine -- corruption only manifests in prod where
-# mobile uploads land.
+# Prod UUIDs. Dev has different IDs; predicate no-ops there, which is fine.
 _RIDES_MACRO_IDS = (
     "21aed8a2-f95b-4f28-b025-44f6d96447e7",  # Photosynthesis RIDES 2.0
     "5bbf306c-d880-4f04-ac04-dd76fe545182",  # Photosynthesis RIDES 2.1
@@ -49,18 +29,8 @@ _RIDES_MACRO_IDS = (
 
 
 def _reinterleave(arr: list) -> list:
-    """Inverse of the macro's de-interleave.
-
-    The macro builds temp1 by:
-        for i in 0,2,4,...:  temp1.push(data_raw[i])   -> ceil(N/2) channel-A
-        for i in 1,3,5,...:  temp1.push(data_raw[i])   -> floor(N/2) channel-B
-
-    So persisted[0..h)  = original even-indexed values (channel A)
-       persisted[h..N)  = original odd-indexed values  (channel B)
-    where h = ceil(N/2). To invert:
-        out[2k]   = persisted[k]
-        out[2k+1] = persisted[h + k]
-    """
+    """Re-weave [A0..A_{h-1}, B0..B_{N-h-1}] back into [A0, B0, A1, B1, ...]
+    where h = ceil(N/2). Odd N leaves the trailing A element unpaired."""
     n = len(arr)
     if n < 2:
         return arr
@@ -75,10 +45,8 @@ def _reinterleave(arr: list) -> list:
 
 
 def _reinvert_pam_payload(value) -> str | None:
-    """Walk the VARIANT payload and re-interleave each PAM set's data_raw.
-
-    Returns a JSON string; the caller wraps with parse_json on the Spark side.
-    """
+    """Re-interleave PAM.data_raw in the VARIANT payload. Returns a JSON
+    string; the caller wraps with parse_json on the Spark side."""
     if value is None:
         return None
     try:
@@ -107,7 +75,7 @@ def _reinvert_pam_udf(data: pd.Series) -> pd.Series:
         "RIDES 2.0/2.1 in-place de-interleave of PAM.data_raw. Inverse "
         "re-weaves the two halves before the macro UDF runs."
     ),
-    severity="advisory",
+    severity="apply",
 )
 def rides_pam_reinterleave(df):
     affected = F.col("macro_id").isin(list(_RIDES_MACRO_IDS))
