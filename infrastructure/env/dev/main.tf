@@ -285,6 +285,9 @@ module "node_cluster_policy" {
       whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
     },
     {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
+    },
+    {
       pypi = {
         package = "mini-racer==0.12.4"
       }
@@ -499,6 +502,10 @@ module "centrum_pipeline" {
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
       permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
