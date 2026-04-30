@@ -51,23 +51,15 @@ def inline_repair(
 
 
 def apply_inline_repairs(df: DataFrame, table_name: str) -> DataFrame:
-    """Apply every repair registered for ``table_name`` in registration order.
-    Row-count delta logging is skipped on streaming DataFrames since
-    ``df.count()`` is illegal on a streaming source."""
+    """Apply every repair registered for ``table_name`` in registration order."""
     for repair in _INLINE_REPAIRS:
         if repair.table != table_name:
             continue
         if repair.severity == "advisory":
             print(f"[REPAIR][advisory] {repair.name} ({repair.issue}): registered, not applied")
             continue
-        if df.isStreaming:
-            df = repair.fn(df)
-            print(f"[REPAIR] {repair.name} ({repair.issue}): applied (streaming, count skipped)")
-        else:
-            before = df.count()
-            df = repair.fn(df)
-            after = df.count()
-            print(f"[REPAIR] {repair.name} ({repair.issue}): rows {before} -> {after}")
+        df = repair.fn(df)
+        print(f"[REPAIR] {repair.name} ({repair.issue}): applied")
     return df
 
 
