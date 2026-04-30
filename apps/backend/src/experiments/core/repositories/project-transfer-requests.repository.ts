@@ -210,7 +210,7 @@ export class ProjectTransferRequestsRepository {
 
     // Parse the results
     const requests: BaseTransferRequest[] = selectResult.value.rows.map((row) =>
-      this.parseTransferRequestRow(row, selectResult.value.columns),
+      this.parseTransferRequestRow(row as (string | null)[], selectResult.value.columns),
     );
 
     return success(requests);
@@ -276,7 +276,10 @@ export class ProjectTransferRequestsRepository {
 
     // Parse the result
     const row = selectResult.value.rows[0];
-    const request = this.parseTransferRequestRow(row, selectResult.value.columns);
+    const request = this.parseTransferRequestRow(
+      row as (string | null)[],
+      selectResult.value.columns,
+    );
 
     return success(request);
   }

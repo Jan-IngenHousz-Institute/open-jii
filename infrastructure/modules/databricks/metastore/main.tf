@@ -13,6 +13,11 @@ resource "databricks_metastore" "this" {
   name     = var.metastore_name
   owner    = var.owner
   region   = var.region
+
+  # Delta Sharing configuration
+  delta_sharing_scope                                = var.delta_sharing_scope
+  delta_sharing_recipient_token_lifetime_in_seconds  = var.delta_sharing_recipient_token_lifetime_in_seconds
+  delta_sharing_organization_name                    = var.delta_sharing_organization_name
 }
 
 resource "databricks_metastore_assignment" "default_metastore" {
