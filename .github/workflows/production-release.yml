@@ -15,6 +15,11 @@ on:
                 required: false
                 type: string
                 default: ""
+            deploy_infrastructure:
+                description: "Deploy infrastructure (Tofu)"
+                required: false
+                type: boolean
+                default: true
             deploy_all:
                 description: "Deploy all applications regardless of changes"
                 required: false
@@ -37,6 +42,6 @@ jobs:
         with:
             environment: ${{ inputs.environment }}
             ref: ${{ inputs.ref }}
-            deploy_infrastructure: true
+            deploy_infrastructure: ${{ inputs.deploy_infrastructure }}
             deploy_all: ${{ inputs.deploy_all }}
         secrets: inherit
