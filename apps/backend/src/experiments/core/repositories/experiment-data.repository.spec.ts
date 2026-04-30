@@ -117,7 +117,7 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(dataSpy).toHaveBeenCalledWith(deltaPort.RAW_DATA_TABLE_NAME, {
-        filters: { experiment_id: experimentId },
+        filter: { op: "eq", column: "experiment_id", value: experimentId },
       });
     });
 
@@ -136,7 +136,13 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(dataSpy).toHaveBeenCalledWith(deltaPort.MACRO_DATA_TABLE_NAME, {
-        filters: { experiment_id: experimentId, macro_id: macroId },
+        filter: {
+          op: "and",
+          filters: [
+            { op: "eq", column: "experiment_id", value: experimentId },
+            { op: "eq", column: "macro_id", value: macroId },
+          ],
+        },
       });
     });
 
@@ -321,7 +327,7 @@ describe("ExperimentDataRepository", () => {
       // Argument forwarded to deltaPort
       const lastCall = vi.mocked(deltaPort.getTableData).mock.calls.at(-1)!;
       const opts = lastCall[1] as DeltaQueryOptions;
-      expect(opts.filters).toEqual({ experiment_id: experimentId });
+      expect(opts.filter).toEqual({ op: "eq", column: "experiment_id", value: experimentId });
     });
   });
 });

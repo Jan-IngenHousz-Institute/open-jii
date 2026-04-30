@@ -1,6 +1,7 @@
 import nock from "nock";
 import { vi } from "vitest";
 
+import type { DeltaFilter } from "../../../../../experiments/core/ports/delta.port";
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertSuccess } from "../../../../utils/fp-utils";
 import type { DeltaFile, DeltaMetadata } from "../shares/shares.types";
@@ -117,7 +118,7 @@ describe("DeltaDataService", () => {
         baseMetadata,
         undefined,
         undefined,
-        { experiment_id: "exp-A" },
+        { op: "eq", column: "experiment_id", value: "exp-A" },
       );
 
       assertSuccess(result);
@@ -155,7 +156,7 @@ describe("DeltaDataService", () => {
     });
   });
 
-  describe("pruneFilesByEquality", () => {
+  describe("pruneFilesByFilter", () => {
     const fileWithStats = (id: string, stats: object): DeltaFile => ({
       url: `https://example.com/${id}.parquet`,
       id,
@@ -164,10 +165,7 @@ describe("DeltaDataService", () => {
       stats: JSON.stringify(stats),
     });
 
-    it("returns the input unchanged when no filters are provided", () => {
-      const files = [fileWithStats("a", { numRecords: 1 })];
-      expect(dataService.pruneFilesByEquality(files, {})).toBe(files);
-    });
+    const eq = (column: string, value: string): DeltaFilter => ({ op: "eq", column, value });
 
     it("drops files whose [min, max] range cannot contain the filter value", () => {
       const files = [
@@ -183,7 +181,7 @@ describe("DeltaDataService", () => {
         }),
       ];
 
-      const result = dataService.pruneFilesByEquality(files, { experiment_id: "exp-500" });
+      const result = dataService.pruneFilesByFilter(files, eq("experiment_id", "exp-500"));
       expect(result.map((f) => f.id)).toEqual(["in"]);
     });
 
@@ -192,14 +190,35 @@ describe("DeltaDataService", () => {
         { ...fileWithStats("a", {}), stats: undefined } as DeltaFile,
         { ...fileWithStats("b", {}), stats: "not-json" } as DeltaFile,
       ];
-      const result = dataService.pruneFilesByEquality(files, { experiment_id: "exp-1" });
+      const result = dataService.pruneFilesByFilter(files, eq("experiment_id", "exp-1"));
       expect(result.map((f) => f.id)).toEqual(["a", "b"]);
     });
 
     it("keeps files whose stats lack min/max for the filtered column", () => {
       const files = [fileWithStats("a", { numRecords: 1, minValues: {}, maxValues: {} })];
-      const result = dataService.pruneFilesByEquality(files, { experiment_id: "exp-1" });
+      const result = dataService.pruneFilesByFilter(files, eq("experiment_id", "exp-1"));
       expect(result.map((f) => f.id)).toEqual(["a"]);
+    });
+
+    it("supports range predicates via min/max", () => {
+      const files = [
+        fileWithStats("low", {
+          numRecords: 1,
+          minValues: { ts: "2024-01-01" },
+          maxValues: { ts: "2024-01-31" },
+        }),
+        fileWithStats("hi", {
+          numRecords: 1,
+          minValues: { ts: "2024-06-01" },
+          maxValues: { ts: "2024-06-30" },
+        }),
+      ];
+      const result = dataService.pruneFilesByFilter(files, {
+        op: "gte",
+        column: "ts",
+        value: "2024-05-01",
+      });
+      expect(result.map((f) => f.id)).toEqual(["hi"]);
     });
   });
 

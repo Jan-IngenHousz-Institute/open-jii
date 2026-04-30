@@ -69,14 +69,20 @@ describe("DeltaAdapter", () => {
         .reply(200, minimalNdjson());
 
       const result = await adapter.getTableData(tableName, {
-        filters: { experiment_id: "exp-1", macro_id: "macro-9" },
+        filter: {
+          op: "and",
+          filters: [
+            { op: "eq", column: "experiment_id", value: "exp-1" },
+            { op: "eq", column: "macro_id", value: "macro-9" },
+          ],
+        },
         limitHint: 50,
       });
 
       assertSuccess(result);
       expect(receivedBody.predicateHints).toEqual([
-        "experiment_id = 'exp-1'",
-        "macro_id = 'macro-9'",
+        "`experiment_id` = 'exp-1'",
+        "`macro_id` = 'macro-9'",
       ]);
       expect(receivedBody.limitHint).toBe(50);
     });
@@ -96,11 +102,11 @@ describe("DeltaAdapter", () => {
         .reply(200, minimalNdjson());
 
       const result = await adapter.getTableData(tableName, {
-        filters: { experiment_id: "o'malley" },
+        filter: { op: "eq", column: "experiment_id", value: "o'malley" },
       });
 
       assertSuccess(result);
-      expect(receivedBody.predicateHints).toEqual(["experiment_id = 'o''malley'"]);
+      expect(receivedBody.predicateHints).toEqual(["`experiment_id` = 'o''malley'"]);
     });
 
     it("prunes files whose min/max stats prove the filter cannot match (no download attempted)", async () => {
@@ -134,7 +140,7 @@ describe("DeltaAdapter", () => {
       nock("https://example.com").get("/file0.parquet").reply(200, Buffer.from([]));
 
       const result = await adapter.getTableData(tableName, {
-        filters: { experiment_id: "exp-500" },
+        filter: { op: "eq", column: "experiment_id", value: "exp-500" },
       });
 
       assertSuccess(result);
@@ -155,7 +161,7 @@ describe("DeltaAdapter", () => {
       nock("https://example.com").get("/file1.parquet").reply(200, Buffer.from([]));
 
       const result = await adapter.getTableData(tableName, {
-        filters: { experiment_id: "exp-1" },
+        filter: { op: "eq", column: "experiment_id", value: "exp-1" },
       });
 
       assertSuccess(result);
@@ -253,7 +259,7 @@ describe("DeltaAdapter", () => {
       });
     });
 
-    it("forwards experiment_id and (optionally) identifier as filters to getTableData", async () => {
+    it("forwards experiment_id and (optionally) identifier as an AND filter to getTableData", async () => {
       const dataSpy = vi.spyOn(adapter, "getTableData").mockResolvedValue({
         isSuccess: () => true,
         isFailure: () => false,
@@ -263,7 +269,13 @@ describe("DeltaAdapter", () => {
       await adapter.getExperimentTableMetadata("exp-1", { identifier: "raw_data" });
 
       expect(dataSpy).toHaveBeenCalledWith("experiment_table_metadata", {
-        filters: { experiment_id: "exp-1", identifier: "raw_data" },
+        filter: {
+          op: "and",
+          filters: [
+            { op: "eq", column: "experiment_id", value: "exp-1" },
+            { op: "eq", column: "identifier", value: "raw_data" },
+          ],
+        },
       });
     });
   });

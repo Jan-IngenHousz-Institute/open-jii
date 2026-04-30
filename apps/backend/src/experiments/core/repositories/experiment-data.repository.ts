@@ -2,6 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
+import { compareDeltaSort } from "../../../common/modules/delta/services/filter";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
 import { STATIC_TABLE_CONFIG, MACRO_TABLE_CONFIG } from "../models/experiment-data.model";
@@ -13,7 +14,7 @@ import type {
 } from "../models/experiment-data.model";
 import { ExperimentDto } from "../models/experiment.model";
 import { DELTA_PORT } from "../ports/delta.port";
-import type { DeltaPort } from "../ports/delta.port";
+import type { DeltaFilter, DeltaPort, DeltaSort } from "../ports/delta.port";
 
 type ColumnMeta = SchemaData["columns"][number];
 
@@ -43,6 +44,11 @@ export class ExperimentDataRepository {
     columns?: string[];
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
+    /**
+     * Additional filter to AND with the experiment scoping. Use this for
+     * range / IN / etc. filters from the controller layer.
+     */
+    extraFilter?: DeltaFilter;
     page?: number;
     pageSize?: number;
   }): Promise<Result<TableDataDto[]>> {
@@ -53,6 +59,7 @@ export class ExperimentDataRepository {
       columns,
       orderBy,
       orderDirection = "ASC",
+      extraFilter,
       page = 1,
       pageSize = 5,
     } = params;
@@ -71,9 +78,12 @@ export class ExperimentDataRepository {
     if (targetResult.isFailure()) return targetResult;
     const target = targetResult.value;
 
-    const dataResult = await this.deltaPort.getTableData(target.physicalTable, {
-      filters: target.filters,
-    });
+    // Combine the experiment-scoping filter with any caller-supplied predicate.
+    const filter: DeltaFilter = extraFilter
+      ? { op: "and", filters: [target.filter, extraFilter] }
+      : target.filter;
+
+    const dataResult = await this.deltaPort.getTableData(target.physicalTable, { filter });
     if (dataResult.isFailure()) return dataResult;
 
     const flattened = this.flattenVariants(
@@ -83,13 +93,16 @@ export class ExperimentDataRepository {
       metadata,
     );
 
+    const sort: DeltaSort = orderBy
+      ? [{ column: orderBy, direction: orderDirection === "DESC" ? "desc" : "asc" }]
+      : [];
+
     const processed = this.applyClientSideQuery(flattened.columns, flattened.rows, {
       // Dropping the requested columns set narrows AFTER variant flattening so
       // callers can ask for variant-derived field names directly.
       keepColumns: columns,
       exceptColumns: columns ? [] : target.config.exceptColumns,
-      orderBy,
-      orderDirection,
+      sort,
       page: columns ? undefined : page,
       pageSize: columns ? undefined : pageSize,
     });
@@ -112,7 +125,7 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Resolve logical identifier → (physical Delta-shared table, filters, config).
+   * Resolve logical identifier → (physical Delta-shared table, scoping filter, config).
    * Macros all live in one shared table, scoped by experiment_id + macro_id.
    * Static tables are one table per identifier, scoped by experiment_id only.
    */
@@ -121,7 +134,7 @@ export class ExperimentDataRepository {
     metadata: ExperimentTableMetadata,
   ): Result<{
     physicalTable: string;
-    filters: Record<string, string>;
+    filter: DeltaFilter;
     config: TableConfig;
   }> {
     const { identifier, tableType } = metadata;
@@ -129,7 +142,13 @@ export class ExperimentDataRepository {
     if (tableType === "macro") {
       return success({
         physicalTable: this.deltaPort.MACRO_DATA_TABLE_NAME,
-        filters: { experiment_id: experimentId, macro_id: identifier },
+        filter: {
+          op: "and",
+          filters: [
+            { op: "eq", column: "experiment_id", value: experimentId },
+            { op: "eq", column: "macro_id", value: identifier },
+          ],
+        },
         config: MACRO_TABLE_CONFIG,
       });
     }
@@ -152,7 +171,7 @@ export class ExperimentDataRepository {
 
     return success({
       physicalTable,
-      filters: { experiment_id: experimentId },
+      filter: { op: "eq", column: "experiment_id", value: experimentId },
       config,
     });
   }
@@ -248,8 +267,7 @@ export class ExperimentDataRepository {
     opts: {
       keepColumns?: string[];
       exceptColumns: string[];
-      orderBy?: string;
-      orderDirection: "ASC" | "DESC";
+      sort: DeltaSort;
       page?: number;
       pageSize?: number;
     },
@@ -271,10 +289,8 @@ export class ExperimentDataRepository {
         })
       : rows;
 
-    if (opts.orderBy) {
-      const key = opts.orderBy;
-      const dir = opts.orderDirection === "DESC" ? -1 : 1;
-      working = [...working].sort((a, b) => compareValues(a[key], b[key]) * dir);
+    if (opts.sort.length > 0) {
+      working = [...working].sort(compareDeltaSort<Record<string, unknown>>(opts.sort));
     }
 
     const totalRows = working.length;
@@ -351,12 +367,3 @@ export function parseVariantSchema(schema: string): { name: string; type: string
   return fields;
 }
 
-function compareValues(a: unknown, b: unknown): number {
-  if (a === b) return 0;
-  if (a == null) return -1;
-  if (b == null) return 1;
-  if (typeof a === "number" && typeof b === "number") return a - b;
-  const aStr = typeof a === "string" ? a : JSON.stringify(a);
-  const bStr = typeof b === "string" ? b : JSON.stringify(b);
-  return aStr.localeCompare(bStr);
-}

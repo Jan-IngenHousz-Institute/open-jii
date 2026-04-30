@@ -1,11 +1,16 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
-import type { DeltaPort, DeltaQueryOptions } from "../../../experiments/core/ports/delta.port";
+import type {
+  DeltaFilter,
+  DeltaPort,
+  DeltaQueryOptions,
+} from "../../../experiments/core/ports/delta.port";
 import { Result, success, failure } from "../../utils/fp-utils";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
 import { DeltaConfigService } from "./services/config/config.service";
 import { DeltaDataService } from "./services/data/data.service";
+import { compileDeltaFilterToPredicateHints } from "./services/filter";
 import { DeltaTablesService } from "./services/tables/tables.service";
 
 /**
@@ -50,11 +55,12 @@ export class DeltaAdapter implements DeltaPort {
   ): Promise<Result<ExperimentTableMetadata[]>> {
     const { identifier, includeSchemas = true } = options;
 
-    const filters: Record<string, string> = { experiment_id: experimentId };
-    if (identifier) filters.identifier = identifier;
+    const parts: DeltaFilter[] = [{ op: "eq", column: "experiment_id", value: experimentId }];
+    if (identifier) parts.push({ op: "eq", column: "identifier", value: identifier });
+    const filter: DeltaFilter = parts.length === 1 ? parts[0] : { op: "and", filters: parts };
 
     const dataResult = await this.getTableData(this.configService.getMetadataTableName(), {
-      filters,
+      filter,
     });
     if (dataResult.isFailure()) return failure(dataResult.error);
 
@@ -78,20 +84,20 @@ export class DeltaAdapter implements DeltaPort {
   async getTableData(tableName: string, opts: DeltaQueryOptions = {}): Promise<Result<SchemaData>> {
     const shareName = this.configService.getShareName();
     const schemaName = this.configService.getSchemaName();
-    const { filters, columns, limitHint } = opts;
+    const { filter, columns, limitHint } = opts;
 
     this.logger.debug(
-      `Querying ${shareName}.${schemaName}.${tableName} (filters=${JSON.stringify(filters)}, limitHint=${limitHint})`,
+      `Querying ${shareName}.${schemaName}.${tableName} (filter=${filter ? "yes" : "none"}, limitHint=${limitHint})`,
     );
 
     const queryResult = await this.tablesService.queryTable(shareName, schemaName, tableName, {
-      predicateHints: filters ? this.buildPredicateHints(filters) : undefined,
+      predicateHints: filter ? compileDeltaFilterToPredicateHints(filter) : undefined,
       limitHint,
     });
     if (queryResult.isFailure()) return failure(queryResult.error);
 
-    const prunedFiles = filters
-      ? this.dataService.pruneFilesByEquality(queryResult.value.files, filters)
+    const prunedFiles = filter
+      ? this.dataService.pruneFilesByFilter(queryResult.value.files, filter)
       : queryResult.value.files;
 
     this.logger.debug(`File pruning: ${queryResult.value.files.length} → ${prunedFiles.length}`);
@@ -101,11 +107,7 @@ export class DeltaAdapter implements DeltaPort {
       queryResult.value.metadata,
       limitHint,
       columns ? { columns } : undefined,
-      filters,
+      filter,
     );
-  }
-
-  private buildPredicateHints(filters: Record<string, string>): string[] {
-    return Object.entries(filters).map(([col, value]) => `${col} = '${value.replace(/'/g, "''")}'`);
   }
 }
