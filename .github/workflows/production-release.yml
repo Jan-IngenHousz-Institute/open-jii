@@ -30,6 +30,11 @@ on:
                 required: false
                 type: boolean
                 default: false
+            deploy_app:
+                description: "Comma-separated apps to force deploy (e.g. web,backend). Leave empty for change detection. Options: web, backend, migration, databricks, docs, macro-sandbox"
+                required: false
+                type: string
+                default: ""
 
 concurrency:
     group: production-deploy-${{ inputs.environment }}
@@ -49,4 +54,5 @@ jobs:
             ref: ${{ inputs.ref }}
             deploy_infrastructure: ${{ inputs.deploy_infrastructure }}
             deploy_all: ${{ inputs.deploy_all }}
+            deploy_app: ${{ inputs.deploy_app || '' }}
         secrets: inherit
