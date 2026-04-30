@@ -27,11 +27,6 @@ artifacts:
     path: ./src/lib/enrich
     build: python3 -m build
 
-  multispeq_wheel:
-    type: whl
-    path: ./src/lib/multispeq
-    build: python3 -m build
-
   openjii_wheel:
     type: whl
     path: ./src/lib/openjii
