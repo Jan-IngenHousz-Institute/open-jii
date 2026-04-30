@@ -1,8 +1,13 @@
 name: PROD Release Workflow
+run-name: "PROD Release: ${{ inputs.title }}"
 
 on:
     workflow_dispatch:
         inputs:
+            title:
+                description: "Release title shown in run history (e.g. 'v1.2.3 hotfix login')"
+                required: true
+                type: string
             environment:
                 description: "Target environment for production deployment"
                 required: true
@@ -15,11 +20,21 @@ on:
                 required: false
                 type: string
                 default: ""
+            deploy_infrastructure:
+                description: "Deploy infrastructure (Tofu)"
+                required: false
+                type: boolean
+                default: true
             deploy_all:
                 description: "Deploy all applications regardless of changes"
                 required: false
                 type: boolean
                 default: false
+            deploy_app:
+                description: "Comma-separated apps to force deploy (e.g. web,backend). Leave empty for change detection. Options: web, backend, migration, databricks, docs, macro-sandbox"
+                required: false
+                type: string
+                default: ""
 
 concurrency:
     group: production-deploy-${{ inputs.environment }}
@@ -37,6 +52,7 @@ jobs:
         with:
             environment: ${{ inputs.environment }}
             ref: ${{ inputs.ref }}
-            deploy_infrastructure: true
+            deploy_infrastructure: ${{ inputs.deploy_infrastructure }}
             deploy_all: ${{ inputs.deploy_all }}
+            deploy_app: ${{ inputs.deploy_app || '' }}
         secrets: inherit

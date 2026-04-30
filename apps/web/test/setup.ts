@@ -72,6 +72,7 @@ vi.mock("@repo/i18n", () => ({
   }),
   defaultLocale: "en-US",
   locales: ["en-US"],
+  isKnownLocale: (locale: string) => ["en-US", "de-DE"].includes(locale),
   namespaces: ["common", "questionCard", "registration", "settings", "experiments"],
   createInstance: vi.fn(() => ({
     use: vi.fn().mockReturnThis(),
