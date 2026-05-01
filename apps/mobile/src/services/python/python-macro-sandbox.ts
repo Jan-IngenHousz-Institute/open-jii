@@ -38,7 +38,10 @@ export const pythonMacroSandboxHtml = `
         '__wrapped_src__ = "def __macro__(json):\\\\n" + textwrap.indent(__user_code__, "    ")\\n' +
         'exec(compile(__wrapped_src__, "<macro>", "exec"), globals())\\n' +
         '__result__ = __macro__(__json_input__)\\n' +
-        '__result_holder__.result = json.dumps(__result__)\\n';
+        '__result_holder__.result = json.dumps(__result__)\\n' +
+        // Pyodide's globals persist across runPythonAsync calls; drop the
+        // per-invocation temporaries so they don't accumulate over a session.
+        'del __json_input__, __user_code__, __wrapped_src__, __result__, __macro__\\n';
       await pyodide.runPythonAsync(wrapped);
       var raw = resultHolder.result;
       if (raw == null) {
