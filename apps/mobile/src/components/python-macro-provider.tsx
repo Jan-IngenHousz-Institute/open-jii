@@ -15,6 +15,14 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
   const requestIdRef = useRef(0);
   const webViewRef = useRef<WebView>(null);
 
+  const rejectAllPending = useCallback((reason: string) => {
+    const map = pendingRef.current;
+    if (map.size === 0) return;
+    const err = new Error(reason);
+    map.forEach((pending) => pending.reject(err));
+    map.clear();
+  }, []);
+
   const runPythonMacro = useCallback(async (code: string, json: object): Promise<MacroOutput> => {
     const requestId = `py-${++requestIdRef.current}`;
     return new Promise<MacroOutput>((resolve, reject) => {
@@ -31,8 +39,9 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
     registerPythonMacroRunner(runPythonMacro);
     return () => {
       registerPythonMacroRunner(null);
+      rejectAllPending("Python sandbox unmounted");
     };
-  }, [runPythonMacro]);
+  }, [runPythonMacro, rejectAllPending]);
 
   const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
     try {
@@ -57,6 +66,20 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
+  const handleWebViewError = useCallback(
+    (event: { nativeEvent: { description?: string } }) => {
+      const description = event.nativeEvent.description ?? "unknown";
+      console.error("[macro] (Python) WebView error:", description);
+      rejectAllPending(`Python sandbox WebView error: ${description}`);
+    },
+    [rejectAllPending],
+  );
+
+  const handleProcessTerminated = useCallback(() => {
+    console.error("[macro] (Python) WebView process terminated");
+    rejectAllPending("Python sandbox process terminated (likely OOM)");
+  }, [rejectAllPending]);
+
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>{children}</View>
@@ -77,6 +100,10 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
           originWhitelist={["*"]}
           source={{ html: pythonMacroSandboxHtml }}
           onMessage={handleMessage}
+          onError={handleWebViewError}
+          onHttpError={handleWebViewError}
+          onContentProcessDidTerminate={handleProcessTerminated}
+          onRenderProcessGone={handleProcessTerminated}
           style={{ width: 1, height: 1 }}
         />
       </View>
