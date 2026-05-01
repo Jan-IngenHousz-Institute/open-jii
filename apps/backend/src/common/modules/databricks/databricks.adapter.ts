@@ -6,9 +6,6 @@ import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 import type { ExportMetadata } from "../../../experiments/core/models/experiment-data-exports.model";
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
-import type { MacroDto } from "../../../macros/core/models/macro.model";
-import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
-import { ErrorCodes } from "../../utils/error-codes";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -20,15 +17,9 @@ import { JobLifecycleState, JobResultState } from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
-import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
-import type {
-  ImportWorkspaceObjectResponse,
-  DeleteWorkspaceObjectResponse,
-} from "./services/workspace/workspace.types";
-import { WorkspaceObjectFormat } from "./services/workspace/workspace.types";
 
 @Injectable()
-export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
+export class DatabricksAdapter implements ExperimentDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
   // Schema and catalog names exposed to repository
@@ -47,7 +38,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     private readonly sqlService: DatabricksSqlService,
     private readonly filesService: DatabricksFilesService,
     private readonly configService: DatabricksConfigService,
-    private readonly workspaceService: DatabricksWorkspaceService,
   ) {
     this.CATALOG_NAME = this.configService.getCatalogName();
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
@@ -399,112 +389,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     }, []);
 
     return success(failedExports);
-  }
-
-  /**
-   * Upload macro code file to Databricks workspace
-   * Uses the pre-computed filename and adds appropriate file extension based on the language
-   * @param params - The macro filename, code, and language to upload
-   * @returns Result containing the import response
-   */
-  async uploadMacroCode({
-    filename,
-    code,
-    language,
-  }: Pick<MacroDto, "filename" | "code" | "language">): Promise<
-    Result<ImportWorkspaceObjectResponse>
-  > {
-    // Determine file extension based on language
-    let fileExtension: string | undefined;
-    switch (language) {
-      case "python":
-        fileExtension = ".py";
-        break;
-      case "r":
-        fileExtension = ".r";
-        break;
-      case "javascript":
-        fileExtension = ".js";
-        break;
-      default:
-        fileExtension = undefined;
-    }
-
-    const fileName = fileExtension ? `${filename}${fileExtension}` : filename;
-
-    this.logger.log({
-      msg: "Uploading macro code",
-      operation: "uploadMacroCode",
-      filename,
-      language,
-      fileName,
-    });
-
-    // Construct the workspace path for the macro
-    const workspacePath = `/Shared/macros/${fileName}`;
-
-    // Upload the macro code to Databricks workspace
-    return await this.workspaceService.importWorkspaceObject({
-      content: code,
-      format: WorkspaceObjectFormat.RAW,
-      overwrite: true,
-      path: workspacePath,
-    });
-  }
-
-  /**
-   * Delete macro code from Databricks workspace
-   * Uses the pre-computed filename directly
-   * @param filename - The filename of the macro to delete
-   * @returns Result containing the delete response
-   */
-  async deleteMacroCode(filename: string): Promise<Result<DeleteWorkspaceObjectResponse>> {
-    this.logger.log({
-      msg: "Deleting macro code",
-      operation: "deleteMacroCode",
-      filename,
-    });
-
-    // Construct the workspace path for the macro - we need to determine the extension
-    // For now, we'll try common extensions (this could be improved by storing extension separately)
-    const extensions = [".py", ".r", ".js", ""];
-
-    for (const ext of extensions) {
-      const workspacePath = `/Shared/macros/${filename}${ext}`;
-
-      const deleteResult = await this.workspaceService.deleteWorkspaceObject({
-        path: workspacePath,
-        recursive: false,
-      });
-
-      // If deletion was successful or file was not found, we're done
-      if (deleteResult.isSuccess()) {
-        this.logger.log({
-          msg: "Successfully deleted macro",
-          operation: "deleteMacroCode",
-          workspacePath,
-          status: "success",
-        });
-        return deleteResult;
-      }
-
-      // If it's not a "not found" error, return the error
-      if (!deleteResult.error.message.includes("does not exist")) {
-        return deleteResult;
-      }
-    }
-
-    // If we get here, the file wasn't found with any extension
-    this.logger.warn({
-      msg: "Macro file not found",
-      errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
-      operation: "deleteMacroCode",
-      filename,
-    });
-    return this.workspaceService.deleteWorkspaceObject({
-      path: `/Shared/macros/${filename}`,
-      recursive: false,
-    });
   }
 
   /**

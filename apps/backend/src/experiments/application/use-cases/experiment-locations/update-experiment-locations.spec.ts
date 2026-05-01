@@ -260,15 +260,11 @@ describe("UpdateExperimentLocationsUseCase", () => {
       },
     ];
 
-    try {
-      const result = await useCase.execute(experiment.id, locationsToUpdate, testUserId);
+    const result = await useCase.execute(experiment.id, locationsToUpdate, testUserId);
 
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("You do not have access to this experiment");
-    } finally {
-      vi.restoreAllMocks();
-    }
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should not affect locations of other experiments", async () => {
@@ -351,18 +347,13 @@ describe("UpdateExperimentLocationsUseCase", () => {
       failure(AppError.internal("Database transaction failed")),
     );
 
-    try {
-      // Act
-      const result = await useCase.execute(experiment.id, locationsToUpdate, testUserId);
+    // Act
+    const result = await useCase.execute(experiment.id, locationsToUpdate, testUserId);
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to update locations");
-      expect(result.error.message).toContain("Database transaction failed");
-    } finally {
-      // Restore original method
-      vi.restoreAllMocks();
-    }
+    // Assert
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to update locations");
+    expect(result.error.message).toContain("Database transaction failed");
   });
 });

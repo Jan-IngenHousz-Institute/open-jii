@@ -231,10 +231,12 @@ describe("NewProtocolForm", () => {
       const codeEditor = screen.getByTestId("code-editor");
       const newCode = JSON.stringify([{ averages: 2 }]);
 
-      // fireEvent: userEvent.type interprets curly braces as special keys
+      // fireEvent: userEvent.type interprets curly braces as special keys.
       fireEvent.change(codeEditor, { target: { value: newCode } });
 
-      expect(codeEditor).toHaveValue(newCode);
+      await waitFor(() => {
+        expect(codeEditor).toHaveValue(newCode);
+      });
     });
 
     it("should show next and back buttons on step 2", async () => {

@@ -5,25 +5,29 @@ import { useIotCommunication } from "./useIotCommunication";
 
 // Mock the IoT package
 vi.mock("@repo/iot", () => ({
-  MultispeqDriver: vi.fn().mockImplementation(() => ({
-    initialize: vi.fn(),
-    execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
-    getDeviceInfo: vi.fn().mockResolvedValue({
-      device_name: "Test Device",
-      device_version: "1.0.0",
-      device_battery: 85,
-    }),
-    destroy: vi.fn().mockResolvedValue(undefined),
-  })),
-  GenericDeviceDriver: vi.fn().mockImplementation(() => ({
-    initialize: vi.fn(),
-    execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
-    getDeviceInfo: vi.fn().mockResolvedValue({
-      device_name: "Generic Device",
-      device_version: "1.0.0",
-    }),
-    destroy: vi.fn().mockResolvedValue(undefined),
-  })),
+  MultispeqDriver: vi.fn(function () {
+    return {
+      initialize: vi.fn(),
+      execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
+      getDeviceInfo: vi.fn().mockResolvedValue({
+        device_name: "Test Device",
+        device_version: "1.0.0",
+        device_battery: 85,
+      }),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+  GenericDeviceDriver: vi.fn(function () {
+    return {
+      initialize: vi.fn(),
+      execute: vi.fn().mockResolvedValue({ success: true, data: { test: "data" } }),
+      getDeviceInfo: vi.fn().mockResolvedValue({
+        device_name: "Generic Device",
+        device_version: "1.0.0",
+      }),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
   GENERIC_BLE_UUIDS: {
     SERVICE: "generic-service",
     WRITE: "generic-write",
@@ -116,6 +120,11 @@ describe("useIotCommunication", () => {
     });
 
     it("errors when connecting multispeq via bluetooth (BLE not supported)", async () => {
+      // The hook logs the thrown connection error via console.error; expected here.
+      vi.spyOn(console, "error").mockImplementation(() => {
+        // no-op
+      });
+
       const { result } = renderHook(() => useIotCommunication("multispeq", "bluetooth"));
 
       void result.current.connect();
@@ -211,6 +220,11 @@ describe("useIotCommunication", () => {
 
   describe("device disconnect", () => {
     it("resets state when device disconnects via transport status change", async () => {
+      // The hook logs the disconnect via console.debug; expected here.
+      vi.spyOn(console, "debug").mockImplementation(() => {
+        // no-op
+      });
+
       // Capture the onStatusChanged callback so we can trigger it
       let statusCallback: ((connected: boolean, error?: Error) => void) | undefined;
       const { WebSerialAdapter } = await import("@repo/iot/transport/web");

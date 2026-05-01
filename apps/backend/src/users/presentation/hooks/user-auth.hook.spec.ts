@@ -1,20 +1,9 @@
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
-import { getSessionFromCtx } from "better-auth/api";
 
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import type { UserRepository } from "../../core/repositories/user.repository";
 import { UserAuthHook } from "./user-auth.hook";
-
-vi.mock("better-auth/api", async (importOriginal: () => Promise<Record<string, unknown>>) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    getSessionFromCtx: vi.fn(),
-  };
-});
-
-const mockGetSessionFromCtx = vi.mocked(getSessionFromCtx);
 
 function createMockContext(
   overrides: {
@@ -61,13 +50,13 @@ describe("UserAuthHook", () => {
     }
 
     beforeEach(() => {
-      mockGetSessionFromCtx.mockResolvedValue({
+      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
         user: { id: "user-123", email: null, registered: false },
-      } as unknown as Awaited<ReturnType<typeof getSessionFromCtx>>);
+      });
     });
 
     it("should return early if no session", async () => {
-      mockGetSessionFromCtx.mockResolvedValue(null);
+      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue(null);
       const ctx = createBeforeHookContext("new@example.com");
 
       await hook.handleEmailOtpSignInBefore(ctx);
@@ -76,9 +65,9 @@ describe("UserAuthHook", () => {
     });
 
     it("should return early if user is registered and has a valid email", async () => {
-      mockGetSessionFromCtx.mockResolvedValue({
+      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
         user: { id: "user-123", email: "existing@example.com", registered: true },
-      } as unknown as Awaited<ReturnType<typeof getSessionFromCtx>>);
+      } as any);
       const ctx = createBeforeHookContext("new@example.com");
 
       await hook.handleEmailOtpSignInBefore(ctx);

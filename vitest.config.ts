@@ -13,6 +13,8 @@ export default defineConfig({
   },
   ...sharedConfig,
   test: {
+    isolate: false,
+    pool: "threads",
     projects: [
       {
         root: "./packages",
@@ -26,7 +28,7 @@ export default defineConfig({
         root: "./tooling",
         test: {
           ...sharedConfig.test,
-          // Project-specific configuration for packages
+          // Project-specific configuration for tooling
           // ...
         },
       },

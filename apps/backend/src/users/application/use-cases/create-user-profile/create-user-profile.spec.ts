@@ -22,7 +22,6 @@ describe("CreateUserProfileUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
