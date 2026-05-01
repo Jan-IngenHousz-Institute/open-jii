@@ -6,8 +6,10 @@ import { useCopyToClipboard } from "./useCopyToClipboard";
 describe("useCopyToClipboard", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    Object.assign(navigator, {
-      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      writable: true,
+      configurable: true,
     });
   });
 
@@ -61,8 +63,10 @@ describe("useCopyToClipboard", () => {
 
   it("logs error when copy fails", async () => {
     const error = new Error("Copy failed");
-    Object.assign(navigator, {
-      clipboard: { writeText: vi.fn().mockRejectedValue(error) },
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockRejectedValue(error) },
+      writable: true,
+      configurable: true,
     });
     const consoleSpy = vi
       .spyOn(console, "error")
