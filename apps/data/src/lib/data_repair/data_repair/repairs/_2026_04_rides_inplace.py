@@ -7,16 +7,6 @@ Mobile pre-v1.16.8 leaked the mutation into bronze. Server re-runs the
 de-interleave a second time, producing unphysical NPQt/FvP_FmP/Phi2. We
 re-interleave at gold before the macro UDF.
 
-Two layers of gating:
-  1. Framework predicate: macro_id IN (RIDES 2.0, 2.1).
-  2. Content signature inside _reinvert_pam_payload: halves of PAM.data_raw
-     are in disjoint value ranges <=> data was de-interleaved by the macro.
-     Already-interleaved (clean) data has channels mixed each step, so any
-     halving spans both ranges. Self-skipping if the macro never ran.
-
-Stale clients on pre-v1.16.8 mobile keep producing corrupt uploads after
-v1.16.8 ships, so a processed_timestamp cutoff is unreliable. The signature
-discriminates per-row regardless of upload time.
 """
 from __future__ import annotations
 
