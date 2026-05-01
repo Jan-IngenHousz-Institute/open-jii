@@ -7,8 +7,6 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
-import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
-import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 // Use Cases
 import { AddCompatibleProtocolsUseCase } from "./application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "./application/use-cases/create-macro/create-macro";
@@ -23,7 +21,6 @@ import { UpdateMacroUseCase } from "./application/use-cases/update-macro/update-
 // Ports
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { CACHE_PORT } from "./core/ports/cache.port";
-import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { LAMBDA_PORT } from "./core/ports/lambda.port";
 // Repositories
 import { MacroProtocolRepository } from "./core/repositories/macro-protocol.repository";
@@ -33,14 +30,10 @@ import { MacroWebhookController } from "./presentation/macro-webhook.controller"
 import { MacroController } from "./presentation/macro.controller";
 
 @Module({
-  imports: [DatabricksModule, AnalyticsModule, AwsModule, CacheModule],
+  imports: [AnalyticsModule, AwsModule, CacheModule],
   controllers: [MacroController, MacroWebhookController],
   providers: [
     // Ports and Adapters
-    {
-      provide: DATABRICKS_PORT,
-      useExisting: DatabricksAdapter,
-    },
     {
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,

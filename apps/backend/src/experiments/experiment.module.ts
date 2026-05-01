@@ -10,7 +10,6 @@ import { DatabricksModule } from "../common/modules/databricks/databricks.module
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
-import { DATABRICKS_PORT as MACRO_DATABRICKS_PORT } from "../macros/core/ports/databricks.port";
 import { MacroModule } from "../macros/macro.module";
 import { CreateProtocolUseCase } from "../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
@@ -125,10 +124,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     {
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
-    },
-    {
-      provide: MACRO_DATABRICKS_PORT,
-      useExisting: DatabricksAdapter,
     },
 
     // Repositories
