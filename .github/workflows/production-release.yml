@@ -35,6 +35,11 @@ on:
                 required: false
                 type: string
                 default: ""
+            dry_run:
+                description: "Skip deploy and only print which PRs would be labeled (for testing)"
+                required: false
+                type: boolean
+                default: false
 
 concurrency:
     group: production-deploy-${{ inputs.environment }}
@@ -48,6 +53,7 @@ permissions:
 jobs:
     deploy-environment:
         name: Deploy to ${{ inputs.environment }}
+        if: ${{ !inputs.dry_run }}
         uses: ./.github/workflows/deploy.yml
         with:
             environment: ${{ inputs.environment }}
@@ -56,3 +62,119 @@ jobs:
             deploy_all: ${{ inputs.deploy_all }}
             deploy_app: ${{ inputs.deploy_app || '' }}
         secrets: inherit
+
+    label-deployed-prs:
+        name: Label Deployed PRs
+        needs: deploy-environment
+        if: ${{ !failure() && !cancelled() && (needs.deploy-environment.result == 'success' || needs.deploy-environment.result == 'skipped') }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: write
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Label PRs with release label
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  DRY_RUN: ${{ inputs.dry_run }}
+              run: |
+                  set -euo pipefail
+
+                  # Determine the release branch from inputs or the triggering ref
+                  INPUT_REF="${{ inputs.ref }}"
+                  TRIGGER_BRANCH="${{ github.ref_name }}"
+
+                  if [[ "$INPUT_REF" =~ ^release/[0-9]{8}$ ]]; then
+                    RELEASE_BRANCH="$INPUT_REF"
+                  elif [[ "$TRIGGER_BRANCH" =~ ^release/[0-9]{8}$ ]]; then
+                    RELEASE_BRANCH="$TRIGGER_BRANCH"
+                  else
+                    echo "No release branch detected (ref=$INPUT_REF, trigger=$TRIGGER_BRANCH). Skipping labeling."
+                    exit 0
+                  fi
+
+                  # Extract DDMMYYYY date from branch name
+                  RELEASE_DATE="${RELEASE_BRANCH#release/}"
+                  LABEL_NAME="releaseProd-${RELEASE_DATE}"
+                  echo "Release branch : $RELEASE_BRANCH"
+                  echo "Label          : $LABEL_NAME"
+                  echo "Dry run        : ${DRY_RUN:-false}"
+
+                  git fetch --all 
+
+                  # Convert DDMMYYYY → YYYYMMDD for chronological comparison
+                  to_sortable() { local d="$1"; echo "${d:4:4}${d:2:2}${d:0:2}"; }
+                  CURRENT_SORTABLE=$(to_sortable "$RELEASE_DATE")
+
+                  # Find the most recent release branch that is older than this one
+                  PREVIOUS_BRANCH=""
+                  PREVIOUS_SORTABLE=""
+                  while IFS= read -r line; do
+                    branch=$(echo "$line" | sed 's|.*origin/||' | xargs)
+                    if [[ "$branch" =~ ^release/([0-9]{8})$ ]] && [[ "$branch" != "$RELEASE_BRANCH" ]]; then
+                      date="${BASH_REMATCH[1]}"
+                      sortable=$(to_sortable "$date")
+                      if [[ "$sortable" < "$CURRENT_SORTABLE" ]]; then
+                        if [[ -z "$PREVIOUS_SORTABLE" || "$sortable" > "$PREVIOUS_SORTABLE" ]]; then
+                          PREVIOUS_SORTABLE="$sortable"
+                          PREVIOUS_BRANCH="origin/$branch"
+                        fi
+                      fi
+                    fi
+                  done < <(git branch -r | grep 'origin/release/')
+
+                  echo "Previous release branch: ${PREVIOUS_BRANCH:-none}"
+
+                  if [ -z "$PREVIOUS_BRANCH" ]; then
+                    echo "No previous release branch found — cannot determine PR range. Skipping."
+                    exit 0
+                  fi
+
+                  RANGE="${PREVIOUS_BRANCH}..origin/${RELEASE_BRANCH}"
+                  echo "Commit range: $RANGE"
+
+                  # Extract PR numbers from commit messages
+                  # Handles regular merges ("Merge pull request #NNN") and squash merges ("Title (#NNN)")
+                  PR_NUMBERS=$(git log "$RANGE" --oneline | grep -oP '#\d+' | tr -d '#' | sort -u)
+
+                  if [ -z "$PR_NUMBERS" ]; then
+                    echo "No PRs found in range."
+                    exit 0
+                  fi
+
+                  echo "Found PRs: $(echo "$PR_NUMBERS" | tr '\n' ' ')"
+
+                  if [ "${DRY_RUN:-false}" = "true" ]; then
+                    echo "[DRY RUN] Would create label '$LABEL_NAME' and apply it to PRs above."
+                    exit 0
+                  fi
+
+                  REPO="${{ github.repository }}"
+
+                  # Create the label if it doesn't exist
+                  if ! gh label list --repo "$REPO" --json name --jq '.[].name' | grep -qx "$LABEL_NAME"; then
+                    gh label create "$LABEL_NAME" \
+                      --color "0075ca" \
+                      --description "Deployed to production on ${RELEASE_DATE:0:2}/${RELEASE_DATE:2:2}/${RELEASE_DATE:4:4}" \
+                      --repo "$REPO"
+                    echo "Created label: $LABEL_NAME"
+                  fi
+
+                  LABELED=0
+                  FAILED=0
+                  for PR in $PR_NUMBERS; do
+                    if gh pr edit "$PR" --add-label "$LABEL_NAME" --repo "$REPO" 2>/dev/null; then
+                      echo "✓ #$PR"
+                      LABELED=$((LABELED + 1))
+                    else
+                      echo "✗ #$PR (not found or already closed)"
+                      FAILED=$((FAILED + 1))
+                    fi
+                  done
+
+                  echo ""
+                  echo "Done: $LABELED labeled, $FAILED skipped."
