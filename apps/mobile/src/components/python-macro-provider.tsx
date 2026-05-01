@@ -15,6 +15,11 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
   const requestIdRef = useRef(0);
   const webViewRef = useRef<WebView>(null);
 
+  // Pyodide is a single-threaded shared instance; concurrent runMacro calls
+  // race on the shared __result_holder__ global. Serialize through this chain
+  // so only one macro is in flight at a time.
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+
   const rejectAllPending = useCallback((reason: string) => {
     const map = pendingRef.current;
     if (map.size === 0) return;
@@ -24,15 +29,20 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const runPythonMacro = useCallback(async (code: string, json: object): Promise<MacroOutput> => {
-    const requestId = `py-${++requestIdRef.current}`;
-    return new Promise<MacroOutput>((resolve, reject) => {
-      pendingRef.current.set(requestId, { resolve, reject });
-      const payload = { requestId, code, json };
-      const msg = JSON.stringify(payload);
-      webViewRef.current?.injectJavaScript(
-        `window.postMessage(${JSON.stringify(msg)}, '*'); true;`,
-      );
-    });
+    const next = queueRef.current.then(
+      () =>
+        new Promise<MacroOutput>((resolve, reject) => {
+          const requestId = `py-${++requestIdRef.current}`;
+          pendingRef.current.set(requestId, { resolve, reject });
+          const payload = { requestId, code, json };
+          const msg = JSON.stringify(payload);
+          webViewRef.current?.injectJavaScript(
+            `window.postMessage(${JSON.stringify(msg)}, '*'); true;`,
+          );
+        }),
+    );
+    queueRef.current = next.catch(() => undefined);
+    return next;
   }, []);
 
   useEffect(() => {
