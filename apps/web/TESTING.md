@@ -16,6 +16,23 @@ test/
     └── server.ts    # MSW server + mount()
 ```
 
+## `isolate: false` — what it means for your tests
+
+`vitest.config.ts` sets `isolate: false` so all test files in a worker share one module cache. Cold-starting jsdom per file is the main cost of `isolate: true`, and skipping it roughly doubles suite throughput.
+
+The trade-off: **a `vi.mock(...)` in one file can leak into another file's module cache**. Mitigations in [test/setup.ts](test/setup.ts):
+
+- **`vi.resetModules()` in `afterAll`** — `setupFiles` hooks run per file, so this flushes the shared cache between files. The next file re-imports everything with only its own mock registrations in effect.
+- **`vi.clearAllMocks()` in `afterEach`** — clears call history between tests. Does **not** touch implementations.
+- **`beforeEach` re-applies `next/navigation` defaults** — because `clearAllMocks` preserves a test's `mockReturnValue(...)`, which would otherwise leak.
+
+### Practical rules
+
+- **Prefer MSW over `vi.mock` for data-fetching hooks** (see below). MSW doesn't touch the module graph, so it's immune to this whole class of issue.
+- **Avoid `vi.mock("./some-local-module", ...)`**. If you stub an in-repo module, the stub is file-scoped *in principle* but cached *in practice* until the next `resetModules`. If another file imports the real module first, or the same file in the same worker, ordering gets flaky. Use real components + MSW, or lift a callback prop instead.
+- **Per-test `vi.mocked(...).mockReturnValue(...)` is fine** — the mock lives in the global setup, not in a file-scoped factory. Just reset defaults yourself if you're not mocking something `setup.ts` already resets (only `next/navigation` gets free reset right now).
+- **Partial overrides of `next/navigation`** (e.g. re-mocking with just `{ redirect }`) are supported — `setup.ts`'s `beforeEach` swallows the "export not defined" crash from vitest's mock proxy.
+
 ## Global mocks (`test/setup.ts`)
 
 These are already mocked globally. **Do not re-declare them in test files.**
@@ -67,7 +84,7 @@ vi.unmock("~/app/actions/auth");
 
 ## MSW + `server.mount()` — preferred for API mocking
 
-**Prefer `server.mount()` over `vi.mock()` on hooks that call the API.** This lets hooks, query state, and data flow run for real — the test only controls the network boundary.
+**Prefer `server.mount()` over `vi.mock()` on hooks that call the API.** This lets hooks, query state, and data flow run for real — the test only controls the network boundary. Under `isolate: false` it's also the only API-mocking strategy that's immune to cross-file cache poisoning.
 
 ```diff
 # ❌ Avoid: mocking the hook

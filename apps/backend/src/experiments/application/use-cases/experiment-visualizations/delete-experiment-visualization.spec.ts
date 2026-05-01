@@ -24,8 +24,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
     useCase = testApp.module.get(DeleteExperimentVisualizationUseCase);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
     experimentRepository = testApp.module.get(ExperimentRepository);
-
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -383,17 +381,13 @@ describe("DeleteExperimentVisualizationUseCase", () => {
         }),
       );
 
-      try {
-        // Act
-        const result = await useCase.execute(visualizationId, testUserId);
+      // Act
+      const result = await useCase.execute(visualizationId, testUserId);
 
-        // Assert
-        expect(result.isFailure()).toBe(true);
-        assertFailure(result);
-        expect(result.error.message).toContain("You do not have access to this experiment");
-      } finally {
-        vi.restoreAllMocks();
-      }
+      // Assert
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("You do not have access to this experiment");
     });
   });
 });

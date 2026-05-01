@@ -19,7 +19,6 @@ describe("GetExperimentMetadataUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(GetExperimentMetadataUseCase);
     metadataRepository = testApp.module.get(ExperimentMetadataRepository);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

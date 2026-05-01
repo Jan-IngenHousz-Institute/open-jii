@@ -36,9 +36,6 @@ describe("ProjectTransferRequestsRepository", () => {
     await testApp.beforeEach();
     repository = testApp.module.get(ProjectTransferRequestsRepository);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

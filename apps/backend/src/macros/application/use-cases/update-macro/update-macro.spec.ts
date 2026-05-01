@@ -23,7 +23,6 @@ describe("UpdateMacroUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

@@ -37,7 +37,6 @@ describe("ExecuteProjectTransferUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

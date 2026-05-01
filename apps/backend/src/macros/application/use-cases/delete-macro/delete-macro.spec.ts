@@ -23,7 +23,6 @@ describe("DeleteMacroUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
