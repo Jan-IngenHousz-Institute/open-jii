@@ -20,29 +20,40 @@ export const pythonMacroSandboxHtml = `
     }
   }
 
-  function indent(s) {
-    return s.split('\\n').map(function(line) { return '    ' + line; }).join('\\n');
-  }
-
   async function runMacro(requestId, code, json) {
     try {
       var resultHolder = {};
       pyodide.globals.set('__result_holder__', resultHolder);
       var jsonB64 = btoa(unescape(encodeURIComponent(JSON.stringify(json))));
+      var codeB64 = btoa(unescape(encodeURIComponent(code)));
+      // textwrap.indent handles CRLF/LF/CR; compile() normalizes line endings
+      // and the "<macro>" filename surfaces in tracebacks instead of "<exec>".
+      // json_module is exposed because the macro signature names its parameter
+      // "json", which shadows the stdlib module inside the function body.
       var wrapped =
-        'import base64, json\\n' +
+        'import base64, json, textwrap\\n' +
+        'import json as json_module\\n' +
         '__json_input__ = json.loads(base64.b64decode("' + jsonB64 + '").decode("utf-8"))\\n' +
-        'def __macro__(json):\\n' + indent(code) + '\\n\\n' +
+        '__user_code__ = base64.b64decode("' + codeB64 + '").decode("utf-8")\\n' +
+        '__wrapped_src__ = "def __macro__(json):\\\\n" + textwrap.indent(__user_code__, "    ")\\n' +
+        'exec(compile(__wrapped_src__, "<macro>", "exec"), globals())\\n' +
         '__result__ = __macro__(__json_input__)\\n' +
         '__result_holder__.result = json.dumps(__result__)\\n';
       await pyodide.runPythonAsync(wrapped);
       var raw = resultHolder.result;
-      var str = (typeof raw === 'string') ? raw : (raw != null ? String(raw) : '');
-      var jsResult = {};
-      if (str) {
-        try { jsResult = JSON.parse(str); } catch (e) {}
+      if (raw == null) {
+        send({ requestId: requestId, result: {} });
+        return;
       }
-      send({ requestId: requestId, result: jsResult });
+      try {
+        var jsResult = JSON.parse(typeof raw === 'string' ? raw : String(raw));
+        send({ requestId: requestId, result: jsResult });
+      } catch (parseErr) {
+        send({
+          requestId: requestId,
+          error: 'Macro returned non-JSON output: ' + (parseErr.message || String(parseErr))
+        });
+      }
     } catch (err) {
       send({ requestId: requestId, error: err.message || String(err) });
     }
