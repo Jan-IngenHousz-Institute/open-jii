@@ -74,6 +74,8 @@ import {
   zProjectTransferQuestionInput,
   zProjectTransferWebhookPayload,
   zProjectTransferWebhookResponse,
+  // Custom metadata
+  zCustomMetadataPayload,
 } from "./experiment.schema";
 
 // -------- Helpers --------
@@ -437,6 +439,31 @@ describe("Experiment Schema", () => {
       if (!result.success) {
         const issue = result.error.issues.find((i) => i.path.join(".") === "nodes.1.name");
         expect(issue?.message).toContain("QUESTION-node!");
+      }
+    });
+
+    it("zFlowGraph rejects question labels that resolve to a reserved column", () => {
+      // "Device ID" sanitizes to `device_id`, which is a top-level column on
+      // experiment_raw_data. Letting it through would shadow the system column
+      // when questions_data is flattened to top-level on read or export.
+      const graph = {
+        nodes: [
+          {
+            id: "n1",
+            type: "question",
+            name: "Device ID",
+            content: { kind: "open_ended", text: "?", required: false },
+            isStart: true,
+          },
+        ],
+        edges: [],
+      };
+      const result = zFlowGraph.safeParse(graph);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "nodes.0.name");
+        expect(issue?.message).toContain("device_id");
+        expect(issue?.message.toLowerCase()).toContain("reserved");
       }
     });
 
@@ -999,6 +1026,82 @@ describe("Experiment Schema", () => {
       expect(zDownloadExportResponse.parse("binary data")).toBe("binary data");
       expect(zDownloadExportResponse.parse(null)).toBe(null);
       expect(zDownloadExportResponse.parse(42)).toBe(42);
+    });
+  });
+
+  // ----- Custom metadata payload -----
+  describe("zCustomMetadataPayload", () => {
+    const validBlob = {
+      name: "Plot map",
+      columns: [
+        { id: "plot", name: "plot", type: "string" as const },
+        { id: "treatment", name: "treatment", type: "string" as const },
+      ],
+      rows: [{ _id: "row_1", plot: "A1", treatment: "control" }],
+      identifierColumnId: "plot",
+      experimentQuestionId: "plot_id",
+    };
+
+    it("accepts a well-formed payload", () => {
+      expect(zCustomMetadataPayload.parse(validBlob)).toEqual(validBlob);
+    });
+
+    it("rejects empty/whitespace column names", () => {
+      const blob = {
+        ...validBlob,
+        columns: [{ id: "x", name: "   ", type: "string" as const }],
+        identifierColumnId: "   ",
+      };
+      const result = zCustomMetadataPayload.safeParse(blob);
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects duplicate column names within the blob", () => {
+      const blob = {
+        ...validBlob,
+        columns: [
+          { id: "plot", name: "plot", type: "string" as const },
+          { id: "plot2", name: "plot", type: "string" as const },
+        ],
+      };
+      const result = zCustomMetadataPayload.safeParse(blob);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "columns.1.name");
+        expect(issue?.message.toLowerCase()).toContain("duplicated");
+      }
+    });
+
+    it("rejects column names that collide with reserved system columns", () => {
+      const blob = {
+        ...validBlob,
+        columns: [{ id: "device_id", name: "device_id", type: "string" as const }],
+        rows: [{ _id: "row_1", device_id: "X" }],
+        identifierColumnId: "device_id",
+      };
+      const result = zCustomMetadataPayload.safeParse(blob);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "columns.0.name");
+        expect(issue?.message.toLowerCase()).toContain("reserved");
+      }
+    });
+
+    it("rejects identifierColumnId that is not in columns", () => {
+      const blob = { ...validBlob, identifierColumnId: "missing" };
+      const result = zCustomMetadataPayload.safeParse(blob);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find(
+          (i) => i.path.join(".") === "identifierColumnId",
+        );
+        expect(issue?.message).toContain("missing");
+      }
+    });
+
+    it("requires at least one column", () => {
+      const blob = { ...validBlob, columns: [] };
+      expect(zCustomMetadataPayload.safeParse(blob).success).toBe(false);
     });
   });
 
