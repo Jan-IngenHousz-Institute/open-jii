@@ -1,18 +1,14 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { DATABRICKS_PORT, DatabricksPort } from "../../../core/ports/databricks.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
 @Injectable()
 export class DeleteMacroUseCase {
   private readonly logger = new Logger(DeleteMacroUseCase.name);
 
-  constructor(
-    private readonly macroRepository: MacroRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
-  ) {}
+  constructor(private readonly macroRepository: MacroRepository) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
     this.logger.log({
@@ -22,7 +18,6 @@ export class DeleteMacroUseCase {
       userId,
     });
 
-    // First, check if the macro exists
     const macroResult = await this.macroRepository.findById(id);
 
     if (macroResult.isFailure()) {
@@ -42,7 +37,6 @@ export class DeleteMacroUseCase {
 
     const macro = macroResult.value;
 
-    // Check if user is the creator
     if (macro.createdBy !== userId) {
       this.logger.warn({
         msg: "Unauthorized macro deletion attempt",
@@ -54,29 +48,12 @@ export class DeleteMacroUseCase {
       return failure(AppError.forbidden("Only the macro creator can delete this macro"));
     }
 
-    // Delete from Databricks first - use filename, not name
-    const databricksResult = await this.databricksPort.deleteMacroCode(macro.filename);
-
-    if (databricksResult.isFailure()) {
-      this.logger.warn({
-        msg: "Failed to delete macro from Databricks",
-        errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
-        operation: "deleteMacro",
-        macroId: id,
-        error: databricksResult.error.message,
-      });
-      // Continue with database deletion even if Databricks fails
-      // as we don't want to leave orphaned database records
-    }
-
-    // Delete from database
     const deleteResult = await this.macroRepository.delete(id);
 
     if (deleteResult.isFailure()) {
       return deleteResult;
     }
 
-    // The macro was successfully deleted
     this.logger.log({
       msg: "Macro deleted successfully",
       operation: "deleteMacro",
