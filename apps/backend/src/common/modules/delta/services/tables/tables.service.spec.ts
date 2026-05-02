@@ -2,12 +2,11 @@ import nock from "nock";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
-import type { TableMetadataResponse, TableQueryResponse } from "../shares/shares.types";
 import { DeltaTablesService } from "./tables.service";
 
 describe("DeltaTablesService", () => {
   const testApp = TestHarness.App;
-  const deltaEndpoint = process.env.DELTA_ENDPOINT || "https://delta.example.com";
+  const deltaEndpoint = process.env.DELTA_ENDPOINT ?? "https://delta.example.com";
 
   let tablesService: DeltaTablesService;
 

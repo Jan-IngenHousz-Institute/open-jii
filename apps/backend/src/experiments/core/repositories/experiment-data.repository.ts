@@ -2,8 +2,8 @@ import { Injectable, Inject } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
-import { compareDeltaSort } from "../../../common/modules/delta/services/filter";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
+import { compareDeltaSort } from "../../../common/modules/delta/services/filter";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
 import { STATIC_TABLE_CONFIG, MACRO_TABLE_CONFIG } from "../models/experiment-data.model";
 import type {
@@ -366,4 +366,3 @@ export function parseVariantSchema(schema: string): { name: string; type: string
   }
   return fields;
 }
-

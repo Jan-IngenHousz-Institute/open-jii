@@ -28,7 +28,14 @@ import { WorkbookModule } from "./workbooks/workbook.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, databricksConfig, awsConfig, emailConfig, analyticsConfig, deltaConfig],
+      load: [
+        databaseConfig,
+        databricksConfig,
+        awsConfig,
+        emailConfig,
+        analyticsConfig,
+        deltaConfig,
+      ],
     }),
     LoggerModule.forRoot({
       pinoHttp: {

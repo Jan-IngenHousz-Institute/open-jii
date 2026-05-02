@@ -6,9 +6,9 @@ import { DeltaAdapter } from "./delta.adapter";
 
 describe("DeltaAdapter", () => {
   const testApp = TestHarness.App;
-  const deltaEndpoint = process.env.DELTA_ENDPOINT || "https://delta.example.com";
-  const shareName = process.env.DELTA_SHARE_NAME || "open_jii_test";
-  const schemaName = process.env.DELTA_SCHEMA_NAME || "centrum";
+  const deltaEndpoint = process.env.DELTA_ENDPOINT ?? "https://delta.example.com";
+  const shareName = process.env.DELTA_SHARE_NAME ?? "open_jii_test";
+  const schemaName = process.env.DELTA_SCHEMA_NAME ?? "centrum";
 
   let adapter: DeltaAdapter;
 

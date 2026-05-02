@@ -58,9 +58,7 @@ describe("GetExperimentTablesUseCase", () => {
         { identifier: macroId, tableType: "macro" as const, rowCount: 25 },
       ];
 
-      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success(mockMetadata));
 
       // Mock macro name resolution from PG
       vi.spyOn(macroRepository, "findNamesByIds").mockResolvedValue(
@@ -148,9 +146,7 @@ describe("GetExperimentTablesUseCase", () => {
         { identifier: ExperimentTableName.RAW_DATA, tableType: "static" as const, rowCount: 100 },
       ];
 
-      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(
-        success(mockMetadata),
-      );
+      vi.spyOn(deltaPort, "getExperimentTableMetadata").mockResolvedValue(success(mockMetadata));
 
       const result = await useCase.execute(experiment.id, testUserId);
 

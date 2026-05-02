@@ -1,7 +1,7 @@
 import nock from "nock";
 
 import { TestHarness } from "../../../test/test-harness";
-import { assertFailure, assertSuccess, success } from "../../utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../utils/fp-utils";
 import { DatabricksAdapter } from "./databricks.adapter";
 import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";

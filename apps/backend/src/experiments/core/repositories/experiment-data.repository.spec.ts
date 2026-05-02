@@ -161,10 +161,10 @@ describe("ExperimentDataRepository", () => {
       const result = await repository.getTableData(baseParams);
 
       assertSuccess(result);
-      const data = result.value[0].data!;
-      expect(data.columns.map((c) => c.name)).not.toContain("experiment_id");
-      expect(data.rows[0]).not.toHaveProperty("experiment_id");
-      expect(data.rows[0]).toHaveProperty("id", "1");
+      const data = result.value[0].data;
+      expect(data?.columns.map((c) => c.name)).not.toContain("experiment_id");
+      expect(data?.rows[0]).not.toHaveProperty("experiment_id");
+      expect(data?.rows[0]).toHaveProperty("id", "1");
     });
 
     it("flattens variant columns using the schema from metadata", async () => {
@@ -199,16 +199,16 @@ describe("ExperimentDataRepository", () => {
       const result = await repository.getTableData(baseParams);
 
       assertSuccess(result);
-      const data = result.value[0].data!;
-      expect(data.columns.map((c) => c.name)).toEqual(
+      const data = result.value[0].data;
+      expect(data?.columns.map((c) => c.name)).toEqual(
         expect.arrayContaining(["question_one", "question_two"]),
       );
-      expect(data.columns.map((c) => c.name)).not.toContain("questions_data");
-      expect(data.rows[0]).toMatchObject({
+      expect(data?.columns.map((c) => c.name)).not.toContain("questions_data");
+      expect(data?.rows[0]).toMatchObject({
         question_one: "yes",
         question_two: "no",
       });
-      expect(data.rows[0]).not.toHaveProperty("questions_data");
+      expect(data?.rows[0]).not.toHaveProperty("questions_data");
     });
 
     it("drops a variant column whose schema is null on this experiment", async () => {
@@ -242,7 +242,7 @@ describe("ExperimentDataRepository", () => {
       const result = await repository.getTableData(baseParams);
 
       assertSuccess(result);
-      const cols = result.value[0].data!.columns.map((c) => c.name);
+      const cols = result.value[0].data?.columns.map((c) => c.name);
       expect(cols).not.toContain("questions_data");
       expect(cols).not.toContain("custom_metadata");
     });
@@ -265,8 +265,8 @@ describe("ExperimentDataRepository", () => {
       expect(tableData.totalRows).toBe(12);
       expect(tableData.totalPages).toBe(3);
       expect(tableData.page).toBe(2);
-      expect(tableData.data!.rows).toHaveLength(5);
-      expect(tableData.data!.rows[0]).toMatchObject({ id: "5" });
+      expect(tableData.data?.rows).toHaveLength(5);
+      expect(tableData.data?.rows[0]).toMatchObject({ id: "5" });
     });
 
     it("sorts client-side by orderBy/orderDirection", async () => {
@@ -292,7 +292,7 @@ describe("ExperimentDataRepository", () => {
       });
 
       assertSuccess(result);
-      const ids = result.value[0].data!.rows.map((r) => r.id);
+      const ids = result.value[0].data?.rows.map((r) => r.id);
       expect(ids).toEqual(["c", "b", "a"]);
     });
 
@@ -322,8 +322,8 @@ describe("ExperimentDataRepository", () => {
       expect(tableData.totalPages).toBe(1);
       expect(tableData.page).toBe(1);
       expect(tableData.pageSize).toBe(2);
-      expect(tableData.data!.rows).toHaveLength(2);
-      expect(tableData.data!.columns.map((c) => c.name)).toEqual(["id"]);
+      expect(tableData.data?.rows).toHaveLength(2);
+      expect(tableData.data?.columns.map((c) => c.name)).toEqual(["id"]);
       // Argument forwarded to deltaPort
       const lastCall = vi.mocked(deltaPort.getTableData).mock.calls.at(-1)!;
       const opts = lastCall[1] as DeltaQueryOptions;

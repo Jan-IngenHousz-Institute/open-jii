@@ -5,11 +5,8 @@ import type { DeltaFilter } from "../../../../../experiments/core/ports/delta.po
 import { Result, success, failure, AppError } from "../../../../utils/fp-utils";
 import type { SchemaData } from "../../../databricks/services/sql/sql.types";
 import { DeltaConfigService } from "../config/config.service";
-import {
-  canFileMatchDeltaFilter,
-  evaluateDeltaFilter,
-  type FileStats,
-} from "../filter";
+import { canFileMatchDeltaFilter, evaluateDeltaFilter } from "../filter";
+import type { FileStats } from "../filter";
 import type { DeltaFile, DeltaMetadata } from "../shares/shares.types";
 
 /**
