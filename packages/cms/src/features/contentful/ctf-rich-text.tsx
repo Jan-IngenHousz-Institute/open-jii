@@ -7,6 +7,8 @@ import React from "react";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
 import { ArticleImage } from "../article/article-image";
+import { ArticleVideo } from "../article/article-video";
+import { isVideoAsset } from "./ctf-video";
 
 // ---- Types ---- //
 export type EmbeddedEntryType = ComponentRichImage | null;
@@ -19,13 +21,20 @@ export interface ContentfulRichTextInterface {
     };
   };
   imageClassName?: string;
+  videoClassName?: string;
 }
 
 // ---- Embedded Entry Renderer ---- //
-export const EmbeddedEntry = (entry: EmbeddedEntryType & { imageClassName?: string }) => {
+export const EmbeddedEntry = (
+  entry: EmbeddedEntryType & { imageClassName?: string; videoClassName?: string },
+) => {
   switch (entry?.__typename) {
     case "ComponentRichImage":
-      return <ArticleImage image={entry} imageClassName={entry.imageClassName} />;
+      return isVideoAsset(entry.image?.contentType) ? (
+        <ArticleVideo video={entry} videoClassName={entry.videoClassName} />
+      ) : (
+        <ArticleImage image={entry} imageClassName={entry.imageClassName} />
+      );
     default:
       return null;
   }
@@ -35,6 +44,7 @@ export const EmbeddedEntry = (entry: EmbeddedEntryType & { imageClassName?: stri
 export const contentfulBaseRichTextOptions = ({
   links,
   imageClassName,
+  videoClassName,
 }: ContentfulRichTextInterface): Options => ({
   renderMark: {
     [MARKS.BOLD]: (text) => <strong className="font-semibold">{text}</strong>,
@@ -124,14 +134,26 @@ export const contentfulBaseRichTextOptions = ({
         (item: EmbeddedEntryType) => item?.sys.id === targetId,
       );
       if (!entry) return null;
-      return <EmbeddedEntry {...entry} imageClassName={imageClassName} />;
+      return (
+        <EmbeddedEntry {...entry} imageClassName={imageClassName} videoClassName={videoClassName} />
+      );
     },
   },
 });
 
 // ---- Rich Text Component ---- //
-export const CtfRichText = ({ json, links, imageClassName }: ContentfulRichTextInterface) => {
-  const baseOptions = contentfulBaseRichTextOptions({ json, links, imageClassName });
+export const CtfRichText = ({
+  json,
+  links,
+  imageClassName,
+  videoClassName,
+}: ContentfulRichTextInterface) => {
+  const baseOptions = contentfulBaseRichTextOptions({
+    json,
+    links,
+    imageClassName,
+    videoClassName,
+  });
 
   return (
     <div className="w-full break-words leading-relaxed text-gray-900">
