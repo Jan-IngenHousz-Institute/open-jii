@@ -7,6 +7,7 @@ export function useOtaUpdate(): void {
     if (__DEV__) return;
 
     let cancelled = false;
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 
     void (async () => {
       try {
@@ -21,7 +22,8 @@ export function useOtaUpdate(): void {
           description: "Restarting to apply.",
           duration: 2000,
         });
-        setTimeout(() => {
+        reloadTimer = setTimeout(() => {
+          if (cancelled) return;
           void Updates.reloadAsync();
         }, 2000);
       } catch (err) {
@@ -31,6 +33,7 @@ export function useOtaUpdate(): void {
 
     return () => {
       cancelled = true;
+      clearTimeout(reloadTimer);
     };
   }, []);
 }

@@ -33,9 +33,11 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
           else
             VERSION=$(git tag -l 'mobile-v*' --sort=-version:refname | head -1 | sed 's/mobile-v//')
           fi
@@ -43,7 +45,11 @@ jobs:
             echo "::error::Could not determine version"
             exit 1
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid version format: '$VERSION'. Expected semver (e.g. 1.2.3)."
+            exit 1
+          fi
+          printf 'version=%s\n' "$VERSION" >> $GITHUB_OUTPUT
           echo "Promoting version: $VERSION to track: ${{ inputs.track }}"
 
       - name: Setup Node.js and pnpm
@@ -63,11 +69,13 @@ jobs:
 
       - name: Set app version
         working-directory: apps/mobile
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
         run: |
           node -e "
             const fs = require('fs');
             const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            app.expo.version = '${{ steps.version.outputs.version }}';
+            app.expo.version = process.env.APP_VERSION;
             fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
           "
 
@@ -120,10 +128,12 @@ jobs:
 
       - name: Publish OTA
         working-directory: apps/mobile
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           eas update \
             --branch ${{ inputs.track }} \
-            --message "promote v${{ steps.version.outputs.version }} to ${{ inputs.track }}" \
+            --message "promote v${VERSION} to ${{ inputs.track }}" \
             --non-interactive
 
       - name: Job summary

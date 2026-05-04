@@ -95,11 +95,13 @@ Triggered on every push to `main` when `mobile` is in the affected packages list
 - Workflow: `.github/workflows/mobile-preview-ota.yml`
 - Publishes: `eas update --branch preview`
 - **Drift gate:** if the native fingerprint changed since the last `preview` AAB, the workflow **skips the OTA** and posts a warning that a new APK must be distributed manually:
+
   ```bash
   pnpm run build-apk            # local APK build
   # or
   eas build --profile preview --platform android
   ```
+
 - Manual override available via `workflow_dispatch` with `force=true`.
 
 Local equivalent:
@@ -174,7 +176,7 @@ This re-points the channel to the previous update. Clients fetch it on next laun
 
 ### Summary cheat-sheet
 
-```
+```text
 push main         →  preview OTA              (Stage 1, auto)
 mobile-vX.Y.Z tag →  internal AAB + OTA       (Stage 2, auto via release.yml)
 gh workflow run mobile-promote.yml track=beta        →  beta AAB + OTA       (Stage 3)

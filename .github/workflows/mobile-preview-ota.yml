@@ -144,21 +144,25 @@ jobs:
       - name: Resolve commit subject
         id: msg
         if: steps.drift.outputs.drift != 'true' || inputs.force == true
+        env:
+          INPUT_MESSAGE: ${{ inputs.message }}
         run: |
-          if [ -n "${{ inputs.message }}" ]; then
-            echo "value=${{ inputs.message }}" >> $GITHUB_OUTPUT
+          if [ -n "$INPUT_MESSAGE" ]; then
+            printf 'value=%s\n' "$INPUT_MESSAGE" >> $GITHUB_OUTPUT
           else
             SUBJECT=$(git log -1 --pretty=%s)
-            echo "value=$SUBJECT" >> $GITHUB_OUTPUT
+            printf 'value=%s\n' "$SUBJECT" >> $GITHUB_OUTPUT
           fi
 
       - name: Publish OTA
         if: steps.drift.outputs.drift != 'true' || inputs.force == true
         working-directory: apps/mobile
+        env:
+          MSG: ${{ steps.msg.outputs.value }}
         run: |
           eas update \
             --branch ${{ inputs.branch || 'preview' }} \
-            --message "${{ steps.msg.outputs.value }}" \
+            --message "$MSG" \
             --non-interactive
 
       - name: Job summary

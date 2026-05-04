@@ -154,6 +154,7 @@ jobs:
         run: pnpm run submit-to-google-play
 
       - name: Publish OTA to internal channel
+        if: steps.decide.outputs.mode == 'ota'
         working-directory: apps/mobile
         run: |
           eas update \
