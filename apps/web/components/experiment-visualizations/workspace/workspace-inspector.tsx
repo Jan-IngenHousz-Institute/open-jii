@@ -93,65 +93,63 @@ export function WorkspaceInspector({
               </div>
             ) : (
               <>
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold">{t("workspace.inspector.dataset")}</h3>
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold">{t("workspace.inspector.dataset")}</h3>
 
-              <FormField
-                control={form.control}
-                name="dataConfig.tableName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="sr-only">{t("workspace.inspector.dataset")}</FormLabel>
-                    <Select
-                      value={selectedTableName || undefined}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onTableChange(value);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("workspace.inspector.selectTable")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {tablesError ? (
-                          <div className="text-destructive px-2 py-1.5 text-sm">
-                            {t("workspace.inspector.failedToLoadTables")}
-                          </div>
-                        ) : tables.length === 0 ? (
-                          <div className="text-muted-foreground px-2 py-1.5 text-sm">
-                            {t("workspace.inspector.noTables")}
-                          </div>
-                        ) : (
-                          tables.map((table) => (
-                            <SelectItem key={table.identifier} value={table.identifier}>
-                              {table.displayName}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </section>
+                  <FormField
+                    control={form.control}
+                    name="dataConfig.tableName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="sr-only">
+                          {t("workspace.inspector.dataset")}
+                        </FormLabel>
+                        <Select
+                          value={selectedTableName || undefined}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            onTableChange(value);
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("workspace.inspector.selectTable")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {tablesError ? (
+                              <div className="text-destructive px-2 py-1.5 text-sm">
+                                {t("workspace.inspector.failedToLoadTables")}
+                              </div>
+                            ) : tables.length === 0 ? (
+                              <div className="text-muted-foreground px-2 py-1.5 text-sm">
+                                {t("workspace.inspector.noTables")}
+                              </div>
+                            ) : (
+                              tables.map((table) => (
+                                <SelectItem key={table.identifier} value={table.identifier}>
+                                  {table.displayName}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </section>
 
-            <Separator />
+                <Separator />
 
-            <ColumnsState
-              hasTable={Boolean(selectedTableName)}
-              isLoading={isColumnsLoading}
-              error={columnsError}
-              hasColumns={columns.length > 0}
-            >
-              {def ? (
-                <def.DataPanel form={form} columns={columns} />
-              ) : (
-                <UnsupportedPanel />
-              )}
-            </ColumnsState>
+                <ColumnsState
+                  hasTable={Boolean(selectedTableName)}
+                  isLoading={isColumnsLoading}
+                  error={columnsError}
+                  hasColumns={columns.length > 0}
+                >
+                  {def ? <def.DataPanel form={form} columns={columns} /> : <UnsupportedPanel />}
+                </ColumnsState>
               </>
             )}
           </TabsContent>

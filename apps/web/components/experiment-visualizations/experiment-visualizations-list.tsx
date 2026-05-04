@@ -238,7 +238,7 @@ function VisualizationTableRow({
           {formatDate(visualization.updatedAt)}
         </TableCell>
         <TableCell className="w-12 px-3 py-3 text-right">
-          <div className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -287,9 +287,7 @@ function VisualizationTableRow({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              {tCommon("common.cancel")}
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{tCommon("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={isDeleting}
               onClick={(e) => {
@@ -314,6 +312,6 @@ function initialsOf(name: string): string {
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
+    .map((part) => part[0].toUpperCase())
     .join("");
 }

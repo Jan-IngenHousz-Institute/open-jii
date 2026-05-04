@@ -13,10 +13,7 @@ import type { ChartPanelProps } from "../types";
 export function ScatterDataPanel({ form, columns }: ChartPanelProps) {
   const xColumns = useMemo(() => filterColumnsForRole(columns, "scatter", "x"), [columns]);
   const yColumns = useMemo(() => filterColumnsForRole(columns, "scatter", "y"), [columns]);
-  const colorColumns = useMemo(
-    () => filterColumnsForRole(columns, "scatter", "color"),
-    [columns],
-  );
+  const colorColumns = useMemo(() => filterColumnsForRole(columns, "scatter", "color"), [columns]);
 
   return (
     <div className="space-y-6">

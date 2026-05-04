@@ -55,7 +55,7 @@ export function XAxisShelf({ form, columns }: XAxisShelfProps) {
           <FormItem>
             <FormLabel className="text-xs font-medium">{t("workspace.shelves.column")}</FormLabel>
             <Select
-              value={String(field.value ?? "")}
+              value={String(field.value)}
               onValueChange={(value) => {
                 field.onChange(value);
                 handleColumnChange(value);

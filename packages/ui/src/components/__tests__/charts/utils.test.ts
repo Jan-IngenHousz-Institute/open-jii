@@ -197,7 +197,7 @@ describe("utils", () => {
         plot_bgcolor: "rgba(0,0,0,0)",
         paper_bgcolor: "#ffffff",
         font: {
-          family: "Inter, sans-serif",
+          family: "var(--font-inter), Inter, sans-serif",
           color: "#000000",
           size: 12,
         },
@@ -229,8 +229,8 @@ describe("utils", () => {
       expect(layout.title).toMatchObject({
         text: "Test Chart",
         font: {
-          size: 16,
-          family: "Inter, sans-serif",
+          size: 14,
+          family: "var(--font-inter), Inter, sans-serif",
           color: "#000000",
         },
       });
@@ -250,7 +250,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "Inter, sans-serif",
+          family: "var(--font-inter), Inter, sans-serif",
         },
       });
 
@@ -259,7 +259,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "Inter, sans-serif",
+          family: "var(--font-inter), Inter, sans-serif",
         },
       });
     });
@@ -336,7 +336,7 @@ describe("utils", () => {
         font: {
           color: "#000000",
           size: 12,
-          family: "Inter, sans-serif",
+          family: "var(--font-inter), Inter, sans-serif",
         },
         bgcolor: "rgba(255,255,255,0.8)",
       });

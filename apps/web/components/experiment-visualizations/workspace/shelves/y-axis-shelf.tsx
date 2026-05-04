@@ -57,12 +57,10 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
         shouldDirty: true,
       });
     }
+    // Refresh the series alias whenever the column changes. Previous guard
+    // ("only set if empty") let a series with a populated alias keep that
+    // stale label after a column switch. Users can rename freely afterwards.
     const yEntry = ySources[seriesIndex];
-    if (!yEntry) return;
-    // Refresh the series alias whenever the column changes — the previous
-    // guard ("only set if empty") meant a series whose alias was already
-    // populated from a prior column kept that stale label after the user
-    // switched columns. Users can still rename the series freely afterwards.
     const aliasKey = `dataConfig.dataSources.${yEntry.index}.alias` as const;
     form.setValue(aliasKey, value);
   };
@@ -126,7 +124,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
                       {t("workspace.shelves.column")}
                     </FormLabel>
                     <Select
-                      value={String(field.value ?? "")}
+                      value={String(field.value)}
                       onValueChange={(value) => {
                         field.onChange(value);
                         handleColumnChange(value, seriesIndex);
@@ -196,7 +194,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
                             <Input
                               type="color"
                               className="h-9 w-12 shrink-0 p-1"
-                              value={field.value! ?? "#3b82f6"}
+                              value={field.value ?? "#3b82f6"}
                               onChange={field.onChange}
                               disabled={isColorMapped}
                             />
@@ -204,7 +202,7 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
                               type="text"
                               className="min-w-0 font-mono text-sm"
                               placeholder="#000000"
-                              value={field.value! ?? ""}
+                              value={field.value ?? ""}
                               onChange={field.onChange}
                               disabled={isColorMapped}
                             />

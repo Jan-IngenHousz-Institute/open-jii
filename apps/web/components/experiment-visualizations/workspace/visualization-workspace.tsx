@@ -101,7 +101,7 @@ export function VisualizationWorkspace({
   };
 
   const hasMeaningfulConfig = () => {
-    const sources = form.getValues("dataConfig.dataSources") ?? [];
+    const sources = form.getValues("dataConfig.dataSources");
     return sources.some((ds) => Boolean(ds.columnName));
   };
 

@@ -61,9 +61,9 @@ describe("ExperimentVisualizationsList", () => {
     render(<ExperimentVisualizationsList visualizations={items} experimentId={expId} />);
     const rows = screen.getAllByRole("row");
     // First row is the header; data rows follow.
-    expect(within(rows[1]!).getByText("Newer")).toBeInTheDocument();
-    expect(within(rows[2]!).getByText("Middle")).toBeInTheDocument();
-    expect(within(rows[3]!).getByText("Older")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Newer")).toBeInTheDocument();
+    expect(within(rows[2]).getByText("Middle")).toBeInTheDocument();
+    expect(within(rows[3]).getByText("Older")).toBeInTheDocument();
   });
 
   it("links the name cell to the visualization page", () => {

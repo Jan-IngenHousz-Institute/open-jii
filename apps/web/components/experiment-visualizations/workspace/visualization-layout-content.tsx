@@ -50,11 +50,14 @@ export function VisualizationLayoutContent({
   const form = useFormContext<ChartFormValues>();
 
   const isCreator = session?.user.id === visualization.createdBy;
-  const name = useWatch({ control: form.control, name: "name" }) ?? "";
+  const name = useWatch({ control: form.control, name: "name" });
   const description = useWatch({ control: form.control, name: "description" }) ?? "";
 
-  const handleTitleSave = async (newName: string) => {
+  // InlineEditableTitle expects an async onSave; the actual setValue is
+  // synchronous so we just resolve immediately.
+  const handleTitleSave = (newName: string): Promise<void> => {
     form.setValue("name", newName, { shouldDirty: true, shouldTouch: true });
+    return Promise.resolve();
   };
 
   return (

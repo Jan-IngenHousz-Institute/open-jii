@@ -43,20 +43,26 @@ describe("chart-type registry", () => {
   });
 
   it("line defaults expose required Plotly + line-specific fields", () => {
-    const config = getChartTypeDef("line")!.defaultConfig();
+    const def = getChartTypeDef("line");
+    if (!def) throw new Error("line def missing from registry");
+    const config = def.defaultConfig();
     expect(config.mode).toBe("lines");
     expect(config.showLegend).toBe(true);
     expect(config.line).toBeDefined();
   });
 
   it("scatter defaults expose marker + colorscale fields", () => {
-    const config = getChartTypeDef("scatter")!.defaultConfig();
+    const def = getChartTypeDef("scatter");
+    if (!def) throw new Error("scatter def missing from registry");
+    const config = def.defaultConfig();
     expect(config.mode).toBe("markers");
     expect(config.marker).toMatchObject({ size: 6, symbol: "circle" });
   });
 
   it("default data config seeds X and Y data sources", () => {
-    const data = getChartTypeDef("line")!.defaultDataConfig("readings");
+    const def = getChartTypeDef("line");
+    if (!def) throw new Error("line def missing from registry");
+    const data = def.defaultDataConfig("readings");
     expect(data.tableName).toBe("readings");
     expect(data.dataSources.map((ds) => ds.role)).toEqual(["x", "y"]);
     expect(data.dataSources.every((ds) => ds.tableName === "readings")).toBe(true);

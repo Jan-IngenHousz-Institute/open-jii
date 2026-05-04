@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { CATEGORY_PALETTE, dataSourcesByRole, makeDataSource } from "../../charts/form-values";
+import { CATEGORY_PALETTE, firstDataSourceByRole, makeDataSource } from "../../charts/form-values";
 import type { ChartFormValues } from "../../charts/form-values";
 
 const COLORSCALES: { value: string; translationKey: string; gradient: string }[] = [
@@ -146,7 +146,7 @@ export function ColorDimensionShelf({ form, columns }: ColorDimensionShelfProps)
   });
 
   const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
-  const colorEntry = dataSourcesByRole(sources, "color")[0];
+  const colorEntry = firstDataSourceByRole(sources, "color");
   const colorColumn = colorEntry?.source.columnName ?? "";
   const watchedColorMode = useWatch({ control: form.control, name: "config.colorMode" });
   const colorMode: "continuous" | "categorical" =
@@ -191,7 +191,10 @@ export function ColorDimensionShelf({ form, columns }: ColorDimensionShelfProps)
 
       <FormItem>
         <FormLabel className="text-xs font-medium">{t("workspace.shelves.column")}</FormLabel>
-        <Select value={colorColumn || "none"} onValueChange={handleColumnChange}>
+        <Select
+          value={colorColumn === "" ? "none" : colorColumn}
+          onValueChange={handleColumnChange}
+        >
           <SelectTrigger>
             <SelectValue placeholder={t("workspace.shelves.colorPlaceholder")} />
           </SelectTrigger>
@@ -316,7 +319,7 @@ function ContinuousColorSettings({
                 {t("workspace.shelves.colorScale")}
               </FormLabel>
               <Select
-                value={(field.value as string) ?? "Viridis"}
+                value={typeof field.value === "string" ? field.value : "Viridis"}
                 onValueChange={field.onChange}
               >
                 <FormControl>

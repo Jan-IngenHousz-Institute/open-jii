@@ -5,7 +5,7 @@ import { ChartTypePicker } from "../chart-type-picker";
 
 describe("ChartTypePicker", () => {
   it("renders the active chart type as the trigger label", () => {
-    render(<ChartTypePicker value="line" onChange={() => {}} />);
+    render(<ChartTypePicker value="line" onChange={vi.fn()} />);
     expect(
       screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }),
     ).toHaveTextContent("workspace.charts.types.line");
@@ -13,7 +13,7 @@ describe("ChartTypePicker", () => {
 
   it("opens a popover with all registered chart types grouped by family", async () => {
     const user = userEvent.setup();
-    render(<ChartTypePicker value="line" onChange={() => {}} />);
+    render(<ChartTypePicker value="line" onChange={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
 
     expect(await screen.findByText("workspace.families.basic")).toBeInTheDocument();
@@ -24,7 +24,7 @@ describe("ChartTypePicker", () => {
 
   it("marks the active chart type with aria-pressed=true", async () => {
     const user = userEvent.setup();
-    render(<ChartTypePicker value="scatter" onChange={() => {}} />);
+    render(<ChartTypePicker value="scatter" onChange={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
 
     const scatterTile = await screen.findByRole("button", {

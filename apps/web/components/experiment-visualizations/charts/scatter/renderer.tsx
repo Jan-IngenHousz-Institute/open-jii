@@ -35,8 +35,7 @@ export function ScatterRenderer({
     Omit<ScatterSeriesData, "x" | "y"> &
     Pick<ChartFormConfig, "colorMode" | "colorMap">;
 
-  const isCategoricalColor =
-    Boolean(colorColumn) && chartConfig.colorMode === "categorical";
+  const isCategoricalColor = Boolean(colorColumn) && chartConfig.colorMode === "categorical";
 
   const scatterData = useMemo<ScatterSeriesData[]>(() => {
     if (visualization.chartType !== "scatter") return [];
@@ -63,8 +62,8 @@ export function ScatterRenderer({
       const categoryKeys = Array.from(categoryIndexMap.keys());
 
       const traces: ScatterSeriesData[] = [];
-      for (let yIdx = 0; yIdx < effectiveYEntries.length; yIdx++) {
-        const ySource = effectiveYEntries[yIdx].source;
+      for (const yEntry of effectiveYEntries) {
+        const ySource = yEntry.source;
         const yValues = rows.map((row) => coerceCell(row[ySource.columnName]));
 
         for (let cIdx = 0; cIdx < categoryKeys.length; cIdx++) {
@@ -157,7 +156,15 @@ export function ScatterRenderer({
         fillcolor: chartConfig.fillcolor,
       };
     });
-  }, [rows, xColumn, yEntries, colorColumn, isCategoricalColor, chartConfig, visualization.chartType]);
+  }, [
+    rows,
+    xColumn,
+    yEntries,
+    colorColumn,
+    isCategoricalColor,
+    chartConfig,
+    visualization.chartType,
+  ]);
 
   if (visualization.chartType !== "scatter") {
     return <ChartConfigError message={t("errors.invalidConfiguration")} />;
@@ -165,11 +172,12 @@ export function ScatterRenderer({
 
   // Categorical mode emits potentially many traces. Switching to scattergl
   // keeps a single shared GPU context for all traces, so trace count stays
-  // cheap even with hundreds of categories.
+  // cheap even with hundreds of categories. Force-on whenever categorical
+  // is active; otherwise honor whatever the chart config asked for.
   const effectiveConfig: PlotlyChartConfig = {
     ...chartConfig,
     autosizable: true,
-    useWebGL: chartConfig.useWebGL || isCategoricalColor,
+    useWebGL: isCategoricalColor || chartConfig.useWebGL,
   };
 
   return (
