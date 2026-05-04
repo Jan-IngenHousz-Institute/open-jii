@@ -1,6 +1,7 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { UpgradeWorkbookVersionUseCase } from "./upgrade-workbook-version";
 
@@ -9,6 +10,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   let attachUseCase: AttachWorkbookUseCase;
   let upgradeUseCase: UpgradeWorkbookVersionUseCase;
   let workbookRepo: WorkbookRepository;
+  let flowRepo: FlowRepository;
   let adminUserId: string;
   let memberUserId: string;
   let experimentId: string;
@@ -26,6 +28,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     upgradeUseCase = testApp.module.get(UpgradeWorkbookVersionUseCase);
     workbookRepo = testApp.module.get(WorkbookRepository);
+    flowRepo = testApp.module.get(FlowRepository);
 
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -96,5 +99,30 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     const result = await upgradeUseCase.execute(experiment.id, adminUserId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(400);
+  });
+
+  it("refreshes the materialised flow row when cells change (mobile backward compat)", async () => {
+    // Initial attach already wrote a flow row from the original "v1" content.
+    const before = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(before);
+    expect(before.value?.graph.nodes[0]).toMatchObject({
+      id: "md1",
+      content: { text: "v1" },
+    });
+
+    // Edit the workbook draft and upgrade.
+    await workbookRepo.update(workbookId, {
+      cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
+    });
+    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+    assertSuccess(result);
+
+    const after = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(after);
+    expect(after.value?.id).toBe(before.value?.id); // same row, overwritten
+    expect(after.value?.graph.nodes[0]).toMatchObject({
+      id: "md1",
+      content: { text: "v2" },
+    });
   });
 });

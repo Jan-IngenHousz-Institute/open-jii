@@ -1,9 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
+
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 export interface AttachWorkbookResult {
   workbookId: string;
@@ -18,6 +22,7 @@ export class AttachWorkbookUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly publishVersionUseCase: PublishVersionUseCase,
+    private readonly flowRepository: FlowRepository,
   ) {}
 
   async execute(
@@ -55,6 +60,14 @@ export class AttachWorkbookUseCase {
 
         if (updateResult.isFailure()) {
           return updateResult;
+        }
+
+        // Materialise a flow row from the version's cells so the mobile app
+        // (which still reads from the flows table) sees the attached workbook.
+        const flowGraph = cellsToFlowGraph(version.cells as WorkbookCell[]);
+        const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
+        if (flowResult.isFailure()) {
+          return flowResult;
         }
 
         this.logger.log({

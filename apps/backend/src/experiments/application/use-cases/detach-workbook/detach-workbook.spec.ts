@@ -1,5 +1,6 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { DetachWorkbookUseCase } from "./detach-workbook";
 
@@ -7,6 +8,7 @@ describe("DetachWorkbookUseCase", () => {
   const testApp = TestHarness.App;
   let attachUseCase: AttachWorkbookUseCase;
   let detachUseCase: DetachWorkbookUseCase;
+  let flowRepo: FlowRepository;
   let adminUserId: string;
   let memberUserId: string;
   let experimentId: string;
@@ -23,6 +25,7 @@ describe("DetachWorkbookUseCase", () => {
 
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     detachUseCase = testApp.module.get(DetachWorkbookUseCase);
+    flowRepo = testApp.module.get(FlowRepository);
 
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -83,5 +86,19 @@ describe("DetachWorkbookUseCase", () => {
     const result = await detachUseCase.execute(experimentId, adminUserId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(400);
+  });
+
+  it("removes the materialised flow row so mobile no longer sees the graph", async () => {
+    // Attach in beforeEach already wrote a flow row.
+    const before = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(before);
+    expect(before.value).not.toBeNull();
+
+    const result = await detachUseCase.execute(experimentId, adminUserId);
+    assertSuccess(result);
+
+    const after = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(after);
+    expect(after.value).toBeNull();
   });
 });

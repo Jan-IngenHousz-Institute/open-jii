@@ -5,6 +5,7 @@ import type {
   ProjectTransferWebhookPayload,
   ProjectTransferWebhookResponse,
 } from "@repo/api/schemas/experiment.schema";
+import { flowNodesToWorkbookCells } from "@repo/api/utils/flow-to-workbook-cells";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -13,6 +14,9 @@ import { MacroRepository } from "../../../../macros/core/repositories/macro.repo
 import { CreateProtocolUseCase } from "../../../../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
+import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
+import type { CreateWorkbookDto } from "../../../../workbooks/core/models/workbook.model";
+import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
@@ -35,6 +39,8 @@ export class ExecuteProjectTransferUseCase {
     private readonly macroRepository: MacroRepository,
     private readonly protocolRepository: ProtocolRepository,
     private readonly userRepository: UserRepository,
+    private readonly workbookRepository: WorkbookRepository,
+    private readonly publishVersionUseCase: PublishVersionUseCase,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
@@ -243,6 +249,63 @@ export class ExecuteProjectTransferUseCase {
           experimentId: experiment.id,
           error: flowResult.error,
         });
+      }
+
+      // 7. Materialise a workbook from the same nodes so the new web UI sees
+      // the transfer immediately. Non-fatal — mirrors the flow-creation path.
+      const cells = flowNodesToWorkbookCells(allNodes, edges);
+      if (cells.length > 0) {
+        // CreateWorkbookDto.cells is typed via drizzle's loose Json union;
+        // WorkbookCell[] is JSON-shaped but TS can't unify the two through
+        // the discriminated-union → Json widening. Hand it an unknown cast.
+        const workbookResult = await this.workbookRepository.create(
+          {
+            name: `${data.experiment.name} - Workbook`,
+            description: "Auto-generated from project transfer",
+            cells: cells as unknown as CreateWorkbookDto["cells"],
+            metadata: {},
+          },
+          data.experiment.createdBy,
+        );
+
+        if (workbookResult.isSuccess() && workbookResult.value.length > 0) {
+          const workbookId = workbookResult.value[0].id;
+          const versionResult = await this.publishVersionUseCase.execute(
+            workbookId,
+            data.experiment.createdBy,
+          );
+
+          if (versionResult.isSuccess()) {
+            const linkResult = await this.experimentRepository.update(experiment.id, {
+              workbookId,
+              workbookVersionId: versionResult.value.id,
+            });
+            if (linkResult.isFailure()) {
+              this.logger.warn({
+                msg: "Failed to link workbook to experiment during project transfer (non-fatal)",
+                operation: "executeProjectTransfer",
+                experimentId: experiment.id,
+                workbookId,
+                error: linkResult.error,
+              });
+            }
+          } else {
+            this.logger.warn({
+              msg: "Failed to publish workbook version during project transfer (non-fatal)",
+              operation: "executeProjectTransfer",
+              experimentId: experiment.id,
+              workbookId,
+              error: versionResult.error,
+            });
+          }
+        } else if (workbookResult.isFailure()) {
+          this.logger.warn({
+            msg: "Failed to create workbook during project transfer (non-fatal)",
+            operation: "executeProjectTransfer",
+            experimentId: experiment.id,
+            error: workbookResult.error,
+          });
+        }
       }
     }
 

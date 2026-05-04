@@ -6,6 +6,7 @@ import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetac
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
+import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import {
   ArrowUpCircle,
@@ -68,8 +69,20 @@ export function LinkedWorkbookCard({
   const versions = versionsData?.body ?? [];
   const pinnedVersion = versions.find((v) => v.id === workbookVersionId);
   const latestVersion = versions[0];
-  const hasUpgrade =
+
+  // Pinned version's cells are needed to detect whether the workbook's live
+  // draft has diverged since the experiment was pinned.
+  const { data: pinnedVersionDetail } = useWorkbookVersion(workbookId, workbookVersionId, {
+    enabled: !!workbookId && !!workbookVersionId,
+  });
+
+  const hasNewerPublished =
     !!pinnedVersion && versions.length > 0 && latestVersion.version > pinnedVersion.version;
+  const draftDiverged =
+    !!workbook &&
+    !!pinnedVersionDetail &&
+    JSON.stringify(workbook.cells) !== JSON.stringify(pinnedVersionDetail.cells);
+  const hasUpgrade = hasNewerPublished || draftDiverged;
 
   // Attach (change) workbook
   const attachWorkbook = useAttachWorkbook();
@@ -202,7 +215,7 @@ export function LinkedWorkbookCard({
       </div>
 
       {/* Upgrade notice */}
-      {hasUpgrade && hasAccess && upgradeState !== "success" && (
+      {hasUpgrade && hasAccess && pinnedVersion && upgradeState !== "success" && (
         <div
           className={cn(
             "flex items-center justify-between gap-4 border-t px-4 py-2.5 transition-colors duration-300",
@@ -219,10 +232,21 @@ export function LinkedWorkbookCard({
               )}
             />
             <p className="text-muted-foreground text-xs">
-              v{latestVersion.version} is available{" "}
-              <span className="text-muted-foreground/70">
-                (currently on v{pinnedVersion.version})
-              </span>
+              {hasNewerPublished ? (
+                <>
+                  v{latestVersion.version} is available{" "}
+                  <span className="text-muted-foreground/70">
+                    (currently on v{pinnedVersion.version})
+                  </span>
+                </>
+              ) : (
+                <>
+                  Workbook has updates available{" "}
+                  <span className="text-muted-foreground/70">
+                    (currently on v{pinnedVersion.version})
+                  </span>
+                </>
+              )}
             </p>
           </div>
           <Button
@@ -240,7 +264,9 @@ export function LinkedWorkbookCard({
             ) : (
               <>
                 <ArrowUpCircle className="h-3 w-3" />
-                {t("flow.upgradeToLatest", { version: latestVersion.version })}
+                {hasNewerPublished
+                  ? t("flow.upgradeToLatest", { version: latestVersion.version })
+                  : t("flow.upgradeToLatest", { version: pinnedVersion.version + 1 })}
               </>
             )}
           </Button>

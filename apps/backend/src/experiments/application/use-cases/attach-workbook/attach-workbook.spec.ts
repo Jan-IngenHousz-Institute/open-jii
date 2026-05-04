@@ -1,10 +1,12 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "./attach-workbook";
 
 describe("AttachWorkbookUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: AttachWorkbookUseCase;
+  let flowRepo: FlowRepository;
   let adminUserId: string;
   let memberUserId: string;
   let experimentId: string;
@@ -19,6 +21,7 @@ describe("AttachWorkbookUseCase", () => {
     adminUserId = await testApp.createTestUser({});
     memberUserId = await testApp.createTestUser({ email: "member@test.com" });
     useCase = testApp.module.get(AttachWorkbookUseCase);
+    flowRepo = testApp.module.get(FlowRepository);
 
     // Create experiment (admin becomes admin member)
     const { experiment } = await testApp.createExperiment({
@@ -90,5 +93,18 @@ describe("AttachWorkbookUseCase", () => {
 
     expect(second.value.workbookVersionId).toBe(first.value.workbookVersionId);
     expect(second.value.version).toBe(1);
+  });
+
+  it("materialises a flow row from the version's cells (mobile backward compat)", async () => {
+    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    assertSuccess(result);
+
+    const flow = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(flow);
+    // markdown cell -> single instruction node, no edges
+    expect(flow.value).not.toBeNull();
+    expect(flow.value?.graph.nodes).toHaveLength(1);
+    expect(flow.value?.graph.nodes[0]).toMatchObject({ id: "md1", type: "instruction" });
+    expect(flow.value?.graph.edges).toHaveLength(0);
   });
 });

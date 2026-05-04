@@ -3,12 +3,16 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 @Injectable()
 export class DetachWorkbookUseCase {
   private readonly logger = new Logger(DetachWorkbookUseCase.name);
 
-  constructor(private readonly experimentRepository: ExperimentRepository) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly flowRepository: FlowRepository,
+  ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentDto>> {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -34,6 +38,13 @@ export class DetachWorkbookUseCase {
 
         if (updateResult.isFailure()) {
           return updateResult;
+        }
+
+        // Drop the materialised flow row so mobile doesn't keep showing a
+        // graph for an experiment that no longer has a workbook attached.
+        const flowDeleteResult = await this.flowRepository.deleteByExperimentId(experimentId);
+        if (flowDeleteResult.isFailure()) {
+          return flowDeleteResult;
         }
 
         this.logger.log({
