@@ -408,6 +408,88 @@ describe("measurements-storage", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // markAsFailed
+  // ---------------------------------------------------------------------------
+
+  describe("markAsFailed", () => {
+    it("reverts an uploading row to failed", async () => {
+      insertRow("m1", "uploading");
+
+      const mod = await import("../measurements-storage");
+      await mod.markAsFailed("m1");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.status).toBe("failed");
+    });
+
+    it("is a no-op on a row that is already failed", async () => {
+      insertRow("m1", "failed");
+
+      const mod = await import("../measurements-storage");
+      await mod.markAsFailed("m1");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.status).toBe("failed");
+    });
+
+    it("is a no-op on a successful row", async () => {
+      insertRow("m1", "successful");
+
+      const mod = await import("../measurements-storage");
+      await mod.markAsFailed("m1");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.status).toBe("successful");
+    });
+
+    it("does not affect other rows", async () => {
+      insertRow("target", "uploading");
+      insertRow("other", "uploading");
+
+      const mod = await import("../measurements-storage");
+      await mod.markAsFailed("target");
+
+      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
+      expect(rows.find((r) => r.id === "target")?.status).toBe("failed");
+      expect(rows.find((r) => r.id === "other")?.status).toBe("uploading");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // resetUploadingMeasurements
+  // ---------------------------------------------------------------------------
+
+  describe("resetUploadingMeasurements", () => {
+    it("reverts all uploading rows to failed", async () => {
+      insertRow("u1", "uploading");
+      insertRow("u2", "uploading");
+      insertRow("f1", "failed");
+      insertRow("s1", "successful");
+
+      const mod = await import("../measurements-storage");
+      await mod.resetUploadingMeasurements();
+
+      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
+      expect(rows.find((r) => r.id === "u1")?.status).toBe("failed");
+      expect(rows.find((r) => r.id === "u2")?.status).toBe("failed");
+      expect(rows.find((r) => r.id === "f1")?.status).toBe("failed");
+      expect(rows.find((r) => r.id === "s1")?.status).toBe("successful");
+    });
+
+    it("is a no-op when no rows are uploading", async () => {
+      insertRow("f1", "failed");
+      insertRow("s1", "successful");
+
+      const mod = await import("../measurements-storage");
+      await mod.resetUploadingMeasurements();
+
+      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
+      expect(rows.find((r) => r.id === "f1")?.status).toBe("failed");
+      expect(rows.find((r) => r.id === "s1")?.status).toBe("successful");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // legacy migration
   // ---------------------------------------------------------------------------
 
