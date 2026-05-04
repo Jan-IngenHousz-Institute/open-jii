@@ -102,7 +102,7 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmSync(m));
       const [confirmBtn] = mockShowAlert.mock.calls[0][2];
-      await act(async () => confirmBtn.onPress());
+      await act(() => confirmBtn.onPress());
 
       expect(mockUploadOne).toHaveBeenCalledWith("k1");
       expect(mockInvalidate).toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmDelete(m));
       const [confirmBtn] = mockShowAlert.mock.calls[0][2];
-      await act(async () => confirmBtn.onPress());
+      await act(() => confirmBtn.onPress());
 
       expect(mockRemoveMeasurement).toHaveBeenCalledWith("k1");
       expect(mockInvalidate).toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmSyncAll());
       const [confirmBtn] = mockShowAlert.mock.calls[0][2];
-      await act(async () => confirmBtn.onPress());
+      await act(() => confirmBtn.onPress());
 
       expect(mockUploadAll).toHaveBeenCalled();
       expect(mockToastSuccess).toHaveBeenCalledWith("All measurements synced successfully");
@@ -190,7 +190,7 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmDeleteAllSynced());
       const [confirmBtn] = mockShowAlert.mock.calls[0][2];
-      await act(async () => confirmBtn.onPress());
+      await act(() => confirmBtn.onPress());
 
       expect(mockClearSyncedMeasurements).toHaveBeenCalled();
       expect(mockInvalidate).toHaveBeenCalled();
@@ -202,7 +202,7 @@ describe("useRecentMeasurementsActions", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
       act(() => result.current.handleExport());
-      await act(async () => new Promise((r) => setTimeout(r, 0)));
+      await act(() => new Promise((r) => setTimeout(r, 0)));
 
       expect(mockExportMeasurementsToFile).toHaveBeenCalled();
     });
@@ -212,7 +212,7 @@ describe("useRecentMeasurementsActions", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
       act(() => result.current.handleExport());
-      await act(async () => new Promise((r) => setTimeout(r, 0)));
+      await act(() => new Promise((r) => setTimeout(r, 0)));
 
       expect(mockToastError).toHaveBeenCalledWith("Export failed. Please try again.");
     });
@@ -223,7 +223,7 @@ describe("useRecentMeasurementsActions", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
       const m = makeItem("k1", "unsynced");
 
-      await act(async () => result.current.saveComment(m, "great result"));
+      await act(() => result.current.saveComment(m, "great result"));
 
       expect(mockUpdateMeasurementComment).toHaveBeenCalledWith("k1", m.data, "great result");
       expect(mockInvalidate).toHaveBeenCalled();
