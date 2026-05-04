@@ -73,14 +73,16 @@ jobs:
 
       - name: Set app version from release
         working-directory: apps/mobile
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           node -e "
             const fs = require('fs');
             const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            app.expo.version = '${{ steps.version.outputs.version }}';
+            app.expo.version = process.env.VERSION;
             fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
           "
-          echo "Set app version to ${{ steps.version.outputs.version }}"
+          echo "Set app version to $VERSION"
 
       - name: Generate release notes
         id: release-notes

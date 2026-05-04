@@ -116,14 +116,9 @@ Triggered when `release.yml` creates a `mobile-vX.Y.Z` tag (semantic-release pic
 
 - Workflow: `.github/workflows/mobile-release.yml`
 - Sets `app.json` version, generates Play release notes from the GitHub release body.
-- Builds AAB to Play `internal` track (only if fingerprint changed) and publishes OTA to the `internal` channel.
-
-Local equivalent:
-
-```bash
-pnpm run update:internal
-pnpm run submit-to-google-play   # only when a fresh AAB is needed
-```
+- Compares current fingerprint against the last internal build:
+  - **`mode=build`** (fingerprint changed or no prior build): builds AAB and submits to Play `internal` track. Local equivalent: `pnpm run submit-to-google-play`
+  - **`mode=ota`** (fingerprint unchanged): publishes OTA update to the `internal` channel only. Local equivalent: `pnpm run update:internal`
 
 ### Stage 3 — Beta (manual)
 
