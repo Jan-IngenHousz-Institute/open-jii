@@ -9,8 +9,6 @@ import type {
 } from "@repo/api/schemas/experiment.schema";
 import type { WebhookErrorResponse } from "@repo/api/schemas/user.schema";
 
-import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
-import { success } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
 
@@ -26,15 +24,10 @@ describe("ProjectTransferWebhookController", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-
-    // Mock Databricks upload to succeed by default
-    const databricksAdapter = testApp.module.get(DatabricksAdapter);
-    vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
   });
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

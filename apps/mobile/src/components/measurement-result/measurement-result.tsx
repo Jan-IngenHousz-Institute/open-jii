@@ -41,10 +41,13 @@ export function MeasurementResult({
     return await applyMacro(rawMeasurement, macro);
   }, [rawMeasurement, macro]);
 
-  const messageGroups: MacroMessageGroup[] =
-    processedMeasurement
-      ?.map((output) => output.messages)
-      .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
+  const messageGroups: MacroMessageGroup[] = processedMeasurement?.messages
+    ? [processedMeasurement.messages]
+    : [];
+
+  const processedKeys = processedMeasurement
+    ? Object.keys(processedMeasurement).filter((key) => key !== "messages")
+    : [];
 
   const renderRawContent = () => (
     <Text className={clsx("font-mono text-sm leading-5", classes.text)}>
@@ -67,7 +70,7 @@ export function MeasurementResult({
       return <ActivityIndicator size="large" color={colors.primary.dark} />;
     }
 
-    if (!processedMeasurement?.length) {
+    if (!processedMeasurement || processedKeys.length === 0) {
       return (
         <View className="items-center justify-center p-6">
           <Text className={clsx("text-center text-lg", classes.textSecondary)}>
@@ -79,23 +82,15 @@ export function MeasurementResult({
 
     return (
       <View>
-        {processedMeasurement.map((output, outputIndex) => {
-          return (
-            <View key={outputIndex}>
-              {Object.keys(output)
-                .filter((key) => key !== "messages")
-                .map((key) => {
-                  const value = output[key];
-                  if (typeof value === "string" || typeof value === "number") {
-                    return <KeyValue key={key} value={value} name={key} />;
-                  }
-                  if (Array.isArray(value) && typeof value[0] === "number") {
-                    return <Chart key={key} name={key} values={value} />;
-                  }
-                  return null;
-                })}
-            </View>
-          );
+        {processedKeys.map((key) => {
+          const value = processedMeasurement[key];
+          if (typeof value === "string" || typeof value === "number") {
+            return <KeyValue key={key} value={value} name={key} />;
+          }
+          if (Array.isArray(value) && typeof value[0] === "number") {
+            return <Chart key={key} name={key} values={value} />;
+          }
+          return null;
         })}
       </View>
     );

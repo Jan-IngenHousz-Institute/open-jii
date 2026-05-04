@@ -5,9 +5,8 @@ import {
 } from "@aws-sdk/client-cognito-identity";
 import { mockClient } from "aws-sdk-client-mock";
 
-import { assertFailure, assertSuccess } from "src/common/utils/fp-utils";
-
 import { TestHarness } from "../../../../../test/test-harness";
+import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { CognitoService } from "./cognito.service";
 
 const cognitoMock = mockClient(CognitoIdentityClient);

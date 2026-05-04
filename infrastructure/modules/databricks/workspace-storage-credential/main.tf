@@ -20,6 +20,7 @@ resource "databricks_storage_credential" "this" {
 
   name           = var.credential_name
   isolation_mode = var.isolation_mode
+  force_update   = true
 
   aws_iam_role {
     role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.role_name}"

@@ -319,7 +319,10 @@ describe("measurements-storage", () => {
 
     it("does not remove failed rows even if old", async () => {
       const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-      insertRow("old-failed", "failed", { timestamp: eightDaysAgo, createdAt: Date.now() - 8 * 24 * 60 * 60 * 1000 });
+      insertRow("old-failed", "failed", {
+        timestamp: eightDaysAgo,
+        createdAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
+      });
 
       const mod = await import("../measurements-storage");
       await mod.pruneExpiredMeasurements();

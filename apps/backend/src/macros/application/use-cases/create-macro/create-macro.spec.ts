@@ -1,7 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
 import { generateHashedFilename } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
@@ -13,7 +12,6 @@ describe("CreateMacroUseCase", () => {
   let testUserId: string;
   let useCase: CreateMacroUseCase;
   let macroRepository: MacroRepository;
-  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -24,12 +22,10 @@ describe("CreateMacroUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateMacroUseCase);
     macroRepository = testApp.module.get(MacroRepository);
-    databricksAdapter = testApp.module.get(DatabricksAdapter);
   });
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -45,15 +41,8 @@ describe("CreateMacroUseCase", () => {
     };
 
     it("should successfully create a macro", async () => {
-      // Arrange
-      const uploadMacroCodeSpy = vi
-        .spyOn(databricksAdapter, "uploadMacroCode")
-        .mockResolvedValue(success({}));
-
-      // Act
       const result = await useCase.execute(mockRequest, testUserId);
 
-      // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toMatchObject({
@@ -64,49 +53,13 @@ describe("CreateMacroUseCase", () => {
         code: mockRequest.code,
         createdBy: testUserId,
       });
-
-      expect(uploadMacroCodeSpy).toHaveBeenCalledWith({
-        code: mockRequest.code,
-        filename: result.value.filename,
-        language: mockRequest.language,
-      });
-    });
-
-    it("should clean up macro and return error when Databricks fails", async () => {
-      // Arrange
-      vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(
-        failure({
-          message: "Databricks processing failed",
-          code: "DATABRICKS_ERROR",
-          statusCode: 500,
-          name: "",
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Databricks processing failed");
-
-      // Verify macro was not created due to rollback - list all macros should be empty
-      const listResult = await macroRepository.findAll();
-      assertSuccess(listResult);
-      expect(listResult.value).toHaveLength(0);
     });
 
     it("should handle duplicate macro names", async () => {
-      // Arrange - Create a macro with the same name first
-      vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
-
       await useCase.execute(mockRequest, testUserId);
 
-      // Act - Try to create another macro with the same name
       const result = await useCase.execute(mockRequest, testUserId);
 
-      // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);

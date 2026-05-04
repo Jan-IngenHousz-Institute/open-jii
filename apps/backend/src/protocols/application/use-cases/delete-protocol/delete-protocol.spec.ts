@@ -24,7 +24,6 @@ describe("DeleteProtocolUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

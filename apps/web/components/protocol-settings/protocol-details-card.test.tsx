@@ -110,26 +110,26 @@ describe("ProtocolDetailsCard", () => {
     });
   });
 
-  it("should render the form with initial values", () => {
+  it("should render the form with initial values", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    expect(screen.getByDisplayValue("Test Protocol")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Test Protocol")).toBeInTheDocument();
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 
-  it("should display all form fields", () => {
+  it("should display all form fields", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/family/i)).toBeInTheDocument();
     expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
   });
 
-  it("should disable submit button when form is pristine", () => {
+  it("should disable submit button when form is pristine", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    const submitButton = screen.getByRole("button", { name: /save/i });
+    const submitButton = await screen.findByRole("button", { name: /save/i });
     expect(submitButton).toBeDisabled();
   });
 
@@ -238,36 +238,38 @@ describe("ProtocolDetailsCard", () => {
     expect(descriptionInput).toHaveValue("New description");
   });
 
-  it("should update code field", () => {
+  it("should update code field", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    const codeEditor = screen.getByTestId("code-editor");
+    const codeEditor = await screen.findByTestId("code-editor");
     const newCode = JSON.stringify([{ averages: 2 }]);
 
-    // fireEvent: userEvent.type interprets curly braces as special keys
+    // fireEvent: userEvent.type interprets curly braces as special keys.
     fireEvent.input(codeEditor, { target: { value: newCode } });
 
-    expect(codeEditor).toHaveValue(newCode);
+    await waitFor(() => {
+      expect(codeEditor).toHaveValue(newCode);
+    });
   });
 
-  it("should show family selector with correct options", () => {
+  it("should show family selector with correct options", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    const familySelect = screen.getByLabelText(/family/i);
+    const familySelect = await screen.findByLabelText(/family/i);
     expect(familySelect).toBeInTheDocument();
   });
 
-  it("should display header title and description", () => {
+  it("should display header title and description", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    expect(screen.getByText("protocolSettings.generalSettings")).toBeInTheDocument();
+    expect(await screen.findByText("protocolSettings.generalSettings")).toBeInTheDocument();
     expect(screen.getByText("protocolSettings.generalDescription")).toBeInTheDocument();
   });
 
-  it("should handle empty code value", () => {
+  it("should handle empty code value", async () => {
     render(<ProtocolDetailsCard {...defaultProps} initialCode={[{}]} />);
 
-    const codeEditor = screen.getByTestId("code-editor");
+    const codeEditor = await screen.findByTestId("code-editor");
     expect(codeEditor).toHaveValue(JSON.stringify([{}]));
   });
 
@@ -285,26 +287,26 @@ describe("ProtocolDetailsCard", () => {
     });
   });
 
-  it("should render resizable panel group with horizontal direction", () => {
+  it("should render resizable panel group with horizontal direction", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    const panelGroup = screen.getByTestId("resizable-panel-group");
+    const panelGroup = await screen.findByTestId("resizable-panel-group");
     expect(panelGroup).toHaveAttribute("data-direction", "horizontal");
   });
 
-  it("should render the connect & test panel title", () => {
+  it("should render the connect & test panel title", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    expect(screen.getByText("protocolSettings.testerTitle")).toBeInTheDocument();
+    expect(await screen.findByText("protocolSettings.testerTitle")).toBeInTheDocument();
   });
 
-  it("should render collapsible details section", () => {
+  it("should render collapsible details section", async () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    expect(screen.getByText("protocolSettings.detailsTitle")).toBeInTheDocument();
+    expect(await screen.findByText("protocolSettings.detailsTitle")).toBeInTheDocument();
   });
 
-  it("should show browser unsupported message when no browser support", () => {
+  it("should show browser unsupported message when no browser support", async () => {
     useIotBrowserSupportMock.mockReturnValue({
       bluetooth: false,
       serial: false,
@@ -313,10 +315,12 @@ describe("ProtocolDetailsCard", () => {
 
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    expect(screen.queryByTestId("iot-protocol-runner")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId("iot-protocol-runner")).not.toBeInTheDocument();
+    });
   });
 
-  it("should render IoT protocol runner when browser supports APIs", () => {
+  it("should render IoT protocol runner when browser supports APIs", async () => {
     useIotBrowserSupportMock.mockReturnValue({
       bluetooth: true,
       serial: false,
@@ -325,7 +329,7 @@ describe("ProtocolDetailsCard", () => {
 
     render(<ProtocolDetailsCard {...defaultProps} />);
 
-    const runner = screen.getByTestId("iot-protocol-runner");
+    const runner = await screen.findByTestId("iot-protocol-runner");
     expect(runner).toBeInTheDocument();
     expect(runner).toHaveAttribute("data-layout", "vertical");
   });

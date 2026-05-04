@@ -1,10 +1,20 @@
 import { render } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import RootLayout, { metadata } from "../layout";
 
 describe("RootLayout", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders children", () => {
+    // RootLayout renders <html>/<body> inside jsdom's <div>, which logs a
+    // hydration warning. Silence it for this test.
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // no-op
+    });
+
     const container = document.createElement("div");
     document.body.appendChild(container);
 

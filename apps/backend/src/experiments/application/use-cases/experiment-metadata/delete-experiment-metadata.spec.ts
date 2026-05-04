@@ -18,7 +18,6 @@ describe("DeleteExperimentMetadataUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(DeleteExperimentMetadataUseCase);
     metadataRepository = testApp.module.get(ExperimentMetadataRepository);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

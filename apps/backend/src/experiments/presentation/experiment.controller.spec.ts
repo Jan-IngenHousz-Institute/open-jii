@@ -31,9 +31,6 @@ describe("ExperimentController", () => {
 
     // Get the databricks service instance for create experiment tests
     analyticsAdapter = testApp.module.get(AnalyticsAdapter);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

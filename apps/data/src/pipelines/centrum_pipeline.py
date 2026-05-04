@@ -6,19 +6,16 @@
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
-from pyspark.sql.window import Window
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, MapType, ArrayType, IntegerType
-from delta.tables import DeltaTable
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType, IntegerType
 import requests
-import json
 import pandas as pd
 from datetime import datetime
-from multispeq import execute_macro_script
 from enrich.user_metadata import add_user_column
 from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
 from enrich.macro_execution import make_execute_macro_udf
 from openjii import decompress_sample
+from data_repair import apply_inline_repairs
 
 # COMMAND ----------
 
@@ -86,13 +83,10 @@ CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
-MACROS_PATH = "/Workspace/Shared/macros"
-
 EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
-EXPERIMENT_MACRO_DATA_SANDBOX_TABLE = "experiment_macro_data_sandbox"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
@@ -603,6 +597,7 @@ def experiment_raw_data():
             "processed_timestamp",
             "skip_macro_processing"
         )
+        .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_RAW_DATA_TABLE))
     )
 
 # COMMAND ----------
@@ -676,8 +671,9 @@ def experiment_device_data():
 )
 def experiment_macro_data():
     """Process macros with VARIANT output column."""
-    
-    # Read all rows with macros from experiment_raw_data
+
+    sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
+
     base_df = (
         dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
         .filter("macros IS NOT NULL")
@@ -719,171 +715,11 @@ def experiment_macro_data():
             F.col("macro.filename").alias("macro_filename")
         )
     )
-    
-    # Define UDF to execute macro and return struct with result and error
-    @F.pandas_udf(returnType=StructType([
-        StructField("result", StringType(), True),
-        StructField("error", StringType(), True)
-    ]))
-    def execute_macro_udf(pdf: pd.DataFrame) -> pd.DataFrame:
-        results = []
-        errors = []
-        
-        for _, row in pdf.iterrows():
-            data = row.get("data")
-            macro_filename = row.get("macro_filename")
-            macro_name = row.get("macro_name")
-            
-            if pd.isna(data) or pd.isna(macro_filename):
-                results.append(None)
-                errors.append(f"NULL data or macro_filename (macro: {macro_name})")
-                continue
-            
-            try:
-                sample_json = data.toJson()
-                
-                result = execute_macro_script(macro_filename, sample_json, MACROS_PATH)
-                
-                if result:
-                    results.append(json.dumps(result))
-                    errors.append(None)
-                else:
-                    results.append(None)
-                    errors.append(f"Macro returned empty result (macro: {macro_name})")
-            except Exception as e:
-                results.append(None)
-                errors.append(f"{str(e)} (macro: {macro_name})")
-        
-        return pd.DataFrame({"result": results, "error": errors})
-    
-    return (
-        base_df
-        # Run macro UDF only for non-imported rows (skip_macro_processing != true)
-        .withColumn(
-            "macro_result",
-            F.when(
-                ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
-                execute_macro_udf(F.struct("data", "macro_filename", "macro_name"))
-            )
-        )
-        # For imported rows, use pre-computed output_data; otherwise use UDF result
-        .withColumn(
-            "macro_output",
-            F.when(
-                F.col("skip_macro_processing") == True,
-                F.col("output_data")
-            ).otherwise(
-                F.when(F.col("macro_result.result").isNotNull(), F.expr("parse_json(macro_result.result)"))
-            )
-        )
-        .withColumn(
-            "macro_error",
-            F.when(
-                F.col("skip_macro_processing") == True,
-                F.lit(None).cast("string")
-            ).otherwise(F.col("macro_result.error"))
-        )
-        .withColumn(
-            "macro_row_id",
-            F.abs(
-                F.hash(
-                    F.col("id"),
-                    F.col("macro_filename"),
-                    F.col("processed_timestamp")
-                )
-            )
-        )
-        .select(
-            "experiment_id",
-            F.col("macro_row_id").alias("id"),
-            F.col("id").alias("raw_id"),
-            "device_id",
-            "device_name",
-            "timestamp",
-            "timezone",
-            "user_id",
-            "macro_id",
-            "macro_name",
-            "macro_filename",
-            "macro_output",
-            "macro_error",
-            "processed_timestamp",
-            "date",
-            "questions_data",
-            "annotations"
-        )
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Experiment Macro Data (Sandbox Comparison)
-
-@dlt.table(
-    name=EXPERIMENT_MACRO_DATA_SANDBOX_TABLE,
-    comment="Gold layer: Macro processing via backend API/Lambda sandbox for comparison with local execution",
-    table_properties={
-        "quality": "gold",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-        "delta.enableRowTracking": "true",
-        "delta.enableChangeDataFeed": "true",
-        "delta.feature.variantType-preview": "supported",
-    },
-)
-def experiment_macro_data_sandbox():
-    """Process macros via backend API (Lambda sandbox) for comparison."""
-
-    # Create UDF inside the table function so secret lookup only happens
-    # when this table runs (not at module import time).
-    sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
-
-    base_df = (
-        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
-        .filter("macros IS NOT NULL")
-        .filter("size(macros) > 0")
-        .select(
-            "id",
-            "experiment_id",
-            "device_id",
-            "device_name",
-            "timestamp",
-            "timezone",
-            "user_id",
-            "data",
-            "output_data",
-            "date",
-            "processed_timestamp",
-            "questions_data",
-            "annotations",
-            "skip_macro_processing",
-            F.explode("macros").alias("macro"),
-        )
-        .select(
-            "id",
-            "experiment_id",
-            "device_id",
-            "device_name",
-            "timestamp",
-            "timezone",
-            "user_id",
-            "data",
-            "output_data",
-            "date",
-            "processed_timestamp",
-            "questions_data",
-            "annotations",
-            "skip_macro_processing",
-            F.col("macro.id").alias("macro_id"),
-            F.col("macro.name").alias("macro_name"),
-            F.col("macro.filename").alias("macro_filename"),
-        )
-    )
 
     return (
         base_df
-        # Run sandbox UDF only for non-imported rows with a valid UUID macro_id.
-        # NULL.rlike(...) returns NULL (treated as false in F.when), so an
+        .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_MACRO_DATA_TABLE))
+        # NULL.rlike(...) returns NULL (treated as false in F.when), so the
         # explicit isNotNull() guard is required — otherwise null macro_ids
         # would silently land with no output and no error.
         .withColumn(
@@ -947,7 +783,6 @@ def experiment_macro_data_sandbox():
             "macro_filename",
             "macro_output",
             "macro_error",
-            F.col("data").alias("raw_data"),
             "processed_timestamp",
             "date",
             "questions_data",
