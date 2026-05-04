@@ -1165,11 +1165,18 @@ export type ProjectTransferWebhookResponse = z.infer<typeof zProjectTransferWebh
 
 // --- Experiment Metadata Schemas ---
 
+function isAllowedMetadataColumnChar(c: string): boolean {
+  return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
+}
+
 const zMetadataColumnName = z
   .string()
   .min(1, "Column name is required")
   .max(64, "Column name must be 64 characters or less")
-  .refine((s) => s.trim().length > 0, "Column name cannot be empty or whitespace");
+  .refine(
+    (s) => Array.from(s).every(isAllowedMetadataColumnChar),
+    "Column names can only contain letters, digits, and underscores",
+  );
 
 const zMetadataColumn = z.object({
   id: z.string().min(1),
@@ -1189,7 +1196,8 @@ const zMetadataRow = z
  */
 export const zCustomMetadataPayload = z
   .object({
-    name: z.string().min(1).max(120),
+    // Empty allowed: the client auto-generates "Untitled Metadata N" when blank.
+    name: z.string().max(120),
     columns: z.array(zMetadataColumn).min(1, "At least one column is required"),
     rows: z.array(zMetadataRow),
     identifierColumnId: z
@@ -1232,7 +1240,10 @@ export const zCustomMetadataPayload = z
     });
 
     // identifierColumnId must reference a real column on this blob.
-    if (!blob.columns.some((c) => c.name === blob.identifierColumnId)) {
+    // Compared against `column.id` so the same schema validates both shapes:
+    // FE editing-time (id is `col_X`, identifierColumnId is `col_X`) and
+    // on-the-wire (id and name are equal after the col-X to name remap).
+    if (!blob.columns.some((c) => c.id === blob.identifierColumnId)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["identifierColumnId"],
@@ -1251,6 +1262,31 @@ export const zExperimentMetadata = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
+
+/**
+ * Compose `zCustomMetadataPayload` with a flow-aware refinement that rejects
+ * any column name that collides with a sanitized question label from the
+ * experiment's flow. The collision set must be supplied by the caller (the FE
+ * form, which already has the flow loaded), since zod cannot read the DB.
+ *
+ * The identifier column is exempt: it's the column that joins against a
+ * question's answers, the pipeline filters it out of `custom_metadata` before
+ * the gold tables, and naming it after the question it matches is natural.
+ */
+export function makeCustomMetadataFormSchema(reservedQuestionLabels: ReadonlySet<string>) {
+  return zCustomMetadataPayload.superRefine((blob, ctx) => {
+    blob.columns.forEach((col, idx) => {
+      if (col.id === blob.identifierColumnId) return;
+      if (reservedQuestionLabels.has(col.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["columns", idx, "name"],
+          message: `Column "${col.name}" collides with an existing question label`,
+        });
+      }
+    });
+  });
+}
 
 export const zCreateExperimentMetadataBody = z.object({
   metadata: zCustomMetadataPayload,
