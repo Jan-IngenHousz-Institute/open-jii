@@ -19,7 +19,7 @@ from pyspark.sql.types import StringType
 from ..manifest import inline_repair
 
 
-# Prod UUIDs. Dev has different IDs; predicate no-ops there, which is fine.
+# Prod UUIDs. Predicate no-ops in dev.
 _RIDES_MACRO_IDS = (
     "21aed8a2-f95b-4f28-b025-44f6d96447e7",  # Photosynthesis RIDES 2.0
     "5bbf306c-d880-4f04-ac04-dd76fe545182",  # Photosynthesis RIDES 2.1
@@ -27,8 +27,7 @@ _RIDES_MACRO_IDS = (
 
 
 def _reinterleave(arr: list) -> list:
-    """Re-weave [A0..A_{h-1}, B0..B_{N-h-1}] back into [A0, B0, A1, B1, ...]
-    where h = ceil(N/2). Odd N leaves the trailing A element unpaired."""
+    """Inverse of the macro's even/odd split. h = ceil(N/2)."""
     n = len(arr)
     if n < 2:
         return arr
@@ -43,12 +42,8 @@ def _reinterleave(arr: list) -> list:
 
 
 def _looks_de_interleaved(arr: list) -> bool:
-    """Count how often adjacent samples cross the array's median.
-    Interleaved (clean) data alternates channels every step, so almost
-    every pair crosses (~N-1 crossings). De-interleaved (corrupt) data
-    walks within one channel for long runs, so crossings only occur at
-    segment boundaries (~few). Threshold n//4 sits between the two regimes
-    with no parameter tuning."""
+    """Adjacent pairs cross the median ~N-1 times for interleaved data,
+    only at segment boundaries for de-interleaved. n//4 separates them."""
     n = len(arr)
     if n < 4:
         return False
@@ -64,9 +59,8 @@ def _looks_de_interleaved(arr: list) -> bool:
 
 
 def _reinvert_pam_payload(value) -> str | None:
-    """Re-interleave PAM.data_raw in the VARIANT payload, only on rows whose
-    layout signature still looks de-interleaved. Returns a JSON string;
-    the caller wraps with parse_json on the Spark side."""
+    """Re-interleave PAM.data_raw if it still looks de-interleaved.
+    Returns a JSON string; caller wraps with parse_json on the Spark side."""
     if value is None:
         return None
     try:
@@ -98,18 +92,17 @@ def _reinvert_pam_udf(data: pd.Series) -> pd.Series:
     severity="apply",
     predicate=lambda: F.col("macro_id").isin(list(_RIDES_MACRO_IDS)),
 )
-def rides_pam_reinterleave(df, *, gate):
+def rides_pam_reinterleave(df):
+    # df is pre-filtered by the framework; UDF returns NULL if it can't parse,
+    # in which case we keep the original `data`.
     return (
-        df.withColumn(
-            "_rides_repaired_json",
-            F.when(gate, _reinvert_pam_udf(F.col("data"))),
-        )
-        .withColumn(
-            "data",
-            F.when(
-                F.col("_rides_repaired_json").isNotNull(),
-                F.expr("parse_json(_rides_repaired_json)"),
-            ).otherwise(F.col("data")),
-        )
-        .drop("_rides_repaired_json")
+        df.withColumn("_rides_repaired_json", _reinvert_pam_udf(F.col("data")))
+          .withColumn(
+              "data",
+              F.when(
+                  F.col("_rides_repaired_json").isNotNull(),
+                  F.expr("parse_json(_rides_repaired_json)"),
+              ).otherwise(F.col("data")),
+          )
+          .drop("_rides_repaired_json")
     )

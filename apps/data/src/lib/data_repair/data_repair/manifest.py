@@ -21,8 +21,6 @@ class InlineRepair:
     description: str
     severity: Severity
     fn: Callable[..., "DataFrame"]
-    # Cheap row-level filter (macro_id, version flag, etc.). Called at apply
-    # time to produce a Column<Boolean>.
     predicate: Optional[Callable[[], "Column"]] = None
 
 
@@ -37,18 +35,11 @@ def inline_repair(
     severity: Severity = "apply",
     predicate: Optional[Callable[[], "Column"]] = None,
 ):
-    """Register a DataFrame transform that fires when ``apply_inline_repairs``
-    runs against ``table``.
+    """Register a DataFrame transform. If ``predicate`` is set, the framework
+    pre-filters by it so the repair (and any UDFs it calls) only touches
+    matching rows. ``severity="advisory"`` registers without applying."""
 
-    The decorated function receives the DataFrame plus a ``gate`` keyword
-    argument: a Column<Boolean> derived from ``predicate`` (or always-True if
-    no predicate). The repair AND's its own conditions (content signature,
-    schema-shape checks) into ``gate`` before applying the inverse.
-
-    severity="advisory" registers without applying.
-    """
-
-    def _decorate(fn: Callable[..., "DataFrame"]) -> Callable[..., "DataFrame"]:
+    def _decorate(fn: Callable[["DataFrame"], "DataFrame"]) -> Callable[["DataFrame"], "DataFrame"]:
         _INLINE_REPAIRS.append(
             InlineRepair(
                 name=fn.__name__,
@@ -73,8 +64,11 @@ def apply_inline_repairs(df: "DataFrame", table_name: str) -> "DataFrame":
         if repair.severity == "advisory":
             print(f"[REPAIR][advisory] {repair.name} ({repair.issue}): registered, not applied")
             continue
-        gate = repair.predicate() if repair.predicate is not None else F.lit(True)
-        df = repair.fn(df, gate=gate)
+        if repair.predicate is not None:
+            keep = F.coalesce(repair.predicate(), F.lit(False))  # NULL -> false
+            df = repair.fn(df.filter(keep)).unionByName(df.filter(~keep), allowMissingColumns=True)
+        else:
+            df = repair.fn(df)
         print(f"[REPAIR] {repair.name} ({repair.issue}): applied")
     return df
 
