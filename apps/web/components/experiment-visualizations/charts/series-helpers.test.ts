@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { IndexedDataSource } from "../form-values";
-import { buildXValues, coerceCell, resolveSeries } from "../series-helpers";
+import type { IndexedDataSource } from "./form-values";
+import { buildXValues, coerceCell, resolveSeries } from "./series-helpers";
 
 describe("coerceCell", () => {
   it("returns numbers unchanged", () => {

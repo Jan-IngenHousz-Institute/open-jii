@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { useVisualizationSaveStatus, VisualizationSaveProvider } from "../save-context";
+import { useVisualizationSaveStatus, VisualizationSaveProvider } from "./save-context";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <VisualizationSaveProvider>{children}</VisualizationSaveProvider>

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { useChartData } from "../use-chart-data";
+import { useChartData } from "./use-chart-data";
 
 function buildViz(columns: string[] = ["time", "temp"]) {
   return createVisualization({

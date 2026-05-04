@@ -2,7 +2,7 @@ import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { ChartConfigError, ChartFrame } from "../chart-frame";
+import { ChartConfigError, ChartFrame } from "./chart-frame";
 
 const baseProps = {
   visualization: createVisualization({ id: "viz-1" }),

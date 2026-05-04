@@ -8,7 +8,7 @@ import {
   firstDataSourceByRole,
   getDefaultSeriesColor,
   makeDataSource,
-} from "../form-values";
+} from "./form-values";
 
 describe("form-values accessors", () => {
   const sources: DataSourceConfig[] = [

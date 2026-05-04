@@ -5,7 +5,7 @@ import {
   isSupportedChartType,
   listChartTypes,
   listChartTypesByFamily,
-} from "../registry";
+} from "./registry";
 
 describe("chart-type registry", () => {
   it("returns the line definition for chartType=line", () => {

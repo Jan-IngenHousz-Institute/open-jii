@@ -1,7 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { ChartTypePicker } from "../chart-type-picker";
+import { ChartTypePicker } from "./chart-type-picker";
 
 describe("ChartTypePicker", () => {
   it("renders the active chart type as the trigger label", () => {
