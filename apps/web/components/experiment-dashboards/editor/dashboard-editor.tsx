@@ -92,7 +92,7 @@ function DashboardEditorInner({
 
   useDashboardAutosave({ form, experimentId, dashboardId });
 
-  const backHref = `/${locale}/platform/experiments/${experimentId}/analysis/dashboards/${dashboardId}`;
+  const backHref = `/${locale}/platform/experiments/${experimentId}/dashboards/${dashboardId}`;
 
   return (
     <Form {...form}>

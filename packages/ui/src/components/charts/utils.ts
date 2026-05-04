@@ -68,6 +68,49 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   return webglTypes[baseType] || baseType;
 }
 
+// ISO 8601 date / datetime, with optional time, fractional seconds, and
+// timezone. Loose enough to catch the common shapes that come back from
+// Postgres / Databricks (e.g. `2025-08-26`, `2025-08-26 14:30:00`,
+// `2025-08-26T14:30:00.123Z`).
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+
+/**
+ * Infer the right Plotly axis type for a column of values. Treating ISO
+ * timestamps as `category` (the previous default) made each unique
+ * timestamp a discrete bin and rotated hundreds of labels vertically;
+ * `date` lets Plotly auto-bucket and tick at sensible intervals. Falls
+ * back to `category` for genuinely-string columns and `linear` for
+ * numeric or empty data.
+ */
+export function detectAxisType(values: ReadonlyArray<unknown>): "date" | "category" | "linear" {
+  let sawAny = false;
+  let allLookLikeDates = true;
+  let sawNonNumericString = false;
+
+  for (const v of values) {
+    if (v == null || v === "") continue;
+    sawAny = true;
+
+    if (v instanceof Date) continue;
+
+    if (typeof v === "string") {
+      if (!ISO_DATE_RE.test(v)) {
+        allLookLikeDates = false;
+        if (Number.isNaN(Number(v))) sawNonNumericString = true;
+      }
+      continue;
+    }
+
+    // Number, bigint, etc.
+    allLookLikeDates = false;
+  }
+
+  if (!sawAny) return "linear";
+  if (allLookLikeDates) return "date";
+  if (sawNonNumericString) return "category";
+  return "linear";
+}
+
 /**
  * Creates base layout for all charts with PlotlyChartConfig
  */

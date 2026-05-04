@@ -164,6 +164,7 @@ export function VisualizationWorkspace({
             <WorkspaceInspector
               form={form}
               tables={tables ?? []}
+              isTablesLoading={isLoadingTables}
               tablesError={tablesError}
               selectedTableName={tableName}
               onTableChange={handleTableChange}

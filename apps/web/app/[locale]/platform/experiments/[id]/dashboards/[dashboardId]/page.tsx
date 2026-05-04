@@ -42,8 +42,8 @@ export default function DashboardViewPage() {
   }
 
   const dashboard = data.body;
-  const editHref = `/${locale}/platform/experiments/${experimentId}/analysis/dashboards/${dashboardId}/edit`;
-  const backHref = `/${locale}/platform/experiments/${experimentId}/analysis/dashboards`;
+  const editHref = `/${locale}/platform/experiments/${experimentId}/dashboards/${dashboardId}/edit`;
+  const backHref = `/${locale}/platform/experiments/${experimentId}/dashboards`;
 
   return (
     <div className="space-y-6">

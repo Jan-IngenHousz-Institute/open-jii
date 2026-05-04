@@ -79,6 +79,9 @@
   },
   "overview": "Übersicht",
   "data": "Daten",
+  "dashboards": {
+    "tabLabel": "Dashboards"
+  },
   "analysis": {
     "title": "Analyse",
     "description": "Analysieren Sie Ihre Experimentdaten mit Visualisierungen und Notebooks",

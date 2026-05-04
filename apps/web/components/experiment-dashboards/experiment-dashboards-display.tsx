@@ -37,7 +37,7 @@ export default function ExperimentDashboardsDisplay({
   const dashboards = data?.body ?? [];
 
   const basePath = isArchived ? "experiments-archive" : "experiments";
-  const dashboardsHref = `/${locale}/platform/${basePath}/${experimentId}/analysis/dashboards`;
+  const dashboardsHref = `/${locale}/platform/${basePath}/${experimentId}/dashboards`;
   const visualizationsHref = `/${locale}/platform/${basePath}/${experimentId}/analysis/visualizations`;
 
   return (

@@ -14,6 +14,7 @@
       "browseVisualizations": "Browse visualizations",
       "createSuccess": "Dashboard created",
       "deleteSuccess": "Dashboard deleted",
+      "deleteConfirm": "Permanently delete \"{{name}}\"? Visualizations referenced by this dashboard are not affected.",
       "loading": "Loading dashboard…",
       "loadFailed": "Failed to load dashboard"
     },
@@ -22,7 +23,13 @@
       "createdAt": "Created",
       "updatedAt": "Updated",
       "widgetCount_one": "{{count}} widget",
-      "widgetCount_other": "{{count}} widgets"
+      "widgetCount_other": "{{count}} widgets",
+      "columns": {
+        "name": "Name",
+        "widgets": "Widgets",
+        "user": "User",
+        "updated": "Updated"
+      }
     }
   },
   "form": {

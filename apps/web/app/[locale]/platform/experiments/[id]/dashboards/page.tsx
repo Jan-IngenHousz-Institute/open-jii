@@ -31,7 +31,7 @@ export default function ExperimentDashboardsPage() {
     experimentId,
     onSuccess: (created) => {
       router.push(
-        `/${locale}/platform/experiments/${experimentId}/analysis/dashboards/${created.id}/edit`,
+        `/${locale}/platform/experiments/${experimentId}/dashboards/${created.id}/edit`,
       );
     },
   });
@@ -50,8 +50,11 @@ export default function ExperimentDashboardsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{t("ui.title")}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">{t("ui.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("ui.subtitle")}</p>
+        </div>
         <Button onClick={handleCreate} disabled={!hasAccess || isCreating}>
           {isCreating ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

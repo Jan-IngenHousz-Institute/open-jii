@@ -1,5 +1,5 @@
 import { createVisualization } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, within } from "@/test/test-utils";
 import { formatDate } from "@/util/date";
 import { describe, it, expect } from "vitest";
 
@@ -24,40 +24,57 @@ function viz(overrides: Partial<ExperimentVisualization> = {}): ExperimentVisual
 }
 
 describe("ExperimentVisualizationsList", () => {
-  it("renders loading skeleton", () => {
+  it("renders skeleton rows when loading", () => {
     render(<ExperimentVisualizationsList visualizations={[]} experimentId={expId} isLoading />);
     expect(document.querySelectorAll('[class*="animate-pulse"]').length).toBeGreaterThan(0);
   });
 
-  it("renders empty state", () => {
+  it("renders empty state when no visualizations", () => {
     render(
       <ExperimentVisualizationsList visualizations={[]} experimentId={expId} isLoading={false} />,
     );
     expect(screen.getByText("ui.messages.noVisualizations")).toBeInTheDocument();
   });
 
-  it("renders visualization details", () => {
+  it("renders all column headers", () => {
+    render(<ExperimentVisualizationsList visualizations={[viz()]} experimentId={expId} />);
+    expect(screen.getByText("ui.labels.columns.name")).toBeInTheDocument();
+    expect(screen.getByText("ui.labels.columns.type")).toBeInTheDocument();
+    expect(screen.getByText("ui.labels.columns.user")).toBeInTheDocument();
+    expect(screen.getByText("ui.labels.columns.updated")).toBeInTheDocument();
+  });
+
+  it("renders the row's name, type, user, and date", () => {
     render(<ExperimentVisualizationsList visualizations={[viz()]} experimentId={expId} />);
     expect(screen.getByText("Test Visualization")).toBeInTheDocument();
-    expect(screen.getByText("A test desc")).toBeInTheDocument();
     expect(screen.getByText("Test User")).toBeInTheDocument();
     expect(screen.getByText("workspace.charts.types.line")).toBeInTheDocument();
+    expect(screen.getByText(formatDate(new Date("2024-01-15").toISOString()))).toBeInTheDocument();
   });
 
-  it("renders multiple items", () => {
-    const items = ["A", "B", "C"].map((n, i) => viz({ id: `v-${i}`, name: n }));
+  it("renders multiple rows, sorted by updatedAt desc", () => {
+    const items = [
+      viz({ id: "v-old", name: "Older", updatedAt: new Date("2024-01-01").toISOString() }),
+      viz({ id: "v-new", name: "Newer", updatedAt: new Date("2024-03-01").toISOString() }),
+      viz({ id: "v-mid", name: "Middle", updatedAt: new Date("2024-02-01").toISOString() }),
+    ];
     render(<ExperimentVisualizationsList visualizations={items} experimentId={expId} />);
-    for (const n of ["A", "B", "C"]) expect(screen.getByText(n)).toBeInTheDocument();
+    const rows = screen.getAllByRole("row");
+    // First row is the header; data rows follow.
+    expect(within(rows[1]!).getByText("Newer")).toBeInTheDocument();
+    expect(within(rows[2]!).getByText("Middle")).toBeInTheDocument();
+    expect(within(rows[3]!).getByText("Older")).toBeInTheDocument();
   });
 
-  it("links to correct visualization page", () => {
+  it("links the name cell to the visualization page", () => {
     render(
       <ExperimentVisualizationsList
         visualizations={[viz({ id: "viz-456" })]}
         experimentId={expId}
       />,
     );
-    expect(screen.getByRole("link")).toHaveAttribute(
+    const link = screen.getByRole("link", { name: "Test Visualization" });
+    expect(link).toHaveAttribute(
       "href",
       `/platform/experiments/${expId}/analysis/visualizations/viz-456`,
     );
@@ -84,7 +101,7 @@ describe("ExperimentVisualizationsList", () => {
     ["scatter", "workspace.charts.types.scatter", "bg-badge-published"],
     // Unregistered chart types fall back to the neutral badge.
     ["unknown", "unknown", "bg-badge-archived"],
-  ] as const)("badge for %s has class %s", (chartType, label, className) => {
+  ] as const)("type pill for %s carries class %s", (chartType, label, className) => {
     render(
       <ExperimentVisualizationsList
         visualizations={[viz({ chartType: chartType as "line" })]}
@@ -94,67 +111,28 @@ describe("ExperimentVisualizationsList", () => {
     expect(screen.getByText(label)).toHaveClass(className);
   });
 
-  it("shows truncated user ID when name is missing", () => {
+  it("falls back to a truncated user id when name is missing", () => {
     render(
       <ExperimentVisualizationsList
         visualizations={[viz({ createdBy: "user-1234567890", createdByName: undefined })]}
         experimentId={expId}
       />,
     );
-    expect(screen.getByText("user-123...")).toBeInTheDocument();
+    expect(screen.getByText("user-123…")).toBeInTheDocument();
   });
 
-  it("displays formatted update date", () => {
-    const date = formatDate(new Date("2024-03-15").toISOString());
+  it("uses experiments-archive base path when isArchived is set", () => {
     render(
       <ExperimentVisualizationsList
-        visualizations={[viz({ updatedAt: new Date("2024-03-15").toISOString() })]}
+        visualizations={[viz({ id: "viz-9" })]}
         experimentId={expId}
+        isArchived
       />,
     );
-    expect(screen.getByText(`common.updated ${date}`)).toBeInTheDocument();
-  });
-
-  it("truncates description over 120 chars", () => {
-    const long = "X".repeat(130);
-    render(
-      <ExperimentVisualizationsList
-        visualizations={[viz({ description: long })]}
-        experimentId={expId}
-      />,
+    const link = screen.getByRole("link", { name: "Test Visualization" });
+    expect(link).toHaveAttribute(
+      "href",
+      `/platform/experiments-archive/${expId}/analysis/visualizations/viz-9`,
     );
-    expect(screen.getByText(long.substring(0, 120) + "...")).toBeInTheDocument();
-    expect(screen.queryByText(long)).not.toBeInTheDocument();
-  });
-
-  it.each([null, ""])("hides description when value is %s", (desc) => {
-    render(
-      <ExperimentVisualizationsList
-        visualizations={[viz({ description: desc as unknown as string })]}
-        experimentId={expId}
-      />,
-    );
-    expect(screen.queryByTestId("visualization-description")).not.toBeInTheDocument();
-  });
-
-  it("renders chevron icons for navigation", () => {
-    render(
-      <ExperimentVisualizationsList
-        visualizations={[viz({ id: "v1" }), viz({ id: "v2" })]}
-        experimentId={expId}
-      />,
-    );
-    expect(document.querySelectorAll(".lucide-chevron-right").length).toBe(2);
-  });
-
-  it("uses responsive grid layout", () => {
-    render(
-      <ExperimentVisualizationsList
-        visualizations={[viz({ id: "v-1" }), viz({ id: "v-2" }), viz({ id: "v-3" })]}
-        experimentId={expId}
-      />,
-    );
-    const grid = document.querySelector(".grid");
-    expect(grid).toHaveClass("grid-cols-1", "md:grid-cols-2", "lg:grid-cols-3");
   });
 });

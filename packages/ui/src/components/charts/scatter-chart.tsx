@@ -6,7 +6,13 @@ import React from "react";
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  detectAxisType,
+  getPlotType,
+  getRenderer,
+} from "./utils";
 
 export interface ScatterSeriesData extends BaseSeries {
   x: (string | number | Date)[];
@@ -113,29 +119,22 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   const layout = createBaseLayout(config);
   const plotConfig = createPlotlyConfig(config);
 
-  // Detect categorical axis data (non-numeric strings). The renderer already
-  // coerces numeric-looking strings to numbers, so anything that arrives as
-  // a string here is genuinely categorical — override the axis type so we
-  // don't try to plot text on a linear scale.
-  const hasCategoricalX = data.some(
-    (series) => series.x && series.x.some((val) => typeof val === "string" && isNaN(Number(val))),
-  );
-  if (hasCategoricalX) {
-    layout.xaxis = {
-      ...layout.xaxis,
-      type: "category",
-      categoryorder: "category ascending",
-    };
+  // Infer axis type from the data. ISO timestamps → `date` (Plotly buckets +
+  // labels sensibly), genuine strings → `category`, otherwise leave as the
+  // default linear scale. `coerceCell` upstream already converts numeric-
+  // looking strings to numbers, so anything that's still a string here is
+  // either a date or a real category.
+  const xAxisType = detectAxisType(data.flatMap((series) => series.x ?? []));
+  if (xAxisType === "date") {
+    layout.xaxis = { ...layout.xaxis, type: "date" };
+  } else if (xAxisType === "category") {
+    layout.xaxis = { ...layout.xaxis, type: "category", categoryorder: "category ascending" };
   }
-  const hasCategoricalY = data.some(
-    (series) => series.y && series.y.some((val) => typeof val === "string" && isNaN(Number(val))),
-  );
-  if (hasCategoricalY) {
-    layout.yaxis = {
-      ...layout.yaxis,
-      type: "category",
-      categoryorder: "category ascending",
-    };
+  const yAxisType = detectAxisType(data.flatMap((series) => series.y ?? []));
+  if (yAxisType === "date") {
+    layout.yaxis = { ...layout.yaxis, type: "date" };
+  } else if (yAxisType === "category") {
+    layout.yaxis = { ...layout.yaxis, type: "category", categoryorder: "category ascending" };
   }
 
   return (

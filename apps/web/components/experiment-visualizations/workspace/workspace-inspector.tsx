@@ -31,6 +31,7 @@ const tabTriggerClass = cn(
 interface WorkspaceInspectorProps {
   form: UseFormReturn<ChartFormValues>;
   tables: ExperimentTableMetadata[];
+  isTablesLoading?: boolean;
   tablesError?: unknown;
   selectedTableName: string;
   onTableChange: (tableName: string) => void;
@@ -42,6 +43,7 @@ interface WorkspaceInspectorProps {
 export function WorkspaceInspector({
   form,
   tables,
+  isTablesLoading = false,
   tablesError,
   selectedTableName,
   onTableChange,
@@ -80,6 +82,17 @@ export function WorkspaceInspector({
 
         <div className="scrollbar-thin overscroll-contain p-4 md:min-h-0 md:flex-1 md:overflow-y-auto">
           <TabsContent value="data" className="mt-0 space-y-6">
+            {isTablesLoading ? (
+              // Whole-tab loading: avoids showing an empty Dataset select +
+              // the columns "select a table first" placeholder while tables
+              // are still in flight. Same visual treatment as the columns
+              // loading card so the inspector feels consistent.
+              <div className="text-muted-foreground flex items-center gap-2 rounded-md border border-dashed p-4 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t("workspace.inspector.loadingTables")}
+              </div>
+            ) : (
+              <>
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">{t("workspace.inspector.dataset")}</h3>
 
@@ -139,6 +152,8 @@ export function WorkspaceInspector({
                 <UnsupportedPanel />
               )}
             </ColumnsState>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="style" className="mt-0">

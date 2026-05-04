@@ -11,6 +11,7 @@
     "messages": {
       "noVisualizations": "Nog geen visualisaties",
       "deleteSuccess": "Visualisatie succesvol verwijderd",
+      "deleteConfirm": "\"{{name}}\" definitief verwijderen? Dashboards die deze grafiek insluiten, tonen een tijdelijke aanduiding voor ontbrekende visualisatie.",
       "createSuccess": "Visualisatie succesvol aangemaakt",
       "updateSuccess": "Visualisatie succesvol bijgewerkt",
       "loading": "Visualisatie laden...",
@@ -20,7 +21,13 @@
     "labels": {
       "createdAt": "Aangemaakt",
       "createdBy": "Aangemaakt door",
-      "updatedAt": "Laatst bijgewerkt"
+      "updatedAt": "Laatst bijgewerkt",
+      "columns": {
+        "name": "Naam",
+        "type": "Type",
+        "user": "Gebruiker",
+        "updated": "Bijgewerkt"
+      }
     }
   },
 
@@ -245,6 +252,7 @@
       "dataset": "Dataset",
       "selectTable": "Select a table",
       "noTables": "No tables available",
+      "loadingTables": "Datasets laden...",
       "failedToLoadTables": "Failed to load tables",
       "failedToLoadColumns": "Failed to load columns",
       "loadingColumns": "Loading columns...",

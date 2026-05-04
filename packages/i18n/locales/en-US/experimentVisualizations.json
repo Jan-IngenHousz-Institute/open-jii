@@ -12,6 +12,7 @@
     "messages": {
       "noVisualizations": "No visualizations yet",
       "deleteSuccess": "Visualization deleted successfully",
+      "deleteConfirm": "Permanently delete \"{{name}}\"? Dashboards that embed this chart will show a missing-visualization placeholder.",
       "createSuccess": "Visualization created successfully",
       "updateSuccess": "Visualization updated successfully",
       "loading": "Loading visualization...",
@@ -21,7 +22,13 @@
     "labels": {
       "createdAt": "Created",
       "createdBy": "Created By",
-      "updatedAt": "Last updated"
+      "updatedAt": "Last updated",
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "user": "User",
+        "updated": "Updated"
+      }
     }
   },
 
@@ -248,6 +255,7 @@
       "dataset": "Dataset",
       "selectTable": "Select a table",
       "noTables": "No tables available",
+      "loadingTables": "Loading datasets...",
       "failedToLoadTables": "Failed to load tables",
       "failedToLoadColumns": "Failed to load columns",
       "loadingColumns": "Loading columns...",

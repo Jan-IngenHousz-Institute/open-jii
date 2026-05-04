@@ -90,6 +90,9 @@
   },
   "overview": "Overview",
   "data": "Data",
+  "dashboards": {
+    "tabLabel": "Dashboards"
+  },
   "analysis": {
     "title": "Analysis",
     "description": "Analyze your experiment data with visualizations and notebooks",

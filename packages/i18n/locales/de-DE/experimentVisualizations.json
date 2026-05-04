@@ -11,6 +11,7 @@
     "messages": {
       "noVisualizations": "Noch keine Visualisierungen",
       "deleteSuccess": "Visualisierung erfolgreich gelöscht",
+      "deleteConfirm": "\"{{name}}\" dauerhaft löschen? Dashboards, die dieses Diagramm einbetten, zeigen einen Platzhalter für fehlende Visualisierung an.",
       "createSuccess": "Visualisierung erfolgreich erstellt",
       "updateSuccess": "Visualisierung erfolgreich aktualisiert",
       "loading": "Visualisierung wird geladen...",
@@ -20,7 +21,13 @@
     "labels": {
       "createdAt": "Erstellt",
       "createdBy": "Erstellt von",
-      "updatedAt": "Zuletzt aktualisiert"
+      "updatedAt": "Zuletzt aktualisiert",
+      "columns": {
+        "name": "Name",
+        "type": "Typ",
+        "user": "Benutzer",
+        "updated": "Aktualisiert"
+      }
     }
   },
 
@@ -245,6 +252,7 @@
       "dataset": "Dataset",
       "selectTable": "Select a table",
       "noTables": "No tables available",
+      "loadingTables": "Datensätze werden geladen...",
       "failedToLoadTables": "Failed to load tables",
       "failedToLoadColumns": "Failed to load columns",
       "loadingColumns": "Loading columns...",
