@@ -76,9 +76,6 @@
   },
   "overview": "Overzicht",
   "data": "Gegevens",
-  "dashboards": {
-    "tabLabel": "Dashboards"
-  },
   "analysis": {
     "title": "Analyse",
     "description": "Analyseer uw experimentgegevens met visualisaties en notebooks",

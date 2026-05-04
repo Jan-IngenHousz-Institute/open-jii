@@ -32,7 +32,6 @@ export const namespaces = [
   "workbook",
   "experimentData",
   "experimentVisualizations",
-  "experimentDashboards",
   "iot",
 ] as const;
 

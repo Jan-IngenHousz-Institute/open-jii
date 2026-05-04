@@ -49,11 +49,6 @@ import { DeleteExperimentVisualizationUseCase } from "./application/use-cases/ex
 import { GetExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/get-experiment-visualization";
 import { ListExperimentVisualizationsUseCase } from "./application/use-cases/experiment-visualizations/list-experiment-visualizations";
 import { UpdateExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/update-experiment-visualization";
-import { CreateExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/create-experiment-dashboard";
-import { DeleteExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/delete-experiment-dashboard";
-import { GetExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/get-experiment-dashboard";
-import { ListExperimentDashboardsUseCase } from "./application/use-cases/experiment-dashboards/list-experiment-dashboards";
-import { UpdateExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/update-experiment-dashboard";
 import { CreateFlowUseCase } from "./application/use-cases/flows/create-flow";
 import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
 import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
@@ -115,7 +110,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentMembersController,
     ExperimentMetadataController,
     ExperimentVisualizationsController,
-    ExperimentDashboardsController,
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
     ProjectTransferRequestsController,
@@ -146,7 +140,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentMetadataRepository,
     ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
-    ExperimentDashboardRepository,
     ExperimentDataRepository,
     ExperimentDataExportsRepository,
     FlowRepository,
@@ -198,13 +191,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     GetExperimentVisualizationUseCase,
     UpdateExperimentVisualizationUseCase,
     DeleteExperimentVisualizationUseCase,
-
-    // Experiment dashboard use cases
-    ListExperimentDashboardsUseCase,
-    CreateExperimentDashboardUseCase,
-    GetExperimentDashboardUseCase,
-    UpdateExperimentDashboardUseCase,
-    DeleteExperimentDashboardUseCase,
 
     // Flow use cases
     GetFlowUseCase,

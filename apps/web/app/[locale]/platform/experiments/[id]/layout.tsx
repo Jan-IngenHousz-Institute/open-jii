@@ -88,7 +88,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const getActiveTab = () => {
     if (pathname.endsWith("/flow")) return "flow";
     if (pathname.startsWith(`/${locale}/platform/experiments/${id}/data`)) return "data";
-    if (pathname.startsWith(`/${locale}/platform/experiments/${id}/dashboards`)) return "dashboards";
     if (pathname.includes("/analysis")) return "analysis";
     if (pathname.endsWith(`/experiments/${id}`)) return "overview";
     return "overview";
@@ -97,43 +96,34 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const activeTab = getActiveTab();
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <div className="mx-auto w-full max-w-7xl">
-        <ExperimentTitle
-          experimentId={id}
-          name={experiment.name}
-          status={experiment.status}
-          visibility={experiment.visibility}
-          hasAccess={hasAccess}
-        />
-      </div>
+    <div className="space-y-6">
+      <ExperimentTitle
+        experimentId={id}
+        name={experiment.name}
+        status={experiment.status}
+        visibility={experiment.visibility}
+        hasAccess={hasAccess}
+      />
 
-      <NavTabs value={activeTab} className="flex w-full flex-1 flex-col">
-        <div className="mx-auto w-full max-w-7xl">
-          <NavTabsList>
-            <NavTabsTrigger value="overview" asChild>
-              <Link href={`/${locale}/platform/experiments/${id}`}>{t("overview")}</Link>
-            </NavTabsTrigger>
-            <NavTabsTrigger value="data" asChild>
-              <Link href={`/${locale}/platform/experiments/${id}/data`}>{t("data")}</Link>
-            </NavTabsTrigger>
-            <NavTabsTrigger value="dashboards" asChild>
-              <Link href={`/${locale}/platform/experiments/${id}/dashboards`}>
-                {t("dashboards.tabLabel", "Dashboards")}
-              </Link>
-            </NavTabsTrigger>
-            <NavTabsTrigger value="analysis" asChild>
-              <Link href={`/${locale}/platform/experiments/${id}/analysis`}>
-                {t("analysis.title")}
-              </Link>
-            </NavTabsTrigger>
-            <NavTabsTrigger value="flow" asChild>
-              <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
-            </NavTabsTrigger>
-          </NavTabsList>
-        </div>
+      <NavTabs value={activeTab} className="w-full">
+        <NavTabsList>
+          <NavTabsTrigger value="overview" asChild>
+            <Link href={`/${locale}/platform/experiments/${id}`}>{t("overview")}</Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="data" asChild>
+            <Link href={`/${locale}/platform/experiments/${id}/data`}>{t("data")}</Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="analysis" asChild>
+            <Link href={`/${locale}/platform/experiments/${id}/analysis`}>
+              {t("analysis.title")}
+            </Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="flow" asChild>
+            <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
+          </NavTabsTrigger>
+        </NavTabsList>
 
-        <div className="mt-6 flex flex-1 flex-col">{children}</div>
+        <div className="mt-6">{children}</div>
       </NavTabs>
     </div>
   );

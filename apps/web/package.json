@@ -52,10 +52,8 @@
     "posthog-node": "catalog:",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
-    "react-grid-layout": "^2.2.3",
     "react-hook-form": "catalog:",
     "react-i18next": "^15.7.4",
-    "react-resizable": "^3",
     "tailwind-merge": "^3.5.0",
     "uuid": "^14.0.0",
     "zod": "catalog:"
