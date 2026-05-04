@@ -7,6 +7,11 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import { NavigationButtons } from "./navigation-buttons";
 
+const mockShowAlert = vi.fn();
+vi.mock("~/components/AlertDialog", () => ({
+  showAlert: (...args: unknown[]) => mockShowAlert(...args),
+}));
+
 const makeQuestion = (id: string, content: any = { kind: "text", required: false }): FlowNode =>
   ({ id, name: id, type: "question", content }) as FlowNode;
 
@@ -17,6 +22,7 @@ const makeMeasurement = (id: string): FlowNode =>
   ({ id, name: id, type: "measurement", content: {} }) as FlowNode;
 
 beforeEach(() => {
+  mockShowAlert.mockReset();
   useMeasurementFlowStore.setState({
     experimentId: undefined,
     protocolId: undefined,
@@ -115,7 +121,7 @@ describe("NavigationButtons", () => {
     expect(screen.queryByText("Next")).toBeNull();
   });
 
-  it("pressing Back calls previousStep on the store", () => {
+  it("pressing Back beyond the first step calls previousStep without prompting", () => {
     const previousStep = vi.fn();
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
@@ -125,6 +131,42 @@ describe("NavigationButtons", () => {
     });
     render(<NavigationButtons />);
     fireEvent.press(screen.getByText("Back"));
+    expect(previousStep).toHaveBeenCalled();
+    expect(mockShowAlert).not.toHaveBeenCalled();
+  });
+
+  it("pressing Back on the first step shows a confirmation alert and does not navigate", () => {
+    const previousStep = vi.fn();
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      flowNodes: [makeQuestion("q1"), makeQuestion("q2")],
+      currentFlowStep: 0,
+      previousStep,
+    });
+    render(<NavigationButtons />);
+    fireEvent.press(screen.getByText("Back"));
+    expect(previousStep).not.toHaveBeenCalled();
+    expect(mockShowAlert).toHaveBeenCalledTimes(1);
+    const [title, message, buttons] = mockShowAlert.mock.calls[0];
+    expect(title).toBe("Back to experiment selection");
+    expect(message).toMatch(/all progress/i);
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toMatchObject({ text: "Continue", variant: "primary" });
+    expect(buttons[1]).toMatchObject({ text: "Cancel", variant: "ghost" });
+  });
+
+  it("confirming the alert from the first step calls previousStep", () => {
+    const previousStep = vi.fn();
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      flowNodes: [makeQuestion("q1")],
+      currentFlowStep: 0,
+      previousStep,
+    });
+    render(<NavigationButtons />);
+    fireEvent.press(screen.getByText("Back"));
+    const [, , buttons] = mockShowAlert.mock.calls[0];
+    buttons[0].onPress?.();
     expect(previousStep).toHaveBeenCalled();
   });
 
