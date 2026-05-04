@@ -309,22 +309,54 @@
       "circle": "Circle",
       "square": "Square",
       "diamond": "Diamond",
+      "triangleUp": "Triangle up",
+      "triangleDown": "Triangle down",
+      "star": "Star",
+      "hexagon": "Hexagon",
       "cross": "Cross",
-      "x": "X"
+      "x": "X",
+      "asterisk": "Asterisk"
+    },
+    "lineDashes": {
+      "solid": "Solid",
+      "dot": "Dotted",
+      "dash": "Dashed",
+      "dashdot": "Dash-dot",
+      "longdash": "Long dash"
+    },
+    "legendPositions": {
+      "right": "Right of plot",
+      "top": "Above plot",
+      "bottom": "Below plot"
+    },
+    "hoverModes": {
+      "closest": "Nearest point",
+      "xUnified": "All series at X",
+      "yUnified": "All series at Y"
     },
     "style": {
       "display": "Display",
       "chartTitle": "Chart title",
       "chartTitlePlaceholder": "Chart title",
+      "legend": "Legend",
+      "grid": "Grid",
+      "interaction": "Interaction",
+      "lineSubsection": "Lines",
+      "markerSubsection": "Markers",
       "showLegend": "Show legend",
       "showGrid": "Show grid",
+      "legendPosition": "Position",
+      "hoverMode": "Hover behaviour",
       "lineOptions": "Line options",
       "scatterOptions": "Scatter options",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",
+      "lineWidth": "Line width",
+      "lineDash": "Line style",
       "markerSize": "Marker size",
-      "markerShape": "Marker shape"
+      "markerShape": "Marker shape",
+      "markerOpacity": "Marker opacity"
     },
     "charts": {
       "pickerLabel": "Choose chart type",

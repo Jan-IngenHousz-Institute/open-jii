@@ -64,14 +64,10 @@ describe("resolveSeries", () => {
     expect(result.useIndexForX).toBe(true);
   });
 
-  it("treats X as the single Y series when only X is configured", () => {
+  it("returns NO Y entries when only X is configured (chart renders axes only, no synthesised series)", () => {
     const result = resolveSeries([], "time");
-    expect(result.effectiveYEntries).toHaveLength(1);
-    expect(result.effectiveYEntries[0]).toEqual({
-      source: { tableName: "", columnName: "time", alias: "time", role: "y" },
-      index: 0,
-    });
-    expect(result.useIndexForX).toBe(true);
+    expect(result.effectiveYEntries).toEqual([]);
+    expect(result.useIndexForX).toBe(false);
   });
 
   it("returns no Y entries and no X fallback when nothing is configured", () => {

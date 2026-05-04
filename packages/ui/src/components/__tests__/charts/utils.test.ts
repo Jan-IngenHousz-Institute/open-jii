@@ -288,6 +288,41 @@ describe("utils", () => {
       expect(layout.showlegend).toBe(false);
     });
 
+    it("anchors the legend outside the right edge by default", () => {
+      const layout = createBaseLayout(baseConfig);
+      // Outside-right preset: anchor 'left' so the legend hangs OFF the
+      // plot's right edge instead of overlapping the data area.
+      expect(layout.legend).toMatchObject({
+        x: 1.02,
+        y: 1,
+        xanchor: "left",
+        yanchor: "top",
+        orientation: "v",
+      });
+    });
+
+    it("renders a horizontal legend above the plot when legendPosition is 'top'", () => {
+      const layout = createBaseLayout({ ...baseConfig, legendPosition: "top" });
+      expect(layout.legend).toMatchObject({
+        x: 0.5,
+        y: 1.1,
+        xanchor: "center",
+        yanchor: "bottom",
+        orientation: "h",
+      });
+    });
+
+    it("renders a horizontal legend below the plot when legendPosition is 'bottom'", () => {
+      const layout = createBaseLayout({ ...baseConfig, legendPosition: "bottom" });
+      expect(layout.legend).toMatchObject({
+        x: 0.5,
+        y: -0.2,
+        xanchor: "center",
+        yanchor: "top",
+        orientation: "h",
+      });
+    });
+
     it("disables grid when specified", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,

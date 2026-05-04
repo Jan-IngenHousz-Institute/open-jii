@@ -37,9 +37,14 @@ export function ScatterRenderer({
 
   const isCategoricalColor = Boolean(colorColumn) && chartConfig.colorMode === "categorical";
 
+  // Hoisted out of the useMemo so the bottom-level `effectiveConfig` can
+  // also branch on `useIndexForX` — when X is synthesised, the user's
+  // auto-picked xAxisType ("date" for a timestamp column, etc.) no
+  // longer matches the actual integer indices being plotted.
+  const { effectiveYEntries, useIndexForX } = resolveSeries(yEntries, xColumn);
+
   const scatterData = useMemo<ScatterSeriesData[]>(() => {
     if (visualization.chartType !== "scatter") return [];
-    const { effectiveYEntries, useIndexForX } = resolveSeries(yEntries, xColumn);
     if (effectiveYEntries.length === 0) return [];
 
     const xValues = buildXValues(rows, xColumn, useIndexForX);
@@ -159,7 +164,8 @@ export function ScatterRenderer({
   }, [
     rows,
     xColumn,
-    yEntries,
+    effectiveYEntries,
+    useIndexForX,
     colorColumn,
     isCategoricalColor,
     chartConfig,
@@ -177,6 +183,11 @@ export function ScatterRenderer({
   const effectiveConfig: PlotlyChartConfig = {
     ...chartConfig,
     autosizable: true,
+    // When X is synthesised from row indices (single-column draft state),
+    // override xAxisType — Plotly would otherwise try to render integer
+    // indices on a date / category axis based on the user's column-pick
+    // auto-selection, producing nonsense ticks.
+    xAxisType: useIndexForX ? "linear" : chartConfig.xAxisType,
     useWebGL: isCategoricalColor || chartConfig.useWebGL,
   };
 
@@ -186,7 +197,11 @@ export function ScatterRenderer({
       experimentId={experimentId}
       isLoading={isLoading}
       error={error}
-      hasRows={rows.length > 0 && scatterData.length > 0}
+      // We pass `hasRows` as just "did the API return rows?" so that an
+      // X-only / Y-only draft state still renders the chart frame with the
+      // configured axis. Plotly handles an empty `data` array by drawing
+      // axes only — no synthesised series.
+      hasRows={rows.length > 0}
     >
       <div className="flex h-full w-full flex-col">
         <ScatterChart data={scatterData} config={effectiveConfig} />

@@ -1,5 +1,3 @@
-import type { Role } from "@repo/api/schemas/experiment.schema";
-
 import type { IndexedDataSource } from "./form-values";
 
 /**
@@ -32,27 +30,20 @@ export function coerceCell(value: unknown): string | number {
  * Compute the Y entries a chart should draw plus whether to synthesize the X
  * axis from row indices.
  *
- * UX rule: a chart should render with even one column picked. If only Y is
- * configured, fall back to row index for X. If only X is configured, treat
- * X as the single Y series (so the user sees their data immediately) and
- * still synthesize an index-based X axis. Both branches keep the chart
- * useful while the user finishes the data config.
+ * UX rule: with both X and Y configured we plot points. With only Y we
+ * synthesise X from row indices so users still see their column. With only
+ * X (or nothing), we draw NO series — the canvas renders an empty plot
+ * with just the configured axis frame, signalling "pick the other axis to
+ * see data" without inventing a series the user didn't ask for.
  */
 export function resolveSeries(
   yEntries: IndexedDataSource[],
   xColumn: string | undefined,
 ): { effectiveYEntries: IndexedDataSource[]; useIndexForX: boolean } {
-  if (yEntries.length > 0) {
-    return { effectiveYEntries: yEntries, useIndexForX: !xColumn };
-  }
-  if (xColumn) {
-    const fallback: IndexedDataSource = {
-      source: { tableName: "", columnName: xColumn, alias: xColumn, role: "y" satisfies Role },
-      index: 0,
-    };
-    return { effectiveYEntries: [fallback], useIndexForX: true };
-  }
-  return { effectiveYEntries: [], useIndexForX: false };
+  return {
+    effectiveYEntries: yEntries,
+    useIndexForX: yEntries.length > 0 && !xColumn,
+  };
 }
 
 /**

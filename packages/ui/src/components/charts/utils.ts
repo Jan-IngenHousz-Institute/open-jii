@@ -129,7 +129,19 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
     shapes = [],
     hoverMode = "closest",
     dragMode = "zoom",
+    legendPosition = "right",
   } = config;
+
+  // Translate the user-facing position preset into Plotly's anchor model.
+  // All three options sit OUTSIDE the data area; Plotly auto-reserves
+  // margin so the legend never crops or overlaps points.
+  const legendAnchor = (
+    {
+      right: { x: 1.02, y: 1, xanchor: "left", yanchor: "top", orientation: "v" },
+      top: { x: 0.5, y: 1.1, xanchor: "center", yanchor: "bottom", orientation: "h" },
+      bottom: { x: 0.5, y: -0.2, xanchor: "center", yanchor: "top", orientation: "h" },
+    } as const
+  )[legendPosition];
 
   // Use provided dimensions or undefined for responsive behavior
   const { width, height } = config;
@@ -186,9 +198,7 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
 
     showlegend: showLegend,
     legend: {
-      x: 1,
-      y: 1,
-      xanchor: "right",
+      ...legendAnchor,
       bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
       bordercolor: gridColor,
       borderwidth: 1,
