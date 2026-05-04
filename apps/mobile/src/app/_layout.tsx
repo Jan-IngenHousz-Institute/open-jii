@@ -95,6 +95,8 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   const { success: migrationsReady, error: migrationsError } = useMigrations(db, migrations);
 
+  useOtaUpdate();
+
   useEffect(() => {
     if (error) {
       console.error(error);
@@ -138,7 +140,6 @@ function AutoUploadEffect() {
 
 function RootLayoutContent() {
   const theme = useTheme();
-  useOtaUpdate();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

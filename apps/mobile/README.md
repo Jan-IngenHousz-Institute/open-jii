@@ -97,10 +97,10 @@ Triggered on every push to `main` when `mobile` is in the affected packages list
 - **Drift gate:** if the native fingerprint changed since the last `preview` AAB, the workflow **skips the OTA** and posts a warning that a new APK must be distributed manually:
 
   ```bash
-  pnpm run build-apk            # local APK build
-  # or
   eas build --profile preview --platform android
   ```
+
+  > **Note:** the drift gate compares against the fingerprint of the last **cloud** build fetched via `eas build:list`. Local APKs produced by `pnpm run build-apk` are not recorded in EAS and will **not** update this baseline — always use the `eas build` command above to clear a drift warning in CI.
 
 - Manual override available via `workflow_dispatch` with `force=true`.
 
@@ -166,13 +166,21 @@ pnpm run update:production
 
 ### Rollback
 
-OTA is reversible at any stage:
+OTA is reversible at any stage. Choose based on what you're rolling back to:
+
+**Republish a previously published update** (most common — re-points the channel to an earlier update):
 
 ```bash
-eas update:rollback --branch <preview|internal|beta|production>
+eas update:republish --branch <preview|internal|beta|production>
 ```
 
-This re-points the channel to the previous update. Clients fetch it on next launch. Native AABs roll back via Play Console (halt rollout / promote previous version).
+**Roll back to the embedded update** (the JS bundle shipped inside the last native build):
+
+```bash
+eas update:roll-back-to-embedded --branch <preview|internal|beta|production> --runtime-version <version>
+```
+
+Clients fetch the rolled-back update on next launch. Native AABs roll back via Play Console (halt rollout / promote previous version).
 
 ### Summary cheat-sheet
 
