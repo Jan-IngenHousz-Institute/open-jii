@@ -119,22 +119,26 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   const layout = createBaseLayout(config);
   const plotConfig = createPlotlyConfig(config);
 
-  // Infer axis type from the data. ISO timestamps → `date` (Plotly buckets +
-  // labels sensibly), genuine strings → `category`, otherwise leave as the
-  // default linear scale. `coerceCell` upstream already converts numeric-
-  // looking strings to numbers, so anything that's still a string here is
-  // either a date or a real category.
-  const xAxisType = detectAxisType(data.flatMap((series) => series.x ?? []));
-  if (xAxisType === "date") {
-    layout.xaxis = { ...layout.xaxis, type: "date" };
-  } else if (xAxisType === "category") {
-    layout.xaxis = { ...layout.xaxis, type: "category", categoryorder: "category ascending" };
+  // Infer axis type from the data — only as a refinement of the safe
+  // `linear` default. If the user (or the upstream column-pick auto-set)
+  // has explicitly chosen `date`, `category`, or `log`, honor it. ISO
+  // timestamps still get a date axis when the user hasn't picked anything
+  // specific, and genuine strings still get a category axis.
+  if (!layout.xaxis?.type || layout.xaxis.type === "linear") {
+    const xAxisType = detectAxisType(data.flatMap((series) => series.x ?? []));
+    if (xAxisType === "date") {
+      layout.xaxis = { ...layout.xaxis, type: "date" };
+    } else if (xAxisType === "category") {
+      layout.xaxis = { ...layout.xaxis, type: "category", categoryorder: "category ascending" };
+    }
   }
-  const yAxisType = detectAxisType(data.flatMap((series) => series.y ?? []));
-  if (yAxisType === "date") {
-    layout.yaxis = { ...layout.yaxis, type: "date" };
-  } else if (yAxisType === "category") {
-    layout.yaxis = { ...layout.yaxis, type: "category", categoryorder: "category ascending" };
+  if (!layout.yaxis?.type || layout.yaxis.type === "linear") {
+    const yAxisType = detectAxisType(data.flatMap((series) => series.y ?? []));
+    if (yAxisType === "date") {
+      layout.yaxis = { ...layout.yaxis, type: "date" };
+    } else if (yAxisType === "category") {
+      layout.yaxis = { ...layout.yaxis, type: "category", categoryorder: "category ascending" };
+    }
   }
 
   return (

@@ -129,7 +129,7 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
 
   if (isLoading) {
     return (
-      <div className="bg-muted/20 flex h-[480px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
+      <div className="bg-muted/20 flex h-[clamp(420px,60vh,640px)] flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
         <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         <span className="text-muted-foreground text-sm">{t("workspace.canvas.loading")}</span>
       </div>
@@ -139,7 +139,7 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
   const Renderer = def.Renderer;
 
   return (
-    <div className="bg-card flex h-[480px] flex-col overflow-hidden rounded-lg border p-4">
+    <div className="bg-card flex h-[clamp(420px,60vh,640px)] flex-col overflow-hidden rounded-lg border p-4">
       <Renderer
         visualization={previewVisualization}
         experimentId={experimentId}
@@ -151,7 +151,7 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
 
 function CanvasPlaceholder({ title, body }: { title: string; body: string }) {
   return (
-    <div className="bg-muted/20 flex h-[480px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-center">
+    <div className="bg-muted/20 flex h-[clamp(420px,60vh,640px)] flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-center">
       <BarChart3 className="text-muted-foreground/60 h-10 w-10" />
       <div className="text-foreground font-medium">{title}</div>
       <div className="text-muted-foreground text-sm">{body}</div>

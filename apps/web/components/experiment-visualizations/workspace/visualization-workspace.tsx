@@ -150,7 +150,7 @@ export function VisualizationWorkspace({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-6 md:flex-row md:items-start">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <WorkspaceCanvas
             control={form.control}
@@ -160,7 +160,7 @@ export function VisualizationWorkspace({
         </div>
 
         {isInspectorOpen && (
-          <div className="w-full md:w-[420px] md:shrink-0">
+          <div className="w-full lg:w-[320px] lg:shrink-0 xl:w-[380px] 2xl:w-[440px]">
             <WorkspaceInspector
               form={form}
               tables={tables ?? []}
