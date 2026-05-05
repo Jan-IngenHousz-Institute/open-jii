@@ -1,4 +1,4 @@
-import type { Config, Layout } from "plotly.js";
+import type { Config, Layout, LayoutAxis } from "plotly.js";
 
 import type { PlotlyChartConfig, WebGLRenderer } from "./types";
 
@@ -111,6 +111,23 @@ export function detectAxisType(values: ReadonlyArray<unknown>): "date" | "catego
   return "linear";
 }
 
+// Refines an axis layout slice with a data-detected type, but only when
+// the user hasn't explicitly chosen one. The default `linear` is treated
+// as "no choice"; anything else (`date`, `category`, `log`) is honored.
+export function refineAxisType(
+  axis: Partial<LayoutAxis> | undefined,
+  values: ReadonlyArray<unknown>,
+): Partial<LayoutAxis> {
+  const base = axis ?? {};
+  if (base.type && base.type !== "linear") return base;
+  const detected = detectAxisType(values);
+  if (detected === "date") return { ...base, type: "date" };
+  if (detected === "category") {
+    return { ...base, type: "category", categoryorder: "category ascending" };
+  }
+  return base;
+}
+
 /**
  * Creates base layout for all charts with PlotlyChartConfig
  */
@@ -170,7 +187,10 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
 
     xaxis: {
       title: xAxisTitle
-        ? { text: xAxisTitle, font: { size: 14, color: textColor, family: "var(--font-inter), Inter, sans-serif" } }
+        ? {
+            text: xAxisTitle,
+            font: { size: 14, color: textColor, family: "var(--font-inter), Inter, sans-serif" },
+          }
         : undefined,
       gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
       showgrid: showGrid,
@@ -184,7 +204,10 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
 
     yaxis: {
       title: yAxisTitle
-        ? { text: yAxisTitle, font: { size: 14, color: textColor, family: "var(--font-inter), Inter, sans-serif" } }
+        ? {
+            text: yAxisTitle,
+            font: { size: 14, color: textColor, family: "var(--font-inter), Inter, sans-serif" },
+          }
         : undefined,
       gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
       showgrid: showGrid,

@@ -37,10 +37,10 @@ vi.mock("../../charts/utils", () => ({
   })),
   getRenderer: vi.fn((useWebGL) => (useWebGL ? "webgl" : "svg")),
   getPlotType: vi.fn((type, renderer) => (renderer === "webgl" ? "scattergl" : "scatter")),
-  // Stub returns "linear" so the consumer leaves the axis at its base layout
-  // value — keeps these tests focused on rendering + props, not axis-type
+  // Pass-through so these tests focus on rendering + props, not axis-type
   // inference (covered separately in utils.test.ts).
   detectAxisType: vi.fn(() => "linear"),
+  refineAxisType: vi.fn((axis) => axis ?? {}),
 }));
 
 describe("ScatterChart", () => {
