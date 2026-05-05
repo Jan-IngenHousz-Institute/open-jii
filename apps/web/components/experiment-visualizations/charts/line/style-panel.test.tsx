@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 
-import type { ChartFormValues } from "../form-values";
 import { lineChartType } from ".";
+import type { ChartFormValues } from "../form-values";
 import { LineStylePanel } from "./style-panel";
 
 function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
@@ -46,9 +46,7 @@ describe("LineStylePanel", () => {
   });
 
   it("shows both subsections when mode is lines+markers", () => {
-    renderPanel(
-      defaults({ config: { ...lineChartType.defaultConfig(), mode: "lines+markers" } }),
-    );
+    renderPanel(defaults({ config: { ...lineChartType.defaultConfig(), mode: "lines+markers" } }));
     expect(screen.getByText("workspace.style.lineWidth")).toBeInTheDocument();
     expect(screen.getByText("workspace.style.markerOpacity")).toBeInTheDocument();
   });

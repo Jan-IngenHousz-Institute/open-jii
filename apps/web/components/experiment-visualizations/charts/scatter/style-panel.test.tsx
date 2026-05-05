@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 
-import type { ChartFormValues } from "../form-values";
 import { scatterChartType } from ".";
+import type { ChartFormValues } from "../form-values";
 import { ScatterStylePanel } from "./style-panel";
 
 function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
