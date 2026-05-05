@@ -7,7 +7,7 @@ import {
   createQuestionCell,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { assertExists, render, screen, userEvent, within } from "@/test/test-utils";
+import { assertExists, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -291,5 +291,84 @@ describe("WorkbookEditor — delete flow", () => {
     if (next[0].type !== "question") throw new Error("unexpected");
     expect(next[0].isAnswered).toBe(false);
     expect(next[0].answer).toBeUndefined();
+  });
+});
+
+/** Reads the most recent `cells` argument passed to the renderer's
+ *  `onCellsChange` mock. Typed so downstream `.find` / `.filter` calls don't
+ *  trip the no-unsafe-* lint rules. */
+function lastCellsArg(onCellsChange: ReturnType<typeof vi.fn>): WorkbookCell[] {
+  const calls = onCellsChange.mock.calls as WorkbookCell[][][];
+  if (calls.length === 0) throw new Error("onCellsChange was not called");
+  return calls[calls.length - 1][0];
+}
+
+describe("WorkbookEditor — answer auto-creates an output cell", () => {
+  it("appends an output cell after a question cell when the user submits an answer", async () => {
+    const user = userEvent.setup();
+    const cells: WorkbookCell[] = [
+      createQuestionCell({
+        id: "q-1",
+        question: { kind: "open_ended", text: "Soil moisture?", required: false },
+      }),
+    ];
+    const { onCellsChange } = renderEditor({ cells });
+
+    // The question cell's CellWrapper exposes a Run button (aria-label
+    // "Run Question") that opens the answer dialog.
+    const runBtn = screen.getByRole("button", { name: /run question/i });
+    await user.click(runBtn);
+
+    const dialogInput = screen.getByPlaceholderText(/type your answer/i);
+    await user.type(dialogInput, "moist");
+    await user.click(screen.getByRole("button", { name: /submit/i }));
+
+    await waitFor(() => expect(onCellsChange).toHaveBeenCalled());
+
+    // The most recent change should carry both an updated question (answered)
+    // and an auto-created output cell that points back at it.
+    const last = lastCellsArg(onCellsChange);
+    const question = last.find((c) => c.id === "q-1");
+    const output = last.find((c) => c.type === "output");
+    expect(question?.type).toBe("question");
+    if (question?.type === "question") {
+      expect(question.isAnswered).toBe(true);
+      expect(question.answer).toBe("moist");
+    }
+    expect(output).toBeDefined();
+    if (output?.type === "output") {
+      expect(output.producedBy).toBe("q-1");
+      expect(output.data).toEqual({ answer: "moist" });
+    }
+  });
+
+  it("updates an existing output cell when the question is re-answered", async () => {
+    const user = userEvent.setup();
+    const cells: WorkbookCell[] = [
+      createQuestionCell({
+        id: "q-1",
+        question: { kind: "open_ended", text: "Soil moisture?", required: false },
+        isAnswered: true,
+        answer: "old",
+      }),
+      createOutputCell({ id: "o-1", producedBy: "q-1", data: { answer: "old" } }),
+    ];
+    const { onCellsChange } = renderEditor({ cells });
+
+    await user.click(screen.getByRole("button", { name: /run question/i }));
+
+    const dialogInput = screen.getByDisplayValue("old");
+    await user.clear(dialogInput);
+    await user.type(dialogInput, "new");
+    await user.click(screen.getByRole("button", { name: /submit/i }));
+
+    await waitFor(() => expect(onCellsChange).toHaveBeenCalled());
+
+    const last = lastCellsArg(onCellsChange);
+    // No second output cell — the existing one is updated in place.
+    const outputs = last.filter((c): c is Extract<WorkbookCell, { type: "output" }> => c.type === "output");
+    expect(outputs).toHaveLength(1);
+    expect(outputs[0].id).toBe("o-1");
+    expect(outputs[0].data).toEqual({ answer: "new" });
   });
 });

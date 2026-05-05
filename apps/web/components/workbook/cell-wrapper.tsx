@@ -193,6 +193,7 @@ export function CellWrapper({
                 className="h-7 w-7 p-0"
                 style={{ color: accentColor }}
                 onClick={onRun}
+                aria-label={`Run ${label}`}
               >
                 <Play className="h-3.5 w-3.5" />
               </Button>
