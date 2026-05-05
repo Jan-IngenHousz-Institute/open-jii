@@ -45,3 +45,4 @@ vulnerabilities:
           TextDecoder, require, or Function, and Buffer.transcode
           would not accept these charsets anyway. Fix is in
           amzn2023.0.4; awaiting AWS base image republish.
+      expired_at: 2026-11-05
