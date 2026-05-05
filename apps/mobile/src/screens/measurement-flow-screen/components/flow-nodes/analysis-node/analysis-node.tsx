@@ -67,6 +67,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       timestamp: displayTimestamp,
       experimentName,
       status: "synced", // To hide the comment button in modal
+      questions,
       data: {
         topic: "",
         measurementResult: { ...(scanResult ?? {}), questions },
