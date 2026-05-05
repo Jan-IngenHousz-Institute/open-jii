@@ -67,7 +67,7 @@ describe("NavItems > NavGroup (children + navigable: false)", () => {
     expect(header.tagName).toBe("BUTTON");
   });
 
-  it("hides children by default when no child is active", async () => {
+  it("hides children by default when no child is active", () => {
     vi.mocked(usePathname).mockReturnValue("/en-US/platform");
     render(<NavItems items={groupItems} />);
 
