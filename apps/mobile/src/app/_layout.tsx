@@ -17,6 +17,7 @@ import { ConfiguredQueryClientProvider } from "~/components/configured-query-cli
 import { PythonMacroProvider } from "~/components/python-macro-provider";
 import { TimeSyncProvider } from "~/components/time-sync-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
+import { useAutoUpload } from "~/hooks/use-auto-upload";
 import { useTheme } from "~/hooks/use-theme";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 import { db } from "~/services/db/client";
@@ -129,6 +130,11 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+function AutoUploadEffect() {
+  useAutoUpload();
+  return null;
+}
+
 function RootLayoutContent() {
   const theme = useTheme();
 
@@ -136,6 +142,7 @@ function RootLayoutContent() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TimeSyncProvider>
         <ConfiguredQueryClientProvider>
+          <AutoUploadEffect />
           <SafeAreaProvider>
             <PythonMacroProvider>
               <BottomSheetModalProvider>
