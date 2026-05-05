@@ -66,7 +66,10 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-16 w-full items-center gap-2 border-b bg-white px-4">
+      <header
+        className="sticky z-40 flex h-16 w-full items-center gap-2 border-b bg-white px-4"
+        style={{ top: "var(--banner-offset, 0px)" }}
+      >
         <div className="flex w-full items-center gap-2">
           {state === "collapsed" && <SidebarTrigger className="hidden md:flex" />}
 

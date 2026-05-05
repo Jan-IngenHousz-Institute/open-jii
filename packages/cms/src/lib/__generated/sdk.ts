@@ -436,6 +436,286 @@ export enum AssetOrder {
   WidthDesc = "width_DESC",
 }
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlert = Entry &
+  _Node & {
+    __typename?: "ComponentAlert";
+    _id: Scalars["ID"]["output"];
+    active?: Maybe<Scalars["Boolean"]["output"]>;
+    audience?: Maybe<Scalars["String"]["output"]>;
+    body?: Maybe<ComponentAlertBody>;
+    contentfulMetadata: ContentfulMetadata;
+    dismissible?: Maybe<Scalars["Boolean"]["output"]>;
+    endAt?: Maybe<Scalars["DateTime"]["output"]>;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    link?: Maybe<ComponentButton>;
+    linkedFrom?: Maybe<ComponentAlertLinkingCollections>;
+    severity?: Maybe<Scalars["String"]["output"]>;
+    startAt?: Maybe<Scalars["DateTime"]["output"]>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+    type?: Maybe<Scalars["String"]["output"]>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertActiveArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertAudienceArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertBodyArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertDismissibleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertEndAtArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertLinkArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertSeverityArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertStartAtArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert) */
+export type ComponentAlertTypeArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentAlertBody = {
+  __typename?: "ComponentAlertBody";
+  json: Scalars["JSON"]["output"];
+  links: ComponentAlertBodyLinks;
+};
+
+export type ComponentAlertBodyAssets = {
+  __typename?: "ComponentAlertBodyAssets";
+  block: Array<Maybe<Asset>>;
+  hyperlink: Array<Maybe<Asset>>;
+};
+
+export type ComponentAlertBodyEntries = {
+  __typename?: "ComponentAlertBodyEntries";
+  block: Array<Maybe<Entry>>;
+  hyperlink: Array<Maybe<Entry>>;
+  inline: Array<Maybe<Entry>>;
+};
+
+export type ComponentAlertBodyLinks = {
+  __typename?: "ComponentAlertBodyLinks";
+  assets: ComponentAlertBodyAssets;
+  entries: ComponentAlertBodyEntries;
+  resources: ComponentAlertBodyResources;
+};
+
+export type ComponentAlertBodyResources = {
+  __typename?: "ComponentAlertBodyResources";
+  block: Array<ComponentAlertBodyResourcesBlock>;
+  hyperlink: Array<ComponentAlertBodyResourcesHyperlink>;
+  inline: Array<ComponentAlertBodyResourcesInline>;
+};
+
+export type ComponentAlertBodyResourcesBlock = ResourceLink & {
+  __typename?: "ComponentAlertBodyResourcesBlock";
+  sys: ResourceSys;
+};
+
+export type ComponentAlertBodyResourcesHyperlink = ResourceLink & {
+  __typename?: "ComponentAlertBodyResourcesHyperlink";
+  sys: ResourceSys;
+};
+
+export type ComponentAlertBodyResourcesInline = ResourceLink & {
+  __typename?: "ComponentAlertBodyResourcesInline";
+  sys: ResourceSys;
+};
+
+export type ComponentAlertCollection = {
+  __typename?: "ComponentAlertCollection";
+  items: Array<Maybe<ComponentAlert>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type ComponentAlertCursorCollection = {
+  __typename?: "ComponentAlertCursorCollection";
+  items: Array<Maybe<ComponentAlert>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export type ComponentAlertFilter = {
+  AND?: InputMaybe<Array<InputMaybe<ComponentAlertFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<ComponentAlertFilter>>>;
+  active?: InputMaybe<Scalars["Boolean"]["input"]>;
+  active_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  active_not?: InputMaybe<Scalars["Boolean"]["input"]>;
+  audience?: InputMaybe<Scalars["String"]["input"]>;
+  audience_contains?: InputMaybe<Scalars["String"]["input"]>;
+  audience_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  audience_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  audience_not?: InputMaybe<Scalars["String"]["input"]>;
+  audience_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  audience_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  body_contains?: InputMaybe<Scalars["String"]["input"]>;
+  body_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  body_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  dismissible?: InputMaybe<Scalars["Boolean"]["input"]>;
+  dismissible_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  dismissible_not?: InputMaybe<Scalars["Boolean"]["input"]>;
+  endAt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  endAt_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  endAt_gt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  endAt_gte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  endAt_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  endAt_lt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  endAt_lte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  endAt_not?: InputMaybe<Scalars["DateTime"]["input"]>;
+  endAt_not_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  link?: InputMaybe<CfComponentButtonNestedFilter>;
+  link_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  severity?: InputMaybe<Scalars["String"]["input"]>;
+  severity_contains?: InputMaybe<Scalars["String"]["input"]>;
+  severity_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  severity_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  severity_not?: InputMaybe<Scalars["String"]["input"]>;
+  severity_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  severity_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  startAt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  startAt_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  startAt_gt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  startAt_gte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  startAt_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  startAt_lt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  startAt_lte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  startAt_not?: InputMaybe<Scalars["DateTime"]["input"]>;
+  startAt_not_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  type?: InputMaybe<Scalars["String"]["input"]>;
+  type_contains?: InputMaybe<Scalars["String"]["input"]>;
+  type_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  type_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  type_not?: InputMaybe<Scalars["String"]["input"]>;
+  type_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  type_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type ComponentAlertLinkingCollections = {
+  __typename?: "ComponentAlertLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
+};
+
+export type ComponentAlertLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentAlertLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export enum ComponentAlertOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  AudienceAsc = "audience_ASC",
+  AudienceDesc = "audience_DESC",
+  DismissibleAsc = "dismissible_ASC",
+  DismissibleDesc = "dismissible_DESC",
+  EndAtAsc = "endAt_ASC",
+  EndAtDesc = "endAt_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SeverityAsc = "severity_ASC",
+  SeverityDesc = "severity_DESC",
+  StartAtAsc = "startAt_ASC",
+  StartAtDesc = "startAt_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+  TypeAsc = "type_ASC",
+  TypeDesc = "type_DESC",
+}
+
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor) */
 export type ComponentAuthor = Entry &
   _Node & {
@@ -708,12 +988,37 @@ export type ComponentButtonFilter = {
 
 export type ComponentButtonLinkingCollections = {
   __typename?: "ComponentButtonLinkingCollections";
+  componentAlertCollection?: Maybe<ComponentAlertCollection>;
+  componentAlertCursorCollection?: Maybe<ComponentAlertCursorCollection>;
   entryCollection?: Maybe<EntryCollection>;
   entryCursorCollection?: Maybe<EntryCursorCollection>;
   footerCollection?: Maybe<FooterCollection>;
   footerCursorCollection?: Maybe<FooterCursorCollection>;
   pageHomeHeroCollection?: Maybe<PageHomeHeroCollection>;
   pageHomeHeroCursorCollection?: Maybe<PageHomeHeroCursorCollection>;
+};
+
+export type ComponentButtonLinkingCollectionsComponentAlertCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsComponentAlertCollectionOrder>>
+  >;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentButtonLinkingCollectionsComponentAlertCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
 export type ComponentButtonLinkingCollectionsEntryCollectionArgs = {
@@ -776,6 +1081,64 @@ export type ComponentButtonLinkingCollectionsPageHomeHeroCursorCollectionArgs = 
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
+
+export enum ComponentButtonLinkingCollectionsComponentAlertCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  AudienceAsc = "audience_ASC",
+  AudienceDesc = "audience_DESC",
+  DismissibleAsc = "dismissible_ASC",
+  DismissibleDesc = "dismissible_DESC",
+  EndAtAsc = "endAt_ASC",
+  EndAtDesc = "endAt_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SeverityAsc = "severity_ASC",
+  SeverityDesc = "severity_DESC",
+  StartAtAsc = "startAt_ASC",
+  StartAtDesc = "startAt_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+  TypeAsc = "type_ASC",
+  TypeDesc = "type_DESC",
+}
+
+export enum ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  AudienceAsc = "audience_ASC",
+  AudienceDesc = "audience_DESC",
+  DismissibleAsc = "dismissible_ASC",
+  DismissibleDesc = "dismissible_DESC",
+  EndAtAsc = "endAt_ASC",
+  EndAtDesc = "endAt_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SeverityAsc = "severity_ASC",
+  SeverityDesc = "severity_DESC",
+  StartAtAsc = "startAt_ASC",
+  StartAtDesc = "startAt_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+  TypeAsc = "type_ASC",
+  TypeDesc = "type_DESC",
+}
 
 export enum ComponentButtonLinkingCollectionsFooterCollectionOrder {
   BadgeAsc = "badge_ASC",
@@ -5373,6 +5736,9 @@ export type Query = {
   asset?: Maybe<Asset>;
   assetCollection?: Maybe<AssetCollection>;
   assetCursorCollection?: Maybe<AssetCursorCollection>;
+  componentAlert?: Maybe<ComponentAlert>;
+  componentAlertCollection?: Maybe<ComponentAlertCollection>;
+  componentAlertCursorCollection?: Maybe<ComponentAlertCursorCollection>;
   componentAuthor?: Maybe<ComponentAuthor>;
   componentAuthorCollection?: Maybe<ComponentAuthorCollection>;
   componentAuthorCursorCollection?: Maybe<ComponentAuthorCursorCollection>;
@@ -5483,6 +5849,34 @@ export type QueryAssetCursorCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<AssetFilter>;
+};
+
+export type QueryComponentAlertArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryComponentAlertCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentAlertOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentAlertFilter>;
+};
+
+export type QueryComponentAlertCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentAlertOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentAlertFilter>;
 };
 
 export type QueryComponentAuthorArgs = {
@@ -6472,6 +6866,39 @@ export type AuthorFieldsFragment = {
   avatar?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
 };
 
+export type ComponentAlertFieldsFragment = {
+  __typename: "ComponentAlert";
+  internalName?: string | null;
+  title?: string | null;
+  type?: string | null;
+  severity?: string | null;
+  dismissible?: boolean | null;
+  audience?: string | null;
+  startAt?: any | null;
+  endAt?: any | null;
+  active?: boolean | null;
+  sys: { __typename?: "Sys"; id: string };
+  body?: { __typename?: "ComponentAlertBody"; json: any } | null;
+  link?: ({ __typename?: "ComponentButton" } & ButtonFieldsFragment) | null;
+};
+
+export type ActiveAlertsQueryVariables = Exact<{
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  now: Scalars["DateTime"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  audience?: InputMaybe<
+    Array<InputMaybe<Scalars["String"]["input"]>> | InputMaybe<Scalars["String"]["input"]>
+  >;
+}>;
+
+export type ActiveAlertsQuery = {
+  __typename?: "Query";
+  componentAlertCollection?: {
+    __typename?: "ComponentAlertCollection";
+    items: Array<({ __typename?: "ComponentAlert" } & ComponentAlertFieldsFragment) | null>;
+  } | null;
+};
+
 export type FooterFieldsFragment = {
   __typename: "Footer";
   internalName?: string | null;
@@ -6559,6 +6986,7 @@ export type PageAboutFieldsFragment = {
       entries: {
         __typename?: "PageAboutDescriptionEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentEmail" }
@@ -6670,6 +7098,7 @@ export type PageBlogPostFieldsFragment = {
       entries: {
         __typename?: "PageBlogPostContentEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentEmail" }
@@ -6748,6 +7177,7 @@ export type PageCookiePolicyFieldsFragment = {
       entries: {
         __typename?: "PageCookiePolicyContentEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentEmail" }
@@ -6804,6 +7234,7 @@ export type ComponentEmailFieldsFragment = {
       entries: {
         __typename?: "ComponentEmailContentEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | ({ __typename?: "ComponentButton" } & ButtonFieldsFragment)
           | { __typename?: "ComponentEmail" }
@@ -6992,6 +7423,7 @@ export type PageHomeMissionFieldsFragment = {
       entries: {
         __typename?: "PageHomeMissionAboutEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentEmail" }
@@ -7027,6 +7459,7 @@ export type PageHomeMissionFieldsFragment = {
       entries: {
         __typename?: "PageHomeMissionMissionEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentEmail" }
@@ -7164,6 +7597,7 @@ export type PagePoliciesFieldsFragment = {
       entries: {
         __typename?: "PagePoliciesContentEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentEmail" }
@@ -7221,6 +7655,7 @@ export type PageTermsAndConditionsFieldsFragment = {
       entries: {
         __typename?: "PageTermsAndConditionsContentEntries";
         block: Array<
+          | { __typename?: "ComponentAlert" }
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentEmail" }
@@ -7323,6 +7758,30 @@ export const ButtonFieldsFragmentDoc = gql`
     label
     url
   }
+`;
+export const ComponentAlertFieldsFragmentDoc = gql`
+  fragment ComponentAlertFields on ComponentAlert {
+    __typename
+    sys {
+      id
+    }
+    internalName
+    title
+    body {
+      json
+    }
+    type
+    severity
+    dismissible
+    link {
+      ...ButtonFields
+    }
+    audience
+    startAt
+    endAt
+    active
+  }
+  ${ButtonFieldsFragmentDoc}
 `;
 export const FooterFieldsFragmentDoc = gql`
   fragment FooterFields on Footer {
@@ -7845,6 +8304,25 @@ export const SitemapPagesFieldsFragmentDoc = gql`
     }
   }
 `;
+export const ActiveAlertsDocument = gql`
+  query activeAlerts($preview: Boolean, $now: DateTime!, $locale: String, $audience: [String]) {
+    componentAlertCollection(
+      preview: $preview
+      locale: $locale
+      where: {
+        active: true
+        audience_in: $audience
+        startAt_lte: $now
+        OR: [{ endAt_gt: $now }, { endAt_exists: false }]
+      }
+    ) {
+      items {
+        ...ComponentAlertFields
+      }
+    }
+  }
+  ${ComponentAlertFieldsFragmentDoc}
+`;
 export const FooterDocument = gql`
   query footer($locale: String, $preview: Boolean) {
     footerCollection(limit: 1, locale: $locale, preview: $preview) {
@@ -8120,6 +8598,24 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
+    activeAlerts(
+      variables: ActiveAlertsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ActiveAlertsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ActiveAlertsQuery>({
+            document: ActiveAlertsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "activeAlerts",
+        "query",
+        variables,
+      );
+    },
     footer(
       variables?: FooterQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
