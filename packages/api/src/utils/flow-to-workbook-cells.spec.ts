@@ -25,8 +25,6 @@ function makeEdge(source: string, target: string): FlowEdge {
   return { id: `${source}->${target}`, source, target } as FlowEdge;
 }
 
-// ── orderFlowNodes ──────────────────────────────────────────────
-
 describe("orderFlowNodes", () => {
   it("returns empty array for empty input", () => {
     expect(orderFlowNodes([], [])).toEqual([]);
@@ -81,8 +79,6 @@ describe("orderFlowNodes", () => {
     expect(result.map((n) => n.id)).toEqual(["n1", "n2"]);
   });
 });
-
-// ── flowNodesToWorkbookCells ────────────────────────────────────
 
 describe("flowNodesToWorkbookCells", () => {
   it("returns empty array for empty input", () => {

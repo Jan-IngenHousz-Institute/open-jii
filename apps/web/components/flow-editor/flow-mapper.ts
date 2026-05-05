@@ -1,6 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import type { z } from "zod";
+import { stripHtml } from "~/util/strip-html";
 
 import type { Flow, UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
 import {
@@ -9,6 +10,7 @@ import {
   zInstructionContent,
   zMeasurementContent,
   zAnalysisContent,
+  zBranchContent,
 } from "@repo/api/schemas/experiment.schema";
 import type { zQuestionKind } from "@repo/api/schemas/experiment.schema";
 
@@ -20,6 +22,7 @@ type QuestionContent = z.infer<typeof zQuestionContent>;
 type InstructionContent = z.infer<typeof zInstructionContent>;
 type MeasurementContent = z.infer<typeof zMeasurementContent>;
 type AnalysisContent = z.infer<typeof zAnalysisContent>;
+type BranchContent = z.infer<typeof zBranchContent>;
 type QuestionKind = z.infer<typeof zQuestionKind>;
 
 // UI-focused question spec interface (matches the one in question-card.tsx)
@@ -34,7 +37,8 @@ type StepSpecification =
   | QuestionContent
   | InstructionContent
   | MeasurementContent
-  | AnalysisContent;
+  | AnalysisContent
+  | BranchContent;
 
 export interface FlowNodeDataBase extends Record<string, unknown> {
   title: string;
@@ -62,6 +66,7 @@ const REACT_FLOW_TO_API_NODE_TYPE = {
   INSTRUCTION: "instruction",
   MEASUREMENT: "measurement",
   ANALYSIS: "analysis",
+  BRANCH: "branch",
 } as const;
 
 const QUESTION_KIND_TO_ANSWER_TYPE: Record<QuestionKind, QuestionUI["answerType"]> = {
@@ -105,21 +110,26 @@ export class FlowMapper {
   static toReactFlow(apiFlow: Flow): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = apiFlow.graph.nodes.map((apiNode) => {
       const reactFlowTypeMapping: Record<
-        "question" | "instruction" | "measurement" | "analysis",
+        "question" | "instruction" | "measurement" | "analysis" | "branch",
         NodeType
       > = {
         question: "QUESTION",
         instruction: "INSTRUCTION",
         measurement: "MEASUREMENT",
         analysis: "ANALYSIS",
+        branch: "BRANCH",
       };
 
       const nodeType = reactFlowTypeMapping[apiNode.type];
 
       const config = nodeTypeColorMap[nodeType];
 
+      const rawTitle = apiNode.name;
+      const displayTitle =
+        apiNode.type === "instruction" ? stripHtml(rawTitle) || rawTitle : rawTitle;
+
       const nodeData: FlowNodeDataWithSpec = {
-        title: apiNode.name,
+        title: displayTitle,
         description:
           isObject(apiNode.content) && "text" in apiNode.content
             ? ((apiNode.content as { text?: string }).text ?? "")
@@ -159,6 +169,7 @@ export class FlowMapper {
       id: apiEdge.id,
       source: apiEdge.source,
       target: apiEdge.target,
+      sourceHandle: apiEdge.sourceHandle ?? undefined,
       type: "default",
       animated: false,
       markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
@@ -264,6 +275,18 @@ export class FlowMapper {
           throw new Error(parsed.error.errors[0].message);
         }
         content = parsed.data;
+      } else if (nodeType === "branch") {
+        const spec = isObject(data.stepSpecification)
+          ? (data.stepSpecification as Partial<BranchContent>)
+          : {};
+        const parsed = zBranchContent.safeParse({
+          paths: spec.paths ?? [],
+          defaultPathId: spec.defaultPathId,
+        });
+        if (!parsed.success) {
+          throw new Error(parsed.error.errors[0].message);
+        }
+        content = parsed.data;
       } else {
         // instruction - prioritize current description over existing stepSpecification
         const candidate: InstructionContent = { text: text || "Instruction" } as const;
@@ -287,7 +310,13 @@ export class FlowMapper {
 
     const apiEdges = edges.map((edge) => {
       const label = (edge.data as FlowEdgeData | undefined)?.label;
-      return { id: edge.id, source: edge.source, target: edge.target, label };
+      return {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle ?? null,
+        label,
+      };
     });
 
     const flowGraph = { nodes: apiNodes, edges: apiEdges };

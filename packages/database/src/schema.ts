@@ -361,7 +361,6 @@ export const experimentVisualizations = pgTable("experiment_visualizations", {
   ...timestamps,
 });
 
-// Workbooks Table - notebook-style composition of protocols, macros, questions, and branching
 export const workbooks = pgTable(
   "workbooks",
   {
@@ -378,7 +377,7 @@ export const workbooks = pgTable(
   (table) => [index("workbooks_created_by_idx").on(table.createdBy)],
 );
 
-// Workbook Versions Table - immutable cell snapshots published when a workbook is attached to an experiment
+// Immutable cell snapshots; published when a workbook is attached to an experiment.
 export const workbookVersions = pgTable(
   "workbook_versions",
   {

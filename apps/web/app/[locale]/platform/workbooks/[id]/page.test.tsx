@@ -52,11 +52,9 @@ describe("WorkbookOverviewPage", () => {
     });
     renderPage();
 
-    // The editor renders the markdown cell's CellWrapper with a "Markdown" label.
     await waitFor(() => {
       expect(screen.getAllByText("Markdown").length).toBeGreaterThan(0);
     });
-    // No empty state visible.
     expect(screen.queryByText("Empty workbook")).not.toBeInTheDocument();
   });
 
@@ -75,7 +73,7 @@ describe("WorkbookOverviewPage", () => {
     const markdownBtn = await screen.findByRole("button", { name: /markdown/i });
     await user.click(markdownBtn);
 
-    // Auto-save fires after AUTO_SAVE_DELAY=1500ms — give waitFor headroom.
+    // Auto-save fires after AUTO_SAVE_DELAY=1500ms; give waitFor headroom.
     await waitFor(() => expect(updateSpy.callCount).toBeGreaterThan(0), { timeout: 3000 });
 
     const savedCells = (updateSpy.body as { cells: { type: string }[] } | undefined)?.cells;

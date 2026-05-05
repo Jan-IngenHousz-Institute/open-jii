@@ -223,8 +223,7 @@ vi.mock("react", async () => {
   return { ...actual, use: vi.fn(actual.use) };
 });
 
-// CodeMirror cannot run in jsdom (no getClientRects, etc.) — provide a mock
-// for the shared CodeEditor wrapper so any component that uses it can be tested.
+// CodeMirror cannot run in jsdom (no getClientRects, etc.), so mock the wrapper.
 vi.mock("~/components/shared/code-editor", async () => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const React = await vi.importActual<typeof import("react")>("react");

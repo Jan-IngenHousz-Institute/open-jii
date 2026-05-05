@@ -1,13 +1,10 @@
 import { tsr } from "@/lib/tsr";
 
-/**
- * Hook to attach a workbook to an experiment, publishing a version.
- */
 export const useAttachWorkbook = () => {
   const queryClient = tsr.useQueryClient();
 
   return tsr.experiments.attachWorkbook.useMutation({
-    onSettled: async (_data, _error, variables) => {
+    onSettled: async (data, _error, variables) => {
       await queryClient.invalidateQueries({
         queryKey: ["experiment", variables.params.id],
       });
@@ -17,6 +14,11 @@ export const useAttachWorkbook = () => {
       await queryClient.invalidateQueries({
         queryKey: ["experiments"],
       });
+      const workbookId = data?.body.workbookId;
+      if (workbookId) {
+        await queryClient.invalidateQueries({ queryKey: ["workbook", workbookId] });
+        await queryClient.invalidateQueries({ queryKey: ["workbookVersions", workbookId] });
+      }
     },
   });
 };

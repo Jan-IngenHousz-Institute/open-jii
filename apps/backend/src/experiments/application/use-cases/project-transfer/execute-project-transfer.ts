@@ -251,18 +251,14 @@ export class ExecuteProjectTransferUseCase {
         });
       }
 
-      // 7. Materialise a workbook from the same nodes so the new web UI sees
-      // the transfer immediately. Non-fatal — mirrors the flow-creation path.
+      // 7. Materialise a workbook from the same nodes (non-fatal).
       const cells = flowNodesToWorkbookCells(allNodes, edges);
       if (cells.length > 0) {
-        // CreateWorkbookDto.cells is typed via drizzle's loose Json union;
-        // WorkbookCell[] is JSON-shaped but TS can't unify the two through
-        // the discriminated-union → Json widening. Hand it an unknown cast.
         const workbookResult = await this.workbookRepository.create(
           {
             name: `${data.experiment.name} - Workbook`,
             description: "Auto-generated from project transfer",
-            cells: cells as unknown as CreateWorkbookDto["cells"],
+            cells: cells as CreateWorkbookDto["cells"],
             metadata: {},
           },
           data.experiment.createdBy,

@@ -73,7 +73,6 @@ export function BranchCellComponent({
     return initial;
   });
 
-  // Filter to cells that can produce output data
   const sourceCells = useMemo(
     () =>
       (allCells ?? []).filter(
@@ -84,18 +83,16 @@ export function BranchCellComponent({
     [allCells, cell.id],
   );
 
-  // Filter to cells that can be jumped to
   const jumpTargets = useMemo(
     () => (allCells ?? []).filter((c) => c.id !== cell.id && c.type !== "output"),
     [allCells, cell.id],
   );
 
-  // Discover field names from the output cell produced by a given source cell
   const getFieldsForSource = useCallback(
     (sourceCellId: string): string[] => {
       if (!allCells) return [];
 
-      // Question cells have a single implicit field: the answer
+      // Questions only expose a single implicit "answer" field.
       const sourceCell = allCells.find((c) => c.id === sourceCellId);
       if (sourceCell?.type === "question") return ["answer"];
 
@@ -140,8 +137,6 @@ export function BranchCellComponent({
     }
   }, []);
 
-  // --- Path handlers ---
-
   const handleAddPath = useCallback(() => {
     const newPath: BranchPath = {
       id: crypto.randomUUID(),
@@ -178,8 +173,6 @@ export function BranchCellComponent({
     [cell, onUpdate],
   );
 
-  // --- Condition handlers ---
-
   const handleConditionUpdate = useCallback(
     (pathId: string, condId: string, field: keyof BranchCondition, value: string) => {
       onUpdate({
@@ -191,7 +184,6 @@ export function BranchCellComponent({
                 conditions: p.conditions.map((c) => {
                   if (c.id !== condId) return c;
                   const updated = { ...c, [field]: value };
-                  // When switching source to a question cell, auto-set field to "answer"
                   if (field === "sourceCellId") {
                     const src = (allCells ?? []).find((ac) => ac.id === value);
                     if (src?.type === "question") {
@@ -245,7 +237,6 @@ export function BranchCellComponent({
     setExpandedPaths((prev) => ({ ...prev, [pathId]: !prev[pathId] }));
   };
 
-  // Render a single condition row
   const renderCondition = (path: BranchPath, cond: BranchCondition, index: number) => {
     const fields = getFieldsForSource(cond.sourceCellId);
     const sourceCell = (allCells ?? []).find((c) => c.id === cond.sourceCellId);
@@ -253,12 +244,10 @@ export function BranchCellComponent({
 
     return (
       <div key={cond.id} className="group/cond flex items-center gap-1.5">
-        {/* Row label: first row says IF, subsequent say AND */}
         <span className="w-7 shrink-0 text-right text-xs font-semibold uppercase text-orange-600/80 dark:text-orange-400/80">
           {index === 0 ? "If" : "And"}
         </span>
 
-        {/* Source cell */}
         <Select
           value={cond.sourceCellId || undefined}
           onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "sourceCellId", v)}
@@ -276,7 +265,6 @@ export function BranchCellComponent({
           </SelectContent>
         </Select>
 
-        {/* Field */}
         {isQuestionSource ? (
           <span className="bg-muted text-muted-foreground flex h-7 min-w-[80px] flex-1 items-center rounded-md border px-2 text-xs">
             answer
@@ -308,7 +296,6 @@ export function BranchCellComponent({
           />
         )}
 
-        {/* Operator */}
         <Select
           value={cond.operator}
           onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "operator", v)}
@@ -326,7 +313,6 @@ export function BranchCellComponent({
           </SelectContent>
         </Select>
 
-        {/* Value */}
         <Input
           value={cond.value}
           onChange={(e) => handleConditionUpdate(path.id, cond.id, "value", e.target.value)}
@@ -335,7 +321,6 @@ export function BranchCellComponent({
           disabled={readOnly}
         />
 
-        {/* Remove condition - hover only */}
         {!readOnly && path.conditions.length > 1 ? (
           <Button
             variant="ghost"
@@ -352,7 +337,6 @@ export function BranchCellComponent({
     );
   };
 
-  // Render a single path folder
   const renderPath = (path: BranchPath) => {
     const isExpanded = expandedPaths[path.id] ?? true;
     const isEvaluated = cell.evaluatedPathId === path.id;
@@ -360,7 +344,6 @@ export function BranchCellComponent({
     return (
       <div key={path.id} className="relative">
         <Collapsible open={isExpanded} onOpenChange={() => togglePathExpanded(path.id)}>
-          {/* Path header */}
           <div className="flex items-center gap-1">
             <CollapsibleTrigger asChild>
               <button
@@ -407,7 +390,6 @@ export function BranchCellComponent({
           <CollapsibleContent>
             <div className="border-border/60 ml-6 border-l pl-4 pt-2">
               <div className="border-border/60 overflow-hidden rounded-md border bg-orange-50/30 dark:bg-orange-950/10">
-                {/* Conditions */}
                 <div className="space-y-1.5 p-2.5">
                   {path.conditions.map((cond, index) => renderCondition(path, cond, index))}
                   {!readOnly && (
@@ -423,7 +405,6 @@ export function BranchCellComponent({
                   )}
                 </div>
 
-                {/* Then -> jump to target */}
                 <div className="border-border/40 bg-background/50 flex items-center gap-2 border-t px-2.5 py-2">
                   <span className="text-muted-foreground w-7 shrink-0 text-right text-xs font-semibold uppercase">
                     Then
@@ -479,7 +460,6 @@ export function BranchCellComponent({
           </div>
         ))}
 
-        {/* Add path button */}
         {!readOnly && (
           <button
             type="button"

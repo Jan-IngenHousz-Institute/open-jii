@@ -12,7 +12,7 @@ import { WorkbookHeader } from "./workbook-header";
 import { WorkbookSidebar } from "./workbook-sidebar";
 
 const noop = () => {
-  /* no-op default callback */
+  // no-op
 };
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
@@ -33,7 +33,6 @@ interface DeviceInfo {
 interface WorkbookEditorProps {
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
-  // Execution (optional - header hidden if not provided)
   title?: string;
   executionStates?: Record<string, CellExecutionState>;
   isConnected?: boolean;
@@ -53,7 +52,6 @@ interface WorkbookEditorProps {
   onRunCell?: (cellId: string) => void;
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
-  /** When true, disable all editing controls (add, delete, reorder, inline editing) */
   readOnly?: boolean;
 }
 
@@ -147,7 +145,6 @@ export function WorkbookEditor({
       const updated = [...cells];
       updated[index] = cell;
 
-      // Auto-create/update output cell when a question is answered
       if (cell.type === "question" && cell.isAnswered && cell.answer != null) {
         const existingOutputIndex = updated.findIndex(
           (c) => c.type === "output" && c.producedBy === cell.id,
@@ -179,7 +176,7 @@ export function WorkbookEditor({
       const deletedCell = cells[index];
       let updated = [...cells];
 
-      // If deleting an output cell from a question, clear the answer
+      // Deleting a question's output should reset the question itself.
       if (deletedCell.type === "output") {
         const sourceIndex = updated.findIndex((c) => c.id === deletedCell.producedBy);
         if (sourceIndex !== -1 && updated[sourceIndex].type === "question") {
@@ -191,7 +188,6 @@ export function WorkbookEditor({
         }
       }
 
-      // Remove the cell and any output cells it produced
       updated = updated.filter(
         (c, i) => i !== index && !(c.type === "output" && c.producedBy === deletedCell.id),
       );
@@ -215,7 +211,6 @@ export function WorkbookEditor({
       const midY = rect.top + rect.height / 2;
       const insertAt = e.clientY < midY ? index : index + 1;
 
-      // Don't show indicator at positions that result in no movement
       if (insertAt === dragIndex || insertAt === dragIndex + 1) {
         setDropIndex(null);
       } else {
@@ -245,7 +240,6 @@ export function WorkbookEditor({
     setDropIndex(null);
   }, []);
 
-  // Compute static cell positions; overlay with runtime execution order when available
   const executionCounts = useMemo(() => {
     const counts: Record<string, number | undefined> = {};
     let counter = 1;
@@ -282,7 +276,6 @@ export function WorkbookEditor({
 
   const showHeader = onConnect && onRunAll;
 
-  // Detect when the header enters sticky mode by checking if it's pinned to top-16
   const headerRef = useRef<HTMLDivElement>(null);
   const [isSticky, setIsSticky] = useState(false);
 
@@ -290,8 +283,7 @@ export function WorkbookEditor({
     const handleScroll = () => {
       const el = headerRef.current;
       if (!el) return;
-      // The header is sticky at top: 64px (top-16). When its natural position
-      // would be above that, it's stuck.
+      // 64px matches top-16 on the sticky header.
       const rect = el.getBoundingClientRect();
       setIsSticky(rect.top <= 64);
     };
@@ -344,7 +336,6 @@ export function WorkbookEditor({
       )}
 
       <div className="flex gap-6">
-        {/* Main editor column */}
         <div className="min-w-0 flex-1 space-y-0">
           {cells.map((cell, index) => {
             const cellState = executionStates?.[cell.id];
@@ -353,7 +344,6 @@ export function WorkbookEditor({
             const isBeingDragged = dragIndex === index;
             return (
               <Fragment key={cell.id}>
-                {/* Drop indicator between cells */}
                 {!readOnly && (
                   <div
                     className={cn(
@@ -397,9 +387,7 @@ export function WorkbookEditor({
                       />
                     ))}
                   <div className="group/row flex items-stretch gap-1">
-                    {/* Gutter: cell number + drag handle */}
                     <div className="relative w-10 shrink-0">
-                      {/* Cell number aligned with header */}
                       <div className="flex justify-center pt-2">
                         {cellNumber !== undefined && (
                           <span className="text-muted-foreground font-mono text-[10px] leading-none">
@@ -407,7 +395,6 @@ export function WorkbookEditor({
                           </span>
                         )}
                       </div>
-                      {/* Drag handle at true vertical center of the cell */}
                       {!isOutput && !readOnly && (
                         <div
                           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab opacity-0 transition-opacity group-hover/row:opacity-100"
@@ -426,7 +413,6 @@ export function WorkbookEditor({
                         </div>
                       )}
                     </div>
-                    {/* Cell */}
                     <div className="min-w-0 flex-1">
                       <CellRenderer
                         cell={cell}
@@ -447,7 +433,6 @@ export function WorkbookEditor({
             );
           })}
 
-          {/* Drop indicator after last cell */}
           {!readOnly && (
             <div
               className={cn(
@@ -482,7 +467,6 @@ export function WorkbookEditor({
           )}
         </div>
 
-        {/* Sidebar minimap */}
         <div className="sticky top-[120px] hidden max-h-[calc(100vh-120px)] shrink-0 xl:block">
           <WorkbookSidebar
             cells={cells}

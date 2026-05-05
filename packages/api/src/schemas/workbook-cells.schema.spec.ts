@@ -11,12 +11,10 @@ import {
   zWorkbookCellArray,
 } from "./workbook-cells.schema";
 
-// -------- Helpers --------
 const uuidA = "11111111-1111-1111-1111-111111111111";
 const _uuidB = "22222222-2222-2222-2222-222222222222";
 
 describe("Workbook Cells Schema", () => {
-  // ----- Protocol Cell -----
   describe("zProtocolCell", () => {
     it("accepts ref payload", () => {
       const cell = {
@@ -74,7 +72,6 @@ describe("Workbook Cells Schema", () => {
     });
   });
 
-  // ----- Macro Cell -----
   describe("zMacroCell", () => {
     it("accepts macro payload", () => {
       const cell = {
@@ -113,7 +110,6 @@ describe("Workbook Cells Schema", () => {
     });
   });
 
-  // ----- Question Cell -----
   describe("zQuestionCell", () => {
     it("accepts yes_no question", () => {
       const cell = {
@@ -170,12 +166,10 @@ describe("Workbook Cells Schema", () => {
           question: { kind: "open_ended", text: "B?" },
         },
       ];
-      // Both canonicalise to "soil_moisture" → must collide.
       expect(() => zWorkbookCellArray.parse(cells)).toThrow(/must be unique/i);
     });
   });
 
-  // ----- Output Cell -----
   describe("zOutputCell", () => {
     it("accepts minimal output cell", () => {
       const cell = { id: "o1", type: "output", producedBy: "p1" };
@@ -205,7 +199,6 @@ describe("Workbook Cells Schema", () => {
     });
   });
 
-  // ----- Markdown Cell -----
   describe("zMarkdownCell", () => {
     it("accepts valid markdown cell", () => {
       const cell = { id: "md1", type: "markdown", content: "# Hello" };
@@ -218,7 +211,6 @@ describe("Workbook Cells Schema", () => {
     });
   });
 
-  // ----- Branch Cell -----
   describe("zBranchCell", () => {
     it("accepts branch with a single path", () => {
       const cell = {
@@ -329,7 +321,6 @@ describe("Workbook Cells Schema", () => {
     });
   });
 
-  // ----- Discriminated Union & Array -----
   describe("zWorkbookCell & zWorkbookCellArray", () => {
     it("accepts each cell type via the union", () => {
       const cells = [

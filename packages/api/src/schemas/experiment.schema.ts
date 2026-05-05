@@ -287,7 +287,13 @@ export const zErrorResponse = z.object({
 });
 
 // --- Flow Schemas ---
-export const zFlowNodeType = z.enum(["question", "instruction", "measurement", "analysis"]);
+export const zFlowNodeType = z.enum([
+  "question",
+  "instruction",
+  "measurement",
+  "analysis",
+  "branch",
+]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 
@@ -353,6 +359,17 @@ export const zAnalysisContent = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const zBranchPathSummary = z.object({
+  id: z.string().min(1),
+  label: z.string().max(64),
+  color: z.string(),
+});
+
+export const zBranchContent = z.object({
+  paths: z.array(zBranchPathSummary).min(1),
+  defaultPathId: z.string().optional(),
+});
+
 export const zFlowNode = z.object({
   id: z.string().min(1),
   type: zFlowNodeType,
@@ -360,7 +377,13 @@ export const zFlowNode = z.object({
     .string()
     .min(1, "Node label is required")
     .max(64, "Node label must be 64 characters or less"),
-  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent, zAnalysisContent]),
+  content: z.union([
+    zQuestionContent,
+    zInstructionContent,
+    zMeasurementContent,
+    zAnalysisContent,
+    zBranchContent,
+  ]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
   // Optional persisted layout position (added later for backwards compatibility)
@@ -377,6 +400,7 @@ export const zFlowEdge = z.object({
   source: z.string().min(1),
   target: z.string().min(1),
   label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
+  sourceHandle: z.string().max(64).optional().nullable(),
 });
 
 /**

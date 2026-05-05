@@ -11,19 +11,14 @@ import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
 interface QuestionPickerProps {
-  /** Existing cells in the workbook — used to check the new name doesn't
-   *  collide (after canonicalisation) with another question cell. */
   existingCells: WorkbookCell[];
   onSelect: (cell: QuestionCell) => void;
   children: ReactNode;
 }
 
-/** Inline popover for naming a brand-new question cell.
- *
- *  Question cells are the column-key source for the data pipeline, so the
- *  name must be set up-front and unique within the workbook. This picker is
- *  the only path that creates question cells; `createDefaultCell` throws on
- *  the question type, mirroring protocol/macro creation. */
+// Question cells supply column keys for the data pipeline, so the name must
+// be set at creation time and be unique within the workbook. This is the only
+// path that creates question cells; createDefaultCell throws for that type.
 export function QuestionPicker({ existingCells, onSelect, children }: QuestionPickerProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");

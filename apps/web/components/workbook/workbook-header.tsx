@@ -50,7 +50,6 @@ interface DeviceInfo {
 interface WorkbookHeaderProps {
   title: string;
   cells: WorkbookCell[];
-  // Device connection
   isConnected: boolean;
   isConnecting: boolean;
   connectionError: string | null;
@@ -61,14 +60,11 @@ interface WorkbookHeaderProps {
   onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
   onConnect: () => void;
   onDisconnect: () => void;
-  // Execution
   isRunningAll: boolean;
   onRunAll: () => void;
   onStopExecution: () => void;
   onClearOutputs: () => void;
-  // Sticky state
   isSticky?: boolean;
-  // Flowchart
   flowchartOpen?: boolean;
   onToggleFlowchart?: () => void;
 }
@@ -85,8 +81,7 @@ function downloadFile(content: string, filename: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Filename-safe slug: lowercase ASCII alphanumerics joined by `-`. Empty
- *  input falls back to "untitled" so we never produce a dotfile. */
+// Falls back to "untitled" so we never produce a dotfile.
 function slugify(name: string): string {
   const slug = name
     .toLowerCase()
@@ -95,7 +90,6 @@ function slugify(name: string): string {
   return slug || "untitled";
 }
 
-/** File extension for a macro source file by language. */
 function macroExtension(language: "python" | "r" | "javascript"): string {
   switch (language) {
     case "python":
@@ -157,9 +151,6 @@ export function WorkbookHeader({
     const protocolCells = cells.filter((c) => c.type === "protocol");
     if (protocolCells.length === 0) return;
 
-    // One file per protocol, named after the protocol itself, containing
-    // the raw MultispeQ JSON the device runs. Multiple protocols → multiple
-    // downloads triggered in sequence.
     for (const cell of protocolCells) {
       const result = await tsr.protocols.getProtocol.query({
         params: { id: cell.payload.protocolId },
@@ -175,10 +166,8 @@ export function WorkbookHeader({
     const macroCells = cells.filter((c) => c.type === "macro");
     if (macroCells.length === 0) return;
 
-    // One file per macro, named after the macro itself with a language-
-    // appropriate extension. Mirrors the protocol export — we ignore the
-    // stored DB filename, which can be a generic placeholder like
-    // `seed_macro_e5664d67…`.
+    // Use the macro's display name, not the stored DB filename (which can be
+    // a generic placeholder like seed_macro_e5664d67...).
     for (const cell of macroCells) {
       const result = await tsr.macros.getMacro.query({
         params: { id: cell.payload.macroId },
@@ -193,8 +182,7 @@ export function WorkbookHeader({
         }
       })();
       const filename = `${slugify(name)}${macroExtension(language)}`;
-      // octet-stream preserves the filename verbatim — text/plain makes some
-      // browsers force a `.txt` suffix.
+      // octet-stream preserves the filename; text/plain forces .txt in some browsers.
       downloadFile(decoded, filename, "application/octet-stream");
     }
   }, [cells]);
@@ -222,7 +210,6 @@ export function WorkbookHeader({
       className="sticky top-16 z-30 flex items-center gap-2 rounded-b-xl border-b px-4 py-2 xl:gap-3 xl:py-3"
       style={{ background: "#FFFFFF", borderColor: "#EDF2F6" }}
     >
-      {/* Device selectors */}
       <div className="flex items-center gap-1.5 xl:gap-2.5">
         {onSensorFamilyChange && (
           <Select
@@ -272,7 +259,6 @@ export function WorkbookHeader({
         )}
       </div>
 
-      {/* Connect button - before status */}
       <button
         className={cn(
           "inline-flex shrink-0 items-center justify-center gap-1.5 text-[12px] font-semibold leading-[18px]",
@@ -291,7 +277,6 @@ export function WorkbookHeader({
         <span className="hidden xl:inline">{isConnected ? "Disconnect" : "Connect"}</span>
       </button>
 
-      {/* Connection status */}
       <div className="flex items-center gap-1.5">
         <Circle
           className={cn(
@@ -327,10 +312,8 @@ export function WorkbookHeader({
         </span>
       )}
 
-      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Right actions */}
       {onToggleFlowchart && (
         <button
           className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
@@ -346,7 +329,6 @@ export function WorkbookHeader({
         </button>
       )}
 
-      {/* Save status indicator - only visible in sticky mode */}
       <div
         className={cn(
           "flex items-center gap-1.5 transition-opacity duration-300",
@@ -365,7 +347,6 @@ export function WorkbookHeader({
         )}
       </div>
 
-      {/* Export dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button

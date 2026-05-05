@@ -12,6 +12,7 @@ export const zWorkbook = z.object({
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  isUpgradable: z.boolean().optional(),
 });
 
 export const zWorkbookList = z.array(zWorkbook);

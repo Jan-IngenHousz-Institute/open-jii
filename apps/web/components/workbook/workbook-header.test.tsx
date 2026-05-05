@@ -161,10 +161,8 @@ describe("WorkbookHeader", () => {
   });
 });
 
-/** Captures what gets fed to `new Blob(...)`. MSW also wraps response bodies
- *  in Blobs, so we can't rely on indexing alone — `clickedBlobIndices` is
- *  filled by the anchor.click spy at the moment each download fires, which
- *  is the last Blob created before that click. */
+// MSW wraps response bodies in Blobs too, so we track which Blob was current
+// at each anchor click rather than relying on Blob creation order.
 const blobParts: string[] = [];
 const clickedBlobIndices: number[] = [];
 const OriginalBlob = globalThis.Blob;
@@ -187,7 +185,6 @@ async function readDownload(
   return { filename, payload: JSON.parse(text) as unknown };
 }
 
-/** Returns every download triggered, in order. */
 async function readAllDownloads(
   anchorClick: AnchorClickSpy,
   expected: number,
@@ -274,7 +271,6 @@ describe("WorkbookHeader — export menu", () => {
     await user.click(screen.getByRole("button", { name: /export/i }));
     await user.click(screen.getByRole("menuitem", { name: /export protocol only/i }));
 
-    // Two protocol cells → two downloads, one Blob per cell.
     const downloads = await readAllDownloads(anchorClick, 2);
     expect(downloads).toHaveLength(2);
     for (const d of downloads) {
@@ -288,8 +284,7 @@ describe("WorkbookHeader — export menu", () => {
       body: createMacro({
         id: "macro-1",
         name: "Chlorophyll Calc",
-        // DB filename is intentionally a generic placeholder — the export
-        // ignores it and uses the macro's display name instead.
+        // DB filename is a placeholder; export uses the macro's display name.
         filename: "seed_macro_e5664d67.py",
         language: "python",
         // The wire format is base64-encoded; export must decode it.

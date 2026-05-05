@@ -32,7 +32,6 @@ describe("WorkbookSidebar", () => {
       />,
     );
     expect(screen.getByText("Markdown")).toBeInTheDocument();
-    // Question cells show their name as the primary label, not the type.
     expect(screen.getByText("soil_moisture")).toBeInTheDocument();
     expect(screen.queryByText("Question")).not.toBeInTheDocument();
     expect(screen.getByText("Protocol")).toBeInTheDocument();
@@ -45,11 +44,8 @@ describe("WorkbookSidebar", () => {
         onCellClick={onCellClick}
       />,
     );
-    // Markdown subtitle is stripped HTML content
     expect(screen.getByText("Hello world")).toBeInTheDocument();
-    // Question subtitle is the question text
     expect(screen.getByText("What?")).toBeInTheDocument();
-    // Protocol subtitle is the protocol name
     expect(screen.getByText("My Protocol")).toBeInTheDocument();
   });
 

@@ -42,10 +42,8 @@ describe("ProtocolCellComponent", () => {
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
 
-    // Protocol name is displayed in the header
     expect(screen.getByText("Light Sensor")).toBeInTheDocument();
 
-    // Code editor shows the JSON once the protocol loads
     await waitFor(() => {
       expect(screen.getByTestId("code-editor")).toBeInTheDocument();
     });
@@ -68,10 +66,8 @@ describe("ProtocolCellComponent", () => {
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
 
-    // Wait for protocol to load so there's code to copy
     await waitFor(() => expect(screen.getByTestId("code-editor")).toBeInTheDocument());
 
-    // The copy button is in the header actions — find all ghost buttons and pick the copy one
     const copyButton = screen
       .getAllByRole("button")
       .find(
@@ -79,7 +75,6 @@ describe("ProtocolCellComponent", () => {
           btn.querySelector("svg")?.classList.contains("lucide-copy") ??
           btn.querySelector("[class*='copy']") !== null,
       );
-    // Fallback: just find the small button in the header area
     if (copyButton) {
       await user.click(copyButton);
     }
@@ -105,7 +100,6 @@ describe("ProtocolCellComponent", () => {
     );
 
     await waitFor(() => {
-      // The family badge shows the formatted label
       expect(screen.getByText("MultispeQ")).toBeInTheDocument();
     });
   });

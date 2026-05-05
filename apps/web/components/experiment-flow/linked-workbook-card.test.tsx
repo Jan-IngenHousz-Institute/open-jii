@@ -95,10 +95,8 @@ describe("LinkedWorkbookCard", () => {
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
-    // Open the detach dialog
     await user.click(screen.getByRole("button", { name: /flow\.detach/ }));
 
-    // Confirm in the alert dialog
     const confirmBtn = screen
       .getAllByText("flow.detach")
       .find((el) => el.closest("[role='alertdialog']"));
@@ -175,17 +173,13 @@ describe("LinkedWorkbookCard", () => {
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
-    // Open the change picker
     await user.click(screen.getByText("flow.changeWorkbook"));
 
-    // Select the other workbook
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByText("Other Workbook"));
 
-    // Click attach, which opens a confirm dialog
     await user.click(screen.getByRole("button", { name: /flow\.attach/ }));
 
-    // Confirm in the dialog
     const confirmBtn = screen
       .getAllByText("flow.confirmChange")
       .find((el) => el.closest("[role='alertdialog']"));

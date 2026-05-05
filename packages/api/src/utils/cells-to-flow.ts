@@ -12,8 +12,15 @@ export interface DerivedFlowGraph {
   edges: FlowEdge[];
 }
 
-function makeEdge(source: string, target: string, label?: string): FlowEdge {
-  return { id: `e-${source}-${target}`, source, target, label: label ?? null };
+function makeEdge(source: string, target: string, label?: string, sourceHandle?: string): FlowEdge {
+  const id = sourceHandle ? `e-${source}-${sourceHandle}-${target}` : `e-${source}-${target}`;
+  return {
+    id,
+    source,
+    target,
+    label: label ?? null,
+    sourceHandle: sourceHandle ?? null,
+  };
 }
 
 function makeNode(
@@ -47,9 +54,7 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       );
 
     case "question":
-      // The cell's `name` is the column-key label set at creation. The flow
-      // node's `name` field is what the data pipeline canonicalises into a
-      // column key downstream — we pass the cell's name straight through.
+      // Cell `name` is the column-key label; data pipeline canonicalises it into a column key downstream.
       return makeNode(cell.id, "question", cell.name, cell.question as Content, isStart);
 
     case "markdown":
@@ -61,10 +66,17 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         isStart,
       );
 
-    case "branch": {
-      const labels = cell.paths.map((p) => p.label).join(" / ");
-      return makeNode(cell.id, "instruction", "Branch", { text: labels } as Content, isStart);
-    }
+    case "branch":
+      return makeNode(
+        cell.id,
+        "branch",
+        "Branch",
+        {
+          paths: cell.paths.map((p) => ({ id: p.id, label: p.label, color: p.color })),
+          defaultPathId: cell.defaultPathId,
+        } as Content,
+        isStart,
+      );
 
     case "output":
       return null;
@@ -97,11 +109,10 @@ export function cellsToFlowGraph(cells: WorkbookCell[]): DerivedFlowGraph {
       edges.push(makeEdge(previousId, node.id));
     }
 
-    // Branch paths with gotoCellId create back-edges
     if (cell.type === "branch") {
       for (const path of cell.paths) {
         if (path.gotoCellId) {
-          edges.push(makeEdge(cell.id, path.gotoCellId, path.label));
+          edges.push(makeEdge(cell.id, path.gotoCellId, path.label, path.id));
         }
       }
     }
@@ -109,7 +120,6 @@ export function cellsToFlowGraph(cells: WorkbookCell[]): DerivedFlowGraph {
     previousId = node.id;
   }
 
-  // Assign horizontal positions so the graph renders as a left-to-right chain
   const NODE_SPACING = 250;
   const Y_CENTER = 240;
   const totalWidth = (nodes.length - 1) * NODE_SPACING;

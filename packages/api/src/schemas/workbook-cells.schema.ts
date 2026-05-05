@@ -21,10 +21,7 @@ export const zProtocolCell = zBaseCell.extend({
   payload: zProtocolPayload,
 });
 
-// --- Macro Cell ---
-// Macros are always persisted entities. The cell stores a ref to the macro.
-// Versioning happens at the experiment/snapshot level, not per-macro-edit.
-
+// Macros are always persisted entities; the cell stores a ref. Versioning happens at the experiment/snapshot level.
 const zMacroPayload = z
   .object({
     macroId: z.string().uuid(),
@@ -40,10 +37,7 @@ export const zMacroCell = zBaseCell.extend({
 
 export const zQuestionCell = zBaseCell.extend({
   type: z.literal("question"),
-  // Column-key label, set at creation time via the question-name picker. The
-  // data pipeline canonicalises this into a column key in `questions_data`,
-  // so it must be present and unique within the workbook. Mirrors the role
-  // of zFlowNode.name for question nodes.
+  // Data pipeline canonicalises this into a column key in `questions_data`; must be unique within the workbook.
   name: z
     .string()
     .min(1, "Question name is required")
@@ -101,10 +95,7 @@ export const zWorkbookCell = z.union([
 ]);
 
 export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx) => {
-  // Reject duplicate question-cell names (canonicalised). The name becomes
-  // the flow node's `name`, which the data pipeline canonicalises into a
-  // column key in `questions_data`; duplicates collide and lose answers
-  // downstream. Mirrors the same check in zFlowGraph.
+  // Canonicalised duplicate names collide as column keys in `questions_data` and lose answers. Mirrors zFlowGraph.
   const seen = new Map<string, number>();
   cells.forEach((cell, index) => {
     if (cell.type !== "question") return;

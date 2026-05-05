@@ -6,7 +6,6 @@ import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetac
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
-import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import {
   ArrowUpCircle,
@@ -70,21 +69,10 @@ export function LinkedWorkbookCard({
   const pinnedVersion = versions.find((v) => v.id === workbookVersionId);
   const latestVersion = versions[0];
 
-  // Pinned version's cells are needed to detect whether the workbook's live
-  // draft has diverged since the experiment was pinned.
-  const { data: pinnedVersionDetail } = useWorkbookVersion(workbookId, workbookVersionId, {
-    enabled: !!workbookId && !!workbookVersionId,
-  });
-
   const hasNewerPublished =
     !!pinnedVersion && versions.length > 0 && latestVersion.version > pinnedVersion.version;
-  const draftDiverged =
-    !!workbook &&
-    !!pinnedVersionDetail &&
-    JSON.stringify(workbook.cells) !== JSON.stringify(pinnedVersionDetail.cells);
-  const hasUpgrade = hasNewerPublished || draftDiverged;
+  const hasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
 
-  // Attach (change) workbook
   const attachWorkbook = useAttachWorkbook();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
   const { data: workbooks = [] } = useWorkbookList();
@@ -107,7 +95,6 @@ export function LinkedWorkbookCard({
     );
   };
 
-  // Detach workbook
   const detachWorkbook = useDetachWorkbook();
 
   const handleDetach = () => {
@@ -124,7 +111,6 @@ export function LinkedWorkbookCard({
     );
   };
 
-  // Upgrade workbook version
   const upgradeVersion = useUpgradeWorkbookVersion();
   const [upgradeState, setUpgradeState] = useState<"idle" | "upgrading" | "success">("idle");
 
@@ -214,7 +200,6 @@ export function LinkedWorkbookCard({
         )}
       </div>
 
-      {/* Upgrade notice */}
       {hasUpgrade && hasAccess && pinnedVersion && upgradeState !== "success" && (
         <div
           className={cn(
@@ -273,7 +258,6 @@ export function LinkedWorkbookCard({
         </div>
       )}
 
-      {/* Upgrade success banner */}
       {upgradeState === "success" && (
         <div className="animate-version-pop flex items-center gap-2 border-t bg-[#CCFCD8]/50 px-4 py-2.5">
           <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
@@ -285,7 +269,6 @@ export function LinkedWorkbookCard({
         </div>
       )}
 
-      {/* Change workbook inline picker */}
       {isChanging && hasAccess && (
         <div className="flex items-center gap-2 border-t px-4 py-3">
           <Select value={selectedWorkbookId} onValueChange={setSelectedWorkbookId}>

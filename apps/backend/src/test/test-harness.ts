@@ -182,9 +182,7 @@ export class TestHarness {
     await this.database.delete(invitations).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentLocations).execute();
-    // Workbook versions reference workbooks, delete before workbooks
     await this.database.delete(workbookVersions).execute();
-    // Workbooks reference experiments, so delete before experiments
     await this.database.delete(workbooks).execute();
     // Flows reference experiments, so delete flows before experiments
     await this.database.delete(flows).execute();
@@ -438,9 +436,6 @@ export class TestHarness {
     return macro;
   }
 
-  /**
-   * Helper to create a workbook for testing
-   */
   public async createWorkbook(data: {
     name: string;
     description?: string;

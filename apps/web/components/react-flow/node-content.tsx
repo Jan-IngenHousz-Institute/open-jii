@@ -7,6 +7,14 @@ import { nodeTypeColorMap } from "../react-flow/node-config";
 import type { NodeType } from "./node-config";
 import { NodeHandles } from "./node-handles";
 
+const TYPE_LABELS: Record<NodeType, string> = {
+  INSTRUCTION: "Instruction",
+  QUESTION: "Question",
+  MEASUREMENT: "Protocol",
+  ANALYSIS: "Macro",
+  BRANCH: "Branch",
+};
+
 interface NodeContentProps {
   title: string;
   nodeType: NodeType;
@@ -33,6 +41,7 @@ export function NodeContent({
   const { t } = useTranslation("experiments");
   const config = nodeTypeColorMap[nodeType];
   const accent = config.accent;
+  const typeLabel = TYPE_LABELS[nodeType];
 
   return (
     <>
@@ -45,50 +54,44 @@ export function NodeContent({
         dragging={dragging}
         nodeType={nodeType}
       />
-      {/* Compact horizontal layout with left padding for accent bar */}
-      <div className="flex items-center gap-2 py-2.5 pl-4 pr-3">
-        {/* Start node indicator — small green dot */}
-        {isStartNode && (
-          <div
-            className="h-2 w-2 flex-shrink-0 rounded-full"
-            style={{ backgroundColor: "#49e06d" }}
-            title={t("start")}
-          />
-        )}
-
-        {/* Type icon — inline, accent-tinted */}
+      <div className="flex items-center gap-3 py-3 pl-4 pr-3">
         <div
-          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
           style={{
-            backgroundColor: `color-mix(in srgb, ${accent} 10%, transparent)`,
+            backgroundColor: `color-mix(in srgb, ${accent} 12%, transparent)`,
             color: accent,
           }}
         >
           {React.cloneElement(
             config.icon as React.ReactElement,
-            { size: 14 } as Record<string, unknown>,
+            { size: 18 } as Record<string, unknown>,
           )}
         </div>
-
-        {/* Title */}
-        <span
-          className="truncate text-[13px] font-medium"
-          style={{ color: "#011111", maxWidth: 140 }}
-          title={title}
-        >
-          {title ? (
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            {isStartNode && (
+              <span
+                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: "#22C55E" }}
+                title={t("start")}
+              />
+            )}
             <span
-              className="text-md inline-block max-w-[250px] truncate font-medium text-slate-700"
-              title={title}
+              className="text-[10px] font-medium uppercase tracking-wider"
+              style={{ color: accent, letterSpacing: "0.06em" }}
             >
-              {title}
+              {typeLabel}
             </span>
-          ) : (
-            <span className="text-md inline-block max-w-[250px] truncate font-medium italic text-slate-400">
-              {t("flow.untitledNode")}
-            </span>
-          )}
-        </span>
+          </div>
+          <span
+            className="line-clamp-2 break-words text-[13px] font-semibold leading-tight text-slate-900"
+            title={title}
+          >
+            {title || (
+              <span className="font-normal italic text-slate-400">{t("flow.untitledNode")}</span>
+            )}
+          </span>
+        </div>
       </div>
     </>
   );

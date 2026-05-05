@@ -41,7 +41,6 @@ describe("DetachWorkbookUseCase", () => {
     });
     workbookId = workbook.id;
 
-    // Attach workbook first so we can detach it
     await attachUseCase.execute(experimentId, workbookId, adminUserId);
   });
 
@@ -62,7 +61,6 @@ describe("DetachWorkbookUseCase", () => {
   it("keeps workbookVersionId after detach for historical reference", async () => {
     const result = await detachUseCase.execute(experimentId, adminUserId);
     assertSuccess(result);
-    // workbookVersionId should remain set (historical)
     expect(result.value.workbookVersionId).toBeDefined();
   });
 
@@ -79,17 +77,14 @@ describe("DetachWorkbookUseCase", () => {
   });
 
   it("returns failure when no workbook is attached", async () => {
-    // First detach
     await detachUseCase.execute(experimentId, adminUserId);
 
-    // Try to detach again
     const result = await detachUseCase.execute(experimentId, adminUserId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(400);
   });
 
   it("removes the materialised flow row so mobile no longer sees the graph", async () => {
-    // Attach in beforeEach already wrote a flow row.
     const before = await flowRepo.getByExperimentId(experimentId);
     assertSuccess(before);
     expect(before.value).not.toBeNull();

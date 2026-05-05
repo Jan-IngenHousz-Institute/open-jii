@@ -24,12 +24,8 @@ interface QuestionCellProps {
   onRun?: () => void;
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
-  /** When true, auto-open the answer dialog (triggered by runAll) */
   promptOpen?: boolean;
-  /** Called when the user submits an answer during a prompted run */
   onQuestionAnswered?: (answer: string) => void;
-  /** All cells in the workbook — used by the rename popover to detect
-   *  duplicate canonical names. */
   allCells?: WorkbookCell[];
   readOnly?: boolean;
 }
@@ -60,7 +56,6 @@ export function QuestionCellComponent({
   const [isAnswering, setIsAnswering] = useState(false);
   const [pendingAnswer, setPendingAnswer] = useState("");
 
-  // Auto-open the dialog when prompted by runAll
   useEffect(() => {
     if (promptOpen && !isAnswering) {
       setIsAnswering(true);
@@ -166,13 +161,12 @@ export function QuestionCellComponent({
   const handleCancelAnswer = () => {
     setIsAnswering(false);
     setPendingAnswer("");
-    // If this was a prompted question during runAll, signal cancellation
+    // Empty string signals cancellation back to a runAll prompt.
     if (promptOpen) onQuestionAnswered?.("");
   };
 
   return (
     <>
-      {/* Answer Modal */}
       <Dialog open={isAnswering} onOpenChange={(open) => !open && handleCancelAnswer()}>
         <DialogContent className="gap-0 overflow-hidden rounded-xl border-[#EDF2F6] p-0 sm:max-w-md">
           <div className="bg-gradient-to-br from-[#005E5E] to-[#1a7a7a] px-6 py-5">
@@ -356,7 +350,6 @@ export function QuestionCellComponent({
         }
       >
         <div className="space-y-3">
-          {/* Answer type - compact segmented control */}
           <div className="flex items-center gap-0.5 rounded-lg border bg-[#EDF2F6] p-0.5">
             {kindOptions.map(({ kind, label, icon: Icon }) => (
               <button
@@ -383,7 +376,6 @@ export function QuestionCellComponent({
             ))}
           </div>
 
-          {/* Question text - prominent, clean */}
           <Input
             value={question.text}
             onChange={(e) => handleTextChange(e.target.value)}
@@ -392,7 +384,6 @@ export function QuestionCellComponent({
             disabled={readOnly}
           />
 
-          {/* Multi-choice options */}
           {question.kind === "multi_choice" && (
             <div className="space-y-1.5 pl-1">
               {question.options.map((option, index) => (

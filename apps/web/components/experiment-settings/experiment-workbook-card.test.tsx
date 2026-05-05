@@ -23,15 +23,12 @@ describe("ExperimentWorkbookCard", () => {
     const experiment = createExperiment({ workbookId: null });
     render(<ExperimentWorkbookCard experimentId={experiment.id} experiment={experiment} />);
 
-    // Open the select dropdown
     await user.click(screen.getByRole("combobox"));
 
-    // User should see the two available workbooks listed
     await waitFor(() => {
       expect(screen.getByText("Photosynthesis Lab")).toBeInTheDocument();
       expect(screen.getByText("Soil Analysis")).toBeInTheDocument();
     });
-    // "No workbook" option appears in both trigger and dropdown
     expect(screen.getAllByText("newExperiment.noWorkbook").length).toBeGreaterThanOrEqual(1);
   });
 

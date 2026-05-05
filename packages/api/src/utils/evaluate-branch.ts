@@ -5,10 +5,6 @@ import type {
   WorkbookCell,
 } from "../schemas/workbook-cells.schema";
 
-/**
- * Validate that a branch cell is fully configured.
- * Returns an array of human-readable error strings (empty = valid).
- */
 export function validateBranchCell(cell: BranchCell): string[] {
   const errors: string[] = [];
 
@@ -44,11 +40,6 @@ export function validateBranchCell(cell: BranchCell): string[] {
   return errors;
 }
 
-/**
- * Resolve a value from a source cell's output. For protocol/macro cells,
- * looks up the output cell produced by that source and reads the field.
- * For question cells, returns the answer string (field is ignored).
- */
 export function resolveConditionValue(
   cells: WorkbookCell[],
   sourceCellId: string,
@@ -57,12 +48,10 @@ export function resolveConditionValue(
   const sourceCell = cells.find((c) => c.id === sourceCellId);
   if (!sourceCell) return undefined;
 
-  // Question cells: the "value" is the answer string
   if (sourceCell.type === "question") {
     return sourceCell.answer ?? undefined;
   }
 
-  // Protocol/macro cells: look at the output cell they produced
   const outputCell = cells.find((c) => c.type === "output" && c.producedBy === sourceCellId);
   if (outputCell?.type !== "output" || outputCell.data == null) {
     return undefined;
@@ -70,7 +59,6 @@ export function resolveConditionValue(
 
   const data = outputCell.data as Record<string, unknown>;
 
-  // If data is an array of records, use the first element
   if (Array.isArray(data)) {
     const first = data[0] as Record<string, unknown> | undefined;
     if (!first) return undefined;
@@ -86,9 +74,6 @@ export function resolveConditionValue(
   return val != null ? JSON.stringify(val) : undefined;
 }
 
-/**
- * Evaluate a single condition against resolved data.
- */
 function evaluateCondition(cond: BranchCondition, cells: WorkbookCell[]): boolean {
   const resolved = resolveConditionValue(cells, cond.sourceCellId, cond.field);
   if (resolved === undefined) return false;
@@ -115,19 +100,12 @@ function evaluateCondition(cond: BranchCondition, cells: WorkbookCell[]): boolea
   }
 }
 
-/**
- * Evaluate all conditions in a path. Returns true if ALL conditions pass (AND logic).
- */
+// AND logic across conditions.
 export function evaluatePathConditions(path: BranchPath, cells: WorkbookCell[]): boolean {
   if (path.conditions.length === 0) return false;
   return path.conditions.every((cond) => evaluateCondition(cond, cells));
 }
 
-/**
- * Evaluate a branch cell: find the first path whose conditions all pass.
- * Falls back to `defaultPathId` if no path matches.
- * Returns the matched path or undefined if nothing matched.
- */
 export function evaluateBranch(cell: BranchCell, cells: WorkbookCell[]): BranchPath | undefined {
   for (const path of cell.paths) {
     if (evaluatePathConditions(path, cells)) {
@@ -135,7 +113,6 @@ export function evaluateBranch(cell: BranchCell, cells: WorkbookCell[]): BranchP
     }
   }
 
-  // Fall back to default path
   if (cell.defaultPathId) {
     return cell.paths.find((p) => p.id === cell.defaultPathId);
   }

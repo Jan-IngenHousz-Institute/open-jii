@@ -8,8 +8,6 @@ import {
   validateBranchCell,
 } from "./evaluate-branch";
 
-// --- Helpers ---
-
 function makeOutputCell(id: string, producedBy: string, data: unknown): WorkbookCell {
   return {
     id,
@@ -42,8 +40,6 @@ function makeBranchCell(overrides: Partial<BranchCell> & { id: string }): Branch
     ...overrides,
   };
 }
-
-// --- Tests ---
 
 describe("resolveConditionValue", () => {
   it("returns undefined for unknown source cell", () => {

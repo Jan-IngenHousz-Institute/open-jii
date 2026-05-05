@@ -4,12 +4,16 @@ import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
+import { IsWorkbookUpgradableUseCase } from "../is-workbook-upgradable/is-workbook-upgradable";
 
 @Injectable()
 export class GetWorkbookUseCase {
   private readonly logger = new Logger(GetWorkbookUseCase.name);
 
-  constructor(private readonly workbookRepository: WorkbookRepository) {}
+  constructor(
+    private readonly workbookRepository: WorkbookRepository,
+    private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
+  ) {}
 
   async execute(id: string, _userId: string): Promise<Result<WorkbookDto>> {
     this.logger.log({
@@ -34,6 +38,12 @@ export class GetWorkbookUseCase {
       return failure(AppError.notFound("Workbook not found"));
     }
 
-    return success(result.value);
+    const isUpgradableResult = await this.isWorkbookUpgradableUseCase.execute(result.value);
+
+    if (isUpgradableResult.isFailure()) {
+      return isUpgradableResult;
+    }
+
+    return success({ ...result.value, isUpgradable: isUpgradableResult.value });
   }
 }

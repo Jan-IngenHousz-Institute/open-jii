@@ -104,9 +104,7 @@ function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsC
 }
 
 describe("ExperimentDetailsCard", () => {
-  // Override global useSession mock to return an authenticated user
-  // Must be in beforeEach because vi.clearAllMocks() in setup.ts afterEach
-  // wipes mockReturnValue between tests.
+  // setup.ts afterEach calls vi.clearAllMocks(); reapply the session mock per test.
   beforeEach(() => {
     vi.mocked(useSession).mockReturnValue({
       data: { user: { id: "user-1" } },

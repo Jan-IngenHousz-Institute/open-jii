@@ -72,10 +72,8 @@ describe("BranchCellComponent", () => {
     const pathInput = screen.getByDisplayValue("Path 1");
     await user.type(pathInput, " updated");
 
-    // The controlled input appends to the original value on each keystroke
     const lastCall = onUpdate.mock.calls[onUpdate.mock.calls.length - 1][0] as BranchCell;
     expect(lastCall.paths[0].label).toContain("Path 1");
-    // Verify onUpdate was called for each character
     expect(onUpdate).toHaveBeenCalled();
   });
 
@@ -86,7 +84,6 @@ describe("BranchCellComponent", () => {
     const valueInput = screen.getByPlaceholderText("value");
     await user.type(valueInput, "4");
 
-    // First keystroke fires onUpdate with value "4"
     const firstCall = onUpdate.mock.calls[0][0] as BranchCell;
     expect(firstCall.paths[0].conditions[0].value).toBe("4");
   });
@@ -133,7 +130,7 @@ describe("BranchCellComponent", () => {
 
   it("does not crash with undefined paths (corrupt legacy data)", () => {
     const cell = makeBranchCell();
-    // @ts-expect-error — simulating corrupt data
+    // @ts-expect-error simulating corrupt data
     delete cell.paths;
     render(<BranchCellComponent cell={cell} onUpdate={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText("Branch")).toBeInTheDocument();

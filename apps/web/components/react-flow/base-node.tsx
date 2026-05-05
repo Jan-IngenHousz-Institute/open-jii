@@ -58,10 +58,7 @@ export function BaseNode(props: BaseNodeProps) {
 
   return (
     <div onClick={handleSelect}>
-      <div
-        className={cn("group relative inline-block min-w-[160px] max-w-[220px] bg-transparent p-0")}
-        tabIndex={0}
-      >
+      <div className={cn("group relative inline-block w-[260px] bg-transparent p-0")} tabIndex={0}>
         {/* Delete button - only show if not static */}
         {!isStatic && (
           <button
@@ -85,15 +82,15 @@ export function BaseNode(props: BaseNodeProps) {
         <div
           data-testid="node-card"
           className={cn(
-            "relative overflow-hidden rounded-[10px] transition-shadow duration-150",
+            "relative overflow-hidden rounded-[12px] transition-shadow duration-150 group-hover:shadow-md",
             isActive && "ring-jii-dark-green ring-2",
           )}
           style={{
             backgroundColor: "#FFFFFF",
-            border: `1px solid ${isActive ? "#005e5e" : "#EDF2F6"}`,
+            border: `1px solid ${isActive ? "#005e5e" : "#E2E8F0"}`,
             boxShadow: isActive
-              ? "inset 0px 2px 16px rgba(0, 94, 94, 0.10), 0px 6px 12px -2px rgba(0, 0, 0, 0.10)"
-              : "inset 0px 2px 16px rgba(0, 94, 94, 0.08), 0px 4px 8px -2px rgba(0, 0, 0, 0.06)",
+              ? "0 8px 20px -6px rgba(0, 94, 94, 0.18), 0 2px 4px rgba(0, 0, 0, 0.04)"
+              : "0 4px 8px -4px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.04)",
           }}
         >
           {/* Left accent bar — matches CellWrapper pattern */}

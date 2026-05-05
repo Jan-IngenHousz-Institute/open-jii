@@ -34,11 +34,9 @@ describe("OutputCellComponent", () => {
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    // Table tab active by default — shows data
     expect(screen.getByText("time")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
 
-    // Switch to JSON tab
     await user.click(screen.getByRole("tab", { name: "JSON" }));
     expect(screen.getByText(/"value": 42/)).toBeInTheDocument();
   });

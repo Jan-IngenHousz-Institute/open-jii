@@ -86,7 +86,7 @@ describe("MarkdownCellComponent", () => {
 
   it("switches from edit to preview when the user clicks Preview", async () => {
     const user = userEvent.setup();
-    renderMarkdown(); // empty → starts in edit
+    renderMarkdown();
 
     await user.click(screen.getByText("Preview"));
     expect(screen.getByText("Click to add content...")).toBeInTheDocument();
@@ -98,7 +98,6 @@ describe("MarkdownCellComponent", () => {
 
     await user.type(screen.getByTestId("rich-textarea"), "H");
 
-    // Controlled input: first keystroke produces "H"
     const firstCall = onUpdate.mock.calls[0][0] as MarkdownCell;
     expect(firstCall.content).toBe("H");
     expect(onUpdate).toHaveBeenCalledTimes(1);
@@ -113,7 +112,6 @@ describe("MarkdownCellComponent", () => {
     renderMarkdown({ content: "<p>Read only text</p>" }, { readOnly: true });
     expect(screen.queryByText("Edit")).not.toBeInTheDocument();
     expect(screen.queryByText("Preview")).not.toBeInTheDocument();
-    // Content is still shown
     expect(screen.getByTestId("rich-renderer")).toBeInTheDocument();
   });
 });

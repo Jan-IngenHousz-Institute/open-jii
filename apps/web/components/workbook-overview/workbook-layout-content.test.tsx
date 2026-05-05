@@ -55,15 +55,12 @@ describe("WorkbookLayoutContent", () => {
 
     renderContent();
 
-    // Click the title to enter edit mode
     await user.click(screen.getByText("Photosynthesis Lab"));
 
-    // Clear and type new name
     const input = screen.getByDisplayValue("Photosynthesis Lab");
     await user.clear(input);
     await user.type(input, "Soil Analysis");
 
-    // Click the Save button (check icon)
     await user.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {

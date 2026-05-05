@@ -72,8 +72,6 @@ describe("cellsToFlowGraph", () => {
     const { nodes } = cellsToFlowGraph(cells);
     expect(nodes).toHaveLength(1);
     expect(nodes[0].type).toBe("question");
-    // The cell's `name` (column-key label) becomes the flow node's `name`,
-    // not the prompt text.
     expect(nodes[0].name).toBe("is_green");
   });
 
@@ -129,26 +127,25 @@ describe("cellsToFlowGraph", () => {
     expect(nodes).toHaveLength(3);
     expect(edges).toHaveLength(2);
 
-    // First cell is start
     expect(nodes[0].isStart).toBe(true);
     expect(nodes[1].isStart).toBe(false);
     expect(nodes[2].isStart).toBe(false);
 
-    // Edges chain sequentially
     expect(edges[0]).toEqual({
       id: "e-md1-p1",
       source: "md1",
       target: "p1",
       label: null,
+      sourceHandle: null,
     });
     expect(edges[1]).toEqual({
       id: "e-p1-m1",
       source: "p1",
       target: "m1",
       label: null,
+      sourceHandle: null,
     });
 
-    // Nodes are positioned in a horizontal chain
     expect(nodes[0].position).toEqual({ x: -250, y: 240 });
     expect(nodes[1].position).toEqual({ x: 0, y: 240 });
     expect(nodes[2].position).toEqual({ x: 250, y: 240 });
@@ -182,18 +179,14 @@ describe("cellsToFlowGraph", () => {
     ];
     const { nodes, edges } = cellsToFlowGraph(cells);
 
-    // p1 + b1 + md-end = 3 nodes
     expect(nodes).toHaveLength(3);
 
-    // p1 -> b1 sequential
     expect(edges.find((e) => e.source === "p1" && e.target === "b1")).toBeTruthy();
 
-    // b1 -> p1 loop back-edge with path label
     const loopEdge = edges.find((e) => e.source === "b1" && e.target === "p1");
     expect(loopEdge).toBeTruthy();
     expect(loopEdge?.label).toBe("Retry");
 
-    // b1 -> md-end sequential
     expect(edges.find((e) => e.source === "b1" && e.target === "md-end")).toBeTruthy();
   });
 
@@ -218,10 +211,8 @@ describe("cellsToFlowGraph", () => {
     ];
     const { nodes, edges } = cellsToFlowGraph(cells);
 
-    // b1 + md1 = 2 nodes
     expect(nodes).toHaveLength(2);
 
-    // No loop edge, just sequential
     expect(edges).toHaveLength(1);
     expect(edges[0].source).toBe("b1");
     expect(edges[0].target).toBe("md1");
@@ -240,11 +231,9 @@ describe("cellsToFlowGraph", () => {
     ];
     const { nodes, edges } = cellsToFlowGraph(cells);
 
-    // Output is skipped
     expect(nodes).toHaveLength(2);
     expect(nodes.find((n) => n.id === "o1")).toBeUndefined();
 
-    // p1 -> md1 directly
     expect(edges).toHaveLength(1);
     expect(edges[0].source).toBe("p1");
     expect(edges[0].target).toBe("md1");

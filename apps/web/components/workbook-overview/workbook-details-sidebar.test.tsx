@@ -18,7 +18,6 @@ describe("WorkbookDetailsSidebar", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Authenticated as the workbook creator
     vi.mocked(useSession).mockReturnValue({
       data: { user: { id: "user-1", name: "Test User", email: "test@test.com" } },
       isPending: false,
@@ -55,17 +54,13 @@ describe("WorkbookDetailsSidebar", () => {
 
     const { router } = render(<WorkbookDetailsSidebar workbookId="wb-123" workbook={workbook} />);
 
-    // Click the delete trigger button
     await user.click(screen.getByRole("button", { name: "workbooks.deleteWorkbook" }));
 
-    // Confirmation dialog appears
     expect(screen.getByText("common.confirmDelete")).toBeInTheDocument();
 
-    // Click the destructive confirm button inside the dialog
     const dialogButtons = screen.getAllByRole("button", { name: "workbooks.deleteWorkbook" });
     await user.click(dialogButtons[dialogButtons.length - 1]);
 
-    // Verify the API was called and navigation occurred
     await waitFor(() => {
       expect(deleteSpy.params.id).toBe("wb-123");
     });

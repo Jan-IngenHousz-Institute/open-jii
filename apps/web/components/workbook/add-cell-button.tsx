@@ -21,8 +21,6 @@ type CellType = WorkbookCell["type"];
 interface AddCellButtonProps {
   onAdd: (type: CellType) => void;
   onAddCell?: (cell: WorkbookCell) => void;
-  /** Existing cells in the workbook — passed to picker components that need
-   *  to validate against current state (e.g. duplicate question-cell names). */
   existingCells?: WorkbookCell[];
   sensorFamily?: "multispeq" | "ambit" | "generic";
   variant?: "inline" | "bottom";
@@ -57,9 +55,7 @@ export function AddCellButton({
   const options = showBranch ? cellOptions : cellOptions.filter((o) => o.type !== "branch");
 
   const handleClick = (type: CellType) => {
-    // Picker-driven cell types (protocol/macro/question) are handled by their
-    // own popovers when onAddCell is provided — the trigger button does
-    // nothing on click; the popover handles the rest.
+    // protocol/macro/question are picker-driven; their popovers fire onAddCell.
     if (onAddCell && (type === "protocol" || type === "macro" || type === "question")) return;
     onAdd(type);
   };
@@ -153,7 +149,6 @@ export function AddCellButton({
                     </Button>
                   );
 
-                  // Picker-driven cell types get wrapped in their popovers
                   if (
                     onAddCell &&
                     (opt.type === "protocol" || opt.type === "macro" || opt.type === "question")

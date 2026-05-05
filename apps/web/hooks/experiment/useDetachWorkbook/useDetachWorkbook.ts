@@ -1,9 +1,5 @@
 import { tsr } from "@/lib/tsr";
 
-/**
- * Hook to detach the workbook from an experiment.
- * The workbook version reference is kept for historical purposes.
- */
 export const useDetachWorkbook = () => {
   const queryClient = tsr.useQueryClient();
 

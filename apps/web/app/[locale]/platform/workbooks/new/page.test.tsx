@@ -27,12 +27,10 @@ describe("NewWorkbookPage", () => {
 
     const { router } = render(<NewWorkbookPage />);
 
-    // The workbook name includes today's date
     await waitFor(() => {
       expect(createSpy.body?.name).toContain("Untitled Workbook");
     });
 
-    // On success, user is redirected to the new workbook
     await waitFor(() => {
       expect(router.replace).toHaveBeenCalledWith("/en-US/platform/workbooks/wb-new-123");
     });

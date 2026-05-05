@@ -28,7 +28,6 @@ describe("QuestionPicker", () => {
     await user.click(screen.getByRole("button", { name: /add question/i }));
 
     expect(screen.getByRole("textbox", { name: /question name/i })).toBeInTheDocument();
-    // Create button is disabled until a non-empty, unique name is typed.
     expect(screen.getByRole("button", { name: /^create$/i })).toBeDisabled();
   });
 
@@ -39,7 +38,6 @@ describe("QuestionPicker", () => {
     await user.click(screen.getByRole("button", { name: /add question/i }));
     await user.type(screen.getByRole("textbox", { name: /question name/i }), "Plant Height (cm)");
 
-    // sanitizeQuestionLabel maps spaces and punctuation to underscores.
     expect(screen.getByText(/column key:\s*plant_height_cm/i)).toBeInTheDocument();
   });
 
@@ -56,8 +54,6 @@ describe("QuestionPicker", () => {
     expect(created.type).toBe("question");
     expect(created.name).toBe("Soil moisture");
     expect(created.id).toBeDefined();
-    // Defaults to an open-ended question with empty prompt — the user fills
-    // those in on the cell itself after creation.
     expect(created.question).toMatchObject({ kind: "open_ended", text: "", required: false });
   });
 
@@ -85,7 +81,6 @@ describe("QuestionPicker", () => {
     expect(screen.getByText(/already used by another question cell/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^create$/i })).toBeDisabled();
 
-    // Pressing Enter is also blocked.
     await user.keyboard("{Enter}");
     expect(onSelect).not.toHaveBeenCalled();
   });

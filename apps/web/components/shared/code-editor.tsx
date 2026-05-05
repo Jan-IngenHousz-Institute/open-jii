@@ -16,7 +16,6 @@ import { useCallback, useMemo } from "react";
 export type CodeLanguage = "json" | "javascript" | "python" | "r" | "markdown";
 export type { Diagnostic };
 
-/** Lint source that receives the document string and returns diagnostics. */
 export type LintSource = (doc: string) => Diagnostic[];
 
 const getLanguageExtension = (language: CodeLanguage) => {
@@ -77,11 +76,7 @@ const baseTheme = EditorView.theme({
   },
 });
 
-/**
- * Built-in syntax linter using Lezer parse tree error nodes.
- * Works with languages that have a full Lezer parser (JS, Python, JSON).
- * StreamLanguage-based languages (R) produce minimal error info.
- */
+// StreamLanguage-based languages (R) produce minimal diagnostics; only Lezer-parsed langs get useful ones.
 export function createSyntaxLinter(delay = 500) {
   return linter(
     (view) => {

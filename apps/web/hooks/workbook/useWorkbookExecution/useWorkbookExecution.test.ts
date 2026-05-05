@@ -378,7 +378,6 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runAll());
 
-      // Only the question cell triggers the prompt — output and markdown are skipped
       expect(onPrompt).toHaveBeenCalledTimes(1);
     });
 
@@ -424,7 +423,6 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runAll());
 
-      // q2 should never be prompted because we stopped after q1
       expect(onPrompt).toHaveBeenCalledTimes(1);
     });
   });

@@ -40,12 +40,10 @@ describe("NewExperimentDetailsCard", () => {
       createWorkbook({ id: "wb-2", name: "Chlorophyll Workbook" }),
     ]);
 
-    // Wait for workbooks to load from MSW
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
 
-    // Open the select
     await user.click(screen.getByRole("combobox"));
 
     await waitFor(() => {
@@ -87,7 +85,6 @@ describe("NewExperimentDetailsCard", () => {
 
     await user.click(screen.getByText("Selected Workbook"));
 
-    // After selection, the combobox should show the selected value
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toHaveTextContent("Selected Workbook");
     });

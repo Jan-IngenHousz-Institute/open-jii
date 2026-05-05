@@ -55,11 +55,9 @@ describe("EmptyWorkbookState", () => {
     const user = userEvent.setup();
     render(<EmptyWorkbookState experimentId="exp-1" hasAccess />);
 
-    // Open select and pick a workbook
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByText("Workbook One"));
 
-    // Click attach
     await user.click(screen.getByRole("button", { name: /flow\.attach/ }));
 
     await waitFor(() => expect(spy.called).toBe(true));

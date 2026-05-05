@@ -42,7 +42,6 @@ describe("FlowchartSidebar", () => {
     expect(screen.getByText("Markdown 1")).toBeInTheDocument();
     expect(screen.getByText("Protocol 1")).toBeInTheDocument();
     expect(screen.getByText("Question 1")).toBeInTheDocument();
-    // Output cells are skipped in flow
     expect(screen.queryByText("Output 1")).not.toBeInTheDocument();
   });
 
@@ -96,7 +95,6 @@ describe("FlowchartSidebar", () => {
         onCellClick={onCellClick}
       />,
     );
-    // When closed, shows a small toggle button, no Flow heading
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
   });
 });

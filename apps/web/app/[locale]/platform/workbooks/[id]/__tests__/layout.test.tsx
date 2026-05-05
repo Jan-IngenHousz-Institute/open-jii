@@ -5,7 +5,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import WorkbookLayout from "../layout";
 
-// Mock child components to isolate the layout
 vi.mock("@/components/workbook-overview/workbook-layout-content", () => ({
   WorkbookLayoutContent: ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div data-testid="workbook-layout-content" data-id={id}>
@@ -18,7 +17,6 @@ vi.mock("@/components/workbook-overview/workbook-save-context", () => ({
   WorkbookSaveProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// Mock ErrorDisplay used by EntityLayoutShell
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
     <div data-testid="error-display">{String(error)}</div>
@@ -75,7 +73,6 @@ describe("WorkbookLayout", () => {
   it("renders nothing when no data and not loading", () => {
     mockUseWorkbook.mockReturnValue({ data: undefined, isLoading: false, error: null });
     const { container } = render(<WorkbookLayout>Child</WorkbookLayout>);
-    // EntityLayoutShell returns null when !hasData
     expect(screen.queryByText("Child")).not.toBeInTheDocument();
     expect(container.querySelector(".workbook-page")).toBeInTheDocument();
   });

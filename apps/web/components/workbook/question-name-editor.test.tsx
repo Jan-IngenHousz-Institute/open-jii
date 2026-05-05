@@ -72,7 +72,6 @@ describe("QuestionNameEditor", () => {
     const { onRename } = renderEditor({ initialName: "soil_moisture" });
 
     await user.click(screen.getByRole("button", { name: /soil_moisture/i }));
-    // Input still equals initialName.
     await user.click(screen.getByRole("button", { name: /save/i }));
 
     expect(onRename).not.toHaveBeenCalled();
@@ -105,7 +104,6 @@ describe("QuestionNameEditor", () => {
     const { onRename } = renderEditor({
       initialName: "soil_moisture",
       cellId: "q-1",
-      // The cell shows up in existingCells; the editor must skip its own id.
       existingCells: [self],
     });
 
@@ -113,7 +111,6 @@ describe("QuestionNameEditor", () => {
     const input = screen.getByRole("textbox", { name: /question name/i });
     await user.clear(input);
     await user.type(input, "Soil Moisture");
-    // Canonical "soil_moisture" matches self → still allowed.
     await user.click(screen.getByRole("button", { name: /save/i }));
 
     expect(onRename).toHaveBeenCalledWith("Soil Moisture");

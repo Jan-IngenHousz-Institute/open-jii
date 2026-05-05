@@ -11,25 +11,13 @@ import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
 interface QuestionNameEditorProps {
-  /** Current name on the cell — pre-fills the input. */
   initialName: string;
-  /** Cell being renamed; excluded from the duplicate check. */
   cellId: string;
-  /** All cells in the workbook (used to detect canonical-name collisions). */
   existingCells: WorkbookCell[];
-  /** Fires only when the user submits a valid (non-empty, unique) name. */
   onRename: (newName: string) => void;
   children: ReactNode;
 }
 
-/** Inline rename popover for question cells. Mirrors the QuestionPicker but
- *  edits an existing cell's name in place — the cell id, kind, and prompt
- *  text are untouched.
- *
- *  Validation matches the picker: non-empty, no duplicate after canonical
- *  sanitisation, max 64 chars. The currently-edited cell is excluded from
- *  the duplicate check so saving the same name back is a no-op (closes the
- *  popover without firing onRename). */
 export function QuestionNameEditor({
   initialName,
   cellId,

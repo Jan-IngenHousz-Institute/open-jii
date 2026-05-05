@@ -52,10 +52,26 @@ export class WorkbookVersionRepository {
     });
   }
 
+  /** Insert a new version. If a concurrent transaction wins the race on
+   *  the `(workbook_id, version)` unique, we return whatever's now the
+   *  latest row instead of bubbling a unique-violation up the stack —
+   *  both racing attaches end up pinned to the same version. */
   async create(data: CreateWorkbookVersionDto): Promise<Result<WorkbookVersionDto>> {
     return tryCatch(async () => {
-      const inserted = await this.database.insert(workbookVersions).values(data).returning();
-      return inserted[0] as WorkbookVersionDto;
+      const inserted = await this.database
+        .insert(workbookVersions)
+        .values(data)
+        .onConflictDoNothing()
+        .returning();
+      if (inserted.length > 0) return inserted[0] as WorkbookVersionDto;
+
+      const [latest] = await this.database
+        .select()
+        .from(workbookVersions)
+        .where(eq(workbookVersions.workbookId, data.workbookId))
+        .orderBy(desc(workbookVersions.version))
+        .limit(1);
+      return latest as WorkbookVersionDto;
     });
   }
 }

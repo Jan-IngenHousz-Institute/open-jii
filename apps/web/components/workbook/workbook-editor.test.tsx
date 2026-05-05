@@ -27,16 +27,13 @@ function renderEditor(overrides: Partial<Parameters<typeof WorkbookEditor>[0]> =
   return { ...render(<WorkbookEditor {...props} />), onCellsChange, props };
 }
 
-/** Returns the trailing AddCellButton (variant="bottom") container, distinct
- *  from sidebar buttons that also display cell-type labels. */
+// Distinguishes the trailing AddCellButton from sidebar buttons that share labels.
 function trailingAddRegion() {
   const region = screen.getByText("Add new").parentElement;
   assertExists(region, "trailing AddCellButton region not found");
   return region;
 }
 
-/** Returns the delete button (Trash icon) inside a CellWrapper that contains
- *  the given header label text. There is one CellWrapper per cell. */
 function findDeleteButtonForCellWith(text: string) {
   const btn = Array.from(document.querySelectorAll("svg.lucide-trash-2"))
     .find((svg) => {
@@ -49,8 +46,7 @@ function findDeleteButtonForCellWith(text: string) {
 }
 
 beforeEach(() => {
-  // The Protocol/Macro pickers wrap their trigger buttons in
-  // popovers and call useProtocols/useMacros at mount
+  // Pickers query these on mount.
   server.mount(contract.protocols.listProtocols, { body: [] });
   server.mount(contract.macros.listMacros, { body: [] });
 });
@@ -128,8 +124,6 @@ describe("WorkbookEditor — empty state", () => {
     const user = userEvent.setup();
     const { onCellsChange } = renderEditor();
 
-    // Question cells are picker-driven — clicking the trigger opens the
-    // popover; the cell is only created once a valid name is submitted.
     await user.click(screen.getByRole("button", { name: /question/i }));
     await user.type(screen.getByRole("textbox", { name: /question name/i }), "Soil moisture");
     await user.click(screen.getByRole("button", { name: /^create$/i }));
@@ -226,8 +220,7 @@ describe("WorkbookEditor — cell rendering", () => {
       cells: [createMarkdownCell({ id: "first" })],
     });
 
-    // Sidebar buttons also expose "Markdown" as their accessible name; scope
-    // to the trailing AddCellButton (variant="bottom"), anchored by "Add new".
+    // Sidebar exposes "Markdown" too; scope to the trailing AddCellButton.
     await user.click(within(trailingAddRegion()).getByRole("button", { name: /markdown/i }));
 
     const next = onCellsChange.mock.calls[0][0] as WorkbookCell[];
@@ -249,9 +242,7 @@ describe("WorkbookEditor — sidebar minimap", () => {
     ];
     renderEditor({ cells });
 
-    // Markdown cells show "Markdown" both in the cell header and the sidebar.
     expect(screen.getAllByText(/Markdown/).length).toBeGreaterThanOrEqual(2);
-    // Question cells show their name in both the cell title and the sidebar.
     expect(screen.getAllByText(/soil_moisture/).length).toBeGreaterThanOrEqual(2);
   });
 });
@@ -287,7 +278,6 @@ describe("WorkbookEditor — delete flow", () => {
     });
     const { onCellsChange } = renderEditor({ cells: [question, output] });
 
-    // OutputCell renders its own dismiss control instead of using CellWrapper.
     await user.click(screen.getByTitle("Clear output"));
 
     const next = onCellsChange.mock.calls[0][0] as WorkbookCell[];
@@ -299,9 +289,7 @@ describe("WorkbookEditor — delete flow", () => {
   });
 });
 
-/** Reads the most recent `cells` argument passed to the renderer's
- *  `onCellsChange` mock. Typed so downstream `.find` / `.filter` calls don't
- *  trip the no-unsafe-* lint rules. */
+// Typed so downstream `.find` / `.filter` calls don't trip no-unsafe-* lint rules.
 function lastCellsArg(onCellsChange: ReturnType<typeof vi.fn>): WorkbookCell[] {
   const calls = onCellsChange.mock.calls as WorkbookCell[][][];
   if (calls.length === 0) throw new Error("onCellsChange was not called");
@@ -319,8 +307,6 @@ describe("WorkbookEditor — answer auto-creates an output cell", () => {
     ];
     const { onCellsChange } = renderEditor({ cells });
 
-    // The question cell's CellWrapper exposes a Run button (aria-label
-    // "Run Question") that opens the answer dialog.
     const runBtn = screen.getByRole("button", { name: /run question/i });
     await user.click(runBtn);
 
@@ -330,8 +316,6 @@ describe("WorkbookEditor — answer auto-creates an output cell", () => {
 
     await waitFor(() => expect(onCellsChange).toHaveBeenCalled());
 
-    // The most recent change should carry both an updated question (answered)
-    // and an auto-created output cell that points back at it.
     const last = lastCellsArg(onCellsChange);
     const question = last.find((c) => c.id === "q-1");
     const output = last.find((c) => c.type === "output");
@@ -370,7 +354,6 @@ describe("WorkbookEditor — answer auto-creates an output cell", () => {
     await waitFor(() => expect(onCellsChange).toHaveBeenCalled());
 
     const last = lastCellsArg(onCellsChange);
-    // No second output cell — the existing one is updated in place.
     const outputs = last.filter(
       (c): c is Extract<WorkbookCell, { type: "output" }> => c.type === "output",
     );

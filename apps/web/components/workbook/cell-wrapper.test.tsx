@@ -33,7 +33,6 @@ describe("CellWrapper", () => {
 
     renderWrapper({ onToggleCollapse });
 
-    // Click collapse button (first button in the header)
     const buttons = screen.getAllByRole("button");
     const collapseButton = buttons[0];
     await user.click(collapseButton);
@@ -44,14 +43,12 @@ describe("CellWrapper", () => {
   it("hides children when isCollapsed is true", () => {
     renderWrapper({ isCollapsed: true });
 
-    // The content should be hidden via Collapsible
     expect(screen.queryByTestId("cell-content")).not.toBeInTheDocument();
   });
 
   it("shows running spinner when executionStatus is 'running'", () => {
     renderWrapper({ executionStatus: "running" });
 
-    // The Loader2 spinner should be present (animated)
     const spinner = document.querySelector(".animate-spin");
     expect(spinner).toBeInTheDocument();
   });
@@ -59,7 +56,6 @@ describe("CellWrapper", () => {
   it("shows completed checkmark when executionStatus is 'completed'", () => {
     renderWrapper({ executionStatus: "completed" });
 
-    // CheckCircle2 with emerald color
     const checkIcon = document.querySelector(".text-emerald-500");
     expect(checkIcon).toBeInTheDocument();
   });
@@ -78,9 +74,7 @@ describe("CellWrapper", () => {
       onRun: vi.fn(),
     });
 
-    // In readOnly mode, the delete and run buttons should not be rendered
     const buttons = screen.getAllByRole("button");
-    // Only the collapse toggle should be present
     expect(buttons).toHaveLength(1);
   });
 

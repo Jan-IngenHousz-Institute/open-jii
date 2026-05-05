@@ -3,8 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { WorkbookCodeEditor } from "./workbook-code-editor";
 
-// CodeEditor is globally mocked in test/setup.ts (CodeMirror can't run in jsdom).
-// The mock renders a <textarea> (role="textbox") that forwards value/onChange/readOnly.
+// CodeEditor is mocked globally in test/setup.ts (CodeMirror can't run in jsdom).
 
 describe("WorkbookCodeEditor", () => {
   it("displays the given value", () => {
@@ -30,7 +29,6 @@ describe("WorkbookCodeEditor", () => {
 
   it("forwards the language to the editor", () => {
     render(<WorkbookCodeEditor value="" language="python" />);
-    // The global mock exposes language as data-language on the editor container
     expect(screen.getByTestId("code-editor")).toHaveAttribute("data-language", "python");
   });
 });

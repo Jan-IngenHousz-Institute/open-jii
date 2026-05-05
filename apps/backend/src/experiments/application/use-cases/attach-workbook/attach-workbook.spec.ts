@@ -23,17 +23,14 @@ describe("AttachWorkbookUseCase", () => {
     useCase = testApp.module.get(AttachWorkbookUseCase);
     flowRepo = testApp.module.get(FlowRepository);
 
-    // Create experiment (admin becomes admin member)
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
       userId: adminUserId,
     });
     experimentId = experiment.id;
 
-    // Add member as non-admin
     await testApp.addExperimentMember(experimentId, memberUserId, "member");
 
-    // Create workbook
     const workbook = await testApp.createWorkbook({
       name: "Test Workbook",
       cells: [{ id: "md1", type: "markdown", content: "Hello", isCollapsed: false }],
@@ -101,7 +98,6 @@ describe("AttachWorkbookUseCase", () => {
 
     const flow = await flowRepo.getByExperimentId(experimentId);
     assertSuccess(flow);
-    // markdown cell -> single instruction node, no edges
     expect(flow.value).not.toBeNull();
     expect(flow.value?.graph.nodes).toHaveLength(1);
     expect(flow.value?.graph.nodes[0]).toMatchObject({ id: "md1", type: "instruction" });

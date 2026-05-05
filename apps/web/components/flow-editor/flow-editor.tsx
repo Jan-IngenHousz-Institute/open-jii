@@ -2,7 +2,16 @@
 
 import type { Node, Edge, Connection } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
-import { ReactFlow, addEdge, useNodesState, useEdgesState } from "@xyflow/react";
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  MiniMap,
+  ReactFlow,
+  addEdge,
+  useNodesState,
+  useEdgesState,
+} from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Maximize2, Minimize2 } from "lucide-react";
@@ -11,6 +20,7 @@ import { useCallback, useState, useEffect, useRef, useImperativeHandle, forwardR
 import type { Flow, UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
+import { cn } from "@repo/ui/lib/utils";
 
 import { LegendFlow } from "../legend-flow";
 import {
@@ -19,9 +29,11 @@ import {
   handleNodeDrop,
 } from "../react-flow/flow-utils";
 import type { NodeType } from "../react-flow/node-config";
-import { ALL_NODE_TYPES, getStyledEdges } from "../react-flow/node-config";
+import { ALL_NODE_TYPES, getStyledEdges, nodeTypeColorMap } from "../react-flow/node-config";
 import { FlowContextProvider, BaseNodeWrapper, ensureOneStartNode } from "../react-flow/node-utils";
 import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
+import { autoLayout } from "./auto-layout";
+import { BackEdge } from "./back-edge";
 import { FlowMapper } from "./flow-mapper";
 
 // Define nodeTypes outside the component to avoid re-creation
@@ -32,6 +44,13 @@ const nodeTypes = ALL_NODE_TYPES.reduce(
   },
   {} as Record<NodeType, React.ComponentType<NodeProps>>,
 );
+
+const edgeTypes = { back: BackEdge };
+
+function lookupAccent(type: string | undefined): string {
+  if (!type || !(type in nodeTypeColorMap)) return "#94A3B8";
+  return nodeTypeColorMap[type as keyof typeof nodeTypeColorMap].accent;
+}
 
 export interface FlowEditorHandle {
   getFlowData: () => UpsertFlowBody | null; // null when not ready
@@ -51,10 +70,12 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
-    // Initialize nodes and edges from API flow or empty arrays
     const initialData = initialFlow
       ? FlowMapper.toReactFlow(initialFlow)
       : { nodes: [], edges: [] };
+    if (isDisabled && initialData.nodes.length > 0) {
+      initialData.nodes = autoLayout(initialData.nodes, initialData.edges);
+    }
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialData.nodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges);
@@ -62,14 +83,17 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Ref for flow area container used by LegendFlow overlay
     const flowAreaRef = useRef<HTMLDivElement | null>(null);
 
-    // Update when initialFlow changes
     useEffect(() => {
       if (initialFlow) {
         const converted = FlowMapper.toReactFlow(initialFlow);
-        setNodes(converted.nodes);
+        const laidOut =
+          isDisabled && converted.nodes.length > 0
+            ? autoLayout(converted.nodes, converted.edges)
+            : converted.nodes;
+        setNodes(laidOut);
         setEdges(converted.edges);
       }
-    }, [initialFlow, setNodes, setEdges]);
+    }, [initialFlow, isDisabled, setNodes, setEdges]);
 
     // Prevent body scroll when fullscreen is active; restore on exit
     useEffect(() => {
@@ -230,18 +254,48 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
       [nodes, isDisabled, setNodes],
     );
 
-    // Apply edge styles based on selection
-    // Ensure label is set for display from edge.data.label
+    const branchPathColors = new Map<string, string>();
+    const nodeXById = new Map<string, number>();
+    for (const node of nodes) {
+      nodeXById.set(node.id, node.position.x);
+      if (node.type !== "BRANCH") continue;
+      const paths =
+        (node.data as { stepSpecification?: { paths?: { id: string; color: string }[] } })
+          .stepSpecification?.paths ?? [];
+      for (const path of paths) {
+        branchPathColors.set(`${node.id}:${path.id}`, path.color);
+      }
+    }
+
     const styledEdges = getStyledEdges(
       edges.map((edge) => {
         const label = edge.data?.label;
-        if (typeof label === "string" || typeof label === "number") {
-          const labelStr = String(label);
-          // Truncate label at 64 characters and add ... if longer
-          const displayLabel = labelStr.length > 64 ? labelStr.slice(0, 64) + "..." : labelStr;
-          return { ...edge, label: displayLabel };
-        }
-        return { ...edge, label: undefined };
+        const displayLabel =
+          typeof label === "string" || typeof label === "number"
+            ? String(label).length > 64
+              ? String(label).slice(0, 64) + "..."
+              : String(label)
+            : undefined;
+        const pathColor = edge.sourceHandle
+          ? branchPathColors.get(`${edge.source}:${edge.sourceHandle}`)
+          : undefined;
+        const sourceX = nodeXById.get(edge.source);
+        const targetX = nodeXById.get(edge.target);
+        const isBackEdge = sourceX !== undefined && targetX !== undefined && targetX < sourceX;
+        const edgeType = isBackEdge ? "back" : pathColor ? "default" : "smoothstep";
+        return {
+          ...edge,
+          label: displayLabel,
+          type: edgeType,
+          pathOptions: edgeType === "smoothstep" ? { borderRadius: 16 } : undefined,
+          animated: false,
+          markerEnd: { type: MarkerType.ArrowClosed, color: pathColor ?? "#94A3B8" },
+          style: { stroke: pathColor ?? "#94A3B8", strokeWidth: pathColor ? 2 : 1.75 },
+          labelStyle: { fill: "#475569", fontSize: 11, fontWeight: 500 },
+          labelBgStyle: { fill: "#FFFFFF", stroke: "#E2E8F0", strokeWidth: 1 },
+          labelBgPadding: [8, 4] as [number, number],
+          labelBgBorderRadius: 6,
+        };
       }),
       selectedEdgeId,
     );
@@ -298,9 +352,10 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                 <CardContent className={isFullscreen ? "min-h-0 flex-1 p-0" : "p-0"}>
                   <div
                     ref={flowAreaRef}
-                    className={
-                      isFullscreen ? "relative h-full w-full" : "relative h-[700px] w-full"
-                    }
+                    className={cn(
+                      isFullscreen ? "relative h-full w-full" : "relative h-[700px] w-full",
+                      "bg-slate-50/60",
+                    )}
                     onDragOver={isDisabled ? undefined : (e) => e.preventDefault()}
                     onDrop={isDisabled ? undefined : handleDrop}
                   >
@@ -340,16 +395,49 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                         onEdgeClick={onEdgeClick}
                         onPaneClick={onPaneClick}
                         nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
                         deleteKeyCode={[]}
                         nodesDraggable={!isDisabled}
                         nodesConnectable={!isDisabled}
                         elementsSelectable={true}
                         fitView={isDisabled}
+                        fitViewOptions={{ padding: 0.2, minZoom: 0.4, maxZoom: 1.2 }}
                         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                        proOptions={{ hideAttribution: true }}
                         defaultEdgeOptions={{
+                          type: "smoothstep",
                           markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
                         }}
-                      />
+                      >
+                        <Background
+                          variant={BackgroundVariant.Dots}
+                          gap={18}
+                          size={1.4}
+                          color="#CBD5E1"
+                        />
+                        <Controls position="bottom-right" showInteractive={false} />
+                        <MiniMap
+                          position="bottom-left"
+                          pannable
+                          zoomable
+                          ariaLabel="Flow minimap"
+                          maskColor="rgba(241, 245, 249, 0.7)"
+                          nodeStrokeWidth={3}
+                          nodeBorderRadius={4}
+                          nodeColor={(n) => {
+                            const accent = lookupAccent(n.type);
+                            return `color-mix(in srgb, ${accent} 25%, white)`;
+                          }}
+                          nodeStrokeColor={(n) => lookupAccent(n.type)}
+                          style={{
+                            backgroundColor: "#FFFFFF",
+                            border: "1px solid #E2E8F0",
+                            borderRadius: 8,
+                            width: 200,
+                            height: 130,
+                          }}
+                        />
+                      </ReactFlow>
                     </FlowContextProvider>
 
                     {/* Overlay legend always, except on small screens and when disabled */}

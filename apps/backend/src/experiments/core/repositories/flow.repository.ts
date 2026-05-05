@@ -49,12 +49,7 @@ export class FlowRepository {
     });
   }
 
-  /**
-   * Inserts a flow if none exists for the experiment, otherwise overwrites it.
-   * Used by workbook attach/upgrade so the mobile app keeps seeing the
-   * up-to-date flow without any code change on its side. Race-free via
-   * Postgres ON CONFLICT against the unique experiment_id constraint.
-   */
+  // Race-free via ON CONFLICT against the unique experiment_id constraint.
   async upsert(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
     return tryCatch(async () => {
       const rows = await this.database

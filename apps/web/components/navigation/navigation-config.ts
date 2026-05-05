@@ -147,8 +147,7 @@ export const mainNavigation = {
   },
 };
 
-// Note: Object property order defines sidebar rendering order:
-// dashboard - experiments - workbooks - library
+// Object property order defines sidebar rendering order.
 
 /**
  * User menu items (desktop dropdown, mobile settings section)

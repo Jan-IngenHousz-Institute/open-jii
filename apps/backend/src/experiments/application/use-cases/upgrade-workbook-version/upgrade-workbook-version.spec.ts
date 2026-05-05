@@ -63,7 +63,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   });
 
   it("creates a new version when workbook cells have changed", async () => {
-    // Modify workbook cells
     await workbookRepo.update(workbookId, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
@@ -90,7 +89,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   });
 
   it("returns failure when no workbook is attached", async () => {
-    // Create experiment without a workbook
     const { experiment } = await testApp.createExperiment({
       name: "No Workbook Experiment",
       userId: adminUserId,
@@ -102,7 +100,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   });
 
   it("refreshes the materialised flow row when cells change (mobile backward compat)", async () => {
-    // Initial attach already wrote a flow row from the original "v1" content.
     const before = await flowRepo.getByExperimentId(experimentId);
     assertSuccess(before);
     expect(before.value?.graph.nodes[0]).toMatchObject({
@@ -110,7 +107,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       content: { text: "v1" },
     });
 
-    // Edit the workbook draft and upgrade.
     await workbookRepo.update(workbookId, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });

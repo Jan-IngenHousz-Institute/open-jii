@@ -15,17 +15,10 @@ export class PublishVersionUseCase {
     private readonly workbookVersionRepository: WorkbookVersionRepository,
   ) {}
 
-  /**
-   * Publishes a workbook version. If the latest version's cells match the
-   * current workbook cells, the existing version is returned. Otherwise a
-   * new version is created with an incremented version number.
-   */
+  // Always mints a new version. Callers gate via IsWorkbookUpgradableUseCase; reuse the latest if undrifted.
   async execute(workbookId: string, userId: string): Promise<Result<WorkbookVersionDto>> {
     const workbookResult = await this.workbookRepository.findById(workbookId);
-
-    if (workbookResult.isFailure()) {
-      return workbookResult;
-    }
+    if (workbookResult.isFailure()) return workbookResult;
 
     const workbook = workbookResult.value;
     if (!workbook) {
@@ -39,26 +32,8 @@ export class PublishVersionUseCase {
     }
 
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbookId);
-
-    if (latestResult.isFailure()) {
-      return latestResult;
-    }
-
-    const latest = latestResult.value;
-
-    // If a version exists and the cells haven't changed, reuse it
-    if (latest && this.cellsMatch(latest.cells, workbook.cells)) {
-      this.logger.log({
-        msg: "Reusing existing workbook version (cells unchanged)",
-        operation: "publishVersion",
-        workbookId,
-        version: latest.version,
-      });
-      return latestResult as Result<WorkbookVersionDto>;
-    }
-
-    // Create a new version
-    const nextVersion = latest ? latest.version + 1 : 1;
+    if (latestResult.isFailure()) return latestResult;
+    const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
 
     this.logger.log({
       msg: "Publishing new workbook version",
@@ -86,9 +61,5 @@ export class PublishVersionUseCase {
     }
 
     return createResult;
-  }
-
-  private cellsMatch(a: unknown, b: unknown): boolean {
-    return JSON.stringify(a) === JSON.stringify(b);
   }
 }

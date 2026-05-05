@@ -40,12 +40,10 @@ describe("MacroCodeEditor", () => {
     render(<MacroCodeEditor {...defaults} value={code} />);
 
     const copyButton = screen.getByRole("button");
-    // Initially shows Copy icon
     expect(copyButton.querySelector(".lucide-copy")).toBeInTheDocument();
 
     await user.click(copyButton);
 
-    // After clicking, the icon changes to Check indicating success
     await waitFor(() => {
       expect(copyButton.querySelector(".lucide-check")).toBeInTheDocument();
     });

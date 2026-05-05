@@ -34,7 +34,6 @@ describe("useWorkbook", () => {
 
     const { result } = renderHook(() => useWorkbook("wb-1", { enabled: false }));
 
-    // Should not fetch when disabled
     expect(result.current.data).toBeUndefined();
   });
 
@@ -43,7 +42,6 @@ describe("useWorkbook", () => {
 
     const { result } = renderHook(() => useWorkbook(""));
 
-    // Empty id disables the query
     expect(result.current.data).toBeUndefined();
   });
 

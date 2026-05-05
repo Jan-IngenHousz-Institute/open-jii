@@ -165,10 +165,6 @@ export function createProtocol(overrides: Partial<Protocol> = {}): Protocol {
   };
 }
 
-// ── User Profile ────────────────────────────────────────────────
-
-// ── Workbook ────────────────────────────────────────────────────
-
 let workbookSeq = 0;
 
 export function createWorkbook(overrides: Partial<Workbook> = {}): Workbook {
@@ -418,8 +414,6 @@ export function createInvitation(overrides: Partial<Invitation> = {}): Invitatio
   };
 }
 
-// ── Workbook Cells ──────────────────────────────────────────────
-
 let cellSeq = 0;
 
 export function createMarkdownCell(overrides: Partial<MarkdownCell> = {}): MarkdownCell {
@@ -504,8 +498,6 @@ export function createBranchCell(overrides: Partial<BranchCell> = {}): BranchCel
     ...overrides,
   };
 }
-
-// ── Workbook Version Summary ────────────────────────────────────
 
 let versionSeq = 0;
 

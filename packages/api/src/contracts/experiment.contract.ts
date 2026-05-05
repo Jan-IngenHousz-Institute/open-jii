@@ -278,7 +278,6 @@ export const experimentContract = c.router({
     description: "Updates the existing flow for the experiment with the provided graph.",
   },
 
-  // --- Workbook Attachment Endpoints ---
   attachWorkbook: {
     method: "POST",
     path: "/api/v1/experiments/:id/workbook/attach",

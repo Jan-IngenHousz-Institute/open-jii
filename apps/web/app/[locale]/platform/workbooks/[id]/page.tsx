@@ -29,8 +29,9 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
   const [cells, setCells] = useState<WorkbookCell[]>([]);
   const cellsInitialized = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingCellsRef = useRef<WorkbookCell[] | null>(null);
+  const saveCellsRef = useRef<((c: WorkbookCell[]) => Promise<void>) | null>(null);
 
-  // Question prompting during runAll
   const [promptedQuestionId, setPromptedQuestionId] = useState<string | undefined>();
   const questionResolverRef = useRef<((answer: string | undefined) => void) | null>(null);
 
@@ -47,7 +48,6 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
     setPromptedQuestionId(undefined);
   }, []);
 
-  // Sync server data into local state on first load
   useEffect(() => {
     if (data && !cellsInitialized.current) {
       setCells(data.cells as WorkbookCell[]);
@@ -75,12 +75,20 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
     [id, updateWorkbook, markSaving, markSaved],
   );
 
+  useEffect(() => {
+    saveCellsRef.current = saveCells;
+  }, [saveCells]);
+
   const handleCellsChange = useCallback(
     (updatedCells: WorkbookCell[]) => {
       setCells(updatedCells);
       markDirty();
+      pendingCellsRef.current = updatedCells;
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => void saveCells(updatedCells), AUTO_SAVE_DELAY);
+      saveTimer.current = setTimeout(() => {
+        pendingCellsRef.current = null;
+        void saveCells(updatedCells);
+      }, AUTO_SAVE_DELAY);
     },
     [saveCells, markDirty],
   );
@@ -108,10 +116,12 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
     onPromptQuestion: handlePromptQuestion,
   });
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (pendingCellsRef.current && saveCellsRef.current) {
+        void saveCellsRef.current(pendingCellsRef.current);
+      }
     };
   }, []);
 

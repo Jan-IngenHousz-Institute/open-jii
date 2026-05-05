@@ -2,6 +2,7 @@
 
 import { GripVertical, List, PanelRightClose } from "lucide-react";
 import { useCallback, useState } from "react";
+import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cn } from "@repo/ui/lib/utils";
@@ -33,14 +34,6 @@ const cellTypeLabels: Record<string, string> = {
   markdown: "Markdown",
   output: "Output",
 };
-
-/** Strip HTML tags and collapse whitespace to get plain text. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 /** Extract a short subtitle for the sidebar row. */
 function getCellSubtitle(cell: WorkbookCell): string {

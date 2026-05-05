@@ -56,7 +56,6 @@ describe("QuestionCellComponent", () => {
 
     await user.type(screen.getByPlaceholderText("Type your question here..."), "W");
 
-    // Controlled input: first keystroke fires onUpdate with "W"
     const firstCall = onUpdate.mock.calls[0][0] as QuestionCell;
     expect(firstCall.question.text).toBe("W");
   });
@@ -118,10 +117,8 @@ describe("QuestionCellComponent", () => {
       { promptOpen: true },
     );
 
-    // The answer dialog should be open showing the question
     expect(screen.getByText("What is your name?")).toBeInTheDocument();
 
-    // Type an answer and submit
     await user.type(screen.getByPlaceholderText("Type your answer..."), "Alice");
     await user.click(screen.getByRole("button", { name: /submit/i }));
 
@@ -158,7 +155,6 @@ describe("QuestionCellComponent", () => {
 
     it("hides the required switch (hidden via headerActions)", () => {
       renderQuestion({}, { readOnly: true });
-      // CellWrapper hides headerActions in readOnly mode, so the switch is not in the DOM
       expect(screen.queryByRole("switch")).not.toBeInTheDocument();
     });
 

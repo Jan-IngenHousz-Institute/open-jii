@@ -6,10 +6,6 @@ import type { QuestionCell, WorkbookCell } from "../schemas/workbook-cells.schem
 type FlowNode = z.infer<typeof zFlowNode>;
 type FlowEdge = z.infer<typeof zFlowEdge>;
 
-/**
- * Orders flow nodes by traversing the edge graph from the start node.
- * Ported from apps/mobile/src/utils/order-flow-nodes.ts.
- */
 export function orderFlowNodes(nodes: FlowNode[], edges: FlowEdge[]): FlowNode[] {
   if (nodes.length === 0) return [];
 
@@ -43,10 +39,6 @@ export function orderFlowNodes(nodes: FlowNode[], edges: FlowEdge[]): FlowNode[]
   return ordered;
 }
 
-/**
- * Converts a flow node to a workbook cell.
- * Inverse of cellToNode in cells-to-flow.ts.
- */
 function nodeToCell(node: FlowNode): WorkbookCell | null {
   const content = node.content as Record<string, unknown>;
 
@@ -81,9 +73,7 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
         type: "question",
         isCollapsed: false,
         isAnswered: false,
-        // The flow node's `name` carries the column-key label. Fall back to
-        // an id-derived default if the source flow node had a blank name —
-        // keeps the schema invariant ("name is required") intact.
+        // Fallback keeps the schema invariant that `name` is required when source flow node had a blank name.
         name: node.name || `question_${node.id.slice(0, 8)}`,
         question: content as QuestionCell["question"],
       };
@@ -101,11 +91,6 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
   }
 }
 
-/**
- * Converts an array of flow nodes + edges into an ordered array of workbook cells.
- * Nodes are first ordered by traversing the edge graph, then each is mapped to a cell.
- * Nodes that cannot be mapped (unknown types) are skipped.
- */
 export function flowNodesToWorkbookCells(nodes: FlowNode[], edges: FlowEdge[]): WorkbookCell[] {
   const ordered = orderFlowNodes(nodes, edges);
   const cells: WorkbookCell[] = [];
@@ -115,7 +100,6 @@ export function flowNodesToWorkbookCells(nodes: FlowNode[], edges: FlowEdge[]): 
       const cell = nodeToCell(node);
       if (cell) cells.push(cell);
     } catch {
-      // Skip malformed nodes
       continue;
     }
   }

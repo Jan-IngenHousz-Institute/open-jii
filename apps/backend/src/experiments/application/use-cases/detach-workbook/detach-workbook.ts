@@ -40,8 +40,7 @@ export class DetachWorkbookUseCase {
           return updateResult;
         }
 
-        // Drop the materialised flow row so mobile doesn't keep showing a
-        // graph for an experiment that no longer has a workbook attached.
+        // Drop the materialised flow row so mobile stops seeing a graph for an experiment with no workbook.
         const flowDeleteResult = await this.flowRepository.deleteByExperimentId(experimentId);
         if (flowDeleteResult.isFailure()) {
           return flowDeleteResult;

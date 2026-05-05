@@ -265,17 +265,14 @@ describe("NavigationSidebarWrapper", () => {
       };
     }>;
 
-    // Verify protocols items under library children
     const protocolsItems = component.props.navigationData.navLibrary[0].children[0].items;
     expect(protocolsItems.length).toBeGreaterThan(0);
     expect(protocolsItems[0]).toHaveProperty("title");
 
-    // Verify macros items under library children
     const macrosItems = component.props.navigationData.navLibrary[0].children[1].items;
     expect(macrosItems.length).toBeGreaterThan(0);
     expect(macrosItems[0]).toHaveProperty("title");
 
-    // Verify workbooks items.map() executes
     const workbooksItems = component.props.navigationData.navWorkbooks[0].items;
     expect(workbooksItems.length).toBeGreaterThan(0);
     expect(workbooksItems[0]).toHaveProperty("title");

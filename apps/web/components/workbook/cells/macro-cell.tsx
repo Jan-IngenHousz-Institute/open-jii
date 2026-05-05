@@ -54,7 +54,6 @@ export function MacroCellComponent({
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
 
-  // Fetch macro data
   const { data: macroData, isLoading: macroLoading } = useMacro(macroId);
   const macroName = macroData?.name;
   const rawCode = macroData?.code ?? null;
@@ -62,15 +61,12 @@ export function MacroCellComponent({
   const macroLanguage = macroData?.language;
   const isOwner = !!session?.user.id && session.user.id === macroData?.createdBy;
 
-  // Mutations
   const { mutate: saveMacro } = useMacroUpdate(macroId);
 
-  // --- Auto-save for owned macros ---
   const [localCode, setLocalCode] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedKeyRef = useRef<string>("");
 
-  // Sync local code when macro data loads or changes externally
   useEffect(() => {
     if (macroCode != null && localCode == null) {
       setLocalCode(macroCode);
@@ -78,7 +74,6 @@ export function MacroCellComponent({
     }
   }, [macroCode, localCode]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);

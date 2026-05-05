@@ -65,7 +65,6 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
     initialLanguage: language,
   });
 
-  // Create-new state
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newLanguage, setNewLanguage] = useState<MacroLanguage>("python");

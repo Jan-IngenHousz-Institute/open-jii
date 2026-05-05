@@ -41,24 +41,24 @@ describe("PublishVersionUseCase", () => {
     expect(result.value.createdBy).toBe(userId);
   });
 
-  it("reuses existing version when cells have not changed", async () => {
+  it("always mints a new version (no dedup) on successive calls", async () => {
     const workbook = await testApp.createWorkbook({
       name: "WB2",
       cells: [{ id: "md1", type: "markdown", content: "Hello", isCollapsed: false }],
       createdBy: userId,
     });
 
-    const first = await useCase.execute(workbook.id, userId);
-    assertSuccess(first);
+    const v1 = await useCase.execute(workbook.id, userId);
+    assertSuccess(v1);
+    expect(v1.value.version).toBe(1);
 
-    const second = await useCase.execute(workbook.id, userId);
-    assertSuccess(second);
-
-    expect(second.value.id).toBe(first.value.id);
-    expect(second.value.version).toBe(1);
+    const v2 = await useCase.execute(workbook.id, userId);
+    assertSuccess(v2);
+    expect(v2.value.version).toBe(2);
+    expect(v2.value.id).not.toBe(v1.value.id);
   });
 
-  it("creates a new version when cells have changed", async () => {
+  it("increments to next version when cells have changed", async () => {
     const workbook = await testApp.createWorkbook({
       name: "WB3",
       cells: [{ id: "md1", type: "markdown", content: "v1", isCollapsed: false }],
@@ -67,9 +67,7 @@ describe("PublishVersionUseCase", () => {
 
     const v1 = await useCase.execute(workbook.id, userId);
     assertSuccess(v1);
-    expect(v1.value.version).toBe(1);
 
-    // Update workbook cells directly
     await workbookRepo.update(workbook.id, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
@@ -77,7 +75,6 @@ describe("PublishVersionUseCase", () => {
     const v2 = await useCase.execute(workbook.id, userId);
     assertSuccess(v2);
     expect(v2.value.version).toBe(2);
-    expect(v2.value.id).not.toBe(v1.value.id);
   });
 
   it("returns failure when workbook does not exist", async () => {

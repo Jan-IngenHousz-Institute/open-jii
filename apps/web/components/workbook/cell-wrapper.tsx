@@ -30,11 +30,8 @@ type ExecutionStatus = "idle" | "running" | "completed" | "error";
 
 interface CellWrapperProps {
   icon: ReactNode;
-  /** Title shown in the header badge. Accepts a node so cells can render an
-   *  interactive element here (e.g. question cells expose a rename popover). */
   label: ReactNode;
-  /** When `label` is a string, used as the aria-label for the Run button. For
-   *  custom node labels, callers should ensure their own button is labelled. */
+  // Used as the Run button aria-label when `label` is not a string.
   labelText?: string;
   accentColor: string;
   isCollapsed?: boolean;
@@ -50,7 +47,6 @@ interface CellWrapperProps {
   className?: string;
   executionStatus?: ExecutionStatus;
   executionError?: string;
-  /** When true, hide delete, run, and headerActions controls */
   readOnly?: boolean;
 }
 
@@ -98,13 +94,11 @@ export function CellWrapper({
             "inset 0px 2px 16px rgba(0, 94, 94, 0.08), 0px 4px 8px -2px rgba(0, 0, 0, 0.06)",
         }}
       >
-        {/* Accent bar */}
         <div
           className="absolute left-0 top-0 h-full"
           style={{ width: 4, background: accentColor }}
         />
 
-        {/* Header */}
         <div
           className={`flex items-center gap-2 border-r border-t px-4 py-2 ${collapsed ? "rounded-lg border-b" : "rounded-t-lg"}`}
           style={{
@@ -137,16 +131,13 @@ export function CellWrapper({
             )}
           </div>
 
-          {/* Badges */}
           {headerBadges}
 
           <div
             className={`ml-auto flex items-center gap-1 ${forceActionsVisible ? "opacity-100" : "opacity-0 transition-opacity group-hover:opacity-100"}`}
           >
-            {/* Cell-specific actions (hover-only items go here, no gaps) */}
             {!readOnly && headerActions}
 
-            {/* Delete - hover only */}
             {!readOnly && onDelete && (
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
@@ -165,7 +156,6 @@ export function CellWrapper({
               </TooltipProvider>
             )}
 
-            {/* Execution status - only rendered when active */}
             {executionStatus === "running" && (
               <div className="flex w-5 items-center justify-center">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
@@ -191,7 +181,6 @@ export function CellWrapper({
               </div>
             )}
 
-            {/* Run button - rightmost, fixed position */}
             {!readOnly && onRun && (
               <Button
                 variant="ghost"
@@ -207,9 +196,7 @@ export function CellWrapper({
           </div>
         </div>
 
-        {/* Content */}
         <CollapsibleContent>
-          {/* Divider */}
           <div className="px-4">
             <div className="h-px w-full rounded" style={{ backgroundColor: "#EDF2F6" }} />
           </div>
