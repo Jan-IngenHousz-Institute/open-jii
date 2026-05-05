@@ -1,6 +1,8 @@
 "use client";
 
 import { useWorkbookSaveStatus } from "@/components/workbook-overview/workbook-save-context";
+import { tsr } from "@/lib/tsr";
+import { decodeBase64 } from "@/util/base64";
 import {
   CheckCircle2,
   ChevronDown,
@@ -83,6 +85,28 @@ function downloadFile(content: string, filename: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Filename-safe slug: lowercase ASCII alphanumerics joined by `-`. Empty
+ *  input falls back to "untitled" so we never produce a dotfile. */
+function slugify(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "untitled";
+}
+
+/** File extension for a macro source file by language. */
+function macroExtension(language: "python" | "r" | "javascript"): string {
+  switch (language) {
+    case "python":
+      return ".py";
+    case "r":
+      return ".r";
+    case "javascript":
+      return ".js";
+  }
+}
+
 export function WorkbookHeader({
   title,
   cells,
@@ -129,38 +153,51 @@ export function WorkbookHeader({
     downloadFile(json, `${safeName}.jii.json`, "application/json");
   }, [title, cells, sensorFamily]);
 
-  const handleExportProtocol = useCallback(() => {
-    const protocols = cells.filter((c) => c.type === "protocol");
-    if (protocols.length === 0) return;
+  const handleExportProtocol = useCallback(async () => {
+    const protocolCells = cells.filter((c) => c.type === "protocol");
+    if (protocolCells.length === 0) return;
 
-    const protocolsJson = protocols.map((p) => {
-      return { ref: p.payload.protocolId, version: p.payload.version };
-    });
+    // One file per protocol, named after the protocol itself, containing
+    // the raw MultispeQ JSON the device runs. Multiple protocols → multiple
+    // downloads triggered in sequence.
+    for (const cell of protocolCells) {
+      const result = await tsr.protocols.getProtocol.query({
+        params: { id: cell.payload.protocolId },
+      });
+      if (result.status !== 200) continue;
+      const { name, code } = result.body;
+      const filename = `${slugify(name)}.json`;
+      downloadFile(JSON.stringify(code, null, 2), filename, "application/json");
+    }
+  }, [cells]);
 
-    const json = JSON.stringify(
-      protocolsJson.length === 1 ? protocolsJson[0] : protocolsJson,
-      null,
-      2,
-    );
-    const safeName = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    downloadFile(json, `${safeName}-protocol.json`, "application/json");
-  }, [title, cells]);
+  const handleExportMacro = useCallback(async () => {
+    const macroCells = cells.filter((c) => c.type === "macro");
+    if (macroCells.length === 0) return;
 
-  const handleExportMacro = useCallback(() => {
-    // Macros are now persisted entities - export as reference list
-    const macros = cells.filter((c) => c.type === "macro");
-    if (macros.length === 0) return;
-
-    const macroRefs = macros.map((m) => ({
-      macroId: m.payload.macroId,
-      name: m.payload.name,
-      language: m.payload.language,
-    }));
-
-    const json = JSON.stringify(macroRefs, null, 2);
-    const safeName = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    downloadFile(json, `${safeName}-macros.json`, "application/json");
-  }, [title, cells]);
+    // One file per macro, named after the macro itself with a language-
+    // appropriate extension. Mirrors the protocol export — we ignore the
+    // stored DB filename, which can be a generic placeholder like
+    // `seed_macro_e5664d67…`.
+    for (const cell of macroCells) {
+      const result = await tsr.macros.getMacro.query({
+        params: { id: cell.payload.macroId },
+      });
+      if (result.status !== 200) continue;
+      const { name, language, code } = result.body;
+      const decoded = (() => {
+        try {
+          return decodeBase64(code);
+        } catch {
+          return code;
+        }
+      })();
+      const filename = `${slugify(name)}${macroExtension(language)}`;
+      // octet-stream preserves the filename verbatim — text/plain makes some
+      // browsers force a `.txt` suffix.
+      downloadFile(decoded, filename, "application/octet-stream");
+    }
+  }, [cells]);
 
   const handleDownloadWorkbook = useCallback(() => {
     const workbook = {
@@ -351,14 +388,18 @@ export function WorkbookHeader({
             Export as JSON
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={handleExportProtocol}
+            onClick={() => void handleExportProtocol()}
             className="gap-2"
             disabled={!hasProtocols}
           >
             <FileCode className="size-4 text-emerald-600" />
             Export Protocol Only
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportMacro} className="gap-2" disabled={!hasMacros}>
+          <DropdownMenuItem
+            onClick={() => void handleExportMacro()}
+            className="gap-2"
+            disabled={!hasMacros}
+          >
             <Code className="size-4 text-violet-600" />
             Export Macro Only
           </DropdownMenuItem>

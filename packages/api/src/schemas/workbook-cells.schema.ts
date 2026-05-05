@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zQuestionContent } from "./experiment.schema";
+import { sanitizeQuestionLabel, zQuestionContent } from "./experiment.schema";
 import { zMacroLanguage } from "./macro.schema";
 
 const zBaseCell = z.object({
@@ -40,6 +40,14 @@ export const zMacroCell = zBaseCell.extend({
 
 export const zQuestionCell = zBaseCell.extend({
   type: z.literal("question"),
+  // Column-key label, set at creation time via the question-name picker. The
+  // data pipeline canonicalises this into a column key in `questions_data`,
+  // so it must be present and unique within the workbook. Mirrors the role
+  // of zFlowNode.name for question nodes.
+  name: z
+    .string()
+    .min(1, "Question name is required")
+    .max(64, "Question name must be 64 characters or less"),
   question: zQuestionContent,
   answer: z.string().optional(),
   isAnswered: z.boolean().optional().default(false),
@@ -92,7 +100,26 @@ export const zWorkbookCell = z.union([
   zMarkdownCell,
 ]);
 
-export const zWorkbookCellArray = z.array(zWorkbookCell);
+export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx) => {
+  // Reject duplicate question-cell names (canonicalised). The name becomes
+  // the flow node's `name`, which the data pipeline canonicalises into a
+  // column key in `questions_data`; duplicates collide and lose answers
+  // downstream. Mirrors the same check in zFlowGraph.
+  const seen = new Map<string, number>();
+  cells.forEach((cell, index) => {
+    if (cell.type !== "question") return;
+    const canonical = sanitizeQuestionLabel(cell.name);
+    if (seen.has(canonical)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Question cell name "${cell.name}" must be unique`,
+        path: [index, "name"],
+      });
+      return;
+    }
+    seen.set(canonical, index);
+  });
+});
 
 export type ProtocolCell = z.infer<typeof zProtocolCell>;
 export type MacroCell = z.infer<typeof zMacroCell>;

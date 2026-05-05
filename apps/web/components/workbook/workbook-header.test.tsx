@@ -1,6 +1,16 @@
-import { createMarkdownCell, createMacroCell, createProtocolCell } from "@/test/factories";
+import {
+  createMacro,
+  createMarkdownCell,
+  createMacroCell,
+  createProtocol,
+  createProtocolCell,
+} from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { MockInstance } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import { WorkbookSaveProvider } from "../workbook-overview/workbook-save-context";
 import { WorkbookHeader } from "./workbook-header";
@@ -151,11 +161,12 @@ describe("WorkbookHeader", () => {
   });
 });
 
-/** Captures what gets fed to `new Blob(...)` (the export utility wraps the
- *  exported JSON in a Blob, then triggers an anchor download). The Blob in
- *  jsdom doesn't expose .text() / .arrayBuffer(), so we record the parts
- *  passed at construction time and read them back here. */
+/** Captures what gets fed to `new Blob(...)`. MSW also wraps response bodies
+ *  in Blobs, so we can't rely on indexing alone — `clickedBlobIndices` is
+ *  filled by the anchor.click spy at the moment each download fires, which
+ *  is the last Blob created before that click. */
 const blobParts: string[] = [];
+const clickedBlobIndices: number[] = [];
 const OriginalBlob = globalThis.Blob;
 class CapturingBlob extends OriginalBlob {
   constructor(parts: BlobPart[], options?: BlobPropertyBag) {
@@ -164,8 +175,10 @@ class CapturingBlob extends OriginalBlob {
   }
 }
 
+type AnchorClickSpy = MockInstance<HTMLAnchorElement["click"]>;
+
 async function readDownload(
-  anchorClick: ReturnType<typeof vi.spyOn>,
+  anchorClick: AnchorClickSpy,
 ): Promise<{ filename: string; payload: unknown }> {
   await waitFor(() => expect(anchorClick).toHaveBeenCalled());
   const lastCall = anchorClick.mock.contexts.at(-1) as HTMLAnchorElement | undefined;
@@ -174,25 +187,35 @@ async function readDownload(
   return { filename, payload: JSON.parse(text) as unknown };
 }
 
+/** Returns every download triggered, in order. */
+async function readAllDownloads(
+  anchorClick: AnchorClickSpy,
+  expected: number,
+): Promise<{ filename: string; text: string }[]> {
+  await waitFor(() => expect(anchorClick.mock.contexts.length).toBe(expected));
+  return anchorClick.mock.contexts.map((ctx, i) => ({
+    filename: (ctx as HTMLAnchorElement).download,
+    text: blobParts[clickedBlobIndices[i] ?? -1] ?? "",
+  }));
+}
+
 describe("WorkbookHeader — export menu", () => {
-  let createObjectURL: ReturnType<typeof vi.spyOn>;
-  let revokeObjectURL: ReturnType<typeof vi.spyOn>;
-  let anchorClick: ReturnType<typeof vi.spyOn>;
+  let anchorClick: AnchorClickSpy;
 
   beforeEach(() => {
-    createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
-    revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
-    anchorClick = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => undefined);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {
+      // The download Blob is the most recent one created before the click.
+      clickedBlobIndices.push(blobParts.length - 1);
+    });
     globalThis.Blob = CapturingBlob as unknown as typeof Blob;
     blobParts.length = 0;
+    clickedBlobIndices.length = 0;
   });
 
   afterEach(() => {
-    createObjectURL.mockRestore();
-    revokeObjectURL.mockRestore();
-    anchorClick.mockRestore();
+    vi.restoreAllMocks();
     globalThis.Blob = OriginalBlob;
   });
 
@@ -211,20 +234,32 @@ describe("WorkbookHeader — export menu", () => {
     });
   });
 
-  it("exports a single protocol reference when only one protocol cell is present", async () => {
+  it("exports each protocol as its own JSON file containing the raw protocol code", async () => {
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({
+        id: "proto-1",
+        name: "Light Sensor",
+        code: [{ _protocol_set_: [{ pulses: 1 }] }],
+      }),
+    });
+
     const user = userEvent.setup();
     renderHeader();
 
     await user.click(screen.getByRole("button", { name: /export/i }));
     await user.click(screen.getByRole("menuitem", { name: /export protocol only/i }));
 
-    const { filename, payload } = await readDownload(anchorClick);
-    expect(filename).toBe("test-workbook-protocol.json");
-    // Single protocol → object form, not array.
-    expect(payload).toEqual({ ref: "proto-1", version: 1 });
+    const [download] = await readAllDownloads(anchorClick, 1);
+    expect(download.filename).toBe("light-sensor.json");
+    // The file contains the raw protocol code array, not a wrapper.
+    expect(JSON.parse(download.text)).toEqual([{ _protocol_set_: [{ pulses: 1 }] }]);
   });
 
-  it("exports a list of protocol references when multiple protocol cells are present", async () => {
+  it("triggers one download per protocol cell when multiple protocols are present", async () => {
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "any", name: "Shared", code: [{ a: 1 }] }),
+    });
+
     const user = userEvent.setup();
     renderHeader({
       cells: [
@@ -239,23 +274,38 @@ describe("WorkbookHeader — export menu", () => {
     await user.click(screen.getByRole("button", { name: /export/i }));
     await user.click(screen.getByRole("menuitem", { name: /export protocol only/i }));
 
-    const { payload } = await readDownload(anchorClick);
-    expect(payload).toEqual([
-      { ref: "proto-1", version: 1 },
-      { ref: "proto-2", version: 2 },
-    ]);
+    // Two protocol cells → two downloads, one Blob per cell.
+    const downloads = await readAllDownloads(anchorClick, 2);
+    expect(downloads).toHaveLength(2);
+    for (const d of downloads) {
+      expect(d.filename).toBe("shared.json");
+      expect(JSON.parse(d.text)).toEqual([{ a: 1 }]);
+    }
   });
 
-  it("exports macro references when 'Export Macro Only' is clicked", async () => {
+  it("exports each macro as its own source file named after the macro with a language extension", async () => {
+    server.mount(contract.macros.getMacro, {
+      body: createMacro({
+        id: "macro-1",
+        name: "Chlorophyll Calc",
+        // DB filename is intentionally a generic placeholder — the export
+        // ignores it and uses the macro's display name instead.
+        filename: "seed_macro_e5664d67.py",
+        language: "python",
+        // The wire format is base64-encoded; export must decode it.
+        code: btoa("print('hello')"),
+      }),
+    });
+
     const user = userEvent.setup();
     renderHeader();
 
     await user.click(screen.getByRole("button", { name: /export/i }));
     await user.click(screen.getByRole("menuitem", { name: /export macro only/i }));
 
-    const { filename, payload } = await readDownload(anchorClick);
-    expect(filename).toBe("test-workbook-macros.json");
-    expect(payload).toEqual([{ macroId: "macro-1", name: "Test Macro", language: "python" }]);
+    const [download] = await readAllDownloads(anchorClick, 1);
+    expect(download.filename).toBe("chlorophyll-calc.py");
+    expect(download.text).toBe("print('hello')");
   });
 
   it("downloads the full workbook as a .jii file via 'Download Workbook'", async () => {

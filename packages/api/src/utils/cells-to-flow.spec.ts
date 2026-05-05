@@ -58,11 +58,12 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[0].isStart).toBe(true);
   });
 
-  it("converts a question cell to a question node", () => {
+  it("converts a question cell to a question node, using the cell's name as the node name", () => {
     const cells: WorkbookCell[] = [
       {
         id: "q1",
         type: "question",
+        name: "is_green",
         isCollapsed: false,
         isAnswered: false,
         question: { kind: "yes_no", text: "Is it green?", required: false },
@@ -71,7 +72,9 @@ describe("cellsToFlowGraph", () => {
     const { nodes } = cellsToFlowGraph(cells);
     expect(nodes).toHaveLength(1);
     expect(nodes[0].type).toBe("question");
-    expect(nodes[0].name).toBe("Is it green?");
+    // The cell's `name` (column-key label) becomes the flow node's `name`,
+    // not the prompt text.
+    expect(nodes[0].name).toBe("is_green");
   });
 
   it("converts a markdown cell to an instruction node", () => {

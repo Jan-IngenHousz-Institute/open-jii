@@ -108,12 +108,19 @@ BEGIN
               'name', node_value->>'name'
             )
           )
-          -- question to question cell (content IS the question object)
+          -- question to question cell (content IS the question object;
+          -- node name carries over as the column-key label, with an
+          -- id-derived fallback when the source node had a blank name so
+          -- the workbook schema's "name is required" invariant holds)
           WHEN 'question' THEN jsonb_build_object(
             'id', node_value->>'id',
             'type', 'question',
             'isCollapsed', false,
             'isAnswered', false,
+            'name', COALESCE(
+              NULLIF(node_value->>'name', ''),
+              'question_' || substr(node_value->>'id', 1, 8)
+            ),
             'question', node_value->'content'
           )
           -- instruction to markdown cell

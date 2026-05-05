@@ -119,6 +119,7 @@ describe("Workbook Cells Schema", () => {
       const cell = {
         id: "q1",
         type: "question",
+        name: "is_green",
         question: { kind: "yes_no", text: "Is it green?", required: true },
       };
       expect(zQuestionCell.parse(cell)).toEqual({ ...cell, isCollapsed: false, isAnswered: false });
@@ -128,6 +129,7 @@ describe("Workbook Cells Schema", () => {
       const cell = {
         id: "q2",
         type: "question",
+        name: "pick_color",
         question: { kind: "multi_choice", text: "Pick color", options: ["red", "blue"] },
       };
       const parsed = zQuestionCell.parse(cell);
@@ -138,9 +140,38 @@ describe("Workbook Cells Schema", () => {
       const cell = {
         id: "q3",
         type: "question",
+        name: "ok",
         question: { kind: "yes_no", text: "Ok?", bonus: 1 },
       };
       expect(() => zQuestionCell.parse(cell)).toThrow();
+    });
+
+    it("rejects question without a name (column-key label is required)", () => {
+      const cell = {
+        id: "q4",
+        type: "question",
+        question: { kind: "yes_no", text: "Q?", required: false },
+      };
+      expect(() => zQuestionCell.parse(cell)).toThrow();
+    });
+
+    it("rejects duplicate question names after canonicalisation across the array", () => {
+      const cells = [
+        {
+          id: "q1",
+          type: "question",
+          name: "Soil moisture",
+          question: { kind: "open_ended", text: "A?" },
+        },
+        {
+          id: "q2",
+          type: "question",
+          name: "Soil_Moisture!",
+          question: { kind: "open_ended", text: "B?" },
+        },
+      ];
+      // Both canonicalise to "soil_moisture" → must collide.
+      expect(() => zWorkbookCellArray.parse(cells)).toThrow(/must be unique/i);
     });
   });
 
@@ -315,6 +346,7 @@ describe("Workbook Cells Schema", () => {
         {
           id: "q1",
           type: "question",
+          name: "why",
           question: { kind: "open_ended", text: "Why?" },
         },
         { id: "md1", type: "markdown", content: "# Note" },

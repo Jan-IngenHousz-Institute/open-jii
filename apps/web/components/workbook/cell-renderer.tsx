@@ -81,6 +81,7 @@ export function CellRenderer({
           executionError={executionError}
           promptOpen={promptedQuestionId === cell.id}
           onQuestionAnswered={promptedQuestionId === cell.id ? onQuestionAnswered : undefined}
+          allCells={allCells}
           readOnly={readOnly}
         />
       );

@@ -63,13 +63,8 @@ describe("createDefaultCell", () => {
     expect(cell.id).toBeDefined();
   });
 
-  it("creates a question cell with open_ended default", () => {
-    const cell = createDefaultCell("question");
-    expect(cell).toMatchObject({
-      type: "question",
-      isCollapsed: false,
-      question: { kind: "open_ended", text: "", required: false },
-    });
+  it("throws for question type — question cells go through the picker for naming", () => {
+    expect(() => createDefaultCell("question")).toThrow(/question picker/i);
   });
 
   it("creates an output cell with empty producedBy", () => {
@@ -129,14 +124,22 @@ describe("WorkbookEditor — empty state", () => {
     expect(next[0].type).toBe("markdown");
   });
 
-  it("adds a question cell when Question is clicked from the empty state", async () => {
+  it("adds a question cell when the user names it through the question picker", async () => {
     const user = userEvent.setup();
     const { onCellsChange } = renderEditor();
 
+    // Question cells are picker-driven — clicking the trigger opens the
+    // popover; the cell is only created once a valid name is submitted.
     await user.click(screen.getByRole("button", { name: /question/i }));
+    await user.type(screen.getByRole("textbox", { name: /question name/i }), "Soil moisture");
+    await user.click(screen.getByRole("button", { name: /^create$/i }));
 
     const next = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+    expect(next).toHaveLength(1);
     expect(next[0].type).toBe("question");
+    if (next[0].type === "question") {
+      expect(next[0].name).toBe("Soil moisture");
+    }
   });
 
   it("adds a branch cell when Branch is clicked", async () => {
@@ -240,14 +243,16 @@ describe("WorkbookEditor — sidebar minimap", () => {
       createMarkdownCell({ id: "md", content: "<p>Hi</p>" }),
       createQuestionCell({
         id: "q",
+        name: "soil_moisture",
         question: { kind: "open_ended", text: "Why?", required: false },
       }),
     ];
     renderEditor({ cells });
 
-    // Each cell type label appears in the cell header AND in the sidebar list.
+    // Markdown cells show "Markdown" both in the cell header and the sidebar.
     expect(screen.getAllByText(/Markdown/).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/Question/).length).toBeGreaterThanOrEqual(2);
+    // Question cells show their name in both the cell title and the sidebar.
+    expect(screen.getAllByText(/soil_moisture/).length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -366,7 +371,9 @@ describe("WorkbookEditor — answer auto-creates an output cell", () => {
 
     const last = lastCellsArg(onCellsChange);
     // No second output cell — the existing one is updated in place.
-    const outputs = last.filter((c): c is Extract<WorkbookCell, { type: "output" }> => c.type === "output");
+    const outputs = last.filter(
+      (c): c is Extract<WorkbookCell, { type: "output" }> => c.type === "output",
+    );
     expect(outputs).toHaveLength(1);
     expect(outputs[0].id).toBe("o-1");
     expect(outputs[0].data).toEqual({ answer: "new" });

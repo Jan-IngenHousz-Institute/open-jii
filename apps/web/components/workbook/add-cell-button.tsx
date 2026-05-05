@@ -14,12 +14,16 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { MacroPicker } from "./macro-picker";
 import { ProtocolPicker } from "./protocol-picker";
+import { QuestionPicker } from "./question-picker";
 
 type CellType = WorkbookCell["type"];
 
 interface AddCellButtonProps {
   onAdd: (type: CellType) => void;
   onAddCell?: (cell: WorkbookCell) => void;
+  /** Existing cells in the workbook — passed to picker components that need
+   *  to validate against current state (e.g. duplicate question-cell names). */
+  existingCells?: WorkbookCell[];
   sensorFamily?: "multispeq" | "ambit" | "generic";
   variant?: "inline" | "bottom";
   showBranch?: boolean;
@@ -43,6 +47,7 @@ const cellOptions: {
 export function AddCellButton({
   onAdd,
   onAddCell,
+  existingCells = [],
   sensorFamily = "multispeq",
   variant = "inline",
   showBranch = true,
@@ -52,8 +57,10 @@ export function AddCellButton({
   const options = showBranch ? cellOptions : cellOptions.filter((o) => o.type !== "branch");
 
   const handleClick = (type: CellType) => {
-    // Protocol/macro are handled by their pickers when onAddCell is provided
-    if (onAddCell && (type === "protocol" || type === "macro")) return;
+    // Picker-driven cell types (protocol/macro/question) are handled by their
+    // own popovers when onAddCell is provided — the trigger button does
+    // nothing on click; the popover handles the rest.
+    if (onAddCell && (type === "protocol" || type === "macro" || type === "question")) return;
     onAdd(type);
   };
 
@@ -71,6 +78,13 @@ export function AddCellButton({
         <MacroPicker key={key} onSelect={onAddCell}>
           {button}
         </MacroPicker>
+      );
+    }
+    if (type === "question") {
+      return (
+        <QuestionPicker key={key} existingCells={existingCells} onSelect={onAddCell}>
+          {button}
+        </QuestionPicker>
       );
     }
     return button;
@@ -139,8 +153,11 @@ export function AddCellButton({
                     </Button>
                   );
 
-                  // Protocol/macro buttons get wrapped with picker popovers
-                  if (onAddCell && (opt.type === "protocol" || opt.type === "macro")) {
+                  // Picker-driven cell types get wrapped in their popovers
+                  if (
+                    onAddCell &&
+                    (opt.type === "protocol" || opt.type === "macro" || opt.type === "question")
+                  ) {
                     return (
                       <Tooltip key={opt.label}>
                         <TooltipTrigger asChild>

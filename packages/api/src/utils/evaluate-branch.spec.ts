@@ -26,6 +26,7 @@ function makeQuestionCell(id: string, answer?: string): WorkbookCell {
   return {
     id,
     type: "question",
+    name: `q_${id}`,
     isCollapsed: false,
     question: { kind: "open_ended", text: "Test?", required: false },
     answer,

@@ -3,7 +3,10 @@
 import { CheckCircle2, Hash, HelpCircle, List, Pencil, Plus, Send, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import type { QuestionCell as QuestionCellType } from "@repo/api/schemas/workbook-cells.schema";
+import type {
+  QuestionCell as QuestionCellType,
+  WorkbookCell,
+} from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
@@ -12,6 +15,7 @@ import { Textarea } from "@repo/ui/components/textarea";
 import { cn } from "@repo/ui/lib/utils";
 
 import { CellWrapper } from "../cell-wrapper";
+import { QuestionNameEditor } from "../question-name-editor";
 
 interface QuestionCellProps {
   cell: QuestionCellType;
@@ -24,6 +28,9 @@ interface QuestionCellProps {
   promptOpen?: boolean;
   /** Called when the user submits an answer during a prompted run */
   onQuestionAnswered?: (answer: string) => void;
+  /** All cells in the workbook — used by the rename popover to detect
+   *  duplicate canonical names. */
+  allCells?: WorkbookCell[];
   readOnly?: boolean;
 }
 
@@ -45,6 +52,7 @@ export function QuestionCellComponent({
   executionError,
   promptOpen,
   onQuestionAnswered,
+  allCells = [],
   readOnly,
 }: QuestionCellProps) {
   const question = cell.question;
@@ -65,6 +73,13 @@ export function QuestionCellComponent({
       onUpdate({ ...cell, question: { ...question, text } as typeof question });
     },
     [cell, question, onUpdate],
+  );
+
+  const handleNameRename = useCallback(
+    (name: string) => {
+      onUpdate({ ...cell, name });
+    },
+    [cell, onUpdate],
   );
 
   const handleRequiredToggle = useCallback(
@@ -297,7 +312,28 @@ export function QuestionCellComponent({
 
       <CellWrapper
         icon={<HelpCircle className="h-3.5 w-3.5" />}
-        label="Question"
+        label={
+          readOnly ? (
+            cell.name
+          ) : (
+            <QuestionNameEditor
+              initialName={cell.name}
+              cellId={cell.id}
+              existingCells={allCells}
+              onRename={handleNameRename}
+            >
+              <button
+                type="button"
+                aria-label={`Rename question (current: ${cell.name})`}
+                className="cursor-pointer rounded px-0.5 hover:underline focus:outline-none focus-visible:underline"
+                style={{ color: "#C58AAE" }}
+              >
+                {cell.name}
+              </button>
+            </QuestionNameEditor>
+          )
+        }
+        labelText="Question"
         accentColor="#C58AAE"
         isCollapsed={cell.isCollapsed}
         onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}

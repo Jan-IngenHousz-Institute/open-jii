@@ -47,7 +47,10 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       );
 
     case "question":
-      return makeNode(cell.id, "question", cell.question.text, cell.question as Content, isStart);
+      // The cell's `name` is the column-key label set at creation. The flow
+      // node's `name` field is what the data pipeline canonicalises into a
+      // column key downstream — we pass the cell's name straight through.
+      return makeNode(cell.id, "question", cell.name, cell.question as Content, isStart);
 
     case "markdown":
       return makeNode(

@@ -9,6 +9,7 @@ function makeQuestionCell(overrides: Partial<QuestionCell> = {}): QuestionCell {
   return {
     id: "q-1",
     type: "question",
+    name: "test_question",
     question: { kind: "open_ended", text: "", required: false },
     isCollapsed: false,
     isAnswered: false,

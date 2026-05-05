@@ -30,7 +30,12 @@ type ExecutionStatus = "idle" | "running" | "completed" | "error";
 
 interface CellWrapperProps {
   icon: ReactNode;
-  label: string;
+  /** Title shown in the header badge. Accepts a node so cells can render an
+   *  interactive element here (e.g. question cells expose a rename popover). */
+  label: ReactNode;
+  /** When `label` is a string, used as the aria-label for the Run button. For
+   *  custom node labels, callers should ensure their own button is labelled. */
+  labelText?: string;
   accentColor: string;
   isCollapsed?: boolean;
   onToggleCollapse?: (collapsed: boolean) => void;
@@ -52,6 +57,7 @@ interface CellWrapperProps {
 export function CellWrapper({
   icon,
   label,
+  labelText,
   accentColor,
   isCollapsed = false,
   onToggleCollapse,
@@ -193,7 +199,7 @@ export function CellWrapper({
                 className="h-7 w-7 p-0"
                 style={{ color: accentColor }}
                 onClick={onRun}
-                aria-label={`Run ${label}`}
+                aria-label={`Run ${labelText ?? (typeof label === "string" ? label : "")}`}
               >
                 <Play className="h-3.5 w-3.5" />
               </Button>

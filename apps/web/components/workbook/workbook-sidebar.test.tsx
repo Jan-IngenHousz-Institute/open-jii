@@ -9,6 +9,7 @@ import { WorkbookSidebar } from "./workbook-sidebar";
 const markdownCell = createMarkdownCell({ id: "md-1", content: "<p>Hello world</p>" });
 const questionCell = createQuestionCell({
   id: "q-1",
+  name: "soil_moisture",
   question: { kind: "open_ended", text: "What?", required: false },
 });
 const protocolCell = createProtocolCell({
@@ -23,7 +24,7 @@ describe("WorkbookSidebar", () => {
     vi.clearAllMocks();
   });
 
-  it("renders cell list with type labels", () => {
+  it("renders cell list with type labels (and the cell's name for question cells)", () => {
     render(
       <WorkbookSidebar
         cells={[markdownCell, questionCell, protocolCell]}
@@ -31,7 +32,9 @@ describe("WorkbookSidebar", () => {
       />,
     );
     expect(screen.getByText("Markdown")).toBeInTheDocument();
-    expect(screen.getByText("Question")).toBeInTheDocument();
+    // Question cells show their name as the primary label, not the type.
+    expect(screen.getByText("soil_moisture")).toBeInTheDocument();
+    expect(screen.queryByText("Question")).not.toBeInTheDocument();
     expect(screen.getByText("Protocol")).toBeInTheDocument();
   });
 

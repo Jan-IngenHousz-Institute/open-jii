@@ -460,6 +460,7 @@ export function createQuestionCell(overrides: Partial<QuestionCell> = {}): Quest
   return {
     id: `cell-q-${cellSeq}`,
     type: "question",
+    name: `question_${cellSeq}`,
     question: { kind: "open_ended", text: "Enter a value", required: false },
     isCollapsed: false,
     isAnswered: false,

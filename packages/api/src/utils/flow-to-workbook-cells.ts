@@ -81,6 +81,10 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
         type: "question",
         isCollapsed: false,
         isAnswered: false,
+        // The flow node's `name` carries the column-key label. Fall back to
+        // an id-derived default if the source flow node had a blank name —
+        // keeps the schema invariant ("name is required") intact.
+        name: node.name || `question_${node.id.slice(0, 8)}`,
         question: content as QuestionCell["question"],
       };
 

@@ -230,7 +230,9 @@ export function WorkbookSidebar({
                       )}
                       style={isActive ? { color } : { color: "#011111" }}
                     >
-                      {cellTypeLabels[cell.type] ?? cell.type}
+                      {cell.type === "question"
+                        ? cell.name
+                        : (cellTypeLabels[cell.type] ?? cell.type)}
                     </span>
                     <span
                       className="truncate text-[13px] font-normal leading-[21px]"

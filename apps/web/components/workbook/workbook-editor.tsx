@@ -72,12 +72,7 @@ export function createDefaultCell(
     case "macro":
       throw new Error("Macro cells must be created via the macro picker");
     case "question":
-      return {
-        ...base,
-        type: "question",
-        question: { kind: "open_ended", text: "", required: false },
-        isAnswered: false,
-      };
+      throw new Error("Question cells must be created via the question picker");
     case "output":
       return { ...base, type: "output", producedBy: "" };
     case "branch":
@@ -314,6 +309,7 @@ export function WorkbookEditor({
           <AddCellButton
             onAdd={(type) => handleAdd(type, 0)}
             onAddCell={(cell) => handleAddCell(cell, 0)}
+            existingCells={cells}
             sensorFamily={sensorFamily}
             variant="bottom"
             showEmptyState
@@ -396,6 +392,7 @@ export function WorkbookEditor({
                       <AddCellButton
                         onAdd={(type) => handleAdd(type, index)}
                         onAddCell={(cell) => handleAddCell(cell, index)}
+                        existingCells={cells}
                         sensorFamily={sensorFamily}
                       />
                     ))}
@@ -476,6 +473,7 @@ export function WorkbookEditor({
                 <AddCellButton
                   onAdd={(type) => handleAdd(type, cells.length)}
                   onAddCell={(cell) => handleAddCell(cell, cells.length)}
+                  existingCells={cells}
                   sensorFamily={sensorFamily}
                   variant="bottom"
                 />
