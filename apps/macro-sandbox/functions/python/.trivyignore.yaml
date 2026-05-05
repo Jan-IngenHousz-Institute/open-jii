@@ -27,3 +27,13 @@ vulnerabilities:
       statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
     - id: CVE-2026-32282
       statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+
+    # glibc in Amazon Linux 2023 base image
+    - id: CVE-2026-4046
+      statement: >-
+          glibc iconv() DoS triggered by IBM1390/IBM1399 destination
+          charset. Unreachable: CPython has no ibm1390/ibm1399 codec,
+          so bytes.decode/str.encode raise LookupError before any C
+          call; sandbox builtins also block __import__, open, eval.
+          Fix is in amzn2023.0.4; awaiting AWS base image republish.
+      expired_at: 2026-11-05
