@@ -10,6 +10,8 @@ import {
   createSubplotLayout,
   create3DLayout,
   createPlotlyConfig,
+  detectAxisType,
+  refineAxisType,
 } from "../../charts/utils";
 
 // Mock DOM APIs
@@ -629,6 +631,89 @@ describe("utils", () => {
 
       expect(config.responsive).toBe(false);
       expect(config.staticPlot).toBe(true);
+    });
+  });
+
+  describe("detectAxisType", () => {
+    it("returns 'linear' for empty input", () => {
+      expect(detectAxisType([])).toBe("linear");
+    });
+
+    it("treats null/undefined/empty-string as no value", () => {
+      expect(detectAxisType([null, undefined, ""])).toBe("linear");
+    });
+
+    it("returns 'date' when every value is a Date instance", () => {
+      expect(detectAxisType([new Date("2025-01-01"), new Date("2025-02-01")])).toBe("date");
+    });
+
+    it("returns 'date' for ISO date strings", () => {
+      expect(detectAxisType(["2025-08-26", "2025-08-27"])).toBe("date");
+    });
+
+    it("returns 'date' for ISO datetimes with timezone", () => {
+      expect(detectAxisType(["2025-08-26T14:30:00.123Z", "2025-08-26T15:00:00+02:00"])).toBe(
+        "date",
+      );
+    });
+
+    it("returns 'category' for non-numeric strings mixed with anything", () => {
+      expect(detectAxisType(["alpha", "beta", "gamma"])).toBe("category");
+    });
+
+    it("returns 'linear' for numeric strings", () => {
+      expect(detectAxisType(["1", "2", "3"])).toBe("linear");
+    });
+
+    it("returns 'linear' for plain numbers", () => {
+      expect(detectAxisType([1, 2, 3.5])).toBe("linear");
+    });
+
+    it("non-numeric string takes precedence over date-like strings", () => {
+      expect(detectAxisType(["2025-08-26", "not-a-date"])).toBe("category");
+    });
+
+    it("ignores null gaps when classifying", () => {
+      expect(detectAxisType([null, "2025-08-26", null, "2025-08-27"])).toBe("date");
+    });
+  });
+
+  describe("refineAxisType", () => {
+    it("preserves an explicit non-linear type without sniffing values", () => {
+      expect(refineAxisType({ type: "log" }, [1, 2, 3])).toEqual({ type: "log" });
+      expect(refineAxisType({ type: "category" }, ["2025-01-01"])).toEqual({ type: "category" });
+      expect(refineAxisType({ type: "date" }, ["alpha"])).toEqual({ type: "date" });
+    });
+
+    it("upgrades linear default to 'date' when values look like dates", () => {
+      expect(refineAxisType({ type: "linear" }, ["2025-08-26", "2025-08-27"])).toEqual({
+        type: "date",
+      });
+    });
+
+    it("upgrades linear default to 'category' for string values", () => {
+      expect(refineAxisType({ type: "linear" }, ["alpha", "beta"])).toEqual({
+        type: "category",
+        categoryorder: "category ascending",
+      });
+    });
+
+    it("treats undefined axis as no choice and refines from data", () => {
+      expect(refineAxisType(undefined, ["2025-08-26"])).toEqual({ type: "date" });
+    });
+
+    it("leaves linear untouched when data is also linear", () => {
+      expect(refineAxisType({ type: "linear" }, [1, 2, 3])).toEqual({ type: "linear" });
+    });
+
+    it("preserves other axis fields when upgrading the type", () => {
+      const axis = { type: "linear" as const, title: { text: "X" }, showgrid: true };
+      const refined = refineAxisType(axis, ["2025-08-26"]);
+      expect(refined).toMatchObject({
+        type: "date",
+        title: { text: "X" },
+        showgrid: true,
+      });
     });
   });
 });
