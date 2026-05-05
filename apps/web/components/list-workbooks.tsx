@@ -1,11 +1,15 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
+import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { WorkbookOverviewCards } from "~/components/workbook-overview-cards";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import {
   Select,
@@ -18,6 +22,23 @@ import {
 export function ListWorkbooks() {
   const { data: workbooks, isLoading, filter, setFilter, search, setSearch } = useWorkbooks({});
   const { t } = useTranslation("workbook");
+  const router = useRouter();
+  const locale = useLocale();
+  const { mutate: createWorkbook, isPending: isCreating } = useWorkbookCreate({
+    onSuccess: (data) => {
+      router.push(`/${locale}/platform/workbooks/${data.body.id}`);
+    },
+  });
+
+  const handleCreate = () => {
+    const now = new Date();
+    const name = `Untitled Workbook - ${now.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+    createWorkbook({ body: { name } });
+  };
 
   return (
     <div className="space-y-4">
@@ -51,6 +72,9 @@ export function ListWorkbooks() {
               <SelectItem value="all">{t("workbooks.filterAll")}</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={handleCreate} disabled={isCreating}>
+            {t("workbooks.create")}
+          </Button>
         </div>
       </div>
 

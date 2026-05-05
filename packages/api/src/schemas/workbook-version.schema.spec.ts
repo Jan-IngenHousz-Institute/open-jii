@@ -19,6 +19,7 @@ describe("Workbook Version Schemas", () => {
       version: 1,
       cells: [],
       metadata: {},
+      entitySnapshots: { protocols: {}, macros: {} },
       createdAt: "2025-06-01T00:00:00.000Z",
       createdBy: validUuid,
     };

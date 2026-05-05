@@ -300,10 +300,10 @@ describe("NavigationSidebarWrapper", () => {
       icon: "BookOpen",
       isActive: true,
     });
-    expect(navigationData.navWorkbooks[0].items).toHaveLength(2);
+    expect(navigationData.navWorkbooks[0].items).toHaveLength(1);
     expect(navigationData.navWorkbooks[0].items[0]).toMatchObject({
-      title: "sidebar.newWorkbook",
-      url: "/en/platform/workbooks/new",
+      title: "sidebar.overview",
+      url: "/en/platform/workbooks",
     });
   });
 });

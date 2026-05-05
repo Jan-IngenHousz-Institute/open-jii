@@ -4,6 +4,7 @@ CREATE TABLE "workbook_versions" (
 	"version" integer NOT NULL,
 	"cells" jsonb NOT NULL,
 	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"entity_snapshots" jsonb DEFAULT '{"protocols":{},"macros":{}}'::jsonb NOT NULL,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	"created_by" uuid NOT NULL,
 	CONSTRAINT "workbook_versions_workbook_version_uniq" UNIQUE("workbook_id","version")

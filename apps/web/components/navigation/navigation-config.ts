@@ -88,11 +88,6 @@ export const mainNavigation = {
     icon: "BookOpen",
     items: [
       {
-        titleKey: "sidebar.newWorkbook",
-        namespace: "navigation",
-        url: (locale: string) => `/${locale}/platform/workbooks/new`,
-      },
-      {
         titleKey: "sidebar.overview",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/workbooks`,

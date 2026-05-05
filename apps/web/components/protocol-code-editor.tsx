@@ -1,7 +1,9 @@
 "use client";
 
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { forceLinting } from "@codemirror/lint";
 import type { Diagnostic } from "@codemirror/lint";
+import type { EditorView } from "@codemirror/view";
 import { Check, Copy } from "lucide-react";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,7 +11,7 @@ import type { FC } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
 import { useDebounce } from "~/hooks/useDebounce";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
+import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import {
   findProtocolErrorLine,
   getErrorMessage,
@@ -99,9 +101,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const onValidationChangeRef = useRef(onValidationChange);
   onValidationChangeRef.current = onValidationChange;
 
-  // Default to strict mode when the feature flag hasn't resolved.
   const validationAsWarning =
-    useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ?? false;
+    useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ??
+    FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING];
 
   // Convert array to JSON string for editor if needed
   const initialEditorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -192,6 +194,17 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     [],
   );
 
+  // The PostHog flag resolves async; force a re-lint when it flips so existing
+  // diagnostics re-render with the right severity instead of staying stale.
+  const editorViewRef = useRef<EditorView | null>(null);
+  const handleCreateEditor = useCallback((view: EditorView) => {
+    editorViewRef.current = view;
+  }, []);
+
+  useEffect(() => {
+    if (editorViewRef.current) forceLinting(editorViewRef.current);
+  }, [validationAsWarning]);
+
   const heightStr = typeof height === "number" ? `${height}px` : height;
 
   return (
@@ -265,6 +278,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
             readOnly={readOnly}
             lintSource={protocolLintSource}
             lintDelay={300}
+            onCreateEditor={handleCreateEditor}
           />
         </div>
       </div>

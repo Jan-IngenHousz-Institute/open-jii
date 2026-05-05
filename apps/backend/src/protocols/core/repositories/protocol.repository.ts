@@ -1,11 +1,11 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api/schemas/protocol.schema";
-import { and, eq, ilike, protocols, users, asc } from "@repo/database";
+import { and, asc, eq, ilike, inArray, protocols, users } from "@repo/database";
 import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -74,6 +74,14 @@ export class ProtocolRepository {
           firstName && lastName ? `${firstName} ${lastName}` : undefined;
         return augmentedResult;
       });
+    });
+  }
+
+  async findByIds(ids: string[]): Promise<Result<Map<string, ProtocolDto>>> {
+    if (ids.length === 0) return success(new Map());
+    return tryCatch(async () => {
+      const rows = await this.database.select().from(protocols).where(inArray(protocols.id, ids));
+      return new Map(rows.map((row) => [row.id, row as ProtocolDto]));
     });
   }
 

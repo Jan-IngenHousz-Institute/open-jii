@@ -48,6 +48,10 @@ const baseTheme = EditorView.theme({
   },
   ".cm-gutter-lint .cm-gutterElement": {
     padding: "0 4px !important",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    lineHeight: "20px",
   },
   ".cm-gutterElement": { padding: "0 8px 0 16px !important" },
   "&.cm-focused": { outline: "none" },

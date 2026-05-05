@@ -2,12 +2,18 @@ import { z } from "zod";
 
 import { zWorkbookCellArray } from "./workbook-cells.schema";
 
+export const zEntitySnapshots = z.object({
+  protocols: z.record(z.string(), z.object({ code: z.unknown() })),
+  macros: z.record(z.string(), z.object({ code: z.string() })),
+});
+
 export const zWorkbookVersion = z.object({
   id: z.string().uuid(),
   workbookId: z.string().uuid(),
   version: z.number().int().positive(),
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
+  entitySnapshots: zEntitySnapshots,
   createdAt: z.string().datetime(),
   createdBy: z.string().uuid(),
 });
@@ -47,3 +53,4 @@ export type WorkbookVersionSummary = z.infer<typeof zWorkbookVersionSummary>;
 export type WorkbookVersionList = z.infer<typeof zWorkbookVersionList>;
 export type AttachWorkbookBody = z.infer<typeof zAttachWorkbookBody>;
 export type AttachWorkbookResponse = z.infer<typeof zAttachWorkbookResponse>;
+export type EntitySnapshots = z.infer<typeof zEntitySnapshots>;

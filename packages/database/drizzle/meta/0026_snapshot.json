@@ -1,6 +1,6 @@
 {
-  "id": "1f6a4e51-a967-47ee-a0e6-1fd410d3e6dc",
-  "prevId": "a194be0f-2731-49f4-a7d5-f9883f14d39f",
+  "id": "ff27482f-0968-4a3b-853d-1103400e0511",
+  "prevId": "0794bd33-44fa-4e2e-b6ab-885cd7afd134",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1572,6 +1572,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
+        },
+        "entity_snapshots": {
+          "name": "entity_snapshots",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"protocols\":{},\"macros\":{}}'::jsonb"
         },
         "created_at": {
           "name": "created_at",

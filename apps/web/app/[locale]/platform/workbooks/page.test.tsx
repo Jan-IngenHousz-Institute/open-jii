@@ -8,16 +8,13 @@ import { contract } from "@repo/api/contract";
 import WorkbookPage from "./page";
 
 describe("WorkbookPage (list)", () => {
-  it("renders the heading, description, and a link to create a new workbook", async () => {
+  it("renders the heading and description", async () => {
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     render(await WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
 
     expect(screen.getByRole("heading", { name: "workbooks.title" })).toBeInTheDocument();
     expect(screen.getByText("workbooks.listDescription")).toBeInTheDocument();
-
-    const createLink = screen.getByRole("link", { name: "workbooks.create" });
-    expect(createLink).toHaveAttribute("href", "/platform/workbooks/new");
   });
 
   it("renders the workbook list once data resolves", async () => {

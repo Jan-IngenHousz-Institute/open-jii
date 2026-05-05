@@ -388,6 +388,7 @@ export const workbookVersions = pgTable(
     version: integer("version").notNull(),
     cells: jsonb("cells").notNull(),
     metadata: jsonb("metadata").notNull().default({}),
+    entitySnapshots: jsonb("entity_snapshots").notNull().default({ protocols: {}, macros: {} }),
     createdAt: timestamp("created_at")
       .default(sql`(now() AT TIME ZONE 'UTC')`)
       .notNull(),

@@ -1,7 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
+
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import type { WorkbookVersionDto } from "../../../core/models/workbook-version.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
@@ -13,6 +18,8 @@ export class PublishVersionUseCase {
   constructor(
     private readonly workbookRepository: WorkbookRepository,
     private readonly workbookVersionRepository: WorkbookVersionRepository,
+    private readonly protocolRepository: ProtocolRepository,
+    private readonly macroRepository: MacroRepository,
   ) {}
 
   // Always mints a new version. Callers gate via IsWorkbookUpgradableUseCase; reuse the latest if undrifted.
@@ -35,6 +42,29 @@ export class PublishVersionUseCase {
     if (latestResult.isFailure()) return latestResult;
     const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
 
+    const cells = workbook.cells as WorkbookCell[];
+    const protocolIds = [
+      ...new Set(cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),
+    ];
+    const macroIds = [
+      ...new Set(cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
+    ];
+
+    const [protocolsResult, macrosResult] = await Promise.all([
+      this.protocolRepository.findByIds(protocolIds),
+      this.macroRepository.findScriptsByIds(macroIds),
+    ]);
+    if (protocolsResult.isFailure()) return protocolsResult;
+    if (macrosResult.isFailure()) return macrosResult;
+
+    const entitySnapshots: EntitySnapshots = { protocols: {}, macros: {} };
+    for (const [id, p] of protocolsResult.value) {
+      entitySnapshots.protocols[id] = { code: p.code };
+    }
+    for (const [id, m] of macrosResult.value) {
+      entitySnapshots.macros[id] = { code: m.code };
+    }
+
     this.logger.log({
       msg: "Publishing new workbook version",
       operation: "publishVersion",
@@ -47,6 +77,7 @@ export class PublishVersionUseCase {
       version: nextVersion,
       cells: workbook.cells,
       metadata: workbook.metadata,
+      entitySnapshots,
       createdBy: userId,
     });
 

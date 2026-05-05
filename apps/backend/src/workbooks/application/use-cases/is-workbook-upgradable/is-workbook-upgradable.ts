@@ -3,12 +3,11 @@ import { Injectable } from "@nestjs/common";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
+import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 
-/** Fields that are part of a cell's runtime/UI state, not its design.
- *  Stripped before comparing so collapsing a cell or answering a question
- *  doesn't count as a workbook change. */
 const RUNTIME_FIELDS = new Set([
   "isCollapsed",
   "isAnswered",
@@ -24,14 +23,13 @@ const designOf = (cells: WorkbookCell[]) =>
     Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_FIELDS.has(k))),
   );
 
-/** Decides whether a workbook's live cells differ from the latest
- *  published version's cells at the *design* level — i.e. whether
- *  publishing now would mint a new row vs. duplicate an existing one.
- *  Returns `false` when there are no versions yet (nothing to upgrade
- *  from); attach/upgrade callers handle that case explicitly. */
 @Injectable()
 export class IsWorkbookUpgradableUseCase {
-  constructor(private readonly workbookVersionRepository: WorkbookVersionRepository) {}
+  constructor(
+    private readonly workbookVersionRepository: WorkbookVersionRepository,
+    private readonly protocolRepository: ProtocolRepository,
+    private readonly macroRepository: MacroRepository,
+  ) {}
 
   async execute(workbook: WorkbookDto): Promise<Result<boolean>> {
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbook.id);
@@ -39,9 +37,37 @@ export class IsWorkbookUpgradableUseCase {
     const latest = latestResult.value;
     if (!latest) return success(false);
 
-    return success(
+    const cellsChanged =
       JSON.stringify(designOf(workbook.cells)) !==
-        JSON.stringify(designOf(latest.cells as WorkbookCell[])),
-    );
+      JSON.stringify(designOf(latest.cells as WorkbookCell[]));
+    if (cellsChanged) return success(true);
+
+    const protocolIds = [
+      ...new Set(
+        workbook.cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : [])),
+      ),
+    ];
+    const macroIds = [
+      ...new Set(workbook.cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
+    ];
+
+    const [protocolsResult, macrosResult] = await Promise.all([
+      this.protocolRepository.findByIds(protocolIds),
+      this.macroRepository.findScriptsByIds(macroIds),
+    ]);
+    if (protocolsResult.isFailure()) return protocolsResult;
+    if (macrosResult.isFailure()) return macrosResult;
+
+    const snapshots = latest.entitySnapshots;
+    for (const [id, p] of protocolsResult.value) {
+      const snap = snapshots.protocols[id] as { code: unknown } | undefined;
+      if (JSON.stringify(snap?.code) !== JSON.stringify(p.code)) return success(true);
+    }
+    for (const [id, m] of macrosResult.value) {
+      const snap = snapshots.macros[id] as { code: string } | undefined;
+      if (snap?.code !== m.code) return success(true);
+    }
+
+    return success(false);
   }
 }
