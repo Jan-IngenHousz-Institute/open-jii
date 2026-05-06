@@ -141,11 +141,19 @@ jobs:
             echo "📱 Mobile release detected: v$MOBILE_VERSION"
           fi
 
-      - name: Trigger Google Play Submission
+      - name: Trigger Mobile Release
         if: steps.extract_mobile.outputs.mobile_version != ''
         run: |
-          gh workflow run submit-to-google-play.yml \
+          gh workflow run mobile-release.yml \
             --ref ${{ github.ref_name }} \
             --field version=${{ steps.extract_mobile.outputs.mobile_version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Mobile Preview OTA
+        if: contains(fromJson(needs.detect.outputs.affected_apps), 'mobile')
+        run: |
+          gh workflow run mobile-preview-ota.yml \
+            --ref ${{ github.ref_name }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
