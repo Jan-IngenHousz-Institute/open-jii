@@ -1,0 +1,79 @@
+name: "Compute and compare mobile fingerprint"
+description: "Computes the current Expo fingerprint and compares against the last finished build for a profile. Emits both build/ota mode and drift true/false/unknown so callers can pick either semantic."
+inputs:
+  profile:
+    description: "EAS build profile to compare against (preview | internal | beta | production)"
+    required: true
+  platform:
+    description: "Platform to compute fingerprint for"
+    required: false
+    default: "android"
+  working-directory:
+    description: "Directory containing app.json / eas.json"
+    required: false
+    default: "apps/mobile"
+outputs:
+  current:
+    description: "Current fingerprint hash"
+    value: ${{ steps.fp.outputs.hash }}
+  last:
+    description: "Fingerprint hash of last finished build for the profile (empty if none)"
+    value: ${{ steps.last_fp.outputs.hash }}
+  mode:
+    description: "build | ota — build when fingerprint changed or no prior build"
+    value: ${{ steps.decide.outputs.mode }}
+  drift:
+    description: "true | false | unknown — unknown when no prior build exists"
+    value: ${{ steps.decide.outputs.drift }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Compute current fingerprint
+      id: fp
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        HASH=$(pnpm exec expo-updates fingerprint:generate --platform ${{ inputs.platform }} | jq -r .hash)
+        if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
+          echo "::error::Failed to compute fingerprint"
+          exit 1
+        fi
+        echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+        echo "Current fingerprint: $HASH"
+
+    - name: Get last build fingerprint for profile
+      id: last_fp
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        LAST=$(eas build:list \
+          --profile ${{ inputs.profile }} \
+          --status finished \
+          --platform ${{ inputs.platform }} \
+          --limit 1 \
+          --non-interactive \
+          --json | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
+        echo "hash=$LAST" >> "$GITHUB_OUTPUT"
+        echo "Last ${{ inputs.profile }} fingerprint: ${LAST:-<none>}"
+
+    - name: Decide build vs OTA
+      id: decide
+      shell: bash
+      env:
+        CURRENT: ${{ steps.fp.outputs.hash }}
+        LAST: ${{ steps.last_fp.outputs.hash }}
+      run: |
+        if [ -z "$LAST" ]; then
+          echo "mode=build" >> "$GITHUB_OUTPUT"
+          echo "drift=unknown" >> "$GITHUB_OUTPUT"
+          echo "No prior ${{ inputs.profile }} build — defaulting to build"
+        elif [ "$CURRENT" = "$LAST" ]; then
+          echo "mode=ota" >> "$GITHUB_OUTPUT"
+          echo "drift=false" >> "$GITHUB_OUTPUT"
+          echo "Fingerprint matches latest ${{ inputs.profile }} build — OTA path"
+        else
+          echo "mode=build" >> "$GITHUB_OUTPUT"
+          echo "drift=true" >> "$GITHUB_OUTPUT"
+          echo "Fingerprint changed since last ${{ inputs.profile }} build — full rebuild"
+        fi
