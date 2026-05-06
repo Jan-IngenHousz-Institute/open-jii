@@ -434,6 +434,45 @@ export function sanitizeQuestionLabel(label: string): string {
   return s;
 }
 
+/**
+ * Column names that are reserved by the centrum gold tables. User-supplied
+ * column keys (sanitized question labels, custom-metadata column names) must
+ * not collide with these, since both questions_data and custom_metadata get
+ * flattened to top-level alongside the system columns.
+ *
+ * Keep in sync with the gold-table column set in
+ * apps/data/src/pipelines/centrum_pipeline.py.
+ */
+export const RESERVED_EXPERIMENT_COLUMN_NAMES: ReadonlySet<string> = new Set([
+  // experiment_raw_data top-level columns
+  "id",
+  "experiment_id",
+  "device_id",
+  "device_name",
+  "device_version",
+  "timestamp",
+  "timezone",
+  "macros",
+  "questions_data",
+  "annotations",
+  "user_id",
+  "data",
+  "output_data",
+  "date",
+  "processed_timestamp",
+  "skip_macro_processing",
+  "custom_metadata",
+  // experiment_macro_data extras
+  "raw_id",
+  "macro_id",
+  "macro_name",
+  "macro_filename",
+  "macro_output",
+  "macro_error",
+  // pipeline-internal
+  "_id",
+]);
+
 export const zFlowGraph = z
   .object({
     nodes: z.array(zFlowNode).min(1, "At least one node is required to create a flow"),
@@ -456,10 +495,22 @@ export const zFlowGraph = z
     // Compare on the canonicalized form so labels that only differ by
     // punctuation/whitespace (and would collapse to the same column key)
     // are also caught.
+    //
+    // Also reject question labels whose canonical form lands on a reserved
+    // experiment-data column name. Those would shadow a system column once
+    // `questions_data` is flattened to top-level on read or export.
     const seen = new Map<string, number>();
     graph.nodes.forEach((node, index) => {
       if (node.type !== "question") return;
       const canonical = sanitizeQuestionLabel(node.name);
+      if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(canonical)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Question label "${node.name}" resolves to reserved column "${canonical}"`,
+          path: ["nodes", index, "name"],
+        });
+        return;
+      }
       if (seen.has(canonical)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -1114,21 +1165,135 @@ export type ProjectTransferWebhookResponse = z.infer<typeof zProjectTransferWebh
 
 // --- Experiment Metadata Schemas ---
 
+function isAllowedMetadataColumnChar(c: string): boolean {
+  return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
+}
+
+const zMetadataColumnName = z
+  .string()
+  .min(1, "Column name is required")
+  .max(64, "Column name must be 64 characters or less")
+  .refine(
+    (s) => Array.from(s).every(isAllowedMetadataColumnChar),
+    "Column names can only contain letters, digits, and underscores",
+  );
+
+const zMetadataColumn = z.object({
+  id: z.string().min(1),
+  name: zMetadataColumnName,
+  type: z.enum(["string", "number", "date"]),
+});
+
+const zMetadataRow = z
+  .object({
+    _id: z.string().min(1),
+  })
+  .catchall(z.unknown());
+
+/**
+ * Custom metadata payload as stored on the wire and persisted to
+ * `experiment_custom_metadata.metadata` (VARIANT).
+ */
+export const zCustomMetadataPayload = z
+  .object({
+    // Empty allowed: the client auto-generates "Untitled Metadata N" when blank.
+    name: z.string().max(120),
+    columns: z.array(zMetadataColumn).min(1, "At least one column is required"),
+    rows: z.array(zMetadataRow),
+    identifierColumnId: z
+      .string()
+      .min(1, "Identifier column is required")
+      .max(64, "Identifier column must be 64 characters or less"),
+    experimentQuestionId: z
+      .string()
+      .min(1, "Experiment question is required")
+      .max(64, "Experiment question must be 64 characters or less"),
+  })
+  .superRefine((blob, ctx) => {
+    // Reserved names: would collide with system columns once `custom_metadata`
+    // is flattened to top-level by an export sink that requires unique columns.
+    blob.columns.forEach((col, idx) => {
+      if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(col.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["columns", idx, "name"],
+          message: `"${col.name}" is a reserved column name`,
+        });
+      }
+    });
+
+    // Duplicate column names within the same blob: at save time the FE remaps
+    // row keys by name, so two columns with the same name silently overwrite
+    // each other (last write wins, first column's data is lost).
+    const seen = new Map<string, number>();
+    blob.columns.forEach((col, idx) => {
+      const prev = seen.get(col.name);
+      if (prev !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["columns", idx, "name"],
+          message: `Column name "${col.name}" is duplicated`,
+        });
+      } else {
+        seen.set(col.name, idx);
+      }
+    });
+
+    // identifierColumnId must reference a real column on this blob.
+    // Compared against `column.id` so the same schema validates both shapes:
+    // FE editing-time (id is `col_X`, identifierColumnId is `col_X`) and
+    // on-the-wire (id and name are equal after the col-X to name remap).
+    if (!blob.columns.some((c) => c.id === blob.identifierColumnId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["identifierColumnId"],
+        message: `Identifier column "${blob.identifierColumnId}" is not in columns`,
+      });
+    }
+  });
+
 export const zExperimentMetadata = z.object({
   metadataId: z.string().uuid(),
   experimentId: z.string().uuid(),
+  // Response stays loose: legacy records persisted before validation existed
+  // may not match the structured shape.
   metadata: z.record(z.string(), z.unknown()),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 
+/**
+ * Compose `zCustomMetadataPayload` with a flow-aware refinement that rejects
+ * any column name that collides with a sanitized question label from the
+ * experiment's flow. The collision set must be supplied by the caller (the FE
+ * form, which already has the flow loaded), since zod cannot read the DB.
+ *
+ * The identifier column is exempt: it's the column that joins against a
+ * question's answers, the pipeline filters it out of `custom_metadata` before
+ * the gold tables, and naming it after the question it matches is natural.
+ */
+export function makeCustomMetadataFormSchema(reservedQuestionLabels: ReadonlySet<string>) {
+  return zCustomMetadataPayload.superRefine((blob, ctx) => {
+    blob.columns.forEach((col, idx) => {
+      if (col.id === blob.identifierColumnId) return;
+      if (reservedQuestionLabels.has(col.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["columns", idx, "name"],
+          message: `Column "${col.name}" collides with an existing question label`,
+        });
+      }
+    });
+  });
+}
+
 export const zCreateExperimentMetadataBody = z.object({
-  metadata: z.record(z.string(), z.unknown()),
+  metadata: zCustomMetadataPayload,
 });
 
 export const zUpdateExperimentMetadataBody = z.object({
-  metadata: z.record(z.string(), z.unknown()),
+  metadata: zCustomMetadataPayload,
 });
 
 export const zMetadataPathParam = z.object({
@@ -1140,3 +1305,4 @@ export const zMetadataPathParam = z.object({
 export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
 export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetadataBody>;
 export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;
+export type CustomMetadataPayload = z.infer<typeof zCustomMetadataPayload>;

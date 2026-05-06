@@ -39,7 +39,9 @@ describe("FlagsService", () => {
       isFeatureEnabled: vi.fn().mockResolvedValue(true),
       shutdown: vi.fn().mockResolvedValue(undefined),
     });
-    mockShutdownPostHog = spyOnProtected(service, "shutdownPostHogClient").mockResolvedValue(undefined);
+    mockShutdownPostHog = spyOnProtected(service, "shutdownPostHogClient").mockResolvedValue(
+      undefined,
+    );
   });
 
   afterEach(() => {
