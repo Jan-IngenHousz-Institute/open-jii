@@ -5,6 +5,7 @@ import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import WorkbookOverviewPage from "./page";
@@ -18,6 +19,10 @@ vi.mock("@/components/workbook/workbook-code-editor", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(use).mockReturnValue({ id: "wb-1" });
+  vi.mocked(useSession).mockReturnValue({
+    data: { user: { id: "user-1" } },
+    isPending: false,
+  } as ReturnType<typeof useSession>);
   // Pickers fetch lists at mount even when their popovers stay closed.
   server.mount(contract.protocols.listProtocols, { body: [] });
   server.mount(contract.macros.listMacros, { body: [] });
@@ -98,5 +103,21 @@ describe("WorkbookOverviewPage", () => {
       () => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
       { timeout: 3000 },
     );
+  });
+
+  it("hides add-cell controls when the viewer is not the workbook creator", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "someone-else" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: "wb-1", createdBy: "user-1", cells: [] }),
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.queryByText("common.loading")).not.toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /markdown/i })).not.toBeInTheDocument();
   });
 });
