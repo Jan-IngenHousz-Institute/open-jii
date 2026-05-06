@@ -7,8 +7,6 @@ Mobile pre-v1.16.8 leaked the mutation into bronze. Server re-runs the
 de-interleave a second time, producing unphysical NPQt/FvP_FmP/Phi2. We
 re-interleave at gold before the macro UDF.
 
-The inverse is not self-idempotent. Single application relies on
-full-refresh-once after deploy + streaming-append semantics thereafter.
 """
 from __future__ import annotations
 
@@ -21,7 +19,7 @@ from pyspark.sql.types import StringType
 from ..manifest import inline_repair
 
 
-# Prod UUIDs. Dev has different IDs; predicate no-ops there, which is fine.
+# Prod UUIDs. Predicate no-ops in dev.
 _RIDES_MACRO_IDS = (
     "21aed8a2-f95b-4f28-b025-44f6d96447e7",  # Photosynthesis RIDES 2.0
     "5bbf306c-d880-4f04-ac04-dd76fe545182",  # Photosynthesis RIDES 2.1
@@ -29,8 +27,7 @@ _RIDES_MACRO_IDS = (
 
 
 def _reinterleave(arr: list) -> list:
-    """Re-weave [A0..A_{h-1}, B0..B_{N-h-1}] back into [A0, B0, A1, B1, ...]
-    where h = ceil(N/2). Odd N leaves the trailing A element unpaired."""
+    """Inverse of the macro's even/odd split. h = ceil(N/2)."""
     n = len(arr)
     if n < 2:
         return arr
@@ -44,9 +41,26 @@ def _reinterleave(arr: list) -> list:
     return out
 
 
+def _looks_de_interleaved(arr: list) -> bool:
+    """Adjacent pairs cross the median ~N-1 times for interleaved data,
+    only at segment boundaries for de-interleaved. n//4 separates them."""
+    n = len(arr)
+    if n < 4:
+        return False
+    median = sorted(arr)[n // 2]
+    crossings = 0
+    above = arr[0] >= median
+    for x in arr[1:]:
+        new_above = x >= median
+        if new_above != above:
+            crossings += 1
+            above = new_above
+    return crossings < n // 4
+
+
 def _reinvert_pam_payload(value) -> str | None:
-    """Re-interleave PAM.data_raw in the VARIANT payload. Returns a JSON
-    string; the caller wraps with parse_json on the Spark side."""
+    """Re-interleave PAM.data_raw if it still looks de-interleaved.
+    Returns a JSON string; caller wraps with parse_json on the Spark side."""
     if value is None:
         return None
     try:
@@ -58,7 +72,7 @@ def _reinvert_pam_payload(value) -> str | None:
         for s in (elem.get("set") or []):
             if s.get("label") == "PAM":
                 raw = s.get("data_raw")
-                if raw and len(raw) >= 2:
+                if raw and _looks_de_interleaved(raw):
                     s["data_raw"] = _reinterleave(raw)
     return json.dumps(obj)
 
@@ -76,20 +90,19 @@ def _reinvert_pam_udf(data: pd.Series) -> pd.Series:
         "re-weaves the two halves before the macro UDF runs."
     ),
     severity="apply",
+    predicate=lambda: F.col("macro_id").isin(list(_RIDES_MACRO_IDS)),
 )
 def rides_pam_reinterleave(df):
-    affected = F.col("macro_id").isin(list(_RIDES_MACRO_IDS))
+    # df is pre-filtered by the framework; UDF returns NULL if it can't parse,
+    # in which case we keep the original `data`.
     return (
-        df.withColumn(
-            "_rides_repaired_json",
-            F.when(affected, _reinvert_pam_udf(F.col("data"))),
-        )
-        .withColumn(
-            "data",
-            F.when(
-                F.col("_rides_repaired_json").isNotNull(),
-                F.expr("parse_json(_rides_repaired_json)"),
-            ).otherwise(F.col("data")),
-        )
-        .drop("_rides_repaired_json")
+        df.withColumn("_rides_repaired_json", _reinvert_pam_udf(F.col("data")))
+          .withColumn(
+              "data",
+              F.when(
+                  F.col("_rides_repaired_json").isNotNull(),
+                  F.expr("parse_json(_rides_repaired_json)"),
+              ).otherwise(F.col("data")),
+          )
+          .drop("_rides_repaired_json")
     )
