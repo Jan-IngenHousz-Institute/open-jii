@@ -5,7 +5,7 @@ import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkboo
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
-import { WorkbookOverviewCards } from "~/components/workbook-overview-cards";
+import { WorkbookList } from "~/components/workbook-list";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
@@ -78,7 +78,7 @@ export function ListWorkbooks() {
         </div>
       </div>
 
-      <WorkbookOverviewCards workbooks={workbooks} isLoading={isLoading} />
+      <WorkbookList workbooks={workbooks} isLoading={isLoading} />
     </div>
   );
 }

@@ -7,16 +7,16 @@ import { contract } from "@repo/api/contract";
 
 import { ListWorkbooks } from "./list-workbooks";
 
-// Mock WorkbookOverviewCards to keep test focused
-vi.mock("~/components/workbook-overview-cards", () => ({
-  WorkbookOverviewCards: ({
+// Mock WorkbookList to keep test focused
+vi.mock("~/components/workbook-list", () => ({
+  WorkbookList: ({
     workbooks,
     isLoading,
   }: {
     workbooks: { id: string; name: string }[] | undefined;
     isLoading: boolean;
   }) => (
-    <div data-testid="workbook-cards">
+    <div data-testid="workbook-list">
       {isLoading && <span>Loading...</span>}
       {workbooks?.map((w) => <span key={w.id}>{w.name}</span>)}
     </div>
