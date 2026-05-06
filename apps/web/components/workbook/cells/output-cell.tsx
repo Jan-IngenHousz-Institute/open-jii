@@ -14,7 +14,46 @@ import {
 } from "lucide-react";
 
 import type { OutputCell as OutputCellType } from "@repo/api/schemas/workbook-cells.schema";
+import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
+import { LineChart } from "@repo/ui/components/charts/line-chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
+
+const CHART_SERIES_COLORS = [
+  "#005E5E",
+  "#D97706",
+  "#6C5CE7",
+  "#D14343",
+  "#2563EB",
+  "#10B981",
+];
+
+interface ChartSeries {
+  name: string;
+  values: number[];
+}
+
+function isNumericArray(val: unknown): val is number[] {
+  return (
+    Array.isArray(val) &&
+    val.length > 0 &&
+    val.every((v) => typeof v === "number" && Number.isFinite(v))
+  );
+}
+
+// Pull out the first chartable series in `data`: a top-level numeric array, or each numeric-array
+// field of a plain object (capped so a 200-key payload doesn't dump 200 lines onto the chart).
+function getChartableSeries(data: unknown): ChartSeries[] {
+  if (isNumericArray(data)) return [{ name: "value", values: data }];
+  if (data != null && typeof data === "object" && !Array.isArray(data)) {
+    const series: ChartSeries[] = [];
+    for (const [key, val] of Object.entries(data as Record<string, unknown>)) {
+      if (isNumericArray(val)) series.push({ name: key, values: val });
+      if (series.length >= CHART_SERIES_COLORS.length) break;
+    }
+    return series;
+  }
+  return [];
+}
 
 interface OutputCellProps {
   cell: OutputCellType;
@@ -136,6 +175,99 @@ function isQuestionAnswer(data: unknown): data is { answer: string } {
   );
 }
 
+function ChartView({ series }: { series: ChartSeries[] }) {
+  const plotData: LineSeriesData[] = series.map((s, i) => ({
+    name: s.name,
+    x: s.values.map((_, idx) => idx),
+    y: s.values,
+    mode: "lines",
+    line: { color: CHART_SERIES_COLORS[i % CHART_SERIES_COLORS.length], width: 2 },
+    showlegend: series.length > 1,
+  }));
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-[#EDF2F6] bg-white">
+      <div className="h-[280px] w-full">
+        <LineChart
+          data={plotData}
+          config={{
+            xAxisTitle: "Index",
+            yAxisTitle: series.length === 1 ? series[0].name : "Value",
+            useWebGL: false,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DataTabs({
+  data,
+  copy,
+  copied,
+}: {
+  data: unknown;
+  copy: (text: string) => Promise<void>;
+  copied: boolean;
+}) {
+  const chartSeries = getChartableSeries(data);
+  const showChart = chartSeries.length > 0;
+
+  return (
+    <Tabs defaultValue={showChart ? "chart" : "table"} className="w-full">
+      <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
+        {showChart && (
+          <TabsTrigger
+            value="chart"
+            className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Chart
+          </TabsTrigger>
+        )}
+        <TabsTrigger
+          value="table"
+          className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+        >
+          Table
+        </TabsTrigger>
+        <TabsTrigger
+          value="json"
+          className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+        >
+          JSON
+        </TabsTrigger>
+      </TabsList>
+      {showChart && (
+        <TabsContent value="chart" className="mt-2">
+          <ChartView series={chartSeries} />
+        </TabsContent>
+      )}
+      <TabsContent value="table" className="mt-2">
+        {renderDataTable(data)}
+      </TabsContent>
+      <TabsContent value="json" className="mt-2">
+        <div className="relative">
+          <pre className="overflow-auto rounded-lg bg-[#F7F8FA] p-3 pr-12 text-xs text-[#011111]">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+          <button
+            className="absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] shadow-sm transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
+            onClick={() => void copy(JSON.stringify(data, null, 2))}
+            title="Copy JSON"
+            aria-label="Copy JSON"
+          >
+            {copied ? (
+              <Check className="size-3.5 text-emerald-500" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </button>
+        </div>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: OutputCellProps) {
   const hasContent = cell.data != null || (cell.messages && cell.messages.length > 0);
   const toggleCollapsed = () => onUpdate({ ...cell, isCollapsed: !cell.isCollapsed });
@@ -217,44 +349,7 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
 
             {/* Measurement / generic data */}
             {cell.data != null && !isQuestionAnswer(cell.data) && (
-              <Tabs defaultValue="table" className="w-full">
-                <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
-                  <TabsTrigger
-                    value="table"
-                    className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                  >
-                    Table
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="json"
-                    className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                  >
-                    JSON
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="table" className="mt-2">
-                  {renderDataTable(cell.data)}
-                </TabsContent>
-                <TabsContent value="json" className="mt-2">
-                  <div className="relative">
-                    <pre className="overflow-auto rounded-lg bg-[#F7F8FA] p-3 pr-12 text-xs text-[#011111]">
-                      {JSON.stringify(cell.data, null, 2)}
-                    </pre>
-                    <button
-                      className="absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] shadow-sm transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
-                      onClick={() => void copy(JSON.stringify(cell.data, null, 2))}
-                      title="Copy JSON"
-                      aria-label="Copy JSON"
-                    >
-                      {copied ? (
-                        <Check className="size-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="size-3.5" />
-                      )}
-                    </button>
-                  </div>
-                </TabsContent>
-              </Tabs>
+              <DataTabs data={cell.data} copy={copy} copied={copied} />
             )}
 
             {!hasContent && (

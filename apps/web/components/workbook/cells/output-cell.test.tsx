@@ -4,6 +4,23 @@ import { describe, it, expect, vi } from "vitest";
 
 import { OutputCellComponent } from "./output-cell";
 
+// Plotly cannot run in jsdom; render a stub that exposes the series for assertions.
+vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    LineChart: ({ data }: { data: { name: string; y: number[] }[] }) => (
+      <div data-testid="line-chart" data-series={JSON.stringify(data.map((s) => s.name))}>
+        {data.map((s) => (
+          <div key={s.name} data-testid={`series-${s.name}`}>
+            {s.y.join(",")}
+          </div>
+        ))}
+      </div>
+    ),
+  };
+});
+
 // jsdom does not implement navigator.clipboard — provide a minimal stub so
 // useCopyToClipboard resolves instead of throwing.
 Object.defineProperty(navigator, "clipboard", {
@@ -115,6 +132,38 @@ describe("OutputCellComponent", () => {
     );
     expect(screen.queryByText("time")).not.toBeInTheDocument();
     expect(screen.getByTitle("Expand output")).toBeInTheDocument();
+  });
+
+  it("renders a chart by default and exposes Table/JSON tabs when data is a numeric array", async () => {
+    const cell = createOutputCell({ data: [1, 2, 3, 4, 5] });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("series-value")).toHaveTextContent("1,2,3,4,5");
+    expect(screen.getByRole("tab", { name: "Chart" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Table" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "JSON" })).toBeInTheDocument();
+  });
+
+  it("plots each numeric-array field of an object payload as a separate series", () => {
+    const cell = createOutputCell({
+      data: { device_id: "abc", spectrum: [10, 20, 30], baseline: [1, 2, 3] },
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    const chart = screen.getByTestId("line-chart");
+    expect(chart).toHaveAttribute("data-series", JSON.stringify(["spectrum", "baseline"]));
+    expect(screen.getByTestId("series-spectrum")).toHaveTextContent("10,20,30");
+    expect(screen.getByTestId("series-baseline")).toHaveTextContent("1,2,3");
+  });
+
+  it("hides the Chart tab and defaults to Table when no field is a numeric array", () => {
+    const cell = createOutputCell({ data: { device_id: "abc-123", firmware_version: "1.2.3" } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.queryByRole("tab", { name: "Chart" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+    expect(screen.getByText("device_id")).toBeInTheDocument();
   });
 
   it("shows a copy button in the JSON view that swaps to a check icon when clicked", async () => {
