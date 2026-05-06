@@ -40,19 +40,57 @@ function isNumericArray(val: unknown): val is number[] {
   );
 }
 
-// Pull out the first chartable series in `data`: a top-level numeric array, or each numeric-array
-// field of a plain object (capped so a 200-key payload doesn't dump 200 lines onto the chart).
-function getChartableSeries(data: unknown): ChartSeries[] {
-  if (isNumericArray(data)) return [{ name: "value", values: data }];
-  if (data != null && typeof data === "object" && !Array.isArray(data)) {
-    const series: ChartSeries[] = [];
-    for (const [key, val] of Object.entries(data as Record<string, unknown>)) {
-      if (isNumericArray(val)) series.push({ name: key, values: val });
-      if (series.length >= CHART_SERIES_COLORS.length) break;
-    }
-    return series;
+// Walk the payload looking for numeric-array leaves so MultispeQ-style outputs
+// (e.g. `{ set: [{ ENV: [...], SUN: [...] }] }`) light up too. For arrays of objects we only
+// recurse into the first element so we don't dump every set onto a single chart.
+function collectChartableSeries(
+  data: unknown,
+  prefix: string,
+  out: ChartSeries[],
+  cap: number,
+): void {
+  if (out.length >= cap) return;
+  if (isNumericArray(data)) {
+    out.push({ name: prefix || "value", values: data });
+    return;
   }
-  return [];
+  if (Array.isArray(data)) {
+    if (data.length > 0 && typeof data[0] === "object" && data[0] !== null) {
+      collectChartableSeries(data[0], prefix ? `${prefix}[0]` : "[0]", out, cap);
+    }
+    return;
+  }
+  if (data != null && typeof data === "object") {
+    for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
+      if (out.length >= cap) break;
+      collectChartableSeries(v, prefix ? `${prefix}.${k}` : k, out, cap);
+    }
+  }
+}
+
+// Strip the longest common dotted prefix from series names so the legend stays readable
+// when every series lives under the same wrapper (e.g. all under "set[0].").
+function stripCommonPrefix(series: ChartSeries[]): ChartSeries[] {
+  if (series.length < 2) return series;
+  const parts = series.map((s) => s.name.split(/[.[]/));
+  const minLen = Math.min(...parts.map((p) => p.length));
+  let common = 0;
+  for (let i = 0; i < minLen; i++) {
+    const candidate = parts[0][i];
+    if (parts.every((p) => p[i] === candidate)) common = i + 1;
+    else break;
+  }
+  if (common === 0) return series;
+  return series.map((s) => {
+    const trimmed = s.name.split(/[.[]/).slice(common).join(".");
+    return { ...s, name: trimmed || s.name };
+  });
+}
+
+function getChartableSeries(data: unknown): ChartSeries[] {
+  const out: ChartSeries[] = [];
+  collectChartableSeries(data, "", out, CHART_SERIES_COLORS.length);
+  return stripCommonPrefix(out);
 }
 
 interface OutputCellProps {
@@ -141,7 +179,10 @@ function renderDataTable(data: unknown): React.ReactNode {
     );
   }
 
-  return <p className="px-3 py-2 text-xs text-[#011111]">{String(data)}</p>;
+  if (typeof data === "string" || typeof data === "number" || typeof data === "boolean") {
+    return <p className="px-3 py-2 text-xs text-[#011111]">{String(data)}</p>;
+  }
+  return <p className="px-3 py-2 text-xs text-[#011111]">{JSON.stringify(data)}</p>;
 }
 
 function getMessageType(message: string): "error" | "warning" | "info" {

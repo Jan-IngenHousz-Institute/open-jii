@@ -157,6 +157,22 @@ describe("OutputCellComponent", () => {
     expect(screen.getByTestId("series-baseline")).toHaveTextContent("1,2,3");
   });
 
+  it("walks into nested set[] arrays of objects (MultispeQ-style payload)", () => {
+    const cell = createOutputCell({
+      data: {
+        set: [{ ENV: [1, 2, 3], SUN: [10, 20, 30], Fluo: [100, 200, 300] }],
+        protocol_id: NaN,
+      },
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    const chart = screen.getByTestId("line-chart");
+    // Common "set[0]." prefix is stripped so the legend reads ENV/SUN/Fluo.
+    expect(chart).toHaveAttribute("data-series", JSON.stringify(["ENV", "SUN", "Fluo"]));
+    expect(screen.getByTestId("series-ENV")).toHaveTextContent("1,2,3");
+    expect(screen.getByTestId("series-SUN")).toHaveTextContent("10,20,30");
+  });
+
   it("hides the Chart tab and defaults to Table when no field is a numeric array", () => {
     const cell = createOutputCell({ data: { device_id: "abc-123", firmware_version: "1.2.3" } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
