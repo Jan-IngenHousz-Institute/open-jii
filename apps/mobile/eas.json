@@ -4,11 +4,27 @@
   },
   "build": {
     "preview": {
+      "channel": "preview",
       "android": {
         "buildType": "apk"
       }
     },
+    "internal": {
+      "channel": "internal",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "beta": {
+      "channel": "beta",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
     "production": {
+      "channel": "production",
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
@@ -16,9 +32,19 @@
     }
   },
   "submit": {
-    "production": {
+    "internal": {
       "android": {
         "track": "internal"
+      }
+    },
+    "beta": {
+      "android": {
+        "track": "beta"
+      }
+    },
+    "production": {
+      "android": {
+        "track": "production"
       }
     }
   }
