@@ -1,4 +1,10 @@
-import { createExperiment, createExperimentAccess, createFlow } from "@/test/factories";
+import {
+  createExperiment,
+  createExperimentAccess,
+  createProtocolCell,
+  createWorkbook,
+  createWorkbookVersionSummary,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
@@ -36,7 +42,17 @@ vi.mock("@/components/flow-editor/flow-editor", () => ({
   ),
 }));
 
+vi.mock("@/components/workbook/workbook-editor", () => ({
+  WorkbookEditor: ({ cells, readOnly }: { cells: unknown[]; readOnly?: boolean }) => (
+    <div data-testid="workbook-editor" data-readonly={readOnly ? "true" : "false"}>
+      Workbook Editor ({cells.length} cells)
+    </div>
+  ),
+}));
+
 const EXP_ID = "exp-123";
+const WB_ID = "wb-1";
+const VERSION_ID = "ver-1";
 const LOCALE = "en-US";
 const defaultProps = {
   params: Promise.resolve({ locale: LOCALE, id: EXP_ID }),
@@ -48,17 +64,72 @@ const activeExperiment = createExperiment({
   name: "Test Experiment",
 });
 
+const experimentWithWorkbook = createExperiment({
+  id: EXP_ID,
+  status: "active",
+  name: "Test Experiment",
+  workbookId: WB_ID,
+  workbookVersionId: VERSION_ID,
+});
+
 const accessPayload = createExperimentAccess({
   experiment: { id: EXP_ID, name: "Test Experiment", status: "active" },
   isAdmin: true,
 });
 
+const readOnlyAccessPayload = createExperimentAccess({
+  experiment: { id: EXP_ID, name: "Test Experiment", status: "active" },
+  isAdmin: false,
+});
+
+const versionSummary = createWorkbookVersionSummary({
+  id: VERSION_ID,
+  workbookId: WB_ID,
+  version: 1,
+});
+
+const newerVersionSummary = createWorkbookVersionSummary({
+  id: "ver-2",
+  workbookId: WB_ID,
+  version: 2,
+});
+
 function mountDefaults() {
   server.mount(contract.experiments.getExperiment, { body: activeExperiment });
   server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-  server.mount(contract.experiments.getFlow, { status: 404 });
-  server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
-  server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
+  server.mount(contract.workbooks.listWorkbooks, { body: [] });
+}
+
+function mountWithWorkbook(overrides?: {
+  versions?: (typeof versionSummary)[];
+  isAdmin?: boolean;
+}) {
+  server.mount(contract.experiments.getExperiment, { body: experimentWithWorkbook });
+  server.mount(contract.experiments.getExperimentAccess, {
+    body: overrides?.isAdmin === false ? readOnlyAccessPayload : accessPayload,
+  });
+  server.mount(contract.workbooks.getWorkbook, {
+    body: createWorkbook({
+      id: WB_ID,
+      name: "Test Workbook",
+      cells: [
+        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+      ],
+    }),
+  });
+  server.mount(contract.workbooks.listWorkbooks, { body: [] });
+  server.mount(contract.workbooks.listWorkbookVersions, {
+    body: overrides?.versions ?? [versionSummary],
+  });
+  server.mount(contract.workbooks.getWorkbookVersion, {
+    body: {
+      ...versionSummary,
+      cells: [
+        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+      ],
+      metadata: {},
+    },
+  });
 }
 
 describe("ExperimentFlowPage", () => {
@@ -67,35 +138,30 @@ describe("ExperimentFlowPage", () => {
     vi.mocked(use).mockReturnValue({ id: EXP_ID, locale: LOCALE });
   });
 
-  it("renders the experiment flow page with all components when loaded", async () => {
+  it("renders the experiment flow page with title when loaded", async () => {
     mountDefaults();
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText("flow.title")).toBeInTheDocument();
-      expect(screen.getByTestId("flow-editor")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /flow.saveFlow/ })).toBeInTheDocument();
     });
   });
 
-  it("displays loading state when experiment is loading", () => {
+  it("displays loading skeleton when experiment is loading", () => {
     server.mount(contract.experiments.getExperiment, { delay: "infinite" });
     server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getFlow, { status: 404 });
-    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
-    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    const { container } = render(<ExperimentFlowPage params={defaultProps.params} />);
 
-    expect(screen.getByText("loading")).toBeInTheDocument();
+    // Skeleton elements are rendered during loading
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("displays error state when experiment fails to load", async () => {
     server.mount(contract.experiments.getExperiment, { status: 500 });
     server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getFlow, { status: 404 });
-    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
-    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
@@ -113,9 +179,7 @@ describe("ExperimentFlowPage", () => {
         experiment: { id: EXP_ID, status: "archived" },
       }),
     });
-    server.mount(contract.experiments.getFlow, { status: 404 });
-    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
-    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
@@ -124,35 +188,88 @@ describe("ExperimentFlowPage", () => {
     });
   });
 
-  it("renders FlowEditor with correct props", async () => {
+  it("renders WorkbookEditor when workbook is linked", async () => {
+    mountWithWorkbook();
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+    });
+  });
+
+  it("shows version badge when workbook is linked", async () => {
+    mountWithWorkbook();
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("v1")).toBeInTheDocument();
+    });
+  });
+
+  it("shows detach and change buttons for admin users", async () => {
+    mountWithWorkbook();
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("flow.detach")).toBeInTheDocument();
+      expect(screen.getByText("flow.changeWorkbook")).toBeInTheDocument();
+    });
+  });
+
+  it("hides detach and change buttons for non-admin users", async () => {
+    mountWithWorkbook({ isAdmin: false });
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("flow.detach")).not.toBeInTheDocument();
+    expect(screen.queryByText("flow.changeWorkbook")).not.toBeInTheDocument();
+  });
+
+  it("shows upgrade banner when a newer version is available", async () => {
+    mountWithWorkbook({ versions: [newerVersionSummary, versionSummary] });
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/v2 is available/)).toBeInTheDocument();
+      expect(screen.getByText(/flow\.upgradeToLatest/)).toBeInTheDocument();
+    });
+  });
+
+  it("does not show upgrade banner when already on latest version", async () => {
+    mountWithWorkbook({ versions: [versionSummary] });
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
+  });
+
+  it("shows no-workbook-linked state when no workbook attached", async () => {
     mountDefaults();
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      const flowEditor = screen.getByTestId("flow-editor");
-      expect(flowEditor).toHaveAttribute("data-disabled", "false");
-      expect(flowEditor).toHaveAttribute("data-initial-flow", "null");
+      expect(screen.getByText("flow.noWorkbookLinked")).toBeInTheDocument();
     });
   });
 
-  it("displays access loading state", () => {
+  it("displays access loading skeleton", () => {
     server.mount(contract.experiments.getExperiment, { body: activeExperiment });
     server.mount(contract.experiments.getExperimentAccess, { delay: "infinite" });
-    server.mount(contract.experiments.getFlow, { status: 404 });
-    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
-    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    const { container } = render(<ExperimentFlowPage params={defaultProps.params} />);
 
-    expect(screen.getByText("loading")).toBeInTheDocument();
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("displays access error state", async () => {
     server.mount(contract.experiments.getExperiment, { body: activeExperiment });
     server.mount(contract.experiments.getExperimentAccess, { status: 500 });
-    server.mount(contract.experiments.getFlow, { status: 404 });
-    server.mount(contract.experiments.createFlow, { body: createFlow({ experimentId: EXP_ID }) });
-    server.mount(contract.experiments.updateFlow, { body: createFlow({ experimentId: EXP_ID }) });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
@@ -161,12 +278,14 @@ describe("ExperimentFlowPage", () => {
     });
   });
 
-  it("renders save button", async () => {
-    mountDefaults();
+  it("renders WorkbookEditor with readOnly prop", async () => {
+    mountWithWorkbook();
     render(<ExperimentFlowPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /flow.saveFlow/ })).toBeInTheDocument();
+      const editor = screen.getByTestId("workbook-editor");
+      expect(editor).toBeInTheDocument();
+      expect(editor).toHaveAttribute("data-readonly", "true");
     });
   });
 });

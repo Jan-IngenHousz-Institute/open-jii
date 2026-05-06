@@ -2,7 +2,7 @@ import { createExperiment, createLocation } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { formatDate } from "@/util/date";
 import type { ComponentProps } from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
@@ -104,11 +104,13 @@ function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsC
 }
 
 describe("ExperimentDetailsCard", () => {
-  // Override global useSession mock to return an authenticated user
-  vi.mocked(useSession).mockReturnValue({
-    data: { user: { id: "user-1" } },
-    isPending: false,
-  } as unknown as ReturnType<typeof useSession>);
+  // setup.ts afterEach calls vi.clearAllMocks(); reapply the session mock per test.
+  beforeEach(() => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+  });
 
   it("renders title", () => {
     renderComponent();

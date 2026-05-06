@@ -1,0 +1,184 @@
+name: Mobile Preview OTA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "EAS Update branch"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+      message:
+        description: "Update message"
+        required: false
+        type: string
+      force:
+        description: "Skip fingerprint gate (publish even if native delta detected)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ota-preview
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Detect mobile changes
+    runs-on: ubuntu-latest
+    outputs:
+      affected: ${{ steps.check.outputs.affected }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Detect affected packages
+        id: detect_pkgs
+        if: github.event_name == 'push'
+        uses: ./.github/actions/detect-affected-packages
+
+      - name: Check if mobile is affected
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "affected=true" >> $GITHUB_OUTPUT
+            echo "Manual dispatch — proceeding"
+            exit 0
+          fi
+          AFFECTED='${{ steps.detect_pkgs.outputs.affected_apps }}'
+          if echo "$AFFECTED" | jq -e 'index("mobile")' >/dev/null; then
+            echo "affected=true" >> $GITHUB_OUTPUT
+            echo "Mobile is in affected packages"
+          else
+            echo "affected=false" >> $GITHUB_OUTPUT
+            echo "Mobile not affected — skipping"
+          fi
+
+  publish:
+    name: Publish OTA
+    needs: detect
+    if: needs.detect.outputs.affected == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Setup Expo CLI
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Compute current fingerprint
+        id: fp
+        working-directory: apps/mobile
+        run: |
+          HASH=$(pnpm exec expo-updates fingerprint:generate --json 2>/dev/null | jq -r .hash)
+          if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
+            echo "::error::Failed to compute fingerprint"
+            exit 1
+          fi
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "Current fingerprint: $HASH"
+
+      - name: Get last preview build fingerprint
+        id: last_fp
+        working-directory: apps/mobile
+        run: |
+          LAST=$(eas build:list \
+            --profile preview \
+            --status finished \
+            --platform android \
+            --limit 1 \
+            --non-interactive \
+            --json 2>/dev/null | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
+          echo "hash=$LAST" >> $GITHUB_OUTPUT
+          echo "Last preview fingerprint: ${LAST:-<none>}"
+
+      - name: Check fingerprint drift
+        id: drift
+        run: |
+          CURRENT="${{ steps.fp.outputs.hash }}"
+          LAST="${{ steps.last_fp.outputs.hash }}"
+          FORCE="${{ inputs.force || 'false' }}"
+          if [ -z "$LAST" ]; then
+            echo "drift=unknown" >> $GITHUB_OUTPUT
+            echo "::warning::No prior preview build found. OTA proceeding but may not reach any device."
+          elif [ "$CURRENT" != "$LAST" ]; then
+            echo "drift=true" >> $GITHUB_OUTPUT
+            if [ "$FORCE" != "true" ]; then
+              echo "::warning::Fingerprint drift detected. Preview testers need a new APK. OTA will not reach them. Skipping publish. Run \`eas build --profile preview --platform android\` to ship a new APK, or re-run this workflow with \`force=true\` to publish anyway."
+            else
+              echo "::warning::Fingerprint drift detected but force=true — publishing anyway."
+            fi
+          else
+            echo "drift=false" >> $GITHUB_OUTPUT
+            echo "Fingerprint matches latest preview build"
+          fi
+
+      - name: Resolve commit subject
+        id: msg
+        if: steps.drift.outputs.drift != 'true' || inputs.force == true
+        env:
+          INPUT_MESSAGE: ${{ inputs.message }}
+        run: |
+          if [ -n "$INPUT_MESSAGE" ]; then
+            printf 'value=%s\n' "$INPUT_MESSAGE" >> $GITHUB_OUTPUT
+          else
+            SUBJECT=$(git log -1 --pretty=%s)
+            printf 'value=%s\n' "$SUBJECT" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish OTA
+        if: steps.drift.outputs.drift != 'true' || inputs.force == true
+        working-directory: apps/mobile
+        env:
+          MSG: ${{ steps.msg.outputs.value }}
+        run: |
+          eas update \
+            --branch ${{ inputs.branch || 'preview' }} \
+            --message "$MSG" \
+            --non-interactive
+
+      - name: Job summary
+        run: |
+          echo "## Preview OTA" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ inputs.branch || 'preview' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current fingerprint | \`${{ steps.fp.outputs.hash }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Last preview fingerprint | \`${{ steps.last_fp.outputs.hash || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Drift | ${{ steps.drift.outputs.drift }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Forced | ${{ inputs.force || false }} |" >> $GITHUB_STEP_SUMMARY
+          PUBLISHED="${{ (steps.drift.outputs.drift != 'true' || inputs.force == true) && 'yes' || 'skipped' }}"
+          echo "| Published | $PUBLISHED |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.drift.outputs.drift }}" = "true" ] && [ "${{ inputs.force || 'false' }}" != "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action required:** new preview APK needed. Run \`eas build --profile preview --platform android\` and distribute to testers." >> $GITHUB_STEP_SUMMARY
+          fi

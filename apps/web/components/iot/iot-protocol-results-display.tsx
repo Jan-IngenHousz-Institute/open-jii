@@ -1,7 +1,7 @@
 "use client";
 
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { AlertCircle, Check, CheckCircle2, Copy, Play } from "lucide-react";
-import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
@@ -24,20 +24,13 @@ interface ProtocolResultsDisplayProps {
 export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
-  const [copied, setCopied] = useState(false);
+  const { copy: copyToClipboard, copied } = useCopyToClipboard();
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (testResult?.data === undefined) return;
-
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(testResult.data, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+    await copyToClipboard(JSON.stringify(testResult.data, null, 2));
   };
 
   return (

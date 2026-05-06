@@ -133,7 +133,10 @@ describe("ProtocolResultsDisplay", () => {
       await user.click(copyButton);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to copy:", expect.any(Error));
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "Failed to copy to clipboard:",
+          expect.any(Error),
+        );
       });
 
       consoleErrorSpy.mockRestore();

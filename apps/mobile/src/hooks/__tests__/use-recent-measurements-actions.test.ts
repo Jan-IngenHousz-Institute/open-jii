@@ -40,14 +40,21 @@ vi.mock("~/components/AlertDialog", () => ({
 }));
 
 vi.mock("sonner-native", () => ({
-  toast: { error: (...args: unknown[]) => mockToastError(...args), success: (...args: unknown[]) => mockToastSuccess(...args) },
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+  },
 }));
 
 vi.mock("~/services/export-measurements", () => ({
   exportMeasurementsToFile: () => mockExportMeasurementsToFile(),
 }));
 
-const makeItem = (key: string, status: MeasurementItem["status"], experimentName = "Exp"): MeasurementItem => ({
+const makeItem = (
+  key: string,
+  status: MeasurementItem["status"],
+  experimentName = "Exp",
+): MeasurementItem => ({
   key,
   status,
   experimentName,
@@ -120,7 +127,9 @@ describe("useRecentMeasurementsActions", () => {
       });
 
       expect(mockInvalidate).toHaveBeenCalled();
-      expect(mockToastError).toHaveBeenCalledWith("Failed to upload measurement. Please try again.");
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to upload measurement. Please try again.",
+      );
     });
   });
 
@@ -130,7 +139,11 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmDelete(makeItem("k2", "synced")));
 
-      expect(mockShowAlert).toHaveBeenCalledWith("Delete Measurement", expect.any(String), expect.any(Array));
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        "Delete Measurement",
+        expect.any(String),
+        expect.any(Array),
+      );
     });
 
     it("shows 'Remove Measurement' title for unsynced items", () => {
@@ -138,7 +151,11 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmDelete(makeItem("k1", "unsynced")));
 
-      expect(mockShowAlert).toHaveBeenCalledWith("Remove Measurement", expect.any(String), expect.any(Array));
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        "Remove Measurement",
+        expect.any(String),
+        expect.any(Array),
+      );
     });
 
     it("calls removeMeasurement and invalidates on confirm", async () => {
@@ -160,7 +177,11 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmSyncAll());
 
-      expect(mockShowAlert).toHaveBeenCalledWith("Upload All Measurements", expect.any(String), expect.any(Array));
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        "Upload All Measurements",
+        expect.any(String),
+        expect.any(Array),
+      );
     });
 
     it("calls uploadAll, toasts success, and invalidates on confirm", async () => {
@@ -182,7 +203,11 @@ describe("useRecentMeasurementsActions", () => {
 
       act(() => result.current.confirmDeleteAllSynced());
 
-      expect(mockShowAlert).toHaveBeenCalledWith("Delete all synced measurements", expect.any(String), expect.any(Array));
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        "Delete all synced measurements",
+        expect.any(String),
+        expect.any(Array),
+      );
     });
 
     it("calls clearSyncedMeasurements and invalidates on confirm", async () => {
