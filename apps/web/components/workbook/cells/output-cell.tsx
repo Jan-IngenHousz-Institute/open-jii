@@ -1,6 +1,17 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Clock, Info, X } from "lucide-react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Copy,
+  Info,
+  X,
+} from "lucide-react";
 
 import type { OutputCell as OutputCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
@@ -18,11 +29,27 @@ function formatExecutionTime(ms?: number): string {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
+function renderCellValue(val: unknown): React.ReactNode {
+  if (val == null) return <span className="text-[#CDD5DB]">—</span>;
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return String(val);
+  }
+  if (Array.isArray(val)) {
+    if (val.length === 0) return <span className="text-[#CDD5DB]">[]</span>;
+    if (typeof val[0] === "object" && val[0] !== null) return renderDataTable(val);
+    return val.map((v) => (v == null ? "" : String(v))).join(", ");
+  }
+  if (typeof val === "object") return renderDataTable(val);
+  return JSON.stringify(val);
+}
+
 function renderDataTable(data: unknown): React.ReactNode {
   if (data == null) return <p className="text-sm text-[#68737B]">No output data</p>;
 
-  if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object") {
-    const keys = Object.keys(data[0] as Record<string, unknown>);
+  if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object" && data[0] !== null) {
+    const keys = Array.from(
+      new Set(data.flatMap((row) => Object.keys(row as Record<string, unknown>))),
+    );
     return (
       <div className="overflow-auto rounded-lg border border-[#EDF2F6]">
         <table className="w-full text-xs">
@@ -39,17 +66,8 @@ function renderDataTable(data: unknown): React.ReactNode {
             {data.map((row, i) => (
               <tr key={i} className={i < data.length - 1 ? "border-b border-b-[#EDF2F6]" : ""}>
                 {keys.map((key) => (
-                  <td key={key} className="px-3 py-2 text-xs text-[#011111]">
-                    {(() => {
-                      const val = (row as Record<string, unknown>)[key] ?? "";
-                      if (
-                        typeof val === "string" ||
-                        typeof val === "number" ||
-                        typeof val === "boolean"
-                      )
-                        return String(val);
-                      return JSON.stringify(val);
-                    })()}
+                  <td key={key} className="px-3 py-2 align-top text-xs text-[#011111]">
+                    {renderCellValue((row as Record<string, unknown>)[key])}
                   </td>
                 ))}
               </tr>
@@ -60,11 +78,31 @@ function renderDataTable(data: unknown): React.ReactNode {
     );
   }
 
-  return (
-    <pre className="overflow-auto rounded-lg bg-[#F7F8FA] p-3 text-xs text-[#011111]">
-      {JSON.stringify(data, null, 2)}
-    </pre>
-  );
+  if (typeof data === "object" && !Array.isArray(data)) {
+    const entries = Object.entries(data as Record<string, unknown>);
+    if (entries.length === 0) return <p className="text-sm text-[#68737B]">No output data</p>;
+    return (
+      <div className="overflow-auto rounded-lg border border-[#EDF2F6]">
+        <table className="w-full text-xs">
+          <tbody>
+            {entries.map(([k, v], i) => (
+              <tr key={k} className={i < entries.length - 1 ? "border-b border-b-[#EDF2F6]" : ""}>
+                <th
+                  scope="row"
+                  className="whitespace-nowrap bg-[#F7F8FA] px-3 py-2 text-left align-top text-xs font-semibold text-[#011111]"
+                >
+                  {k}
+                </th>
+                <td className="px-3 py-2 align-top text-xs text-[#011111]">{renderCellValue(v)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return <p className="px-3 py-2 text-xs text-[#011111]">{String(data)}</p>;
 }
 
 function getMessageType(message: string): "error" | "warning" | "info" {
@@ -98,19 +136,29 @@ function isQuestionAnswer(data: unknown): data is { answer: string } {
   );
 }
 
-export function OutputCellComponent({
-  cell,
-  onUpdate: _onUpdate,
-  onDelete,
-  readOnly,
-}: OutputCellProps) {
+export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: OutputCellProps) {
   const hasContent = cell.data != null || (cell.messages && cell.messages.length > 0);
+  const toggleCollapsed = () => onUpdate({ ...cell, isCollapsed: !cell.isCollapsed });
+  const { copy, copied } = useCopyToClipboard();
 
   return (
     <div className="group/output relative overflow-hidden rounded-b-[10px] border border-t-0 border-[#EDF2F6] bg-white">
-      <div className="px-4 pb-3 pt-3">
-        {/* Toolbar: OUTPUT label + execution time + dismiss */}
-        <div className="mb-2 flex items-center gap-2">
+      <div className={`px-4 ${cell.isCollapsed ? "py-2" : "pb-3 pt-3"}`}>
+        <div
+          className={cell.isCollapsed ? "flex items-center gap-2" : "mb-2 flex items-center gap-2"}
+        >
+          <button
+            className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
+            onClick={toggleCollapsed}
+            title={cell.isCollapsed ? "Expand output" : "Collapse output"}
+            aria-expanded={!cell.isCollapsed}
+          >
+            {cell.isCollapsed ? (
+              <ChevronRight className="size-3.5" />
+            ) : (
+              <ChevronDown className="size-3.5" />
+            )}
+          </button>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#68737B]">
             Output
           </span>
@@ -132,71 +180,89 @@ export function OutputCellComponent({
           )}
         </div>
 
-        {/* Messages */}
-        {cell.messages && cell.messages.length > 0 && (
-          <div className="space-y-1.5">
-            {cell.messages.map((msg, i) => {
-              const type = getMessageType(msg);
-              const style = messageStyles[type];
-              const Icon = style.icon;
-              return (
-                <div
-                  key={i}
-                  className="flex items-start gap-2 rounded-lg px-3 py-2"
-                  style={{ background: style.bg }}
-                >
-                  <Icon className="mt-0.5 size-3.5 shrink-0" style={{ color: style.color }} />
-                  <span className="text-[13px] leading-[18px]" style={{ color: style.color }}>
-                    {msg}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {!cell.isCollapsed && (
+          <>
+            {/* Messages */}
+            {cell.messages && cell.messages.length > 0 && (
+              <div className="space-y-1.5">
+                {cell.messages.map((msg, i) => {
+                  const type = getMessageType(msg);
+                  const style = messageStyles[type];
+                  const Icon = style.icon;
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2 rounded-lg px-3 py-2"
+                      style={{ background: style.bg }}
+                    >
+                      <Icon className="mt-0.5 size-3.5 shrink-0" style={{ color: style.color }} />
+                      <span className="text-[13px] leading-[18px]" style={{ color: style.color }}>
+                        {msg}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-        {/* Question answer */}
-        {isQuestionAnswer(cell.data) && (
-          <div className="flex items-center gap-2 rounded-lg bg-[#005E5E]/[0.04] px-3 py-2">
-            <CheckCircle2 className="size-3.5 shrink-0 text-[#005E5E]" />
-            <span className="text-[13px] text-[#011111]">
-              {(cell.data as { answer: string }).answer}
-            </span>
-          </div>
-        )}
+            {/* Question answer */}
+            {isQuestionAnswer(cell.data) && (
+              <div className="flex items-center gap-2 rounded-lg bg-[#005E5E]/[0.04] px-3 py-2">
+                <CheckCircle2 className="size-3.5 shrink-0 text-[#005E5E]" />
+                <span className="text-[13px] text-[#011111]">
+                  {(cell.data as { answer: string }).answer}
+                </span>
+              </div>
+            )}
 
-        {/* Measurement / generic data */}
-        {cell.data != null && !isQuestionAnswer(cell.data) && (
-          <Tabs defaultValue="table" className="w-full">
-            <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
-              <TabsTrigger
-                value="table"
-                className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
-              >
-                Table
-              </TabsTrigger>
-              <TabsTrigger
-                value="json"
-                className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
-              >
-                JSON
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="table" className="mt-2">
-              {renderDataTable(cell.data)}
-            </TabsContent>
-            <TabsContent value="json" className="mt-2">
-              <pre className="overflow-auto rounded-lg bg-[#F7F8FA] p-3 text-xs text-[#011111]">
-                {JSON.stringify(cell.data, null, 2)}
-              </pre>
-            </TabsContent>
-          </Tabs>
-        )}
+            {/* Measurement / generic data */}
+            {cell.data != null && !isQuestionAnswer(cell.data) && (
+              <Tabs defaultValue="table" className="w-full">
+                <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
+                  <TabsTrigger
+                    value="table"
+                    className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    Table
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="json"
+                    className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    JSON
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="table" className="mt-2">
+                  {renderDataTable(cell.data)}
+                </TabsContent>
+                <TabsContent value="json" className="mt-2">
+                  <div className="relative">
+                    <pre className="overflow-auto rounded-lg bg-[#F7F8FA] p-3 pr-12 text-xs text-[#011111]">
+                      {JSON.stringify(cell.data, null, 2)}
+                    </pre>
+                    <button
+                      className="absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] shadow-sm transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
+                      onClick={() => void copy(JSON.stringify(cell.data, null, 2))}
+                      title="Copy JSON"
+                      aria-label="Copy JSON"
+                    >
+                      {copied ? (
+                        <Check className="size-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="size-3.5" />
+                      )}
+                    </button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
 
-        {!hasContent && (
-          <p className="py-1 text-xs text-[#CDD5DB]">
-            No measurement data available — run a protocol cell first
-          </p>
+            {!hasContent && (
+              <p className="py-1 text-xs text-[#CDD5DB]">
+                No measurement data available — run a protocol cell first
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
