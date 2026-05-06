@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
-    "build-apk": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile preview --local && rm .npmrc",
+    "build-apk": "dotenv -- eas build -p android --profile preview --local",
     "build-aab-locally": "dotenv -- eas build -p android --profile internal --local",
     "submit-to-google-play": "eas build -p android --profile internal --clear-cache --non-interactive --auto-submit",
     "update:preview": "eas update --branch preview",
