@@ -12,25 +12,14 @@ import {
   Info,
   X,
 } from "lucide-react";
+import { useState } from "react";
 
 import type { OutputCell as OutputCellType } from "@repo/api/schemas/workbook-cells.schema";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
-const CHART_SERIES_COLORS = [
-  "#005E5E",
-  "#D97706",
-  "#6C5CE7",
-  "#D14343",
-  "#2563EB",
-  "#10B981",
-];
-
-interface ChartSeries {
-  name: string;
-  values: number[];
-}
+type ChartClickHandler = (data: number[], columnName: string) => void;
 
 function isNumericArray(val: unknown): val is number[] {
   return (
@@ -40,57 +29,51 @@ function isNumericArray(val: unknown): val is number[] {
   );
 }
 
-// Walk the payload looking for numeric-array leaves so MultispeQ-style outputs
-// (e.g. `{ set: [{ ENV: [...], SUN: [...] }] }`) light up too. For arrays of objects we only
-// recurse into the first element so we don't dump every set onto a single chart.
-function collectChartableSeries(
-  data: unknown,
-  prefix: string,
-  out: ChartSeries[],
-  cap: number,
-): void {
-  if (out.length >= cap) return;
-  if (isNumericArray(data)) {
-    out.push({ name: prefix || "value", values: data });
-    return;
-  }
-  if (Array.isArray(data)) {
-    if (data.length > 0 && typeof data[0] === "object" && data[0] !== null) {
-      collectChartableSeries(data[0], prefix ? `${prefix}[0]` : "[0]", out, cap);
-    }
-    return;
-  }
-  if (data != null && typeof data === "object") {
-    for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
-      if (out.length >= cap) break;
-      collectChartableSeries(v, prefix ? `${prefix}.${k}` : k, out, cap);
-    }
-  }
-}
-
-// Strip the longest common dotted prefix from series names so the legend stays readable
-// when every series lives under the same wrapper (e.g. all under "set[0].").
-function stripCommonPrefix(series: ChartSeries[]): ChartSeries[] {
-  if (series.length < 2) return series;
-  const parts = series.map((s) => s.name.split(/[.[]/));
-  const minLen = Math.min(...parts.map((p) => p.length));
-  let common = 0;
-  for (let i = 0; i < minLen; i++) {
-    const candidate = parts[0][i];
-    if (parts.every((p) => p[i] === candidate)) common = i + 1;
-    else break;
-  }
-  if (common === 0) return series;
-  return series.map((s) => {
-    const trimmed = s.name.split(/[.[]/).slice(common).join(".");
-    return { ...s, name: trimmed || s.name };
-  });
-}
-
-function getChartableSeries(data: unknown): ChartSeries[] {
-  const out: ChartSeries[] = [];
-  collectChartableSeries(data, "", out, CHART_SERIES_COLORS.length);
-  return stripCommonPrefix(out);
+function Sparkline({
+  data,
+  columnName,
+  onClick,
+}: {
+  data: number[];
+  columnName: string;
+  onClick?: ChartClickHandler;
+}) {
+  const width = 80;
+  const height = 24;
+  const padding = 2;
+  const minY = Math.min(...data);
+  const maxY = Math.max(...data);
+  const rangeY = maxY - minY || 1;
+  const points = data
+    .map((value, index) => {
+      const x = padding + (index / (data.length - 1 || 1)) * (width - 2 * padding);
+      const y = height - padding - ((value - minY) / rangeY) * (height - 2 * padding);
+      return `${x},${y}`;
+    })
+    .join(" L ");
+  const path = `M ${points}`;
+  const interactive = !!onClick;
+  return (
+    <button
+      type="button"
+      className={`flex items-center gap-2 rounded p-1 text-left transition-colors ${interactive ? "hover:bg-[#EDF2F6]" : "cursor-default"}`}
+      onClick={() => onClick?.(data, columnName)}
+      aria-label={interactive ? `Expand chart for ${columnName}` : undefined}
+      disabled={!interactive}
+    >
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0">
+        <path
+          d={path}
+          fill="none"
+          stroke="#005E5E"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span className="text-[10px] tabular-nums text-[#68737B]">n={data.length}</span>
+    </button>
+  );
 }
 
 interface OutputCellProps {
@@ -106,21 +89,28 @@ function formatExecutionTime(ms?: number): string {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-function renderCellValue(val: unknown): React.ReactNode {
+function renderCellValue(
+  val: unknown,
+  columnName: string,
+  onChartClick?: ChartClickHandler,
+): React.ReactNode {
   if (val == null) return <span className="text-[#CDD5DB]">—</span>;
   if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
     return String(val);
   }
   if (Array.isArray(val)) {
     if (val.length === 0) return <span className="text-[#CDD5DB]">[]</span>;
-    if (typeof val[0] === "object" && val[0] !== null) return renderDataTable(val);
+    if (isNumericArray(val)) {
+      return <Sparkline data={val} columnName={columnName} onClick={onChartClick} />;
+    }
+    if (typeof val[0] === "object" && val[0] !== null) return renderDataTable(val, onChartClick);
     return val.map((v) => (v == null ? "" : String(v))).join(", ");
   }
-  if (typeof val === "object") return renderDataTable(val);
+  if (typeof val === "object") return renderDataTable(val, onChartClick);
   return JSON.stringify(val);
 }
 
-function renderDataTable(data: unknown): React.ReactNode {
+function renderDataTable(data: unknown, onChartClick?: ChartClickHandler): React.ReactNode {
   if (data == null) return <p className="text-sm text-[#68737B]">No output data</p>;
 
   if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object" && data[0] !== null) {
@@ -144,7 +134,7 @@ function renderDataTable(data: unknown): React.ReactNode {
               <tr key={i} className={i < data.length - 1 ? "border-b border-b-[#EDF2F6]" : ""}>
                 {keys.map((key) => (
                   <td key={key} className="px-3 py-2 align-top text-xs text-[#011111]">
-                    {renderCellValue((row as Record<string, unknown>)[key])}
+                    {renderCellValue((row as Record<string, unknown>)[key], key, onChartClick)}
                   </td>
                 ))}
               </tr>
@@ -170,7 +160,9 @@ function renderDataTable(data: unknown): React.ReactNode {
                 >
                   {k}
                 </th>
-                <td className="px-3 py-2 align-top text-xs text-[#011111]">{renderCellValue(v)}</td>
+                <td className="px-3 py-2 align-top text-xs text-[#011111]">
+                  {renderCellValue(v, k, onChartClick)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -216,26 +208,43 @@ function isQuestionAnswer(data: unknown): data is { answer: string } {
   );
 }
 
-function ChartView({ series }: { series: ChartSeries[] }) {
-  const plotData: LineSeriesData[] = series.map((s, i) => ({
-    name: s.name,
-    x: s.values.map((_, idx) => idx),
-    y: s.values,
-    mode: "lines",
-    line: { color: CHART_SERIES_COLORS[i % CHART_SERIES_COLORS.length], width: 2 },
-    showlegend: series.length > 1,
-  }));
-
+function ExpandedChart({
+  data,
+  columnName,
+  onClose,
+}: {
+  data: number[];
+  columnName: string;
+  onClose: () => void;
+}) {
+  const plotData: LineSeriesData[] = [
+    {
+      name: columnName,
+      x: data.map((_, idx) => idx),
+      y: data,
+      mode: "lines",
+      line: { color: "#005E5E", width: 2 },
+      showlegend: false,
+    },
+  ];
   return (
-    <div className="overflow-hidden rounded-lg border border-[#EDF2F6] bg-white">
-      <div className="h-[280px] w-full">
+    <div className="mt-3 overflow-hidden rounded-lg border border-[#EDF2F6] bg-white">
+      <div className="flex items-center justify-between border-b border-[#EDF2F6] bg-[#F7F8FA] px-3 py-1.5">
+        <span className="text-xs font-semibold text-[#011111]">{columnName}</span>
+        <button
+          type="button"
+          className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
+          onClick={onClose}
+          title="Close chart"
+          aria-label="Close chart"
+        >
+          <X className="size-3" />
+        </button>
+      </div>
+      <div className="h-[280px] w-full p-2">
         <LineChart
           data={plotData}
-          config={{
-            xAxisTitle: "Index",
-            yAxisTitle: series.length === 1 ? series[0].name : "Value",
-            useWebGL: false,
-          }}
+          config={{ xAxisTitle: "Index", yAxisTitle: columnName, useWebGL: false }}
         />
       </div>
     </div>
@@ -246,25 +255,16 @@ function DataTabs({
   data,
   copy,
   copied,
+  onChartClick,
 }: {
   data: unknown;
   copy: (text: string) => Promise<void>;
   copied: boolean;
+  onChartClick: ChartClickHandler;
 }) {
-  const chartSeries = getChartableSeries(data);
-  const showChart = chartSeries.length > 0;
-
   return (
-    <Tabs defaultValue={showChart ? "chart" : "table"} className="w-full">
+    <Tabs defaultValue="table" className="w-full">
       <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
-        {showChart && (
-          <TabsTrigger
-            value="chart"
-            className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            Chart
-          </TabsTrigger>
-        )}
         <TabsTrigger
           value="table"
           className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -278,13 +278,8 @@ function DataTabs({
           JSON
         </TabsTrigger>
       </TabsList>
-      {showChart && (
-        <TabsContent value="chart" className="mt-2">
-          <ChartView series={chartSeries} />
-        </TabsContent>
-      )}
       <TabsContent value="table" className="mt-2">
-        {renderDataTable(data)}
+        {renderDataTable(data, onChartClick)}
       </TabsContent>
       <TabsContent value="json" className="mt-2">
         <div className="relative">
@@ -313,6 +308,14 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
   const hasContent = cell.data != null || (cell.messages && cell.messages.length > 0);
   const toggleCollapsed = () => onUpdate({ ...cell, isCollapsed: !cell.isCollapsed });
   const { copy, copied } = useCopyToClipboard();
+  const [pinnedChart, setPinnedChart] = useState<{ data: number[]; columnName: string } | null>(
+    null,
+  );
+  const handleChartClick: ChartClickHandler = (data, columnName) => {
+    setPinnedChart((prev) =>
+      prev?.columnName === columnName ? null : { data, columnName },
+    );
+  };
 
   return (
     <div className="group/output relative overflow-hidden rounded-b-[10px] border border-t-0 border-[#EDF2F6] bg-white">
@@ -390,7 +393,21 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
 
             {/* Measurement / generic data */}
             {cell.data != null && !isQuestionAnswer(cell.data) && (
-              <DataTabs data={cell.data} copy={copy} copied={copied} />
+              <>
+                <DataTabs
+                  data={cell.data}
+                  copy={copy}
+                  copied={copied}
+                  onChartClick={handleChartClick}
+                />
+                {pinnedChart && (
+                  <ExpandedChart
+                    data={pinnedChart.data}
+                    columnName={pinnedChart.columnName}
+                    onClose={() => setPinnedChart(null)}
+                  />
+                )}
+              </>
             )}
 
             {!hasContent && (

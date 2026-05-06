@@ -134,50 +134,64 @@ describe("OutputCellComponent", () => {
     expect(screen.getByTitle("Expand output")).toBeInTheDocument();
   });
 
-  it("renders a chart by default and exposes Table/JSON tabs when data is a numeric array", async () => {
-    const cell = createOutputCell({ data: [1, 2, 3, 4, 5] });
-    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
-
-    expect(screen.getByTestId("line-chart")).toBeInTheDocument();
-    expect(screen.getByTestId("series-value")).toHaveTextContent("1,2,3,4,5");
-    expect(screen.getByRole("tab", { name: "Chart" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Table" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "JSON" })).toBeInTheDocument();
-  });
-
-  it("plots each numeric-array field of an object payload as a separate series", () => {
+  it("renders inline sparklines for numeric-array fields in the table", () => {
     const cell = createOutputCell({
       data: { device_id: "abc", spectrum: [10, 20, 30], baseline: [1, 2, 3] },
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    const chart = screen.getByTestId("line-chart");
-    expect(chart).toHaveAttribute("data-series", JSON.stringify(["spectrum", "baseline"]));
-    expect(screen.getByTestId("series-spectrum")).toHaveTextContent("10,20,30");
-    expect(screen.getByTestId("series-baseline")).toHaveTextContent("1,2,3");
+    expect(screen.getByRole("button", { name: "Expand chart for spectrum" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand chart for baseline" })).toBeInTheDocument();
+    // Plain string values still render as text, not as charts.
+    expect(screen.getByText("abc")).toBeInTheDocument();
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
   });
 
-  it("walks into nested set[] arrays of objects (MultispeQ-style payload)", () => {
+  it("renders sparklines inside nested rows (MultispeQ-style set[0] payload)", () => {
     const cell = createOutputCell({
-      data: {
-        set: [{ ENV: [1, 2, 3], SUN: [10, 20, 30], Fluo: [100, 200, 300] }],
-        protocol_id: NaN,
-      },
+      data: { set: [{ ENV: [1, 2, 3], SUN: [10, 20, 30] }], protocol_id: 12 },
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    const chart = screen.getByTestId("line-chart");
-    // Common "set[0]." prefix is stripped so the legend reads ENV/SUN/Fluo.
-    expect(chart).toHaveAttribute("data-series", JSON.stringify(["ENV", "SUN", "Fluo"]));
-    expect(screen.getByTestId("series-ENV")).toHaveTextContent("1,2,3");
-    expect(screen.getByTestId("series-SUN")).toHaveTextContent("10,20,30");
+    expect(screen.getByRole("button", { name: "Expand chart for ENV" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand chart for SUN" })).toBeInTheDocument();
   });
 
-  it("hides the Chart tab and defaults to Table when no field is a numeric array", () => {
+  it("expands the full chart below the table when a sparkline is clicked, and closes it again", async () => {
+    const user = userEvent.setup();
+    const cell = createOutputCell({
+      data: { spectrum: [10, 20, 30], baseline: [1, 2, 3] },
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expand chart for spectrum" }));
+    expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("series-spectrum")).toHaveTextContent("10,20,30");
+
+    await user.click(screen.getByRole("button", { name: "Close chart" }));
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+  });
+
+  it("clicking the same sparkline a second time toggles the expanded chart off", async () => {
+    const user = userEvent.setup();
+    const cell = createOutputCell({ data: { spectrum: [10, 20, 30] } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    const trigger = screen.getByRole("button", { name: "Expand chart for spectrum" });
+    await user.click(trigger);
+    expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+  });
+
+  it("does not render a sparkline when no field is a numeric array", () => {
     const cell = createOutputCell({ data: { device_id: "abc-123", firmware_version: "1.2.3" } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.queryByRole("tab", { name: "Chart" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Expand chart/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
     expect(screen.getByText("device_id")).toBeInTheDocument();
   });
