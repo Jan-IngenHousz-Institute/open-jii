@@ -141,10 +141,10 @@ jobs:
             echo "📱 Mobile release detected: v$MOBILE_VERSION"
           fi
 
-      - name: Trigger Google Play Submission
+      - name: Trigger Mobile Release
         if: steps.extract_mobile.outputs.mobile_version != ''
         run: |
-          gh workflow run submit-to-google-play.yml \
+          gh workflow run mobile-release.yml \
             --ref ${{ github.ref_name }} \
             --field version=${{ steps.extract_mobile.outputs.mobile_version }}
         env:
