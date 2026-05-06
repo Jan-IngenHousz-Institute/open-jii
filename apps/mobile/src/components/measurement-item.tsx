@@ -1,8 +1,8 @@
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { UploadCloud, Trash2, CloudCheck, CloudAlert } from "lucide-react-native";
-import React from "react";
-import { View, Text, TouchableOpacity, Pressable } from "react-native";
+import React, { memo } from "react";
+import { View, Text, TouchableOpacity, Pressable, ActivityIndicator } from "react-native";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
@@ -23,14 +23,14 @@ interface MeasurementItemProps {
   experimentName: string;
   status: MeasurementStatus;
   questions?: AnswerData[];
-  onPress?: () => void;
+  onPress?: (id: string) => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
   /** When true, action buttons (sync/delete) are hidden - e.g. when used inside a swipeable row */
   hideActions?: boolean;
 }
 
-export function MeasurementItem({
+export const MeasurementItem = memo(function MeasurementItem({
   id,
   timestamp,
   experimentName,
@@ -43,6 +43,7 @@ export function MeasurementItem({
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
   const isSynced = status === "synced";
+  const isSyncing = status === "syncing";
 
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
@@ -50,7 +51,7 @@ export function MeasurementItem({
   return (
     <Pressable
       className={clsx("border-t px-4 py-3", classes.card, classes.border)}
-      onPress={onPress}
+      onPress={() => onPress?.(id)}
     >
       {/* Top: answers */}
       <Text
@@ -75,7 +76,7 @@ export function MeasurementItem({
         <View className="flex-row items-center gap-1.5">
           {!hideActions && (
             <View className="flex-row gap-1">
-              {!isSynced && (
+              {!isSynced && !isSyncing && !!onSync && (
                 <TouchableOpacity
                   onPress={(e) => {
                     e.stopPropagation();
@@ -106,7 +107,9 @@ export function MeasurementItem({
           <Text className={clsx("shrink-0 text-sm", classes.textMuted)} numberOfLines={1}>
             {formatTimeAgo(timestamp)}
           </Text>
-          {isSynced ? (
+          {isSyncing ? (
+            <ActivityIndicator size={16} color={colors.semantic.info} />
+          ) : isSynced ? (
             <CloudCheck size={16} color={colors.semantic.success} />
           ) : (
             <CloudAlert size={16} color={colors.semantic.error} />
@@ -115,4 +118,4 @@ export function MeasurementItem({
       </View>
     </Pressable>
   );
-}
+});

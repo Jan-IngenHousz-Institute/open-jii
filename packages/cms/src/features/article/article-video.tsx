@@ -6,11 +6,11 @@ import type { ReactElement } from "react";
 import { cn, cva } from "@repo/ui/lib/utils";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
-import { CtfImage } from "../contentful/ctf-image";
+import { CtfVideo } from "../contentful/ctf-video";
 
-interface ArticleImageProps {
-  image: ComponentRichImage;
-  imageClassName?: string;
+interface ArticleVideoProps {
+  video: ComponentRichImage;
+  videoClassName?: string;
 }
 
 const wrapperVariants = cva("flex", {
@@ -25,7 +25,7 @@ const wrapperVariants = cva("flex", {
   },
 });
 
-const imageVariants = cva("rounded-2xl", {
+const videoVariants = cva("rounded-2xl", {
   variants: {
     fullWidth: {
       true: "md:w-screen md:max-w-[calc(100vw-40px)] md:shrink-0",
@@ -37,28 +37,26 @@ const imageVariants = cva("rounded-2xl", {
   },
 });
 
-export const ArticleImage = ({ image, imageClassName }: ArticleImageProps): ReactElement | null => {
+export const ArticleVideo = ({ video, videoClassName }: ArticleVideoProps): ReactElement | null => {
   const inspectorProps = useContentfulInspectorMode({
-    entryId: image.sys.id,
+    entryId: video.sys.id,
   });
 
-  if (!image.image) return null;
+  if (!video.image) return null;
 
   return (
     <figure>
       <div
-        className={wrapperVariants({ fullWidth: image.fullWidth })}
+        className={wrapperVariants({ fullWidth: video.fullWidth })}
         {...inspectorProps({ fieldId: "image" })}
       >
-        <CtfImage
-          nextImageProps={{
-            className: cn(imageVariants({ fullWidth: image.fullWidth }), imageClassName),
-          }}
-          {...image.image}
+        <CtfVideo
+          className={cn(videoVariants({ fullWidth: video.fullWidth }), videoClassName)}
+          {...video.image}
         />
       </div>
-      {image.caption && (
-        <figcaption {...inspectorProps({ fieldId: "caption" })}>{image.caption}</figcaption>
+      {video.caption && (
+        <figcaption {...inspectorProps({ fieldId: "caption" })}>{video.caption}</figcaption>
       )}
     </figure>
   );
