@@ -81,13 +81,13 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   DRY_RUN: ${{ inputs.dry_run }}
+                  INPUT_REF: ${{ inputs.ref }}
+                  TRIGGER_BRANCH: ${{ github.ref_name }}
+                  REPO: ${{ github.repository }}
               run: |
                   set -euo pipefail
 
                   # Determine the release branch from inputs or the triggering ref
-                  INPUT_REF="${{ inputs.ref }}"
-                  TRIGGER_BRANCH="${{ github.ref_name }}"
-
                   if [[ "$INPUT_REF" =~ ^release/[0-9]{8}$ ]]; then
                     RELEASE_BRANCH="$INPUT_REF"
                   elif [[ "$TRIGGER_BRANCH" =~ ^release/[0-9]{8}$ ]]; then
@@ -137,9 +137,11 @@ jobs:
                   RANGE="${PREVIOUS_BRANCH}..origin/${RELEASE_BRANCH}"
                   echo "Commit range: $RANGE"
 
-                  # Extract PR numbers from commit messages
-                  # Handles regular merges ("Merge pull request #NNN") and squash merges ("Title (#NNN)")
-                  PR_NUMBERS=$(git log "$RANGE" --oneline | grep -oP '#\d+' | tr -d '#' | sort -u)
+                  # Extract PR numbers from canonical GitHub merge/squash commit subjects only:
+                  # "Merge pull request #NNN" and "Title (#NNN)"
+                  PR_NUMBERS=$(git log "$RANGE" --format="%s" \
+                    | grep -oP '(?<=Merge pull request #)\d+|(?<=\(#)\d+(?=\))' \
+                    | sort -u || true)
 
                   if [ -z "$PR_NUMBERS" ]; then
                     echo "No PRs found in range."
@@ -152,8 +154,6 @@ jobs:
                     echo "[DRY RUN] Would create label '$LABEL_NAME' and apply it to PRs above."
                     exit 0
                   fi
-
-                  REPO="${{ github.repository }}"
 
                   # Create the label if it doesn't exist
                   if ! gh label list --repo "$REPO" --json name --jq '.[].name' | grep -qx "$LABEL_NAME"; then
