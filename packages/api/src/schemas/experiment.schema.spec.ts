@@ -1093,9 +1093,7 @@ describe("Experiment Schema", () => {
       const result = zCustomMetadataPayload.safeParse(blob);
       expect(result.success).toBe(false);
       if (!result.success) {
-        const issue = result.error.issues.find(
-          (i) => i.path.join(".") === "identifierColumnId",
-        );
+        const issue = result.error.issues.find((i) => i.path.join(".") === "identifierColumnId");
         expect(issue?.message).toContain("missing");
       }
     });
