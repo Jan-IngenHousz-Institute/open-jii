@@ -149,7 +149,10 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
     return (
       <CanvasPlaceholder
         title={t("errors.failedToLoadData")}
-        body={t("workspace.canvas.fetchErrorBody", "The query couldn't run with the current data configuration. Try a different column or table.")}
+        body={t(
+          "workspace.canvas.fetchErrorBody",
+          "The query couldn't run with the current data configuration. Try a different column or table.",
+        )}
       />
     );
   }
