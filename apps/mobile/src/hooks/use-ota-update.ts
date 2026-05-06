@@ -24,7 +24,13 @@ export function useOtaUpdate(): void {
         });
         reloadTimer = setTimeout(() => {
           if (cancelled) return;
-          void Updates.reloadAsync();
+          Updates.reloadAsync().catch((err) => {
+            if (cancelled) return;
+            console.error("[ota] reload failed", err);
+            toast.error("Restart failed", {
+              description: "Please restart the app manually to apply update.",
+            });
+          });
         }, 2000);
       } catch (err) {
         console.warn("[ota] update check failed", err);

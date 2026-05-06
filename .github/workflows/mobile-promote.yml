@@ -127,6 +127,7 @@ jobs:
             --auto-submit
 
       - name: Publish OTA
+        if: steps.decide.outputs.mode == 'ota'
         working-directory: apps/mobile
         env:
           VERSION: ${{ steps.version.outputs.version }}
