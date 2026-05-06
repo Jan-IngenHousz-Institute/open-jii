@@ -151,7 +151,15 @@ jobs:
                   echo "Found PRs: $(echo "$PR_NUMBERS" | tr '\n' ' ')"
 
                   if [ "${DRY_RUN:-false}" = "true" ]; then
-                    echo "[DRY RUN] Would create label '$LABEL_NAME' and apply it to PRs above."
+                    echo "[DRY RUN] Verifying which numbers are PRs (not issues)..."
+                    for NUMBER in $PR_NUMBERS; do
+                      TYPE=$(gh api "repos/$REPO/issues/$NUMBER" --jq '.pull_request // empty' 2>/dev/null)
+                      if [ -z "$TYPE" ]; then
+                        echo "  ⏭ #$NUMBER → issue, would skip"
+                      else
+                        echo "  ✓ #$NUMBER → PR, would label with '$LABEL_NAME'"
+                      fi
+                    done
                     exit 0
                   fi
 
@@ -165,16 +173,22 @@ jobs:
                   fi
 
                   LABELED=0
-                  FAILED=0
-                  for PR in $PR_NUMBERS; do
-                    if gh pr edit "$PR" --add-label "$LABEL_NAME" --repo "$REPO" 2>/dev/null; then
-                      echo "✓ #$PR"
+                  SKIPPED=0
+                  for NUMBER in $PR_NUMBERS; do
+                    TYPE=$(gh api "repos/$REPO/issues/$NUMBER" --jq '.pull_request // empty' 2>/dev/null)
+                    if [ -z "$TYPE" ]; then
+                      echo "⏭ #$NUMBER is an issue, skipping"
+                      SKIPPED=$((SKIPPED + 1))
+                      continue
+                    fi
+                    if gh pr edit "$NUMBER" --add-label "$LABEL_NAME" --repo "$REPO" 2>/dev/null; then
+                      echo "✓ #$NUMBER"
                       LABELED=$((LABELED + 1))
                     else
-                      echo "✗ #$PR (not found or already closed)"
-                      FAILED=$((FAILED + 1))
+                      echo "✗ #$NUMBER (could not label)"
+                      SKIPPED=$((SKIPPED + 1))
                     fi
                   done
 
                   echo ""
-                  echo "Done: $LABELED labeled, $FAILED skipped."
+                  echo "Done: $LABELED labeled, $SKIPPED skipped."
