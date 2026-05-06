@@ -59,7 +59,7 @@ export function ChartFrame({
                 configLink:
                   visualization.id && visualization.id !== "preview" ? (
                     <Link
-                      href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}/edit`}
+                      href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}`}
                       className="text-foreground underline hover:opacity-80"
                     />
                   ) : (

@@ -178,11 +178,11 @@ export type ColumnKind = "numeric" | "temporal" | "categorical" | "complex";
 export function getColumnKind(type?: string): ColumnKind | undefined {
   if (!type) return undefined;
   if (isNumericType(type) || isDecimalType(type)) return "numeric";
-  if (isTimestampType(type) || type === "DATE") return "temporal";
+  if (isTimestampType(type) || type === ColumnPrimitiveType.DATE) return "temporal";
   if (isArrayType(type) || isMapType(type) || isStructType(type) || isVariantType(type)) {
     return "complex";
   }
-  if (isStringType(type) || type === "BOOLEAN") return "categorical";
+  if (isStringType(type) || type === ColumnPrimitiveType.BOOLEAN) return "categorical";
   return undefined;
 }
 

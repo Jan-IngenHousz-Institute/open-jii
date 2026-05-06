@@ -243,7 +243,7 @@ function VisualizationTableRow({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  aria-label={t("ui.actions.edit")}
+                  aria-label={t("ui.actions.moreActions", "More actions")}
                   className={cn(
                     "hover:bg-accent data-[state=open]:bg-accent inline-flex size-8 items-center justify-center rounded-md hover:text-[#011111] data-[state=open]:text-[#011111]",
                     TEXT_MUTED,

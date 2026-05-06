@@ -1,6 +1,5 @@
+import ExperimentVisualizationReadOnly from "@/components/experiment-visualizations/experiment-visualization-read-only";
 import { notFound } from "next/navigation";
-
-import ExperimentVisualizationReadOnly from "../../../../../../../../components/experiment-visualizations/experiment-visualization-read-only";
 
 interface PageProps {
   params: Promise<{

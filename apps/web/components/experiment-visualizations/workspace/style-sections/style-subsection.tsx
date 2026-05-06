@@ -15,7 +15,11 @@ interface StyleSubsectionProps {
 export function StyleSubsection({ title, children }: StyleSubsectionProps) {
   return (
     <div className="space-y-2.5">
-      <div className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+      <div
+        role="heading"
+        aria-level={3}
+        className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider"
+      >
         {title}
       </div>
       <div className="space-y-3">{children}</div>

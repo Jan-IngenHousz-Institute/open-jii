@@ -22,17 +22,23 @@ export function LineRenderer({
 
   const xColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "x")[0]?.source
     .columnName;
-  const yEntries = dataSourcesByRole(visualization.dataConfig.dataSources, "y");
+  // Both `dataSourcesByRole` and `resolveSeries` allocate fresh arrays on
+  // every call, which would defeat the chartSeries useMemo below — Plotly
+  // would redraw on every parent render. Cache through useMemo so identity
+  // is stable across renders that don't actually change inputs.
+  const yEntries = useMemo(
+    () => dataSourcesByRole(visualization.dataConfig.dataSources, "y"),
+    [visualization.dataConfig.dataSources],
+  );
 
   const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
     orderBy: xColumn,
   });
 
-  // Hoisted out of the useMemo so the bottom-level `effectiveConfig` can
-  // also branch on `useIndexForX` — when X is synthesised, the user's
-  // auto-picked xAxisType ("date" for a timestamp column, etc.) no
-  // longer matches the actual integer indices being plotted.
-  const { effectiveYEntries, useIndexForX } = resolveSeries(yEntries, xColumn);
+  const { effectiveYEntries, useIndexForX } = useMemo(
+    () => resolveSeries(yEntries, xColumn),
+    [yEntries, xColumn],
+  );
 
   const chartSeries = useMemo<LineSeriesData[]>(() => {
     if (visualization.chartType !== "line") return [];

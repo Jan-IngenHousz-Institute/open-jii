@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Textarea } from "@repo/ui/components/textarea";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import type { ChartFormValues } from "../charts/form-values";
 import { getChartTypeDef } from "../charts/registry";
@@ -277,9 +278,25 @@ function SettingsMenu({ experimentId, visualization }: SettingsMenuProps) {
             <Button
               variant="destructive"
               onClick={() =>
-                deleteVisualization({
-                  params: { id: experimentId, visualizationId: visualization.id },
-                })
+                deleteVisualization(
+                  { params: { id: experimentId, visualizationId: visualization.id } },
+                  {
+                    // Delete failures were silent: the dialog stayed open
+                    // with the disabled spinner clearing but no signal
+                    // either way. Surface a toast so the user knows the
+                    // request didn't take, dialog stays open for retry.
+                    onError: (err) => {
+                      const message =
+                        (err as { body?: { message?: string } } | null)?.body?.message ??
+                        tCommon("ui.actions.error", "Something went wrong");
+                      toast({
+                        title: t("workspace.detailsSidebar.deleteVisualization"),
+                        description: message,
+                        variant: "destructive",
+                      });
+                    },
+                  },
+                )
               }
               disabled={isDeleting}
             >

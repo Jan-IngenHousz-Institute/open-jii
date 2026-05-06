@@ -4,7 +4,7 @@ import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperime
 import { useEffect, useRef } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { CreateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
+import type { UpdateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
 
 import type { ChartFormValues } from "../charts/form-values";
 import { useVisualizationSaveStatus } from "./save-context";
@@ -67,7 +67,7 @@ export function useAutosave({
           body: {
             ...snapshot,
             config: snapshot.config as unknown as Record<string, unknown>,
-          } satisfies CreateExperimentVisualizationBody,
+          } satisfies UpdateExperimentVisualizationBody,
         });
         if (seq < latestAppliedRef.current) return;
         latestAppliedRef.current = seq;

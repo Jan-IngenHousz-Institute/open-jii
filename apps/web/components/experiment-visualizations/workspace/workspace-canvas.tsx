@@ -56,7 +56,11 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
   const hasAnyColumn = configuredSources.length > 0;
   const isReady = Boolean(def) && Boolean(tableName) && hasAnyColumn;
 
-  const { data: fetched, isLoading } = useExperimentVisualizationData(
+  const {
+    data: fetched,
+    isLoading,
+    error: fetchError,
+  } = useExperimentVisualizationData(
     experimentId,
     tableName
       ? {
@@ -133,6 +137,20 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
         <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         <span className="text-muted-foreground text-sm">{t("workspace.canvas.loading")}</span>
       </div>
+    );
+  }
+
+  // Surface fetch failures here instead of falling through with `undefined`
+  // rows. Forwarding undefined makes the renderer's `useChartData` think
+  // no provider gave it data, so it subscribes to the same query key —
+  // TanStack then refetches because the query is in error state, kicking
+  // off a fresh retry pipeline. Two pipelines means twice the retries.
+  if (fetchError) {
+    return (
+      <CanvasPlaceholder
+        title={t("errors.failedToLoadData")}
+        body={t("workspace.canvas.fetchErrorBody", "The query couldn't run with the current data configuration. Try a different column or table.")}
+      />
     );
   }
 

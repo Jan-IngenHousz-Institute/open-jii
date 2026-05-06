@@ -31,11 +31,11 @@ export default function VisualizationLayout({ children }: LayoutProps) {
   const { t } = useTranslation("common");
 
   const { data: accessData } = useExperimentAccess(experimentId);
+  const { data, isLoading, error } = useExperimentVisualization(visualizationId, experimentId);
+
   if (accessData?.body.experiment.status === "archived") {
     notFound();
   }
-
-  const { data, isLoading, error } = useExperimentVisualization(visualizationId, experimentId);
 
   return (
     <div className="visualization-page flex flex-1 flex-col">
