@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import "expo-application";
 import * as Application from "expo-application";
 import { useRouter } from "expo-router";
+import * as Updates from "expo-updates";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, Linking, Image } from "react-native";
@@ -186,8 +187,20 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        openJII v{Application.nativeApplicationVersion}
+        openJII v{Application.nativeApplicationVersion} ({Application.nativeBuildVersion})
       </Text>
+      {Updates.updateId && (
+        <Text
+          style={[
+            styles.versionText,
+            {
+              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
+            },
+          ]}
+        >
+          {Updates.updateId}
+        </Text>
+      )}
     </ScrollView>
   );
 }
