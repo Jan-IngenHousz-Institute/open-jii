@@ -5,19 +5,27 @@ import { describe, it, expect, vi } from "vitest";
 import { OutputCellComponent } from "./output-cell";
 
 // Plotly cannot run in jsdom; render a stub that exposes the series for assertions.
+// Mock factory is hoisted so we use React.createElement (no JSX) to avoid runtime ordering issues.
 vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
+  const { createElement } = await import("react");
   return {
     ...actual,
-    LineChart: ({ data }: { data: { name: string; y: number[] }[] }) => (
-      <div data-testid="line-chart" data-series={JSON.stringify(data.map((s) => s.name))}>
-        {data.map((s) => (
-          <div key={s.name} data-testid={`series-${s.name}`}>
-            {s.y.join(",")}
-          </div>
-        ))}
-      </div>
-    ),
+    LineChart: ({ data }: { data: { name: string; y: number[] }[] }) =>
+      createElement(
+        "div",
+        {
+          "data-testid": "line-chart",
+          "data-series": JSON.stringify(data.map((s) => s.name)),
+        },
+        data.map((s) =>
+          createElement(
+            "div",
+            { key: s.name, "data-testid": `series-${s.name}` },
+            s.y.join(","),
+          ),
+        ),
+      ),
   };
 });
 
@@ -184,6 +192,35 @@ describe("OutputCellComponent", () => {
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
 
     await user.click(trigger);
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+  });
+
+  it("switches the expanded chart to a different column on a single click", async () => {
+    const user = userEvent.setup();
+    const cell = createOutputCell({ data: { spectrum: [10, 20, 30], baseline: [1, 2, 3] } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole("button", { name: "Expand chart for spectrum" }));
+    expect(screen.getByTestId("series-spectrum")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expand chart for baseline" }));
+    expect(screen.queryByTestId("series-spectrum")).not.toBeInTheDocument();
+    expect(screen.getByTestId("series-baseline")).toHaveTextContent("1,2,3");
+  });
+
+  it("collapses the expanded chart when the user switches to the JSON tab", async () => {
+    const user = userEvent.setup();
+    const cell = createOutputCell({ data: { spectrum: [10, 20, 30] } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole("button", { name: "Expand chart for spectrum" }));
+    expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "JSON" }));
+    expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
+
+    // Switching back to Table doesn't auto-restore the chart; the user re-clicks the sparkline.
+    await user.click(screen.getByRole("tab", { name: "Table" }));
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
   });
 

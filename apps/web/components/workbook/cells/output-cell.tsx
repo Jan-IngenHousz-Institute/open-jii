@@ -241,7 +241,10 @@ function ExpandedChart({
           <X className="size-3" />
         </button>
       </div>
-      <div className="h-[280px] w-full p-2">
+      {/* Plotly's X-axis title + tick labels need ~60px of bottom margin. The container is sized
+          generously so the trace doesn't squeeze them out, and pb-2 gives the panel breathing room
+          inside the cell wrapper's overflow-hidden boundary. */}
+      <div className="h-[340px] w-full px-2 pb-2 pt-1">
         <LineChart
           data={plotData}
           config={{ xAxisTitle: "Index", yAxisTitle: columnName, useWebGL: false }}
@@ -256,14 +259,18 @@ function DataTabs({
   copy,
   copied,
   onChartClick,
+  activeTab,
+  onTabChange,
 }: {
   data: unknown;
   copy: (text: string) => Promise<void>;
   copied: boolean;
   onChartClick: ChartClickHandler;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
 }) {
   return (
-    <Tabs defaultValue="table" className="w-full">
+    <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
         <TabsTrigger
           value="table"
@@ -311,10 +318,15 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
   const [pinnedChart, setPinnedChart] = useState<{ data: number[]; columnName: string } | null>(
     null,
   );
+  const [activeTab, setActiveTab] = useState("table");
   const handleChartClick: ChartClickHandler = (data, columnName) => {
-    setPinnedChart((prev) =>
-      prev?.columnName === columnName ? null : { data, columnName },
-    );
+    setPinnedChart((prev) => (prev?.columnName === columnName ? null : { data, columnName }));
+  };
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // The expanded chart only makes sense alongside the table view, so collapse it
+    // when the user switches to JSON.
+    if (tab !== "table") setPinnedChart(null);
   };
 
   return (
@@ -399,9 +411,14 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
                   copy={copy}
                   copied={copied}
                   onChartClick={handleChartClick}
+                  activeTab={activeTab}
+                  onTabChange={handleTabChange}
                 />
-                {pinnedChart && (
+                {pinnedChart && activeTab === "table" && (
+                  // Plotly reuses its plot div across re-renders; switching columns can leave the
+                  // previous trace on screen. Keying on columnName forces a fresh mount.
                   <ExpandedChart
+                    key={pinnedChart.columnName}
                     data={pinnedChart.data}
                     columnName={pinnedChart.columnName}
                     onClose={() => setPinnedChart(null)}
