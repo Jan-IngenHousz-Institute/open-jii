@@ -200,26 +200,6 @@ describe("DeltaDataService", () => {
       expect(result.map((f) => f.id)).toEqual(["a"]);
     });
 
-    it("supports range predicates via min/max", () => {
-      const files = [
-        fileWithStats("low", {
-          numRecords: 1,
-          minValues: { ts: "2024-01-01" },
-          maxValues: { ts: "2024-01-31" },
-        }),
-        fileWithStats("hi", {
-          numRecords: 1,
-          minValues: { ts: "2024-06-01" },
-          maxValues: { ts: "2024-06-30" },
-        }),
-      ];
-      const result = dataService.pruneFilesByFilter(files, {
-        op: "gte",
-        column: "ts",
-        value: "2024-05-01",
-      });
-      expect(result.map((f) => f.id)).toEqual(["hi"]);
-    });
   });
 
   describe("applyLimitHint", () => {

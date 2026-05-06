@@ -4,35 +4,20 @@ import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 
 export const DELTA_PORT = Symbol("DELTA_PORT");
 
-/** Scalar value types that show up in Delta filter leaves. */
-export type DeltaFilterValue = string | number | boolean | null;
-
 /**
- * AST for filtering rows fetched from Delta Sharing. The same expression is
- * fed through three interpreters:
- *
- *  1. predicate-hint compiler — emits SQL `predicateHints` strings for the
- *     server (best-effort, file-level only per protocol).
- *  2. file-stats pruner — uses `minValues` / `maxValues` / `nullCount` returned
- *     alongside files to skip downloads.
- *  3. row evaluator — full row-level evaluation after parquet decode (the
- *     source of truth for correctness).
- *
- * Layers 1 and 2 may approximate (over-include); layer 3 decides.
+ * Filter AST for narrowing Delta Sharing reads. Today the read path only needs
+ * `eq` + `and` (scoping reads to one experiment, optionally one macro). The AST
+ * shape stays so adding `range` / `in` / `or` is a one-line union extension
+ * plus three small interpreter cases — no architectural change.
  */
 export type DeltaFilter =
-  | { op: "eq" | "neq"; column: string; value: DeltaFilterValue }
-  | { op: "lt" | "lte" | "gt" | "gte"; column: string; value: string | number }
-  | { op: "in" | "nin"; column: string; values: DeltaFilterValue[] }
-  | { op: "isNull" | "isNotNull"; column: string }
-  | { op: "and" | "or"; filters: DeltaFilter[] }
-  | { op: "not"; filter: DeltaFilter };
+  | { op: "eq"; column: string; value: string }
+  | { op: "and"; filters: DeltaFilter[] };
 
-/** Multi-column sort with optional null-ordering control per key. */
+/** Sort key applied client-side after parquet decode. */
 export interface DeltaSortKey {
   column: string;
   direction?: "asc" | "desc";
-  nulls?: "first" | "last";
 }
 export type DeltaSort = DeltaSortKey[];
 

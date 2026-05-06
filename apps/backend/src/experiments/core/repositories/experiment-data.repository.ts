@@ -44,11 +44,6 @@ export class ExperimentDataRepository {
     columns?: string[];
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
-    /**
-     * Additional filter to AND with the experiment scoping. Use this for
-     * range / IN / etc. filters from the controller layer.
-     */
-    extraFilter?: DeltaFilter;
     page?: number;
     pageSize?: number;
   }): Promise<Result<TableDataDto[]>> {
@@ -59,7 +54,6 @@ export class ExperimentDataRepository {
       columns,
       orderBy,
       orderDirection = "ASC",
-      extraFilter,
       page = 1,
       pageSize = 5,
     } = params;
@@ -78,12 +72,9 @@ export class ExperimentDataRepository {
     if (targetResult.isFailure()) return targetResult;
     const target = targetResult.value;
 
-    // Combine the experiment-scoping filter with any caller-supplied predicate.
-    const filter: DeltaFilter = extraFilter
-      ? { op: "and", filters: [target.filter, extraFilter] }
-      : target.filter;
-
-    const dataResult = await this.deltaPort.getTableData(target.physicalTable, { filter });
+    const dataResult = await this.deltaPort.getTableData(target.physicalTable, {
+      filter: target.filter,
+    });
     if (dataResult.isFailure()) return dataResult;
 
     const flattened = this.flattenVariants(
