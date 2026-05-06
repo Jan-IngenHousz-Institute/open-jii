@@ -18,10 +18,14 @@ const RUNTIME_FIELDS = new Set([
   "messages",
 ]);
 
+// Output cells are runtime artifacts produced by execution; they are not part
+// of the workbook's design and must not register as "upgradable" drift.
 const designOf = (cells: WorkbookCell[]) =>
-  cells.map((cell) =>
-    Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_FIELDS.has(k))),
-  );
+  cells
+    .filter((cell) => cell.type !== "output")
+    .map((cell) =>
+      Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_FIELDS.has(k))),
+    );
 
 @Injectable()
 export class IsWorkbookUpgradableUseCase {

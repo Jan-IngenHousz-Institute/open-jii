@@ -164,6 +164,35 @@ describe("IsWorkbookUpgradableUseCase", () => {
     expect(result.value).toBe(false);
   });
 
+  it("is false when only output cells have been appended since the latest version", async () => {
+    const source = { id: "md1", type: "markdown" as const, content: "hi", isCollapsed: false };
+    const workbook = await testApp.createWorkbook({
+      name: "WB",
+      cells: [source],
+      createdBy: userId,
+    });
+    await publishV1(workbook);
+
+    await workbookRepo.update(workbook.id, {
+      cells: [
+        source,
+        {
+          id: "out1",
+          type: "output",
+          isCollapsed: false,
+          producedBy: source.id,
+          data: { value: 42 },
+        },
+      ],
+    });
+    const fresh = await workbookRepo.findById(workbook.id);
+    assertSuccess(fresh);
+
+    const result = await useCase.execute(expectValue(fresh.value));
+    assertSuccess(result);
+    expect(result.value).toBe(false);
+  });
+
   it("propagates failure when the version repository fails", async () => {
     const workbook = await testApp.createWorkbook({ name: "WB", createdBy: userId });
     const fresh = await workbookRepo.findById(workbook.id);
