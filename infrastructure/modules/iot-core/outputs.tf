@@ -12,3 +12,4 @@ output "iot_kinesis_role_arn" {
   description = "ARN of the IoT Kinesis IAM Role"
   value       = aws_iam_role.iot_kinesis_role.arn
 }
+

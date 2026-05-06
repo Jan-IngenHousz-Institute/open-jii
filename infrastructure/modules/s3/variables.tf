@@ -45,3 +45,17 @@ variable "dr_bucket_name" {
   default     = null
 }
 
+variable "lifecycle_rules" {
+  description = "List of lifecycle rules for the primary bucket"
+  type = list(object({
+    id     = string
+    status = string
+    transitions = list(object({
+      days          = number
+      storage_class = string
+    }))
+    expiration_days = optional(number)
+  }))
+  default = []
+}
+

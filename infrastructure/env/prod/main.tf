@@ -79,6 +79,38 @@ module "kinesis" {
   workspace_kinesis_credential_id = var.kinesis_credential_id
 }
 
+module "iot_raw_archive_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-iot-raw-archive-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id     = "archive-tiering"
+      status = "Enabled"
+      transitions = [
+        { days = 30, storage_class = "STANDARD_IA" },
+        { days = 90, storage_class = "GLACIER" },
+        { days = 365, storage_class = "DEEP_ARCHIVE" }
+      ]
+      expiration_days = null
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
@@ -93,7 +125,11 @@ module "iot_core" {
   kinesis_stream_name     = module.kinesis.kinesis_stream_name
   kinesis_stream_arn      = module.kinesis.kinesis_stream_arn
 
-  cloudwatch_role_arn = module.cloudwatch.iot_cloudwatch_role_arn
+  cloudwatch_role_arn    = module.cloudwatch.iot_cloudwatch_role_arn
+  s3_archive_bucket_name = module.iot_raw_archive_s3.bucket_id
+  s3_archive_bucket_arn  = module.iot_raw_archive_s3.bucket_arn
+  iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
+  iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
 }
 
 module "cognito" {
