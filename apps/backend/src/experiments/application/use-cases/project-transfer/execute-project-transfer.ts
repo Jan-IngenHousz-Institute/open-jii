@@ -5,6 +5,7 @@ import type {
   ProjectTransferWebhookPayload,
   ProjectTransferWebhookResponse,
 } from "@repo/api/schemas/experiment.schema";
+import { flowNodesToWorkbookCells } from "@repo/api/utils/flow-to-workbook-cells";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -13,12 +14,14 @@ import { MacroRepository } from "../../../../macros/core/repositories/macro.repo
 import { CreateProtocolUseCase } from "../../../../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
+import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
+import type { CreateWorkbookDto } from "../../../../workbooks/core/models/workbook.model";
+import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
-import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "../flows/create-flow";
 
@@ -29,7 +32,6 @@ export class ExecuteProjectTransferUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
-    private readonly experimentProtocolRepository: ExperimentProtocolRepository,
     private readonly locationRepository: LocationRepository,
     private readonly createFlowUseCase: CreateFlowUseCase,
     private readonly createProtocolUseCase: CreateProtocolUseCase,
@@ -37,6 +39,8 @@ export class ExecuteProjectTransferUseCase {
     private readonly macroRepository: MacroRepository,
     private readonly protocolRepository: ProtocolRepository,
     private readonly userRepository: UserRepository,
+    private readonly workbookRepository: WorkbookRepository,
+    private readonly publishVersionUseCase: PublishVersionUseCase,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
@@ -154,28 +158,7 @@ export class ExecuteProjectTransferUseCase {
       return addMembersResult;
     }
 
-    // 5. Associate protocol with experiment (if protocol was created)
-    if (protocolId) {
-      const addProtocolsResult = await this.experimentProtocolRepository.addProtocols(
-        experiment.id,
-        [{ protocolId, order: 0 }],
-      );
-
-      if (addProtocolsResult.isFailure()) {
-        this.logger.error({
-          msg: "Failed to associate protocol with experiment",
-          errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-          operation: "executeProjectTransfer",
-          experimentId: experiment.id,
-          error: addProtocolsResult.error,
-        });
-        return failure(
-          AppError.internal(`Failed to associate protocol: ${addProtocolsResult.error.message}`),
-        );
-      }
-    }
-
-    // 6. Add locations if provided
+    // 5. Add locations if provided
     if (data.experiment.locations && data.experiment.locations.length > 0) {
       const locations: CreateLocationDto[] = data.experiment.locations.map((loc) => ({
         ...loc,
@@ -198,7 +181,7 @@ export class ExecuteProjectTransferUseCase {
       }
     }
 
-    // 7. Create flow (non-fatal, requires both protocol and macro)
+    // 6. Create flow (non-fatal, requires both protocol and macro)
     let flowId: string | null = null;
     if (protocolId && macroId) {
       const questionNodes: FlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({
@@ -266,6 +249,59 @@ export class ExecuteProjectTransferUseCase {
           experimentId: experiment.id,
           error: flowResult.error,
         });
+      }
+
+      // 7. Materialise a workbook from the same nodes (non-fatal).
+      const cells = flowNodesToWorkbookCells(allNodes, edges);
+      if (cells.length > 0) {
+        const workbookResult = await this.workbookRepository.create(
+          {
+            name: `${data.experiment.name} - Workbook`,
+            description: "Auto-generated from project transfer",
+            cells: cells as CreateWorkbookDto["cells"],
+            metadata: {},
+          },
+          data.experiment.createdBy,
+        );
+
+        if (workbookResult.isSuccess() && workbookResult.value.length > 0) {
+          const workbookId = workbookResult.value[0].id;
+          const versionResult = await this.publishVersionUseCase.execute(
+            workbookId,
+            data.experiment.createdBy,
+          );
+
+          if (versionResult.isSuccess()) {
+            const linkResult = await this.experimentRepository.update(experiment.id, {
+              workbookId,
+              workbookVersionId: versionResult.value.id,
+            });
+            if (linkResult.isFailure()) {
+              this.logger.warn({
+                msg: "Failed to link workbook to experiment during project transfer (non-fatal)",
+                operation: "executeProjectTransfer",
+                experimentId: experiment.id,
+                workbookId,
+                error: linkResult.error,
+              });
+            }
+          } else {
+            this.logger.warn({
+              msg: "Failed to publish workbook version during project transfer (non-fatal)",
+              operation: "executeProjectTransfer",
+              experimentId: experiment.id,
+              workbookId,
+              error: versionResult.error,
+            });
+          }
+        } else if (workbookResult.isFailure()) {
+          this.logger.warn({
+            msg: "Failed to create workbook during project transfer (non-fatal)",
+            operation: "executeProjectTransfer",
+            experimentId: experiment.id,
+            error: workbookResult.error,
+          });
+        }
       }
     }
 

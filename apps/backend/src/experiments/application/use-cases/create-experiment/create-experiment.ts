@@ -7,7 +7,6 @@ import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
-import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -17,7 +16,6 @@ export class CreateExperimentUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
-    private readonly experimentProtocolRepository: ExperimentProtocolRepository,
     private readonly locationRepository: LocationRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
@@ -107,28 +105,6 @@ export class CreateExperimentUseCase {
         );
 
         return addMembersResult.chain(async () => {
-          // Associate protocols if provided
-          if (Array.isArray(data.protocols) && data.protocols.length > 0) {
-            const addProtocolsResult = await this.experimentProtocolRepository.addProtocols(
-              experiment.id,
-              data.protocols,
-            );
-            if (addProtocolsResult.isFailure()) {
-              this.logger.error({
-                msg: "Failed to associate protocols with experiment",
-                errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-                operation: "createExperiment",
-                experimentId: experiment.id,
-                error: addProtocolsResult.error,
-              });
-              return failure(
-                AppError.badRequest(
-                  `Failed to associate protocols: ${addProtocolsResult.error.message}`,
-                ),
-              );
-            }
-          }
-
           // Associate locations if provided
           if (Array.isArray(data.locations) && data.locations.length > 0) {
             const locationsWithExperimentId = data.locations.map((location) => ({

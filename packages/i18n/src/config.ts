@@ -29,6 +29,7 @@ export const namespaces = [
   "dashboard",
   "account",
   "macro",
+  "workbook",
   "experimentData",
   "experimentVisualizations",
   "iot",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Code, FileSliders, Home, Microscope } from "lucide-react";
+import { BookOpen, Code, FileSliders, Home, Microscope } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -25,6 +25,13 @@ export default function PlatformNotFound() {
         href: "/platform/protocols",
         label: tNav("sidebar.protocols"),
         Icon: FileSliders,
+      };
+    }
+    if (pathname.includes("/workbooks")) {
+      return {
+        href: "/platform/workbooks",
+        label: tNav("sidebar.workbooks"),
+        Icon: BookOpen,
       };
     }
     if (pathname.includes("/macros")) {

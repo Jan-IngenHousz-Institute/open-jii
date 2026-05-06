@@ -266,6 +266,7 @@ describe("Flow Conversion", () => {
         source: "start",
         target: "start",
         label: "Continue",
+        sourceHandle: null,
       });
     });
 

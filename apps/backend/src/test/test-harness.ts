@@ -22,10 +22,11 @@ import {
   auditLogs,
   profiles,
   protocols,
-  experimentProtocols,
   organizations,
   flows,
   macros,
+  workbooks,
+  workbookVersions,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -180,8 +181,9 @@ export class TestHarness {
     await this.database.delete(auditLogs).execute();
     await this.database.delete(invitations).execute();
     await this.database.delete(experimentMembers).execute();
-    await this.database.delete(experimentProtocols).execute();
     await this.database.delete(experimentLocations).execute();
+    await this.database.delete(workbookVersions).execute();
+    await this.database.delete(workbooks).execute();
     // Flows reference experiments, so delete flows before experiments
     await this.database.delete(flows).execute();
     await this.database.delete(experiments).execute();
@@ -434,19 +436,24 @@ export class TestHarness {
     return macro;
   }
 
-  /**
-   * Helper to associate a protocol with an experiment
-   */
-  public async addExperimentProtocol(experimentId: string, protocolId: string, order = 0) {
-    const [association] = await this.database
-      .insert(experimentProtocols)
+  public async createWorkbook(data: {
+    name: string;
+    description?: string;
+    cells?: unknown[];
+    metadata?: Record<string, unknown>;
+    createdBy: string;
+  }) {
+    const [workbook] = await this.database
+      .insert(workbooks)
       .values({
-        experimentId,
-        protocolId,
-        order,
+        name: data.name,
+        description: data.description ?? "Test workbook description",
+        cells: data.cells ?? [],
+        metadata: data.metadata ?? {},
+        createdBy: data.createdBy,
       })
       .returning();
-    return association;
+    return workbook;
   }
 
   /**

@@ -111,37 +111,6 @@ export const zUpdateExperimentLocationsBody = z.object({
   locations: z.array(zLocationInput),
 });
 
-// --- Protocol Association Schemas ---
-export const zExperimentProtocolDetails = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  family: z.enum(["multispeq", "ambit", "generic"]),
-  createdBy: z.string().uuid(),
-});
-
-export const zExperimentProtocol = z.object({
-  experimentId: z.string().uuid(),
-  order: z.number().int(),
-  addedAt: z.string().datetime(),
-  protocol: zExperimentProtocolDetails,
-});
-
-export const zExperimentProtocolList = z.array(zExperimentProtocol);
-
-export const zExperimentProtocolPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  protocolId: z.string().uuid().describe("ID of the protocol association"),
-});
-
-export const zAddExperimentProtocolsBody = z.object({
-  protocols: z.array(
-    z.object({
-      protocolId: z.string().uuid(),
-      order: z.number().int().optional(),
-    }),
-  ),
-});
-
 // Define Zod schemas for experiment models
 export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
 
@@ -281,6 +250,8 @@ export const zExperiment = z.object({
   status: zExperimentStatus,
   visibility: zExperimentVisibility,
   embargoUntil: z.string().datetime(),
+  workbookId: z.string().uuid().nullable(),
+  workbookVersionId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),
@@ -316,7 +287,13 @@ export const zErrorResponse = z.object({
 });
 
 // --- Flow Schemas ---
-export const zFlowNodeType = z.enum(["question", "instruction", "measurement", "analysis"]);
+export const zFlowNodeType = z.enum([
+  "question",
+  "instruction",
+  "measurement",
+  "analysis",
+  "branch",
+]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 
@@ -324,10 +301,7 @@ export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "nu
 const zQuestionYesNo = z
   .object({
     kind: z.literal("yes_no"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -335,10 +309,7 @@ const zQuestionYesNo = z
 const zQuestionOpenEnded = z
   .object({
     kind: z.literal("open_ended"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -346,10 +317,7 @@ const zQuestionOpenEnded = z
 const zQuestionMultiChoice = z
   .object({
     kind: z.literal("multi_choice"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     options: z
       .array(
         z
@@ -365,10 +333,7 @@ const zQuestionMultiChoice = z
 const zQuestionNumber = z
   .object({
     kind: z.literal("number"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -394,6 +359,17 @@ export const zAnalysisContent = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const zBranchPathSummary = z.object({
+  id: z.string().min(1),
+  label: z.string().max(64),
+  color: z.string(),
+});
+
+export const zBranchContent = z.object({
+  paths: z.array(zBranchPathSummary).min(1),
+  defaultPathId: z.string().optional(),
+});
+
 export const zFlowNode = z.object({
   id: z.string().min(1),
   type: zFlowNodeType,
@@ -401,7 +377,13 @@ export const zFlowNode = z.object({
     .string()
     .min(1, "Node label is required")
     .max(64, "Node label must be 64 characters or less"),
-  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent, zAnalysisContent]),
+  content: z.union([
+    zQuestionContent,
+    zInstructionContent,
+    zMeasurementContent,
+    zAnalysisContent,
+    zBranchContent,
+  ]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
   // Optional persisted layout position (added later for backwards compatibility)
@@ -418,6 +400,7 @@ export const zFlowEdge = z.object({
   source: z.string().min(1),
   target: z.string().min(1),
   label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
+  sourceHandle: z.string().max(64).optional().nullable(),
 });
 
 /**
@@ -709,7 +692,6 @@ export type ExperimentData = z.infer<typeof zExperimentData>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentMember = z.infer<typeof zExperimentMember>;
-export type ExperimentProtocol = z.infer<typeof zExperimentProtocol>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
 export type ErrorResponse = z.infer<typeof zErrorResponse>;
 export type FlowNodeType = z.infer<typeof zFlowNodeType>;
@@ -792,22 +774,15 @@ export const zCreateExperimentBodyBase = z.object({
     )
     .optional()
     .describe("Optional array of member objects with userId and role"),
-  protocols: z
-    .array(
-      z.object({
-        protocolId: z.string().uuid(),
-        order: z.number().int().optional(),
-        name: z.string().optional(),
-      }),
-    )
-    .optional()
-    .describe(
-      "Optional array of protocol objects with protocolId and order to associate with the experiment",
-    ),
   locations: z
     .array(zLocationInput)
     .optional()
     .describe("Optional array of locations associated with the experiment"),
+  workbookId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Optional workbook ID to associate with the experiment"),
 });
 
 export const zCreateExperimentBody = zCreateExperimentBodyBase.superRefine((val, ctx) => {

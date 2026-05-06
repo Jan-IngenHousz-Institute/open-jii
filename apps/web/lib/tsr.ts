@@ -8,6 +8,7 @@ import { experimentContract } from "@repo/api/contracts/experiment.contract";
 import { macroContract } from "@repo/api/contracts/macro.contract";
 import { protocolContract } from "@repo/api/contracts/protocol.contract";
 import { userContract } from "@repo/api/contracts/user.contract";
+import { workbookContract } from "@repo/api/contracts/workbook.contract";
 
 import { tsrCustomApiFetcher } from "./tsr-custom-fetch";
 
@@ -20,6 +21,7 @@ export const contract = c.router({
   macros: macroContract,
   protocols: protocolContract,
   users: userContract,
+  workbooks: workbookContract,
 });
 
 export const tsr = initTsrReactQuery(contract, {
