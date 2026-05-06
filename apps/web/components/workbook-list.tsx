@@ -87,9 +87,7 @@ export function WorkbookList({ workbooks, isLoading }: WorkbookListProps) {
         <TableBody>
           {isLoading
             ? Array.from({ length: 4 }).map((_, index) => <SkeletonRow key={index} />)
-            : sorted.map((workbook) => (
-                <WorkbookTableRow key={workbook.id} workbook={workbook} />
-              ))}
+            : sorted.map((workbook) => <WorkbookTableRow key={workbook.id} workbook={workbook} />)}
         </TableBody>
       </Table>
     </div>
