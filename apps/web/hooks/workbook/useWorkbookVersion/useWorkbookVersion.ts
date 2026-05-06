@@ -11,9 +11,7 @@ export function useWorkbookVersion(
   const enabled = options?.enabled ?? !!(workbookId && versionId);
 
   const query = tsr.workbooks.getWorkbookVersion.useQuery({
-    queryData: {
-      params: { id: workbookId || "placeholder", versionId: versionId || "placeholder" },
-    },
+    queryData: { params: { id: workbookId, versionId } },
     queryKey: ["workbookVersion", workbookId, versionId],
     enabled,
   });

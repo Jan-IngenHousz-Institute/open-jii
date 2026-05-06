@@ -126,15 +126,8 @@ export function useWorkbookExecution({
     setSensorFamilyState(family);
   }, []);
 
-  const {
-    isConnected,
-    isConnecting,
-    error: connectionError,
-    deviceInfo,
-    driver,
-    connect,
-    disconnect,
-  } = useIotCommunication(sensorFamily, connectionType);
+  const { isConnected, isConnecting, deviceInfo, driver, connect, disconnect } =
+    useIotCommunication(sensorFamily, connectionType);
 
   const { executeProtocol } = useIotProtocolExecution(driver, isConnected, sensorFamily);
   const executeMacroMutation = tsr.macros.executeMacro.useMutation();
@@ -466,7 +459,6 @@ export function useWorkbookExecution({
   return {
     isConnected,
     isConnecting,
-    connectionError,
     deviceInfo,
     sensorFamily,
     setSensorFamily,

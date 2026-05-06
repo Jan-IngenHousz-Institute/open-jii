@@ -133,28 +133,34 @@ export function CellWrapper({
 
           {headerBadges}
 
-          <div
-            className={`ml-auto flex items-center gap-1 ${forceActionsVisible ? "opacity-100" : "opacity-0 transition-opacity group-hover:opacity-100"}`}
-          >
-            {!readOnly && headerActions}
+          <div className="ml-auto flex items-center gap-1">
+            <div
+              className={
+                forceActionsVisible
+                  ? "flex items-center gap-1 opacity-100"
+                  : "flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+              }
+            >
+              {!readOnly && headerActions}
 
-            {!readOnly && onDelete && (
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
-                      onClick={onDelete}
-                    >
-                      {deleteIcon ?? <Trash2 className="h-3.5 w-3.5" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{deleteLabel ?? "Delete cell"}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+              {!readOnly && onDelete && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
+                        onClick={onDelete}
+                      >
+                        {deleteIcon ?? <Trash2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{deleteLabel ?? "Delete cell"}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
 
             {executionStatus === "running" && (
               <div className="flex w-5 items-center justify-center">

@@ -37,7 +37,6 @@ interface WorkbookEditorProps {
   executionStates?: Record<string, CellExecutionState>;
   isConnected?: boolean;
   isConnecting?: boolean;
-  connectionError?: string | null;
   deviceInfo?: DeviceInfo | null;
   sensorFamily?: "multispeq" | "ambit" | "generic";
   onSensorFamilyChange?: (family: "multispeq" | "ambit" | "generic") => void;
@@ -98,7 +97,6 @@ export function WorkbookEditor({
   executionStates,
   isConnected,
   isConnecting,
-  connectionError,
   deviceInfo,
   sensorFamily,
   connectionType,
@@ -197,6 +195,20 @@ export function WorkbookEditor({
     [cells, onCellsChange],
   );
 
+  // A source cell's output cell is glued to it: dragging the source moves both,
+  // and drops between the pair are rejected.
+  const dragRange = useCallback(
+    (srcIdx: number): [number, number] => {
+      const cell = cells[srcIdx];
+      const next = cells[srcIdx + 1];
+      if (next.type === "output" && next.producedBy === cell.id) {
+        return [srcIdx, srcIdx + 2];
+      }
+      return [srcIdx, srcIdx + 1];
+    },
+    [cells],
+  );
+
   const handleDragStart = useCallback((index: number) => {
     setDragIndex(index);
   }, []);
@@ -211,13 +223,20 @@ export function WorkbookEditor({
       const midY = rect.top + rect.height / 2;
       const insertAt = e.clientY < midY ? index : index + 1;
 
-      if (insertAt === dragIndex || insertAt === dragIndex + 1) {
+      const [start, end] = dragRange(dragIndex);
+      const noOp = insertAt >= start && insertAt <= end;
+
+      const before = cells[insertAt - 1];
+      const after = cells[insertAt];
+      const splitsOutputPair = after.type === "output" && after.producedBy === before.id;
+
+      if (noOp || splitsOutputPair) {
         setDropIndex(null);
       } else {
         setDropIndex(insertAt);
       }
     },
-    [dragIndex],
+    [dragIndex, cells, dragRange],
   );
 
   const handleDrop = useCallback(() => {
@@ -226,14 +245,15 @@ export function WorkbookEditor({
       setDropIndex(null);
       return;
     }
+    const [start, end] = dragRange(dragIndex);
     const updated = [...cells];
-    const [moved] = updated.splice(dragIndex, 1);
-    const adjustedIndex = dropIndex > dragIndex ? dropIndex - 1 : dropIndex;
-    updated.splice(adjustedIndex, 0, moved);
+    const moved = updated.splice(start, end - start);
+    const adjustedIndex = dropIndex > start ? dropIndex - moved.length : dropIndex;
+    updated.splice(adjustedIndex, 0, ...moved);
     onCellsChange(updated);
     setDragIndex(null);
     setDropIndex(null);
-  }, [dragIndex, dropIndex, cells, onCellsChange]);
+  }, [dragIndex, dropIndex, cells, onCellsChange, dragRange]);
 
   const handleDragEnd = useCallback(() => {
     setDragIndex(null);
@@ -319,7 +339,6 @@ export function WorkbookEditor({
           cells={cells}
           isConnected={isConnected ?? false}
           isConnecting={isConnecting ?? false}
-          connectionError={connectionError ?? null}
           deviceInfo={deviceInfo ?? null}
           sensorFamily={sensorFamily ?? "multispeq"}
           onSensorFamilyChange={onSensorFamilyChange}

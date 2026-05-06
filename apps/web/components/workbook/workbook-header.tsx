@@ -20,6 +20,7 @@ import {
   Usb,
 } from "lucide-react";
 import { useCallback } from "react";
+import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -37,6 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
 import { useIsMobile, useIsLgTablet, useIsTablet } from "@repo/ui/hooks/use-mobile";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -52,7 +59,6 @@ interface WorkbookHeaderProps {
   cells: WorkbookCell[];
   isConnected: boolean;
   isConnecting: boolean;
-  connectionError: string | null;
   deviceInfo: DeviceInfo | null;
   sensorFamily: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
@@ -106,7 +112,6 @@ export function WorkbookHeader({
   cells,
   isConnected,
   isConnecting,
-  connectionError,
   deviceInfo,
   sensorFamily,
   onSensorFamilyChange,
@@ -128,6 +133,19 @@ export function WorkbookHeader({
   const isTablet = useIsTablet();
   const isLgTablet = useIsLgTablet();
   const compact = isMobile || isTablet || isLgTablet;
+
+  const browserSupport = useIotBrowserSupport(sensorFamily);
+  const transportSupported =
+    connectionType === "serial" ? browserSupport.serial : browserSupport.bluetooth;
+  const transportTooltip = transportSupported
+    ? null
+    : connectionType === "serial"
+      ? browserSupport.serialReason === "browser"
+        ? "Your browser does not support Web Serial. Use Chrome or Edge."
+        : "This device does not support serial."
+      : browserSupport.bluetoothReason === "browser"
+        ? "Your browser does not support Web Bluetooth. Use Chrome or Edge."
+        : "This device does not support Bluetooth.";
 
   const handleExportJSON = useCallback(() => {
     const workbook = {
@@ -259,23 +277,35 @@ export function WorkbookHeader({
         )}
       </div>
 
-      <button
-        className={cn(
-          "inline-flex shrink-0 items-center justify-center gap-1.5 text-[12px] font-semibold leading-[18px]",
-          "h-[34px] px-2.5 xl:h-[38px] xl:gap-2 xl:px-3 xl:text-[13px]",
-          isConnecting && "cursor-not-allowed opacity-50",
-        )}
-        style={
-          isConnected
-            ? { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
-            : { background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }
-        }
-        onClick={isConnected ? onDisconnect : onConnect}
-        disabled={isConnecting}
-      >
-        <Usb className="size-4" />
-        <span className="hidden xl:inline">{isConnected ? "Disconnect" : "Connect"}</span>
-      </button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className={cn(
+                "inline-flex shrink-0 items-center justify-center gap-1.5 text-[12px] font-semibold leading-[18px]",
+                "h-[34px] px-2.5 xl:h-[38px] xl:gap-2 xl:px-3 xl:text-[13px]",
+                (isConnecting || (!isConnected && !transportSupported)) &&
+                  "cursor-not-allowed opacity-50",
+              )}
+              style={
+                isConnected
+                  ? { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
+                  : { background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }
+              }
+              onClick={isConnected ? onDisconnect : onConnect}
+              disabled={isConnecting || (!isConnected && !transportSupported)}
+            >
+              <Usb className="size-4" />
+              <span className="hidden xl:inline">{isConnected ? "Disconnect" : "Connect"}</span>
+            </button>
+          </TooltipTrigger>
+          {transportTooltip && (
+            <TooltipContent>
+              <p>{transportTooltip}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
 
       <div className="flex items-center gap-1.5">
         <Circle
@@ -300,15 +330,6 @@ export function WorkbookHeader({
       {isConnected && deviceInfo?.device_version && (
         <span className="hidden text-[13px] leading-[21px] text-[#68737B] xl:inline">
           FW {deviceInfo.device_version}
-        </span>
-      )}
-
-      {connectionError && (
-        <span
-          className="text-destructive hidden max-w-48 truncate text-xs xl:inline"
-          title={connectionError}
-        >
-          {connectionError}
         </span>
       )}
 

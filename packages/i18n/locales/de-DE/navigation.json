@@ -40,8 +40,7 @@
     "otherDevice1": "Anderes Gerät 1",
     "hardware": "Hardware",
     "macros": "Makros",
-    "workbooks": "Arbeitsmappen",
-    "newWorkbook": "Neue Arbeitsmappe"
+    "workbooks": "Arbeitsmappen"
   },
   "breadcrumbs": {
     "home": "Startseite",

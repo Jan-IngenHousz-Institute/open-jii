@@ -96,7 +96,6 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
   const {
     isConnected,
     isConnecting,
-    connectionError,
     deviceInfo,
     sensorFamily,
     setSensorFamily,
@@ -148,7 +147,6 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
         executionStates={executionStates}
         isConnected={isConnected}
         isConnecting={isConnecting}
-        connectionError={connectionError}
         deviceInfo={deviceInfo}
         sensorFamily={sensorFamily}
         onSensorFamilyChange={setSensorFamily}

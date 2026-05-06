@@ -451,7 +451,6 @@ describe("useWorkbookExecution", () => {
 
       expect(result.current.isConnected).toBe(false);
       expect(result.current.isConnecting).toBe(false);
-      expect(result.current.connectionError).toBeNull();
     });
 
     it("exposes connect and disconnect from IoT hook", () => {

@@ -15,6 +15,16 @@ import { contract } from "@repo/api/contract";
 import { WorkbookSaveProvider } from "../workbook-overview/workbook-save-context";
 import { WorkbookHeader } from "./workbook-header";
 
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => ({
+    bluetooth: true,
+    serial: true,
+    any: true,
+    bluetoothReason: null,
+    serialReason: null,
+  }),
+}));
+
 const protocolCell = createProtocolCell({
   id: "p1",
   payload: { protocolId: "proto-1", version: 1, name: "Test Protocol" },
@@ -31,7 +41,6 @@ function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> =
     cells: [markdownCell, protocolCell, macroCell],
     isConnected: false,
     isConnecting: false,
-    connectionError: null,
     deviceInfo: null,
     sensorFamily: "multispeq" as const,
     onSensorFamilyChange: vi.fn(),
@@ -153,11 +162,6 @@ describe("WorkbookHeader", () => {
       deviceInfo: { device_name: "Device", device_version: "3.0.1" },
     });
     expect(screen.getByText("FW 3.0.1")).toBeInTheDocument();
-  });
-
-  it("displays connection error when present", () => {
-    renderHeader({ connectionError: "USB not found" });
-    expect(screen.getByText("USB not found")).toBeInTheDocument();
   });
 });
 

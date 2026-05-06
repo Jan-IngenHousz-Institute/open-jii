@@ -6,7 +6,7 @@ export function useWorkbook(id: string, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? !!id;
 
   const query = tsr.workbooks.getWorkbook.useQuery({
-    queryData: { params: { id: id || "placeholder" } },
+    queryData: { params: { id } },
     queryKey: ["workbook", id],
     retry: shouldRetryQuery,
     enabled,
