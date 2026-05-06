@@ -90,14 +90,15 @@ resource "databricks_pipeline" "this" {
   }
 }
 
-# Grant pipeline permissions to principals if provided
+# Single authoritative resource: each apply PUTs the full ACL, so splitting
+# across `count` would let resources clobber each other's grants.
 resource "databricks_permissions" "pipeline" {
-  count       = length(var.permissions)
+  count       = length(var.permissions) > 0 ? 1 : 0
   provider    = databricks.workspace
   pipeline_id = databricks_pipeline.this.id
 
   dynamic "access_control" {
-    for_each = [var.permissions[count.index]]
+    for_each = var.permissions
     content {
       service_principal_name = access_control.value.principal_application_id
       permission_level       = access_control.value.permission_level
