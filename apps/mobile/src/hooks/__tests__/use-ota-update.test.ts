@@ -73,6 +73,7 @@ describe("useOtaUpdate", () => {
   it("shows success toast and reloads after 2s when fetched update is new", async () => {
     mocks.checkForUpdateAsync.mockResolvedValue({ isAvailable: true });
     mocks.fetchUpdateAsync.mockResolvedValue({ isNew: true });
+    mocks.reloadAsync.mockResolvedValue(undefined);
     const { unmount } = renderHook(() => useOtaUpdate());
     // Flush microtask queue: one tick per awaited promise in the IIFE
     await Promise.resolve();
