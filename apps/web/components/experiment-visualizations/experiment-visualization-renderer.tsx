@@ -1,26 +1,10 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import React from "react";
-
 import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
-import { LineChartRenderer } from "./chart-renderers/basic/line-chart/line-chart-renderer";
-import { ScatterChartRenderer } from "./chart-renderers/basic/scatter-chart/scatter-chart-renderer";
-
-// Dynamic import for better performance
-const LazyChartWrapper = dynamic(
-  () => Promise.resolve(({ children }: { children: React.ReactNode }) => <>{children}</>),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full min-h-[300px] items-center justify-center">
-        <div className="text-muted-foreground">Loading visualization...</div>
-      </div>
-    ),
-  },
-);
+import "../../styles/plotly-chart.css";
+import { getChartTypeDef } from "./charts/registry";
 
 interface ExperimentVisualizationRendererProps {
   visualization: ExperimentVisualization;
@@ -38,34 +22,8 @@ export default function ExperimentVisualizationRenderer({
   showDescription = true,
 }: ExperimentVisualizationRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
-
-  const renderChart = () => {
-    // Common props for all chart renderers
-    const commonProps = {
-      visualization,
-      experimentId,
-      data: data ?? undefined,
-    };
-
-    switch (visualization.chartType) {
-      case "line":
-        return <LineChartRenderer {...commonProps} />;
-      case "scatter":
-        return <ScatterChartRenderer {...commonProps} />;
-      default:
-        return (
-          <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed">
-            <div className="text-center">
-              <div className="mb-2 text-lg font-medium">{t("errors.unsupportedChartType")}</div>
-              <div className="text-sm">
-                {t("charts.types." + visualization.chartType, visualization.chartType)}{" "}
-                {t("errors.chartTypeNotSupported")}
-              </div>
-            </div>
-          </div>
-        );
-    }
-  };
+  const def = getChartTypeDef(visualization.chartType);
+  const labelKey = def?.labelKey ?? `charts.types.${visualization.chartType}`;
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -78,7 +36,22 @@ export default function ExperimentVisualizationRenderer({
         </div>
       )}
       <div className="flex min-h-0 w-full flex-1 flex-col">
-        <LazyChartWrapper>{renderChart()}</LazyChartWrapper>
+        {def ? (
+          <def.Renderer
+            visualization={visualization}
+            experimentId={experimentId}
+            data={data ?? undefined}
+          />
+        ) : (
+          <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed">
+            <div className="text-center">
+              <div className="mb-2 text-lg font-medium">{t("errors.unsupportedChartType")}</div>
+              <div className="text-sm">
+                {t(labelKey, visualization.chartType)} {t("errors.chartTypeNotSupported")}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

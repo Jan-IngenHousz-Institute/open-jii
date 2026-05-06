@@ -572,12 +572,39 @@ export const zChartType = z.enum([
   "alluvial",
 ]);
 
-// Data source configuration schema
+// Roles a data source can play in a chart. Add a new entry only when a chart
+// type genuinely needs it — the role contract per chart type lives in
+// `@repo/api/utils/visualization-contracts` and decides which of these are
+// required, optional, single, or many.
+export const zRole = z.enum([
+  // Cartesian axes
+  "x",
+  "y",
+  "z",
+  // Visual encodings
+  "color",
+  "size",
+  // Categorical (pie, donut)
+  "labels",
+  "values",
+  // Network / sankey
+  "source",
+  "target",
+  "value",
+  // Geographic
+  "lat",
+  "lon",
+  // Statistical grouping
+  "groupBy",
+]);
+
+// Data source configuration schema. tableName and columnName allow empty
+// strings so a freshly-created visualization can persist in a draft state
+// until the user picks a table and columns in the editor.
 export const zDataSourceConfig = z.object({
-  tableName: z.string().min(1, "Table name is required"),
-  columnName: z.string().min(1, "Column name is required"),
-  // Role defines how this data source is used (e.g., "x", "y", "y1", "y2", "color", "size", "a", "b", "c", "labels", "values", etc.)
-  role: z.string().min(1, "Role is required"),
+  tableName: z.string(),
+  columnName: z.string(),
+  role: zRole,
   // Optional series name for multiple series with same role
   seriesName: z.string().optional(),
   // Optional alias for display
@@ -612,11 +639,10 @@ export const zChartDisplayOptions = z
 // Generic chart config - allows any props to be passed to chart components
 export const zChartConfig = z.record(z.string(), z.unknown()).optional();
 
-// Data configuration schema for visualization data sources
+// Data configuration schema for visualization data sources. tableName allows
+// empty strings to match the draft state of zDataSourceConfig.
 export const zChartDataConfig = z.object({
-  // Primary data table for the visualization
-  tableName: z.string().min(1),
-  // Additional data source configurations specific to chart type
+  tableName: z.string(),
   dataSources: z.array(zDataSourceConfig).min(1),
   // Optional filtering/aggregation settings
   filters: z
@@ -1084,9 +1110,11 @@ export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataR
 // Visualization types
 export type ChartFamily = z.infer<typeof zChartFamily>;
 export type ChartType = z.infer<typeof zChartType>;
+export type Role = z.infer<typeof zRole>;
 export type DataSourceConfig = z.infer<typeof zDataSourceConfig>;
 export type AxisConfig = z.infer<typeof zAxisConfig>;
 export type ChartConfig = z.infer<typeof zChartConfig>;
+export type ChartDataConfig = z.infer<typeof zChartDataConfig>;
 export type ExperimentVisualization = z.infer<typeof zExperimentVisualization>;
 export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizationList>;
 export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;

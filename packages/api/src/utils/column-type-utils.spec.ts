@@ -240,22 +240,32 @@ describe("column-type-utils", () => {
     });
   });
 
-  describe("isValidAxisSource", () => {
-    it("should return true for numeric types", () => {
+  describe("isValidAxisSource (alias for isPlottableColumn)", () => {
+    it("accepts numeric types", () => {
       expect(isValidAxisSource(ColumnPrimitiveType.INT)).toBe(true);
       expect(isValidAxisSource(ColumnPrimitiveType.FLOAT)).toBe(true);
       expect(isValidAxisSource(ColumnPrimitiveType.DOUBLE)).toBe(true);
     });
 
-    it("should return true for timestamp types", () => {
+    it("accepts temporal types", () => {
       expect(isValidAxisSource(ColumnPrimitiveType.TIMESTAMP)).toBe(true);
       expect(isValidAxisSource(ColumnPrimitiveType.TIMESTAMP_NTZ)).toBe(true);
+      expect(isValidAxisSource("DATE")).toBe(true);
     });
 
-    it("should return false for non-numeric and non-timestamp types", () => {
-      expect(isValidAxisSource("STRING")).toBe(false);
-      expect(isValidAxisSource("BOOLEAN")).toBe(false);
+    it("accepts categorical types — Plotly auto-creates a category axis", () => {
+      // Strings often store numeric data too (e.g. soil_moisture: "5.3");
+      // surfacing them in axis pickers lets the renderer's smart cell
+      // coercion handle the rest.
+      expect(isValidAxisSource("STRING")).toBe(true);
+      expect(isValidAxisSource("BOOLEAN")).toBe(true);
+    });
+
+    it("rejects complex types and unknown inputs", () => {
       expect(isValidAxisSource("ARRAY<INT>")).toBe(false);
+      expect(isValidAxisSource("STRUCT<a: INT>")).toBe(false);
+      expect(isValidAxisSource("MAP<STRING, INT>")).toBe(false);
+      expect(isValidAxisSource("VARIANT")).toBe(false);
       expect(isValidAxisSource(undefined)).toBe(false);
     });
   });
