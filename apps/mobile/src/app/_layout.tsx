@@ -10,9 +10,14 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  SafeAreaInsetsContext,
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
 import { AlertDialog } from "~/components/AlertDialog";
+import { AlertsBar } from "~/components/cms-alert/alerts-container";
 import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
 import { PythonMacroProvider } from "~/components/python-macro-provider";
 import { TimeSyncProvider } from "~/components/time-sync-provider";
@@ -138,6 +143,27 @@ function AutoUploadEffect() {
   return null;
 }
 
+// Measures the alert bar and zeroes out insets.top for the navigator subtree when
+// the bar is visible, preventing the navigator from double-counting the notch area.
+function AlertsAwareLayout() {
+  const insets = useSafeAreaInsets();
+  const [alertBarHeight, setAlertBarHeight] = useState(0);
+  const adjustedInsets = { ...insets, top: alertBarHeight > 0 ? 0 : insets.top };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View onLayout={(e) => setAlertBarHeight(e.nativeEvent.layout.height)}>
+        <AlertsBar />
+      </View>
+      <SafeAreaInsetsContext.Provider value={adjustedInsets}>
+        <View style={{ flex: 1 }}>
+          <RootLayoutNav />
+        </View>
+      </SafeAreaInsetsContext.Provider>
+    </View>
+  );
+}
+
 function RootLayoutContent() {
   const theme = useTheme();
 
@@ -151,7 +177,7 @@ function RootLayoutContent() {
               <BottomSheetModalProvider>
                 <StatusBar style={theme.isDark ? "light" : "dark"} />
                 {__DEV__ && <DrizzleDevTools />}
-                <RootLayoutNav />
+                <AlertsAwareLayout />
                 <Toaster />
                 <AlertDialog />
               </BottomSheetModalProvider>

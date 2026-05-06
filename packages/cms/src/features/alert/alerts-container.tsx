@@ -14,23 +14,23 @@ const SEVERITY_ORDER = { critical: 0, warning: 1, info: 2 } as const;
 export const AlertsContainer: React.FC<AlertsContainerProps> = ({ alerts }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(
-    () => new Set(alerts.map((a) => a.sys.id)),
+    () => new Set(alerts.map((a) => a.internalName ?? a.sys.id)),
   );
 
   useEffect(() => {
     const stillDismissed = alerts
-      .map((a) => a.sys.id)
-      .filter((id) => localStorage.getItem(`alert-dismissed-${id}`) === "true");
+      .map((a) => a.internalName ?? a.sys.id)
+      .filter((key) => localStorage.getItem(`alert-dismissed-${key}`) === "true");
     setDismissed(new Set(stillDismissed));
   }, [alerts]);
 
-  const handleDismiss = (id: string) => {
-    localStorage.setItem(`alert-dismissed-${id}`, "true");
-    setDismissed((prev) => new Set([...prev, id]));
+  const handleDismiss = (key: string) => {
+    localStorage.setItem(`alert-dismissed-${key}`, "true");
+    setDismissed((prev) => new Set([...prev, key]));
   };
 
   const visible = alerts
-    .filter((a) => !dismissed.has(a.sys.id))
+    .filter((a) => !dismissed.has(a.internalName ?? a.sys.id))
     .sort((a, b) => {
       const aOrder = SEVERITY_ORDER[(a.severity ?? "info") as keyof typeof SEVERITY_ORDER] ?? 2;
       const bOrder = SEVERITY_ORDER[(b.severity ?? "info") as keyof typeof SEVERITY_ORDER] ?? 2;
@@ -56,7 +56,11 @@ export const AlertsContainer: React.FC<AlertsContainerProps> = ({ alerts }) => {
   return (
     <div ref={containerRef} className="sticky top-0 z-40">
       {visible.map((alert) => (
-        <AlertBanner key={alert.sys.id} alert={alert} onDismiss={handleDismiss} />
+        <AlertBanner
+          key={alert.sys.id}
+          alert={alert}
+          onDismiss={() => handleDismiss(alert.internalName ?? alert.sys.id)}
+        />
       ))}
     </div>
   );
