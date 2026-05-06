@@ -50,21 +50,12 @@ export interface MacroInput {
   language?: string;
 }
 
-export async function applyMacro(
-  result: object,
-  macro: MacroInput | string,
-): Promise<MacroOutput[]> {
+// Macros receive the full measurement wrapper and loop over json["sample"]
+// themselves, matching the Databricks and macro-sandbox executors.
+export async function applyMacro(result: object, macro: MacroInput | string): Promise<MacroOutput> {
   if (!("sample" in result)) {
     throw new Error("Result does not contain sample data");
   }
-
-  const { sample } = result;
-
-  if (!sample) {
-    throw new Error("Sample data is missing");
-  }
-
-  const samples = Array.isArray(sample) ? sample : [sample];
 
   const macroInput: MacroInput =
     typeof macro === "string" ? { code: macro, language: "javascript" } : macro;
@@ -73,38 +64,24 @@ export async function applyMacro(
 
   const codePreview = code.length > 500 ? code.slice(0, 500) + "..." : code;
   console.log("[macro] code preview:", codePreview);
-  console.log("[macro] language:", language, "samples:", samples.length);
+  console.log("[macro] language:", language);
 
   if (language === "python") {
     const runPython = getPythonMacroRunner();
     if (!runPython) {
       throw new Error("Python macro runner not ready. Ensure PythonMacroProvider is mounted.");
     }
-    const outputs: MacroOutput[] = [];
-    for (let i = 0; i < samples.length; i++) {
-      const sample = samples[i];
-      console.log("[macro] (Python) input sample", i, JSON.stringify(sample));
-      try {
-        const out = await runPython(code, structuredClone(sample));
-        console.log("[macro] (Python) output sample", i, JSON.stringify(out));
-        outputs.push(out);
-      } catch (err) {
-        console.error("[macro] (Python) error sample", i, err);
-        throw err;
-      }
-    }
-    return outputs;
-  }
-
-  const outputs: MacroOutput[] = [];
-  for (let i = 0; i < samples.length; i++) {
     try {
-      const out = await executeMacro(code, samples[i]);
-      outputs.push(out);
+      return await runPython(code, structuredClone(result));
     } catch (err) {
-      console.error("[macro] (JS) error sample", i, err);
+      console.error("[macro] (Python) error:", err);
       throw err;
     }
   }
-  return outputs;
+
+  if (language !== "javascript") {
+    throw new Error(`Unsupported macro language: ${language}`);
+  }
+
+  return executeMacro(code, structuredClone(result));
 }

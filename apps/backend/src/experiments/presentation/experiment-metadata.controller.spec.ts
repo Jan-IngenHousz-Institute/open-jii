@@ -8,6 +8,19 @@ import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ExperimentMetadataRepository } from "../core/repositories/experiment-metadata.repository";
 
+// Minimal payload that satisfies zCustomMetadataPayload. Reused across
+// create/update tests since the controller-level checks (auth, access, 404)
+// don't depend on payload contents.
+const validMetadataBody = {
+  metadata: {
+    name: "Plot map",
+    columns: [{ id: "plot", name: "plot", type: "string" as const }],
+    rows: [{ _id: "row_1", plot: "A1" }],
+    identifierColumnId: "plot",
+    experimentQuestionId: "plot_id",
+  },
+};
+
 describe("ExperimentMetadataController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
@@ -19,7 +32,6 @@ describe("ExperimentMetadataController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -156,7 +168,7 @@ describe("ExperimentMetadataController", () => {
       const response: SuperTestResponse<ExperimentMetadata> = await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ metadata: { location: "Lab B" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.CREATED);
 
       expect(response.body).toHaveProperty("metadataId");
@@ -176,7 +188,7 @@ describe("ExperimentMetadataController", () => {
       await testApp
         .post(path)
         .withoutAuth()
-        .send({ metadata: { key: "value" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -195,7 +207,7 @@ describe("ExperimentMetadataController", () => {
       await testApp
         .post(path)
         .withAuth(otherUserId)
-        .send({ metadata: { key: "value" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.FORBIDDEN);
     });
 
@@ -208,7 +220,7 @@ describe("ExperimentMetadataController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ metadata: { key: "value" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.NOT_FOUND);
     });
   });
@@ -248,7 +260,7 @@ describe("ExperimentMetadataController", () => {
       const response: SuperTestResponse<ExperimentMetadata> = await testApp
         .put(path)
         .withAuth(testUserId)
-        .send({ metadata: { location: "Lab C Updated" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveProperty("metadataId", metadataId);
@@ -270,7 +282,7 @@ describe("ExperimentMetadataController", () => {
       await testApp
         .put(path)
         .withoutAuth()
-        .send({ metadata: { key: "value" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -290,7 +302,7 @@ describe("ExperimentMetadataController", () => {
       await testApp
         .put(path)
         .withAuth(otherUserId)
-        .send({ metadata: { key: "value" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.FORBIDDEN);
     });
 
@@ -305,7 +317,7 @@ describe("ExperimentMetadataController", () => {
       await testApp
         .put(path)
         .withAuth(testUserId)
-        .send({ metadata: { key: "value" } })
+        .send(validMetadataBody)
         .expect(StatusCodes.NOT_FOUND);
     });
   });

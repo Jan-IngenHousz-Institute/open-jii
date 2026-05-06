@@ -48,9 +48,6 @@ describe("MacroController", () => {
     listMacrosUseCase = testApp.module.get(ListMacrosUseCase);
     updateMacroUseCase = testApp.module.get(UpdateMacroUseCase);
     deleteMacroUseCase = testApp.module.get(DeleteMacroUseCase);
-
-    // Reset any mocks before each test
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -696,7 +693,6 @@ describe("MacroController – macro-protocol endpoints", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     macroProtocolRepository = testApp.module.get(MacroProtocolRepository);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

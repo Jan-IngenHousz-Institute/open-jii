@@ -135,7 +135,7 @@ export function AddAnnotationDialog({
               </DialogDescription>
             </DialogHeader>
             <div className="mb-4 grid gap-4">
-              {type === "flag" && (
+              {form.watch("type") === "flag" && (
                 <FormField
                   control={form.control}
                   name="flagType"

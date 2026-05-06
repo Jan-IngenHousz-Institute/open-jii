@@ -2,11 +2,18 @@ import type { Position } from "@xyflow/react";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { cn } from "@repo/ui/lib/utils";
 
 import { nodeTypeColorMap } from "../react-flow/node-config";
 import type { NodeType } from "./node-config";
 import { NodeHandles } from "./node-handles";
+
+const TYPE_LABELS: Record<NodeType, string> = {
+  INSTRUCTION: "Instruction",
+  QUESTION: "Question",
+  MEASUREMENT: "Protocol",
+  ANALYSIS: "Macro",
+  BRANCH: "Branch",
+};
 
 interface NodeContentProps {
   title: string;
@@ -32,6 +39,10 @@ export function NodeContent({
   isStartNode = false,
 }: NodeContentProps) {
   const { t } = useTranslation("experiments");
+  const config = nodeTypeColorMap[nodeType];
+  const accent = config.accent;
+  const typeLabel = TYPE_LABELS[nodeType];
+
   return (
     <>
       <NodeHandles
@@ -43,36 +54,43 @@ export function NodeContent({
         dragging={dragging}
         nodeType={nodeType}
       />
-      <div className={cn("flex flex-col gap-y-2 p-3")}>
-        <div className="flex flex-col items-center justify-center p-3">
-          {/* Start/End Node Indicators */}
-          {isStartNode && (
-            <div className="mb-2 flex">
-              <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                {t("start")}
-              </span>
-            </div>
+      <div className="flex items-center gap-3 py-3 pl-4 pr-3">
+        <div
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+          style={{
+            backgroundColor: `color-mix(in srgb, ${accent} 12%, transparent)`,
+            color: accent,
+          }}
+        >
+          {React.cloneElement(
+            config.icon as React.ReactElement,
+            { size: 18 } as Record<string, unknown>,
           )}
-
-          {/* Icon */}
-          <div className={`${selected ? "text-jii-dark-green" : "text-slate-600"} mb-1`}>
-            {nodeTypeColorMap[nodeType].icon}
-          </div>
-          {/* Label inside the node */}
-          <div className="text-center">
-            {title ? (
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            {isStartNode && (
               <span
-                className="text-md inline-block max-w-[250px] truncate font-medium text-slate-700"
-                title={title}
-              >
-                {title}
-              </span>
-            ) : (
-              <span className="text-md inline-block max-w-[250px] truncate font-medium italic text-slate-400">
-                {t("flow.untitledNode")}
-              </span>
+                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: "#22C55E" }}
+                title={t("start")}
+              />
             )}
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider"
+              style={{ color: accent, letterSpacing: "0.06em" }}
+            >
+              {typeLabel}
+            </span>
           </div>
+          <span
+            className="line-clamp-2 break-words text-[13px] font-semibold leading-tight text-slate-900"
+            title={title}
+          >
+            {title || (
+              <span className="font-normal italic text-slate-400">{t("flow.untitledNode")}</span>
+            )}
+          </span>
         </div>
       </div>
     </>

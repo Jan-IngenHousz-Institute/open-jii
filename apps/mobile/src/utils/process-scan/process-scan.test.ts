@@ -22,103 +22,63 @@ vi.mock("expo-asset", () => ({
   },
 }));
 
+// `new File(path)` is invoked with `new`. Arrow functions aren't constructible,
+// so we declare a class.
 vi.mock("expo-file-system", () => ({
-  File: vi.fn().mockImplementation(() => ({
-    text: vi.fn(() => Promise.resolve("")),
-  })),
+  File: class {
+    text() {
+      return Promise.resolve("");
+    }
+  },
 }));
 
 const encode = (code: string) => Buffer.from(code, "utf8").toString("base64");
 
-describe("applyMacro — input isolation (OJD-1463)", () => {
+describe("applyMacro — wrapper contract", () => {
   describe("JavaScript macros", () => {
-    it("does not mutate top-level scalar properties on the original sample", async () => {
-      const sample = { meta: "original", phi2: 0.5 };
-      const result = { sample };
-
-      const code = encode(`
-        json.meta = "mutated";
-        json.phi2 = -1;
-        return { ok: true };
-      `);
-
-      const [out] = await applyMacro(result, { code, language: "javascript" });
-
-      // Macro saw its own copy and was free to mutate it.
-      expect(out).toEqual({ ok: true });
-      // Original is untouched.
-      expect(sample).toEqual({ meta: "original", phi2: 0.5 });
-    });
-
-    it("does not mutate array elements on the original sample", async () => {
-      const sample = { data_raw: [1, 2, 3, 4, 5] };
-      const result = { sample };
-
-      const code = encode(`
-        for (var i = 0; i < json.data_raw.length; i++) {
-          json.data_raw[i] = -json.data_raw[i];
-        }
-        json.data_raw.push(999);
-        return { ok: true };
-      `);
-
-      await applyMacro(result, { code, language: "javascript" });
-
-      expect(sample.data_raw).toEqual([1, 2, 3, 4, 5]);
-    });
-
-    it("does not mutate nested objects on the original sample", async () => {
-      const sample = {
-        nested: { phi2: 0.5, deep: { value: 42 } },
+    it("passes the full wrapper to the macro (json.sample is the array)", async () => {
+      const result = {
+        device_id: "dev-1",
+        sample: [{ set: [{ par: 1234 }] }],
       };
-      const result = { sample };
 
       const code = encode(`
-        json.nested.phi2 = -1;
-        json.nested.deep.value = 0;
-        delete json.nested.deep;
+        return {
+          device_id: json.device_id,
+          par: json.sample[0].set[0].par,
+          n_samples: json.sample.length,
+        };
+      `);
+
+      const out = await applyMacro(result, { code, language: "javascript" });
+
+      expect(out).toEqual({ device_id: "dev-1", par: 1234, n_samples: 1 });
+    });
+
+    it("does not mutate the caller's wrapper", async () => {
+      const result = {
+        sample: [{ data_raw: [1, 2, 3, 4, 5] }],
+      };
+
+      const code = encode(`
+        json.sample[0].data_raw[0] = 999;
+        json.sample.push({ injected: true });
         return { ok: true };
       `);
 
       await applyMacro(result, { code, language: "javascript" });
 
-      expect(sample.nested.phi2).toBe(0.5);
-      expect(sample.nested.deep).toEqual({ value: 42 });
+      expect(result.sample.length).toBe(1);
+      expect(result.sample[0].data_raw).toEqual([1, 2, 3, 4, 5]);
     });
 
-    it("isolates mutations between sibling samples in a batch", async () => {
-      const sample1 = { data_raw: [1, 2, 3] };
-      const sample2 = { data_raw: [4, 5, 6] };
-      const result = { sample: [sample1, sample2] };
+    it("rejects unknown languages instead of silently running them as JS", async () => {
+      const result = { sample: [{}] };
+      const code = encode("return { ok: true };");
 
-      const code = encode(`
-        json.data_raw[0] = 999;
-        return { first: json.data_raw[0] };
-      `);
-
-      const outputs = await applyMacro(result, { code, language: "javascript" });
-
-      expect(outputs).toEqual([{ first: 999 }, { first: 999 }]);
-      expect(sample1.data_raw).toEqual([1, 2, 3]);
-      expect(sample2.data_raw).toEqual([4, 5, 6]);
-    });
-
-    it("gives the macro a different object reference than the original sample", async () => {
-      const sample = { marker: { tag: "original" } };
-      const result = { sample };
-
-      // Smuggle the `json` reference out of the macro so we can assert on it.
-      let macroSawReference: unknown = null;
-      const code = encode(`
-        json.__capturedBy = "macro";
-        return { capturedRef: json };
-      `);
-
-      const [out] = await applyMacro(result, { code, language: "javascript" });
-      macroSawReference = (out as { capturedRef: unknown }).capturedRef;
-
-      expect(macroSawReference).not.toBe(sample);
-      expect(sample).toEqual({ marker: { tag: "original" } });
+      await expect(applyMacro(result, { code, language: "r" })).rejects.toThrow(
+        /Unsupported macro language: r/,
+      );
     });
   });
 
@@ -127,36 +87,38 @@ describe("applyMacro — input isolation (OJD-1463)", () => {
       registerPythonMacroRunner(null);
     });
 
-    it("does not mutate the original sample even if the Python runner mutates its arg", async () => {
-      const sample = { meta: "original", data_raw: [1, 2, 3] };
-      const result = { sample };
+    it("passes the full wrapper to the Python runner", async () => {
+      const result = {
+        device_id: "dev-1",
+        sample: [{ set: [{ par: 1234 }] }],
+      };
 
-      let receivedRef: unknown = null;
+      let receivedJson: unknown = null;
       registerPythonMacroRunner((_code, json) => {
-        receivedRef = json;
-        (json as { meta: string }).meta = "mutated-by-python";
-        (json as { data_raw: number[] }).data_raw[0] = 999;
+        receivedJson = json;
         return Promise.resolve({ ok: true });
       });
 
       await applyMacro(result, {
-        code: encode("# python body irrelevant — runner is mocked"),
+        code: encode("# runner is mocked"),
         language: "python",
       });
 
-      // The runner must have received a clone, not the caller's reference.
-      expect(receivedRef).not.toBe(sample);
-      // Original must still be intact.
-      expect(sample).toEqual({ meta: "original", data_raw: [1, 2, 3] });
+      expect(receivedJson).toEqual({
+        device_id: "dev-1",
+        sample: [{ set: [{ par: 1234 }] }],
+      });
     });
 
-    it("isolates mutations between sibling Python samples in a batch", async () => {
-      const sample1 = { data_raw: [1, 2, 3] };
-      const sample2 = { data_raw: [4, 5, 6] };
-      const result = { sample: [sample1, sample2] };
+    it("does not mutate the caller's wrapper even if the runner mutates its arg", async () => {
+      const result = {
+        device_id: "dev-1",
+        sample: [{ data_raw: [1, 2, 3] }],
+      };
 
       registerPythonMacroRunner((_code, json) => {
-        (json as { data_raw: number[] }).data_raw[0] = 999;
+        (json as { device_id: string }).device_id = "tampered";
+        (json as { sample: { data_raw: number[] }[] }).sample[0].data_raw[0] = 999;
         return Promise.resolve({ ok: true });
       });
 
@@ -165,8 +127,8 @@ describe("applyMacro — input isolation (OJD-1463)", () => {
         language: "python",
       });
 
-      expect(sample1.data_raw).toEqual([1, 2, 3]);
-      expect(sample2.data_raw).toEqual([4, 5, 6]);
+      expect(result.device_id).toBe("dev-1");
+      expect(result.sample[0].data_raw).toEqual([1, 2, 3]);
     });
   });
 });

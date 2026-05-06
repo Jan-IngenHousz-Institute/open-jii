@@ -122,9 +122,10 @@ export function CompletedState() {
                   ? () => setSelectedForComment(measurement)
                   : undefined
               }
-              onDelete={() =>
-                handleDelete(measurement.key, measurement.status, measurement.experimentName)
-              }
+              onDelete={() => {
+                if (measurement.status === "syncing") return;
+                handleDelete(measurement.key, measurement.status, measurement.experimentName);
+              }}
               onSync={
                 measurement.status === "unsynced"
                   ? () => handleSync(measurement.key, measurement.experimentName)

@@ -66,13 +66,21 @@ export enum ErrorCodes {
   MACRO_EXECUTION_FAILED = "MACRO_EXECUTION_FAILED", // Lambda macro execution failed
   MACRO_BATCH_VALIDATION_FAILED = "MACRO_BATCH_VALIDATION_FAILED", // Batch request validation failed
 
+  // ==================== Domain Operations - Workbooks ====================
+  // Location: src/workbooks/application/use-cases/
+  WORKBOOK_CREATE_FAILED = "WORKBOOK_CREATE_FAILED", // Failed to create workbook
+  WORKBOOK_UPDATE_FAILED = "WORKBOOK_UPDATE_FAILED", // Failed to update workbook
+  WORKBOOK_DELETE_FAILED = "WORKBOOK_DELETE_FAILED", // Failed to delete workbook
+  WORKBOOK_NOT_FOUND = "WORKBOOK_NOT_FOUND", // Workbook not found
+  WORKBOOK_VERSION_NOT_FOUND = "WORKBOOK_VERSION_NOT_FOUND", // Workbook version not found
+  WORKBOOK_VERSION_CREATE_FAILED = "WORKBOOK_VERSION_CREATE_FAILED", // Failed to create workbook version
+
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/
   PROTOCOL_CREATE_FAILED = "PROTOCOL_CREATE_FAILED", // Failed to create protocol
   PROTOCOL_UPDATE_FAILED = "PROTOCOL_UPDATE_FAILED", // Failed to update protocol
   PROTOCOL_DELETE_FAILED = "PROTOCOL_DELETE_FAILED", // Failed to delete protocol
   PROTOCOL_NOT_FOUND = "PROTOCOL_NOT_FOUND", // Protocol not found
-  PROTOCOL_ASSIGNED = "PROTOCOL_ASSIGNED", // Cannot modify assigned protocol
   PROTOCOL_MACROS_ADD_FAILED = "PROTOCOL_MACROS_ADD_FAILED", // Failed to add compatible macros
   PROTOCOL_MACROS_REMOVE_FAILED = "PROTOCOL_MACROS_REMOVE_FAILED", // Failed to remove compatible macro
   PROTOCOL_MACROS_LIST_FAILED = "PROTOCOL_MACROS_LIST_FAILED", // Failed to list compatible macros

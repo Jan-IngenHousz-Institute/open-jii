@@ -144,6 +144,75 @@ describe("FlowMapper.toReactFlow", () => {
   });
 });
 
+describe("FlowMapper branch + sourceHandle", () => {
+  it("maps an API branch node to a BRANCH React Flow node and surfaces paths in stepSpecification", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "branch-node",
+          type: "branch" as const,
+          name: "Soil branch",
+          content: {
+            paths: [
+              { id: "p1", label: "Wet", color: "#10B981" },
+              { id: "p2", label: "Dry", color: "#EF4444" },
+            ],
+            defaultPathId: "p2",
+          },
+          isStart: true,
+        },
+      ],
+    });
+    const { nodes } = FlowMapper.toReactFlow(flow);
+    expect(nodes).toHaveLength(1);
+    const n = nodes[0];
+    expect(n.type).toBe("BRANCH");
+    const data = n.data as FlowNodeDataWithSpec & {
+      stepSpecification?: { paths: { id: string }[]; defaultPathId?: string };
+    };
+    expect(data.stepSpecification?.paths.map((p) => p.id)).toEqual(["p1", "p2"]);
+    expect(data.stepSpecification?.defaultPathId).toBe("p2");
+  });
+
+  it("preserves edge sourceHandle through both toReactFlow and toApiGraph", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "branch-node",
+          type: "branch" as const,
+          name: "Soil branch",
+          content: {
+            paths: [{ id: "p1", label: "Loop", color: "#10B981" }],
+          },
+          isStart: true,
+        },
+        {
+          id: "target-node",
+          type: "instruction" as const,
+          name: "Continue",
+          content: { text: "Continue" },
+          isStart: false,
+        },
+      ],
+      edges: [
+        {
+          id: "e-branch-p1-target",
+          source: "branch-node",
+          target: "target-node",
+          sourceHandle: "p1",
+          label: "Loop",
+        },
+      ],
+    });
+
+    const reactSide = FlowMapper.toReactFlow(flow);
+    expect(reactSide.edges[0].sourceHandle).toBe("p1");
+
+    const back = FlowMapper.toApiGraph(reactSide.nodes, reactSide.edges);
+    expect(back.edges[0].sourceHandle).toBe("p1");
+  });
+});
+
 describe("FlowMapper round-trip", () => {
   it("API -> React -> API preserves semantic graph", () => {
     const flow = buildApiFlow({

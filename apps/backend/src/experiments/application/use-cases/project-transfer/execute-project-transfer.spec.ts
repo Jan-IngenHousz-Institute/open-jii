@@ -10,9 +10,10 @@ import {
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
-import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { ExecuteProjectTransferUseCase } from "./execute-project-transfer";
 
@@ -37,7 +38,6 @@ describe("ExecuteProjectTransferUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -108,6 +108,30 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.success).toBe(true);
     });
 
+    it("materialises a workbook and v1 linked to the experiment (web parity)", async () => {
+      const payload = buildPayload({
+        questions: [{ kind: "yes_no", text: "Ready?", required: false }],
+      });
+
+      const result = await useCase.execute(payload);
+      assertSuccess(result);
+      const experimentId = result.value.experimentId;
+
+      const experimentRepo = testApp.module.get(ExperimentRepository);
+      const workbookRepo = testApp.module.get(WorkbookRepository);
+
+      const exp = await experimentRepo.findOne(experimentId);
+      assertSuccess(exp);
+      expect(exp.value?.workbookId).toBeDefined();
+      expect(exp.value?.workbookVersionId).toBeDefined();
+
+      const workbook = await workbookRepo.findById(exp.value?.workbookId ?? "");
+      assertSuccess(workbook);
+      expect(workbook.value?.name).toBe("Transfer Experiment - Workbook");
+      // 1 question + 1 measurement + 1 analysis = 3 cells
+      expect(workbook.value?.cells).toHaveLength(3);
+    });
+
     it("should handle flow creation failure gracefully (non-fatal)", async () => {
       // CreateFlowUseCase delegates to FlowRepository internally
       vi.spyOn(FlowRepository.prototype, "create").mockResolvedValue(
@@ -173,19 +197,6 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-    });
-
-    it("should fail when experiment protocol association fails", async () => {
-      vi.spyOn(ExperimentProtocolRepository.prototype, "addProtocols").mockResolvedValue(
-        failure(AppError.internal("Association failed")),
-      );
-
-      const payload = buildPayload();
-      const result = await useCase.execute(payload);
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to associate protocol");
     });
 
     it("should handle multi_choice questions in flow", async () => {

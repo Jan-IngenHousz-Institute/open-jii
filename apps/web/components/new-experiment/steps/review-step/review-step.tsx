@@ -7,12 +7,7 @@ import { useTranslation } from "@repo/i18n";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
-import {
-  detailsSchema,
-  locationsSchema,
-  membersVisibilitySchema,
-  protocolsSchema,
-} from "../form-step";
+import { detailsSchema, locationsSchema, membersVisibilitySchema } from "../form-step";
 import { DetailsSection } from "./details-section";
 import { LocationsSection } from "./locations-section";
 import { MembersVisibilitySection } from "./members-visibility-section";
@@ -21,7 +16,6 @@ import { MembersVisibilitySection } from "./members-visibility-section";
 export const reviewSchema = z.object({
   ...detailsSchema.shape,
   ...membersVisibilitySchema.shape,
-  ...protocolsSchema.shape,
   ...locationsSchema.shape,
 });
 

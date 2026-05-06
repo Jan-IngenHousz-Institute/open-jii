@@ -226,6 +226,14 @@ resource "databricks_job" "this" {
       }
     }
   }
+
+  # table_update.condition isn't round-tripped on refresh, so plans perpetually
+  # show it as drift. Ignore post-create.
+  lifecycle {
+    ignore_changes = [
+      trigger[0].table_update[0].condition,
+    ]
+  }
 }
 
 # Grant job permissions to principals if provided

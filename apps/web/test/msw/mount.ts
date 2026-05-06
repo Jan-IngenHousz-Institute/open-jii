@@ -41,8 +41,8 @@ export type MountFn = <T extends ContractEndpoint>(
     status?: StatusOf<T> | 500;
     /** JSON response body. */
     body?: AnyBody<T>;
-    /** Artificial delay in ms before responding. */
-    delay?: number;
+    /** Artificial delay in ms (or "infinite" to hang forever). */
+    delay?: number | "infinite";
   },
 ) => RequestSpy;
 
@@ -92,7 +92,7 @@ function statusForMethod(method: HttpMethod): number {
 export function createMount(server: SetupServer): MountFn {
   function mount(
     endpoint: ContractEndpoint,
-    options: { body?: unknown; status?: number; delay?: number } = {},
+    options: { body?: unknown; status?: number; delay?: number | "infinite" } = {},
   ): RequestSpy {
     const method = endpoint.method.toLowerCase() as HttpMethod;
     const url = `${API_URL}${endpoint.path}`;

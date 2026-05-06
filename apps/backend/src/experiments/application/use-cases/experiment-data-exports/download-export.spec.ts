@@ -25,7 +25,6 @@ describe("DownloadExportUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(DownloadExportUseCase);
     exportsRepository = testApp.module.get(ExperimentDataExportsRepository);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

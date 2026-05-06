@@ -48,4 +48,25 @@ export class FlowRepository {
       return row as FlowDto;
     });
   }
+
+  // Race-free via ON CONFLICT against the unique experiment_id constraint.
+  async upsert(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .insert(flows)
+        .values({ experimentId, graph })
+        .onConflictDoUpdate({
+          target: flows.experimentId,
+          set: { graph },
+        })
+        .returning();
+      return rows[0] as FlowDto;
+    });
+  }
+
+  async deleteByExperimentId(experimentId: string): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.database.delete(flows).where(eq(flows.experimentId, experimentId));
+    });
+  }
 }

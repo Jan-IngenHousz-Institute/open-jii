@@ -40,14 +40,8 @@ export function NodeHandles({
   dragging,
   nodeType,
 }: NodeHandlesProps) {
-  // Pick color classes from nodeTypeColorMap
-  const highlightClass = "!border-jii-dark-green !bg-white";
-  const colorClass =
-    selected || dragging
-      ? highlightClass
-      : nodeType
-        ? `${nodeTypeColorMap[nodeType].border} ${nodeTypeColorMap[nodeType].bg}`
-        : "!border-slate-300 !bg-slate-100";
+  const isActive = selected ?? dragging;
+  const accent = nodeType ? nodeTypeColorMap[nodeType].accent : "#94a3b8";
 
   return (
     <>
@@ -57,11 +51,12 @@ export function NodeHandles({
             type="target"
             position={inputPosition}
             id="in"
-            className={cn(
-              "!h-[12px] !w-[12px] rounded-full border opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
-              colorClass,
-              (selected ?? dragging) && "opacity-100",
-            )}
+            className={cn("!h-2 !w-2 !rounded-full !border transition-colors duration-150")}
+            style={{
+              backgroundColor: isActive ? "#FFFFFF" : "#FFFFFF",
+              borderColor: isActive ? "#005e5e" : accent,
+              borderWidth: isActive ? 2 : 1.5,
+            }}
           />
         </div>
       )}
@@ -71,11 +66,12 @@ export function NodeHandles({
             type="source"
             position={outputPosition}
             id="out"
-            className={cn(
-              "!h-[12px] !w-[12px] rounded-full border opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
-              colorClass,
-              (selected ?? dragging) && "opacity-100",
-            )}
+            className={cn("!h-2 !w-2 !rounded-full !border transition-colors duration-150")}
+            style={{
+              backgroundColor: isActive ? "#FFFFFF" : "#FFFFFF",
+              borderColor: isActive ? "#005e5e" : accent,
+              borderWidth: isActive ? 2 : 1.5,
+            }}
           />
         </div>
       )}

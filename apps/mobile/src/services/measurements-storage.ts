@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, inArray } from "drizzle-orm";
 import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
@@ -14,7 +14,7 @@ const LEGACY_PREFIXES = [
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export type MeasurementStatus = "failed" | "successful";
+export type MeasurementStatus = "failed" | "uploading" | "successful";
 
 export interface Measurement {
   topic: string;
@@ -151,12 +151,53 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
   }
 }
 
+export async function markAsUploading(keys: string[]): Promise<string[]> {
+  if (keys.length === 0) return [];
+  await ensureMigrated();
+  try {
+    const rows = db
+      .update(measurements)
+      .set({ status: "uploading" })
+      .where(and(inArray(measurements.id, keys), eq(measurements.status, "failed")))
+      .returning({ id: measurements.id })
+      .all();
+    return rows.map((r) => r.id);
+  } catch (error) {
+    console.error("Failed to mark measurements as uploading:", error);
+    return [];
+  }
+}
+
+export async function markAsFailed(key: string): Promise<void> {
+  await ensureMigrated();
+  try {
+    db.update(measurements)
+      .set({ status: "failed" })
+      .where(and(eq(measurements.id, key), eq(measurements.status, "uploading")))
+      .run();
+  } catch (error) {
+    console.error("Failed to revert measurement to failed:", error);
+  }
+}
+
+export async function resetUploadingMeasurements(): Promise<void> {
+  await ensureMigrated();
+  try {
+    db.update(measurements)
+      .set({ status: "failed" })
+      .where(eq(measurements.status, "uploading"))
+      .run();
+  } catch (error) {
+    console.error("Failed to reset uploading measurements:", error);
+  }
+}
+
 export async function markAsSuccessful(key: string): Promise<void> {
   await ensureMigrated();
   try {
     db.update(measurements)
       .set({ status: "successful" })
-      .where(and(eq(measurements.id, key), eq(measurements.status, "failed")))
+      .where(and(eq(measurements.id, key), eq(measurements.status, "uploading")))
       .run();
   } catch (error) {
     console.error("Failed to mark measurement as successful:", error);
