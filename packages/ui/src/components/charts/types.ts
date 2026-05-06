@@ -18,6 +18,13 @@ export interface PlotlyChartConfig extends Partial<Config> {
   showLegend?: boolean;
   showGrid?: boolean;
   backgroundColor?: string;
+  /**
+   * Where to anchor the legend relative to the plot area. All three options
+   * sit OUTSIDE the data area so the legend never occludes points. Defaults
+   * to "right" — Plotly's own default puts it inside the top-right corner,
+   * which overlaps data once you have more than a couple of series.
+   */
+  legendPosition?: "right" | "top" | "bottom";
 
   // Mode bar configuration
   showModeBar?: boolean;

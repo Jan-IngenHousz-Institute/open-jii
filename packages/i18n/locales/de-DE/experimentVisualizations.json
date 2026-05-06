@@ -11,6 +11,7 @@
     "messages": {
       "noVisualizations": "Noch keine Visualisierungen",
       "deleteSuccess": "Visualisierung erfolgreich gelöscht",
+      "deleteConfirm": "\"{{name}}\" dauerhaft löschen? Dashboards, die dieses Diagramm einbetten, zeigen einen Platzhalter für fehlende Visualisierung an.",
       "createSuccess": "Visualisierung erfolgreich erstellt",
       "updateSuccess": "Visualisierung erfolgreich aktualisiert",
       "loading": "Visualisierung wird geladen...",
@@ -20,7 +21,13 @@
     "labels": {
       "createdAt": "Erstellt",
       "createdBy": "Erstellt von",
-      "updatedAt": "Zuletzt aktualisiert"
+      "updatedAt": "Zuletzt aktualisiert",
+      "columns": {
+        "name": "Name",
+        "type": "Typ",
+        "user": "Benutzer",
+        "updated": "Aktualisiert"
+      }
     }
   },
 
@@ -207,5 +214,189 @@
 
   "selector": {
     "noVisualizations": "Keine Visualisierungen für dieses Experiment verfügbar"
+  },
+
+  "workspace": {
+    "layout": {
+      "untitled": "Untitled visualization",
+      "namePlaceholder": "Untitled visualization",
+      "descriptionTitle": "Description",
+      "descriptionPlaceholder": "Add a description",
+      "saving": "Saving...",
+      "allChangesSaved": "All changes saved",
+      "saveFailed": "Couldn't save your changes"
+    },
+    "detailsSidebar": {
+      "title": "Details",
+      "collapsedSummary": "Updated {{updatedAt}}",
+      "visualizationId": "Visualization ID",
+      "dataSource": "Data source",
+      "noDataSource": "No table selected",
+      "columns": "Columns",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "createdBy": "Created by",
+      "deleteVisualization": "Delete visualization",
+      "deleteWarning": "Once deleted, this visualization cannot be recovered.",
+      "deleteConfirm": "Delete"
+    },
+    "canvas": {
+      "noTable": "No data source selected",
+      "selectTable": "Pick a table from the inspector to start.",
+      "noColumns": "No columns configured",
+      "configureColumns": "Choose at least one column in the Data tab to render the chart.",
+      "loading": "Loading chart data...",
+      "previewName": "Preview"
+    },
+    "inspector": {
+      "dataset": "Dataset",
+      "selectTable": "Select a table",
+      "noTables": "No tables available",
+      "loadingTables": "Datensätze werden geladen...",
+      "failedToLoadTables": "Failed to load tables",
+      "failedToLoadColumns": "Failed to load columns",
+      "loadingColumns": "Loading columns...",
+      "selectTableFirst": "Select a table to see its columns.",
+      "noValidColumns": "No columns suitable for axes were found in this table.",
+      "tabs": {
+        "data": "Data",
+        "style": "Style"
+      },
+      "collapse": "Collapse panel",
+      "expand": "Expand panel",
+      "expandLabel": "Configuration"
+    },
+    "shelves": {
+      "xAxis": "X axis",
+      "yAxis": "Y axis",
+      "colorDimension": "Color dimension",
+      "column": "Column",
+      "selectColumn": "Select a column",
+      "axisTitle": "Axis title",
+      "axisTitlePlaceholder": "Axis title",
+      "axisType": "Axis type",
+      "series": "Series {{index}}",
+      "removeSeries": "Remove series",
+      "addSeries": "Add series",
+      "seriesName": "Series name",
+      "seriesNamePlaceholder": "Series name",
+      "color": "Color",
+      "colorPlaceholder": "Color column",
+      "noColorMapping": "None",
+      "colorScale": "Color scale",
+      "colorAxisTitle": "Color axis title",
+      "colorAxisTitlePlaceholder": "Color axis title",
+      "colorAxisTitlePosition": "Title position",
+      "showColorbar": "Show colorbar",
+      "preview": "Preview"
+    },
+    "axisTypes": {
+      "linear": "Linear",
+      "log": "Logarithmic",
+      "date": "Date"
+    },
+    "positions": {
+      "top": "Top",
+      "right": "Right",
+      "bottom": "Bottom"
+    },
+    "modes": {
+      "lines": "Lines",
+      "markers": "Markers",
+      "linesMarkers": "Lines + markers"
+    },
+    "markerSymbols": {
+      "circle": "Circle",
+      "square": "Square",
+      "diamond": "Diamond",
+      "triangleUp": "Triangle up",
+      "triangleDown": "Triangle down",
+      "star": "Star",
+      "hexagon": "Hexagon",
+      "cross": "Cross",
+      "x": "X",
+      "asterisk": "Asterisk"
+    },
+    "lineDashes": {
+      "solid": "Solid",
+      "dot": "Dotted",
+      "dash": "Dashed",
+      "dashdot": "Dash-dot",
+      "longdash": "Long dash"
+    },
+    "legendPositions": {
+      "right": "Right of plot",
+      "top": "Above plot",
+      "bottom": "Below plot"
+    },
+    "hoverModes": {
+      "closest": "Nearest point",
+      "xUnified": "All series at X",
+      "yUnified": "All series at Y"
+    },
+    "style": {
+      "display": "Display",
+      "chartTitle": "Chart title",
+      "chartTitlePlaceholder": "Chart title",
+      "legend": "Legend",
+      "grid": "Grid",
+      "interaction": "Interaction",
+      "lineSubsection": "Lines",
+      "markerSubsection": "Markers",
+      "showLegend": "Show legend",
+      "showGrid": "Show grid",
+      "legendPosition": "Position",
+      "hoverMode": "Hover behaviour",
+      "lineOptions": "Line options",
+      "scatterOptions": "Scatter options",
+      "mode": "Drawing mode",
+      "connectGaps": "Connect gaps",
+      "smoothing": "Line smoothing",
+      "lineWidth": "Line width",
+      "lineDash": "Line style",
+      "markerSize": "Marker size",
+      "markerShape": "Marker shape",
+      "markerOpacity": "Marker opacity"
+    },
+    "charts": {
+      "pickerLabel": "Choose chart type",
+      "switchConfirmTitle": "Switch chart type?",
+      "switchConfirmDescription": "Switching to a different chart type resets your column choices and style settings. This change saves automatically.",
+      "switchConfirm": "Switch",
+      "types": {
+        "line": "Line",
+        "scatter": "Scatter"
+      },
+      "descriptions": {
+        "line": "Data points connected by line segments",
+        "scatter": "Data plotted as points on x and y coordinates"
+      }
+    },
+    "families": {
+      "basic": "Basic",
+      "statistical": "Statistical",
+      "scientific": "Scientific",
+      "3d": "3D"
+    },
+    "colorscales": {
+      "viridis": "Viridis",
+      "cividis": "Cividis",
+      "blues": "Blues",
+      "reds": "Reds",
+      "greens": "Greens",
+      "greys": "Greys",
+      "ylgnbu": "Yellow-Green-Blue",
+      "ylord": "Yellow-Orange-Red",
+      "rdbu": "Red-Blue",
+      "picnic": "Picnic",
+      "rainbow": "Rainbow",
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Hot",
+      "blackbody": "Blackbody",
+      "earth": "Earth",
+      "electric": "Electric",
+      "bluered": "Blue-Red"
+    }
   }
 }
