@@ -1,8 +1,6 @@
 name: Mobile Preview OTA
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       branch:
@@ -30,48 +28,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  detect:
-    name: Detect mobile changes
-    runs-on: ubuntu-latest
-    outputs:
-      affected: ${{ steps.check.outputs.affected }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "22"
-
-      - name: Detect affected packages
-        id: detect_pkgs
-        if: github.event_name == 'push'
-        uses: ./.github/actions/detect-affected-packages
-
-      - name: Check if mobile is affected
-        id: check
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "affected=true" >> $GITHUB_OUTPUT
-            echo "Manual dispatch — proceeding"
-            exit 0
-          fi
-          AFFECTED='${{ steps.detect_pkgs.outputs.affected_apps }}'
-          if echo "$AFFECTED" | jq -e 'index("mobile")' >/dev/null; then
-            echo "affected=true" >> $GITHUB_OUTPUT
-            echo "Mobile is in affected packages"
-          else
-            echo "affected=false" >> $GITHUB_OUTPUT
-            echo "Mobile not affected — skipping"
-          fi
-
   publish:
     name: Publish OTA
-    needs: detect
-    if: needs.detect.outputs.affected == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
