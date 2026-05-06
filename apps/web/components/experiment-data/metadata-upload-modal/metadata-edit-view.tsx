@@ -235,7 +235,12 @@ export function MetadataEditView({
             <p className="text-muted-foreground text-sm">
               {t("uploadModal.metadata.rowCount", { count: rows.length })}
             </p>
-            <Button type="button" variant="outline" size="sm" onClick={() => replaceTableData([], [])}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => replaceTableData([], [])}
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               {t("uploadModal.metadata.clearData")}
             </Button>
@@ -423,9 +428,7 @@ function ImportDropZone({
         </Button>
         <Button type="button" variant="outline" onClick={onPasteClick} disabled={isPasting}>
           <ClipboardPaste className="mr-2 h-4 w-4" />
-          {isPasting
-            ? t("uploadModal.metadata.pasting")
-            : t("uploadModal.metadata.pasteClipboard")}
+          {isPasting ? t("uploadModal.metadata.pasting") : t("uploadModal.metadata.pasteClipboard")}
         </Button>
       </div>
     </div>

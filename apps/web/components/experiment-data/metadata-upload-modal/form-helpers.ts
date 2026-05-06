@@ -56,13 +56,13 @@ export function toWirePayload(values: MetadataFormValues, existing: ExperimentMe
   };
 }
 
-export type StoredMetadataShape = {
+export interface StoredMetadataShape {
   name?: string;
   columns?: MetadataFormValues["columns"];
   rows?: MetadataFormValues["rows"];
   identifierColumnId?: string;
   experimentQuestionId?: string;
-};
+}
 
 export function asStoredMetadata(record: ExperimentMetadata): StoredMetadataShape {
   return record.metadata as StoredMetadataShape;
