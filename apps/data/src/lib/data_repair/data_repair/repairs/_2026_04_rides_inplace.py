@@ -8,6 +8,7 @@ de-interleave a second time, producing unphysical NPQt/FvP_FmP/Phi2. We
 re-interleave at gold before the macro UDF.
 
 """
+
 from __future__ import annotations
 
 import json
@@ -17,7 +18,6 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StringType
 
 from ..manifest import inline_repair
-
 
 # Prod UUIDs. Predicate no-ops in dev.
 _RIDES_MACRO_IDS = (
@@ -69,8 +69,8 @@ def _reinvert_pam_payload(value) -> str | None:
     except (json.JSONDecodeError, TypeError):
         return None
     for elem in obj or []:
-        for s in (elem.get("set") or []):
-            if s.get("label") == "PAM":
+        for s in elem.get("set") or []:
+            if isinstance(s, dict) and s.get("label") == "PAM":
                 raw = s.get("data_raw")
                 if raw and _looks_de_interleaved(raw):
                     s["data_raw"] = _reinterleave(raw)
@@ -97,12 +97,12 @@ def rides_pam_reinterleave(df):
     # in which case we keep the original `data`.
     return (
         df.withColumn("_rides_repaired_json", _reinvert_pam_udf(F.col("data")))
-          .withColumn(
-              "data",
-              F.when(
-                  F.col("_rides_repaired_json").isNotNull(),
-                  F.expr("parse_json(_rides_repaired_json)"),
-              ).otherwise(F.col("data")),
-          )
-          .drop("_rides_repaired_json")
+        .withColumn(
+            "data",
+            F.when(
+                F.col("_rides_repaired_json").isNotNull(),
+                F.expr("parse_json(_rides_repaired_json)"),
+            ).otherwise(F.col("data")),
+        )
+        .drop("_rides_repaired_json")
     )
