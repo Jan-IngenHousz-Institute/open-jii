@@ -104,7 +104,29 @@ jobs:
                   echo "Label          : $LABEL_NAME"
                   echo "Dry run        : ${DRY_RUN:-false}"
 
-                  git fetch --all 
+                  git fetch --all
+
+                  # Returns the pull_request field if the number is a PR in this repo.
+                  # Returns empty string for 404 (not found / cross-repo ref).
+                  # Exits 1 (fails the job) for auth, rate-limit, or network errors.
+                  get_pr_type() {
+                    local number="$1" err result exit_code
+                    err=$(mktemp)
+                    if result=$(gh api "repos/$REPO/issues/$number" --jq '.pull_request // empty' 2>"$err"); then
+                      echo "$result"
+                    else
+                      exit_code=$?
+                      if grep -qi "HTTP 404" "$err"; then
+                        echo ""
+                      else
+                        echo "API error checking #$number:" >&2
+                        cat "$err" >&2
+                        rm -f "$err"
+                        return $exit_code
+                      fi
+                    fi
+                    rm -f "$err"
+                  }
 
                   # Convert DDMMYYYY → YYYYMMDD for chronological comparison
                   to_sortable() { local d="$1"; echo "${d:4:4}${d:2:2}${d:0:2}"; }
@@ -153,7 +175,7 @@ jobs:
                   if [ "${DRY_RUN:-false}" = "true" ]; then
                     echo "[DRY RUN] Verifying which numbers are PRs (not issues)..."
                     for NUMBER in $PR_NUMBERS; do
-                      TYPE=$(gh api "repos/$REPO/issues/$NUMBER" --jq '.pull_request // empty' 2>/dev/null || echo "")
+                      TYPE=$(get_pr_type "$NUMBER")
                       if [ -z "$TYPE" ]; then
                         echo "  ⏭ #$NUMBER → issue or not found, would skip"
                       else
@@ -175,7 +197,7 @@ jobs:
                   LABELED=0
                   SKIPPED=0
                   for NUMBER in $PR_NUMBERS; do
-                    TYPE=$(gh api "repos/$REPO/issues/$NUMBER" --jq '.pull_request // empty' 2>/dev/null || echo "")
+                    TYPE=$(get_pr_type "$NUMBER")
                     if [ -z "$TYPE" ]; then
                       echo "⏭ #$NUMBER is an issue or not found, skipping"
                       SKIPPED=$((SKIPPED + 1))
