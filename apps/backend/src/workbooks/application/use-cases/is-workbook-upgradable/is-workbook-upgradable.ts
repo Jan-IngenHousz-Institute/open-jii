@@ -38,19 +38,36 @@ export class IsWorkbookUpgradableUseCase {
   ) {}
 
   async execute(workbook: WorkbookDto): Promise<Result<boolean>> {
+    this.logger.log({
+      msg: "Checking workbook upgradable",
+      operation: "isWorkbookUpgradable",
+      workbookId: workbook.id,
+    });
+
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbook.id);
     if (latestResult.isFailure()) return latestResult;
     const latest = latestResult.value;
-    if (!latest) return success(false);
-
-    const liveDesign = JSON.stringify(designOf(workbook.cells));
-    const versionDesign = JSON.stringify(designOf(latest.cells as WorkbookCell[]));
-    if (liveDesign !== versionDesign) {
-      this.logger.warn({
-        msg: "isWorkbookUpgradable: cells diff",
+    if (!latest) {
+      this.logger.log({
+        msg: "Workbook upgradable check resolved",
+        operation: "isWorkbookUpgradable",
         workbookId: workbook.id,
-        liveDesign,
-        versionDesign,
+        upgradable: false,
+        reason: "no_published_version",
+      });
+      return success(false);
+    }
+
+    const cellsChanged =
+      JSON.stringify(designOf(workbook.cells)) !==
+      JSON.stringify(designOf(latest.cells as WorkbookCell[]));
+    if (cellsChanged) {
+      this.logger.log({
+        msg: "Workbook upgradable check resolved",
+        operation: "isWorkbookUpgradable",
+        workbookId: workbook.id,
+        upgradable: true,
+        reason: "cells_diff",
       });
       return success(true);
     }
@@ -74,40 +91,38 @@ export class IsWorkbookUpgradableUseCase {
     const snapshots = latest.entitySnapshots;
     for (const [id, p] of protocolsResult.value) {
       const snap = snapshots.protocols[id] as { code: unknown } | undefined;
-      const live = JSON.stringify(p.code);
-      const stored = JSON.stringify(snap?.code);
-      if (live !== stored) {
-        this.logger.warn({
-          msg: "isWorkbookUpgradable: protocol drift",
+      if (JSON.stringify(snap?.code) !== JSON.stringify(p.code)) {
+        this.logger.log({
+          msg: "Workbook upgradable check resolved",
+          operation: "isWorkbookUpgradable",
           workbookId: workbook.id,
-          protocolId: id,
-          liveType: typeof p.code,
-          storedType: typeof snap?.code,
-          live,
-          stored,
+          upgradable: true,
+          reason: "protocol_drift",
         });
         return success(true);
       }
     }
     for (const [id, m] of macrosResult.value) {
       const snap = snapshots.macros[id] as { code: string } | undefined;
-      const stored = snap?.code;
-      if (stored !== m.code) {
-        this.logger.warn({
-          msg: "isWorkbookUpgradable: macro drift",
+      if (snap?.code !== m.code) {
+        this.logger.log({
+          msg: "Workbook upgradable check resolved",
+          operation: "isWorkbookUpgradable",
           workbookId: workbook.id,
-          macroId: id,
-          liveType: typeof m.code,
-          storedType: typeof stored,
-          liveLen: m.code.length,
-          storedLen: stored?.length,
-          liveHead: m.code.slice(0, 40),
-          storedHead: stored?.slice(0, 40),
+          upgradable: true,
+          reason: "macro_drift",
         });
         return success(true);
       }
     }
 
+    this.logger.log({
+      msg: "Workbook upgradable check resolved",
+      operation: "isWorkbookUpgradable",
+      workbookId: workbook.id,
+      upgradable: false,
+      reason: "no_drift",
+    });
     return success(false);
   }
 }
