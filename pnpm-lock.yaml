@@ -101,7 +101,6 @@ catalogs:
 overrides:
   react: 19.2.4
   react-dom: 19.2.4
-  lodash: ^4.18.0
 
 patchedDependencies:
   '@better-auth/expo@1.5.6':
@@ -13840,6 +13839,9 @@ packages:
   lodash.uniqby@4.7.0:
     resolution: {integrity: sha512-e/zcLx6CSbmaEgFHCA7BnoQKyCtKMxnuWrJygbwPs/AIn+IMKl66L8/s+wBUn5LRw2pZx3bUHibiV1b6aTWIww==}
 
+  lodash@4.17.23:
+    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
+
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
@@ -23246,7 +23248,7 @@ snapshots:
       common-tags: 1.8.2
       graphql: 16.13.2
       import-from: 4.0.0
-      lodash: 4.18.1
+      lodash: 4.17.23
       tslib: 2.6.3
 
   '@graphql-codegen/schema-ast@5.0.1(graphql@16.13.2)':
@@ -24469,7 +24471,7 @@ snapshots:
       '@nestjs/common': 11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2)
       dotenv: 17.2.3
       dotenv-expand: 12.0.3
-      lodash: 4.18.1
+      lodash: 4.17.23
       rxjs: 7.8.2
 
   '@nestjs/core@11.1.18(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.18)(reflect-metadata@0.2.2)(rxjs@7.8.2)':
@@ -34449,6 +34451,8 @@ snapshots:
   lodash.uniq@4.5.0: {}
 
   lodash.uniqby@4.7.0: {}
+
+  lodash@4.17.23: {}
 
   lodash@4.18.1: {}
 
