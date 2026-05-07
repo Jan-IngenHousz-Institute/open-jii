@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import type { BluetoothDevice } from "react-native-bluetooth-classic";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { describe, it, expect, vi, beforeEach } from "vitest";

@@ -10,6 +10,7 @@ import { use, useCallback, useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -22,6 +23,7 @@ const AUTO_SAVE_DELAY = 1500;
 export default function WorkbookOverviewPage({ params }: WorkbookOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useWorkbook(id);
+  const { data: session } = useSession();
   const { t } = useTranslation(["workbook", "common"]);
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
   const { markDirty, markSaving, markSaved } = useWorkbookSaveStatus();
@@ -137,12 +139,14 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
   }
 
   const workbook = data;
+  const isCreator = session?.user.id === workbook.createdBy;
 
   return (
     <div className="space-y-6">
       <WorkbookEditor
         cells={cells}
         onCellsChange={handleCellsChange}
+        readOnly={!isCreator}
         title={workbook.name}
         executionStates={executionStates}
         isConnected={isConnected}

@@ -4,7 +4,9 @@
 --   1. Traverse the flow graph edges from the start node to order nodes
 --   2. Convert ordered nodes to workbook cell JSON
 --   3. Create a workbook named "{experiment.name} - Workbook"
---   4. Create workbook version 1 with those cells
+--   4. Capture entity_snapshots for referenced protocols/macros in the shape
+--      the runtime expects (parsed JSON, not jsonb-string), then create
+--      workbook version 1 with cells + snapshots
 --   5. Link experiment to workbook + version
 --
 -- Idempotent: skips experiments that already have a workbook_id.
@@ -15,6 +17,9 @@ DECLARE
   v_cells jsonb;
   v_workbook_id uuid;
   v_version_id uuid;
+  v_protocol_ids uuid[];
+  v_macro_ids uuid[];
+  v_snapshots jsonb;
 BEGIN
   FOR rec IN
     SELECT
@@ -157,18 +162,57 @@ BEGIN
     )
     RETURNING id INTO v_workbook_id;
 
-    -- 4. Create version 1
-    INSERT INTO workbook_versions (workbook_id, version, cells, metadata, created_by)
+    -- 4. Capture entity_snapshots for protocols/macros referenced by the cells.
+    --    Protocol code is stored as a jsonb-string by the controller's write
+    --    path; the runtime read path parses it back to its content shape.
+    --    Snapshots must reflect the parsed shape so drift detection compares
+    --    apples to apples.
+    SELECT COALESCE(array_agg(DISTINCT (cell->'payload'->>'protocolId')::uuid), ARRAY[]::uuid[])
+      INTO v_protocol_ids
+    FROM jsonb_array_elements(v_cells) AS cell
+    WHERE cell->>'type' = 'protocol'
+      AND cell->'payload'->>'protocolId' IS NOT NULL;
+
+    SELECT COALESCE(array_agg(DISTINCT (cell->'payload'->>'macroId')::uuid), ARRAY[]::uuid[])
+      INTO v_macro_ids
+    FROM jsonb_array_elements(v_cells) AS cell
+    WHERE cell->>'type' = 'macro'
+      AND cell->'payload'->>'macroId' IS NOT NULL;
+
+    SELECT jsonb_build_object(
+      'protocols', COALESCE((
+        SELECT jsonb_object_agg(
+          p.id::text,
+          jsonb_build_object(
+            'code',
+            CASE WHEN jsonb_typeof(p.code) = 'string'
+                 THEN (p.code #>> '{}')::jsonb
+                 ELSE p.code END
+          )
+        )
+        FROM protocols p
+        WHERE p.id = ANY(v_protocol_ids)
+      ), '{}'::jsonb),
+      'macros', COALESCE((
+        SELECT jsonb_object_agg(m.id::text, jsonb_build_object('code', m.code))
+        FROM macros m
+        WHERE m.id = ANY(v_macro_ids)
+      ), '{}'::jsonb)
+    ) INTO v_snapshots;
+
+    -- 5. Create version 1 with snapshots
+    INSERT INTO workbook_versions (workbook_id, version, cells, metadata, entity_snapshots, created_by)
     VALUES (
       v_workbook_id,
       1,
       v_cells,
       '{}'::jsonb,
+      v_snapshots,
       rec.created_by
     )
     RETURNING id INTO v_version_id;
 
-    -- 5. Link experiment
+    -- 6. Link experiment
     UPDATE experiments
     SET workbook_id = v_workbook_id,
         workbook_version_id = v_version_id

@@ -38,6 +38,10 @@ vi.mock("../../charts/utils", () => ({
   })),
   getRenderer: vi.fn((useWebGL) => (useWebGL ? "webgl" : "svg")),
   getPlotType: vi.fn((type, renderer) => `${type}${renderer === "webgl" ? "gl" : ""}`),
+  // Pass-through so these tests focus on rendering + props, not axis-type
+  // inference (covered separately in utils.test.ts).
+  detectAxisType: vi.fn(() => "linear"),
+  refineAxisType: vi.fn((axis) => axis ?? {}),
 }));
 
 describe("LineChart", () => {
