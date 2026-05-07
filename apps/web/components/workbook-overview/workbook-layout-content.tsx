@@ -1,10 +1,10 @@
 "use client";
 
+import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
+import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
-import { useWorkbookSaveStatus } from "@/components/workbook-overview/workbook-save-context";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { formatDate } from "@/util/date";
-import { CheckCircle2, Loader2 } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
@@ -23,10 +23,12 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
   const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();
   const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id);
-  const { isSaving: isCellsSaving, isDirty } = useWorkbookSaveStatus();
+  const autosave = useAutosaveStatus();
 
   const isCreator = session?.user.id === workbook.createdBy;
-  const showSaving = isUpdating || isCellsSaving || isDirty;
+  // The title save (manual) and the cell autosave both feed the same
+  // indicator; treat in-flight title PATCH as "saving" too.
+  const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (newName: string) => {
     await updateWorkbook(
@@ -54,21 +56,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
             onSave={handleTitleSave}
             isPending={isUpdating}
           />
-
-          {/* Auto-save indicator */}
-          <div className="flex items-center gap-2 text-[15px]">
-            {showSaving ? (
-              <>
-                <Loader2 className="size-5 animate-spin text-[#68737B]" />
-                <span className="text-[#011111]">{t("workbooks.saving")}</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="size-5 text-emerald-500" />
-                <span className="text-[#68737B]">{t("workbooks.allChangesSaved")}</span>
-              </>
-            )}
-          </div>
+          <AutosaveIndicator status={indicatorStatus} />
         </div>
 
         {/* Metadata row - stacked labels */}

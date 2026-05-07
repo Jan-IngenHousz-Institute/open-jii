@@ -1,3 +1,4 @@
+import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -7,7 +8,6 @@ import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
 import { WorkbookLayoutContent } from "./workbook-layout-content";
-import { WorkbookSaveProvider } from "./workbook-save-context";
 
 describe("WorkbookLayoutContent", () => {
   const workbook = createWorkbook({
@@ -27,11 +27,11 @@ describe("WorkbookLayoutContent", () => {
 
   function renderContent(overrides: Partial<typeof workbook> = {}) {
     return render(
-      <WorkbookSaveProvider>
+      <AutosaveStatusProvider>
         <WorkbookLayoutContent id="wb-1" workbook={{ ...workbook, ...overrides }}>
           <div data-testid="children">Notebook goes here</div>
         </WorkbookLayoutContent>
-      </WorkbookSaveProvider>,
+      </AutosaveStatusProvider>,
     );
   }
 
@@ -39,7 +39,9 @@ describe("WorkbookLayoutContent", () => {
     renderContent();
     expect(screen.getByText("Photosynthesis Lab")).toBeInTheDocument();
     expect(screen.getByText("Test User")).toBeInTheDocument();
-    expect(screen.getByText("workbooks.allChangesSaved")).toBeInTheDocument();
+    // Indicator now reads from the unified autosave context; default
+    // (no edits reported) is "all saved".
+    expect(screen.getByText("autosave.saved")).toBeInTheDocument();
   });
 
   it("renders children content", () => {

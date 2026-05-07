@@ -1,6 +1,6 @@
 "use client";
 
-import { useWorkbookSaveStatus } from "@/components/workbook-overview/workbook-save-context";
+import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { tsr } from "@/lib/tsr";
 import { decodeBase64 } from "@/util/base64";
 import {
@@ -127,8 +127,8 @@ export function WorkbookHeader({
   onToggleFlowchart,
   isSticky,
 }: WorkbookHeaderProps) {
-  const { isSaving, isDirty } = useWorkbookSaveStatus();
-  const showSaving = isSaving || isDirty;
+  const autosave = useAutosaveStatus();
+  const showSaving = autosave?.status === "saving" || autosave?.status === "dirty";
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isLgTablet = useIsLgTablet();

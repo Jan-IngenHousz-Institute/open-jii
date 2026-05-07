@@ -3,7 +3,11 @@
 import { JsonCodeViewer } from "@/components/json-code-viewer";
 import ProtocolCodeEditor from "@/components/protocol-code-editor";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
-import type { ProtocolCode } from "@/hooks/useProtocolCodeAutoSave";
+import type { AutosaveStatus } from "@/hooks/useAutosave";
+
+/** Protocol code is an array of cells; `string`/`undefined` cover transient
+ *  editor states (raw text, pre-mount). */
+export type ProtocolCode = Record<string, unknown>[] | string | undefined;
 
 interface ProtocolCodePanelProps {
   code: Record<string, unknown>[];
@@ -11,7 +15,7 @@ interface ProtocolCodePanelProps {
   isEditing: boolean;
   editedCode: ProtocolCode;
   handleChange: (value: ProtocolCode) => void;
-  syncStatus: "synced" | "unsynced" | "syncing";
+  status: AutosaveStatus;
   closeEditing: () => void;
   startEditing: () => void;
   title?: React.ReactNode;
@@ -26,7 +30,7 @@ export function ProtocolCodePanel({
   isEditing,
   editedCode,
   handleChange,
-  syncStatus,
+  status,
   closeEditing,
   startEditing,
   title,
@@ -42,7 +46,7 @@ export function ProtocolCodePanel({
         label=""
         placeholder={placeholder}
         title={title}
-        headerActions={<CodeEditorHeaderActions syncStatus={syncStatus} onClose={closeEditing} />}
+        headerActions={<CodeEditorHeaderActions status={status} onClose={closeEditing} />}
         height={height}
         borderless={borderless}
       />

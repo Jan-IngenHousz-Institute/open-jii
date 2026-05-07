@@ -8,10 +8,10 @@ import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
-import { useCodeAutoSave } from "@/hooks/useCodeAutoSave";
+import { useAutosave } from "@/hooks/useAutosave";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { CodeIcon } from "lucide-react";
-import { use, useCallback } from "react";
+import { use, useCallback, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
@@ -27,19 +27,41 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const { data, isLoading, error } = useMacro(id);
   const { t } = useTranslation(["macro", "common"]);
   const { data: session } = useSession();
-  const { mutateAsync: updateMacro, mutate: saveMacro, isPending: isUpdating } = useMacroUpdate(id);
+  const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
 
-  const buildPayload = useCallback(
-    (code: string) => ({ params: { id }, body: { code: encodeBase64(code) } }),
-    [id],
+  // Editor lifecycle. `useAutosave` watches `editedCode` and only fires
+  // saves while the editor is open (`enabled: isEditing`). On close we
+  // flush any pending save before flipping back to the viewer.
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedCode, setEditedCode] = useState("");
+
+  const save = useCallback(
+    async (code: string) => {
+      try {
+        await updateMacro({ params: { id }, body: { code: encodeBase64(code) } });
+      } catch (err) {
+        toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        throw err;
+      }
+    },
+    [id, updateMacro],
   );
 
-  const { isEditing, editedCode, syncStatus, startEditing, closeEditing, handleChange } =
-    useCodeAutoSave<string, ReturnType<typeof buildPayload>>({
-      saveFn: saveMacro,
-      buildPayload,
-      toKey: (code) => code,
-    });
+  const autosave = useAutosave<string>({
+    value: editedCode,
+    toKey: (code) => code,
+    save,
+    enabled: isEditing,
+  });
+
+  const startEditing = (initial: string) => {
+    setEditedCode(initial);
+    setIsEditing(true);
+  };
+  const closeEditing = async () => {
+    await autosave.flush();
+    setIsEditing(false);
+  };
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -89,12 +111,12 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
         {isEditing ? (
           <MacroCodeEditor
             value={editedCode}
-            onChange={handleChange}
+            onChange={setEditedCode}
             language={macro.language}
             label=""
             title={t("macros.codeTitle")}
             headerActions={
-              <CodeEditorHeaderActions syncStatus={syncStatus} onClose={closeEditing} />
+              <CodeEditorHeaderActions status={autosave.status} onClose={closeEditing} />
             }
           />
         ) : macro.code ? (

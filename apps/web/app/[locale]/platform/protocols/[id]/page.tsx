@@ -4,10 +4,11 @@ import { ErrorDisplay } from "@/components/error-display";
 import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-details-sidebar";
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
+import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { useProtocolCodeAutoSave } from "@/hooks/useProtocolCodeAutoSave";
-import { use } from "react";
+import { useAutosave } from "@/hooks/useAutosave";
+import { use, useCallback, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
@@ -25,8 +26,43 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   const { data: session } = useSession();
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
-  const { isEditing, editedCode, syncStatus, startEditing, closeEditing, handleChange } =
-    useProtocolCodeAutoSave(id);
+  // Editor lifecycle (mirrors macro page). `isValid: Array.isArray` skips
+  // saves when the editor is mid-keystroke and the value isn't a valid
+  // cell array yet (e.g. raw text).
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedCode, setEditedCode] = useState<ProtocolCode>();
+
+  const save = useCallback(
+    async (code: ProtocolCode) => {
+      try {
+        await updateProtocol({
+          params: { id },
+          body: { code: code as Record<string, unknown>[] },
+        });
+      } catch (err) {
+        toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        throw err;
+      }
+    },
+    [id, updateProtocol],
+  );
+
+  const autosave = useAutosave<ProtocolCode>({
+    value: editedCode,
+    toKey: (code) => JSON.stringify(code),
+    isValid: (value) => Array.isArray(value),
+    save,
+    enabled: isEditing,
+  });
+
+  const startEditing = (initial: ProtocolCode) => {
+    setEditedCode(initial);
+    setIsEditing(true);
+  };
+  const closeEditing = async () => {
+    await autosave.flush();
+    setIsEditing(false);
+  };
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -78,8 +114,8 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           isCreator={isCreator}
           isEditing={isEditing}
           editedCode={editedCode}
-          handleChange={handleChange}
-          syncStatus={syncStatus}
+          handleChange={setEditedCode}
+          status={autosave.status}
           closeEditing={closeEditing}
           startEditing={() => startEditing(protocol.code)}
           title={t("protocols.codeTitle")}
