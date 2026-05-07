@@ -25,11 +25,6 @@ export async function getAllDevices(): Promise<Device[]> {
   await requestBluetoothPermission();
   const devices = await RNBluetoothClassic.startDiscovery();
 
-  // Name-based filtering was removed in OJD-1487: MultispeQ units relabelled to
-  // numeric IDs were being silently dropped. Probe-based identification lives
-  // in getBluetoothClassicDevices() (the manual scan path); this query is
-  // re-fetched on every connect/disconnect, so probing here would briefly tear
-  // down the device the user just connected to.
   return devices.map(bluetoothDeviceToDevice);
 }
 

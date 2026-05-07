@@ -33,8 +33,6 @@ describe("getBluetoothClassicDevices", () => {
   });
 
   it("returns devices regardless of name (numeric or otherwise)", async () => {
-    // Regression for OJD-1487 / #1383: MultispeQ units relabelled to numeric
-    // ids were silently dropped by the old `multi`/`photo` name filter.
     const numericMultispeq = fakeDevice("AA:01", "1520");
     const namedMultispeq = fakeDevice("AA:02", "MultispeQ-X");
     const otherDevice = fakeDevice("AA:03", "WH-1000XM4");
