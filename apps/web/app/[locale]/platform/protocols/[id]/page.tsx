@@ -26,9 +26,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   const { data: session } = useSession();
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
-  // Editor lifecycle (mirrors macro page). `isValid: Array.isArray` skips
-  // saves when the editor is mid-keystroke and the value isn't a valid
-  // cell array yet (e.g. raw text).
+  // `isValid` skips saves while the editor is mid-keystroke with raw text.
   const [isEditing, setIsEditing] = useState(false);
   const [editedCode, setEditedCode] = useState<ProtocolCode>();
 

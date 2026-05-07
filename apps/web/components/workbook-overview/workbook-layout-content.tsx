@@ -26,8 +26,6 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
   const autosave = useAutosaveStatus();
 
   const isCreator = session?.user.id === workbook.createdBy;
-  // The title save (manual) and the cell autosave both feed the same
-  // indicator; treat in-flight title PATCH as "saving" too.
   const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (newName: string) => {

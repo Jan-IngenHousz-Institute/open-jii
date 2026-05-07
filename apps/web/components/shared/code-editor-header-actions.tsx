@@ -17,11 +17,6 @@ interface CodeEditorHeaderActionsProps {
   onClose: () => void;
 }
 
-/**
- * Inline editor toolbar: autosave status pill + close-editor button.
- * The status icon and label come from the shared `AutosaveIndicator` so
- * editor-pane and layout-level indicators stay visually in sync.
- */
 export function CodeEditorHeaderActions({ status, onClose }: CodeEditorHeaderActionsProps) {
   return (
     <TooltipProvider delayDuration={200}>

@@ -5,8 +5,6 @@ import ProtocolCodeEditor from "@/components/protocol-code-editor";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
 import type { AutosaveStatus } from "@/hooks/useAutosave";
 
-/** Protocol code is an array of cells; `string`/`undefined` cover transient
- *  editor states (raw text, pre-mount). */
 export type ProtocolCode = Record<string, unknown>[] | string | undefined;
 
 interface ProtocolCodePanelProps {

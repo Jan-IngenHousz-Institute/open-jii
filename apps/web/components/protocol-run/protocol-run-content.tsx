@@ -30,8 +30,6 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
 
   const { mutateAsync: updateProtocol } = useProtocolUpdate(protocolId);
 
-  // Editor lifecycle (mirrors protocols/[id]/page.tsx). Same protocol
-  // contract: code is an array of cells, validity gated by Array.isArray.
   const [isEditing, setIsEditing] = useState(false);
   const [editedCode, setEditedCode] = useState<ProtocolCode>();
 

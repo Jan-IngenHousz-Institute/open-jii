@@ -22,12 +22,10 @@ describe("CodeEditorHeaderActions", () => {
     expect(document.querySelector(".lucide-loader-circle")).not.toBeInTheDocument();
   });
 
-  it("renders the dirty-state amber circle when status is dirty", () => {
+  it("renders the spinner when status is dirty (collapsed into the saving treatment)", () => {
     renderComponent("dirty");
-    // Plain Circle (no inner check). Filtering by class avoids matching
-    // the destructive AlertCircle / CheckCircle2 variants.
-    const dot = document.querySelector(".lucide-circle.fill-amber-500");
-    expect(dot).toBeInTheDocument();
+    expect(document.querySelector(".lucide-loader-circle")).toBeInTheDocument();
+    expect(document.querySelector(".lucide-circle-check")).not.toBeInTheDocument();
   });
 
   it("renders the spinner when status is saving", () => {
@@ -49,9 +47,9 @@ describe("CodeEditorHeaderActions", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("autosave.saved");
   });
 
-  it("uses the dirty label when there are unsaved changes", () => {
+  it("uses the saving label when status is dirty (collapsed treatment)", () => {
     renderComponent("dirty");
-    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.dirty");
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saving");
   });
 
   it("uses the saving label while a save is in flight", () => {

@@ -29,9 +29,6 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const { data: session } = useSession();
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
 
-  // Editor lifecycle. `useAutosave` watches `editedCode` and only fires
-  // saves while the editor is open (`enabled: isEditing`). On close we
-  // flush any pending save before flipping back to the viewer.
   const [isEditing, setIsEditing] = useState(false);
   const [editedCode, setEditedCode] = useState("");
 

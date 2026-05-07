@@ -1,7 +1,7 @@
 "use client";
 
 import type { AutosaveStatus } from "@/hooks/useAutosave";
-import { AlertCircle, CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -17,29 +17,12 @@ import { useAutosaveStatus } from "./autosave-status-context";
 type AutosaveIndicatorVariant = "full" | "compact";
 
 interface AutosaveIndicatorProps {
-  /**
-   * Override the status read from context. Useful when the indicator is
-   * co-located with the autosave hook (no provider in between).
-   */
   status?: AutosaveStatus;
-  /**
-   * - `full` (default): icon + label, sized for a layout-level slot.
-   * - `compact`: icon-only with the label moved into a tooltip, sized for
-   *    inline use inside an editor toolbar.
-   */
+  /** `compact` swaps the label for a tooltip — sized for editor toolbars. */
   variant?: AutosaveIndicatorVariant;
   className?: string;
 }
 
-/**
- * Visual treatment for autosave state. Reads from `AutosaveStatusContext`
- * by default; pass `status` directly to bypass the context. Renders
- * nothing when there's no status to show.
- *
- * Each state has its own glyph + colour so users can tell "your edit is
- * pending" (`dirty`) from "your edit is being sent" (`saving`) — those
- * blur into ~1.5s in practice but the visual distinction is honest.
- */
 export function AutosaveIndicator({
   status: statusProp,
   variant = "full",
@@ -59,14 +42,7 @@ export function AutosaveIndicator({
         labelClassName: "text-destructive",
       };
     }
-    if (status === "dirty") {
-      return {
-        icon: <Circle className="size-4 fill-amber-500 text-amber-500" />,
-        label: t("autosave.dirty", "Unsaved changes"),
-        labelClassName: "text-[#011111]",
-      };
-    }
-    if (status === "saving") {
+    if (status === "dirty" || status === "saving") {
       return {
         icon: <Loader2 className="size-4 animate-spin text-[#68737B]" />,
         label: t("autosave.saving", "Saving…"),

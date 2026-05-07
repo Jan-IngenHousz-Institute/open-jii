@@ -26,11 +26,21 @@ vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
 
 let mockSession: { user: { id: string } } | null = null;
 
+// Captured to drive the autosave path without the real CodeMirror pipeline.
+let capturedOnChange: ((value: Record<string, unknown>[] | string | undefined) => void) | null =
+  null;
 vi.mock("../../protocol-code-editor", () => ({
   __esModule: true,
-  default: ({ headerActions }: { headerActions?: React.ReactNode }) => (
-    <div data-testid="code-editor">{headerActions}</div>
-  ),
+  default: ({
+    headerActions,
+    onChange,
+  }: {
+    headerActions?: React.ReactNode;
+    onChange: (value: Record<string, unknown>[] | string | undefined) => void;
+  }) => {
+    capturedOnChange = onChange;
+    return <div data-testid="code-editor">{headerActions}</div>;
+  },
 }));
 
 vi.mock("../../json-code-viewer", () => ({
@@ -91,6 +101,7 @@ describe("<ProtocolRunContent />", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedOnChange = null;
     server.mount(contract.protocols.getProtocol, { body: mockProtocol });
     server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
     mockBrowserSupport = {
@@ -197,5 +208,23 @@ describe("<ProtocolRunContent />", () => {
 
     expect(await screen.findByTestId("code-editor")).toBeInTheDocument();
     expect(screen.queryByText("common.save")).not.toBeInTheDocument();
+  });
+
+  it("autosaves the edited protocol code after the debounce window", async () => {
+    mockSession = { user: { id: "user-1" } };
+    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
+    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    const user = userEvent.setup();
+
+    render(<ProtocolRunContent protocolId="proto-1" />);
+
+    await user.click(await screen.findByTestId("edit-trigger"));
+    await screen.findByTestId("code-editor");
+
+    expect(capturedOnChange).not.toBeNull();
+    capturedOnChange?.([{ averages: 2 }]);
+
+    await waitFor(() => expect(updateSpy.callCount).toBe(1), { timeout: 4000 });
+    expect(updateSpy.body).toEqual({ code: [{ averages: 2 }] });
   });
 });

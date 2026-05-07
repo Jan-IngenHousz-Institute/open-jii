@@ -36,9 +36,8 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
     return <div>{t("workbooks.notFound")}</div>;
   }
 
-  // Inner component receives a guaranteed-loaded workbook so `useAutosave`
-  // mounts with the persisted state as its anchor — no spurious save fires
-  // on the load → cells transition.
+  // Mount the editor only after data loads so `useAutosave` sees the
+  // persisted state as its first value.
   return (
     <WorkbookEditorWithAutosave
       id={id}
@@ -101,7 +100,6 @@ function WorkbookEditorWithAutosave({
     delayMs: AUTO_SAVE_DELAY,
   });
 
-  // Surface status to the layout-level indicator.
   useReportAutosaveStatus(autosave);
 
   const handleCellsChange = useCallback((next: WorkbookCell[]) => {
