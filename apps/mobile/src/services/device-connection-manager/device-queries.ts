@@ -3,7 +3,7 @@ import { listSerialPortDevices } from "~/services/multispeq-communication/androi
 import { requestBluetoothPermission } from "~/services/request-bluetooth-permissions";
 import type { Device } from "~/types/device";
 
-import { bluetoothDeviceToDevice, isJiiDevice } from "./device-utils";
+import { bluetoothDeviceToDevice } from "./device-utils";
 import { getConnectedSerialPortDevice } from "./serial-port-connection";
 
 export async function getConnectedDevice(): Promise<Device | null> {
@@ -25,14 +25,19 @@ export async function getAllDevices(): Promise<Device[]> {
   await requestBluetoothPermission();
   const devices = await RNBluetoothClassic.startDiscovery();
 
-  return devices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
+  // Name-based filtering was removed in OJD-1487: MultispeQ units relabelled to
+  // numeric IDs were being silently dropped. Probe-based identification lives
+  // in getBluetoothClassicDevices() (the manual scan path); this query is
+  // re-fetched on every connect/disconnect, so probing here would briefly tear
+  // down the device the user just connected to.
+  return devices.map(bluetoothDeviceToDevice);
 }
 
 export async function getPairedDevices(): Promise<Device[]> {
   await requestBluetoothPermission();
   const bluetoothDevices = await RNBluetoothClassic.getBondedDevices();
 
-  return bluetoothDevices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
+  return bluetoothDevices.map(bluetoothDeviceToDevice);
 }
 
 export async function getSerialDevices(): Promise<Device[]> {
