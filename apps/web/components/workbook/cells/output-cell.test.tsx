@@ -152,8 +152,8 @@ describe("OutputCellComponent", () => {
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "output.expandChart:spectrum" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "output.expandChart:baseline" })).toBeInTheDocument();
+    expect(screen.getByTestId("sparkline-spectrum")).toBeInTheDocument();
+    expect(screen.getByTestId("sparkline-baseline")).toBeInTheDocument();
     // Plain string values still render as text, not as charts.
     expect(screen.getByText("abc")).toBeInTheDocument();
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
@@ -165,8 +165,8 @@ describe("OutputCellComponent", () => {
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "output.expandChart:ENV" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "output.expandChart:SUN" })).toBeInTheDocument();
+    expect(screen.getByTestId("sparkline-ENV")).toBeInTheDocument();
+    expect(screen.getByTestId("sparkline-SUN")).toBeInTheDocument();
   });
 
   it("expands the full chart below the table when a sparkline is clicked, and closes it again", async () => {
@@ -178,7 +178,7 @@ describe("OutputCellComponent", () => {
 
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "output.expandChart:spectrum" }));
+    await user.click(screen.getByTestId("sparkline-spectrum"));
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
     expect(screen.getByTestId("series-spectrum")).toHaveTextContent("10,20,30");
 
@@ -191,7 +191,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [10, 20, 30] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    const trigger = screen.getByRole("button", { name: "output.expandChart:spectrum" });
+    const trigger = screen.getByTestId("sparkline-spectrum");
     await user.click(trigger);
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
 
@@ -204,10 +204,10 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [10, 20, 30], baseline: [1, 2, 3] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    await user.click(screen.getByRole("button", { name: "output.expandChart:spectrum" }));
+    await user.click(screen.getByTestId("sparkline-spectrum"));
     expect(screen.getByTestId("series-spectrum")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "output.expandChart:baseline" }));
+    await user.click(screen.getByTestId("sparkline-baseline"));
     expect(screen.queryByTestId("series-spectrum")).not.toBeInTheDocument();
     expect(screen.getByTestId("series-baseline")).toHaveTextContent("1,2,3");
   });
@@ -217,7 +217,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [10, 20, 30] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    await user.click(screen.getByRole("button", { name: "output.expandChart:spectrum" }));
+    await user.click(screen.getByTestId("sparkline-spectrum"));
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
@@ -232,7 +232,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { device_id: "abc-123", firmware_version: "1.2.3" } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.queryByRole("button", { name: /output.expandChart/ })).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId(/sparkline-/)).toHaveLength(0);
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
     expect(screen.getByText("device_id")).toBeInTheDocument();
   });
@@ -244,7 +244,7 @@ describe("OutputCellComponent", () => {
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
     expect(screen.getByText("alpha, beta, gamma")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /output.expandChart/ })).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId(/sparkline-/)).toHaveLength(0);
   });
 
   it("renders a nested plain object inside a cell as a sub-table", () => {
@@ -308,7 +308,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [42] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "output.expandChart:spectrum" })).toBeInTheDocument();
+    expect(screen.getByTestId("sparkline-spectrum")).toBeInTheDocument();
     expect(screen.getByText("n=1")).toBeInTheDocument();
   });
 
@@ -316,7 +316,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [5, 5, 5] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "output.expandChart:spectrum" })).toBeInTheDocument();
+    expect(screen.getByTestId("sparkline-spectrum")).toBeInTheDocument();
   });
 
   it("renders multi-row array-of-objects tables with row dividers", () => {

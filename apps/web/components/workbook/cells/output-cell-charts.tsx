@@ -39,6 +39,7 @@ export function Sparkline({
       className={`flex items-center gap-2 rounded p-1 text-left transition-colors ${interactive ? "hover:bg-[#EDF2F6]" : "cursor-default"}`}
       onClick={() => onClick?.(data, columnName)}
       aria-label={interactive ? t("output.expandChart", { column: columnName }) : undefined}
+      data-testid={interactive ? `sparkline-${columnName}` : undefined}
       disabled={!interactive}
     >
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0">
