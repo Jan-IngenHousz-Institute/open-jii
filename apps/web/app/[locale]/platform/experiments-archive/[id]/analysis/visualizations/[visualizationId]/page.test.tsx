@@ -2,80 +2,43 @@ import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { vi, describe, it, expect } from "vitest";
 
-import VisualizationDetailPage from "./page";
+import ArchivedVisualizationDetailPage from "./page";
 
 vi.mock(
-  "../../../../../../../../components/experiment-visualizations/experiment-visualization-details",
+  "../../../../../../../../components/experiment-visualizations/experiment-visualization-read-only",
   () => ({
     default: ({
       experimentId,
       visualizationId,
-      isArchiveContext,
     }: {
       experimentId: string;
       visualizationId: string;
-      isArchiveContext?: boolean;
     }) => (
-      <div data-testid="visualization-details">
+      <div data-testid="visualization-readonly">
         <div data-testid="experiment-id">{experimentId}</div>
         <div data-testid="visualization-id">{visualizationId}</div>
-        <div data-testid="archive-context">{isArchiveContext ? "true" : "false"}</div>
       </div>
     ),
   }),
 );
 
-describe("<VisualizationDetailPage />", () => {
-  it("renders visualization details with correct props", async () => {
+describe("ArchivedVisualizationDetailPage", () => {
+  it("renders the read-only viz with correct ids", async () => {
     const params = Promise.resolve({
       locale: "en-US",
-      id: "test-experiment-id",
-      visualizationId: "test-visualization-id",
+      id: "exp-1",
+      visualizationId: "viz-1",
     });
-
-    const result = await VisualizationDetailPage({ params });
-
+    const result = await ArchivedVisualizationDetailPage({ params });
     render(result);
-
-    expect(screen.getByTestId("visualization-details")).toBeInTheDocument();
-    expect(screen.getByTestId("experiment-id")).toHaveTextContent("test-experiment-id");
-    expect(screen.getByTestId("visualization-id")).toHaveTextContent("test-visualization-id");
-    expect(screen.getByTestId("archive-context")).toHaveTextContent("true");
+    expect(screen.getByTestId("experiment-id")).toHaveTextContent("exp-1");
+    expect(screen.getByTestId("visualization-id")).toHaveTextContent("viz-1");
   });
 
-  it("calls notFound when experimentId is missing", async () => {
-    const params = Promise.resolve({
-      locale: "en-US",
-      id: "",
-      visualizationId: "test-visualization-id",
+  it("calls notFound when ids are missing", async () => {
+    await ArchivedVisualizationDetailPage({
+      params: Promise.resolve({ locale: "en-US", id: "", visualizationId: "" }),
     });
-
-    await VisualizationDetailPage({ params });
-
-    expect(vi.mocked(notFound)).toHaveBeenCalled();
-  });
-
-  it("calls notFound when visualizationId is missing", async () => {
-    const params = Promise.resolve({
-      locale: "en-US",
-      id: "test-experiment-id",
-      visualizationId: "",
-    });
-
-    await VisualizationDetailPage({ params });
-
-    expect(vi.mocked(notFound)).toHaveBeenCalled();
-  });
-
-  it("calls notFound when both ids are missing", async () => {
-    const params = Promise.resolve({
-      locale: "en-US",
-      id: "",
-      visualizationId: "",
-    });
-
-    await VisualizationDetailPage({ params });
-
     expect(vi.mocked(notFound)).toHaveBeenCalled();
   });
 });

@@ -6,7 +6,13 @@ import React from "react";
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getPlotType,
+  getRenderer,
+  refineAxisType,
+} from "./utils";
 
 export interface ScatterSeriesData extends BaseSeries {
   x: (string | number | Date)[];
@@ -113,17 +119,14 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   const layout = createBaseLayout(config);
   const plotConfig = createPlotlyConfig(config);
 
-  // Check if we have categorical x data (non-numeric strings)
-  const hasCategoricalX = data.some(
-    (series) => series.x && series.x.some((val) => typeof val === "string" && isNaN(Number(val))),
+  layout.xaxis = refineAxisType(
+    layout.xaxis,
+    data.flatMap((s) => s.x ?? []),
   );
-  if (hasCategoricalX) {
-    layout.xaxis = {
-      ...layout.xaxis,
-      type: "category",
-      categoryorder: "category ascending",
-    };
-  }
+  layout.yaxis = refineAxisType(
+    layout.yaxis,
+    data.flatMap((s) => s.y ?? []),
+  );
 
   return (
     <div className={cn("flex h-full w-full flex-col", className)}>

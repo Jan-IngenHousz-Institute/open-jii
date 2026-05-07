@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import type { UsbSerial } from "react-native-usb-serialport-for-android";
 import { UsbSerialManager } from "react-native-usb-serialport-for-android";
 import { describe, it, expect, vi, beforeEach } from "vitest";
