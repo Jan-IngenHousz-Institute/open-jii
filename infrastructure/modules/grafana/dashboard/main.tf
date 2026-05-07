@@ -395,7 +395,7 @@ resource "grafana_rule_group" "cloudfront_errors" {
       })
 
       relative_time_range {
-        from = 120
+        from = 300
         to   = 0
       }
     }
