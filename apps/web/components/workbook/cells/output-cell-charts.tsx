@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 
+import { useTranslation } from "@repo/i18n";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
 
@@ -16,6 +17,7 @@ export function Sparkline({
   columnName: string;
   onClick?: ChartClickHandler;
 }) {
+  const { t } = useTranslation("workbook");
   const width = 80;
   const height = 24;
   const padding = 2;
@@ -36,7 +38,7 @@ export function Sparkline({
       type="button"
       className={`flex items-center gap-2 rounded p-1 text-left transition-colors ${interactive ? "hover:bg-[#EDF2F6]" : "cursor-default"}`}
       onClick={() => onClick?.(data, columnName)}
-      aria-label={interactive ? `Expand chart for ${columnName}` : undefined}
+      aria-label={interactive ? t("output.expandChart", { column: columnName }) : undefined}
       disabled={!interactive}
     >
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0">
@@ -63,6 +65,7 @@ export function ExpandedChart({
   columnName: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("workbook");
   const plotData: LineSeriesData[] = [
     {
       name: columnName,
@@ -81,8 +84,8 @@ export function ExpandedChart({
           type="button"
           className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
           onClick={onClose}
-          title="Close chart"
-          aria-label="Close chart"
+          title={t("output.closeChart")}
+          aria-label={t("output.closeChart")}
         >
           <X className="size-3" />
         </button>

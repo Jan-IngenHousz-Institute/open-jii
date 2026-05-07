@@ -67,7 +67,8 @@ const { mockRouter } = vi.hoisted(() => ({
 
 vi.mock("@repo/i18n", () => ({
   useTranslation: (_ns?: string) => ({
-    t: (key: string) => key,
+    t: (key: string, opts?: Record<string, unknown>) =>
+      opts && Object.keys(opts).length > 0 ? `${key}:${Object.values(opts).join(",")}` : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   defaultLocale: "en-US",
@@ -87,7 +88,8 @@ vi.mock("@repo/i18n", () => ({
 
 vi.mock("@repo/i18n/client", () => ({
   useTranslation: (_ns?: string) => ({
-    t: (key: string) => key,
+    t: (key: string, opts?: Record<string, unknown>) =>
+      opts && Object.keys(opts).length > 0 ? `${key}:${Object.values(opts).join(",")}` : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   Trans: ({ i18nKey, children }: { i18nKey?: string; children?: unknown }) =>

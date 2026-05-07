@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 
 import type { OutputCell as OutputCellType } from "@repo/api/schemas/workbook-cells.schema";
+import { useTranslation } from "@repo/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
 import type { ChartClickHandler } from "./output-cell-charts";
@@ -80,6 +81,7 @@ function DataTabs({
   activeTab: string;
   onTabChange: (tab: string) => void;
 }) {
+  const { t } = useTranslation("workbook");
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
@@ -87,17 +89,17 @@ function DataTabs({
           value="table"
           className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
         >
-          Table
+          {t("output.tabTable")}
         </TabsTrigger>
         <TabsTrigger
           value="json"
           className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
         >
-          JSON
+          {t("output.tabJson")}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="table" className="mt-2">
-        {renderDataTable(data, onChartClick)}
+        {renderDataTable(data, { onChartClick, noDataLabel: t("output.noData") })}
       </TabsContent>
       <TabsContent value="json" className="mt-2">
         <div className="relative">
@@ -107,8 +109,8 @@ function DataTabs({
           <button
             className="absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] shadow-sm transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
             onClick={() => void copy(JSON.stringify(data, null, 2))}
-            title="Copy JSON"
-            aria-label="Copy JSON"
+            title={t("output.copyJson")}
+            aria-label={t("output.copyJson")}
           >
             {copied ? (
               <Check className="size-3.5 text-emerald-500" />
@@ -123,6 +125,7 @@ function DataTabs({
 }
 
 export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: OutputCellProps) {
+  const { t } = useTranslation("workbook");
   const hasContent = cell.data != null || (cell.messages && cell.messages.length > 0);
   // Read-only viewers can still collapse the cell for their own view, but their toggle should not
   // mutate persisted state. Keep a local override; fall back to the cell's persisted flag.
@@ -157,7 +160,7 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
           <button
             className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
             onClick={toggleCollapsed}
-            title={isCollapsed ? "Expand output" : "Collapse output"}
+            title={isCollapsed ? t("output.expand") : t("output.collapse")}
             aria-expanded={!isCollapsed}
           >
             {isCollapsed ? (
@@ -167,7 +170,7 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
             )}
           </button>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#68737B]">
-            Output
+            {t("output.label")}
           </span>
           {cell.executionTime != null && (
             <span className="flex items-center gap-1 text-[11px] text-[#CDD5DB]">
@@ -180,7 +183,7 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
             <button
               className="flex size-5 items-center justify-center rounded opacity-0 transition-opacity hover:bg-[#EDF2F6] group-hover/output:opacity-100"
               onClick={onDelete}
-              title="Clear output"
+              title={t("output.clear")}
             >
               <X className="size-3 text-[#68737B]" />
             </button>
@@ -246,11 +249,7 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
               </>
             )}
 
-            {!hasContent && (
-              <p className="py-1 text-xs text-[#CDD5DB]">
-                No measurement data available — run a protocol cell first
-              </p>
-            )}
+            {!hasContent && <p className="py-1 text-xs text-[#CDD5DB]">{t("output.empty")}</p>}
           </>
         )}
       </div>

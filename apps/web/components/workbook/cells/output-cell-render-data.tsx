@@ -17,10 +17,15 @@ function isPlainObject(val: unknown): val is Record<string, unknown> {
   return val != null && typeof val === "object" && !Array.isArray(val);
 }
 
+export interface RenderOptions {
+  onChartClick?: ChartClickHandler;
+  noDataLabel: string;
+}
+
 export function renderCellValue(
   val: unknown,
   columnName: string,
-  onChartClick?: ChartClickHandler,
+  options: RenderOptions,
 ): React.ReactNode {
   if (val == null) return <span className="text-[#CDD5DB]">—</span>;
   if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
@@ -29,15 +34,15 @@ export function renderCellValue(
   if (Array.isArray(val)) {
     if (val.length === 0) return <span className="text-[#CDD5DB]">[]</span>;
     if (isNumericArray(val)) {
-      return <Sparkline data={val} columnName={columnName} onClick={onChartClick} />;
+      return <Sparkline data={val} columnName={columnName} onClick={options.onChartClick} />;
     }
-    if (typeof val[0] === "object" && val[0] !== null) return renderDataTable(val, onChartClick);
+    if (typeof val[0] === "object" && val[0] !== null) return renderDataTable(val, options);
     return val.map((v) => (v == null ? "" : String(v))).join(", ");
   }
-  return renderDataTable(val, onChartClick);
+  return renderDataTable(val, options);
 }
 
-export function renderDataTable(data: unknown, onChartClick?: ChartClickHandler): React.ReactNode {
+export function renderDataTable(data: unknown, options: RenderOptions): React.ReactNode {
   // Array-of-rows: defensively filter to object rows for the keys union, but render every row in
   // the original order. Primitive/null rows fall back to a single empty-row placeholder so the
   // table doesn't throw or stringify nonsense.
@@ -61,7 +66,7 @@ export function renderDataTable(data: unknown, onChartClick?: ChartClickHandler)
               <tr key={i} className={i < data.length - 1 ? "border-b border-b-[#EDF2F6]" : ""}>
                 {keys.map((key) => (
                   <td key={key} className="px-3 py-2 align-top text-xs text-[#011111]">
-                    {renderCellValue(isPlainObject(row) ? row[key] : null, key, onChartClick)}
+                    {renderCellValue(isPlainObject(row) ? row[key] : null, key, options)}
                   </td>
                 ))}
               </tr>
@@ -74,7 +79,8 @@ export function renderDataTable(data: unknown, onChartClick?: ChartClickHandler)
 
   if (isPlainObject(data)) {
     const entries = Object.entries(data);
-    if (entries.length === 0) return <p className="text-sm text-[#68737B]">No output data</p>;
+    if (entries.length === 0)
+      return <p className="text-sm text-[#68737B]">{options.noDataLabel}</p>;
     return (
       <div className="overflow-auto rounded-lg border border-[#EDF2F6]">
         <table className="w-full text-xs">
@@ -88,7 +94,7 @@ export function renderDataTable(data: unknown, onChartClick?: ChartClickHandler)
                   {k}
                 </th>
                 <td className="px-3 py-2 align-top text-xs text-[#011111]">
-                  {renderCellValue(v, k, onChartClick)}
+                  {renderCellValue(v, k, options)}
                 </td>
               </tr>
             ))}

@@ -21,5 +21,18 @@
     "saving": "Saving...",
     "allChangesSaved": "All changes saved",
     "viewWorkbook": "View Workbook"
+  },
+  "output": {
+    "label": "Output",
+    "expand": "Expand output",
+    "collapse": "Collapse output",
+    "clear": "Clear output",
+    "empty": "No measurement data available — run a protocol cell first",
+    "noData": "No output data",
+    "tabTable": "Table",
+    "tabJson": "JSON",
+    "copyJson": "Copy JSON",
+    "closeChart": "Close chart",
+    "expandChart": "Expand chart for {{column}}"
   }
 }

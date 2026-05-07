@@ -74,7 +74,7 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("time")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "JSON" }));
+    await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
     expect(screen.getByText(/"value": 42/)).toBeInTheDocument();
   });
 
@@ -83,7 +83,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { answer: "Yes" } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    await user.click(screen.getByTitle("Clear output"));
+    await user.click(screen.getByTitle("output.clear"));
     expect(onDelete).toHaveBeenCalledOnce();
   });
 
@@ -91,7 +91,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { answer: "Yes" } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} readOnly />);
 
-    expect(screen.queryByTitle("Clear output")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("output.clear")).not.toBeInTheDocument();
     expect(screen.getByText("Yes")).toBeInTheDocument();
   });
 
@@ -99,7 +99,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell();
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByText(/No measurement data available/)).toBeInTheDocument();
+    expect(screen.getByText("output.empty")).toBeInTheDocument();
   });
 
   it("formats short execution times in milliseconds", () => {
@@ -132,7 +132,7 @@ describe("OutputCellComponent", () => {
 
     expect(screen.getByText("time")).toBeInTheDocument();
 
-    await user.click(screen.getByTitle("Collapse output"));
+    await user.click(screen.getByTitle("output.collapse"));
     expect(localOnUpdate).toHaveBeenCalledWith({ ...cell, isCollapsed: true });
 
     rerender(
@@ -143,7 +143,7 @@ describe("OutputCellComponent", () => {
       />,
     );
     expect(screen.queryByText("time")).not.toBeInTheDocument();
-    expect(screen.getByTitle("Expand output")).toBeInTheDocument();
+    expect(screen.getByTitle("output.expand")).toBeInTheDocument();
   });
 
   it("renders inline sparklines for numeric-array fields in the table", () => {
@@ -152,8 +152,8 @@ describe("OutputCellComponent", () => {
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "Expand chart for spectrum" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Expand chart for baseline" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "output.expandChart:spectrum" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "output.expandChart:baseline" })).toBeInTheDocument();
     // Plain string values still render as text, not as charts.
     expect(screen.getByText("abc")).toBeInTheDocument();
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
@@ -165,8 +165,8 @@ describe("OutputCellComponent", () => {
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "Expand chart for ENV" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Expand chart for SUN" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "output.expandChart:ENV" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "output.expandChart:SUN" })).toBeInTheDocument();
   });
 
   it("expands the full chart below the table when a sparkline is clicked, and closes it again", async () => {
@@ -178,11 +178,11 @@ describe("OutputCellComponent", () => {
 
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Expand chart for spectrum" }));
+    await user.click(screen.getByRole("button", { name: "output.expandChart:spectrum" }));
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
     expect(screen.getByTestId("series-spectrum")).toHaveTextContent("10,20,30");
 
-    await user.click(screen.getByRole("button", { name: "Close chart" }));
+    await user.click(screen.getByRole("button", { name: "output.closeChart" }));
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
   });
 
@@ -191,7 +191,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [10, 20, 30] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    const trigger = screen.getByRole("button", { name: "Expand chart for spectrum" });
+    const trigger = screen.getByRole("button", { name: "output.expandChart:spectrum" });
     await user.click(trigger);
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
 
@@ -204,10 +204,10 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [10, 20, 30], baseline: [1, 2, 3] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    await user.click(screen.getByRole("button", { name: "Expand chart for spectrum" }));
+    await user.click(screen.getByRole("button", { name: "output.expandChart:spectrum" }));
     expect(screen.getByTestId("series-spectrum")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Expand chart for baseline" }));
+    await user.click(screen.getByRole("button", { name: "output.expandChart:baseline" }));
     expect(screen.queryByTestId("series-spectrum")).not.toBeInTheDocument();
     expect(screen.getByTestId("series-baseline")).toHaveTextContent("1,2,3");
   });
@@ -217,14 +217,14 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [10, 20, 30] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    await user.click(screen.getByRole("button", { name: "Expand chart for spectrum" }));
+    await user.click(screen.getByRole("button", { name: "output.expandChart:spectrum" }));
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "JSON" }));
+    await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
 
     // Switching back to Table doesn't auto-restore the chart; the user re-clicks the sparkline.
-    await user.click(screen.getByRole("tab", { name: "Table" }));
+    await user.click(screen.getByRole("tab", { name: "output.tabTable" }));
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
   });
 
@@ -232,7 +232,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { device_id: "abc-123", firmware_version: "1.2.3" } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.queryByRole("button", { name: /Expand chart/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /output.expandChart/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
     expect(screen.getByText("device_id")).toBeInTheDocument();
   });
@@ -244,7 +244,7 @@ describe("OutputCellComponent", () => {
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
     expect(screen.getByText("alpha, beta, gamma")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Expand chart/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /output.expandChart/ })).not.toBeInTheDocument();
   });
 
   it("renders a nested plain object inside a cell as a sub-table", () => {
@@ -285,7 +285,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: {} });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByText("No output data")).toBeInTheDocument();
+    expect(screen.getByText("output.noData")).toBeInTheDocument();
   });
 
   it("renders an em-dash placeholder for nullish cell values", () => {
@@ -308,7 +308,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [42] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "Expand chart for spectrum" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "output.expandChart:spectrum" })).toBeInTheDocument();
     expect(screen.getByText("n=1")).toBeInTheDocument();
   });
 
@@ -316,7 +316,7 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: { spectrum: [5, 5, 5] } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    expect(screen.getByRole("button", { name: "Expand chart for spectrum" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "output.expandChart:spectrum" })).toBeInTheDocument();
   });
 
   it("renders multi-row array-of-objects tables with row dividers", () => {
@@ -344,8 +344,8 @@ describe("OutputCellComponent", () => {
     const cell = createOutputCell({ data: [{ time: 1, value: 42 }] });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
-    await user.click(screen.getByRole("tab", { name: "JSON" }));
-    const copyButton = screen.getByRole("button", { name: "Copy JSON" });
+    await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
+    const copyButton = screen.getByRole("button", { name: "output.copyJson" });
     expect(copyButton.querySelector(".lucide-copy")).toBeInTheDocument();
 
     await user.click(copyButton);
@@ -361,11 +361,11 @@ describe("OutputCellComponent", () => {
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} readOnly />);
 
     expect(screen.getByText("device_id")).toBeInTheDocument();
-    await user.click(screen.getByTitle("Collapse output"));
+    await user.click(screen.getByTitle("output.collapse"));
 
     expect(onUpdate).not.toHaveBeenCalled();
     expect(screen.queryByText("device_id")).not.toBeInTheDocument();
-    expect(screen.getByTitle("Expand output")).toBeInTheDocument();
+    expect(screen.getByTitle("output.expand")).toBeInTheDocument();
   });
 
   it("renders an array of objects with primitive rows without throwing", () => {

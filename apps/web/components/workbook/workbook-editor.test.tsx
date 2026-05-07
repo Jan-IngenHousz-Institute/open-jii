@@ -278,7 +278,7 @@ describe("WorkbookEditor — delete flow", () => {
     });
     const { onCellsChange } = renderEditor({ cells: [question, output] });
 
-    await user.click(screen.getByTitle("Clear output"));
+    await user.click(screen.getByTitle("output.clear"));
 
     const next = onCellsChange.mock.calls[0][0] as WorkbookCell[];
     expect(next).toHaveLength(1);
