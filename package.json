@@ -54,7 +54,8 @@
     ],
     "overrides": {
       "react": "catalog:react19",
-      "react-dom": "catalog:react19"
+      "react-dom": "catalog:react19",
+      "lodash": "^4.18.0"
     },
     "patchedDependencies": {
       "react-native-usb-serialport-for-android": "patches/react-native-usb-serialport-for-android.patch",
