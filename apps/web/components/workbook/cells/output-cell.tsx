@@ -101,7 +101,7 @@ function DataTabs({
       </TabsContent>
       <TabsContent value="json" className="mt-2">
         <div className="relative">
-          <pre className="overflow-auto rounded-lg bg-[#F7F8FA] p-3 pr-12 text-xs text-[#011111]">
+          <pre className="max-h-[480px] overflow-auto rounded-lg bg-[#F7F8FA] p-3 pr-12 text-xs text-[#011111]">
             {JSON.stringify(data, null, 2)}
           </pre>
           <button
