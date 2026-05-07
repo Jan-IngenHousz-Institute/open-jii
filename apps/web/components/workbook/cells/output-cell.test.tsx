@@ -19,11 +19,7 @@ vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
           "data-series": JSON.stringify(data.map((s) => s.name)),
         },
         data.map((s) =>
-          createElement(
-            "div",
-            { key: s.name, "data-testid": `series-${s.name}` },
-            s.y.join(","),
-          ),
+          createElement("div", { key: s.name, "data-testid": `series-${s.name}` }, s.y.join(",")),
         ),
       ),
   };
@@ -231,6 +227,101 @@ describe("OutputCellComponent", () => {
     expect(screen.queryByRole("button", { name: /Expand chart/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId("line-chart")).not.toBeInTheDocument();
     expect(screen.getByText("device_id")).toBeInTheDocument();
+  });
+
+  it("renders an array of non-numeric primitives as a comma-joined string in a cell", () => {
+    const cell = createOutputCell({
+      data: { device_id: "abc", tags: ["alpha", "beta", "gamma"] },
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("alpha, beta, gamma")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Expand chart/ })).not.toBeInTheDocument();
+  });
+
+  it("renders a nested plain object inside a cell as a sub-table", () => {
+    const cell = createOutputCell({
+      data: { device: { id: "esp32-c3", firmware: "1.0.0" } },
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("device")).toBeInTheDocument();
+    expect(screen.getByText("id")).toBeInTheDocument();
+    expect(screen.getByText("esp32-c3")).toBeInTheDocument();
+    expect(screen.getByText("firmware")).toBeInTheDocument();
+    expect(screen.getByText("1.0.0")).toBeInTheDocument();
+  });
+
+  it("renders a top-level primitive data value as plain text in the table tab", () => {
+    const cell = createOutputCell({ data: "raw measurement string" });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("raw measurement string")).toBeInTheDocument();
+  });
+
+  it("renders a top-level array of primitives via JSON in the table tab", () => {
+    const cell = createOutputCell({ data: [1, 2, 3] });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("[1,2,3]")).toBeInTheDocument();
+  });
+
+  it("renders nullish entries in a non-numeric array as empty strings", () => {
+    const cell = createOutputCell({ data: { tags: ["a", null, "b"] } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("a, , b")).toBeInTheDocument();
+  });
+
+  it("falls back to the empty-state message when data is an empty object", () => {
+    const cell = createOutputCell({ data: {} });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("No output data")).toBeInTheDocument();
+  });
+
+  it("renders an em-dash placeholder for nullish cell values", () => {
+    const cell = createOutputCell({ data: { device_id: "abc", missing: null } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("missing")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("renders an empty-array placeholder for empty-array cell values", () => {
+    const cell = createOutputCell({ data: { device_id: "abc", samples: [] } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("samples")).toBeInTheDocument();
+    expect(screen.getByText("[]")).toBeInTheDocument();
+  });
+
+  it("renders a sparkline for a single-point numeric array (no division by zero)", () => {
+    const cell = createOutputCell({ data: { spectrum: [42] } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByRole("button", { name: "Expand chart for spectrum" })).toBeInTheDocument();
+    expect(screen.getByText("n=1")).toBeInTheDocument();
+  });
+
+  it("renders a sparkline for a constant-value numeric array (no NaN range)", () => {
+    const cell = createOutputCell({ data: { spectrum: [5, 5, 5] } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByRole("button", { name: "Expand chart for spectrum" })).toBeInTheDocument();
+  });
+
+  it("renders multi-row array-of-objects tables with row dividers", () => {
+    const cell = createOutputCell({
+      data: [
+        { time: 1, value: 42 },
+        { time: 2, value: 84 },
+      ],
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getByText("84")).toBeInTheDocument();
   });
 
   it("shows a copy button in the JSON view that swaps to a check icon when clicked", async () => {

@@ -106,13 +106,10 @@ function renderCellValue(
     if (typeof val[0] === "object" && val[0] !== null) return renderDataTable(val, onChartClick);
     return val.map((v) => (v == null ? "" : String(v))).join(", ");
   }
-  if (typeof val === "object") return renderDataTable(val, onChartClick);
-  return JSON.stringify(val);
+  return renderDataTable(val, onChartClick);
 }
 
 function renderDataTable(data: unknown, onChartClick?: ChartClickHandler): React.ReactNode {
-  if (data == null) return <p className="text-sm text-[#68737B]">No output data</p>;
-
   if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object" && data[0] !== null) {
     const keys = Array.from(
       new Set(data.flatMap((row) => Object.keys(row as Record<string, unknown>))),
@@ -171,10 +168,11 @@ function renderDataTable(data: unknown, onChartClick?: ChartClickHandler): React
     );
   }
 
-  if (typeof data === "string" || typeof data === "number" || typeof data === "boolean") {
-    return <p className="px-3 py-2 text-xs text-[#011111]">{String(data)}</p>;
-  }
-  return <p className="px-3 py-2 text-xs text-[#011111]">{JSON.stringify(data)}</p>;
+  const text =
+    typeof data === "string" || typeof data === "number" || typeof data === "boolean"
+      ? String(data)
+      : JSON.stringify(data);
+  return <p className="px-3 py-2 text-xs text-[#011111]">{text}</p>;
 }
 
 function getMessageType(message: string): "error" | "warning" | "info" {
