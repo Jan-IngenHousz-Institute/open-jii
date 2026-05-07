@@ -47,30 +47,12 @@ export class IsWorkbookUpgradableUseCase {
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbook.id);
     if (latestResult.isFailure()) return latestResult;
     const latest = latestResult.value;
-    if (!latest) {
-      this.logger.log({
-        msg: "Workbook upgradable check resolved",
-        operation: "isWorkbookUpgradable",
-        workbookId: workbook.id,
-        upgradable: false,
-        reason: "no_published_version",
-      });
-      return success(false);
-    }
+    if (!latest) return success(false);
 
     const cellsChanged =
       JSON.stringify(designOf(workbook.cells)) !==
       JSON.stringify(designOf(latest.cells as WorkbookCell[]));
-    if (cellsChanged) {
-      this.logger.log({
-        msg: "Workbook upgradable check resolved",
-        operation: "isWorkbookUpgradable",
-        workbookId: workbook.id,
-        upgradable: true,
-        reason: "cells_diff",
-      });
-      return success(true);
-    }
+    if (cellsChanged) return success(true);
 
     const protocolIds = [
       ...new Set(
@@ -91,38 +73,13 @@ export class IsWorkbookUpgradableUseCase {
     const snapshots = latest.entitySnapshots;
     for (const [id, p] of protocolsResult.value) {
       const snap = snapshots.protocols[id] as { code: unknown } | undefined;
-      if (JSON.stringify(snap?.code) !== JSON.stringify(p.code)) {
-        this.logger.log({
-          msg: "Workbook upgradable check resolved",
-          operation: "isWorkbookUpgradable",
-          workbookId: workbook.id,
-          upgradable: true,
-          reason: "protocol_drift",
-        });
-        return success(true);
-      }
+      if (JSON.stringify(snap?.code) !== JSON.stringify(p.code)) return success(true);
     }
     for (const [id, m] of macrosResult.value) {
       const snap = snapshots.macros[id] as { code: string } | undefined;
-      if (snap?.code !== m.code) {
-        this.logger.log({
-          msg: "Workbook upgradable check resolved",
-          operation: "isWorkbookUpgradable",
-          workbookId: workbook.id,
-          upgradable: true,
-          reason: "macro_drift",
-        });
-        return success(true);
-      }
+      if (snap?.code !== m.code) return success(true);
     }
 
-    this.logger.log({
-      msg: "Workbook upgradable check resolved",
-      operation: "isWorkbookUpgradable",
-      workbookId: workbook.id,
-      upgradable: false,
-      reason: "no_drift",
-    });
     return success(false);
   }
 }
