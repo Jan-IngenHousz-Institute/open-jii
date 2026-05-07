@@ -51,18 +51,17 @@ exports.handler = async () => {
         EXTRACT(WEEK FROM created_at)::int    AS week_number,
         COUNT(*)::int                         AS user_count
       FROM users
+      WHERE created_at >= date_trunc('week', now() - INTERVAL '7 days')
+        AND created_at <  date_trunc('week', now())
       GROUP BY year, week_number
       ORDER BY year, week_number
     `;
-
-        const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
         const metricData = rows
             .map((row) => ({
                 timestamp: isoWeekStart(row.year, row.week_number),
                 count: row.user_count,
             }))
-            .filter(({ timestamp }) => timestamp >= cutoff)
             .map(({ timestamp, count }) => ({
                 MetricName: "WeeklyNewUsers",
                 Value: count,
