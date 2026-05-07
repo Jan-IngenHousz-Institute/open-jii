@@ -1044,7 +1044,7 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -1062,7 +1062,7 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "normal"
+              "mode": "none"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -1071,30 +1071,21 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "short"
         },
         "overrides": [
           {
-            "matcher": { "id": "byFrameRefID", "options": "A" },
+            "matcher": { "id": "byRegexp", "options": ".*2XX.*" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
           },
           {
-            "matcher": { "id": "byFrameRefID", "options": "B" },
+            "matcher": { "id": "byRegexp", "options": ".*4XX.*" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }]
           },
           {
-            "matcher": { "id": "byFrameRefID", "options": "C" },
+            "matcher": { "id": "byRegexp", "options": ".*5XX.*" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
           }
         ]
@@ -1129,7 +1120,7 @@
           },
           "expression": "",
           "id": "",
-          "label": "",
+          "label": "HTTPCode_Target_2XX_Count",
           "logGroups": [],
           "matchExact": true,
           "metricEditorMode": 0,
@@ -1149,7 +1140,7 @@
           },
           "expression": "",
           "id": "",
-          "label": "",
+          "label": "HTTPCode_Target_4XX_Count",
           "logGroups": [],
           "matchExact": true,
           "metricEditorMode": 0,
@@ -1169,7 +1160,7 @@
           },
           "expression": "",
           "id": "",
-          "label": "",
+          "label": "HTTPCode_Target_5XX_Count",
           "logGroups": [],
           "matchExact": true,
           "metricEditorMode": 0,
