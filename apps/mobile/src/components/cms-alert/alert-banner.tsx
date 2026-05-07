@@ -1,52 +1,49 @@
+import { cva } from "class-variance-authority";
 import { AlertTriangle, ArrowRight, Info, Sparkles, Wrench, X } from "lucide-react-native";
 import React from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import { CtfRichText } from "~/components/contentful/ctf-rich-text";
+import { colors } from "~/constants/colors";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms";
 
 export type Severity = "critical" | "warning" | "info";
 
-export const severityStyles: Record<
-  Severity,
+const bannerVariants = cva("overflow-hidden border-b border-black/5", {
+  variants: {
+    severity: {
+      info: "bg-[#E2FCFC]",
+      warning: "bg-[#FFF8D6]",
+      critical: "bg-[#FDECEC]",
+    },
+  },
+  defaultVariants: { severity: "info" },
+});
+
+const badgeVariants = cva(
+  "h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/5",
   {
-    banner: string;
-    text: string;
-    secondaryText: string;
-    badge: string;
-    button: string;
-    dismiss: string;
-    iconColor: string;
-  }
-> = {
-  info: {
-    banner: "bg-[#E2FCFC] border-b border-black/5",
-    text: "text-[#005e5e]",
-    secondaryText: "text-[#005e5e]/85",
-    badge: "bg-[#005e5e]/10 border border-black/5",
-    button: "bg-[#005e5e] active:bg-[#005151]",
-    dismiss: "bg-black/5 active:bg-black/10",
-    iconColor: "#005e5e",
+    variants: {
+      severity: {
+        info: "bg-[#005e5e]/10",
+        warning: "bg-[#FFE98A]",
+        critical: "bg-[#F9D2D2]",
+      },
+    },
+    defaultVariants: { severity: "info" },
   },
-  warning: {
-    banner: "bg-[#FFF8D6] border-b border-black/5",
-    text: "text-[#005e5e]",
-    secondaryText: "text-[#005e5e]/85",
-    badge: "bg-[#FFE98A] border border-black/5",
-    button: "bg-[#005e5e] active:bg-[#005151]",
-    dismiss: "bg-black/5 active:bg-black/10",
-    iconColor: "#005e5e",
+);
+
+const actionButtonVariants = cva("shrink-0 flex-row items-center gap-1 rounded-lg px-3 py-1.5", {
+  variants: {
+    severity: {
+      info: "bg-[#005e5e] active:bg-[#003a3a]",
+      warning: "bg-[#D97706] active:bg-[#B45309]",
+      critical: "bg-[#B91C1C] active:bg-[#991B1B]",
+    },
   },
-  critical: {
-    banner: "bg-[#FDECEC] border-b border-black/5",
-    text: "text-[#7F1D1D]",
-    secondaryText: "text-[#7F1D1D]/85",
-    badge: "bg-[#F9D2D2] border border-black/5",
-    button: "bg-[#7F1D1D] active:bg-[#6B1717]",
-    dismiss: "bg-black/5 active:bg-black/10",
-    iconColor: "#7F1D1D",
-  },
-};
+  defaultVariants: { severity: "info" },
+});
 
 const typeIcons: Partial<Record<string, React.ComponentType<{ size: number; color: string }>>> = {
   info: Info,
@@ -63,43 +60,42 @@ export interface AlertBannerProps {
 
 export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerProps) {
   const severity = (alert.severity ?? "info") as Severity;
-  const s = severityStyles[severity] ?? severityStyles.info;
 
   const Icon = typeIcons[alert.type ?? ""] ?? null;
 
   return (
-    <View className={`overflow-hidden ${s.banner}`}>
+    <View className={bannerVariants({ severity })}>
       <View
         className="flex-row items-center gap-3 px-4 py-2.5"
         style={topPadding > 0 ? { paddingTop: topPadding + 10 } : undefined}
       >
         {Icon && (
-          <View className={`h-7 w-7 shrink-0 items-center justify-center rounded-full ${s.badge}`}>
-            <Icon size={14} color={s.iconColor} />
+          <View className={badgeVariants({ severity })}>
+            <Icon size={14} color={colors.neutral.gray700} />
           </View>
         )}
 
-        <Text className={`flex-1 text-sm leading-5 ${s.text}`}>
+        <Text className="flex-1 text-sm leading-5 text-[#111827]">
           {alert.title && <Text className="font-semibold">{alert.title}</Text>}
           {alert.title && alert.body?.json && (
-            <Text style={{ color: s.iconColor, opacity: 0.5 }}> · </Text>
+            <Text style={{ color: colors.neutral.gray700, opacity: 0.5 }}> · </Text>
           )}
-          {alert.body?.json && <CtfRichText json={alert.body.json} color={s.iconColor} inline />}
+          {alert.body?.json && (
+            <CtfRichText json={alert.body.json} color={colors.neutral.gray700} inline />
+          )}
         </Text>
 
         {alert.link?.url && alert.link?.label && (
           <Pressable
+            className={actionButtonVariants({ severity })}
             onPress={() => {
               if (alert.link?.url) {
                 void Linking.openURL(alert.link.url);
               }
             }}
-            className={`shrink-0 rounded-full px-3 py-1.5 ${s.button}`}
           >
-            <View className="flex-row items-center gap-1">
-              <Text className="text-sm font-medium text-white">{alert.link.label}</Text>
-              <ArrowRight size={14} color="white" />
-            </View>
+            <Text className="text-sm font-medium text-white">{alert.link.label}</Text>
+            <ArrowRight size={14} color="white" />
           </Pressable>
         )}
 
@@ -108,9 +104,9 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
             onPress={onDismiss}
             hitSlop={12}
             accessibilityLabel="Dismiss alert"
-            className={`shrink-0 rounded-full p-2 ${s.dismiss}`}
+            className="shrink-0 p-2"
           >
-            <X size={16} color={s.iconColor} />
+            <X size={16} color={colors.neutral.gray700} />
           </Pressable>
         )}
       </View>
