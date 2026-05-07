@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { uniq } from "lodash";
 import { tsr } from "~/api/tsr";
 import type { FlowNode } from "~/screens/measurement-flow-screen/types";
+import { uniq } from "~/utils/uniq";
 
 async function precacheExperimentMacrosFn(
   experimentId: string,
