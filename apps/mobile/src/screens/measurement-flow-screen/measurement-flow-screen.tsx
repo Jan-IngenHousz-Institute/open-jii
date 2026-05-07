@@ -9,6 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { Image, View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useActiveAlerts } from "~/hooks/use-active-alerts";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
@@ -84,6 +85,8 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
   const isFocused = useIsFocused();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const visibleAlerts = useActiveAlerts();
+  const hasAlerts = visibleAlerts.length > 0;
 
   const handleEndFlow = () => {
     setSelectedExperimentId(undefined);
@@ -104,7 +107,7 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
 
   return (
     <View className={clsx("flex-1", classes.card)} style={{ paddingBottom: insets.bottom }}>
-      {isFocused && <StatusBar style="light" />}
+      {isFocused && <StatusBar style={hasAlerts ? "dark" : "light"} />}
 
       {/* Background */}
       <Image
