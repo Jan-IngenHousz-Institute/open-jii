@@ -8,12 +8,3 @@ export function bluetoothDeviceToDevice(d: BluetoothDevice): Device {
     name: d.name + " (" + d.id.slice(-11) + ")",
   };
 }
-
-export function isJiiDevice(device: { name: string }) {
-  const name = device.name.toLowerCase();
-  if (name.includes("multi")) {
-    return true;
-  }
-
-  return name.includes("photo");
-}

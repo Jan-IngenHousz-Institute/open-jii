@@ -1147,5 +1147,50 @@ describe("WebGLContextManager", () => {
       expect(callback1).not.toHaveBeenCalled();
       expect(callback2).toHaveBeenCalledOnce();
     });
+
+    it("is idempotent: re-requesting an already-active chartId does not double-count", () => {
+      const cb = vi.fn();
+      const first = manager.requestContext("chart-1", cb);
+      const second = manager.requestContext("chart-1", cb);
+
+      expect(first).toBe(true);
+      expect(second).toBe(true);
+      expect(cb).toHaveBeenCalledTimes(2);
+      expect(manager.getActiveCount()).toBe(1);
+    });
+
+    it("releasing a non-active chart does not promote pending charts", () => {
+      // Fill the cap with active contexts
+      for (let i = 0; i < 8; i++) {
+        manager.requestContext(`chart-${i}`, () => {});
+      }
+      const queuedCallback = vi.fn();
+      manager.requestContext("chart-queued", queuedCallback);
+      expect(queuedCallback).not.toHaveBeenCalled();
+
+      // No-op release: chartId not in active set; should not promote.
+      manager.releaseContext("never-acquired");
+      expect(queuedCallback).not.toHaveBeenCalled();
+      expect(manager.getActiveCount()).toBe(8);
+    });
+
+    it("releasing while still pending removes the chart from the pending queue", () => {
+      // Fill up the cap so the next request gets queued.
+      for (let i = 0; i < 8; i++) {
+        manager.requestContext(`chart-${i}`, () => {});
+      }
+      const ghostCallback = vi.fn();
+      manager.requestContext("chart-ghost", ghostCallback);
+
+      // Component "unmounts" before being promoted.
+      manager.releaseContext("chart-ghost");
+
+      // Now a real slot opens up — the next pending entry should run, not the
+      // dropped ghost. Since chart-ghost was dropped, no callback fires until
+      // we queue another waiter.
+      manager.releaseContext("chart-0");
+      expect(ghostCallback).not.toHaveBeenCalled();
+      expect(manager.getActiveCount()).toBe(7);
+    });
   });
 });
