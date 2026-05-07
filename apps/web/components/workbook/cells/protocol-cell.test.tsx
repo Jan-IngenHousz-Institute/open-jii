@@ -22,12 +22,23 @@ vi.mock("../workbook-code-editor", () => ({
     <div data-testid="code-editor-wrapper" data-readonly={String(!!readOnly)}>
       <pre data-testid="code-editor">{value}</pre>
       {onChange && (
-        <button
-          data-testid="simulate-change"
-          onClick={() => onChange('[{"measurement":"new","duration":10}]')}
-        >
-          change
-        </button>
+        <>
+          <button
+            data-testid="simulate-change"
+            onClick={() => onChange('[{"measurement":"new","duration":10}]')}
+          >
+            change
+          </button>
+          <button data-testid="simulate-invalid" onClick={() => onChange("not json")}>
+            invalid
+          </button>
+          <button data-testid="simulate-non-array" onClick={() => onChange('{"x":1}')}>
+            non-array
+          </button>
+          <button data-testid="simulate-same" onClick={() => onChange(value)}>
+            same
+          </button>
+        </>
       )}
     </div>
   ),
@@ -166,6 +177,118 @@ describe("ProtocolCellComponent", () => {
       expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "false");
     });
     expect(screen.getByTestId("simulate-change")).toBeInTheDocument();
+  });
+
+  it("debounces and persists protocol code edits when the owner types valid JSON", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-change"));
+
+    await vi.advanceTimersByTimeAsync(1100);
+    await waitFor(() => expect(updateSpy.called).toBe(true));
+    expect(updateSpy.body).toEqual({ code: [{ measurement: "new", duration: 10 }] });
+    vi.useRealTimers();
+  });
+
+  it("does not persist when the owner types unparseable JSON", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-invalid")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-invalid"));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(updateSpy.called).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("does not persist when the parsed JSON is not an array", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-non-array")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-non-array"));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(updateSpy.called).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("skips persistence when the new code matches the saved snapshot", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-same")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-same"));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(updateSpy.called).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("forwards CellWrapper collapse toggles through onUpdate", async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Light Sensor")).toBeInTheDocument());
+    // CellWrapper's collapse button has no accessible name; identify it by aria-expanded.
+    const collapseButton = screen.getByRole("button", { expanded: true });
+    await user.click(collapseButton);
+
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ isCollapsed: true }));
   });
 
   it("forces the editor read-only regardless of ownership when readOnly prop is set", async () => {

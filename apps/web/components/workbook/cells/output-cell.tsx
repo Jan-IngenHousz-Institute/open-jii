@@ -15,66 +15,11 @@ import {
 import { useState } from "react";
 
 import type { OutputCell as OutputCellType } from "@repo/api/schemas/workbook-cells.schema";
-import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
-import { LineChart } from "@repo/ui/components/charts/line-chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
-type ChartClickHandler = (data: number[], columnName: string) => void;
-
-function isNumericArray(val: unknown): val is number[] {
-  return (
-    Array.isArray(val) &&
-    val.length > 0 &&
-    val.every((v) => typeof v === "number" && Number.isFinite(v))
-  );
-}
-
-function Sparkline({
-  data,
-  columnName,
-  onClick,
-}: {
-  data: number[];
-  columnName: string;
-  onClick?: ChartClickHandler;
-}) {
-  const width = 80;
-  const height = 24;
-  const padding = 2;
-  const minY = Math.min(...data);
-  const maxY = Math.max(...data);
-  const rangeY = maxY - minY || 1;
-  const points = data
-    .map((value, index) => {
-      const x = padding + (index / (data.length - 1 || 1)) * (width - 2 * padding);
-      const y = height - padding - ((value - minY) / rangeY) * (height - 2 * padding);
-      return `${x},${y}`;
-    })
-    .join(" L ");
-  const path = `M ${points}`;
-  const interactive = !!onClick;
-  return (
-    <button
-      type="button"
-      className={`flex items-center gap-2 rounded p-1 text-left transition-colors ${interactive ? "hover:bg-[#EDF2F6]" : "cursor-default"}`}
-      onClick={() => onClick?.(data, columnName)}
-      aria-label={interactive ? `Expand chart for ${columnName}` : undefined}
-      disabled={!interactive}
-    >
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0">
-        <path
-          d={path}
-          fill="none"
-          stroke="#005E5E"
-          strokeWidth="1"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span className="text-[10px] tabular-nums text-[#68737B]">n={data.length}</span>
-    </button>
-  );
-}
+import type { ChartClickHandler } from "./output-cell-charts";
+import { ExpandedChart } from "./output-cell-charts";
+import { renderDataTable } from "./output-cell-render-data";
 
 interface OutputCellProps {
   cell: OutputCellType;
@@ -87,92 +32,6 @@ function formatExecutionTime(ms?: number): string {
   if (ms == null) return "";
   if (ms < 1000) return `${Math.round(ms)}ms`;
   return `${(ms / 1000).toFixed(2)}s`;
-}
-
-function renderCellValue(
-  val: unknown,
-  columnName: string,
-  onChartClick?: ChartClickHandler,
-): React.ReactNode {
-  if (val == null) return <span className="text-[#CDD5DB]">—</span>;
-  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
-    return String(val);
-  }
-  if (Array.isArray(val)) {
-    if (val.length === 0) return <span className="text-[#CDD5DB]">[]</span>;
-    if (isNumericArray(val)) {
-      return <Sparkline data={val} columnName={columnName} onClick={onChartClick} />;
-    }
-    if (typeof val[0] === "object" && val[0] !== null) return renderDataTable(val, onChartClick);
-    return val.map((v) => (v == null ? "" : String(v))).join(", ");
-  }
-  return renderDataTable(val, onChartClick);
-}
-
-function renderDataTable(data: unknown, onChartClick?: ChartClickHandler): React.ReactNode {
-  if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object" && data[0] !== null) {
-    const keys = Array.from(
-      new Set(data.flatMap((row) => Object.keys(row as Record<string, unknown>))),
-    );
-    return (
-      <div className="overflow-auto rounded-lg border border-[#EDF2F6]">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-b-[#EDF2F6] bg-[#F7F8FA]">
-              {keys.map((key) => (
-                <th key={key} className="px-3 py-2 text-left text-xs font-semibold text-[#011111]">
-                  {key}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, i) => (
-              <tr key={i} className={i < data.length - 1 ? "border-b border-b-[#EDF2F6]" : ""}>
-                {keys.map((key) => (
-                  <td key={key} className="px-3 py-2 align-top text-xs text-[#011111]">
-                    {renderCellValue((row as Record<string, unknown>)[key], key, onChartClick)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  if (typeof data === "object" && !Array.isArray(data)) {
-    const entries = Object.entries(data as Record<string, unknown>);
-    if (entries.length === 0) return <p className="text-sm text-[#68737B]">No output data</p>;
-    return (
-      <div className="overflow-auto rounded-lg border border-[#EDF2F6]">
-        <table className="w-full text-xs">
-          <tbody>
-            {entries.map(([k, v], i) => (
-              <tr key={k} className={i < entries.length - 1 ? "border-b border-b-[#EDF2F6]" : ""}>
-                <th
-                  scope="row"
-                  className="whitespace-nowrap bg-[#F7F8FA] px-3 py-2 text-left align-top text-xs font-semibold text-[#011111]"
-                >
-                  {k}
-                </th>
-                <td className="px-3 py-2 align-top text-xs text-[#011111]">
-                  {renderCellValue(v, k, onChartClick)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  const text =
-    typeof data === "string" || typeof data === "number" || typeof data === "boolean"
-      ? String(data)
-      : JSON.stringify(data);
-  return <p className="px-3 py-2 text-xs text-[#011111]">{text}</p>;
 }
 
 function getMessageType(message: string): "error" | "warning" | "info" {
@@ -203,52 +62,6 @@ function isQuestionAnswer(data: unknown): data is { answer: string } {
     typeof data === "object" &&
     "answer" in data &&
     typeof (data as Record<string, unknown>).answer === "string"
-  );
-}
-
-function ExpandedChart({
-  data,
-  columnName,
-  onClose,
-}: {
-  data: number[];
-  columnName: string;
-  onClose: () => void;
-}) {
-  const plotData: LineSeriesData[] = [
-    {
-      name: columnName,
-      x: data.map((_, idx) => idx),
-      y: data,
-      mode: "lines",
-      line: { color: "#005E5E", width: 2 },
-      showlegend: false,
-    },
-  ];
-  return (
-    <div className="mt-3 overflow-hidden rounded-lg border border-[#EDF2F6] bg-white">
-      <div className="flex items-center justify-between border-b border-[#EDF2F6] bg-[#F7F8FA] px-3 py-1.5">
-        <span className="text-xs font-semibold text-[#011111]">{columnName}</span>
-        <button
-          type="button"
-          className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
-          onClick={onClose}
-          title="Close chart"
-          aria-label="Close chart"
-        >
-          <X className="size-3" />
-        </button>
-      </div>
-      {/* Plotly renders at ~450px when its container's height isn't propagated through the
-          plotly-container div (a quirk of the shared chart wrapper). Match the experiment-data
-          chart's 460px so the X-axis ticks and "Index" title aren't clipped. */}
-      <div className="h-[460px] w-full px-2 pb-2 pt-1">
-        <LineChart
-          data={plotData}
-          config={{ xAxisTitle: "Index", yAxisTitle: columnName, useWebGL: false }}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -311,7 +124,17 @@ function DataTabs({
 
 export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: OutputCellProps) {
   const hasContent = cell.data != null || (cell.messages && cell.messages.length > 0);
-  const toggleCollapsed = () => onUpdate({ ...cell, isCollapsed: !cell.isCollapsed });
+  // Read-only viewers can still collapse the cell for their own view, but their toggle should not
+  // mutate persisted state. Keep a local override; fall back to the cell's persisted flag.
+  const [localCollapsed, setLocalCollapsed] = useState<boolean | null>(null);
+  const isCollapsed = readOnly && localCollapsed != null ? localCollapsed : !!cell.isCollapsed;
+  const toggleCollapsed = () => {
+    if (readOnly) {
+      setLocalCollapsed(!isCollapsed);
+    } else {
+      onUpdate({ ...cell, isCollapsed: !cell.isCollapsed });
+    }
+  };
   const { copy, copied } = useCopyToClipboard();
   const [pinnedChart, setPinnedChart] = useState<{ data: number[]; columnName: string } | null>(
     null,
@@ -329,17 +152,15 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
 
   return (
     <div className="group/output relative overflow-hidden rounded-b-[10px] border border-t-0 border-[#EDF2F6] bg-white">
-      <div className={`px-4 ${cell.isCollapsed ? "py-2" : "pb-3 pt-3"}`}>
-        <div
-          className={cell.isCollapsed ? "flex items-center gap-2" : "mb-2 flex items-center gap-2"}
-        >
+      <div className={`px-4 ${isCollapsed ? "py-2" : "pb-3 pt-3"}`}>
+        <div className={isCollapsed ? "flex items-center gap-2" : "mb-2 flex items-center gap-2"}>
           <button
             className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
             onClick={toggleCollapsed}
-            title={cell.isCollapsed ? "Expand output" : "Collapse output"}
-            aria-expanded={!cell.isCollapsed}
+            title={isCollapsed ? "Expand output" : "Collapse output"}
+            aria-expanded={!isCollapsed}
           >
-            {cell.isCollapsed ? (
+            {isCollapsed ? (
               <ChevronRight className="size-3.5" />
             ) : (
               <ChevronDown className="size-3.5" />
@@ -366,7 +187,7 @@ export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: Outp
           )}
         </div>
 
-        {!cell.isCollapsed && (
+        {!isCollapsed && (
           <>
             {/* Messages */}
             {cell.messages && cell.messages.length > 0 && (

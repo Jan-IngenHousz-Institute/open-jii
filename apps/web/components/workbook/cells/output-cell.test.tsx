@@ -1,6 +1,6 @@
 import { createOutputCell } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { OutputCellComponent } from "./output-cell";
 
@@ -26,9 +26,11 @@ vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
 });
 
 // jsdom does not implement navigator.clipboard — provide a minimal stub so
-// useCopyToClipboard resolves instead of throwing.
+// useCopyToClipboard resolves instead of throwing. Hoisted so tests can
+// assert payloads and reset between runs (otherwise call counts leak).
+const writeText = vi.fn().mockResolvedValue(undefined);
 Object.defineProperty(navigator, "clipboard", {
-  value: { writeText: vi.fn().mockResolvedValue(undefined) },
+  value: { writeText },
   writable: true,
   configurable: true,
 });
@@ -36,6 +38,12 @@ Object.defineProperty(navigator, "clipboard", {
 describe("OutputCellComponent", () => {
   const onUpdate = vi.fn();
   const onDelete = vi.fn();
+
+  beforeEach(() => {
+    writeText.mockClear();
+    onUpdate.mockClear();
+    onDelete.mockClear();
+  });
 
   it("displays execution time and messages with correct severity styling", () => {
     const cell = createOutputCell({
@@ -326,6 +334,13 @@ describe("OutputCellComponent", () => {
 
   it("shows a copy button in the JSON view that swaps to a check icon when clicked", async () => {
     const user = userEvent.setup();
+    // userEvent.setup() v14 replaces navigator.clipboard with its own stub; re-install ours
+    // so we can assert the payload that was copied.
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
     const cell = createOutputCell({ data: [{ time: 1, value: 42 }] });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
@@ -337,5 +352,31 @@ describe("OutputCellComponent", () => {
     await waitFor(() => {
       expect(copyButton.querySelector(".lucide-check")).toBeInTheDocument();
     });
+    expect(writeText).toHaveBeenCalledWith(JSON.stringify(cell.data, null, 2));
+  });
+
+  it("uses local state to collapse in readOnly mode without mutating persisted state", async () => {
+    const user = userEvent.setup();
+    const cell = createOutputCell({ data: { device_id: "abc" } });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} readOnly />);
+
+    expect(screen.getByText("device_id")).toBeInTheDocument();
+    await user.click(screen.getByTitle("Collapse output"));
+
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.queryByText("device_id")).not.toBeInTheDocument();
+    expect(screen.getByTitle("Expand output")).toBeInTheDocument();
+  });
+
+  it("renders an array of objects with primitive rows without throwing", () => {
+    const cell = createOutputCell({
+      data: [{ time: 1, value: 42 }, "broken-row", null, { time: 2, value: 84 }],
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getByText("84")).toBeInTheDocument();
+    // Non-object rows render as em-dash placeholders in every column.
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
   });
 });
