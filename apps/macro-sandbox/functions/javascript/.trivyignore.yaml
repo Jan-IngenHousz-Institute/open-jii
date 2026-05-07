@@ -3,7 +3,8 @@
 # Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
 
 vulnerabilities:
-    # axios 1.13.5 in Lambda runtime SDK (/var/runtime/node_modules/@aws-sdk/)
+    # axios in Lambda runtime SDK (/var/runtime/node_modules/@aws-sdk/).
+    # Version drifts as AWS refreshes the base image; observed 1.13.5, 1.15.0.
     - id: CVE-2025-62718
       statement: >-
           axios SSRF requires proxy config that Lambda does not have.
@@ -11,6 +12,25 @@ vulnerabilities:
       statement: >-
           axios RCE chain needs a separate prototype-pollution gadget
           that does not exist in our code.
+    - id: CVE-2026-42033
+      statement: >-
+          HTTP transport hijack via prototype pollution. Sandbox has
+          no outbound HTTP.
+      expired_at: 2026-06-07
+    - id: CVE-2026-42035
+      statement: >-
+          Header injection via prototype pollution. Sandbox has no
+          outbound HTTP.
+      expired_at: 2026-06-07
+    - id: CVE-2026-42043
+      statement: >-
+          NO_PROXY bypass on crafted URL. Sandbox has no outbound HTTP.
+      expired_at: 2026-06-07
+    - id: CVE-2026-42264
+      statement: >-
+          Credential exfil via prototype-pollution gadget in HTTP
+          adapter. Sandbox has no IAM creds and no outbound HTTP.
+      expired_at: 2026-06-07
 
     # libnghttp2
     - id: CVE-2026-27135
