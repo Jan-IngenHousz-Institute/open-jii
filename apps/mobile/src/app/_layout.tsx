@@ -10,11 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import {
-  SafeAreaInsetsContext,
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
 import { AlertDialog } from "~/components/AlertDialog";
 import { AlertsBar } from "~/components/cms-alert/alerts-container";
@@ -143,23 +139,29 @@ function AutoUploadEffect() {
   return null;
 }
 
-// Measures the alert bar and zeroes out insets.top for the navigator subtree when
-// the bar is visible, preventing the navigator from double-counting the notch area.
+// AlertsBar is rendered as an overlay above normal screens.
+// The navigator gets extra top padding equal to the alert height minus the real
+// status-bar inset, so normal screens sit below the alert without corrupting
+// safe-area values for modals.
 function AlertsAwareLayout() {
   const insets = useSafeAreaInsets();
   const [alertBarHeight, setAlertBarHeight] = useState(0);
-  const adjustedInsets = { ...insets, top: alertBarHeight > 0 ? 0 : insets.top };
+
+  const navigatorTopPadding = alertBarHeight > 0 ? Math.max(alertBarHeight - insets.top, 0) : 0;
 
   return (
-    <View style={{ flex: 1 }}>
-      <View onLayout={(e) => setAlertBarHeight(e.nativeEvent.layout.height)}>
+    <View className="flex-1">
+      <View className="flex-1" style={{ paddingTop: navigatorTopPadding }}>
+        <RootLayoutNav />
+      </View>
+
+      <View
+        pointerEvents="box-none"
+        className="absolute inset-x-0 top-0"
+        onLayout={(e) => setAlertBarHeight(e.nativeEvent.layout.height)}
+      >
         <AlertsBar />
       </View>
-      <SafeAreaInsetsContext.Provider value={adjustedInsets}>
-        <View style={{ flex: 1 }}>
-          <RootLayoutNav />
-        </View>
-      </SafeAreaInsetsContext.Provider>
     </View>
   );
 }
