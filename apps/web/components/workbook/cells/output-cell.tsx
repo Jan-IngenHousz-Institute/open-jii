@@ -241,10 +241,10 @@ function ExpandedChart({
           <X className="size-3" />
         </button>
       </div>
-      {/* Plotly's X-axis title + tick labels need ~60px of bottom margin. The container is sized
-          generously so the trace doesn't squeeze them out, and pb-2 gives the panel breathing room
-          inside the cell wrapper's overflow-hidden boundary. */}
-      <div className="h-[340px] w-full px-2 pb-2 pt-1">
+      {/* Plotly renders at ~450px when its container's height isn't propagated through the
+          plotly-container div (a quirk of the shared chart wrapper). Match the experiment-data
+          chart's 460px so the X-axis ticks and "Index" title aren't clipped. */}
+      <div className="h-[460px] w-full px-2 pb-2 pt-1">
         <LineChart
           data={plotData}
           config={{ xAxisTitle: "Index", yAxisTitle: columnName, useWebGL: false }}
