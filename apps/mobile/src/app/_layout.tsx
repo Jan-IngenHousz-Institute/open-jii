@@ -19,9 +19,11 @@ import { TimeSyncProvider } from "~/components/time-sync-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useAutoUpload } from "~/hooks/use-auto-upload";
 import { useOtaUpdate } from "~/hooks/use-ota-update";
+import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 import { db } from "~/services/db/client";
+import { shouldHideSplash } from "~/utils/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
 
@@ -35,6 +37,19 @@ function DrizzleDevTools() {
 function RootLayoutNav() {
   const theme = useTheme();
   const { colors } = theme;
+  const { session, isLoaded } = useSession();
+
+  useEffect(() => {
+    if (isLoaded) {
+      void SplashScreen.hideAsync();
+    }
+  }, [isLoaded]);
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  const isSignedIn = !!session;
 
   return (
     <Stack
@@ -54,24 +69,12 @@ function RootLayoutNav() {
         },
       }}
     >
-      <Stack.Screen
-        name="(auth)/login"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="callback"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
-      />
+      <Stack.Protected guard={isSignedIn}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={!isSignedIn}>
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -105,6 +108,12 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
       console.error("[db] Migration failed:", migrationsError);
     }
   }, [error, migrationsError]);
+
+  useEffect(() => {
+    if (shouldHideSplash(loaded, migrationsReady, migrationsError)) {
+      void SplashScreen.hideAsync();
+    }
+  }, [loaded, migrationsReady, migrationsError]);
 
   if (migrationsError) {
     return (

@@ -70,7 +70,7 @@ describe("CellRenderer", () => {
   it("renders output cell", () => {
     const cell = createOutputCell();
     render(<CellRenderer cell={cell} onUpdate={noop} onDelete={noop} />);
-    expect(screen.getByText("Output")).toBeInTheDocument();
+    expect(screen.getByText("output.label")).toBeInTheDocument();
   });
 
   it("renders branch cell with label", () => {

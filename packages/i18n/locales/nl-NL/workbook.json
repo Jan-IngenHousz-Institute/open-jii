@@ -21,5 +21,18 @@
     "saving": "Opslaan...",
     "allChangesSaved": "Alle wijzigingen opgeslagen",
     "viewWorkbook": "Werkboek bekijken"
+  },
+  "output": {
+    "label": "Uitvoer",
+    "expand": "Uitvoer uitvouwen",
+    "collapse": "Uitvoer samenvouwen",
+    "clear": "Uitvoer wissen",
+    "empty": "Geen meetgegevens beschikbaar — voer eerst een protocolcel uit",
+    "noData": "Geen uitvoergegevens",
+    "tabTable": "Tabel",
+    "tabJson": "JSON",
+    "copyJson": "JSON kopiëren",
+    "closeChart": "Diagram sluiten",
+    "expandChart": "Diagram voor {{column}} openen"
   }
 }

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -23,10 +22,8 @@ import { OTPInput } from "~/components/OTPInput";
 import { useIsOnline } from "~/hooks/use-is-online";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
-import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { prefetchOfflineData } from "~/services/prefetch-offline-data";
-import { markSessionActive } from "~/services/session-persistence";
 import { getEnvVar } from "~/stores/environment-store";
 import { EnvironmentSelector } from "~/widgets/environment-selector";
 
@@ -36,7 +33,6 @@ export default function LoginScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const router = useRouter();
   const queryClient = useQueryClient();
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
   const {
@@ -51,16 +47,6 @@ export default function LoginScreen() {
   } = useLoginFlow();
 
   const { data: online } = useIsOnline();
-  const { session, isLoaded } = useSession();
-
-  // If useSession returns a session (from Better Auth or SecureStore cache),
-  // redirect to tabs. This handles cold start offline (cached session) and
-  // online (server-validated session). No direct SecureStore read needed.
-  useEffect(() => {
-    if (isLoaded && session) {
-      router.replace("(tabs)");
-    }
-  }, [isLoaded, session, router]);
 
   const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
     tapsRequired: 4,
@@ -87,10 +73,8 @@ export default function LoginScreen() {
       return;
     }
 
-    void markSessionActive();
-    router.replace("(tabs)");
     void prefetchOfflineData(queryClient);
-  }, [otp, email, verifyEmailOTP, router, queryClient]);
+  }, [otp, email, verifyEmailOTP, queryClient]);
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -107,16 +91,12 @@ export default function LoginScreen() {
   async function handleGitHubLogin() {
     setError("");
     await startGitHubLogin();
-    void markSessionActive();
-    router.replace("(tabs)");
     void prefetchOfflineData(queryClient);
   }
 
   async function handleOrcidLogin() {
     setError("");
     await startOrcidLogin();
-    void markSessionActive();
-    router.replace("(tabs)");
     void prefetchOfflineData(queryClient);
   }
 

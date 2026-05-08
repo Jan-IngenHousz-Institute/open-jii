@@ -1,12 +1,15 @@
 "use client";
 
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
+import { useSession } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
 
 import { CellWrapper } from "../cell-wrapper";
@@ -33,19 +36,73 @@ export function ProtocolCellComponent({
 }: ProtocolCellProps) {
   const protocolId = cell.payload.protocolId;
   const { copy, copied } = useCopyToClipboard();
+  const { data: session } = useSession();
 
-  // Fetch protocol data
   const { data: protocolData, isLoading: protocolLoading } = useProtocol(protocolId, true);
   const protocolName = protocolData?.body.name;
-  const protocolCode =
-    protocolData?.body.code && protocolData.body.code.length > 0
-      ? JSON.stringify(protocolData.body.code, null, 2)
-      : null;
+  // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
+  // rather than treating it as a load failure.
+  const protocolCode = protocolData?.body.code
+    ? JSON.stringify(protocolData.body.code, null, 2)
+    : null;
 
   const protocolFamily = protocolData?.body.family;
+  const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
+
+  const { mutate: saveProtocol } = useProtocolUpdate(protocolId);
+
+  const [localCode, setLocalCode] = useState<string | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedKeyRef = useRef<string>("");
+
+  useEffect(() => {
+    if (protocolCode != null && localCode == null) {
+      setLocalCode(protocolCode);
+      savedKeyRef.current = protocolCode;
+    }
+  }, [protocolCode, localCode]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
+  const handleCodeChange = useCallback(
+    (code: string) => {
+      setLocalCode(code);
+
+      if (code === savedKeyRef.current) return;
+
+      // Protocol code is a JSON array; only persist when the editor contents parse successfully.
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(code);
+      } catch {
+        return;
+      }
+      if (!Array.isArray(parsed)) return;
+
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        saveProtocol(
+          {
+            params: { id: protocolId },
+            body: { code: parsed as Record<string, unknown>[] },
+          },
+          {
+            onSuccess: () => {
+              savedKeyRef.current = code;
+            },
+          },
+        );
+      }, 1000);
+    },
+    [protocolId, saveProtocol],
+  );
 
   const handleCopy = () => {
-    void copy(protocolCode ?? "");
+    void copy(localCode ?? protocolCode ?? "");
   };
 
   const displayName = cell.payload.name ?? protocolName ?? "Protocol";
@@ -98,13 +155,14 @@ export function ProtocolCellComponent({
         <div className="flex items-center justify-center py-6">
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
         </div>
-      ) : protocolCode ? (
+      ) : localCode != null || protocolCode != null ? (
         <WorkbookCodeEditor
-          value={protocolCode}
+          value={localCode ?? protocolCode ?? ""}
+          onChange={isOwner && !readOnly ? handleCodeChange : undefined}
           language="json"
-          minHeight="80px"
-          maxHeight="400px"
-          readOnly
+          minHeight={isOwner && !readOnly ? "120px" : "80px"}
+          maxHeight={isOwner && !readOnly ? "500px" : "400px"}
+          readOnly={readOnly ?? !isOwner}
         />
       ) : (
         <p className="text-muted-foreground px-3 py-4 text-xs">Could not load protocol code</p>
