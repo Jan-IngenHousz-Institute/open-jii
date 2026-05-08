@@ -413,6 +413,12 @@ importers:
       '@aws-sdk/client-cognito-identity':
         specifier: catalog:aws-sdk
         version: 3.1019.0
+      '@contentful/rich-text-react-renderer':
+        specifier: 16.0.2
+        version: 16.0.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@contentful/rich-text-types':
+        specifier: 17.0.1
+        version: 17.0.1
       '@expo/vector-icons':
         specifier: ^15.1.1
         version: 15.1.1(expo-font@55.0.6)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
@@ -443,6 +449,9 @@ importers:
       '@repo/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@repo/cms':
+        specifier: workspace:*
+        version: link:../../packages/cms
       '@repo/iot':
         specifier: workspace:*
         version: link:../../packages/iot
@@ -1074,6 +1083,9 @@ importers:
       '@repo/ui':
         specifier: workspace:*
         version: link:../ui
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
       contentful:
         specifier: ^11.12.0
         version: 11.12.0
