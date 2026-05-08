@@ -642,5 +642,22 @@ export function measurementToTimeseries(
     }
   }
 
+  // Anchor the time axis to the first record so charts always start at t=0,
+  // not at "however long the user took to click Run after start_time fired".
+  // Wall-clock markers determine the true device idle time *between* sub-
+  // protocols; the slack *before* the first sub-protocol is just user delay
+  // and shouldn't show up as empty space on the left of the chart.
+  let zeroOffset = Infinity;
+  for (const r of allInputs) if (r.t_start_us < zeroOffset) zeroOffset = r.t_start_us;
+  for (const r of allOutputs) if (r.timestamp_us < zeroOffset) zeroOffset = r.timestamp_us;
+  if (zeroOffset !== Infinity && zeroOffset > 0) {
+    for (const r of allInputs) {
+      r.t_start_us -= zeroOffset;
+      r.t_end_us -= zeroOffset;
+    }
+    for (const r of allOutputs) r.timestamp_us -= zeroOffset;
+    tOffset -= zeroOffset;
+  }
+
   return { inputs: allInputs, outputs: allOutputs, totalDurationUs: tOffset };
 }
