@@ -214,4 +214,4 @@ export interface SafeLayout extends Partial<Omit<Layout, "yaxis" | "scene">> {
 export type SafePlotData = PlotData;
 
 // Export all plotly.js types for convenience
-export type { Config, Layout, PlotData } from "plotly.js";
+export type { Config, Layout, PlotData, Shape } from "plotly.js";
