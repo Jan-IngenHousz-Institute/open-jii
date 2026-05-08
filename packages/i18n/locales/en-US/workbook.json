@@ -31,8 +31,15 @@
     "noData": "No output data",
     "tabTable": "Table",
     "tabJson": "JSON",
+    "tabTimeseries": "Timeseries",
     "copyJson": "Copy JSON",
     "closeChart": "Close chart",
-    "expandChart": "Expand chart for {{column}}"
+    "expandChart": "Expand chart for {{column}}",
+    "loadingProtocol": "Loading protocol…",
+    "timeseriesXAxis": "Time (s)",
+    "timeseriesYAxis": "Normalised signal",
+    "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
+    "timeseriesEmpty": "No detector readings to plot",
+    "timeseriesError": "Cannot decode this output against the source protocol"
   }
 }
