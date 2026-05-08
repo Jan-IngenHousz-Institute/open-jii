@@ -343,6 +343,187 @@ describe("measurementToTimeseries", () => {
     // Phase duration of first ABS = 3 * 1000us = 3000us. Second ABS detector readings start after.
     expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(3000);
   });
+
+  it("uses wall-clock e_time markers to space sub-protocols and shifts the leftmost trace to t=0", () => {
+    // start_time @ 1000ms then start_time @ 6000ms creates a 5s wall-clock
+    // gap before any data. After post-loop shifting (so the first trace sits
+    // at t=0) the gap is collapsed and ABS detector readings start near zero.
+    // Two ABS sub-protocols separated by an f_start_time marker exercise the
+    // between-sub-protocol spacing the markers control.
+    const sample_raw = JSON.stringify([
+      {
+        set: [
+          { label: "start_time", e_time: [0, 1000], data_raw: [] },
+          { label: "start_time", e_time: [0, 6000], data_raw: [] },
+          { label: "ABS", data_raw: [10, 20, 30] },
+          { label: "f_start_time", e_time: [0, 11000], data_raw: [] },
+          { label: "ABS", data_raw: [40, 50, 60] },
+        ],
+      },
+    ]);
+    const { outputs } = measurementToTimeseries({ sample_raw }, protocol);
+    // First detector read sits at the start of the chart (just one
+    // pulse_distance in, since pulses fire after the LED actinic phase opens).
+    expect(outputs[0]?.timestamp_us).toBeLessThan(10_000);
+    // Second sub-protocol's first read is offset by the wall-clock gap
+    // between markers (11_000ms - 6_000ms = 5_000ms = 5_000_000us).
+    const second = outputs.filter((r) => r.sub_protocol === "ABS #1");
+    expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(5_000_000);
+  });
+
+  it("treats f_start_time / f_end_time records as wall-clock markers", () => {
+    // Any zero-data record with an e_time anchors t_offset. We verify it via
+    // the spacing between two ABS sub-protocols separated by an f_start_time.
+    const sample_raw = JSON.stringify([
+      {
+        set: [
+          { label: "start_time", e_time: [0, 0], data_raw: [] },
+          { label: "ABS", data_raw: [1, 2, 3] },
+          { label: "f_start_time", e_time: [0, 4000], data_raw: [] },
+          { label: "ABS", data_raw: [4, 5, 6] },
+        ],
+      },
+    ]);
+    const { outputs } = measurementToTimeseries({ sample_raw }, protocol);
+    const second = outputs.filter((r) => r.sub_protocol === "ABS #1");
+    // f_start_time at 4s pushes the second ABS forward to roughly t=4s.
+    expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(4_000_000);
+  });
+
+  it("recovers from malformed pi_json without crashing", () => {
+    // Force an unparseable pi_json into the explode path so the JSON.parse catch
+    // branch is exercised. We do this by hand-crafting the explode output and
+    // calling the orchestrator via measurementToTimeseries on a fresh sample
+    // whose pi field is a string the JSON parser rejects.
+    const sample_raw = JSON.stringify([
+      { set: [{ label: "ABS", data_raw: [1, 2, 3], pi: "not-an-array" }] },
+    ]);
+    const { outputs } = measurementToTimeseries({ sample_raw }, protocol);
+    // pi parsed as a non-array string falls back to ambient (none here), so
+    // the protocol's pre_illumination path isn't entered, but the run should
+    // still produce three detector records.
+    expect(outputs).toHaveLength(3);
+  });
+
+  it("advances t_offset by protocols_delay between sub-protocols", () => {
+    const proto: ProtocolJson = {
+      v_arrays: [[3]],
+      _protocol_set_: [
+        {
+          label: "ABS",
+          pulses: ["@n0:0"],
+          pulse_distance: [1000],
+          detectors: [[3]],
+          pulsed_lights: [[1]],
+          nonpulsed_lights: [[2]],
+          nonpulsed_lights_brightness: [[100]],
+        },
+        { label: "WAIT", protocols_delay: 2 },
+      ],
+    };
+    // ABS, then a WAIT sub-protocol that just advances t_offset, then ABS again.
+    // The 2s protocols_delay should put the second ABS 2s after the first.
+    const sample_raw = JSON.stringify([
+      {
+        set: [
+          { label: "ABS", data_raw: [10, 20, 30] },
+          { label: "WAIT", data_raw: [] },
+          { label: "ABS", data_raw: [40, 50, 60] },
+        ],
+      },
+    ]);
+    const { outputs } = measurementToTimeseries({ sample_raw }, proto);
+    const second = outputs.filter((r) => r.sub_protocol === "ABS #1");
+    // First ABS phase ~3ms, then 2s protocols_delay; second ABS first read >= 2s.
+    expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(2_000_000);
+  });
+
+  it("extends each sub-protocol's last actinic LED phase to the next sub-protocol's start", () => {
+    // Two sub-protocols separated by a wall-clock marker pushing tOffset
+    // forward. The first sub-protocol's actinic LED span should extend to fill
+    // the gap up to the second one's start.
+    const sample_raw = JSON.stringify([
+      {
+        set: [
+          { label: "start_time", e_time: [0, 0], data_raw: [] },
+          { label: "ABS", data_raw: [1, 2, 3] },
+          { label: "f_start_time", e_time: [0, 5000], data_raw: [] },
+          { label: "ABS", data_raw: [4, 5, 6] },
+        ],
+      },
+    ]);
+    const { inputs } = measurementToTimeseries({ sample_raw }, protocol);
+    const firstActinic = inputs.filter(
+      (r) => r.sub_protocol === "ABS #0" && r.light_type === "actinic",
+    );
+    const secondStart = inputs
+      .filter((r) => r.sub_protocol === "ABS #1")
+      .reduce((m, r) => Math.min(m, r.t_start_us), Infinity);
+    // The extension pushes the first sub-protocol's actinic LED end up to the
+    // second sub-protocol's starting timestamp.
+    expect(Math.max(...firstActinic.map((r) => r.t_end_us))).toBe(secondStart);
+  });
+
+  it("handles measurements with no sub-protocols gracefully", () => {
+    const { inputs, outputs, totalDurationUs } = measurementToTimeseries(
+      { sample_raw: "[]" },
+      protocol,
+    );
+    expect(inputs).toEqual([]);
+    expect(outputs).toEqual([]);
+    expect(totalDurationUs).toBe(0);
+  });
+});
+
+describe("explodeRecords edge cases", () => {
+  it("returns [] for null sample_raw", () => {
+    expect(explodeRecords({ sample_raw: null })).toEqual([]);
+  });
+
+  it("returns [] for missing sample_raw", () => {
+    expect(explodeRecords({})).toEqual([]);
+  });
+
+  it("preserves measurement_id and project_id when provided", () => {
+    const records = explodeRecords({
+      measurement_id: "m1",
+      project_id: "p1",
+      sample_raw: [{ data_raw: [1, 2], protocol_id: 7 }],
+    });
+    expect(records[0]?.measurement_id).toBe("m1");
+    expect(records[0]?.project_id).toBe("p1");
+    expect(records[0]?.protocol_id).toBe(7);
+  });
+
+  it("ignores non-object items inside a v1 array", () => {
+    const records = explodeRecords({
+      sample_raw: [{ data_raw: [1] }, "garbage", null, 42, [{ nested: true }]],
+    });
+    expect(records).toHaveLength(1);
+    expect(records[0]?.data_raw).toEqual([1]);
+  });
+});
+
+describe("resolveProtocolSetEntry edge cases", () => {
+  it("wraps non-list nested items into single-element lists", () => {
+    // A bare scalar in detectors[i] (not wrapped in a list) is a legacy form;
+    // the resolver normalises it to [n] so the rest of the pipeline can index it.
+    const r = resolveProtocolSetEntry({
+      pulses: [3],
+      pulse_distance: [1000],
+      detectors: [3],
+    });
+    expect(r.detectors).toEqual([[3]]);
+  });
+
+  it("substitutes 0 for items that resolve to null in nested lists", () => {
+    const r = resolveProtocolSetEntry({
+      pulses: [1],
+      pulse_distance: [1000],
+      detectors: ["unresolvable-string"],
+    });
+    expect(r.detectors).toEqual([[0]]);
+  });
 });
 
 describe("isMultispeqOutput", () => {
