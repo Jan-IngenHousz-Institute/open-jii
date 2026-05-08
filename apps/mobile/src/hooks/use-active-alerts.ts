@@ -20,6 +20,7 @@ export function useActiveAlerts(locale = "en-US"): ComponentAlertFieldsFragment[
     enabled: envLoaded,
     staleTime: FIVE_MINUTES,
     gcTime: FIVE_MINUTES,
+    refetchOnMount: true,
   });
 
   if (!alerts) return [];
