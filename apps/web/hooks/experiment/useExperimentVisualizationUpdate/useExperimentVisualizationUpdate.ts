@@ -11,40 +11,22 @@ export const useExperimentVisualizationUpdate = (props: ExperimentVisualizationU
   const queryClient = tsr.useQueryClient();
 
   return tsr.experiments.updateExperimentVisualization.useMutation({
-    onMutate: async () => {
-      // Cancel any outgoing refetches so they don't overwrite our optimistic update
-      await queryClient.cancelQueries({
-        queryKey: ["experiment-visualizations", props.experimentId],
+    onSuccess: (data) => {
+      // Seed the single-viz cache with the server response so a quick
+      // back-and-forth navigation reads the just-saved state instead of the
+      // stale snapshot from the layout's initial load. The autosave path
+      // also rebases the form's defaults; this keeps both in sync.
+      queryClient.setQueryData(["experiment-visualization", props.experimentId, data.body.id], {
+        body: data.body,
       });
-
-      // Get the current visualizations
-      const previousVisualizations = queryClient.getQueryData<{
-        body: ExperimentVisualization[];
-      }>(["experiment-visualizations", props.experimentId]);
-
-      // Return the previous visualizations to use in case of error
-      return { previousVisualizations };
-    },
-    onError: (error, variables, context) => {
-      // If there was an error, revert to the previous state
-      if (context?.previousVisualizations) {
-        queryClient.setQueryData(
-          ["experiment-visualizations", props.experimentId],
-          context.previousVisualizations,
-        );
-      }
+      props.onSuccess?.(data.body);
     },
     onSettled: async () => {
-      // Always refetch after error or success to make sure cache is in sync with server
+      // The list query feeds the experiment overview page; invalidate so
+      // navigating away reflects the latest names/types.
       await queryClient.invalidateQueries({
         queryKey: ["experiment-visualizations", props.experimentId],
       });
-    },
-    onSuccess: (data) => {
-      // Call the provided onSuccess callback if it exists
-      if (props.onSuccess) {
-        props.onSuccess(data.body);
-      }
     },
   });
 };

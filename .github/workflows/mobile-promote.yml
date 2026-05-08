@@ -83,7 +83,7 @@ jobs:
         id: fp
         working-directory: apps/mobile
         run: |
-          HASH=$(pnpm exec expo-updates fingerprint:generate --json 2>/dev/null | jq -r .hash)
+          HASH=$(pnpm exec expo-updates fingerprint:generate --platform android | jq -r .hash)
           if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
             echo "::error::Failed to compute fingerprint"
             exit 1

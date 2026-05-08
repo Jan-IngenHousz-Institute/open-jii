@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
@@ -18,13 +18,19 @@ const RUNTIME_FIELDS = new Set([
   "messages",
 ]);
 
+// Output cells are runtime artifacts produced by execution; they are not part
+// of the workbook's design and must not register as "upgradable" drift.
 const designOf = (cells: WorkbookCell[]) =>
-  cells.map((cell) =>
-    Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_FIELDS.has(k))),
-  );
+  cells
+    .filter((cell) => cell.type !== "output")
+    .map((cell) =>
+      Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_FIELDS.has(k))),
+    );
 
 @Injectable()
 export class IsWorkbookUpgradableUseCase {
+  private readonly logger = new Logger(IsWorkbookUpgradableUseCase.name);
+
   constructor(
     private readonly workbookVersionRepository: WorkbookVersionRepository,
     private readonly protocolRepository: ProtocolRepository,
@@ -32,6 +38,12 @@ export class IsWorkbookUpgradableUseCase {
   ) {}
 
   async execute(workbook: WorkbookDto): Promise<Result<boolean>> {
+    this.logger.log({
+      msg: "Checking workbook upgradable",
+      operation: "isWorkbookUpgradable",
+      workbookId: workbook.id,
+    });
+
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbook.id);
     if (latestResult.isFailure()) return latestResult;
     const latest = latestResult.value;

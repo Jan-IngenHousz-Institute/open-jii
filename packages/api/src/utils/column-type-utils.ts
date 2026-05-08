@@ -158,14 +158,63 @@ export function getWellKnownSortField(type?: string): string | undefined {
 }
 
 /**
- * Check if a column type is valid for use as a graph axis source
- * Valid types include: numeric types and timestamps
+ * High-level taxonomy of column data for plotting purposes. Every plottable
+ * column maps to exactly one kind, and chart-type role contracts declare
+ * which kinds each role accepts. This is the single seam between database
+ * column types and chart eligibility — adding a new column type means
+ * mapping it to a kind here, not editing per-shelf filter functions.
+ *
+ * - `numeric`: integers/floats/decimals — placed on a linear/log axis or a
+ *   continuous color scale.
+ * - `temporal`: timestamps and dates — date axis or continuous color scale
+ *   ordered by time.
+ * - `categorical`: strings and booleans — category axis or one bucket per
+ *   unique value when used as a color/group dimension.
+ * - `complex`: arrays, structs, maps, variants — not plottable as a single
+ *   value; excluded from picker UIs.
  */
-export function isValidAxisSource(type?: string): boolean {
-  if (!type) return false;
-  // Numeric types can be plotted on either axis
-  if (isNumericType(type)) return true;
-  // Timestamps are common for time-series x-axis
-  if (isTimestampType(type)) return true;
-  return false;
+export type ColumnKind = "numeric" | "temporal" | "categorical" | "complex";
+
+export function getColumnKind(type?: string): ColumnKind | undefined {
+  if (!type) return undefined;
+  if (isNumericType(type) || isDecimalType(type)) return "numeric";
+  if (isTimestampType(type) || type === ColumnPrimitiveType.DATE) return "temporal";
+  if (isArrayType(type) || isMapType(type) || isStructType(type) || isVariantType(type)) {
+    return "complex";
+  }
+  if (isStringType(type) || type === ColumnPrimitiveType.BOOLEAN) return "categorical";
+  return undefined;
 }
+
+/**
+ * Whether a column can be plotted at all. Used as the global filter when
+ * surfacing columns in any picker UI — per-role kind constraints (e.g.
+ * "Y must be numeric") are then applied on top via
+ * `filterColumnsForRole` from the visualization contracts.
+ */
+export function isPlottableColumn(type?: string): boolean {
+  const kind = getColumnKind(type);
+  return kind === "numeric" || kind === "temporal" || kind === "categorical";
+}
+
+/**
+ * Decide whether a column should be treated as categorical for color
+ * encoding by default. Categorical-kind columns become per-bucket traces;
+ * numeric and temporal types default to continuous (the user can override).
+ */
+export function isCategoricalColumnType(type?: string): boolean {
+  return getColumnKind(type) === "categorical";
+}
+
+/**
+ * @deprecated Use `isPlottableColumn` plus `filterColumnsForRole` from
+ * `@repo/api/utils/visualization-contracts` for per-role constraints.
+ * Kept as an alias so existing callers continue to work during migration.
+ */
+export const isValidAxisSource = isPlottableColumn;
+
+/**
+ * @deprecated Use `isPlottableColumn` plus `filterColumnsForRole` from
+ * `@repo/api/utils/visualization-contracts` for per-role constraints.
+ */
+export const isValidColorSource = isPlottableColumn;

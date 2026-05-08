@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { uniq } from "lodash";
 import { tsr } from "~/api/tsr";
 import type { FlowNode } from "~/screens/measurement-flow-screen/types";
+import { uniq } from "~/utils/uniq";
 
 /**
  * Prefetches all experiment data needed for offline use.

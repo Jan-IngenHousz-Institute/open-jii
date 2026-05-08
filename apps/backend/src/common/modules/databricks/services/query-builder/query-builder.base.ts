@@ -185,7 +185,9 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
-      this.selectClause = columns.join(",\n    ");
+      // Backtick-escape every identifier so column names with spaces or
+      // reserved words work.
+      this.selectClause = columns.map((c) => this.escapeIdentifier(c)).join(",\n    ");
     }
     return this;
   }

@@ -3,7 +3,7 @@ import { listSerialPortDevices } from "~/services/multispeq-communication/androi
 import { requestBluetoothPermission } from "~/services/request-bluetooth-permissions";
 import type { Device } from "~/types/device";
 
-import { bluetoothDeviceToDevice, isJiiDevice } from "./device-utils";
+import { bluetoothDeviceToDevice } from "./device-utils";
 import { getConnectedSerialPortDevice } from "./serial-port-connection";
 
 export async function getConnectedDevice(): Promise<Device | null> {
@@ -25,14 +25,14 @@ export async function getAllDevices(): Promise<Device[]> {
   await requestBluetoothPermission();
   const devices = await RNBluetoothClassic.startDiscovery();
 
-  return devices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
+  return devices.map(bluetoothDeviceToDevice);
 }
 
 export async function getPairedDevices(): Promise<Device[]> {
   await requestBluetoothPermission();
   const bluetoothDevices = await RNBluetoothClassic.getBondedDevices();
 
-  return bluetoothDevices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
+  return bluetoothDevices.map(bluetoothDeviceToDevice);
 }
 
 export async function getSerialDevices(): Promise<Device[]> {
