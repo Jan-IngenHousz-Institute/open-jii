@@ -1,19 +1,16 @@
 "use client";
 
-// Plotly's `PlotData` type spreads `any`-typed fields into our trace objects;
-// ESLint's no-unsafe-assignment / no-unsafe-return then trip on every cast we
-// do at the boundary even though the runtime data is fully typed locally. This
-// file is small and the casts are scoped, so disable the two rules here rather
-// than littering eslint-disable-next-line comments around each trace object.
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { extractMeasurement } from "@/lib/multispeq/detect";
 import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
 import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
-import type { Layout, PlotData, Shape } from "plotly.js";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { PlotlyChart } from "@repo/ui/components/charts/plotly-chart";
+// Plotly's own types are a workspace dep of @repo/ui, not of apps/web —
+// re-export them through the UI charts module so we don't pull plotly.js
+// into web's package.json just to type a layout object.
+import type { Layout, PlotData, Shape } from "@repo/ui/components/charts/types";
 
 interface OutputCellTimeseriesProps {
   data: unknown;
