@@ -123,9 +123,17 @@ function isFiniteNumber(v: unknown): v is number {
  * When a protocol declares `set_repeats: N`, the device picks a different value
  * per repeat by indexing `v_arrays[X]` with the occurrence number. We mirror
  * that — `f_transient` with `pulses: ["@s8"]` and `v_arrays[8] = [20, 100]`
- * runs 20 pulses on repeat 0 and 100 on repeat 1. If the indexed value is
- * non-numeric (e.g. the placeholder `"p_light"`), fall back to the last
- * numeric in the array (matches observed `["p_light", 2500] → 2500`).
+ * runs 20 pulses on repeat 0 and 100 on repeat 1.
+ *
+ * If the indexed slot is in-range but non-numeric (e.g. the `"p_light"`
+ * placeholder in `["p_light", 2500]`), we leave `@sX` unset so the caller can
+ * fall back to the runtime `pi` brightness — that placeholder means "use the
+ * measured ambient PAR", which is only known from the device's recorded `pi`
+ * field, not from the protocol JSON.
+ *
+ * If the indexed slot is *out-of-range* (iteration past the array length), we
+ * clamp to the last numeric value — this is the @s8 / `[20, 100]` style
+ * pattern where the caller is asking for a value beyond the declared repeats.
  */
 export function resolveVariables(
   protocolJson: ProtocolJson,
@@ -134,14 +142,18 @@ export function resolveVariables(
   const lookup: Record<string, number> = {};
   const arrs = protocolJson.v_arrays ?? [];
   arrs.forEach((arr, i) => {
-    if (!Array.isArray(arr)) return;
+    if (!Array.isArray(arr) || arr.length === 0) return;
     arr.forEach((val, j) => {
       if (isFiniteNumber(val)) lookup[`@n${i}:${j}`] = Math.trunc(val);
     });
-    let lastNumeric: number | null = null;
-    for (const val of arr) if (isFiniteNumber(val)) lastNumeric = Math.trunc(val);
-    const indexed = arr[Math.min(occurrence, arr.length - 1)];
-    const chosen = isFiniteNumber(indexed) ? Math.trunc(indexed) : lastNumeric;
+    let chosen: number | null = null;
+    if (occurrence < arr.length) {
+      const indexed = arr[occurrence];
+      if (isFiniteNumber(indexed)) chosen = Math.trunc(indexed);
+    } else {
+      // Out-of-range: clamp to the last numeric in the array.
+      for (const val of arr) if (isFiniteNumber(val)) chosen = Math.trunc(val);
+    }
     if (chosen != null) lookup[`@s${i}`] = chosen;
   });
   return lookup;

@@ -32,19 +32,21 @@ describe("resolveVariables", () => {
     });
   });
 
-  it("falls back to the last numeric when the indexed value is non-numeric", () => {
-    // ["p_light", 2500] — index 0 is a string, fall back to last numeric.
+  it("leaves @sX unset when the indexed slot is non-numeric so pi can fill brightness", () => {
+    // ["p_light", 2500] at iteration 0: "p_light" is a runtime sentinel meaning
+    // "use the measured ambient PAR", which only the device knows. We leave
+    // @s0 unset; downstream the brightness gets filled from the pi tuple.
     expect(resolveVariables({ v_arrays: [["p_light", 2500]] }, 0)).toEqual({
       "@n0:1": 2500,
-      "@s0": 2500,
     });
+    // Iteration 1 lands on the numeric 2500 directly.
     expect(resolveVariables({ v_arrays: [["p_light", 2500]] }, 1)).toEqual({
       "@n0:1": 2500,
       "@s0": 2500,
     });
   });
 
-  it("clamps occurrence to the array length", () => {
+  it("clamps out-of-range iterations to the last numeric value", () => {
     expect(resolveVariables({ v_arrays: [[10, 20]] }, 5)).toMatchObject({ "@s0": 20 });
   });
 

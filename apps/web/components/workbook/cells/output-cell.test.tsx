@@ -515,5 +515,174 @@ describe("OutputCellComponent", () => {
         "0,0.5,1",
       );
     });
+
+    it("shows a loading placeholder while the source protocol is being fetched", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+      // Family is multispeq so the tab shows; `isLoading: true` triggers the
+      // loading branch in OutputCellTimeseries.
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: undefined } },
+        isLoading: true,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.loadingProtocol")).toBeInTheDocument();
+    });
+
+    it("shows the decode-error placeholder when the protocol code is missing", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+      // Family is multispeq, isLoading is false, but no protocol code is
+      // available — measurementToTimeseries can't decode. Falls into the
+      // error branch.
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: undefined } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.timeseriesError")).toBeInTheDocument();
+    });
+
+    it("shows the empty placeholder when decoding succeeds but emits no detector data", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      // Sample with a sub-protocol whose label has no protocol set entry, so
+      // outputs come back empty after decoding.
+      const cell = createOutputCell({
+        data: {
+          sample_raw: JSON.stringify([
+            { set: [{ label: "UNKNOWN_PROTOCOL_LABEL", data_raw: [] }] },
+          ]),
+        },
+        producedBy: proto.id,
+      });
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByText("output.timeseriesEmpty")).toBeInTheDocument();
+    });
+
+    it("decodes a protocol passed in already-unwrapped (object, not single-element array) form", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+      // Pick the inner ProtocolJson object directly — pickProtocolJson should
+      // accept it as-is (the code field can be either a 1-element array or
+      // the inner dict, depending on how the protocol was saved).
+      const inner = multispeqProtocolCode()[0];
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: inner } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+    });
+
+    it("collapses repeated actinic brightness across phases into a min-max range entry", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      // Protocol with two phases at different actinic brightnesses for the same LED.
+      const code = [
+        {
+          v_arrays: [[3, 3]],
+          _protocol_set_: [
+            {
+              label: "ABS",
+              pulses: ["@n0:0", "@n0:1"],
+              pulse_distance: [1000, 1000],
+              detectors: [[3], [3]],
+              pulsed_lights: [[1], [1]],
+              nonpulsed_lights: [[2], [2]],
+              nonpulsed_lights_brightness: [[100], [500]],
+            },
+          ],
+        },
+      ];
+      const cell = createOutputCell({
+        data: {
+          sample_raw: JSON.stringify([
+            { set: [{ label: "ABS", data_raw: [10, 20, 30, 40, 50, 60] }] },
+          ]),
+        },
+        producedBy: proto.id,
+      });
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      // The light legend collapses 100 + 500 µmol on LED 2 into a single trace
+      // whose label carries the brightness range; this exercises the min/max
+      // update branches in buildLightLegendTraces.
+      const seriesAttr = screen.getByTestId("plotly-chart").getAttribute("data-series") ?? "";
+      expect(seriesAttr).toMatch(/100-500 µmol/);
+    });
+
+    it("decodes a protocol passed wrapped under a `protocol_json` field", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+      // The bundled-protocol shape has the inner dict under .protocol_json;
+      // the picker should unwrap it.
+      const inner = multispeqProtocolCode()[0];
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: { protocol_json: inner } } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+    });
   });
 });
