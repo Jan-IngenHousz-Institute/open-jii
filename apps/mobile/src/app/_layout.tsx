@@ -23,6 +23,7 @@ import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 import { db } from "~/services/db/client";
+import { shouldHideSplash } from "~/utils/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
 
@@ -107,6 +108,12 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
       console.error("[db] Migration failed:", migrationsError);
     }
   }, [error, migrationsError]);
+
+  useEffect(() => {
+    if (shouldHideSplash(loaded, migrationsReady, migrationsError)) {
+      void SplashScreen.hideAsync();
+    }
+  }, [loaded, migrationsReady, migrationsError]);
 
   if (migrationsError) {
     return (
