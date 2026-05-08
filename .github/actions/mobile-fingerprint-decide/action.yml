@@ -33,8 +33,11 @@ runs:
       id: fp
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        PLATFORM: ${{ inputs.platform }}
       run: |
-        HASH=$(pnpm exec expo-updates fingerprint:generate --platform ${{ inputs.platform }} | jq -r .hash)
+        set -euo pipefail
+        HASH=$(pnpm exec expo-updates fingerprint:generate --platform "$PLATFORM" | jq -r .hash)
         if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
           echo "::error::Failed to compute fingerprint"
           exit 1
@@ -47,13 +50,19 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        LAST=$(eas build:list \
+        set -o pipefail
+        if ! JSON=$(eas build:list \
           --profile ${{ inputs.profile }} \
           --status finished \
           --platform ${{ inputs.platform }} \
           --limit 1 \
           --non-interactive \
-          --json | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
+          --json); then
+          EXIT=$?
+          echo "::error::eas build:list failed (exit $EXIT) — refusing to default to full rebuild"
+          exit "$EXIT"
+        fi
+        LAST=$(printf '%s' "$JSON" | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
         echo "hash=$LAST" >> "$GITHUB_OUTPUT"
         echo "Last ${{ inputs.profile }} fingerprint: ${LAST:-<none>}"
 
