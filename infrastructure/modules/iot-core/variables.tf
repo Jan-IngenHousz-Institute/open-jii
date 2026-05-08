@@ -9,26 +9,6 @@ variable "environment" {
   type        = string
 }
 
-variable "timestream_table" {
-  description = "Name of the Timestream table"
-  type        = string
-}
-
-variable "timestream_database" {
-  description = "Name of the Timestream database"
-  type        = string
-}
-
-variable "iot_timestream_role_name" {
-  description = "Name for the IoT Timestream IAM Role"
-  type        = string
-}
-
-variable "iot_timestream_policy_name" {
-  description = "Name for the IoT Timestream IAM Policy"
-  type        = string
-}
-
 variable "kinesis_stream_name" {
   description = "Name of the Kinesis Data Stream"
   type        = string

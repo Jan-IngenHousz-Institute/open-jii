@@ -93,12 +93,6 @@ module "docusaurus_s3" {
   }
 }
 
-module "timestream" {
-  source        = "../../modules/timestream"
-  database_name = "open_jii_${var.environment}_data_ingest_db"
-  table_name    = "measurements"
-}
-
 module "kinesis" {
   source      = "../../modules/kinesis"
   stream_name = "open-jii-${var.environment}-data-ingest-stream"
@@ -141,11 +135,6 @@ module "iot_raw_archive_s3" {
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
-
-  timestream_table           = "measurements"
-  timestream_database        = "open_jii_${var.environment}_data_ingest_db"
-  iot_timestream_role_name   = "open_jii_${var.environment}_iot_timestream_role"
-  iot_timestream_policy_name = "open_jii_${var.environment}_iot_timestream_policy"
 
   iot_kinesis_role_name   = "open_jii_${var.environment}_iot_kinesis_role"
   iot_kinesis_policy_name = "open_jii_${var.environment}_iot_kinesis_policy"
