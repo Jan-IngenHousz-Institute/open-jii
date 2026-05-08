@@ -75,13 +75,11 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
           </View>
         )}
 
-        <Text className="flex-1 text-sm leading-5 text-[#111827]">
+        <Text className="flex-1 text-sm leading-5 text-gray-900">
           {alert.title && <Text className="font-semibold">{alert.title}</Text>}
-          {alert.title && alert.body?.json && (
-            <Text style={{ color: colors.neutral.gray700, opacity: 0.5 }}> · </Text>
-          )}
+          {alert.title && alert.body?.json && <Text className="text-gray-700 opacity-50"> · </Text>}
           {alert.body?.json && (
-            <CtfRichText json={alert.body.json} color={colors.neutral.gray700} inline />
+            <CtfRichText json={alert.body.json} textClass="text-gray-700" inline />
           )}
         </Text>
 

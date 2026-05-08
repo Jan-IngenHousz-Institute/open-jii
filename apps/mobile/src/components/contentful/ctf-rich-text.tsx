@@ -3,68 +3,63 @@ import { documentToReactComponents } from "@contentful/rich-text-react-renderer"
 import type { Document, Node } from "@contentful/rich-text-types";
 import { BLOCKS, INLINES, MARKS } from "@contentful/rich-text-types";
 import React from "react";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 
 export interface CtfRichTextProps {
   json: Document;
-  color?: string;
+  textClass?: string;
   inline?: boolean;
 }
 
-const makeInlineOptions = (color: string): Options => ({
+const makeInlineOptions = (textClass: string): Options => ({
   renderMark: {
-    [MARKS.BOLD]: (text) => <Text style={{ color, fontWeight: "600" }}>{text}</Text>,
-    [MARKS.ITALIC]: (text) => <Text style={{ color, fontStyle: "italic" }}>{text}</Text>,
-    [MARKS.UNDERLINE]: (text) => (
-      <Text style={{ color, textDecorationLine: "underline" }}>{text}</Text>
-    ),
-    [MARKS.CODE]: (text) => <Text style={{ color, fontFamily: "monospace" }}>{text}</Text>,
+    [MARKS.BOLD]: (text) => <Text className={`${textClass} font-semibold`}>{text}</Text>,
+    [MARKS.ITALIC]: (text) => <Text className={`${textClass} italic`}>{text}</Text>,
+    [MARKS.UNDERLINE]: (text) => <Text className={`${textClass} underline`}>{text}</Text>,
+    [MARKS.CODE]: (text) => <Text className={`${textClass} font-mono`}>{text}</Text>,
   },
   renderNode: {
     [BLOCKS.PARAGRAPH]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color }}>{children}</Text>
+      <Text className={textClass}>{children}</Text>
     ),
     [BLOCKS.HEADING_1]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color, fontWeight: "700" }}>{children}</Text>
+      <Text className={`${textClass} font-bold`}>{children}</Text>
     ),
     [BLOCKS.HEADING_2]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color, fontWeight: "700" }}>{children}</Text>
+      <Text className={`${textClass} font-bold`}>{children}</Text>
     ),
     [BLOCKS.HEADING_3]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color, fontWeight: "600" }}>{children}</Text>
+      <Text className={`${textClass} font-semibold`}>{children}</Text>
     ),
     [BLOCKS.HEADING_4]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color, fontWeight: "600" }}>{children}</Text>
+      <Text className={`${textClass} font-semibold`}>{children}</Text>
     ),
     [BLOCKS.HEADING_5]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color, fontWeight: "600" }}>{children}</Text>
+      <Text className={`${textClass} font-semibold`}>{children}</Text>
     ),
     [BLOCKS.HEADING_6]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color, fontWeight: "600" }}>{children}</Text>
+      <Text className={`${textClass} font-semibold`}>{children}</Text>
     ),
     [BLOCKS.UL_LIST]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color }}>{children}</Text>
+      <Text className={textClass}>{children}</Text>
     ),
     [BLOCKS.OL_LIST]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color }}>{children}</Text>
+      <Text className={textClass}>{children}</Text>
     ),
     [BLOCKS.LIST_ITEM]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color }}>
+      <Text className={textClass}>
         {" • "}
         {children}
       </Text>
     ),
     [BLOCKS.QUOTE]: (_node: Node, children: React.ReactNode) => (
-      <Text style={{ color, fontStyle: "italic" }}>{children}</Text>
+      <Text className={`${textClass} italic`}>{children}</Text>
     ),
-    [BLOCKS.HR]: () => <Text style={{ color }}>{" — "}</Text>,
+    [BLOCKS.HR]: () => <Text className={textClass}>{" — "}</Text>,
     [INLINES.HYPERLINK]: (node: Node, children: React.ReactNode) => {
       const uri = (node.data as { uri?: string }).uri ?? "#";
       return (
-        <Text
-          style={{ color, textDecorationLine: "underline" }}
-          onPress={() => void Linking.openURL(uri)}
-        >
+        <Text className={`${textClass} underline`} onPress={() => void Linking.openURL(uri)}>
           {children}
         </Text>
       );
@@ -72,76 +67,86 @@ const makeInlineOptions = (color: string): Options => ({
   },
 });
 
-const makeOptions = (color: string): Options => ({
+const makeOptions = (textClass: string): Options => ({
   renderMark: {
-    [MARKS.BOLD]: (text) => <Text style={[styles.base, { color, fontWeight: "600" }]}>{text}</Text>,
+    [MARKS.BOLD]: (text) => (
+      <Text className={`text-sm font-semibold leading-5 ${textClass}`}>{text}</Text>
+    ),
     [MARKS.ITALIC]: (text) => (
-      <Text style={[styles.base, { color, fontStyle: "italic" }]}>{text}</Text>
+      <Text className={`text-sm italic leading-5 ${textClass}`}>{text}</Text>
     ),
     [MARKS.UNDERLINE]: (text) => (
-      <Text style={[styles.base, { color, textDecorationLine: "underline" }]}>{text}</Text>
+      <Text className={`text-sm leading-5 underline ${textClass}`}>{text}</Text>
     ),
-    [MARKS.CODE]: (text) => <Text style={[styles.base, styles.code, { color }]}>{text}</Text>,
+    [MARKS.CODE]: (text) => (
+      <Text className={`rounded-[3px] bg-black/[6%] px-1 font-mono text-sm leading-5 ${textClass}`}>
+        {text}
+      </Text>
+    ),
   },
   renderNode: {
     [BLOCKS.PARAGRAPH]: (_node: Node, children: React.ReactNode) => (
-      <Text style={[styles.paragraph, { color }]}>{children}</Text>
+      <Text className={`mb-1 text-sm leading-5 ${textClass}`}>{children}</Text>
     ),
     [BLOCKS.HEADING_1]: (_node: Node, children: React.ReactNode) => (
-      <Text style={[styles.h1, { color }]}>{children}</Text>
+      <Text className={`mb-2 text-[28px] font-bold leading-[34px] ${textClass}`}>{children}</Text>
     ),
     [BLOCKS.HEADING_2]: (_node: Node, children: React.ReactNode) => (
-      <Text style={[styles.h2, { color }]}>{children}</Text>
+      <Text className={`mb-1.5 text-2xl font-semibold leading-[30px] ${textClass}`}>
+        {children}
+      </Text>
     ),
     [BLOCKS.HEADING_3]: (_node: Node, children: React.ReactNode) => (
-      <Text style={[styles.h3, { color }]}>{children}</Text>
+      <Text className={`mb-1 text-xl font-semibold leading-[26px] ${textClass}`}>{children}</Text>
     ),
     [BLOCKS.HEADING_4]: (_node: Node, children: React.ReactNode) => (
-      <Text style={[styles.h4, { color }]}>{children}</Text>
+      <Text className={`mb-1 text-lg font-semibold leading-6 ${textClass}`}>{children}</Text>
     ),
     [BLOCKS.HEADING_5]: (_node: Node, children: React.ReactNode) => (
-      <Text style={[styles.h5, { color }]}>{children}</Text>
+      <Text className={`mb-0.5 text-base font-semibold leading-[22px] ${textClass}`}>
+        {children}
+      </Text>
     ),
     [BLOCKS.HEADING_6]: (_node: Node, children: React.ReactNode) => (
-      <Text style={[styles.h6, { color }]}>{children}</Text>
+      <Text className={`mb-0.5 text-sm font-semibold leading-5 ${textClass}`}>{children}</Text>
     ),
     [BLOCKS.UL_LIST]: (_node: Node, children: React.ReactNode) => (
-      <View style={styles.list}>{children}</View>
+      <View className="my-1 gap-0.5">{children}</View>
     ),
     [BLOCKS.OL_LIST]: (_node: Node, children: React.ReactNode) => (
-      <View style={styles.list}>{children}</View>
+      <View className="my-1 gap-0.5">{children}</View>
     ),
     [BLOCKS.LIST_ITEM]: (_node: Node, children: React.ReactNode) => (
-      <View style={styles.listItem}>
-        <Text style={[styles.bullet, { color }]}>{"•"}</Text>
-        <View style={styles.listItemContent}>{children}</View>
+      <View className="flex-row items-start">
+        <Text className={`mr-1.5 text-sm leading-5 ${textClass}`}>{"•"}</Text>
+        <View className="flex-1">{children}</View>
       </View>
     ),
     [BLOCKS.QUOTE]: (_node: Node, children: React.ReactNode) => (
-      <View style={styles.blockquote}>{children}</View>
+      <View className="my-1 border-l-[3px] border-l-black/20 pl-3 opacity-80">{children}</View>
     ),
-    [BLOCKS.HR]: () => <View style={styles.hr} />,
+    [BLOCKS.HR]: () => <View className="my-2 h-px bg-black/10" />,
     [BLOCKS.TABLE]: (_node: Node, children: React.ReactNode) => (
-      <View style={styles.table}>{children}</View>
+      <View className="my-1 border border-black/15">{children}</View>
     ),
     [BLOCKS.TABLE_ROW]: (_node: Node, children: React.ReactNode) => (
-      <View style={styles.tableRow}>{children}</View>
+      <View className="flex-row border-b border-b-black/10">{children}</View>
     ),
     [BLOCKS.TABLE_HEADER_CELL]: (_node: Node, children: React.ReactNode) => (
-      <View style={[styles.tableCell, styles.tableHeaderCell]}>
-        <Text style={[styles.base, { color, fontWeight: "600" }]}>{children}</Text>
+      <View className="flex-1 border-r border-r-black/10 bg-black/[4%] p-2">
+        <Text className={`text-sm font-semibold leading-5 ${textClass}`}>{children}</Text>
       </View>
     ),
     [BLOCKS.TABLE_CELL]: (_node: Node, children: React.ReactNode) => (
-      <View style={styles.tableCell}>
-        <Text style={[styles.base, { color }]}>{children}</Text>
+      <View className="flex-1 border-r border-r-black/10 p-2">
+        <Text className={`text-sm leading-5 ${textClass}`}>{children}</Text>
       </View>
     ),
     [INLINES.HYPERLINK]: (node: Node, children: React.ReactNode) => {
       const uri = (node.data as { uri?: string }).uri ?? "#";
       return (
         <Text
-          style={[styles.base, { color, textDecorationLine: "underline" }]}
+          className={`text-sm leading-5 underline ${textClass}`}
           onPress={() => void Linking.openURL(uri)}
         >
           {children}
@@ -151,47 +156,11 @@ const makeOptions = (color: string): Options => ({
   },
 });
 
-export function CtfRichText({ json, color = "#000000", inline = false }: CtfRichTextProps) {
-  const options = inline ? makeInlineOptions(color) : makeOptions(color);
+export function CtfRichText({
+  json,
+  textClass = "text-gray-900",
+  inline = false,
+}: CtfRichTextProps) {
+  const options = inline ? makeInlineOptions(textClass) : makeOptions(textClass);
   return <>{documentToReactComponents(json, options)}</>;
 }
-
-const styles = StyleSheet.create({
-  base: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  paragraph: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  h1: { fontSize: 28, fontWeight: "700", marginBottom: 8, lineHeight: 34 },
-  h2: { fontSize: 24, fontWeight: "600", marginBottom: 6, lineHeight: 30 },
-  h3: { fontSize: 20, fontWeight: "600", marginBottom: 4, lineHeight: 26 },
-  h4: { fontSize: 18, fontWeight: "600", marginBottom: 4, lineHeight: 24 },
-  h5: { fontSize: 16, fontWeight: "600", marginBottom: 2, lineHeight: 22 },
-  h6: { fontSize: 14, fontWeight: "600", marginBottom: 2, lineHeight: 20 },
-  code: {
-    fontFamily: "monospace",
-    backgroundColor: "rgba(0,0,0,0.06)",
-    paddingHorizontal: 4,
-    borderRadius: 3,
-  },
-  list: { marginVertical: 4, gap: 2 },
-  listItem: { flexDirection: "row", alignItems: "flex-start" },
-  bullet: { marginRight: 6, fontSize: 14, lineHeight: 20 },
-  listItemContent: { flex: 1 },
-  blockquote: {
-    borderLeftWidth: 3,
-    borderLeftColor: "rgba(0,0,0,0.2)",
-    paddingLeft: 12,
-    marginVertical: 4,
-    opacity: 0.8,
-  },
-  hr: { height: 1, backgroundColor: "rgba(0,0,0,0.1)", marginVertical: 8 },
-  table: { borderWidth: 1, borderColor: "rgba(0,0,0,0.15)", marginVertical: 4 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.1)" },
-  tableCell: { flex: 1, padding: 8, borderRightWidth: 1, borderRightColor: "rgba(0,0,0,0.1)" },
-  tableHeaderCell: { backgroundColor: "rgba(0,0,0,0.04)" },
-});
