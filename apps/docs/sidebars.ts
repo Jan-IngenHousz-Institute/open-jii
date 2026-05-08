@@ -264,7 +264,15 @@ const sidebars: SidebarsConfig = {
           ],
         },
         "for-developers/developers-guide/api-documentation",
-        "for-developers/developers-guide/extending-the-platform",
+        {
+          type: "category",
+          label: "Extending the Platform",
+          link: { type: "generated-index" },
+          items: [
+            "for-developers/developers-guide/extending-the-platform/cms/transactional-emails",
+            "for-developers/developers-guide/extending-the-platform/cms/alert-banners",
+          ],
+        },
       ],
     },
     {

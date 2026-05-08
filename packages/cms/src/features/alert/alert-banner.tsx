@@ -1,5 +1,6 @@
 "use client";
 
+import { useContentfulInspectorMode } from "@contentful/live-preview/react";
 import type { Document } from "@contentful/rich-text-types";
 import { cva } from "class-variance-authority";
 import { AlertTriangle, ArrowRight, Info, Sparkles, Wrench, X } from "lucide-react";
@@ -74,6 +75,7 @@ const typeIcons: Partial<Record<string, React.ElementType>> = {
 
 export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) => {
   const [shown, setShown] = useState(false);
+  const inspectorProps = useContentfulInspectorMode({ entryId: alert.sys.id });
 
   const severity = (alert.severity ?? "info") as Severity;
 
@@ -126,7 +128,9 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
             })()}
 
             <div className="min-w-0 text-sm/6 text-gray-900">
-              <strong className="font-semibold">{alert.title}</strong>
+              <strong className="font-semibold" {...inspectorProps({ fieldId: "title" })}>
+                {alert.title}
+              </strong>
 
               {alert.body?.json && (
                 <svg
@@ -139,18 +143,23 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
               )}
 
               {alert.body?.json && (
-                <span className="text-gray-700 [&>*]:inline [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 [&_h1]:hidden [&_h2]:hidden [&_h3]:hidden [&_h4]:hidden [&_h5]:hidden [&_h6]:hidden [&_p]:m-0 [&_p]:inline [&_p]:text-sm">
+                <span
+                  className="text-gray-700 [&>*]:inline [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 [&_h1]:hidden [&_h2]:hidden [&_h3]:hidden [&_h4]:hidden [&_h5]:hidden [&_h6]:hidden [&_p]:m-0 [&_p]:inline [&_p]:text-sm"
+                  {...inspectorProps({ fieldId: "body" })}
+                >
                   <CtfRichText json={alert.body.json as Document} />
                 </span>
               )}
 
               {alert.link?.url && alert.link?.label && (
-                <Button asChild size="sm" className={actionButtonVariants({ severity })}>
-                  <Link href={alert.link.url} target="_blank" rel="noopener noreferrer">
-                    {alert.link.label}
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                </Button>
+                <span {...inspectorProps({ fieldId: "link" })}>
+                  <Button asChild size="sm" className={actionButtonVariants({ severity })}>
+                    <Link href={alert.link.url} target="_blank" rel="noopener noreferrer">
+                      {alert.link.label}
+                      <ArrowRight className="size-3.5" />
+                    </Link>
+                  </Button>
+                </span>
               )}
             </div>
           </div>
