@@ -10,7 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@repo/ui/components/button";
 import {
@@ -27,6 +27,31 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 type ExecutionStatus = "idle" | "running" | "completed" | "error";
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms / 100) * 100}ms`;
+  if (ms < 10_000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${Math.round(ms / 1000)}s`;
+}
+
+/**
+ * Live counter rendered next to the spinner while a cell is executing.
+ * Resets to zero on each fresh "running" transition; unmounts when the cell
+ * is no longer running so it doesn't tick when it shouldn't.
+ */
+function RunTimer() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const start = Date.now();
+    const id = setInterval(() => setElapsed(Date.now() - start), 100);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="text-[11px] tabular-nums text-blue-500" data-testid="run-timer">
+      {formatElapsed(elapsed)}
+    </span>
+  );
+}
 
 interface CellWrapperProps {
   icon: ReactNode;
@@ -163,8 +188,9 @@ export function CellWrapper({
             </div>
 
             {executionStatus === "running" && (
-              <div className="flex w-5 items-center justify-center">
+              <div className="flex items-center gap-1.5">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                <RunTimer />
               </div>
             )}
             {executionStatus === "completed" && (
