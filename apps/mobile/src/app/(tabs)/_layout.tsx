@@ -1,16 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Tabs, useRouter, useSegments } from "expo-router";
+import { Tabs, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
 import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
-import { useIsOnline } from "~/hooks/use-is-online";
-import { useSession } from "~/hooks/use-session";
 import { useTheme } from "~/hooks/use-theme";
 import { pruneExpiredMeasurements } from "~/services/measurements-storage";
-import { hadActiveSession } from "~/services/session-persistence";
 import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
@@ -18,17 +15,8 @@ export default function TabLayout() {
   const theme = useTheme();
   const { colors } = theme;
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const segments = useSegments();
-
-  const { session, isLoaded, error } = useSession();
-  const { data: online } = useIsOnline();
-  const [hadSession, setHadSession] = useState<boolean | null>(null);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    void hadActiveSession().then(setHadSession);
-  }, []);
 
   useAutoReconnect();
 
@@ -38,20 +26,6 @@ export default function TabLayout() {
   }, [queryClient]);
 
   const inMeasureTab = segments.includes("measurement-flow");
-
-  useEffect(() => {
-    // Wait for session check and hadSession flag to load
-    if (!isLoaded || hadSession === null) return;
-    if (session) return;
-
-    // If offline and user previously had a session, trust it —
-    // don't kick them to login where they can't do anything.
-    // If they never had a session, redirect to login even if offline.
-    if (online === false && hadSession) return;
-    if (error && hadSession) return;
-
-    router.replace("/callback");
-  }, [isLoaded, session, error, hadSession, online, router]);
 
   return (
     <View style={{ flex: 1 }}>

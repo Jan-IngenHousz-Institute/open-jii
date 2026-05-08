@@ -1,7 +1,6 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { getAuthClient } from "~/services/auth";
-import { clearSessionFlag } from "~/services/session-persistence";
 import { getEnvVar } from "~/stores/environment-store";
 
 function removeTrailingSlashes(value: string) {
@@ -30,7 +29,6 @@ export const customApiFetcher = async (args: ApiFetcherArgs) => {
   });
 
   if (result?.status === 401) {
-    await clearSessionFlag();
     await authClient.signOut();
   }
 
