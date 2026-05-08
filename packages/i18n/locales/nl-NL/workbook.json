@@ -31,8 +31,15 @@
     "noData": "Geen uitvoergegevens",
     "tabTable": "Tabel",
     "tabJson": "JSON",
+    "tabTimeseries": "Tijdreeks",
     "copyJson": "JSON kopiëren",
     "closeChart": "Diagram sluiten",
-    "expandChart": "Diagram voor {{column}} openen"
+    "expandChart": "Diagram voor {{column}} openen",
+    "loadingProtocol": "Protocol laden…",
+    "timeseriesXAxis": "Tijd (s)",
+    "timeseriesYAxis": "Genormaliseerd signaal",
+    "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",
+    "timeseriesEmpty": "Geen detectorwaarden om te plotten",
+    "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
   }
 }

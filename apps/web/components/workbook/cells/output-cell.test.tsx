@@ -1,11 +1,16 @@
-import { createOutputCell } from "@/test/factories";
+import { createOutputCell, createProtocolCell } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { OutputCellComponent } from "./output-cell";
 
-// Plotly cannot run in jsdom; render a stub that exposes the series for assertions.
-// Mock factory is hoisted so we use React.createElement (no JSX) to avoid runtime ordering issues.
+const useProtocolMock = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
+  useProtocol: useProtocolMock,
+}));
+
+// Plotly cannot run in jsdom; render stubs that expose the series for assertions.
+// Mock factories are hoisted so we use React.createElement (no JSX) to avoid runtime ordering issues.
 vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   const { createElement } = await import("react");
@@ -20,6 +25,34 @@ vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
         },
         data.map((s) =>
           createElement("div", { key: s.name, "data-testid": `series-${s.name}` }, s.y.join(",")),
+        ),
+      ),
+  };
+});
+
+interface MockPlotlyTrace {
+  name?: string;
+  y?: number[];
+}
+
+vi.mock("@repo/ui/components/charts/plotly-chart", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  const { createElement } = await import("react");
+  return {
+    ...actual,
+    PlotlyChart: ({ data }: { data: MockPlotlyTrace[] }) =>
+      createElement(
+        "div",
+        {
+          "data-testid": "plotly-chart",
+          "data-series": JSON.stringify(data.map((s) => s.name ?? "")),
+        },
+        data.map((s) =>
+          createElement(
+            "div",
+            { key: s.name ?? "", "data-testid": `series-${s.name ?? ""}` },
+            (s.y ?? []).join(","),
+          ),
         ),
       ),
   };
@@ -43,6 +76,8 @@ describe("OutputCellComponent", () => {
     writeText.mockClear();
     onUpdate.mockClear();
     onDelete.mockClear();
+    useProtocolMock.mockReset();
+    useProtocolMock.mockReturnValue({ data: undefined, isLoading: false });
   });
 
   it("displays execution time and messages with correct severity styling", () => {
@@ -378,5 +413,107 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("84")).toBeInTheDocument();
     // Non-object rows render as em-dash placeholders in every column.
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
+  });
+
+  describe("Timeseries tab (multispeq)", () => {
+    function multispeqProtocolCode() {
+      return [
+        {
+          v_arrays: [[3]],
+          _protocol_set_: [
+            {
+              label: "ABS",
+              pulses: ["@n0:0"],
+              pulse_distance: [1000],
+              detectors: [[3]],
+              pulsed_lights: [[1]],
+              nonpulsed_lights: [[2]],
+              nonpulsed_lights_brightness: [[100]],
+            },
+          ],
+        },
+      ];
+    }
+
+    function multispeqOutput() {
+      return {
+        sample_raw: JSON.stringify([
+          { set: [{ label: "ABS", data_raw: [10, 20, 30], pi: [2, 100, 1] }] },
+        ]),
+      };
+    }
+
+    it("does not show the Timeseries tab when there is no source protocol cell", () => {
+      const cell = createOutputCell({ data: multispeqOutput() });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+      expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
+    });
+
+    it("does not show the Timeseries tab when the source protocol family is not multispeq", () => {
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "ambit", code: multispeqProtocolCode() } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
+    });
+
+    it("does not show the Timeseries tab when output data is not a multispeq payload", () => {
+      const proto = createProtocolCell();
+      const cell = createOutputCell({
+        data: { device_id: "abc", firmware: "1.0" },
+        producedBy: proto.id,
+      });
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+      expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
+    });
+
+    it("shows a Timeseries tab and decodes detectors into a chart for multispeq output", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+      useProtocolMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+
+      const tab = screen.getByRole("tab", { name: "output.tabTimeseries" });
+      await user.click(tab);
+
+      // Decoded series name follows "<sub_protocol> · <led label> [vmin-vmax]";
+      // values are normalised 0..1.
+      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+      expect(screen.getByTestId("series-ABS · 530 nm (green, body) [10-30]")).toHaveTextContent(
+        "0,0.5,1",
+      );
+    });
   });
 });
