@@ -92,7 +92,6 @@ export function CellRenderer({
           onUpdate={onUpdate}
           onDelete={onDelete}
           readOnly={readOnly}
-          allCells={allCells}
         />
       );
     case "branch":

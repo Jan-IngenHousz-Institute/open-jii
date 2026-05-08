@@ -1,8 +1,6 @@
 "use client";
 
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { isMultispeqOutput } from "@/lib/multispeq/detect";
 import {
   AlertCircle,
   Check,
@@ -16,24 +14,19 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import type {
-  OutputCell as OutputCellType,
-  WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+import type { OutputCell as OutputCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
 import type { ChartClickHandler } from "./output-cell-charts";
 import { ExpandedChart } from "./output-cell-charts";
 import { renderDataTable } from "./output-cell-render-data";
-import { OutputCellTimeseries } from "./output-cell-timeseries";
 
 interface OutputCellProps {
   cell: OutputCellType;
   onUpdate: (cell: OutputCellType) => void;
   onDelete: () => void;
   readOnly?: boolean;
-  allCells?: WorkbookCell[];
 }
 
 function formatExecutionTime(ms?: number): string {
@@ -80,9 +73,6 @@ function DataTabs({
   onChartClick,
   activeTab,
   onTabChange,
-  showTimeseries,
-  protocolCode,
-  protocolLoading,
 }: {
   data: unknown;
   copy: (text: string) => Promise<void>;
@@ -90,9 +80,6 @@ function DataTabs({
   onChartClick: ChartClickHandler;
   activeTab: string;
   onTabChange: (tab: string) => void;
-  showTimeseries: boolean;
-  protocolCode?: unknown;
-  protocolLoading?: boolean;
 }) {
   const { t } = useTranslation("workbook");
   return (
@@ -104,14 +91,6 @@ function DataTabs({
         >
           {t("output.tabTable")}
         </TabsTrigger>
-        {showTimeseries && (
-          <TabsTrigger
-            value="timeseries"
-            className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            {t("output.tabTimeseries")}
-          </TabsTrigger>
-        )}
         <TabsTrigger
           value="json"
           className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -122,17 +101,6 @@ function DataTabs({
       <TabsContent value="table" className="mt-2">
         {renderDataTable(data, { onChartClick, noDataLabel: t("output.noData") })}
       </TabsContent>
-      {showTimeseries && (
-        <TabsContent value="timeseries" className="mt-2">
-          <OutputCellTimeseries
-            data={data}
-            protocolCode={protocolCode}
-            loading={protocolLoading}
-            emptyLabel={t("output.timeseriesEmpty")}
-            errorLabel={t("output.timeseriesError")}
-          />
-        </TabsContent>
-      )}
       <TabsContent value="json" className="mt-2">
         <div className="relative">
           <pre className="max-h-[480px] overflow-auto rounded-lg bg-[#F7F8FA] p-3 pr-12 text-xs text-[#011111]">
@@ -156,13 +124,7 @@ function DataTabs({
   );
 }
 
-export function OutputCellComponent({
-  cell,
-  onUpdate,
-  onDelete,
-  readOnly,
-  allCells,
-}: OutputCellProps) {
+export function OutputCellComponent({ cell, onUpdate, onDelete, readOnly }: OutputCellProps) {
   const { t } = useTranslation("workbook");
   const hasContent = cell.data != null || (cell.messages && cell.messages.length > 0);
   // Read-only viewers can still collapse the cell for their own view, but their toggle should not
@@ -187,20 +149,9 @@ export function OutputCellComponent({
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     // The expanded chart only makes sense alongside the table view, so collapse it
-    // when the user switches off it.
+    // when the user switches to JSON.
     if (tab !== "table") setPinnedChart(null);
   };
-
-  const sourceCell = allCells?.find((c) => c.id === cell.producedBy);
-  const sourceProtocolId =
-    sourceCell?.type === "protocol" ? sourceCell.payload.protocolId : undefined;
-  const { data: protocolResponse, isLoading: protocolLoading } = useProtocol(
-    sourceProtocolId ?? "",
-    !!sourceProtocolId,
-  );
-  const protocolFamily = protocolResponse?.body.family;
-  const protocolCode = protocolResponse?.body.code;
-  const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (
     <div className="group/output relative overflow-hidden rounded-b-[10px] border border-t-0 border-[#EDF2F6] bg-white">
@@ -284,9 +235,6 @@ export function OutputCellComponent({
                   onChartClick={handleChartClick}
                   activeTab={activeTab}
                   onTabChange={handleTabChange}
-                  showTimeseries={showTimeseries}
-                  protocolCode={protocolCode}
-                  protocolLoading={protocolLoading}
                 />
                 {pinnedChart && activeTab === "table" && (
                   // Plotly reuses its plot div across re-renders; switching columns can leave the
