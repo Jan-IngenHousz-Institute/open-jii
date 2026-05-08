@@ -375,7 +375,7 @@ resource "grafana_rule_group" "cloudfront_errors" {
   interval_seconds = 60
 
   rule {
-    name      = "High CloudFront Error Rate"
+    name      = "Site Down - High CloudFront 5xx Rate"
     condition = "C"
 
     data {
@@ -403,21 +403,21 @@ resource "grafana_rule_group" "cloudfront_errors" {
     data {
       ref_id         = "B"
       query_type     = ""
-      datasource_uid = grafana_data_source.cloudwatch_source.uid
+      datasource_uid = "__expr__"
 
       model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
         refId      = "B"
-        region     = "us-east-1"
-        namespace  = "AWS/CloudFront"
-        metricName = "4xxErrorRate"
-        statistic  = "Average"
-        dimensions = {
-          DistributionId = var.cloudfront_distribution_id
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
         }
       })
 
       relative_time_range {
-        from = 300
+        from = 0
         to   = 0
       }
     }
@@ -425,44 +425,30 @@ resource "grafana_rule_group" "cloudfront_errors" {
     data {
       ref_id         = "C"
       query_type     = ""
-      datasource_uid = "-100"
+      datasource_uid = "__expr__"
 
       model = jsonencode({
-        conditions = [
-          {
-            evaluator = {
-              params = [5]
-              type   = "gt"
-            }
-            operator = {
-              type = "or"
-            }
-            query = {
-              params = ["C"]
-            }
-            type = "query"
-          }
-        ]
-        expression = "$A + $B"
+        expression = "$B > 5"
         type       = "math"
+        refId      = "C"
       })
 
       relative_time_range {
-        from = 300
+        from = 0
         to   = 0
       }
     }
 
     no_data_state  = "NoData"
     exec_err_state = "OK"
-    for            = "5m"
+    for            = "1m"
 
     annotations = {
-      description = "CloudFront error rate is above 5%"
-      summary     = "High error rate on CloudFront distribution"
+      description = "CloudFront 5xx error rate is above 5% — origin may be down"
+      summary     = "Site may be down: high 5xx rate on CloudFront"
     }
     labels = {
-      severity = "warning"
+      severity = "critical"
       service  = "frontend"
     }
   }
@@ -509,7 +495,7 @@ resource "grafana_rule_group" "lambda_health" {
       datasource_uid = "__expr__"
 
       model = <<EOT
-{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
 EOT
 
       relative_time_range {
@@ -537,15 +523,15 @@ EOT
 
     no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "5m"
+    for            = "1m"
 
     annotations = {
-      description = "Lambda function has more than 5 errors in the last 5 minutes"
-      summary     = "High error rate on Lambda function"
+      description = "Server Lambda has more than 5 errors in the last 5 minutes — site may be down"
+      summary     = "Site may be down: Server Lambda errors detected"
     }
     labels = {
-      severity = "warning"
-      service  = "lambda"
+      severity = "critical"
+      service  = "frontend"
     }
   }
 
@@ -583,7 +569,7 @@ EOT
       datasource_uid = "__expr__"
 
       model = <<EOT
-{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
 EOT
 
       relative_time_range {
