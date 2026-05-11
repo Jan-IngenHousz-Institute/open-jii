@@ -51,14 +51,15 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: |
         set -o pipefail
-        if ! JSON=$(eas build:list \
-          --profile ${{ inputs.profile }} \
+        JSON=$(eas build:list \
+          --profile "${{ inputs.profile }}" \
           --status finished \
-          --platform ${{ inputs.platform }} \
+          --platform "${{ inputs.platform }}" \
           --limit 1 \
           --non-interactive \
-          --json); then
-          EXIT=$?
+          --json)
+        EXIT=$?
+        if [ "$EXIT" -ne 0 ]; then
           echo "::error::eas build:list failed (exit $EXIT) — refusing to default to full rebuild"
           exit "$EXIT"
         fi
