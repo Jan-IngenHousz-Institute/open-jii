@@ -2,6 +2,8 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useOtaUpdate } from "../use-ota-update";
+
 const mocks = vi.hoisted(() => ({
   checkForUpdateAsync: vi.fn(),
   fetchUpdateAsync: vi.fn(),
@@ -24,8 +26,6 @@ vi.mock("sonner-native", () => ({
 }));
 
 vi.stubGlobal("__DEV__", false);
-
-import { useOtaUpdate } from "../use-ota-update";
 
 describe("useOtaUpdate", () => {
   beforeEach(() => {
@@ -65,7 +65,9 @@ describe("useOtaUpdate", () => {
     mocks.fetchUpdateAsync.mockResolvedValue({ isNew: false });
     const { unmount } = renderHook(() => useOtaUpdate());
     await vi.runAllTimersAsync();
-    expect(mocks.toastInfo).toHaveBeenCalledWith("Update available", { description: "Downloading…" });
+    expect(mocks.toastInfo).toHaveBeenCalledWith("Update available", {
+      description: "Downloading…",
+    });
     expect(mocks.fetchUpdateAsync).toHaveBeenCalledOnce();
     unmount();
   });

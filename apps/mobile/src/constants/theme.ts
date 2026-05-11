@@ -15,6 +15,8 @@ export interface Theme {
     onPrimary: string;
     onSecondary: string;
     inactive: string;
+    brand: string;
+    warningFg: string;
   };
   typography: typeof typography;
   spacing: typeof spacing;
