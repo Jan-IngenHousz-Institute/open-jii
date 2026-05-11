@@ -604,7 +604,8 @@ export function measurementToTimeseries(
   subOrder.sort((a, b) => (subStart.get(a) ?? 0) - (subStart.get(b) ?? 0));
   for (let i = 0; i < subOrder.length; i++) {
     const cur = subOrder[i];
-    const nextStart = i + 1 < subOrder.length ? (subStart.get(subOrder[i + 1]) ?? tOffset) : tOffset;
+    const nextStart =
+      i + 1 < subOrder.length ? (subStart.get(subOrder[i + 1]) ?? tOffset) : tOffset;
     let maxPhase = -1;
     for (const r of allInputs) {
       if (r.sub_protocol === cur && r.light_type === "actinic" && r.phase_index > maxPhase) {
