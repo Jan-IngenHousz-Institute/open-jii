@@ -194,6 +194,36 @@ resource "aws_s3_bucket_replication_configuration" "crr" {
   ]
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "lifecycle" {
+  count  = length(var.lifecycle_rules) > 0 ? 1 : 0
+  bucket = aws_s3_bucket.bucket.id
+
+  dynamic "rule" {
+    for_each = var.lifecycle_rules
+    content {
+      id     = rule.value.id
+      status = rule.value.status
+
+      dynamic "transition" {
+        for_each = rule.value.transitions
+        content {
+          days          = transition.value.days
+          storage_class = transition.value.storage_class
+        }
+      }
+
+      dynamic "expiration" {
+        for_each = rule.value.expiration_days != null ? [rule.value.expiration_days] : []
+        content {
+          days = expiration.value
+        }
+      }
+
+      filter {}
+    }
+  }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "dr_lifecycle" {
   provider = aws.dr
   count    = var.enable_crr ? 1 : 0

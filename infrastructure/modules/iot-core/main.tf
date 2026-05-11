@@ -84,41 +84,6 @@ resource "aws_iot_policy" "iot_policy" {
   })
 }
 
-# -----------------------------------------------
-# IAM Role and Policy for Timestream Integration
-# -----------------------------------------------
-resource "aws_iam_role" "iot_timestream_role" {
-  name = var.iot_timestream_role_name
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect    = "Allow",
-      Principal = { Service = "iot.amazonaws.com" },
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_policy" "iot_timestream_policy" {
-  name = var.iot_timestream_policy_name
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Action = [
-        "timestream:WriteRecords",
-        "timestream:DescribeEndpoints"
-      ],
-      Resource = "*"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "iot_timestream_attach" {
-  role       = aws_iam_role.iot_timestream_role.name
-  policy_arn = aws_iam_policy.iot_timestream_policy.arn
-}
-
 # --------------------------------------------
 # IAM Role and Policy for Kinesis Integration
 # --------------------------------------------
@@ -154,6 +119,38 @@ resource "aws_iam_role_policy_attachment" "iot_kinesis_attach" {
   policy_arn = aws_iam_policy.iot_kinesis_policy.arn
 }
 
+# ----------------------------------------
+# IAM Role and Policy for S3 Archive
+# ----------------------------------------
+resource "aws_iam_role" "iot_s3_role" {
+  name = var.iot_s3_role_name
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "iot.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_policy" "iot_s3_policy" {
+  name = var.iot_s3_policy_name
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = ["s3:PutObject"],
+      Resource = "${var.s3_archive_bucket_arn}/*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "iot_s3_attach" {
+  role       = aws_iam_role.iot_s3_role.name
+  policy_arn = aws_iam_policy.iot_s3_policy.arn
+}
+
 # ----------------
 # IoT Topic Rules
 # ----------------
@@ -165,23 +162,15 @@ resource "aws_iot_topic_rule" "iot_rules" {
   sql         = "SELECT topic() as topic, * FROM '${local.iot_topic_filters[each.key]}'"
   sql_version = "2016-03-23"
 
-  timestream {
-    role_arn      = aws_iam_role.iot_timestream_role.arn
-    database_name = var.timestream_database
-    table_name    = var.timestream_table
-
-    dynamic "dimension" {
-      for_each = local.iot_parameter_to_topic_index[each.key]
-      content {
-        name  = dimension.key
-        value = format("$${topic(%d)}", dimension.value)
-      }
-    }
-  }
-
   kinesis {
     role_arn      = aws_iam_role.iot_kinesis_role.arn
     stream_name   = var.kinesis_stream_name
     partition_key = "$${newuuid()}"
+  }
+
+  s3 {
+    role_arn    = aws_iam_role.iot_s3_role.arn
+    bucket_name = var.s3_archive_bucket_name
+    key         = "raw-iot/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
   }
 }

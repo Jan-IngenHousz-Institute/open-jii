@@ -93,12 +93,6 @@ module "docusaurus_s3" {
   }
 }
 
-module "timestream" {
-  source        = "../../modules/timestream"
-  database_name = "open_jii_${var.environment}_data_ingest_db"
-  table_name    = "measurements"
-}
-
 module "kinesis" {
   source      = "../../modules/kinesis"
   stream_name = "open-jii-${var.environment}-data-ingest-stream"
@@ -106,14 +100,41 @@ module "kinesis" {
   workspace_kinesis_credential_id = var.kinesis_credential_id
 }
 
+module "iot_raw_archive_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-iot-raw-archive-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id     = "archive-tiering"
+      status = "Enabled"
+      transitions = [
+        { days = 30, storage_class = "STANDARD_IA" },
+        { days = 90, storage_class = "GLACIER" },
+        { days = 365, storage_class = "DEEP_ARCHIVE" }
+      ]
+      expiration_days = null
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
-
-  timestream_table           = "measurements"
-  timestream_database        = "open_jii_${var.environment}_data_ingest_db"
-  iot_timestream_role_name   = "open_jii_${var.environment}_iot_timestream_role"
-  iot_timestream_policy_name = "open_jii_${var.environment}_iot_timestream_policy"
 
   iot_kinesis_role_name   = "open_jii_${var.environment}_iot_kinesis_role"
   iot_kinesis_policy_name = "open_jii_${var.environment}_iot_kinesis_policy"
@@ -121,6 +142,11 @@ module "iot_core" {
   kinesis_stream_arn      = module.kinesis.kinesis_stream_arn
 
   cloudwatch_role_arn = module.cloudwatch.iot_cloudwatch_role_arn
+
+  s3_archive_bucket_name = module.iot_raw_archive_s3.bucket_id
+  s3_archive_bucket_arn  = module.iot_raw_archive_s3.bucket_arn
+  iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
+  iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
 }
 
 module "cognito" {
