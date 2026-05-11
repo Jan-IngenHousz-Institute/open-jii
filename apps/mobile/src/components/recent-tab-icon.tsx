@@ -2,6 +2,7 @@ import { Clock } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useMeasurements } from "~/hooks/use-measurements";
+import { cn } from "~/utils/cn";
 
 export function RecentTabIcon({ color, size }: { color: string; size: number }) {
   const { failedUploads: uploads } = useMeasurements();
@@ -12,8 +13,10 @@ export function RecentTabIcon({ color, size }: { color: string; size: number }) 
       <Clock size={size} color={color} />
       {count > 0 && (
         <View
-          className="border-surface bg-error absolute -right-2 -top-1.5 h-5 min-w-5 items-center justify-center rounded-full border-2"
-          style={{ paddingHorizontal: count > 9 ? 4 : 6 }}
+          className={cn(
+            "border-surface bg-error absolute -right-2 -top-1.5 h-5 min-w-5 items-center justify-center rounded-full border-2",
+            count > 9 ? "px-1" : "px-1.5",
+          )}
         >
           <Text className="text-[11px] font-bold text-white">{count > 99 ? "99+" : count}</Text>
         </View>

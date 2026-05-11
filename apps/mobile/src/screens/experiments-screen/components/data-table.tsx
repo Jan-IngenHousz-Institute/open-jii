@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { cn } from "~/utils/cn";
 import { ParsedTableData, formatCellValue, getTableSummary } from "~/utils/parse-experiment-data";
 
 import { TableDetailModal } from "./table-detail-modal";
@@ -39,8 +40,7 @@ export function DataTable({ table }: DataTableProps) {
               {table.columns.map((column) => (
                 <View
                   key={column.name}
-                  className="flex-1 px-1.5"
-                  style={{ minWidth: 100, maxWidth: 200 }}
+                  className={cn("min-w-[100px] max-w-[200px] flex-1 px-1.5")}
                 >
                   <Text className="text-on-surface text-xs font-bold">{column.displayName}</Text>
                   {column.isArray && (
@@ -56,14 +56,12 @@ export function DataTable({ table }: DataTableProps) {
             {table.rows.map((row, rowIndex) => (
               <View
                 key={rowIndex}
-                className="border-border flex-row border-b py-1"
-                style={{ borderBottomWidth: 0.5 }}
+                className={cn("border-border flex-row border-b-[0.5px] py-1")}
               >
                 {table.columns.map((column) => (
                   <View
                     key={column.name}
-                    className="flex-1 px-1.5"
-                    style={{ minWidth: 100, maxWidth: 200 }}
+                    className={cn("min-w-[100px] max-w-[200px] flex-1 px-1.5")}
                   >
                     {renderCell(row[column.name], column)}
                   </View>
