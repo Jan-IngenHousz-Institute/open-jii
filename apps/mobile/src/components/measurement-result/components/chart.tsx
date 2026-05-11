@@ -1,8 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
 import { CartesianChart, Line } from "victory-native";
-import { colors } from "~/constants/colors";
-import { useTheme } from "~/hooks/use-theme";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 interface ChartProps {
   name: string;
@@ -10,8 +9,7 @@ interface ChartProps {
 }
 
 export function Chart({ name, values }: ChartProps) {
-  const { isDark } = useTheme();
-  const accent = isDark ? colors.primary.bright : colors.primary.dark;
+  const { brand } = useThemeColors();
   if (!values || values.length === 0) {
     return (
       <View className="border-border my-5 rounded-2xl border px-5 py-5">
@@ -32,7 +30,7 @@ export function Chart({ name, values }: ChartProps) {
 
       <View className="bg-background h-[280px] rounded-xl p-4">
         <CartesianChart data={chartData} xKey="x" yKeys={["y"]}>
-          {({ points }) => <Line points={points.y} color={accent} strokeWidth={2} />}
+          {({ points }) => <Line points={points.y} color={brand} strokeWidth={2} />}
         </CartesianChart>
       </View>
     </View>

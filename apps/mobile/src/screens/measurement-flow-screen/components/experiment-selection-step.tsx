@@ -17,7 +17,7 @@ import { orderFlowNodes } from "~/utils/order-flow-nodes";
 import { OfflineModeIndicator } from "./offline-mode-indicator";
 
 export function ExperimentSelectionStep() {
-  const { classes, colors, isDark } = useTheme();
+  const { classes, colors } = useTheme();
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const { setExperimentId, setFlowNodes } = useMeasurementFlowStore();
@@ -56,10 +56,7 @@ export function ExperimentSelectionStep() {
 
         {isLoading && (
           <View className="items-center py-8">
-            <ActivityIndicator
-              size="large"
-              color={isDark ? colors.primary.bright : colors.primary.dark}
-            />
+            <ActivityIndicator size="large" color={colors.brand} />
             <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
               Loading experiments...
             </Text>

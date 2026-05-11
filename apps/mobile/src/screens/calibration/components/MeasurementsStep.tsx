@@ -2,7 +2,6 @@ import React from "react";
 import { View, Text, TextInput, ActivityIndicator } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
-import { colors } from "~/constants/colors";
 import { useThemeColors } from "~/hooks/use-theme-colors";
 
 interface MeasurementsStepProps {
@@ -51,10 +50,7 @@ export function MeasurementsStep({
         </Text>
         {isProcessing ? (
           <View className="items-center justify-center py-6">
-            <ActivityIndicator
-              size="large"
-              color={themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark}
-            />
+            <ActivityIndicator size="large" color={themeColors.brand} />
           </View>
         ) : (
           <TextInput

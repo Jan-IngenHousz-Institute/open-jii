@@ -48,9 +48,10 @@ type EnhancedTheme = typeof lightTheme & {
 };
 
 const Probe: React.FC<{ onRender: (theme: EnhancedTheme) => void }> = ({ onRender }) => {
-  const theme = useContext(ThemeContext) as EnhancedTheme;
-  onRender(theme);
-  return <Text>{theme.isDark ? "dark" : "light"}</Text>;
+  const themeCtx = useContext(ThemeContext) as EnhancedTheme;
+  onRender(themeCtx);
+  const darkActive = themeCtx.isDark;
+  return <Text>{darkActive === true ? "dark" : "light"}</Text>;
 };
 
 const renderWithProvider = () => {

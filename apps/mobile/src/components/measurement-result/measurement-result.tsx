@@ -30,8 +30,7 @@ export function MeasurementResult({
   macro,
   onCommentPress,
 }: MeasurementResultProps) {
-  const { classes, colors, isDark } = useTheme();
-  const accent = isDark ? colors.primary.bright : colors.primary.dark;
+  const { classes, colors } = useTheme();
   const [activeTab, setActiveTab] = useState<TabKey>("result");
 
   const {
@@ -65,7 +64,7 @@ export function MeasurementResult({
     }
 
     if (isProcessing) {
-      return <ActivityIndicator size="large" color={accent} />;
+      return <ActivityIndicator size="large" color={colors.brand} />;
     }
 
     if (!processedMeasurement?.length) {
@@ -116,10 +115,10 @@ export function MeasurementResult({
           onPress={onCommentPress}
         >
           <View className="flex-row items-center gap-2">
-            <MessageCircle size={18} color={accent} />
+            <MessageCircle size={18} color={colors.brand} />
             <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
           </View>
-          <ChevronRight size={16} color={accent} />
+          <ChevronRight size={16} color={colors.brand} />
         </TouchableOpacity>
       )}
 

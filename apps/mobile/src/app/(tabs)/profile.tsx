@@ -46,10 +46,7 @@ export default function ProfileScreen() {
       <View className="my-6 items-center">
         <View
           className="mb-4 h-20 w-20 items-center justify-center overflow-hidden rounded-full"
-          style={{
-            backgroundColor:
-              (themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark) + "30",
-          }}
+          style={{ backgroundColor: themeColors.brand + "30" }}
         >
           {user.image ? (
             <Image source={{ uri: user.image }} className="h-full w-full rounded-full" />
@@ -84,19 +81,15 @@ export default function ProfileScreen() {
           variant="outline"
           style={{ marginBottom: 12 }}
           icon={
-            <ExternalLink
-              size={16}
-              color={themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark}
-            />
+            <ExternalLink size={16} color={themeColors.brand} />
           }
         />
 
         <Button
           title="Log Out"
           onPress={handleLogout}
-          variant="outline"
-          style={{ marginBottom: 12, borderColor: colors.semantic.error }}
-          textStyle={{ color: colors.semantic.error }}
+          variant="danger"
+          style={{ marginBottom: 12 }}
           icon={<LogOut size={16} color={colors.semantic.error} />}
         />
       </View>

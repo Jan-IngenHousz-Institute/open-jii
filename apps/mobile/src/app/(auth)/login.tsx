@@ -39,10 +39,11 @@ interface OfflineBannerProps {
 }
 
 function OfflineBanner({ online }: OfflineBannerProps) {
+  const { warningFg } = useThemeColors();
   if (online !== false) return null;
   return (
     <View className="mb-4 flex-row items-center gap-2 rounded-lg bg-amber-100 p-3 dark:bg-amber-900/30">
-      <MaterialIcons name="wifi-off" size={18} color="#92400e" />
+      <MaterialIcons name="wifi-off" size={18} color={warningFg} />
       <Text className="flex-1 text-sm text-amber-800 dark:text-amber-200">
         You are offline. Please connect to the internet to log in.
       </Text>
@@ -337,7 +338,7 @@ export default function LoginScreen() {
                   <MaterialIcons
                     name="edit"
                     size={16}
-                    color={themeColors.scheme === "dark" ? "#49e06d" : "#005e5e"}
+                    color={themeColors.brand}
                     onPress={handleEditEmail}
                     style={{ marginLeft: 4 }}
                   />

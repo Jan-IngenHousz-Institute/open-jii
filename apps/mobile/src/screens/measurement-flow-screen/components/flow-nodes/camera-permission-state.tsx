@@ -35,7 +35,7 @@ export function CameraPermissionState({
   permission,
   requestPermission,
 }: CameraPermissionStateProps) {
-  const { colors, classes, isDark } = useTheme();
+  const { colors, classes } = useTheme();
 
   if (!permission) {
     return (
@@ -46,7 +46,6 @@ export function CameraPermissionState({
   }
 
   const permanentlyDenied = !permission.canAskAgain || permission.status === "denied";
-  const accent = isDark ? colors.primary.bright : colors.primary.dark;
 
   return (
     <View className="flex-1 items-center justify-center gap-6 px-8">
@@ -54,7 +53,7 @@ export function CameraPermissionState({
         {permanentlyDenied ? (
           <ShieldAlert size={40} color={colors.semantic.error} />
         ) : (
-          <CameraOff size={40} color={accent} />
+          <CameraOff size={40} color={colors.brand} />
         )}
       </View>
 

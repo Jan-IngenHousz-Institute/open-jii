@@ -4,14 +4,9 @@ import { useTheme } from "~/hooks/use-theme";
 import { JSONViewer } from "./json-viewer";
 
 export function ResultView({ isScanning, scanResult }) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   if (isScanning) {
-    return (
-      <ActivityIndicator
-        size="large"
-        color={isDark ? colors.primary.bright : colors.primary.dark}
-      />
-    );
+    return <ActivityIndicator size="large" color={colors.brand} />;
   }
   if (scanResult) {
     return <JSONViewer data={scanResult} />;

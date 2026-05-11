@@ -82,7 +82,7 @@ jobs:
       - name: Forbid theme.isDark / isDark? ternaries in apps/mobile/src
         shell: bash
         run: |
-          if grep -rEln "theme\.isDark|isDark \?" apps/mobile/src; then
+          if grep -rEln "theme\.isDark|isDark[[:space:]]+\?|isDark[[:space:]]*&&|isDark[[:space:]]*\|\|" apps/mobile/src; then
             echo "::error::theme.isDark / isDark? ternaries are not allowed in apps/mobile/src — use NativeWind dark: variants or useThemeColors(). See apps/mobile/docs/styling.md."
             exit 1
           fi

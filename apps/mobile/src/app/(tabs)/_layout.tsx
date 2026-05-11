@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
-import { colors } from "~/constants/colors";
 import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
 import { useThemeColors } from "~/hooks/use-theme-colors";
 import { pruneExpiredMeasurements } from "~/services/measurements-storage";
@@ -31,8 +30,7 @@ export default function TabLayout() {
     <View className="flex-1">
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor:
-            themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark,
+          tabBarActiveTintColor: themeColors.brand,
           tabBarInactiveTintColor: themeColors.inactive,
           tabBarStyle: {
             backgroundColor: themeColors.surface,

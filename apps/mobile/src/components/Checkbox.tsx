@@ -13,7 +13,7 @@ interface CheckboxProps {
 }
 
 export function Checkbox({ value, text, onChange, textSize = "base", icon }: CheckboxProps) {
-  const { classes, isDark } = useTheme();
+  const { classes, colors: themeColors } = useTheme();
 
   // WORKAROUND: Key with timestamp to force remount on every render
   // This bypasses React Native's native style caching bug in Expo SDK 54
@@ -24,7 +24,7 @@ export function Checkbox({ value, text, onChange, textSize = "base", icon }: Che
     <View
       className={clsx("h-6 w-6 items-center justify-center rounded-lg border-2")}
       style={{
-        borderColor: value ? "#09B732" : isDark ? "#FFFFFF" : "#011111",
+        borderColor: value ? "#09B732" : themeColors.onBackground,
         backgroundColor: value ? "#09B732" : "transparent",
       }}
     >

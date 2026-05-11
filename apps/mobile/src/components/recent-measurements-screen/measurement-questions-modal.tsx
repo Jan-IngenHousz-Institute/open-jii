@@ -26,8 +26,7 @@ export function MeasurementQuestionsModal({
   measurement,
   onClose,
 }: MeasurementQuestionsModalProps) {
-  const { colors, classes, isDark } = useTheme();
-  const accent = isDark ? colors.primary.bright : colors.primary.dark;
+  const { colors, classes } = useTheme();
   const insets = useSafeAreaInsets();
   const { updateMeasurementComment } = useMeasurements();
   const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -104,10 +103,10 @@ export function MeasurementQuestionsModal({
               {protocolName && (
                 <View
                   className="max-w-full flex-row items-center gap-1 rounded-full px-2.5 py-1"
-                  style={{ backgroundColor: accent + "15" }}
+                  style={{ backgroundColor: colors.brand + "15" }}
                 >
-                  <FlaskConical size={11} color={accent} />
-                  <Text className="shrink text-xs font-semibold" style={{ color: accent }}>
+                  <FlaskConical size={11} color={colors.brand} />
+                  <Text className="shrink text-xs font-semibold" style={{ color: colors.brand }}>
                     {protocolName}
                   </Text>
                 </View>
@@ -171,7 +170,7 @@ export function MeasurementQuestionsModal({
                     classes.border,
                   )}
                 >
-                  <Flag size={14} color={accent} />
+                  <Flag size={14} color={colors.brand} />
                   <Text className={clsx("text-sm font-semibold", classes.text)}>
                     {FLAG_TYPE_LABELS[currentFlagType]}
                   </Text>
@@ -186,7 +185,7 @@ export function MeasurementQuestionsModal({
                     classes.border,
                   )}
                 >
-                  <MessageCircle size={14} color={accent} style={{ marginTop: 2 }} />
+                  <MessageCircle size={14} color={colors.brand} style={{ marginTop: 2 }} />
                   <Text className={clsx("flex-1 text-sm", classes.text)}>{currentComment}</Text>
                 </View>
               )}
@@ -232,9 +231,9 @@ export function MeasurementQuestionsModal({
                   <View className="flex-row items-start gap-3 p-4">
                     <View
                       className="mt-0.5 h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
-                      style={{ backgroundColor: accent + "15" }}
+                      style={{ backgroundColor: colors.brand + "15" }}
                     >
-                      <Text className="text-xs font-bold" style={{ color: accent }}>
+                      <Text className="text-xs font-bold" style={{ color: colors.brand }}>
                         {index + 1}
                       </Text>
                     </View>
@@ -255,9 +254,9 @@ export function MeasurementQuestionsModal({
 
                       <View
                         className="self-start rounded-lg px-3 py-1.5"
-                        style={{ backgroundColor: accent + "12" }}
+                        style={{ backgroundColor: colors.brand + "12" }}
                       >
-                        <Text className="text-sm font-semibold" style={{ color: accent }}>
+                        <Text className="text-sm font-semibold" style={{ color: colors.brand }}>
                           {question.question_answer}
                         </Text>
                       </View>

@@ -8,7 +8,7 @@ interface ScanningStateProps {
 }
 
 export function ScanningState({ protocolName }: ScanningStateProps) {
-  const { classes, colors, isDark } = useTheme();
+  const { classes, colors } = useTheme();
 
   return (
     <View className="flex-1 items-center justify-center gap-3">
@@ -16,10 +16,7 @@ export function ScanningState({ protocolName }: ScanningStateProps) {
       {protocolName && (
         <Text className={clsx("text-center text-base", classes.textMuted)}>{protocolName}</Text>
       )}
-      <ActivityIndicator
-        size="large"
-        color={isDark ? colors.primary.bright : colors.primary.dark}
-      />
+      <ActivityIndicator size="large" color={colors.brand} />
     </View>
   );
 }

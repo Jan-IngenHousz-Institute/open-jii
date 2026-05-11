@@ -1,11 +1,10 @@
 import React from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { Card } from "~/components/Card";
-import { colors } from "~/constants/colors";
-import { useTheme } from "~/hooks/use-theme";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 export function ProcessingStep() {
-  const { isDark } = useTheme();
+  const { brand } = useThemeColors();
   return (
     <View className="flex-1">
       <Text className="text-on-surface mb-2 text-2xl font-bold">Processing Calibration Data</Text>
@@ -14,10 +13,7 @@ export function ProcessingStep() {
       </Text>
 
       <Card className="items-center p-8">
-        <ActivityIndicator
-          size="large"
-          color={isDark ? colors.primary.bright : colors.primary.dark}
-        />
+        <ActivityIndicator size="large" color={brand} />
         <Text className="text-on-surface mt-4 text-center text-base">
           Please wait while we process your calibration data
         </Text>

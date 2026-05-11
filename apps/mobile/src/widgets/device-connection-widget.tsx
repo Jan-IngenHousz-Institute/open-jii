@@ -13,8 +13,7 @@ import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-c
 import { isOnline } from "~/utils/is-online";
 
 export function DeviceConnectionWidget() {
-  const { colors, classes, isDark } = useTheme();
-  const accent = isDark ? colors.primary.bright : colors.primary.dark;
+  const { colors, classes } = useTheme();
   const queryClient = useQueryClient();
   const { batteryLevel, setBatteryLevel } = useDeviceConnectionStore();
   const { executeCommand } = useScannerCommandExecutor();
@@ -101,7 +100,7 @@ export function DeviceConnectionWidget() {
         style={{
           width: 36,
           height: 36,
-          backgroundColor: isOnlineStatus ? accent : colors.semantic.error,
+          backgroundColor: isOnlineStatus ? colors.brand : colors.semantic.error,
         }}
         activeOpacity={0.7}
       >
