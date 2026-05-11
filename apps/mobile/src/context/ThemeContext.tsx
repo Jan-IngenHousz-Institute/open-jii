@@ -12,6 +12,12 @@ interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
+// Note: on Android, switching system dark mode while the app is alive will
+// not flip the theme until a cold restart. The Activity Configuration stays
+// stale because the manifest absorbs `uiMode` in `configChanges` and
+// nothing in JS-land can refresh `Appearance.getColorScheme()`. The proper
+// fix is a `MainActivity.onConfigurationChanged` override (wiped by
+// `expo prebuild --clean`) or a config plugin — neither in scope right now.
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState<Theme>(lightTheme);
