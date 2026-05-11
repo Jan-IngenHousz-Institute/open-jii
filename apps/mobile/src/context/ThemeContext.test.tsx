@@ -1,12 +1,19 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, render, waitFor } from "@testing-library/react-native";
 import React, { useContext } from "react";
 import { Text, useColorScheme } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { darkTheme, lightTheme } from "~/constants/theme";
 
+import { ThemeContext, ThemeProvider } from "./ThemeContext";
+
 const { colorSchemeSetMock, asyncStorageStore } = vi.hoisted(() => ({
   colorSchemeSetMock: vi.fn(),
-  asyncStorageStore: { value: null as string | null, getError: null as Error | null, setError: null as Error | null },
+  asyncStorageStore: {
+    value: null as string | null,
+    getError: null as Error | null,
+    setError: null as Error | null,
+  },
 }));
 
 vi.mock("nativewind", () => ({
@@ -38,10 +45,6 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-import { ThemeContext, ThemeProvider } from "./ThemeContext";
-
 type EnhancedTheme = typeof lightTheme & {
   changeTheme: (pref: "system" | "light" | "dark") => Promise<void>;
   themePreference: "system" | "light" | "dark";
@@ -61,7 +64,13 @@ const renderWithProvider = () => {
       <Probe onRender={(t) => (latest = t)} />
     </ThemeProvider>,
   );
-  return { ...utils, getTheme: () => latest! };
+  return {
+    ...utils,
+    getTheme: () => {
+      if (!latest) throw new Error("Probe did not render");
+      return latest;
+    },
+  };
 };
 
 beforeEach(() => {
@@ -133,10 +142,7 @@ describe("ThemeProvider", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { getTheme } = renderWithProvider();
     await waitFor(() =>
-      expect(errorSpy).toHaveBeenCalledWith(
-        "Failed to load theme preference:",
-        expect.any(Error),
-      ),
+      expect(errorSpy).toHaveBeenCalledWith("Failed to load theme preference:", expect.any(Error)),
     );
     expect(getTheme().themePreference).toBe("system");
     expect(getTheme().isDark).toBe(false);
@@ -152,10 +158,7 @@ describe("ThemeProvider", () => {
       await getTheme().changeTheme("dark");
     });
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      "Failed to save theme preference:",
-      expect.any(Error),
-    );
+    expect(errorSpy).toHaveBeenCalledWith("Failed to save theme preference:", expect.any(Error));
     expect(getTheme().themePreference).toBe("system");
   });
 
