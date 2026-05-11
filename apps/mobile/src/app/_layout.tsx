@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -20,7 +21,7 @@ import { ThemeProvider } from "~/context/ThemeContext";
 import { useAutoUpload } from "~/hooks/use-auto-upload";
 import { useOtaUpdate } from "~/hooks/use-ota-update";
 import { useSession } from "~/hooks/use-session";
-import { useTheme } from "~/hooks/use-theme";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 import { db } from "~/services/db/client";
 import { shouldHideSplash } from "~/utils/should-hide-splash";
@@ -35,8 +36,7 @@ function DrizzleDevTools() {
 }
 
 function RootLayoutNav() {
-  const theme = useTheme();
-  const { colors } = theme;
+  const themeColors = useThemeColors();
   const { session, isLoaded } = useSession();
 
   useEffect(() => {
@@ -56,16 +56,16 @@ function RootLayoutNav() {
       screenOptions={{
         headerShown: false,
         headerStyle: {
-          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
+          backgroundColor: themeColors.background,
         },
-        headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+        headerTintColor: themeColors.onSurface,
         headerTitleStyle: {
           fontWeight: "bold",
           fontFamily: "Poppins-Bold",
         },
         headerShadowVisible: false,
         contentStyle: {
-          backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
+          backgroundColor: themeColors.surface,
         },
       }}
     >
@@ -148,7 +148,7 @@ function AutoUploadEffect() {
 }
 
 function RootLayoutContent() {
-  const theme = useTheme();
+  const { colorScheme } = useColorScheme();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -158,7 +158,7 @@ function RootLayoutContent() {
           <SafeAreaProvider>
             <PythonMacroProvider>
               <BottomSheetModalProvider>
-                <StatusBar style={theme.isDark ? "light" : "dark"} />
+                <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
                 {__DEV__ && <DrizzleDevTools />}
                 <RootLayoutNav />
                 <Toaster />

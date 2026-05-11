@@ -1,8 +1,9 @@
 import React from "react";
-import { View, Text, StyleSheet, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, ActivityIndicator } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
-import { useTheme } from "~/hooks/use-theme";
+import { colors } from "~/constants/colors";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 interface MeasurementsStepProps {
   currentMeasurementIndex: number;
@@ -29,8 +30,7 @@ export function MeasurementsStep({
   onTakeMeasurement,
   onCancelMeasurement,
 }: MeasurementsStepProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const themeColors = useThemeColors();
 
   const handleTakeMeasurement = () => {
     if (currentPanelNumber) {
@@ -39,51 +39,27 @@ export function MeasurementsStep({
   };
 
   return (
-    <View style={styles.stepContainer}>
-      <Text
-        style={[
-          styles.stepTitle,
-          { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-        ]}
-      >
+    <View className="flex-1">
+      <Text className="text-on-surface mb-2 text-2xl font-bold">
         Calibration Measurements ({currentMeasurementIndex + 1}/{totalMeasurements})
       </Text>
-      <Text
-        style={[
-          styles.stepDescription,
-          { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-        ]}
-      >
-        {prompt}
-      </Text>
+      <Text className="text-inactive mb-6 text-base leading-6">{prompt}</Text>
 
-      <Card style={styles.measurementCard}>
-        <Text
-          style={[
-            styles.measurementLabel,
-            { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-          ]}
-        >
+      <Card className="mb-6">
+        <Text className="text-on-surface mb-3 text-base font-semibold">
           Panel #{currentPanelNumber} Value:
         </Text>
         {isProcessing ? (
-          <View style={styles.spinnerContainer}>
+          <View className="items-center justify-center py-6">
             <ActivityIndicator size="large" color={colors.primary.dark} />
           </View>
         ) : (
           <TextInput
-            style={[
-              styles.userInput,
-              {
-                backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                borderColor: theme.isDark ? colors.dark.border : colors.light.border,
-              },
-            ]}
+            className="border-border bg-surface text-on-surface rounded-lg border p-3 text-base"
             value={currentUserInput}
             onChangeText={onUserInputChange}
             placeholder="Enter value"
-            placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
+            placeholderTextColor={themeColors.inactive}
             keyboardType="numeric"
           />
         )}
@@ -91,107 +67,32 @@ export function MeasurementsStep({
 
       {isProcessing ? (
         <Button
-          title={"Cancel Measurement"}
+          title="Cancel Measurement"
           onPress={onCancelMeasurement}
           variant="outline"
-          style={[styles.actionButton, styles.cancelButton] as any}
-          textStyle={styles.cancelButtonText}
+          style={{ marginTop: 16, borderColor: "#e11d48" }}
+          textStyle={{ color: "#e11d48" }}
         />
       ) : (
         <Button
-          title={"Start Measurement"}
+          title="Start Measurement"
           onPress={handleTakeMeasurement}
           isDisabled={!currentUserInput.trim()}
-          style={styles.actionButton}
+          style={{ marginTop: 16 }}
         />
       )}
 
-      <View style={styles.progressContainer}>
-        <View
-          style={[
-            styles.progressBar,
-            { backgroundColor: theme.isDark ? colors.dark.border : colors.light.border },
-          ]}
-        >
+      <View className="mt-6">
+        <View className="bg-border mb-2 h-2 rounded">
           <View
-            style={[
-              styles.progressFill,
-              {
-                backgroundColor: colors.primary.dark,
-                width: `${progressPercentage}%`,
-              },
-            ]}
+            className="bg-jii-primary h-full rounded"
+            style={{ width: `${progressPercentage}%` }}
           />
         </View>
-        <Text
-          style={[
-            styles.progressText,
-            { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-          ]}
-        >
+        <Text className="text-inactive text-center text-sm">
           {currentMeasurementIndex + 1} of {totalMeasurements} measurements completed
         </Text>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  stepContainer: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  stepDescription: {
-    fontSize: 16,
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  measurementCard: {
-    marginBottom: 24,
-  },
-  measurementLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  userInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  progressContainer: {
-    marginTop: 24,
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 14,
-    textAlign: "center",
-  },
-  actionButton: {
-    marginTop: 16,
-  },
-  spinnerContainer: {
-    paddingVertical: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelButton: {
-    borderColor: "#e11d48",
-  },
-  cancelButtonText: {
-    color: "#e11d48",
-  },
-});

@@ -63,6 +63,31 @@ jobs:
             echo "No infrastructure changes detected"
           fi
 
+  mobile_styling_guard:
+    name: Mobile Styling Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Forbid StyleSheet.create in apps/mobile/src
+        shell: bash
+        run: |
+          if grep -rln "StyleSheet.create" apps/mobile/src; then
+            echo "::error::StyleSheet.create is not allowed in apps/mobile/src — use NativeWind className instead. See apps/mobile/docs/styling.md."
+            exit 1
+          fi
+          echo "ok — no StyleSheet.create found"
+
+      - name: Forbid theme.isDark / isDark? ternaries in apps/mobile/src
+        shell: bash
+        run: |
+          if grep -rEln "theme\.isDark|isDark \?" apps/mobile/src; then
+            echo "::error::theme.isDark / isDark? ternaries are not allowed in apps/mobile/src — use NativeWind dark: variants or useThemeColors(). See apps/mobile/docs/styling.md."
+            exit 1
+          fi
+          echo "ok — no theme.isDark ternaries found"
+
   build_lint_test:
     name: Build, Lint, & Test
     needs: detect

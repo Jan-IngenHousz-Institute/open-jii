@@ -1,9 +1,7 @@
-import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
-import { useTheme } from "~/hooks/use-theme";
 import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-command-executor";
 import type { Device } from "~/types/device";
 
@@ -14,23 +12,20 @@ interface Props {
 
 export function ConnectedDevice(props: Props) {
   const { device, onDisconnect } = props;
-  const { classes, colors, isDark } = useTheme();
   const { executeCommand, isExecuting } = useScannerCommandExecutor();
 
-  const accent = isDark ? colors.primary.bright : colors.primary.dark;
-
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-4">
       <View className="mb-2 flex-row items-center justify-between">
-        <Text className={clsx("text-sm font-semibold", classes.text)}>Connected Device</Text>
-        <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: accent + "22" }}>
-          <Text style={{ color: accent }} className="text-xs font-semibold">
+        <Text className="text-foreground text-sm font-semibold">Connected Device</Text>
+        <View className="bg-jii-primary/15 dark:bg-jii-primary-bright/15 rounded-full px-2 py-0.5">
+          <Text className="text-jii-primary dark:text-jii-primary-bright text-xs font-semibold">
             Connected
           </Text>
         </View>
       </View>
-      <Text className={clsx("mb-0.5 text-base font-bold", classes.text)}>{device.name}</Text>
-      <Text className={clsx("text-xs", classes.textMuted)}>
+      <Text className="text-foreground mb-0.5 text-base font-bold">{device.name}</Text>
+      <Text className="text-muted-foreground text-xs">
         {device.type} • {device.id}
       </Text>
       {!!onDisconnect && (

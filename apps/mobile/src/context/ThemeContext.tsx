@@ -1,29 +1,28 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { colorScheme } from "nativewind";
 import React, { createContext, useState, useEffect } from "react";
 import { useColorScheme } from "react-native";
 import { Theme, darkTheme, lightTheme } from "~/constants/theme";
 
-// Create the theme context
+type ThemePreference = "system" | "light" | "dark";
+
 export const ThemeContext = createContext<Theme>(lightTheme);
 
-// Theme provider props
 interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
-// Theme provider component
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState<Theme>(lightTheme);
-  const [themePreference, setThemePreference] = useState<"system" | "light" | "dark">("light");
+  const [themePreference, setThemePreference] = useState<ThemePreference>("light");
 
-  // Load theme preference from storage
   useEffect(() => {
     const loadThemePreference = async () => {
       try {
         const savedPreference = await AsyncStorage.getItem("themePreference");
         if (savedPreference) {
-          setThemePreference(savedPreference as "system" | "light" | "dark");
+          setThemePreference(savedPreference as ThemePreference);
         }
       } catch (error) {
         console.error("Failed to load theme preference:", error);
@@ -33,20 +32,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     loadThemePreference();
   }, []);
 
-  // Update theme based on preference
   useEffect(() => {
-    const determineTheme = () => {
-      if (themePreference === "system") {
-        return systemColorScheme === "dark" ? darkTheme : lightTheme;
-      }
-      return themePreference === "dark" ? darkTheme : lightTheme;
-    };
+    // Drive both the legacy JS theme object AND NativeWind's runtime scheme
+    // from the same preference so `dark:` className variants stay in sync
+    // with the in-app theme setting.
+    colorScheme.set(themePreference);
 
-    setTheme(determineTheme());
+    const themesByScheme = { light: lightTheme, dark: darkTheme } as const;
+    const activeScheme: "light" | "dark" =
+      themePreference === "system"
+        ? systemColorScheme === "dark"
+          ? "dark"
+          : "light"
+        : themePreference;
+    setTheme(themesByScheme[activeScheme]);
   }, [themePreference, systemColorScheme]);
 
-  // Function to change theme preference
-  const changeTheme = async (newPreference: "system" | "light" | "dark") => {
+  const changeTheme = async (newPreference: ThemePreference) => {
     try {
       await AsyncStorage.setItem("themePreference", newPreference);
       setThemePreference(newPreference);
@@ -55,7 +57,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
   };
 
-  // Enhanced theme with theme changing function
   const enhancedTheme = {
     ...theme,
     changeTheme,

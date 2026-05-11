@@ -1,8 +1,8 @@
-import { clsx } from "clsx";
 import { X } from "lucide-react-native";
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { colors } from "~/constants/colors";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 import { QuestionContent } from "../../../../types";
 
@@ -13,8 +13,7 @@ interface NumberQuestionProps {
 }
 
 export function NumberQuestion({ content, value, onChange }: NumberQuestionProps) {
-  const theme = useTheme();
-  const { classes, colors } = theme;
+  const themeColors = useThemeColors();
 
   const handleTextChange = (text: string) => {
     const numericValue = text.replace(/[^0-9.-]/g, "");
@@ -29,34 +28,18 @@ export function NumberQuestion({ content, value, onChange }: NumberQuestionProps
 
   return (
     <View>
-      <View
-        className={clsx(
-          "flex-row items-center gap-1 rounded-lg border pl-3 pr-2",
-          classes.border,
-          classes.input,
-        )}
-      >
+      <View className="border-border bg-card flex-row items-center gap-1 rounded-lg border pl-3 pr-2">
         <TextInput
-          className="flex-1 text-base"
+          className="text-on-surface flex-1 text-base"
           placeholder={content.placeholder ?? "Enter a number..."}
-          placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
-          style={{ color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface }}
+          placeholderTextColor={themeColors.inactive}
           value={value}
           onChangeText={handleTextChange}
           keyboardType="numeric"
         />
 
-        {/* Right button */}
         {hasValue && (
-          <TouchableOpacity
-            className="rounded-md p-1"
-            style={{
-              backgroundColor: theme.isDark
-                ? colors.dark.grayBackground
-                : colors.light.grayBackground,
-            }}
-            onPress={handleClear}
-          >
+          <TouchableOpacity className="bg-gray-background rounded-md p-1" onPress={handleClear}>
             <X size={20} color={colors.neutral.black} />
           </TouchableOpacity>
         )}
@@ -64,18 +47,18 @@ export function NumberQuestion({ content, value, onChange }: NumberQuestionProps
 
       <View className="mt-2">
         {content.min !== undefined && content.max !== undefined && (
-          <Text className={clsx("text-sm", classes.textMuted)}>
+          <Text className="text-muted-foreground text-sm">
             Range: {content.min} - {content.max}
           </Text>
         )}
         {content.min !== undefined && content.max === undefined && (
-          <Text className={clsx("text-sm", classes.textMuted)}>Minimum: {content.min}</Text>
+          <Text className="text-muted-foreground text-sm">Minimum: {content.min}</Text>
         )}
         {content.max !== undefined && content.min === undefined && (
-          <Text className={clsx("text-sm", classes.textMuted)}>Maximum: {content.max}</Text>
+          <Text className="text-muted-foreground text-sm">Maximum: {content.max}</Text>
         )}
         {content.required && isNaN(parseFloat(value)) && (
-          <Text className={clsx("text-sm text-red-500", classes.text)}>This field is required</Text>
+          <Text className="text-sm text-red-500">This field is required</Text>
         )}
       </View>
     </View>
