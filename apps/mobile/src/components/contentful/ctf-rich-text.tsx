@@ -57,7 +57,8 @@ const makeInlineOptions = (textClass: string): Options => ({
     ),
     [BLOCKS.HR]: () => <Text className={textClass}>{" — "}</Text>,
     [INLINES.HYPERLINK]: (node: Node, children: React.ReactNode) => {
-      const uri = (node.data as { uri?: string }).uri ?? "#";
+      const uri = (node.data as { uri?: string }).uri;
+      if (!uri) return null;
       return (
         <Text className={`${textClass} underline`} onPress={() => void Linking.openURL(uri)}>
           {children}
@@ -143,11 +144,14 @@ const makeOptions = (textClass: string): Options => ({
       </View>
     ),
     [INLINES.HYPERLINK]: (node: Node, children: React.ReactNode) => {
-      const uri = (node.data as { uri?: string }).uri ?? "#";
+      const uri = (node.data as { uri?: string }).uri;
+      if (!uri) return null;
       return (
         <Text
           className={`text-sm leading-5 underline ${textClass}`}
-          onPress={() => void Linking.openURL(uri)}
+          onPress={() =>
+            Linking.openURL(uri).catch((e) => console.warn("[ctf] failed to open url", e))
+          }
         >
           {children}
         </Text>
