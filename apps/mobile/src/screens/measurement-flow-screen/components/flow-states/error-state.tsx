@@ -8,7 +8,7 @@ export function ErrorState() {
 
   return (
     <View className={clsx("rounded-xl border p-6", classes.card, classes.border)}>
-      <Text className={clsx("text-center text-red-500", classes.text)}>
+      <Text className="text-destructive text-center">
         Failed to load experiment flow. Please try again.
       </Text>
     </View>

@@ -6,14 +6,13 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecentTabIcon } from "~/components/recent-tab-icon";
 import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
-import { useTheme } from "~/hooks/use-theme";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 import { pruneExpiredMeasurements } from "~/services/measurements-storage";
 import { DevIndicator } from "~/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
 export default function TabLayout() {
-  const theme = useTheme();
-  const { colors } = theme;
+  const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const queryClient = useQueryClient();
@@ -28,14 +27,14 @@ export default function TabLayout() {
   const inMeasureTab = segments.includes("measurement-flow");
 
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: colors.primary.dark,
-          tabBarInactiveTintColor: theme.isDark ? colors.dark.inactive : colors.light.inactive,
+          tabBarActiveTintColor: themeColors.brand,
+          tabBarInactiveTintColor: themeColors.inactive,
           tabBarStyle: {
-            backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
-            borderTopColor: theme.isDark ? colors.dark.border : colors.light.border,
+            backgroundColor: themeColors.surface,
+            borderTopColor: themeColors.border,
             height: 60 + insets.bottom,
             paddingBottom: insets.bottom,
             display: inMeasureTab ? "none" : "flex",
@@ -44,9 +43,9 @@ export default function TabLayout() {
             fontSize: 12,
           },
           headerStyle: {
-            backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
+            backgroundColor: themeColors.background,
           },
-          headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+          headerTintColor: themeColors.onSurface,
           headerTitleStyle: {
             fontWeight: "bold",
             fontSize: 24,

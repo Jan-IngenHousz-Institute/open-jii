@@ -1,8 +1,7 @@
-import { clsx } from "clsx";
 import { Repeat2 } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { colors } from "~/constants/colors";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
@@ -38,8 +37,6 @@ export function getCachedFirstManualNodeId(iterationCount: number): string | und
 }
 
 export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProceededSummaryProps) {
-  const theme = useTheme();
-  const { classes, colors } = theme;
   const { flowNodes } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled } = useFlowAnswersStore();
 
@@ -57,17 +54,8 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
   if (!show) return null;
 
   return (
-    <View
-      className="gap-1 rounded-xl p-2"
-      style={{
-        backgroundColor: theme.isDark ? colors.dark.grayBackground : colors.light.grayBackground,
-      }}
-    >
-      <Text
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        className={clsx("text-sm", classes.textSecondary)}
-      >
+    <View className="bg-gray-background gap-1 rounded-xl p-2">
+      <Text numberOfLines={1} ellipsizeMode="tail" className="text-muted-foreground text-sm">
         Your current plot
       </Text>
 
@@ -77,7 +65,7 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
             <Text
               numberOfLines={1}
               ellipsizeMode="tail"
-              className={clsx("flex-shrink text-base font-semibold", classes.text)}
+              className="text-foreground flex-shrink text-base font-semibold"
             >
               {getAnswer(iterationCount, n.id)}
             </Text>

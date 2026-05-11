@@ -1,8 +1,8 @@
-import { clsx } from "clsx";
 import { ScanQrCode } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { colors } from "~/constants/colors";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 import { QuestionContent } from "../../../../types";
 
@@ -14,8 +14,7 @@ interface OpenEndedQuestionProps {
 }
 
 export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenEndedQuestionProps) {
-  const theme = useTheme();
-  const { classes, colors } = theme;
+  const themeColors = useThemeColors();
   const [internal, setInternal] = useState(value);
 
   useEffect(() => {
@@ -36,13 +35,9 @@ export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenE
     <View className="flex-1 items-start justify-start gap-2">
       <View className="relative w-full">
         <TextInput
-          className={clsx(
-            "min-h-[200px] w-full rounded-lg border p-4 pb-11 text-base",
-            classes.input,
-            classes.border,
-          )}
+          className="border-border bg-card text-on-surface min-h-[200px] w-full rounded-lg border p-4 pb-11 text-base"
           placeholder={content.placeholder ?? "Enter your answer..."}
-          placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
+          placeholderTextColor={themeColors.inactive}
           value={internal}
           onChangeText={handleChange}
           multiline
@@ -50,30 +45,18 @@ export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenE
           textAlignVertical="top"
         />
 
-        {/* Clear button */}
         {internal.length > 0 && (
           <TouchableOpacity
-            className="absolute bottom-2 left-2 rounded-md p-1"
-            style={{
-              backgroundColor: theme.isDark
-                ? colors.dark.grayBackground
-                : colors.light.grayBackground,
-            }}
+            className="bg-gray-background absolute bottom-2 left-2 rounded-md p-1"
             onPress={handleClear}
           >
-            <Text className="font-semibold">Clear text</Text>
+            <Text className="text-foreground font-semibold">Clear text</Text>
           </TouchableOpacity>
         )}
 
-        {/* QR button */}
         {onQRPress && (
           <TouchableOpacity
-            className="absolute bottom-2 right-2 rounded-md p-1"
-            style={{
-              backgroundColor: theme.isDark
-                ? colors.dark.grayBackground
-                : colors.light.grayBackground,
-            }}
+            className="bg-gray-background absolute bottom-2 right-2 rounded-md p-1"
             onPress={onQRPress}
           >
             <ScanQrCode size={20} color={colors.neutral.black} />
@@ -82,7 +65,7 @@ export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenE
       </View>
 
       {content.required && !value && (
-        <Text className={clsx("text-sm text-red-500", classes.text)}>This field is required</Text>
+        <Text className="text-destructive text-sm">This field is required</Text>
       )}
     </View>
   );

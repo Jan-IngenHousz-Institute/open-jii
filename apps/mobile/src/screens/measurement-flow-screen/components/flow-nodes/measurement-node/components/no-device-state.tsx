@@ -21,7 +21,7 @@ export function NoDeviceState() {
           <ActivityIndicator size="large" />
         ) : (
           <>
-            <Text className="text-center text-sm text-gray-500">
+            <Text className="text-muted-foreground text-center text-sm">
               Device disconnected — {lastConnectedDevice.name}
             </Text>
             <Button

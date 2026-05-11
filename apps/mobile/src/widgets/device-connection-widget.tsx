@@ -100,7 +100,7 @@ export function DeviceConnectionWidget() {
         style={{
           width: 36,
           height: 36,
-          backgroundColor: isOnlineStatus ? colors.primary.dark : colors.semantic.error,
+          backgroundColor: isOnlineStatus ? colors.brand : colors.semantic.error,
         }}
         activeOpacity={0.7}
       >
