@@ -77,7 +77,7 @@ export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTyp
             onPress={() => onSelect(value)}
             className={clsx(
               "flex-row items-center justify-between rounded-xl px-4 py-3",
-              selected === value ? "bg-[#EDF2F6]" : "",
+              selected === value ? "bg-muted" : "",
             )}
             activeOpacity={0.7}
           >

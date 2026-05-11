@@ -52,6 +52,8 @@ export const colors = {
     divider: "#2C2C2C",
     statusBar: "#000000",
     grayBackground: "#1C2128",
+    brand: "#49e06d", // primary.bright — interactive accent in dark
+    warningFg: "#fde68a", // amber-200 — readable warning text/icon on dark amber-tinted surfaces
   },
 
   // Theme Colors (light theme)
@@ -68,5 +70,7 @@ export const colors = {
     divider: "#E0E0E0",
     statusBar: "#FFFFFF",
     grayBackground: "#F6F8FA", // figma gray light
+    brand: "#005e5e", // primary.dark — interactive accent in light
+    warningFg: "#92400e", // amber-800 — readable warning text/icon on light amber-tinted surfaces
   },
 };

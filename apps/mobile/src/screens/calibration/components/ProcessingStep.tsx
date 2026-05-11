@@ -1,67 +1,23 @@
 import React from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator } from "react-native";
 import { Card } from "~/components/Card";
-import { useTheme } from "~/hooks/use-theme";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 export function ProcessingStep() {
-  const theme = useTheme();
-  const { colors } = theme;
-
+  const { brand } = useThemeColors();
   return (
-    <View style={styles.stepContainer}>
-      <Text
-        style={[
-          styles.stepTitle,
-          { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-        ]}
-      >
-        Processing Calibration Data
-      </Text>
-      <Text
-        style={[
-          styles.stepDescription,
-          { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-        ]}
-      >
+    <View className="flex-1">
+      <Text className="text-on-surface mb-2 text-2xl font-bold">Processing Calibration Data</Text>
+      <Text className="text-inactive mb-6 text-base leading-6">
         Analyzing measurement data and calculating calibration parameters...
       </Text>
 
-      <Card style={styles.processingCard}>
-        <ActivityIndicator size="large" color={colors.primary.dark} />
-        <Text
-          style={[
-            styles.processingText,
-            { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-          ]}
-        >
+      <Card className="items-center p-8">
+        <ActivityIndicator size="large" color={brand} />
+        <Text className="text-on-surface mt-4 text-center text-base">
           Please wait while we process your calibration data
         </Text>
       </Card>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  stepContainer: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  stepDescription: {
-    fontSize: 16,
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  processingCard: {
-    alignItems: "center",
-    padding: 32,
-  },
-  processingText: {
-    fontSize: 16,
-    marginTop: 16,
-    textAlign: "center",
-  },
-});

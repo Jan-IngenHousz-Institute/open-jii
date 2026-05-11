@@ -71,14 +71,12 @@ export function DeviceList({
               <View className="flex-row items-center gap-2">
                 <View className="p-2">
                   {isConnecting ? (
-                    <ActivityIndicator size="small" color={colors.primary.dark} />
+                    <ActivityIndicator size="small" color={colors.brand} />
                   ) : (
                     <>
-                      {item.type === "bluetooth-classic" && (
-                        <Bluetooth size={16} color={colors.primary.dark} />
-                      )}
-                      {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
-                      {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
+                      {item.type === "bluetooth-classic" && <Bluetooth size={16} color={colors.brand} />}
+                      {item.type === "ble" && <Radio size={16} color={colors.brand} />}
+                      {item.type === "usb" && <Usb size={16} color={colors.brand} />}
                     </>
                   )}
                 </View>

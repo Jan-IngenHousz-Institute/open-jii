@@ -1,10 +1,9 @@
 import React from "react";
-import { Modal, ScrollView, Text, View, StyleSheet } from "react-native";
+import { Modal, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Chart } from "~/components/measurement-result/components/chart";
 import { KeyValue } from "~/components/measurement-result/components/key-value";
 import { MeasurementHeader } from "~/components/measurement-result/components/measurement-header";
-import { useTheme } from "~/hooks/use-theme";
 import { ParsedTableData } from "~/utils/parse-experiment-data";
 
 interface TableDetailModalProps {
@@ -14,14 +13,11 @@ interface TableDetailModalProps {
 }
 
 export function TableDetailModal({ visible, table, onClose }: TableDetailModalProps) {
-  const theme = useTheme();
-  const { colors } = theme;
   const insets = useSafeAreaInsets();
 
   if (!table) return null;
 
   function renderDataItem(key: string, value: any, rowIndex: number) {
-    // Try to parse JSON values first
     let parsedValue = value;
     try {
       if (typeof value === "string" && (value.startsWith("[") || value.startsWith("{"))) {
@@ -31,24 +27,20 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
       // Keep original value if parsing fails
     }
 
-    // Handle arrays
     if (Array.isArray(parsedValue)) {
       if (parsedValue.length > 0 && typeof parsedValue[0] === "number") {
         return <Chart key={`${rowIndex}-${key}`} name={key} values={parsedValue} />;
       } else {
-        // For non-number arrays, show as key-value with summary
         const summary = getArraySummary(parsedValue);
         return <KeyValue key={`${rowIndex}-${key}`} value={summary} name={key} />;
       }
     }
 
-    // Handle objects
     if (typeof parsedValue === "object" && parsedValue !== null) {
       const summary = `{${Object.keys(parsedValue).length} keys}`;
       return <KeyValue key={`${rowIndex}-${key}`} value={summary} name={key} />;
     }
 
-    // Handle primitives
     if (typeof parsedValue === "string" || typeof parsedValue === "number") {
       return <KeyValue key={`${rowIndex}-${key}`} value={parsedValue} name={key} />;
     }
@@ -79,14 +71,8 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
-            paddingTop: insets.top,
-            paddingBottom: insets.bottom,
-          },
-        ]}
+        className="bg-background flex-1"
+        style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
       >
         <MeasurementHeader
           timestamp={new Date().toISOString()}
@@ -95,35 +81,19 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
         />
 
         <ScrollView
-          style={styles.scrollContainer}
+          className="flex-1"
           showsVerticalScrollIndicator={true}
           contentContainerStyle={{ paddingBottom: 20 }}
         >
-          <View style={styles.content}>
-            <Text
-              style={[
-                styles.tableInfo,
-                {
-                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                },
-              ]}
-            >
+          <View className="p-4">
+            <Text className="text-on-surface mb-4 text-center text-base font-semibold">
               {table.totalRows} rows, {table.columns.length} columns
             </Text>
 
             {table.rows.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.rowContainer}>
-                <Text
-                  style={[
-                    styles.rowTitle,
-                    {
-                      color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                    },
-                  ]}
-                >
-                  Row {rowIndex + 1}
-                </Text>
-                <View style={styles.rowContent}>
+              <View key={rowIndex} className="mb-6">
+                <Text className="text-on-surface mb-3 text-lg font-bold">Row {rowIndex + 1}</Text>
+                <View className="gap-2">
                   {Object.keys(row).map((key) => renderDataItem(key, row[key], rowIndex))}
                 </View>
               </View>
@@ -134,32 +104,3 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  tableInfo: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  rowContainer: {
-    marginBottom: 24,
-  },
-  rowTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-  rowContent: {
-    gap: 8,
-  },
-});

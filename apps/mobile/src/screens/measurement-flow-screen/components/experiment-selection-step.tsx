@@ -56,7 +56,7 @@ export function ExperimentSelectionStep() {
 
         {isLoading && (
           <View className="items-center py-8">
-            <ActivityIndicator size="large" color="#005e5e" />
+            <ActivityIndicator size="large" color={colors.brand} />
             <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
               Loading experiments...
             </Text>
@@ -65,7 +65,7 @@ export function ExperimentSelectionStep() {
 
         {!isLoading && error && (
           <View className="items-center py-8">
-            <Text className={clsx("text-center text-red-500", classes.text)}>
+            <Text className="text-destructive text-center">
               Failed to load experiments. Please try again.
             </Text>
           </View>
