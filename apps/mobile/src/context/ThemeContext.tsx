@@ -33,11 +33,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Drive both the legacy JS theme object AND NativeWind's runtime scheme
-    // from the same preference so `dark:` className variants stay in sync
-    // with the in-app theme setting.
-    colorScheme.set(themePreference);
-
+    // Resolve "system" to an explicit "light" | "dark" before driving
+    // NativeWind. Passing "system" to `colorScheme.set` clears its
+    // observable and falls back to NativeWind's internal `systemColorScheme`
+    // — which doesn't reliably refresh CSS-var subscriptions on Android
+    // when the OS preference is set before the first set() call. Driving an
+    // explicit value keeps NativeWind's class-mode + var swap in sync with
+    // the legacy JS theme object.
     const themesByScheme = { light: lightTheme, dark: darkTheme } as const;
     const activeScheme: "light" | "dark" =
       themePreference === "system"
@@ -45,6 +47,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           ? "dark"
           : "light"
         : themePreference;
+    colorScheme.set(activeScheme);
     setTheme(themesByScheme[activeScheme]);
   }, [themePreference, systemColorScheme]);
 
