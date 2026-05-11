@@ -46,7 +46,10 @@ export default function ProfileScreen() {
       <View className="my-6 items-center">
         <View
           className="mb-4 h-20 w-20 items-center justify-center overflow-hidden rounded-full"
-          style={{ backgroundColor: colors.primary.dark + "30" }}
+          style={{
+            backgroundColor:
+              (themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark) + "30",
+          }}
         >
           {user.image ? (
             <Image source={{ uri: user.image }} className="h-full w-full rounded-full" />
@@ -80,7 +83,12 @@ export default function ProfileScreen() {
           onPress={handleOpenWebProfile}
           variant="outline"
           style={{ marginBottom: 12 }}
-          icon={<ExternalLink size={16} color={colors.primary.dark} />}
+          icon={
+            <ExternalLink
+              size={16}
+              color={themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark}
+            />
+          }
         />
 
         <Button

@@ -31,7 +31,8 @@ export default function TabLayout() {
     <View className="flex-1">
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: colors.primary.dark,
+          tabBarActiveTintColor:
+            themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark,
           tabBarInactiveTintColor: themeColors.inactive,
           tabBarStyle: {
             backgroundColor: themeColors.surface,

@@ -4,8 +4,8 @@ import { Text, TouchableOpacity, ActivityIndicator, View } from "react-native";
 const bigActionButton = cva("mt-6 w-full items-center justify-center rounded-full py-6 shadow-lg", {
   variants: {
     disabled: {
-      true: "bg-gray-400",
-      false: "bg-blue-600 active:opacity-80",
+      true: "bg-inactive",
+      false: "bg-primary active:opacity-80",
     },
   },
 });
@@ -13,8 +13,8 @@ const bigActionButton = cva("mt-6 w-full items-center justify-center rounded-ful
 const buttonText = cva("text-2xl font-bold", {
   variants: {
     disabled: {
-      true: "text-gray-200",
-      false: "text-white",
+      true: "text-muted-foreground",
+      false: "text-primary-foreground",
     },
   },
 });

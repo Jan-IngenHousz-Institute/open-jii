@@ -51,7 +51,10 @@ export function MeasurementsStep({
         </Text>
         {isProcessing ? (
           <View className="items-center justify-center py-6">
-            <ActivityIndicator size="large" color={colors.primary.dark} />
+            <ActivityIndicator
+              size="large"
+              color={themeColors.scheme === "dark" ? colors.primary.bright : colors.primary.dark}
+            />
           </View>
         ) : (
           <TextInput
@@ -69,9 +72,8 @@ export function MeasurementsStep({
         <Button
           title="Cancel Measurement"
           onPress={onCancelMeasurement}
-          variant="outline"
-          style={{ marginTop: 16, borderColor: "#e11d48" }}
-          textStyle={{ color: "#e11d48" }}
+          variant="danger"
+          style={{ marginTop: 16 }}
         />
       ) : (
         <Button

@@ -3,7 +3,6 @@ import React from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { create } from "zustand";
 import { Button } from "~/components/Button";
-import { useTheme } from "~/hooks/use-theme";
 
 interface AlertButton {
   text: string;
@@ -44,7 +43,6 @@ export function showAlert(title: string, message: string, buttons?: AlertButton[
 
 export function AlertDialog() {
   const { visible, title, message, buttons, hide } = useAlertStore();
-  const { classes, colors } = useTheme();
 
   const handlePress = (button: AlertButton) => {
     hide();
@@ -55,11 +53,11 @@ export function AlertDialog() {
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <Pressable className="flex-1 items-center justify-center bg-black/50" onPress={hide}>
         <Pressable
-          className={clsx("w-[85%] max-w-sm rounded-2xl p-4 pb-2.5", classes.card)}
+          className={clsx("bg-card w-[85%] max-w-sm rounded-2xl p-4 pb-2.5")}
           onPress={(e) => e.stopPropagation()}
         >
-          <Text className="mb-2 text-left text-lg font-semibold">{title}</Text>
-          <Text className="mb-4 text-left text-sm font-normal">{message}</Text>
+          <Text className="text-card-foreground mb-2 text-left text-lg font-semibold">{title}</Text>
+          <Text className="text-card-foreground mb-4 text-left text-sm font-normal">{message}</Text>
 
           <View className="gap-3.5">
             {buttons.map((button, index) => {
@@ -68,9 +66,6 @@ export function AlertDialog() {
                   key={index}
                   title={button.text}
                   variant={button.variant}
-                  textStyle={
-                    button.variant === "ghost" ? { color: colors.neutral.black } : undefined
-                  }
                   onPress={() => handlePress(button)}
                 />
               );

@@ -55,7 +55,7 @@ export function YesNoQuestion({ content, selectedValue, onSelect }: YesNoQuestio
       </View>
 
       {content.required && !selectedValue && (
-        <Text className="mt-2 text-center text-sm text-red-500">Please select an option</Text>
+        <Text className="text-destructive mt-2 text-center text-sm">Please select an option</Text>
       )}
     </View>
   );

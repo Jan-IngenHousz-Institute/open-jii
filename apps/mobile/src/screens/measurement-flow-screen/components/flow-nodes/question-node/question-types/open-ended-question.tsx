@@ -65,7 +65,7 @@ export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenE
       </View>
 
       {content.required && !value && (
-        <Text className="text-sm text-red-500">This field is required</Text>
+        <Text className="text-destructive text-sm">This field is required</Text>
       )}
     </View>
   );

@@ -38,9 +38,8 @@ export function ConnectedDevice(props: Props) {
               await executeCommand("sleep");
               onDisconnect(device);
             }}
-            variant="ghost"
-            style={{ backgroundColor: "#E2FCFC", minWidth: 120 }}
-            textStyle={{ color: "#005E5E" }}
+            variant="tertiary"
+            style={{ minWidth: 120 }}
           />
         </View>
       )}

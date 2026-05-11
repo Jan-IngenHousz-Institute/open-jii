@@ -33,7 +33,8 @@ export function MeasurementsToolbar({
   onSyncAll,
   onDeleteAllSynced,
 }: Props) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const accent = isDark ? colors.primary.bright : colors.primary.dark;
 
   return (
     <View className="flex-row items-center justify-between p-4">
@@ -44,7 +45,7 @@ export function MeasurementsToolbar({
           variant="tertiary"
           onPress={onDeleteAllSynced}
           isDisabled={syncedCount === 0}
-          icon={<Trash2 size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+          icon={<Trash2 size={24} color={accent} strokeWidth={1.4} />}
           style={{ borderColor: "transparent", padding: 9 }}
           accessibilityRole="button"
           accessibilityLabel="Delete all synced measurements"
@@ -56,7 +57,7 @@ export function MeasurementsToolbar({
             onPress={onSyncAll}
             isLoading={isUploading}
             isDisabled={unsyncedCount === 0}
-            icon={<UploadCloud size={24} color={colors.primary.dark} strokeWidth={1.4} />}
+            icon={<UploadCloud size={24} color={accent} strokeWidth={1.4} />}
             style={{ borderColor: "transparent", padding: 9 }}
             accessibilityRole="button"
             accessibilityLabel="Sync all measurements"

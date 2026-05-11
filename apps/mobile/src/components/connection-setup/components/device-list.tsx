@@ -22,7 +22,8 @@ export function DeviceList({
   onDelete,
   title,
 }: Props) {
-  const { colors, classes } = useTheme();
+  const { colors, classes, isDark } = useTheme();
+  const accent = isDark ? colors.primary.bright : colors.primary.dark;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const renderKey = useMemo(() => Date.now(), [connectingDeviceId]);
@@ -71,14 +72,12 @@ export function DeviceList({
               <View className="flex-row items-center gap-2">
                 <View className="p-2">
                   {isConnecting ? (
-                    <ActivityIndicator size="small" color={colors.primary.dark} />
+                    <ActivityIndicator size="small" color={accent} />
                   ) : (
                     <>
-                      {item.type === "bluetooth-classic" && (
-                        <Bluetooth size={16} color={colors.primary.dark} />
-                      )}
-                      {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
-                      {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
+                      {item.type === "bluetooth-classic" && <Bluetooth size={16} color={accent} />}
+                      {item.type === "ble" && <Radio size={16} color={accent} />}
+                      {item.type === "usb" && <Usb size={16} color={accent} />}
                     </>
                   )}
                 </View>

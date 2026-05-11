@@ -12,7 +12,8 @@ interface MeasurementHeaderProps {
 }
 
 export function MeasurementHeader({ timestamp, experimentName, onClose }: MeasurementHeaderProps) {
-  const { classes, colors } = useTheme();
+  const { classes, colors, isDark } = useTheme();
+  const accent = isDark ? colors.primary.bright : colors.primary.dark;
 
   return (
     <View
@@ -24,13 +25,13 @@ export function MeasurementHeader({ timestamp, experimentName, onClose }: Measur
     >
       <View className="flex-1">
         <View className="mb-1 flex-row items-center">
-          <FlaskConical size={20} color={colors.primary.dark} />
+          <FlaskConical size={20} color={accent} />
           <Text className={clsx("ml-2 text-xl font-bold", classes.text)}>Measurement Results</Text>
         </View>
 
         {timestamp && (
           <View className="mb-1 flex-row items-center">
-            <Calendar size={14} color={colors.primary.dark} />
+            <Calendar size={14} color={accent} />
             <Text className={clsx("ml-1 text-xs", classes.textSecondary)}>
               {formatIsoDateString(timestamp)}
             </Text>
@@ -47,7 +48,7 @@ export function MeasurementHeader({ timestamp, experimentName, onClose }: Measur
         onPress={onClose}
         activeOpacity={0.7}
       >
-        <X size={20} color={colors.primary.dark} />
+        <X size={20} color={accent} />
       </TouchableOpacity>
     </View>
   );

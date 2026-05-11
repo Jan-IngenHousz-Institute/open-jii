@@ -12,7 +12,8 @@ import type { MeasurementFilter, MeasurementItem } from "~/hooks/use-all-measure
 import { useTheme } from "~/hooks/use-theme";
 
 export function RecentMeasurementsScreen() {
-  const { colors, classes } = useTheme();
+  const { colors, classes, isDark } = useTheme();
+  const accent = isDark ? colors.primary.bright : colors.primary.dark;
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
@@ -101,7 +102,7 @@ export function RecentMeasurementsScreen() {
               variant="tertiary"
               onPress={handleExport}
               isDisabled={!hasAnyMeasurements}
-              icon={<Download size={16} color={colors.primary.dark} strokeWidth={1.4} />}
+              icon={<Download size={16} color={accent} strokeWidth={1.4} />}
             />
           </View>
         }

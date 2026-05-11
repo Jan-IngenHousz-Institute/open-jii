@@ -117,13 +117,13 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   if (migrationsError) {
     return (
-      <View className="flex-1 items-center justify-center bg-white p-8">
-        <Text className="mb-3 text-xl font-bold text-[#c0392b]">Database Error</Text>
-        <Text className="mb-8 text-center text-sm text-[#555]">
+      <View className="bg-background flex-1 items-center justify-center p-8">
+        <Text className="text-destructive mb-3 text-xl font-bold">Database Error</Text>
+        <Text className="text-muted-foreground mb-8 text-center text-sm">
           {migrationsError.message ?? "A database migration failed. Please try again."}
         </Text>
-        <Pressable className="rounded-lg bg-[#c0392b] px-8 py-3" onPress={onRetry}>
-          <Text className="text-base font-semibold text-white">Retry</Text>
+        <Pressable className="bg-destructive rounded-lg px-8 py-3" onPress={onRetry}>
+          <Text className="text-destructive-foreground text-base font-semibold">Retry</Text>
         </Pressable>
       </View>
     );

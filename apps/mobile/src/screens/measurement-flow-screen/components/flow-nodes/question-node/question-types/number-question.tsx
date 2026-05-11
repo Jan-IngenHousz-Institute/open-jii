@@ -58,7 +58,7 @@ export function NumberQuestion({ content, value, onChange }: NumberQuestionProps
           <Text className="text-muted-foreground text-sm">Maximum: {content.max}</Text>
         )}
         {content.required && isNaN(parseFloat(value)) && (
-          <Text className="text-sm text-red-500">This field is required</Text>
+          <Text className="text-destructive text-sm">This field is required</Text>
         )}
       </View>
     </View>
