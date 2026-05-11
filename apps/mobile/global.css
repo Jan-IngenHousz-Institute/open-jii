@@ -43,7 +43,7 @@
     --info: 217 91% 60%; /* #3B82F6 */
   }
 
-  .dark {
+  .dark:root {
     --background: 0 0% 7%; /* #121212 */
     --foreground: 0 0% 100%; /* #FFFFFF */
     --surface: 0 0% 12%; /* #1E1E1E */
