@@ -3,8 +3,14 @@ import { ChevronRight, MessageCircle } from "lucide-react-native";
 import React, { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
 import { useTheme } from "~/hooks/use-theme";
+import {
+  installPythonRuntime,
+  PythonRuntimeNotReadyError,
+} from "~/services/python/python-runtime-installer";
+import { usePythonRuntimeStore } from "~/stores/python-runtime-store";
 import { applyMacro } from "~/utils/process-scan/process-scan";
 
 import { Chart } from "./components/chart";
@@ -54,6 +60,9 @@ export function MeasurementResult({
 
   const renderProcessedContent = () => {
     if (processingError) {
+      if (processingError.name === PythonRuntimeNotReadyError.name) {
+        return <PythonRuntimeNotReadyPrompt />;
+      }
       return (
         <View className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
           <Text className={clsx("text-sm text-red-600 dark:text-red-400", classes.text)}>
@@ -130,6 +139,50 @@ export function MeasurementResult({
 
       {/* Tab content */}
       {activeTab === "raw" ? renderRawContent() : renderProcessedContent()}
+    </View>
+  );
+}
+
+function PythonRuntimeNotReadyPrompt() {
+  const state = usePythonRuntimeStore((s) => s.state);
+  const progress = usePythonRuntimeStore((s) => s.progress);
+  const error = usePythonRuntimeStore((s) => s.error);
+
+  const handleInstall = async () => {
+    try {
+      await installPythonRuntime();
+    } catch {
+      // Errors land in the store; the UI re-renders with the failed state.
+    }
+  };
+
+  const isInstalling = state === "installing";
+  const isFailed = state === "failed";
+
+  return (
+    <View className="gap-3 rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
+      <Text className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+        Python macro support not installed
+      </Text>
+      <Text className="text-sm text-amber-800 dark:text-amber-200">
+        This macro uses Python. Download Pyodide + scientific packages (~100 MB) to run it on this
+        device. Required once; runs offline afterwards.
+      </Text>
+      {isInstalling ? (
+        <Text className="text-sm text-amber-800 dark:text-amber-200">
+          Installing… {Math.round(progress * 100)}%
+        </Text>
+      ) : null}
+      {isFailed && error ? (
+        <Text className="text-sm text-red-700 dark:text-red-300">Install failed: {error}</Text>
+      ) : null}
+      <Button
+        title={isFailed ? "Retry download (~100 MB)" : "Download (~100 MB)"}
+        onPress={handleInstall}
+        variant="primary"
+        isLoading={isInstalling}
+        isDisabled={isInstalling}
+      />
     </View>
   );
 }

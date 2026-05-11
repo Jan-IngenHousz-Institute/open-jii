@@ -1,14 +1,24 @@
 /**
  * Inline HTML for a hidden WebView that runs Python macros via Pyodide.
- * Listens for postMessage({ requestId, code, json }), wraps code in a function
- * that receives json, runs it, and posts back { requestId, result } or { requestId, error }.
+ *
+ * Pyodide v0.24.1 and the scientific packages (numpy/pandas/scipy + deps) are
+ * downloaded on demand to `Paths.document/pyodide/` by
+ * `python-runtime-installer.ts` when the user enables Python macro support in
+ * Settings. The WebView is mounted with `baseUrl` pointing at that directory,
+ * so `<script src="pyodide.js">` and `loadPyodide({ indexURL: "./" })` resolve
+ * to the local copies. After install, macros run offline.
+ *
+ * Before executing each macro we call `loadPackagesFromImports`, which scans
+ * the user's `import` statements and pulls in the matching wheels from the
+ * staged directory. Authors just write `import numpy as np`; no
+ * `await micropip.install(...)` boilerplate.
  */
 export const pythonMacroSandboxHtml = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"/><title>Python Macro</title></head>
 <body>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+<script src="pyodide.js"></script>
 <script>
 (function() {
   var pyodideReady = false;
@@ -35,6 +45,7 @@ export const pythonMacroSandboxHtml = `
         'def __macro__(json):\\n' + indent(code) + '\\n\\n' +
         '__result__ = __macro__(__json_input__)\\n' +
         '__result_holder__.result = json.dumps(__result__)\\n';
+      await pyodide.loadPackagesFromImports(wrapped);
       await pyodide.runPythonAsync(wrapped);
       var raw = resultHolder.result;
       var str = (typeof raw === 'string') ? raw : (raw != null ? String(raw) : '');
@@ -63,7 +74,7 @@ export const pythonMacroSandboxHtml = `
     }
   });
 
-  loadPyodide().then(function(pyodide) {
+  loadPyodide({ indexURL: "./" }).then(function(pyodide) {
     window.pyodide = pyodide;
     pyodideReady = true;
     send({ type: 'ready' });

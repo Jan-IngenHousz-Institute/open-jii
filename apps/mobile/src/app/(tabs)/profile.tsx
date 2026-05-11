@@ -8,6 +8,7 @@ import { View, Text, ScrollView, Linking, Image } from "react-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
+import { PythonRuntimeCard } from "~/components/python-runtime-card";
 import { colors } from "~/constants/colors";
 import { useSession } from "~/hooks/use-session";
 import { useThemeColors } from "~/hooks/use-theme-colors";
@@ -74,15 +75,15 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
+      <PythonRuntimeCard />
+
       <View className="mb-6">
         <Button
           title="Open Web Profile"
           onPress={handleOpenWebProfile}
           variant="outline"
           style={{ marginBottom: 12 }}
-          icon={
-            <ExternalLink size={16} color={themeColors.brand} />
-          }
+          icon={<ExternalLink size={16} color={themeColors.brand} />}
         />
 
         <Button

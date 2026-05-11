@@ -2,6 +2,12 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { View } from "react-native";
 import WebView from "react-native-webview";
 import { pythonMacroSandboxHtml } from "~/services/python/python-macro-sandbox";
+import {
+  getPythonRuntimeDirUri,
+  PythonRuntimeNotReadyError,
+  reconcilePythonRuntimeState,
+} from "~/services/python/python-runtime-installer";
+import { usePythonRuntimeStore } from "~/stores/python-runtime-store";
 import type { MacroOutput } from "~/utils/process-scan/process-scan";
 import { registerPythonMacroRunner } from "~/utils/process-scan/python-macro-runner";
 
@@ -14,8 +20,16 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
   const pendingRef = useRef<Map<string, Pending>>(new Map());
   const requestIdRef = useRef(0);
   const webViewRef = useRef<WebView>(null);
+  const runtimeState = usePythonRuntimeStore((s) => s.state);
+
+  useEffect(() => {
+    reconcilePythonRuntimeState();
+  }, []);
 
   const runPythonMacro = useCallback(async (code: string, json: object): Promise<MacroOutput> => {
+    if (usePythonRuntimeStore.getState().state !== "ready") {
+      throw new PythonRuntimeNotReadyError();
+    }
     const requestId = `py-${++requestIdRef.current}`;
     return new Promise<MacroOutput>((resolve, reject) => {
       pendingRef.current.set(requestId, { resolve, reject });
@@ -72,13 +86,20 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
           pointerEvents: "none",
         }}
       >
-        <WebView
-          ref={webViewRef}
-          originWhitelist={["*"]}
-          source={{ html: pythonMacroSandboxHtml }}
-          onMessage={handleMessage}
-          style={{ width: 1, height: 1 }}
-        />
+        {runtimeState === "ready" ? (
+          <WebView
+            ref={webViewRef}
+            originWhitelist={["*"]}
+            source={{ html: pythonMacroSandboxHtml, baseUrl: getPythonRuntimeDirUri() }}
+            onMessage={handleMessage}
+            allowFileAccess
+            allowFileAccessFromFileURLs
+            allowUniversalAccessFromFileURLs
+            javaScriptEnabled
+            domStorageEnabled
+            style={{ width: 1, height: 1 }}
+          />
+        ) : null}
       </View>
     </View>
   );
