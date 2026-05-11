@@ -346,12 +346,11 @@ describe("measurementToTimeseries", () => {
     expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(3000);
   });
 
-  it("uses wall-clock e_time markers to space sub-protocols and shifts the leftmost trace to t=0", () => {
-    // start_time @ 1000ms then start_time @ 6000ms creates a 5s wall-clock
-    // gap before any data. After post-loop shifting (so the first trace sits
-    // at t=0) the gap is collapsed and ABS detector readings start near zero.
-    // Two ABS sub-protocols separated by an f_start_time marker exercise the
-    // between-sub-protocol spacing the markers control.
+  it("ignores e_time markers and lays sub-protocols back-to-back by declared duration", () => {
+    // The protocol's start_time / f_start_time records carry wall-clock
+    // timestamps but those reflect device-internal autogain/env work that
+    // has no chart-meaningful duration. Sub-protocols sit back-to-back at
+    // their declared phase durations regardless of marker spacing.
     const sample_raw = JSON.stringify([
       {
         set: [
@@ -364,32 +363,12 @@ describe("measurementToTimeseries", () => {
       },
     ]);
     const { outputs } = measurementToTimeseries({ sample_raw }, protocol);
-    // First detector read sits at the start of the chart (just one
-    // pulse_distance in, since pulses fire after the LED actinic phase opens).
-    expect(outputs[0]?.timestamp_us).toBeLessThan(10_000);
-    // Second sub-protocol's first read is offset by the wall-clock gap
-    // between markers (11_000ms - 6_000ms = 5_000ms = 5_000_000us).
+    // First read at one pulse_distance into the first ABS phase.
+    expect(outputs[0]?.timestamp_us).toBe(1000);
+    // Second ABS follows the first immediately. ABS phase = 3 pulses × 1000us
+    // = 3000us, so the second ABS's first read is at ~3000 + 1000 = 4000us.
     const second = outputs.filter((r) => r.sub_protocol === "ABS #1");
-    expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(5_000_000);
-  });
-
-  it("treats f_start_time / f_end_time records as wall-clock markers", () => {
-    // Any zero-data record with an e_time anchors t_offset. We verify it via
-    // the spacing between two ABS sub-protocols separated by an f_start_time.
-    const sample_raw = JSON.stringify([
-      {
-        set: [
-          { label: "start_time", e_time: [0, 0], data_raw: [] },
-          { label: "ABS", data_raw: [1, 2, 3] },
-          { label: "f_start_time", e_time: [0, 4000], data_raw: [] },
-          { label: "ABS", data_raw: [4, 5, 6] },
-        ],
-      },
-    ]);
-    const { outputs } = measurementToTimeseries({ sample_raw }, protocol);
-    const second = outputs.filter((r) => r.sub_protocol === "ABS #1");
-    // f_start_time at 4s pushes the second ABS forward to roughly t=4s.
-    expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(4_000_000);
+    expect(second[0]?.timestamp_us).toBeLessThan(10_000);
   });
 
   it("recovers from malformed pi_json without crashing", () => {
@@ -440,30 +419,47 @@ describe("measurementToTimeseries", () => {
     expect(second[0]?.timestamp_us).toBeGreaterThanOrEqual(2_000_000);
   });
 
-  it("extends each sub-protocol's last actinic LED phase to the next sub-protocol's start", () => {
-    // Two sub-protocols separated by a wall-clock marker pushing tOffset
-    // forward. The first sub-protocol's actinic LED span should extend to fill
-    // the gap up to the second one's start.
+  it("extends a sub-protocol's last-phase actinic across a protocols_delay gap to the next sub-protocol", () => {
+    // The MultispeQ holds the actinic LED at its last nonpulsed brightness
+    // through any time gap between sub-protocols (e.g. a `protocols_delay`),
+    // so the first sub-protocol's last-phase actinic must extend to where the
+    // next data sub-protocol starts — leaving no break in the actinic line.
+    const proto: ProtocolJson = {
+      v_arrays: [[3]],
+      _protocol_set_: [
+        {
+          label: "ABS",
+          pulses: ["@n0:0"],
+          pulse_distance: [1000],
+          detectors: [[3]],
+          pulsed_lights: [[1]],
+          nonpulsed_lights: [[2]],
+          nonpulsed_lights_brightness: [[100]],
+        },
+        { label: "WAIT", protocols_delay: 1 },
+      ],
+    };
     const sample_raw = JSON.stringify([
       {
         set: [
-          { label: "start_time", e_time: [0, 0], data_raw: [] },
           { label: "ABS", data_raw: [1, 2, 3] },
-          { label: "f_start_time", e_time: [0, 5000], data_raw: [] },
+          { label: "WAIT", data_raw: [] },
           { label: "ABS", data_raw: [4, 5, 6] },
         ],
       },
     ]);
-    const { inputs } = measurementToTimeseries({ sample_raw }, protocol);
-    const firstActinic = inputs.filter(
-      (r) => r.sub_protocol === "ABS #0" && r.light_type === "actinic",
+    const { inputs } = measurementToTimeseries({ sample_raw }, proto);
+    const firstActinicEnd = Math.max(
+      ...inputs
+        .filter((r) => r.sub_protocol === "ABS #0" && r.light_type === "actinic")
+        .map((r) => r.t_end_us),
     );
     const secondStart = inputs
       .filter((r) => r.sub_protocol === "ABS #1")
       .reduce((m, r) => Math.min(m, r.t_start_us), Infinity);
-    // The extension pushes the first sub-protocol's actinic LED end up to the
-    // second sub-protocol's starting timestamp.
-    expect(Math.max(...firstActinic.map((r) => r.t_end_us))).toBe(secondStart);
+    expect(firstActinicEnd).toBe(secondStart);
+    // Sanity: protocols_delay creates a 1s gap, far more than ABS's declared phase.
+    expect(secondStart).toBeGreaterThanOrEqual(1_000_000);
   });
 
   it("handles measurements with no sub-protocols gracefully", () => {

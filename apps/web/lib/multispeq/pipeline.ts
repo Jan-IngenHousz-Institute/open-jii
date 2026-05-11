@@ -493,27 +493,13 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
   return out;
 }
 
-function parseETimeUs(metadataJson: string | null): number | null {
-  if (!metadataJson) return null;
-  let meta: unknown;
-  try {
-    meta = JSON.parse(metadataJson) as unknown;
-  } catch {
-    return null;
-  }
-  if (!meta || typeof meta !== "object") return null;
-  const eTime = (meta as Record<string, unknown>).e_time;
-  if (!Array.isArray(eTime) || eTime.length < 2) return null;
-  const ms: unknown = eTime[1];
-  return isFiniteNumber(ms) ? Math.trunc(ms) * 1000 : null;
-}
-
 export interface MeasurementTimeseries {
   inputs: InputRecord[];
   outputs: OutputRecord[];
-  /** Wall-clock duration in microseconds, taken from the latest marker
-   * (start_time/end_time/f_start_time/...). Useful for sizing the x-axis when
-   * trailing sub-protocols (e.g. SPAD) emit no data_raw. */
+  /** Total duration in microseconds — sum of declared sub-protocol durations
+   * plus any `protocols_delay` waits. The device's e_time wall-clock markers
+   * are intentionally ignored (they vary with device-internal autogain/env
+   * work that doesn't map to user-meaningful chart time). */
   totalDurationUs: number;
 }
 
@@ -526,25 +512,6 @@ export function measurementToTimeseries(
   for (const ps of pset) if (ps.label) setByLabel.set(ps.label, ps);
 
   const allRecords = explodeRecords(measurement);
-
-  // A wall-clock marker is any record without data_raw that carries an e_time
-  // ([overflow, ms]). The device emits these at start/end and around fast
-  // (`f_*`) sub-protocols. Anchoring t_offset on every marker — not just
-  // start_time/end_time — keeps long device-only intervals (e.g. an f_transient
-  // that takes 10s but only emits 100 samples) from collapsing.
-  const isMarker = (r: SubProtocolRecord) =>
-    r.data_raw_len === 0 && parseETimeUs(r.metadata_json) != null;
-
-  let wallClockZero: number | null = null;
-  for (const r of allRecords) {
-    if (isMarker(r)) {
-      const t = parseETimeUs(r.metadata_json);
-      if (t != null) {
-        wallClockZero = t;
-        break;
-      }
-    }
-  }
 
   // Disambiguate repeated labels with " #N" suffixes.
   const labelCounts = new Map<string, number>();
@@ -563,14 +530,6 @@ export function measurementToTimeseries(
   let ambientPi: unknown[] | null = null;
 
   for (const row of allRecords) {
-    if (isMarker(row)) {
-      if (wallClockZero != null) {
-        const t = parseETimeUs(row.metadata_json);
-        if (t != null) tOffset = Math.max(tOffset, t - wallClockZero);
-      }
-      continue;
-    }
-
     const psDef = setByLabel.get(row.label);
 
     if (psDef) {
@@ -624,31 +583,42 @@ export function measurementToTimeseries(
     tOffset += subDur;
   }
 
-  // Wall-clock markers (e.g. f_start_time around f_transient) often span longer
-  // than the declared phase duration — the device sits idle (or actinic-only)
-  // for the remainder. Extend each sub-protocol's last actinic LED phase up to
-  // the next sub-protocol's start (or totalDuration) so the LED background
-  // covers the full device window instead of leaving a visual gap.
-  const spans = new Map<string, { start: number; end: number }>();
+  // The device holds actinic LEDs at their last nonpulsed brightness through
+  // wall-clock gaps (autogain, env sensors, etc.) — there is no break in the
+  // actinic light, only in data acquisition. Extend the last-phase actinic
+  // records of each sub-protocol to the start of the next so the input chart
+  // is continuous. Measuring/pulsed lights are NOT extended; those really are
+  // off between sub-protocols.
+  const subStart = new Map<string, number>();
+  const subOrder: string[] = [];
   for (const r of allInputs) {
-    if (!r.sub_protocol) continue;
-    const span = spans.get(r.sub_protocol);
-    if (!span) spans.set(r.sub_protocol, { start: r.t_start_us, end: r.t_end_us });
-    else {
-      span.start = Math.min(span.start, r.t_start_us);
-      span.end = Math.max(span.end, r.t_end_us);
+    if (r.sub_protocol == null) continue;
+    const prev = subStart.get(r.sub_protocol);
+    if (prev == null) {
+      subStart.set(r.sub_protocol, r.t_start_us);
+      subOrder.push(r.sub_protocol);
+    } else if (r.t_start_us < prev) {
+      subStart.set(r.sub_protocol, r.t_start_us);
     }
   }
-  const ordered = Array.from(spans.entries()).sort((a, b) => a[1].start - b[1].start);
-  for (let i = 0; i < ordered.length; i++) {
-    const [name, span] = ordered[i] as [string, { start: number; end: number }];
-    const nextStart =
-      i + 1 < ordered.length
-        ? (ordered[i + 1] as [string, { start: number; end: number }])[1].start
-        : tOffset;
-    if (nextStart <= span.end) continue;
+  subOrder.sort((a, b) => (subStart.get(a) ?? 0) - (subStart.get(b) ?? 0));
+  for (let i = 0; i < subOrder.length; i++) {
+    const cur = subOrder[i];
+    const nextStart = i + 1 < subOrder.length ? (subStart.get(subOrder[i + 1]) ?? tOffset) : tOffset;
+    let maxPhase = -1;
     for (const r of allInputs) {
-      if (r.sub_protocol === name && r.t_end_us === span.end && r.light_type === "actinic") {
+      if (r.sub_protocol === cur && r.light_type === "actinic" && r.phase_index > maxPhase) {
+        maxPhase = r.phase_index;
+      }
+    }
+    if (maxPhase < 0) continue;
+    for (const r of allInputs) {
+      if (
+        r.sub_protocol === cur &&
+        r.light_type === "actinic" &&
+        r.phase_index === maxPhase &&
+        r.t_end_us < nextStart
+      ) {
         r.t_end_us = nextStart;
       }
     }
