@@ -235,6 +235,102 @@ describe("inputRecords", () => {
     const measuring = records.find((r) => r.light_type === "measuring");
     expect(measuring?.t_end_us).toBe(10 * 2 * 1000);
   });
+
+  it("expands entry.pre_illumination via @s array refs when no runtime pi is supplied", () => {
+    // pre_illumination = [led, brightness_arr_ref, duration_arr_ref]. With
+    // "@s1" / "@s2" the arrays come from v_arrays; we pair them position-wise.
+    const proto: ProtocolJson = {
+      v_arrays: [[], [100, 200, 300], [5, 10, 15]],
+    };
+    const records = inputRecords(
+      {
+        pulses: [],
+        pre_illumination: [2, "@s1", "@s2"],
+      },
+      {},
+      proto,
+      null,
+    );
+    const preIllum = records.filter((r) => r.light_type === "pre_illumination");
+    expect(preIllum).toHaveLength(3);
+    expect(preIllum[0]).toMatchObject({ led: 2, brightness: 100, t_end_us: 5000 });
+    expect(preIllum[1]).toMatchObject({ led: 2, brightness: 200, t_end_us: 5000 + 10_000 });
+    expect(preIllum[2]).toMatchObject({
+      led: 2,
+      brightness: 300,
+      t_end_us: 5000 + 10_000 + 15_000,
+    });
+  });
+
+  it("clamps short pre_illumination arrays by repeating the last value", () => {
+    // brightnesses has 1 entry, durations has 3 — len = 3 and the brightness
+    // clamps to the last value for the trailing iterations.
+    const proto: ProtocolJson = { v_arrays: [] };
+    const records = inputRecords(
+      {
+        pulses: [],
+        pre_illumination: [4, [50], [10, 20, 30]],
+      },
+      {},
+      proto,
+      null,
+    );
+    const preIllum = records.filter((r) => r.light_type === "pre_illumination");
+    expect(preIllum.map((r) => r.brightness)).toEqual([50, 50, 50]);
+    expect(preIllum.map((r) => (r.t_end_us - r.t_start_us) / 1000)).toEqual([10, 20, 30]);
+  });
+
+  it("accepts scalar pre_illumination brightness/duration as single-element lists", () => {
+    // Plain scalar values (not arrays, not @s refs) become a 1-step pre_illum.
+    const proto: ProtocolJson = { v_arrays: [] };
+    const records = inputRecords({ pulses: [], pre_illumination: [5, 75, 20] }, {}, proto, null);
+    const preIllum = records.filter((r) => r.light_type === "pre_illumination");
+    expect(preIllum).toHaveLength(1);
+    expect(preIllum[0]).toMatchObject({ led: 5, brightness: 75, t_end_us: 20_000 });
+  });
+
+  it("treats out-of-range @s references in pre_illumination as empty arrays", () => {
+    // `@s99` with no matching v_arrays slot yields an empty array, which
+    // collapses the loop to zero pre_illumination steps.
+    const proto: ProtocolJson = { v_arrays: [] };
+    const records = inputRecords(
+      { pulses: [], pre_illumination: [3, "@s99", "@s99"] },
+      {},
+      proto,
+      null,
+    );
+    expect(records.filter((r) => r.light_type === "pre_illumination")).toHaveLength(0);
+  });
+
+  it("reuses the last pulse_distance value when the array is shorter than pulses", () => {
+    // Protocols sometimes declare 1 pulse_distance for multiple phases; the
+    // getSafe fallback should clamp to the last value rather than treat
+    // overflow phases as zero-distance.
+    const records = inputRecords({
+      pulses: [2, 3],
+      pulse_distance: [1000],
+      detectors: [[3], [3]],
+      pulsed_lights: [[1], [1]],
+      nonpulsed_lights: [[2], [2]],
+    });
+    const actinic = records.filter((r) => r.light_type === "actinic");
+    expect(actinic[0]?.t_end_us).toBe(2 * 1000);
+    expect(actinic[1]?.t_end_us).toBe(2 * 1000 + 3 * 1000);
+  });
+
+  it("skips LED 0 entries in both nonpulsed and pulsed light lists", () => {
+    // An explicit 0 LED id means "no LED here"; the channel is skipped
+    // entirely so the records list stays clean of phantom entries.
+    const records = inputRecords({
+      pulses: [1],
+      pulse_distance: [1000],
+      detectors: [[3]],
+      pulsed_lights: [[0]],
+      nonpulsed_lights: [[0]],
+    });
+    expect(records.filter((r) => r.light_type === "actinic")).toHaveLength(0);
+    expect(records.filter((r) => r.light_type === "measuring")).toHaveLength(0);
+  });
 });
 
 describe("explodeRecords", () => {
@@ -471,6 +567,72 @@ describe("measurementToTimeseries", () => {
     expect(outputs).toEqual([]);
     expect(totalDurationUs).toBe(0);
   });
+
+  it("shifts the timeline back to t=0 when a protocols_delay precedes the first data sub-protocol", () => {
+    const proto: ProtocolJson = {
+      v_arrays: [[3]],
+      _protocol_set_: [
+        { label: "WAIT", protocols_delay: 1 },
+        {
+          label: "ABS",
+          pulses: ["@n0:0"],
+          pulse_distance: [1000],
+          detectors: [[3]],
+          pulsed_lights: [[1]],
+          nonpulsed_lights: [[2]],
+          nonpulsed_lights_brightness: [[100]],
+        },
+      ],
+    };
+    const sample_raw = JSON.stringify([
+      {
+        set: [
+          { label: "WAIT", data_raw: [] },
+          { label: "ABS", data_raw: [1, 2, 3] },
+        ],
+      },
+    ]);
+    const { outputs } = measurementToTimeseries({ sample_raw }, proto);
+    expect(outputs[0]?.timestamp_us).toBe(1000);
+  });
+
+  it("skips actinic extension for sub-protocols whose phases have no nonpulsed light", () => {
+    // A sub-protocol that only fires measuring (pulsed) lights produces no
+    // actinic records, so there's no record to extend across a delay gap.
+    // The pipeline should handle that without crashing or mis-extending.
+    const proto: ProtocolJson = {
+      v_arrays: [[2]],
+      _protocol_set_: [
+        {
+          label: "PULSE_ONLY",
+          pulses: ["@n0:0"],
+          pulse_distance: [1000],
+          detectors: [[3]],
+          pulsed_lights: [[1]],
+        },
+        { label: "WAIT", protocols_delay: 1 },
+        {
+          label: "PULSE_ONLY",
+          pulses: ["@n0:0"],
+          pulse_distance: [1000],
+          detectors: [[3]],
+          pulsed_lights: [[1]],
+        },
+      ],
+    };
+    const sample_raw = JSON.stringify([
+      {
+        set: [
+          { label: "PULSE_ONLY", data_raw: [1, 2] },
+          { label: "WAIT", data_raw: [] },
+          { label: "PULSE_ONLY", data_raw: [3, 4] },
+        ],
+      },
+    ]);
+    const { inputs } = measurementToTimeseries({ sample_raw }, proto);
+    expect(inputs.filter((r) => r.light_type === "actinic")).toHaveLength(0);
+    expect(inputs.filter((r) => r.light_type === "measuring").length).toBeGreaterThan(0);
+  });
 });
 
 describe("explodeRecords edge cases", () => {
@@ -499,6 +661,21 @@ describe("explodeRecords edge cases", () => {
     });
     expect(records).toHaveLength(1);
     expect(records[0]?.data_raw).toEqual([1]);
+  });
+
+  it("skips nullish or non-object entries inside a v2 'set' array", () => {
+    // Live-device payloads occasionally contain stray null or string entries
+    // alongside real sub-protocol objects; the explode pass should drop them
+    // rather than throwing on the missing fields.
+    const records = explodeRecords({
+      sample_raw: [
+        {
+          set: [null, "junk", [1, 2], { label: "OK", data_raw: [9] }],
+        },
+      ],
+    });
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ label: "OK", data_raw: [9] });
   });
 });
 
