@@ -3,6 +3,7 @@ import { usePythonRuntimeStore } from "~/stores/python-runtime-store";
 
 import {
   getPythonRuntimeDirUri,
+  installPythonRuntime,
   isPythonRuntimeReady,
   reconcilePythonRuntimeState,
   uninstallPythonRuntime,
@@ -17,10 +18,14 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 // `expo-file-system` reaches into native code; provide a minimal in-memory
-// stand-in for the surface the installer uses.
+// stand-in for the surface the installer uses. `downloadFileAsync` is a
+// vi.fn() so individual tests can make specific files fail without touching
+// the network.
 let sentinelExists = false;
 let dirExists = false;
 const fileSystemActions: string[] = [];
+const downloadCalls: string[] = [];
+let downloadBehavior: (url: string) => Promise<void> = () => Promise.resolve();
 
 vi.mock("expo-file-system", () => {
   class FakeDirectory {
@@ -62,6 +67,11 @@ vi.mock("expo-file-system", () => {
     delete() {
       if (this.uri.endsWith(".install-complete-v1")) sentinelExists = false;
     }
+    static async downloadFileAsync(url: string, _dest: unknown): Promise<FakeFile> {
+      downloadCalls.push(url);
+      await downloadBehavior(url);
+      return new FakeFile(url);
+    }
   }
 
   return {
@@ -73,12 +83,16 @@ vi.mock("expo-file-system", () => {
   };
 });
 
+const EXPECTED_FILE_COUNT = 12; // 5 core + 7 packages
+
 describe("python-runtime-installer", () => {
   beforeEach(() => {
     usePythonRuntimeStore.getState().reset();
     dirExists = false;
     sentinelExists = false;
     fileSystemActions.length = 0;
+    downloadCalls.length = 0;
+    downloadBehavior = () => Promise.resolve();
   });
 
   it("getPythonRuntimeDirUri always ends with a trailing slash", () => {
@@ -139,5 +153,76 @@ describe("python-runtime-installer", () => {
     uninstallPythonRuntime();
     expect(fileSystemActions).not.toContain("dir.delete");
     expect(usePythonRuntimeStore.getState().state).toBe("absent");
+  });
+
+  it("install downloads every required file and ends in 'ready' with progress=1", async () => {
+    await installPythonRuntime();
+
+    const current = usePythonRuntimeStore.getState();
+    expect(current.state).toBe("ready");
+    expect(current.progress).toBe(1);
+    expect(current.error).toBeUndefined();
+    expect(downloadCalls.length).toBe(EXPECTED_FILE_COUNT);
+    expect(sentinelExists).toBe(true);
+    expect(fileSystemActions).toContain("dir.create");
+  });
+
+  it("install fetches all 12 files from the pinned Pyodide CDN", async () => {
+    await installPythonRuntime();
+    expect(
+      downloadCalls.every((url) =>
+        url.startsWith("https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"),
+      ),
+    ).toBe(true);
+  });
+
+  it("install transitions to 'failed' and captures the error when a download throws", async () => {
+    downloadBehavior = (url) => {
+      if (url.endsWith("scipy-1.11.2-cp311-cp311-emscripten_3_1_45_wasm32.whl")) {
+        return Promise.reject(new Error("network unreachable"));
+      }
+      return Promise.resolve();
+    };
+
+    await expect(installPythonRuntime()).rejects.toThrow("network unreachable");
+
+    const current = usePythonRuntimeStore.getState();
+    expect(current.state).toBe("failed");
+    expect(current.error).toBe("network unreachable");
+    expect(sentinelExists).toBe(false);
+  });
+
+  it("concurrent install() calls share one active install and run downloads once", async () => {
+    let resolveGate = () => undefined as void;
+    const gate = new Promise<void>((res) => {
+      resolveGate = () => res();
+    });
+    downloadBehavior = () => gate;
+
+    const a = installPythonRuntime();
+    const b = installPythonRuntime();
+
+    resolveGate();
+    await Promise.all([a, b]);
+
+    // Functional dedup: a second install while one is active does not double the
+    // download count. (Identity check `a === b` would fail because `async`
+    // wraps a returned promise in a fresh outer promise even when the body
+    // returns an existing promise — the dedup is in the file ops, not refs.)
+    expect(downloadCalls.length).toBe(EXPECTED_FILE_COUNT);
+    expect(usePythonRuntimeStore.getState().state).toBe("ready");
+  });
+
+  it("install retries cleanly after a previous failure: dir is recreated and prior partials are gone", async () => {
+    downloadBehavior = () => Promise.reject(new Error("disk full"));
+    await expect(installPythonRuntime()).rejects.toThrow("disk full");
+    expect(usePythonRuntimeStore.getState().state).toBe("failed");
+
+    downloadBehavior = () => Promise.resolve();
+    await installPythonRuntime();
+
+    expect(usePythonRuntimeStore.getState().state).toBe("ready");
+    // dir.create runs on each install attempt (we wipe before each).
+    expect(fileSystemActions.filter((a) => a === "dir.create").length).toBe(2);
   });
 });
