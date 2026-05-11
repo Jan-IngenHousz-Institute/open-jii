@@ -64,33 +64,15 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Releasing version: $VERSION"
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
+      - name: Setup mobile CI environment
+        uses: ./.github/actions/setup-mobile-ci
         with:
-          node-version: "22"
-
-      - name: Setup Expo CLI
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: pnpm install
+          expo-token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Set app version from release
-        working-directory: apps/mobile
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          node -e "
-            const fs = require('fs');
-            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            app.expo.version = process.env.VERSION;
-            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
-          "
-          echo "Set app version to $VERSION"
+        uses: ./.github/actions/set-app-version
+        with:
+          version: ${{ steps.version.outputs.version }}
 
       - name: Generate release notes
         id: release-notes
@@ -124,44 +106,11 @@ jobs:
             echo "Release notes not available"
           fi
 
-      - name: Compute current fingerprint
-        id: fp
-        working-directory: apps/mobile
-        run: |
-          HASH=$(pnpm exec expo-updates fingerprint:generate --platform android | jq -r .hash)
-          if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
-            echo "::error::Failed to compute fingerprint"
-            exit 1
-          fi
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
-          echo "Current fingerprint: $HASH"
-
-      - name: Get last internal build fingerprint
-        id: last_fp
-        working-directory: apps/mobile
-        run: |
-          LAST=$(eas build:list \
-            --profile internal \
-            --status finished \
-            --platform android \
-            --limit 1 \
-            --non-interactive \
-            --json 2>/dev/null | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
-          echo "hash=$LAST" >> $GITHUB_OUTPUT
-          echo "Last internal fingerprint: ${LAST:-<none>}"
-
-      - name: Decide build vs OTA
+      - name: Compute fingerprint and decide build vs OTA
         id: decide
-        run: |
-          CURRENT="${{ steps.fp.outputs.hash }}"
-          LAST="${{ steps.last_fp.outputs.hash }}"
-          if [ -n "$LAST" ] && [ "$CURRENT" = "$LAST" ]; then
-            echo "mode=ota" >> $GITHUB_OUTPUT
-            echo "Fingerprint unchanged — OTA-only path"
-          else
-            echo "mode=build" >> $GITHUB_OUTPUT
-            echo "Fingerprint changed (or no prior build) — full AAB rebuild"
-          fi
+        uses: ./.github/actions/mobile-fingerprint-decide
+        with:
+          profile: internal
 
       - name: Build and submit AAB to Play internal track
         if: steps.decide.outputs.mode == 'build'
@@ -187,8 +136,8 @@ jobs:
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Mode | \`${{ steps.decide.outputs.mode }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Current fingerprint | \`${{ steps.fp.outputs.hash }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Last build fingerprint | \`${{ steps.last_fp.outputs.hash || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current fingerprint | \`${{ steps.decide.outputs.current }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Last build fingerprint | \`${{ steps.decide.outputs.last || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| AAB built | ${{ steps.decide.outputs.mode == 'build' && 'yes' || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Play track | internal |" >> $GITHUB_STEP_SUMMARY
           echo "| OTA channel | internal |" >> $GITHUB_STEP_SUMMARY
