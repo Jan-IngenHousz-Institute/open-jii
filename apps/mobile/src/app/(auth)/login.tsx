@@ -140,6 +140,7 @@ export default function LoginScreen() {
 
   const [showOTPInput, setShowOTPInput] = React.useState(false);
   const [countdown, setCountdown] = React.useState(0);
+  const [lastSubmittedOtp, setLastSubmittedOtp] = React.useState<string | null>(null);
 
   const formError = errors.email?.message ?? errors.otp?.message ?? "";
 
@@ -173,10 +174,11 @@ export default function LoginScreen() {
   }, [countdown]);
 
   useEffect(() => {
-    if (otp.length === 6 && !verifyLoading && online) {
+    if (otp.length === 6 && !verifyLoading && online && otp !== lastSubmittedOtp) {
+      setLastSubmittedOtp(otp);
       void handleOTPVerify(otp);
     }
-  }, [otp, verifyLoading, handleOTPVerify, online]);
+  }, [otp, verifyLoading, handleOTPVerify, online, lastSubmittedOtp]);
 
   async function handleGitHubLogin() {
     clearErrors();
@@ -217,12 +219,14 @@ export default function LoginScreen() {
     }
 
     setValue("otp", "");
+    setLastSubmittedOtp(null);
     setCountdown(RESEND_COOLDOWN_SECONDS);
   }
 
   function handleEditEmail() {
     setShowOTPInput(false);
     setValue("otp", "");
+    setLastSubmittedOtp(null);
     clearErrors();
   }
 
