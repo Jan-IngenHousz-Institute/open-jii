@@ -37,67 +37,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
+      - name: Setup mobile CI environment
+        uses: ./.github/actions/setup-mobile-ci
         with:
-          node-version: "22"
+          expo-token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Setup Expo CLI
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Compute current fingerprint
-        id: fp
-        working-directory: apps/mobile
-        run: |
-          HASH=$(pnpm exec expo-updates fingerprint:generate --platform android | jq -r .hash)
-          if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
-            echo "::error::Failed to compute fingerprint"
-            exit 1
-          fi
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
-          echo "Current fingerprint: $HASH"
-
-      - name: Get last preview build fingerprint
-        id: last_fp
-        working-directory: apps/mobile
-        run: |
-          LAST=$(eas build:list \
-            --profile preview \
-            --status finished \
-            --platform android \
-            --limit 1 \
-            --non-interactive \
-            --json 2>/dev/null | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
-          echo "hash=$LAST" >> $GITHUB_OUTPUT
-          echo "Last preview fingerprint: ${LAST:-<none>}"
-
-      - name: Check fingerprint drift
+      - name: Compute fingerprint and check drift
         id: drift
-        run: |
-          CURRENT="${{ steps.fp.outputs.hash }}"
-          LAST="${{ steps.last_fp.outputs.hash }}"
-          FORCE="${{ inputs.force || 'false' }}"
-          if [ -z "$LAST" ]; then
-            echo "drift=unknown" >> $GITHUB_OUTPUT
-            echo "::warning::No prior preview build found. OTA proceeding but may not reach any device."
-          elif [ "$CURRENT" != "$LAST" ]; then
-            echo "drift=true" >> $GITHUB_OUTPUT
-            if [ "$FORCE" != "true" ]; then
-              echo "::warning::Fingerprint drift detected. Preview testers need a new APK. OTA will not reach them. Skipping publish. Run \`eas build --profile preview --platform android\` to ship a new APK, or re-run this workflow with \`force=true\` to publish anyway."
-            else
-              echo "::warning::Fingerprint drift detected but force=true — publishing anyway."
-            fi
-          else
-            echo "drift=false" >> $GITHUB_OUTPUT
-            echo "Fingerprint matches latest preview build"
-          fi
+        uses: ./.github/actions/mobile-fingerprint-decide
+        with:
+          profile: preview
+
+      - name: Warn on drift
+        if: steps.drift.outputs.drift == 'true' && inputs.force != true
+        run: echo "::warning::Fingerprint drift detected. Preview testers need a new APK. OTA will not reach them. Skipping publish. Run \`eas build --profile preview --platform android\` to ship a new APK, or re-run this workflow with \`force=true\` to publish anyway."
+
+      - name: Warn on forced drift
+        if: steps.drift.outputs.drift == 'true' && inputs.force == true
+        run: echo "::warning::Fingerprint drift detected but force=true — publishing anyway."
+
+      - name: Warn on unknown baseline
+        if: steps.drift.outputs.drift == 'unknown'
+        run: echo "::warning::No prior preview build found. OTA proceeding but may not reach any device."
 
       - name: Resolve commit subject
         id: msg
@@ -130,8 +91,8 @@ jobs:
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Branch | \`${{ inputs.branch || 'preview' }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Current fingerprint | \`${{ steps.fp.outputs.hash }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Last preview fingerprint | \`${{ steps.last_fp.outputs.hash || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current fingerprint | \`${{ steps.drift.outputs.current }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Last preview fingerprint | \`${{ steps.drift.outputs.last || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Drift | ${{ steps.drift.outputs.drift }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Forced | ${{ inputs.force || false }} |" >> $GITHUB_STEP_SUMMARY
           PUBLISHED="${{ (steps.drift.outputs.drift != 'true' || inputs.force == true) && 'yes' || 'skipped' }}"
