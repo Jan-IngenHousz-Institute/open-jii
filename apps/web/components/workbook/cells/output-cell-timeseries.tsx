@@ -349,11 +349,11 @@ export function OutputCellTimeseries({
     annotations,
     hovermode: "closest",
     showlegend: true,
+    // `entrywidth` + `orientation: "h"` packs items into rows of fixed pixel
+    // width; without it, Plotly's horizontal mode stacks one item per row when
+    // label text is long. The two `entrywidth*` keys exist in Plotly.js runtime
+    // but are missing from @types/plotly.js, so cast through to bypass the type.
     legend: {
-      // `entrywidth` + `orientation: "h"` packs items into rows of fixed pixel
-      // width. Without it, Plotly's horizontal mode stacks one item per row
-      // when label text is long, which eats the y-axis on protocols with many
-      // sub-protocol × LED combinations.
       orientation: "h",
       xanchor: "left",
       x: 0,
@@ -363,7 +363,7 @@ export function OutputCellTimeseries({
       tracegroupgap: 16,
       entrywidth: 240,
       entrywidthmode: "pixels",
-    },
+    } as Partial<Layout["legend"]>,
     plot_bgcolor: "#FFFFFF",
     paper_bgcolor: "#FFFFFF",
   };
