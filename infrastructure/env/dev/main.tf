@@ -1756,6 +1756,10 @@ module "backend_ecs" {
     {
       name  = "AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME"
       value = module.macro_sandbox.function_names["r"]
+    },
+    {
+      name  = "AWS_IOT_ARCHIVE_BUCKET_NAME"
+      value = module.iot_raw_archive_s3.bucket_id
     }
   ]
 
@@ -1763,6 +1767,7 @@ module "backend_ecs" {
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn,
     module.macro_sandbox.invoke_policy_arn,
+    module.iot_core.backend_s3_presign_policy_arn,
   ]
 
   tags = {

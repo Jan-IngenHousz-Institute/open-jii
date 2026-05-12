@@ -151,6 +151,20 @@ resource "aws_iam_role_policy_attachment" "iot_s3_attach" {
   policy_arn = aws_iam_policy.iot_s3_policy.arn
 }
 
+# IAM policy that allows the ECS backend task role to generate pre-signed
+# PutObject URLs for large payloads (>128 KB) uploaded directly to S3.
+resource "aws_iam_policy" "backend_s3_presign" {
+  name = "open_jii_${var.environment}_backend_iot_s3_presign"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:PutObject"]
+      Resource = "${var.s3_archive_bucket_arn}/large-iot/*"
+    }]
+  })
+}
+
 # ----------------
 # IoT Topic Rules
 # ----------------

@@ -45,3 +45,5 @@ catalogs:
     "@aws-sdk/client-cognito-identity": 3.1019.0
     "@aws-sdk/client-location": 3.1019.0
     "@aws-sdk/client-lambda": 3.1019.0
+    "@aws-sdk/client-s3": 3.1019.0
+    "@aws-sdk/s3-request-presigner": 3.1019.0

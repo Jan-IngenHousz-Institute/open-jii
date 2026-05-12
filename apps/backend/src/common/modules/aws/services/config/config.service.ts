@@ -40,6 +40,9 @@ export class AwsConfigService {
           "aws.lambda.macroSandboxRFunctionName",
         ),
       },
+      s3: {
+        iotArchiveBucketName: this.configService.getOrThrow<string>("aws.s3.iotArchiveBucketName"),
+      },
     };
   }
 
@@ -99,5 +102,9 @@ export class AwsConfigService {
    */
   get lambdaConfig() {
     return this.config.lambda;
+  }
+
+  get s3Config() {
+    return this.config.s3;
   }
 }
