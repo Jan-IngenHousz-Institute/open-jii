@@ -1,0 +1,150 @@
+name: Mobile Release (Internal Track)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.2.0). If empty, uses latest mobile release tag."
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to release"
+        required: true
+        type: string
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_call' ||
+      startsWith(github.event.release.tag_name, 'mobile-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ "$EVENT_NAME" = "release" ]; then
+            VERSION="${RELEASE_TAG#mobile-v}"
+          elif [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION=$(git tag -l 'mobile-v*' --sort=-version:refname | head -1 | sed 's/mobile-v//')
+          fi
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not determine version"
+            exit 1
+          fi
+
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid semver version: $VERSION"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing version: $VERSION"
+
+      - name: Setup mobile CI environment
+        uses: ./.github/actions/setup-mobile-ci
+        with:
+          expo-token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Set app version from release
+        uses: ./.github/actions/set-app-version
+        with:
+          version: ${{ steps.version.outputs.version }}
+
+      - name: Generate release notes
+        id: release-notes
+        working-directory: apps/mobile
+        env:
+          RELEASE_BODY: ${{ github.event.release.body || '' }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p fastlane/metadata/android/en-US/changelogs
+
+          if [ -n "$RELEASE_BODY" ]; then
+            NOTES="$RELEASE_BODY"
+          else
+            echo "No release body in event, fetching from GitHub API..."
+            NOTES=$(gh release view "mobile-v${VERSION}" --json body -q '.body' 2>/dev/null || echo "")
+          fi
+
+          if [ -n "$NOTES" ]; then
+            echo "$NOTES" > fastlane/metadata/android/en-US/changelogs/default.txt
+            echo "has_notes=true" >> $GITHUB_OUTPUT
+            {
+              echo 'notes<<NOTES_EOF'
+              echo "$NOTES"
+              echo 'NOTES_EOF'
+            } >> $GITHUB_OUTPUT
+            echo "Release notes found"
+          else
+            echo "No release notes available" > fastlane/metadata/android/en-US/changelogs/default.txt
+            echo "has_notes=false" >> $GITHUB_OUTPUT
+            echo "Release notes not available"
+          fi
+
+      - name: Compute fingerprint and decide build vs OTA
+        id: decide
+        uses: ./.github/actions/mobile-fingerprint-decide
+        with:
+          profile: internal
+
+      - name: Build and submit AAB to Play internal track
+        if: steps.decide.outputs.mode == 'build'
+        working-directory: apps/mobile
+        run: pnpm run submit-to-google-play
+
+      - name: Publish OTA to internal channel
+        if: steps.decide.outputs.mode == 'ota'
+        working-directory: apps/mobile
+        run: |
+          eas update \
+            --branch internal \
+            --message "mobile-v${{ steps.version.outputs.version }}" \
+            --non-interactive
+
+      - name: Job summary
+        env:
+          RESOLVED_NOTES: ${{ steps.release-notes.outputs.notes }}
+        run: |
+          echo "## Mobile Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mode | \`${{ steps.decide.outputs.mode }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current fingerprint | \`${{ steps.decide.outputs.current }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Last build fingerprint | \`${{ steps.decide.outputs.last || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| AAB built | ${{ steps.decide.outputs.mode == 'build' && 'yes' || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Play track | internal |" >> $GITHUB_STEP_SUMMARY
+          echo "| OTA channel | internal |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release notes | ${{ steps.release-notes.outputs.has_notes }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.release-notes.outputs.has_notes }}" = "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Changes" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "$RESOLVED_NOTES" >> $GITHUB_STEP_SUMMARY
+          fi

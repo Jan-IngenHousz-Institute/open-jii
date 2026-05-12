@@ -16,6 +16,8 @@ interface InlineEditableTitleProps {
   isPending?: boolean;
   badges?: ReactNode;
   actions?: ReactNode;
+  /** When true, actions render right after the title instead of pushed to the row's far end. */
+  actionsInline?: boolean;
 }
 
 const titleVariants = cva("text-2xl transition-all duration-300", {
@@ -37,6 +39,7 @@ export function InlineEditableTitle({
   isPending = false,
   badges,
   actions,
+  actionsInline = false,
 }: InlineEditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -70,13 +73,15 @@ export function InlineEditableTitle({
   };
 
   return (
-    <div className="flex items-center justify-between">
+    <div
+      className={actionsInline ? "flex items-center gap-2" : "flex items-center justify-between"}
+    >
       {isEditing ? (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2">
           <Input
             value={editedTitle}
             onChange={(e) => setEditedTitle(e.target.value)}
-            className="text-2xl font-semibold"
+            className="min-w-[300px] flex-1 text-2xl font-semibold"
             disabled={isPending}
             autoFocus
             onBlur={handleBlur}

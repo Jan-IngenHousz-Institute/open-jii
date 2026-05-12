@@ -93,4 +93,66 @@ describe("FlowRepository", () => {
     expect(updated.id).toBe(created.id);
     expect(updated.graph).toEqual(graph2);
   });
+
+  it("upsert inserts a new flow row when none exists for the experiment", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upsert Insert",
+      userId: testUserId,
+    });
+
+    const graph = testApp.sampleFlowGraph({ includeInstruction: true });
+    const result = await repository.upsert(experiment.id, graph);
+    assertSuccess(result);
+    expect(result.value.experimentId).toBe(experiment.id);
+    expect(result.value.graph).toEqual(graph);
+
+    const fetched = await repository.getByExperimentId(experiment.id);
+    assertSuccess(fetched);
+    expect(fetched.value?.graph).toEqual(graph);
+  });
+
+  it("upsert overwrites the graph when a row already exists, preserving the row id", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Upsert Update",
+      userId: testUserId,
+    });
+
+    const graph1 = testApp.sampleFlowGraph();
+    const first = await repository.upsert(experiment.id, graph1);
+    assertSuccess(first);
+
+    const graph2 = testApp.sampleFlowGraph({ includeInstruction: true });
+    const second = await repository.upsert(experiment.id, graph2);
+    assertSuccess(second);
+
+    expect(second.value.id).toBe(first.value.id);
+    expect(second.value.graph).toEqual(graph2);
+  });
+
+  it("deleteByExperimentId removes the flow row", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Delete Flow",
+      userId: testUserId,
+    });
+
+    const graph = testApp.sampleFlowGraph();
+    await repository.create(experiment.id, graph);
+
+    const deleted = await repository.deleteByExperimentId(experiment.id);
+    assertSuccess(deleted);
+
+    const fetched = await repository.getByExperimentId(experiment.id);
+    assertSuccess(fetched);
+    expect(fetched.value).toBeNull();
+  });
+
+  it("deleteByExperimentId is a no-op when no row exists", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Delete Missing Flow",
+      userId: testUserId,
+    });
+
+    const result = await repository.deleteByExperimentId(experiment.id);
+    assertSuccess(result);
+  });
 });

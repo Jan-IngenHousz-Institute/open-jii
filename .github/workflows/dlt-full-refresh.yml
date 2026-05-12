@@ -1,0 +1,105 @@
+name: DLT pipeline full-refresh
+
+# Manual trigger to selectively full-refresh tables on the Lakeflow Declarative
+# Pipelines (DLT) pipeline. Useful after landing a data_repair entry that needs
+# historical rows recomputed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options:
+          - dev
+          - prod
+        required: true
+      tables:
+        description: 'Comma-separated tables to full-refresh (e.g. "experiment_macro_data,experiment_macro_data_sandbox")'
+        required: true
+      reason:
+        description: 'Audit reason (e.g. "OJD-571 RIDES repair")'
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  refresh:
+    name: Full-refresh selected DLT tables
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      DATABRICKS_HOST:          ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID:     ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+      PID: ${{ vars.DLT_PIPELINE_ID }}
+      TABLES: ${{ inputs.tables }}
+
+    steps:
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b  # v0.298.0
+
+      - name: Validate pipeline id
+        run: |
+          if [ -z "$PID" ]; then
+            echo "::error::vars.DLT_PIPELINE_ID is not set for environment '${{ inputs.environment }}'"
+            exit 1
+          fi
+
+      - name: Validate table selection
+        run: |
+          IFS=',' read -ra REQ <<< "$TABLES"
+          for t in "${REQ[@]}"; do
+            case "$(echo "$t" | xargs)" in raw_data)
+                echo "::error::Table '$t' is forbidden from full-refresh"
+                exit 1
+                ;;
+            esac
+          done
+
+      - name: Stop active continuous update
+        if: inputs.environment == 'prod'
+        run: |
+          set -euo pipefail
+          databricks pipelines stop "$PID"
+          for _ in $(seq 1 60); do
+            STATE=$(databricks pipelines get "$PID" -o json | jq -r '.state // "UNKNOWN"')
+            case "$STATE" in
+              IDLE|FAILED|CANCELED) exit 0 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Pipeline did not stop within 10m"; exit 1
+
+      - name: Flip pipeline to triggered
+        if: inputs.environment == 'prod'
+        run: |
+          set -euo pipefail
+          databricks pipelines get "$PID" -o json | jq '.spec | .continuous=false' > /tmp/spec.json
+          databricks pipelines update "$PID" --json @/tmp/spec.json
+
+      - name: Trigger full-refresh and wait for completion
+        run: |
+          set -euo pipefail
+          BODY=$(jq -Rnc --arg s "$TABLES" '{full_refresh_selection: ($s | split(",") | map(gsub("^\\s+|\\s+$"; ""))), cause: "API_CALL"}')
+          UID=$(databricks pipelines start-update "$PID" --json "$BODY" | jq -r '.update_id')
+          echo "::notice::Update $UID started (${{ inputs.reason }})"
+          for _ in $(seq 1 240); do
+            STATE=$(databricks pipelines get-update "$PID" "$UID" -o json | jq -r '.update.state')
+            case "$STATE" in
+              COMPLETED)        echo "::notice::Update $UID completed"; exit 0 ;;
+              FAILED|CANCELED)  echo "::error::Update $UID ended with $STATE"; exit 1 ;;
+            esac
+            sleep 30
+          done
+          echo "::error::Update $UID did not complete within 2h"; exit 1
+
+      - name: Restore continuous mode
+        if: always() && inputs.environment == 'prod'
+        run: |
+          set -euo pipefail
+          databricks pipelines get "$PID" -o json | jq '.spec | .continuous=true' > /tmp/spec.json
+          databricks pipelines update "$PID" --json @/tmp/spec.json
+          databricks pipelines start-update "$PID" --json '{"cause":"API_CALL"}'

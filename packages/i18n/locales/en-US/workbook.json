@@ -1,0 +1,38 @@
+{
+  "workbooks": {
+    "title": "Workbooks",
+    "workbook": "Workbook",
+    "create": "Create Workbook",
+    "noWorkbooks": "No workbooks found",
+    "workbookCreated": "Workbook created successfully",
+    "workbookUpdated": "Workbook updated successfully",
+    "createError": "Failed to create workbook. Please try again.",
+    "listDescription": "View and manage your measurement notebooks.",
+    "noDescription": "No description provided",
+    "notFound": "Workbook not found",
+    "searchPlaceholder": "Search workbooks...",
+    "errorLoading": "Error loading workbooks",
+    "filterMy": "My Workbooks",
+    "filterAll": "All Workbooks",
+    "filterWorkbooks": "Filter workbooks",
+    "clearSearch": "Clear search",
+    "lastUpdate": "Last update",
+    "noCells": "No cells yet. Open the workbook to start building your notebook.",
+    "saving": "Saving...",
+    "allChangesSaved": "All changes saved",
+    "viewWorkbook": "View Workbook"
+  },
+  "output": {
+    "label": "Output",
+    "expand": "Expand output",
+    "collapse": "Collapse output",
+    "clear": "Clear output",
+    "empty": "No measurement data available — run a protocol cell first",
+    "noData": "No output data",
+    "tabTable": "Table",
+    "tabJson": "JSON",
+    "copyJson": "Copy JSON",
+    "closeChart": "Close chart",
+    "expandChart": "Expand chart for {{column}}"
+  }
+}

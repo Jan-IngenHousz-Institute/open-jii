@@ -1,6 +1,5 @@
+import ExperimentVisualizationReadOnly from "@/components/experiment-visualizations/experiment-visualization-read-only";
 import { notFound } from "next/navigation";
-
-import ExperimentVisualizationDetails from "../../../../../../../../components/experiment-visualizations/experiment-visualization-details";
 
 interface PageProps {
   params: Promise<{
@@ -10,7 +9,7 @@ interface PageProps {
   }>;
 }
 
-export default async function VisualizationDetailPage({ params }: PageProps) {
+export default async function ArchivedVisualizationDetailPage({ params }: PageProps) {
   const { id: experimentId, visualizationId } = await params;
 
   if (!experimentId || !visualizationId) {
@@ -18,10 +17,9 @@ export default async function VisualizationDetailPage({ params }: PageProps) {
   }
 
   return (
-    <ExperimentVisualizationDetails
+    <ExperimentVisualizationReadOnly
       experimentId={experimentId}
       visualizationId={visualizationId}
-      isArchiveContext={true}
     />
   );
 }

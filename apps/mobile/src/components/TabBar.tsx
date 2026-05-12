@@ -4,22 +4,26 @@ import React from "react";
 import { TouchableOpacity, Text, View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
-export interface Tab {
-  key: string;
+export interface Tab<K extends string = string> {
+  key: K;
   label: string;
 }
 
-interface TabBarProps {
-  tabs: Tab[];
-  activeTab: string;
-  onTabChange: (key: string) => void;
+interface TabBarProps<K extends string = string> {
+  tabs: Tab<K>[];
+  activeTab: K;
+  onTabChange: (key: K) => void;
 }
 
-export function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
+export function TabBar<K extends string = string>({
+  tabs,
+  activeTab,
+  onTabChange,
+}: TabBarProps<K>) {
   const { colors, classes } = useTheme();
 
   return (
-    <View className="flex-row self-center rounded-lg bg-[#EDF2F6] p-1.5">
+    <View className="bg-muted flex-row self-center rounded-lg p-1.5">
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
 

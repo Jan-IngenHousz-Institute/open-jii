@@ -11,7 +11,6 @@ import { QueryBuilderService } from "./services/query-builder/query-builder.serv
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import { DatabricksTablesService } from "./services/tables/tables.service";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
-import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 
 @Module({
   imports: [
@@ -30,7 +29,6 @@ import { DatabricksWorkspaceService } from "./services/workspace/workspace.servi
     QueryBuilderService,
     DatabricksFilesService,
     DatabricksVolumesService,
-    DatabricksWorkspaceService,
     DatabricksAdapter,
   ],
   exports: [DatabricksAdapter, DatabricksConfigService],

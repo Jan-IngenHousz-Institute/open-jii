@@ -4,6 +4,7 @@ import type { NodeProps } from "@xyflow/react";
 import { createContext, useContext } from "react";
 
 import { BaseNode } from "./base-node";
+import { BranchNode } from "./branch-node";
 import { nodeTypeColorMap } from "./node-config";
 
 // Object map for default step specifications by node type
@@ -93,6 +94,17 @@ export const BaseNodeWrapper = (props: NodeProps) => {
   const context = useContext(FlowContext);
   if (!context) {
     throw new Error("BaseNodeWrapper must be used within FlowContext.Provider");
+  }
+  if (props.type === "BRANCH") {
+    return (
+      <BranchNode
+        {...props}
+        nodes={context.nodes}
+        onNodeSelect={context.onNodeSelect}
+        onNodeDelete={context.onNodeDelete}
+        isStatic={context.isDisabled}
+      />
+    );
   }
   return (
     <BaseNode

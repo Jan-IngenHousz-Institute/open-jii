@@ -31,8 +31,6 @@ describe("ExecuteMacroBatchUseCase", () => {
     useCase = testApp.module.get(ExecuteMacroBatchUseCase);
     macroRepository = testApp.module.get(MacroRepository);
     lambdaPort = testApp.module.get(LAMBDA_PORT);
-
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {

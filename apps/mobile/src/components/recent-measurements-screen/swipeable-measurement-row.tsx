@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react-native";
-import React from "react";
+import React, { memo } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -22,13 +22,13 @@ interface SwipeableMeasurementRowProps {
   experimentName: string;
   status: MeasurementStatus;
   questions?: AnswerData[];
-  onPress?: () => void;
+  onPress?: (id: string) => void;
   onComment?: (id: string) => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
-export function SwipeableMeasurementRow({
+export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   id,
   timestamp,
   experimentName,
@@ -81,7 +81,7 @@ export function SwipeableMeasurementRow({
             actionWidthSV.value = width;
           }
         }}
-        className="absolute bottom-0 right-0 top-0 flex-row justify-center gap-3 overflow-hidden rounded-bl-lg rounded-tl-xl bg-[#CDD5DB] p-4"
+        className="bg-surface absolute bottom-0 right-0 top-0 flex-row justify-center gap-3 overflow-hidden rounded-bl-lg rounded-tl-xl p-4"
       >
         {showSync && (
           <Button
@@ -102,16 +102,13 @@ export function SwipeableMeasurementRow({
         )}
 
         {showDelete && (
-          <View
-            style={{ width: ICON_BUTTON_SIZE }}
-            className="overflow-hidden rounded-lg bg-[#EDF2F6]"
-          >
+          <View style={{ width: ICON_BUTTON_SIZE }} className="bg-muted overflow-hidden rounded-lg">
             <TouchableOpacity
               onPress={handleDelete}
               className="flex-1 items-center justify-center"
               activeOpacity={0.7}
             >
-              <Trash2 size={16} color={colors.neutral.black} />
+              <Trash2 size={16} color={colors.onSurface} />
             </TouchableOpacity>
           </View>
         )}
@@ -132,4 +129,4 @@ export function SwipeableMeasurementRow({
       </GestureDetector>
     </View>
   );
-}
+});

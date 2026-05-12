@@ -7,7 +7,8 @@ const apiError = z.object({
 
 export function parseApiError(error: unknown) {
   if (typeof error === "object" && error !== null && "body" in error) {
-    return apiError.parse(error.body);
+    const result = apiError.safeParse(error.body);
+    if (result.success) return result.data;
   }
   return undefined;
 }

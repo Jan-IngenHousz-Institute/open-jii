@@ -1,3 +1,84 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Theme CSS variables live OUTSIDE @layer base.
+ *
+ * Tailwind v3's `addBase`/`@layer base` pipeline silently drops selectors it
+ * does not consider valid base rules — `.dark:root` is one such selector. The
+ * rule never reaches the final CSS, which means NativeWind's
+ * css-to-rn parser never sees the dark variant of these variables, and
+ * `bg-background` / `text-foreground` / etc. stay locked to their light
+ * values regardless of `colorScheme`. Keeping the rules at the top level
+ * preserves them in the compiled output, where `react-native-css-interop`'s
+ * `isRootDarkVariableSelector` picks them up as `rootVariables.dark`.
+ */
+:root {
+  /* Light theme — sourced from src/constants/colors.ts (JII Design System) */
+  --background: 0 0% 100%; /* #FFFFFF */
+  --foreground: 0 0% 7%; /* #121212 */
+  --surface: 0 0% 96%; /* #F5F5F5 */
+  --on-surface: 0 0% 7%; /* #121212 */
+  --on-background: 0 0% 7%; /* #121212 */
+  --on-primary: 0 0% 100%; /* #FFFFFF */
+  --card: 0 0% 100%; /* #FFFFFF */
+  --card-foreground: 0 0% 7%; /* #121212 */
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 7%;
+  --border: 0 0% 88%; /* #E0E0E0 */
+  --input: 0 0% 88%;
+  --ring: 180 100% 18%;
+  --divider: 0 0% 88%;
+  --inactive: 0 0% 62%; /* #9E9E9E */
+  --muted: 220 14% 96%; /* gray100 */
+  --muted-foreground: 220 9% 46%; /* gray500 */
+  --accent: 210 40% 96%;
+  --accent-foreground: 0 0% 7%;
+  --primary: 180 100% 18%; /* #005e5e */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 0 0% 7%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --gray-background: 210 17% 97%; /* #F6F8FA */
+
+  --jii-primary: 180 100% 18%; /* #005e5e */
+  --jii-primary-bright: 134 70% 58%; /* #49e06d */
+  --jii-secondary-blue: 207 78% 82%; /* #afd7f4 */
+  --jii-secondary-yellow: 55 100% 75%; /* #fff381 */
+
+  --success: 160 84% 39%; /* #10B981 */
+  --warning: 43 96% 56%; /* #FBBF24 */
+  --error: 0 84% 60%; /* #EF4444 */
+  --info: 217 91% 60%; /* #3B82F6 */
+}
+
+.dark:root {
+  --background: 0 0% 7%; /* #121212 */
+  --foreground: 0 0% 100%; /* #FFFFFF */
+  --surface: 0 0% 12%; /* #1E1E1E */
+  --on-surface: 0 0% 100%;
+  --on-background: 0 0% 100%;
+  --on-primary: 0 0% 0%;
+  --card: 0 0% 15%; /* #252525 */
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 15%;
+  --popover-foreground: 0 0% 100%;
+  --border: 0 0% 17%; /* #2C2C2C */
+  --input: 0 0% 17%;
+  --ring: 134 70% 58%;
+  --divider: 0 0% 17%;
+  --inactive: 0 0% 46%; /* #757575 */
+  --muted: 0 0% 12%;
+  --muted-foreground: 220 9% 72%;
+  --accent: 0 0% 15%;
+  --accent-foreground: 0 0% 100%;
+  --primary: 134 70% 58%;
+  --primary-foreground: 0 0% 7%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --gray-background: 213 18% 14%; /* #1C2128 */
+}

@@ -23,7 +23,10 @@ export interface ExperimentDataTable {
 export function useExperimentMeasurements(experimentId: string | undefined) {
   return tsr.experiments.getExperimentData.useQuery({
     queryKey: ["experiment-data", experimentId],
-    queryData: { params: { id: experimentId ?? "" } },
+    queryData: {
+      params: { id: experimentId ?? "" },
+      query: { tableName: "raw_data" },
+    },
     enabled: !!experimentId,
   });
 }

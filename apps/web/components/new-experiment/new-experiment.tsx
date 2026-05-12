@@ -1,9 +1,10 @@
 "use client";
 
+import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 
 import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 import { zExperimentVisibility } from "@repo/api/schemas/experiment.schema";
@@ -81,16 +82,34 @@ export function NewExperimentForm() {
     [t],
   );
 
+  const pendingWorkbookId = useRef<string | undefined>(undefined);
+  const attachWorkbook = useAttachWorkbook();
+
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
-      setIsSubmitting(true); // Mark as submitted to prevent dialog
-      toast({ description: t("experiments.experimentCreated") });
-      router.push(`/${locale}/platform/experiments/${experimentId}`);
+      // If a workbook was selected, attach it to create a version snapshot
+      if (pendingWorkbookId.current) {
+        attachWorkbook.mutate(
+          { params: { id: experimentId }, body: { workbookId: pendingWorkbookId.current } },
+          {
+            onSettled: () => {
+              setIsSubmitting(true);
+              toast({ description: t("experiments.experimentCreated") });
+              router.push(`/${locale}/platform/experiments/${experimentId}`);
+            },
+          },
+        );
+      } else {
+        setIsSubmitting(true);
+        toast({ description: t("experiments.experimentCreated") });
+        router.push(`/${locale}/platform/experiments/${experimentId}`);
+      }
     },
   });
 
   function onSubmit(data: CreateExperimentBody) {
     setIsSubmitting(true);
+    pendingWorkbookId.current = data.workbookId ?? undefined;
     createExperiment({
       body: data,
     });

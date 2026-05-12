@@ -63,6 +63,25 @@ vi.mock("@gorhom/bottom-sheet", () => {
   };
 });
 
+// nativewind transitively imports react-native-css-interop's web stylesheet
+// at module load, which touches `document.documentElement` and explodes in
+// the Node test env. Stub the surface our code uses (useColorScheme,
+// colorScheme.set, the JSX runtime preset).
+vi.mock("nativewind", () => ({
+  useColorScheme: () => ({
+    colorScheme: "light",
+    setColorScheme: () => undefined,
+    toggleColorScheme: () => undefined,
+  }),
+  colorScheme: {
+    get: () => "light",
+    set: () => undefined,
+  },
+  vars: (input: Record<string, string>) => input,
+  cssInterop: () => undefined,
+  remapProps: () => undefined,
+}));
+
 // safe-area-context needs a provider at the root; zero insets work fine for
 // component tests.
 vi.mock("react-native-safe-area-context", () => ({

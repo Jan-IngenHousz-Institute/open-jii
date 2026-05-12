@@ -178,9 +178,12 @@ function renderWithForm<T extends FieldValues>(
   return render(<FormWrapper />, renderOptions);
 }
 
-// ── Re-exports ──────────────────────────────────────────────────
+function assertExists<T>(value: T, message?: string): asserts value is NonNullable<T> {
+  if (value === null || value === undefined) {
+    throw new Error(message ?? `Expected value to exist, got ${String(value)}`);
+  }
+}
 
-// Re-export everything from RTL except render and renderHook (we provide custom versions)
 export {
   screen,
   waitFor,
@@ -247,5 +250,12 @@ export {
   findByTestId,
 } from "@testing-library/react";
 
-// Export our custom versions
-export { render, renderHook, renderWithForm, userEvent, AllProviders, createTestQueryClient };
+export {
+  render,
+  renderHook,
+  renderWithForm,
+  userEvent,
+  AllProviders,
+  createTestQueryClient,
+  assertExists,
+};

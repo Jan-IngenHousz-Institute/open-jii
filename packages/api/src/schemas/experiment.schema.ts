@@ -111,37 +111,6 @@ export const zUpdateExperimentLocationsBody = z.object({
   locations: z.array(zLocationInput),
 });
 
-// --- Protocol Association Schemas ---
-export const zExperimentProtocolDetails = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  family: z.enum(["multispeq", "ambit", "generic"]),
-  createdBy: z.string().uuid(),
-});
-
-export const zExperimentProtocol = z.object({
-  experimentId: z.string().uuid(),
-  order: z.number().int(),
-  addedAt: z.string().datetime(),
-  protocol: zExperimentProtocolDetails,
-});
-
-export const zExperimentProtocolList = z.array(zExperimentProtocol);
-
-export const zExperimentProtocolPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  protocolId: z.string().uuid().describe("ID of the protocol association"),
-});
-
-export const zAddExperimentProtocolsBody = z.object({
-  protocols: z.array(
-    z.object({
-      protocolId: z.string().uuid(),
-      order: z.number().int().optional(),
-    }),
-  ),
-});
-
 // Define Zod schemas for experiment models
 export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
 
@@ -281,6 +250,8 @@ export const zExperiment = z.object({
   status: zExperimentStatus,
   visibility: zExperimentVisibility,
   embargoUntil: z.string().datetime(),
+  workbookId: z.string().uuid().nullable(),
+  workbookVersionId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),
@@ -316,7 +287,13 @@ export const zErrorResponse = z.object({
 });
 
 // --- Flow Schemas ---
-export const zFlowNodeType = z.enum(["question", "instruction", "measurement", "analysis"]);
+export const zFlowNodeType = z.enum([
+  "question",
+  "instruction",
+  "measurement",
+  "analysis",
+  "branch",
+]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 
@@ -324,10 +301,7 @@ export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "nu
 const zQuestionYesNo = z
   .object({
     kind: z.literal("yes_no"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -335,10 +309,7 @@ const zQuestionYesNo = z
 const zQuestionOpenEnded = z
   .object({
     kind: z.literal("open_ended"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -346,10 +317,7 @@ const zQuestionOpenEnded = z
 const zQuestionMultiChoice = z
   .object({
     kind: z.literal("multi_choice"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     options: z
       .array(
         z
@@ -365,10 +333,7 @@ const zQuestionMultiChoice = z
 const zQuestionNumber = z
   .object({
     kind: z.literal("number"),
-    text: z
-      .string()
-      .min(1, "Question text is required")
-      .max(64, "Question text must be 64 characters or less"),
+    text: z.string().max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -394,6 +359,17 @@ export const zAnalysisContent = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const zBranchPathSummary = z.object({
+  id: z.string().min(1),
+  label: z.string().max(64),
+  color: z.string(),
+});
+
+export const zBranchContent = z.object({
+  paths: z.array(zBranchPathSummary).min(1),
+  defaultPathId: z.string().optional(),
+});
+
 export const zFlowNode = z.object({
   id: z.string().min(1),
   type: zFlowNodeType,
@@ -401,7 +377,13 @@ export const zFlowNode = z.object({
     .string()
     .min(1, "Node label is required")
     .max(64, "Node label must be 64 characters or less"),
-  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent, zAnalysisContent]),
+  content: z.union([
+    zQuestionContent,
+    zInstructionContent,
+    zMeasurementContent,
+    zAnalysisContent,
+    zBranchContent,
+  ]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
   // Optional persisted layout position (added later for backwards compatibility)
@@ -418,6 +400,7 @@ export const zFlowEdge = z.object({
   source: z.string().min(1),
   target: z.string().min(1),
   label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
+  sourceHandle: z.string().max(64).optional().nullable(),
 });
 
 /**
@@ -433,6 +416,45 @@ export function sanitizeQuestionLabel(label: string): string {
   if (!s || /^\d/.test(s)) s = `question_${s}`;
   return s;
 }
+
+/**
+ * Column names that are reserved by the centrum gold tables. User-supplied
+ * column keys (sanitized question labels, custom-metadata column names) must
+ * not collide with these, since both questions_data and custom_metadata get
+ * flattened to top-level alongside the system columns.
+ *
+ * Keep in sync with the gold-table column set in
+ * apps/data/src/pipelines/centrum_pipeline.py.
+ */
+export const RESERVED_EXPERIMENT_COLUMN_NAMES: ReadonlySet<string> = new Set([
+  // experiment_raw_data top-level columns
+  "id",
+  "experiment_id",
+  "device_id",
+  "device_name",
+  "device_version",
+  "timestamp",
+  "timezone",
+  "macros",
+  "questions_data",
+  "annotations",
+  "user_id",
+  "data",
+  "output_data",
+  "date",
+  "processed_timestamp",
+  "skip_macro_processing",
+  "custom_metadata",
+  // experiment_macro_data extras
+  "raw_id",
+  "macro_id",
+  "macro_name",
+  "macro_filename",
+  "macro_output",
+  "macro_error",
+  // pipeline-internal
+  "_id",
+]);
 
 export const zFlowGraph = z
   .object({
@@ -456,10 +478,22 @@ export const zFlowGraph = z
     // Compare on the canonicalized form so labels that only differ by
     // punctuation/whitespace (and would collapse to the same column key)
     // are also caught.
+    //
+    // Also reject question labels whose canonical form lands on a reserved
+    // experiment-data column name. Those would shadow a system column once
+    // `questions_data` is flattened to top-level on read or export.
     const seen = new Map<string, number>();
     graph.nodes.forEach((node, index) => {
       if (node.type !== "question") return;
       const canonical = sanitizeQuestionLabel(node.name);
+      if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(canonical)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Question label "${node.name}" resolves to reserved column "${canonical}"`,
+          path: ["nodes", index, "name"],
+        });
+        return;
+      }
       if (seen.has(canonical)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -521,12 +555,39 @@ export const zChartType = z.enum([
   "alluvial",
 ]);
 
-// Data source configuration schema
+// Roles a data source can play in a chart. Add a new entry only when a chart
+// type genuinely needs it — the role contract per chart type lives in
+// `@repo/api/utils/visualization-contracts` and decides which of these are
+// required, optional, single, or many.
+export const zRole = z.enum([
+  // Cartesian axes
+  "x",
+  "y",
+  "z",
+  // Visual encodings
+  "color",
+  "size",
+  // Categorical (pie, donut)
+  "labels",
+  "values",
+  // Network / sankey
+  "source",
+  "target",
+  "value",
+  // Geographic
+  "lat",
+  "lon",
+  // Statistical grouping
+  "groupBy",
+]);
+
+// Data source configuration schema. tableName and columnName allow empty
+// strings so a freshly-created visualization can persist in a draft state
+// until the user picks a table and columns in the editor.
 export const zDataSourceConfig = z.object({
-  tableName: z.string().min(1, "Table name is required"),
-  columnName: z.string().min(1, "Column name is required"),
-  // Role defines how this data source is used (e.g., "x", "y", "y1", "y2", "color", "size", "a", "b", "c", "labels", "values", etc.)
-  role: z.string().min(1, "Role is required"),
+  tableName: z.string(),
+  columnName: z.string(),
+  role: zRole,
   // Optional series name for multiple series with same role
   seriesName: z.string().optional(),
   // Optional alias for display
@@ -561,11 +622,10 @@ export const zChartDisplayOptions = z
 // Generic chart config - allows any props to be passed to chart components
 export const zChartConfig = z.record(z.string(), z.unknown()).optional();
 
-// Data configuration schema for visualization data sources
+// Data configuration schema for visualization data sources. tableName allows
+// empty strings to match the draft state of zDataSourceConfig.
 export const zChartDataConfig = z.object({
-  // Primary data table for the visualization
-  tableName: z.string().min(1),
-  // Additional data source configurations specific to chart type
+  tableName: z.string(),
   dataSources: z.array(zDataSourceConfig).min(1),
   // Optional filtering/aggregation settings
   filters: z
@@ -658,7 +718,6 @@ export type ExperimentData = z.infer<typeof zExperimentData>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentMember = z.infer<typeof zExperimentMember>;
-export type ExperimentProtocol = z.infer<typeof zExperimentProtocol>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
 export type ErrorResponse = z.infer<typeof zErrorResponse>;
 export type FlowNodeType = z.infer<typeof zFlowNodeType>;
@@ -741,22 +800,15 @@ export const zCreateExperimentBodyBase = z.object({
     )
     .optional()
     .describe("Optional array of member objects with userId and role"),
-  protocols: z
-    .array(
-      z.object({
-        protocolId: z.string().uuid(),
-        order: z.number().int().optional(),
-        name: z.string().optional(),
-      }),
-    )
-    .optional()
-    .describe(
-      "Optional array of protocol objects with protocolId and order to associate with the experiment",
-    ),
   locations: z
     .array(zLocationInput)
     .optional()
     .describe("Optional array of locations associated with the experiment"),
+  workbookId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Optional workbook ID to associate with the experiment"),
 });
 
 export const zCreateExperimentBody = zCreateExperimentBodyBase.superRefine((val, ctx) => {
@@ -1033,9 +1085,11 @@ export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataR
 // Visualization types
 export type ChartFamily = z.infer<typeof zChartFamily>;
 export type ChartType = z.infer<typeof zChartType>;
+export type Role = z.infer<typeof zRole>;
 export type DataSourceConfig = z.infer<typeof zDataSourceConfig>;
 export type AxisConfig = z.infer<typeof zAxisConfig>;
 export type ChartConfig = z.infer<typeof zChartConfig>;
+export type ChartDataConfig = z.infer<typeof zChartDataConfig>;
 export type ExperimentVisualization = z.infer<typeof zExperimentVisualization>;
 export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizationList>;
 export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
@@ -1114,21 +1168,135 @@ export type ProjectTransferWebhookResponse = z.infer<typeof zProjectTransferWebh
 
 // --- Experiment Metadata Schemas ---
 
+function isAllowedMetadataColumnChar(c: string): boolean {
+  return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
+}
+
+const zMetadataColumnName = z
+  .string()
+  .min(1, "Column name is required")
+  .max(64, "Column name must be 64 characters or less")
+  .refine(
+    (s) => Array.from(s).every(isAllowedMetadataColumnChar),
+    "Column names can only contain letters, digits, and underscores",
+  );
+
+const zMetadataColumn = z.object({
+  id: z.string().min(1),
+  name: zMetadataColumnName,
+  type: z.enum(["string", "number", "date"]),
+});
+
+const zMetadataRow = z
+  .object({
+    _id: z.string().min(1),
+  })
+  .catchall(z.unknown());
+
+/**
+ * Custom metadata payload as stored on the wire and persisted to
+ * `experiment_custom_metadata.metadata` (VARIANT).
+ */
+export const zCustomMetadataPayload = z
+  .object({
+    // Empty allowed: the client auto-generates "Untitled Metadata N" when blank.
+    name: z.string().max(120),
+    columns: z.array(zMetadataColumn).min(1, "At least one column is required"),
+    rows: z.array(zMetadataRow),
+    identifierColumnId: z
+      .string()
+      .min(1, "Identifier column is required")
+      .max(64, "Identifier column must be 64 characters or less"),
+    experimentQuestionId: z
+      .string()
+      .min(1, "Experiment question is required")
+      .max(64, "Experiment question must be 64 characters or less"),
+  })
+  .superRefine((blob, ctx) => {
+    // Reserved names: would collide with system columns once `custom_metadata`
+    // is flattened to top-level by an export sink that requires unique columns.
+    blob.columns.forEach((col, idx) => {
+      if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(col.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["columns", idx, "name"],
+          message: `"${col.name}" is a reserved column name`,
+        });
+      }
+    });
+
+    // Duplicate column names within the same blob: at save time the FE remaps
+    // row keys by name, so two columns with the same name silently overwrite
+    // each other (last write wins, first column's data is lost).
+    const seen = new Map<string, number>();
+    blob.columns.forEach((col, idx) => {
+      const prev = seen.get(col.name);
+      if (prev !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["columns", idx, "name"],
+          message: `Column name "${col.name}" is duplicated`,
+        });
+      } else {
+        seen.set(col.name, idx);
+      }
+    });
+
+    // identifierColumnId must reference a real column on this blob.
+    // Compared against `column.id` so the same schema validates both shapes:
+    // FE editing-time (id is `col_X`, identifierColumnId is `col_X`) and
+    // on-the-wire (id and name are equal after the col-X to name remap).
+    if (!blob.columns.some((c) => c.id === blob.identifierColumnId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["identifierColumnId"],
+        message: `Identifier column "${blob.identifierColumnId}" is not in columns`,
+      });
+    }
+  });
+
 export const zExperimentMetadata = z.object({
   metadataId: z.string().uuid(),
   experimentId: z.string().uuid(),
+  // Response stays loose: legacy records persisted before validation existed
+  // may not match the structured shape.
   metadata: z.record(z.string(), z.unknown()),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 
+/**
+ * Compose `zCustomMetadataPayload` with a flow-aware refinement that rejects
+ * any column name that collides with a sanitized question label from the
+ * experiment's flow. The collision set must be supplied by the caller (the FE
+ * form, which already has the flow loaded), since zod cannot read the DB.
+ *
+ * The identifier column is exempt: it's the column that joins against a
+ * question's answers, the pipeline filters it out of `custom_metadata` before
+ * the gold tables, and naming it after the question it matches is natural.
+ */
+export function makeCustomMetadataFormSchema(reservedQuestionLabels: ReadonlySet<string>) {
+  return zCustomMetadataPayload.superRefine((blob, ctx) => {
+    blob.columns.forEach((col, idx) => {
+      if (col.id === blob.identifierColumnId) return;
+      if (reservedQuestionLabels.has(col.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["columns", idx, "name"],
+          message: `Column "${col.name}" collides with an existing question label`,
+        });
+      }
+    });
+  });
+}
+
 export const zCreateExperimentMetadataBody = z.object({
-  metadata: z.record(z.string(), z.unknown()),
+  metadata: zCustomMetadataPayload,
 });
 
 export const zUpdateExperimentMetadataBody = z.object({
-  metadata: z.record(z.string(), z.unknown()),
+  metadata: zCustomMetadataPayload,
 });
 
 export const zMetadataPathParam = z.object({
@@ -1140,3 +1308,4 @@ export const zMetadataPathParam = z.object({
 export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
 export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetadataBody>;
 export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;
+export type CustomMetadataPayload = z.infer<typeof zCustomMetadataPayload>;

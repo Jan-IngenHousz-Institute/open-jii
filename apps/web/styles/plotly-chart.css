@@ -1,0 +1,39 @@
+/*
+ * Plotly chart styling overrides — platform tokens only.
+ *
+ * Two concerns:
+ *
+ * 1. Modebar icon colors. Plotly inlines `fill` on the SVG <path>s via JS
+ *    for default / hover / active states, so each rule needs `!important`
+ *    to win over the inline.
+ *
+ * 2. Font family. Plotly applies `font-family` as an SVG attribute on
+ *    <text> nodes (via d3.attr), and SVG attributes don't reliably resolve
+ *    `var()`. A CSS rule on those nodes resolves the variable correctly
+ *    and wins over the SVG attribute by normal cascade.
+ *
+ * Everything else — modebar layout, position, group separators, button
+ * shapes, per-group backgrounds — stays at Plotly's defaults.
+ */
+
+.js-plotly-plot text,
+.js-plotly-plot .modebar,
+.js-plotly-plot .hovertext,
+.js-plotly-plot .legendtext {
+  font-family: var(--font-inter), Inter, sans-serif !important;
+}
+
+.js-plotly-plot .modebar-container .modebar-btn svg,
+.js-plotly-plot .modebar-container .modebar-btn svg path {
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+.js-plotly-plot .modebar-container .modebar-btn:hover svg,
+.js-plotly-plot .modebar-container .modebar-btn:hover svg path {
+  fill: hsl(var(--foreground)) !important;
+}
+
+.js-plotly-plot .modebar-container .modebar-btn.active svg,
+.js-plotly-plot .modebar-container .modebar-btn.active svg path {
+  fill: hsl(var(--primary)) !important;
+}

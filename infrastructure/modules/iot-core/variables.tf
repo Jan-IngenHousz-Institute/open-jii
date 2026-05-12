@@ -9,26 +9,6 @@ variable "environment" {
   type        = string
 }
 
-variable "timestream_table" {
-  description = "Name of the Timestream table"
-  type        = string
-}
-
-variable "timestream_database" {
-  description = "Name of the Timestream database"
-  type        = string
-}
-
-variable "iot_timestream_role_name" {
-  description = "Name for the IoT Timestream IAM Role"
-  type        = string
-}
-
-variable "iot_timestream_policy_name" {
-  description = "Name for the IoT Timestream IAM Policy"
-  type        = string
-}
-
 variable "kinesis_stream_name" {
   description = "Name of the Kinesis Data Stream"
   type        = string
@@ -57,5 +37,25 @@ variable "default_log_level" {
 
 variable "cloudwatch_role_arn" {
   description = "ARN of the IAM role for IoT Core logging created by the cloudwatch module"
+  type        = string
+}
+
+variable "s3_archive_bucket_name" {
+  description = "Name of the S3 bucket for raw IoT archive"
+  type        = string
+}
+
+variable "s3_archive_bucket_arn" {
+  description = "ARN of the S3 bucket for raw IoT archive"
+  type        = string
+}
+
+variable "iot_s3_role_name" {
+  description = "Name for the IAM role that allows IoT Core to write to S3"
+  type        = string
+}
+
+variable "iot_s3_policy_name" {
+  description = "Name for the IAM policy that allows IoT Core to write to S3"
   type        = string
 }

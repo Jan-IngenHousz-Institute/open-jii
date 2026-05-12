@@ -8,7 +8,7 @@ import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
-import { defaultLocale, namespaces } from "@repo/i18n";
+import { defaultLocale, isKnownLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -49,6 +49,11 @@ const allowedOriginList = ["https://app.contentful.com", "https://app.eu.content
 
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
+
+  if (!isKnownLocale(locale)) {
+    notFound();
+  }
+
   const { isEnabled: preview } = await draftMode();
 
   // Check multi-language feature flag

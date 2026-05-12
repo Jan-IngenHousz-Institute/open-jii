@@ -95,18 +95,10 @@ vi.mock("@repo/ui/components/dialog", () => ({
 }));
 
 vi.mock("@repo/ui/components/input", () => ({
-  Input: ({
-    id,
-    value,
-    onChange,
-    placeholder,
-  }: {
-    id?: string;
-    value?: string;
-    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    placeholder?: string;
-  }) => (
-    <input id={id} value={value} onChange={onChange} placeholder={placeholder} data-testid={id} />
+  Input: React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+    function Input(props, ref) {
+      return <input ref={ref} data-testid={props.id} {...props} />;
+    },
   ),
 }));
 

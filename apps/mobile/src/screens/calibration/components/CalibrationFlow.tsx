@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
+import { ScrollView } from "react-native";
 import { toast } from "sonner-native";
-import { useTheme } from "~/hooks/use-theme";
 
 import {
   CalibrationProtocol,
@@ -24,9 +23,6 @@ interface CalibrationFlowProps {
 }
 
 export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
-  const theme = useTheme();
-  const { colors } = theme;
-
   const [currentStep, setCurrentStep] = useState<CalibrationStep>("setup");
   const [isProcessing, setIsProcessing] = useState(false);
   const [measurements, setMeasurements] = useState<MeasurementData[]>([]);
@@ -206,24 +202,9 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
   };
 
   return (
-    <ScrollView
-      style={[
-        styles.container,
-        { backgroundColor: theme.isDark ? colors.dark.background : colors.light.background },
-      ]}
-      contentContainerStyle={styles.contentContainer}
-    >
+    <ScrollView className="bg-background flex-1" contentContainerStyle={{ padding: 16 }}>
       <DemoDisclaimer />
       {renderCurrentStep()}
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-  },
-});

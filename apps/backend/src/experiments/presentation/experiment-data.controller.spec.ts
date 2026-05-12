@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import busboy from "busboy";
 import type { Request } from "express";
+import { PassThrough } from "stream";
 import { expect } from "vitest";
 
 import { AppError, success, failure } from "../../common/utils/fp-utils";
@@ -12,9 +12,35 @@ import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-dat
 import type { ExperimentDto } from "../core/models/experiment.model";
 import { ExperimentDataController } from "./experiment-data.controller";
 
-vi.mock("busboy");
-
 /* eslint-disable @typescript-eslint/unbound-method */
+
+/**
+ * Build a real multipart/form-data request stream.
+ * Because we use real busboy (no vi.mock), execute mocks must drain
+ * `fileData.stream` (via `.resume()`) or busboy will never emit 'close'.
+ */
+function multipartRequest(
+  parts: (
+    | { field: string; value: string }
+    | { name: string; filename: string; content: string; mime: string }
+  )[],
+): Request {
+  const boundary = "----TestBoundary";
+  const body = parts
+    .map((p) =>
+      "field" in p
+        ? `--${boundary}\r\nContent-Disposition: form-data; name="${p.field}"\r\n\r\n${p.value}\r\n`
+        : `--${boundary}\r\nContent-Disposition: form-data; name="${p.name}"; filename="${p.filename}"\r\nContent-Type: ${p.mime}\r\n\r\n${p.content}\r\n`,
+    )
+    .concat(`--${boundary}--\r\n`)
+    .join("");
+
+  const stream = new PassThrough();
+  stream.end(Buffer.from(body));
+  return Object.assign(stream, {
+    headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
+  }) as unknown as Request;
+}
 
 describe("ExperimentDataController", () => {
   const testApp = TestHarness.App;
@@ -55,7 +81,6 @@ describe("ExperimentDataController", () => {
     getExperimentDataUseCase = testApp.module.get(GetExperimentDataUseCase);
     getExperimentTablesUseCase = testApp.module.get(GetExperimentTablesUseCase);
     uploadAmbyteDataUseCase = testApp.module.get(UploadAmbyteDataUseCase);
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -221,150 +246,75 @@ describe("ExperimentDataController", () => {
     const experimentId = faker.string.uuid();
     const mockExperiment = { id: experimentId, name: "test-exp" } as unknown as ExperimentDto;
 
-    const setupMocks = () => {
+    // Invoke the upload handler
+    const upload = async (req: Request, id = experimentId) => {
+      const handler = controller.uploadExperimentData(mockSession, req);
+      return handler({ params: { id }, body: {} as never, headers: {} });
+    };
+
+    // Drains the file stream so busboy can finish.
+    const drainExecute = (fileData: { stream?: { resume?: () => void } }) => {
+      fileData.stream?.resume?.();
+      return Promise.resolve();
+    };
+
+    // Minimal request for tests where preexecute fails before busboy runs
+    const stubRequest = {
+      headers: { "content-type": "multipart/form-data; boundary=x" },
+    } as unknown as Request;
+
+    it("should process file upload successfully", async () => {
       vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
-        success({
-          experiment: mockExperiment,
-          directoryName: "dir",
-        }),
+        success({ experiment: mockExperiment, directoryName: "dir" }),
       );
-      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockResolvedValue(undefined);
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockImplementation(drainExecute);
       vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
         success({ uploadId: "123", files: [{ fileName: "test.csv", filePath: "path" }] }),
       );
-    };
 
-    interface BusboyHandlers {
-      field?: (name: string, value: string) => void;
-      file?: (
-        fieldname: string,
-        file: { resume: () => void },
-        info: { filename: string; encoding: string; mimeType: string },
-      ) => void;
-      close?: () => void;
-      error?: (err: Error) => void;
-    }
-
-    const runTest = async (configureBusboy: (handlers: BusboyHandlers) => void) => {
-      const busboyHandlers: Record<string, (...args: unknown[]) => void> = {};
-      const mockBusboy = {
-        on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
-          busboyHandlers[event] = handler;
-          return mockBusboy;
-        }),
-      };
-      (busboy as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockBusboy);
-
-      const requestMock = {
-        headers: { "content-type": "multipart/form-data; boundary=boundary" },
-        pipe: vi.fn(() => {
-          configureBusboy(busboyHandlers);
-        }),
-      } as unknown as Request;
-
-      const handler = controller.uploadExperimentData(mockSession, requestMock);
-      return await handler({
-        params: { id: experimentId },
-        body: {} as never,
-        headers: {},
-      });
-    };
-
-    it("should process file upload successfully", async () => {
-      setupMocks();
-      const result = await runTest((handlers) => {
-        if (handlers.field) handlers.field("sourceType", "ambyte");
-        if (handlers.file) {
-          handlers.file(
-            "files",
-            { resume: vi.fn() },
-            {
-              filename: "test.csv",
-              encoding: "7bit",
-              mimeType: "text/csv",
-            },
-          );
-        }
-        if (handlers.close) handlers.close();
-      });
+      const result = await upload(
+        multipartRequest([
+          { field: "sourceType", value: "ambyte" },
+          { name: "files", filename: "test.csv", content: "col1,col2\n1,2", mime: "text/csv" },
+        ]),
+      );
 
       expect(result.status).toBe(201);
       expect(uploadAmbyteDataUseCase.execute).toHaveBeenCalled();
     });
 
     it("should return 400 if not multipart", async () => {
-      const requestMock = {
+      const result = await upload({
         headers: { "content-type": "application/json" },
-      } as unknown as Request;
-
-      const handler = controller.uploadExperimentData(mockSession, requestMock);
-      const result = await handler({
-        params: { id: experimentId },
-        body: {} as never,
-        headers: {},
-      });
+      } as unknown as Request);
 
       expect(result.status).toBe(400);
     });
 
     it("should return 404 when experiment does not exist", async () => {
-      const nonExistentId = faker.string.uuid();
-      const error = AppError.notFound("Experiment not found");
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        failure(AppError.notFound("Experiment not found")),
+      );
 
-      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(failure(error));
-
-      const requestMock = {
-        headers: { "content-type": "multipart/form-data; boundary=boundary" },
-        pipe: vi.fn(),
-      } as unknown as Request;
-
-      const handler = controller.uploadExperimentData(mockSession, requestMock);
-      const result = await handler({
-        params: { id: nonExistentId },
-        body: {} as never,
-        headers: {},
-      });
-
+      const result = await upload(stubRequest, faker.string.uuid());
       expect(result.status).toBe(404);
     });
 
-    it("should return 403 when user does not have access to the experiment", async () => {
-      const error = AppError.forbidden("User does not have access to experiment");
+    it("should return 403 when user does not have access", async () => {
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        failure(AppError.forbidden("User does not have access to experiment")),
+      );
 
-      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(failure(error));
-
-      const requestMock = {
-        headers: { "content-type": "multipart/form-data; boundary=boundary" },
-        pipe: vi.fn(),
-      } as unknown as Request;
-
-      const handler = controller.uploadExperimentData(mockSession, requestMock);
-      const result = await handler({
-        params: { id: experimentId },
-        body: {} as never,
-        headers: {},
-      });
-
+      const result = await upload(stubRequest);
       expect(result.status).toBe(403);
     });
 
     it("should return 403 when uploading to an archived experiment", async () => {
-      const error = AppError.forbidden("Cannot upload data to archived experiments");
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        failure(AppError.forbidden("Cannot upload data to archived experiments")),
+      );
 
-      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(failure(error));
-
-      const requestMock = {
-        headers: { "content-type": "multipart/form-data; boundary=boundary" },
-        pipe: vi.fn(),
-      } as unknown as Request;
-
-      const handler = controller.uploadExperimentData(mockSession, requestMock);
-      const result = await handler({
-        params: { id: experimentId },
-        body: {} as never,
-        headers: {},
-      });
-
+      const result = await upload(stubRequest);
       expect(result.status).toBe(403);
       expect((result.body as { message: string }).message).toBe(
         "Cannot upload data to archived experiments",
@@ -373,74 +323,49 @@ describe("ExperimentDataController", () => {
 
     it("should return 400 when no files are uploaded", async () => {
       vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
-        success({
-          experiment: mockExperiment,
-          directoryName: "dir",
-        }),
+        success({ experiment: mockExperiment, directoryName: "dir" }),
       );
       vi.spyOn(uploadAmbyteDataUseCase, "execute").mockResolvedValue(undefined);
       vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
         failure(AppError.badRequest("No files were uploaded")),
       );
 
-      const result = await runTest((handlers) => {
-        // No file uploaded, just close
-        if (handlers.field) handlers.field("sourceType", "ambyte");
-        if (handlers.close) handlers.close();
-      });
-
+      const result = await upload(multipartRequest([{ field: "sourceType", value: "ambyte" }]));
       expect(result.status).toBe(400);
     });
 
     it("should reject invalid file formats", async () => {
       vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
-        success({
-          experiment: mockExperiment,
-          directoryName: "dir",
-        }),
+        success({ experiment: mockExperiment, directoryName: "dir" }),
       );
-      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockResolvedValue(undefined);
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockImplementation(drainExecute);
       vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
         failure(AppError.badRequest("Invalid file format: only .txt files are allowed")),
       );
 
-      const result = await runTest((handlers) => {
-        if (handlers.field) handlers.field("sourceType", "ambyte");
-        if (handlers.file) {
-          handlers.file(
-            "files",
-            { resume: vi.fn() },
-            {
-              filename: "invalid.pdf",
-              encoding: "7bit",
-              mimeType: "application/pdf",
-            },
-          );
-        }
-        if (handlers.close) handlers.close();
-      });
-
+      const result = await upload(
+        multipartRequest([
+          { field: "sourceType", value: "ambyte" },
+          { name: "files", filename: "invalid.pdf", content: "pdf", mime: "application/pdf" },
+        ]),
+      );
       expect(result.status).toBe(400);
     });
 
     it("should fail if sourceType is missing before file", async () => {
-      setupMocks();
-      const result = await runTest((handlers) => {
-        // No field handler called
-        if (handlers.file) {
-          handlers.file(
-            "files",
-            { resume: vi.fn() },
-            {
-              filename: "test.csv",
-              encoding: "7bit",
-              mimeType: "text/csv",
-            },
-          );
-        }
-        if (handlers.close) handlers.close();
-      });
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        success({ experiment: mockExperiment, directoryName: "dir" }),
+      );
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockImplementation(drainExecute);
+      vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
+        success({ uploadId: "123", files: [] }),
+      );
 
+      const result = await upload(
+        multipartRequest([
+          { name: "files", filename: "test.csv", content: "data", mime: "text/csv" },
+        ]),
+      );
       expect(result.status).toBe(400);
       expect((result.body as { message: string }).message).toContain(
         "sourceType field must be provided",
@@ -448,61 +373,59 @@ describe("ExperimentDataController", () => {
     });
 
     it("should skip files with wrong fieldname", async () => {
-      setupMocks();
-      const resumeSpy = vi.fn();
-      const result = await runTest((handlers) => {
-        if (handlers.field) handlers.field("sourceType", "ambyte");
-        if (handlers.file) {
-          // Wrong fieldname
-          handlers.file(
-            "wrong_field",
-            { resume: resumeSpy },
-            {
-              filename: "test.csv",
-              encoding: "7bit",
-              mimeType: "text/csv",
-            },
-          );
-        }
-        if (handlers.close) handlers.close();
-      });
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        success({ experiment: mockExperiment, directoryName: "dir" }),
+      );
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockImplementation(drainExecute);
+      vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
+        success({ uploadId: "123", files: [] }),
+      );
 
-      expect(result.status).toBe(201); // Success but nothing uploaded
-      expect(resumeSpy).toHaveBeenCalled();
+      const result = await upload(
+        multipartRequest([
+          { field: "sourceType", value: "ambyte" },
+          { name: "wrong_field", filename: "test.csv", content: "data", mime: "text/csv" },
+        ]),
+      );
+      expect(result.status).toBe(201);
       expect(uploadAmbyteDataUseCase.execute).not.toHaveBeenCalled();
     });
 
     it("should handle busboy error", async () => {
-      setupMocks();
-      const result = await runTest((handlers) => {
-        if (handlers.error) handlers.error(new Error("Busboy stream error"));
-      });
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        success({ experiment: mockExperiment, directoryName: "dir" }),
+      );
+
+      // Missing boundary causes busboy to throw during construction
+      const result = await upload({
+        headers: { "content-type": "multipart/form-data" },
+        pipe: vi.fn(),
+      } as unknown as Request);
 
       expect(result.status).toBe(500);
     });
 
     it("should capture execute errors in processing queue", async () => {
-      setupMocks();
-      // Mock execute failure
-      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockRejectedValue(new Error("Upload failed"));
+      vi.spyOn(uploadAmbyteDataUseCase, "preexecute").mockResolvedValue(
+        success({ experiment: mockExperiment, directoryName: "dir" }),
+      );
+      vi.spyOn(uploadAmbyteDataUseCase, "execute").mockImplementation(
+        (fileData: { stream?: { resume?: () => void } }): Promise<never> => {
+          fileData.stream?.resume?.();
+          return Promise.reject(new Error("Upload failed"));
+        },
+      );
+      vi.spyOn(uploadAmbyteDataUseCase, "postexecute").mockResolvedValue(
+        success({ uploadId: "123", files: [] }),
+      );
 
-      const result = await runTest((handlers) => {
-        if (handlers.field) handlers.field("sourceType", "ambyte");
-        if (handlers.file) {
-          handlers.file(
-            "files",
-            { resume: vi.fn() },
-            {
-              filename: "test.csv",
-              encoding: "7bit",
-              mimeType: "text/csv",
-            },
-          );
-        }
-        if (handlers.close) handlers.close();
-      });
+      const result = await upload(
+        multipartRequest([
+          { field: "sourceType", value: "ambyte" },
+          { name: "files", filename: "test.csv", content: "data", mime: "text/csv" },
+        ]),
+      );
 
-      expect(uploadAmbyteDataUseCase.execute).toHaveBeenCalled();
       expect(result.status).toBe(201);
     });
   });

@@ -123,6 +123,12 @@ export function ExperimentDetailsCard({
             className="text-muted-foreground mx-4 border-t"
           />
 
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            className="text-muted-foreground mx-4 border-t"
+          />
+
           <ExperimentMemberManagement
             experimentId={experimentId}
             members={members}

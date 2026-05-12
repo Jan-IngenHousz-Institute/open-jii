@@ -1,7 +1,7 @@
+import { useColorScheme } from "nativewind";
 import React from "react";
 import { View } from "react-native";
 import { WebView } from "react-native-webview";
-import { useTheme } from "~/hooks/use-theme";
 
 interface HtmlViewerProps {
   htmlContent: string;
@@ -13,7 +13,6 @@ interface HtmlViewerProps {
 function normalizeQuillLists(html: string) {
   if (!html) return html;
 
-  // Convert bullet lists
   let updated = html.replace(/<ol>([\s\S]*?)<\/ol>/g, (match) => {
     if (match.includes('data-list="bullet"')) {
       return match
@@ -24,19 +23,36 @@ function normalizeQuillLists(html: string) {
     return match;
   });
 
-  // Remove remaining data-list attributes
   updated = updated.replace(/ data-list="ordered"/g, "");
 
   return updated;
 }
 
+// Approved exception: WebView renders raw HTML outside the NativeWind view
+// tree, so CSS colors must be injected as a string. See docs/styling.md.
 export function HtmlViewer({
   htmlContent,
   scrollEnabled = true,
   showsVerticalScrollIndicator = true,
   showsHorizontalScrollIndicator = false,
 }: HtmlViewerProps) {
-  const { isDark } = useTheme();
+  const { colorScheme } = useColorScheme();
+  const palette =
+    colorScheme === "dark"
+      ? {
+          body: "#1f2937",
+          text: "#f9fafb",
+          codeBg: "#374151",
+          quoteBorder: "#6b7280",
+          quoteBg: "#374151",
+        }
+      : {
+          body: "#ffffff",
+          text: "#111827",
+          codeBg: "#f3f4f6",
+          quoteBorder: "#d1d5db",
+          quoteBg: "#f9fafb",
+        };
 
   const normalizedContent = normalizeQuillLists(htmlContent);
 
@@ -51,8 +67,8 @@ export function HtmlViewer({
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           font-size: 13px;
           margin: 0;
-          background-color: ${isDark ? "#1f2937" : "#ffffff"};
-          color: ${isDark ? "#f9fafb" : "#111827"};
+          background-color: ${palette.body};
+          color: ${palette.text};
           line-height: 1.6;
         }
         h1 { font-size: 1.85em; margin: 16px 0 8px 0; font-weight: 600; }
@@ -72,17 +88,17 @@ export function HtmlViewer({
           margin: 4px 0;
         }
         code {
-          background-color: ${isDark ? "#374151" : "#f3f4f6"};
+          background-color: ${palette.codeBg};
           padding: 2px 6px;
           border-radius: 4px;
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
           font-size: 0.92em;
         }
         blockquote {
-          border-left: 4px solid ${isDark ? "#6b7280" : "#d1d5db"};
+          border-left: 4px solid ${palette.quoteBorder};
           margin: 16px 0;
           padding: 8px 16px;
-          background-color: ${isDark ? "#374151" : "#f9fafb"};
+          background-color: ${palette.quoteBg};
         }
         a {
           color: #3b82f6;
@@ -109,7 +125,7 @@ export function HtmlViewer({
   `;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       <WebView
         source={{ html: fullHtmlContent }}
         style={{ flex: 1 }}

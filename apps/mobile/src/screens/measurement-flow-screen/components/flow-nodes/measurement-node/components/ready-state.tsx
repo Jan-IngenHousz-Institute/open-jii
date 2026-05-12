@@ -4,7 +4,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Bookmark, HelpCircle, Repeat2 } from "lucide-react-native";
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { colors } from "~/constants/colors";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
@@ -24,11 +25,9 @@ interface ReadyStateProps {
 }
 
 export function ReadyState({ onCardPress }: ReadyStateProps) {
-  const { classes, colors, isDark } = useTheme();
+  const themeColors = useThemeColors();
   const { flowNodes, iterationCount } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore();
-
-  const cardBackground = isDark ? colors.dark.grayBackground : colors.light.grayBackground;
 
   const questionEntries: { node: FlowNode; index: number }[] = flowNodes
     .map((node, index) => ({ node, index }))
@@ -39,15 +38,10 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
   if (!hasQuestions) {
     return (
       <View className="flex-1 items-center justify-center">
-        <View
-          className={clsx(
-            "mb-4 h-14 w-14 items-center justify-center rounded-full",
-            classes.surface,
-          )}
-        >
-          <HelpCircle size={26} color={colors.onSurface} />
+        <View className="bg-surface mb-4 h-14 w-14 items-center justify-center rounded-full">
+          <HelpCircle size={26} color={themeColors.onSurface} />
         </View>
-        <Text className={clsx("text-center text-base font-medium", classes.textSecondary)}>
+        <Text className="text-muted-foreground text-center text-base font-medium">
           This flow has no questions, start measuring directly!
         </Text>
       </View>
@@ -57,7 +51,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
   return (
     <View className="flex-1">
       <View className="px-4 pt-4">
-        <Text className={clsx("text-lg font-bold", classes.text)}>Overview of your answers</Text>
+        <Text className="text-foreground text-lg font-bold">Overview of your answers</Text>
       </View>
 
       <ScrollView
@@ -78,8 +72,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               key={node.id}
               onPress={() => onCardPress(index)}
               activeOpacity={0.7}
-              className="mb-2 flex-row items-stretch gap-4 rounded-xl p-4"
-              style={{ backgroundColor: cardBackground }}
+              className="bg-gray-background mb-2 flex-row items-stretch gap-4 rounded-xl p-4"
             >
               <View className="items-center justify-center">
                 <LinearGradient
@@ -94,15 +87,12 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
                     justifyContent: "center",
                   }}
                 >
-                  <Text className={clsx("text-lg font-bold text-white")}>{position + 1}</Text>
+                  <Text className="text-lg font-bold text-white">{position + 1}</Text>
                 </LinearGradient>
               </View>
 
               <View className="flex-1 gap-1">
-                <Text
-                  className={clsx("text-xs font-medium", classes.textSecondary)}
-                  numberOfLines={1}
-                >
+                <Text className="text-muted-foreground text-xs font-medium" numberOfLines={1}>
                   {label}
                 </Text>
                 <View className="flex-row items-center gap-1">
@@ -110,7 +100,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
                     numberOfLines={1}
                     className={clsx(
                       answerText({ state: hasAnswer ? "answered" : "unanswered" }),
-                      !hasAnswer && classes.textSecondary,
+                      hasAnswer ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
                     {hasAnswer ? answer : "Not set"}

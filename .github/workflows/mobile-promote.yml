@@ -1,0 +1,108 @@
+name: Mobile Promote (Beta / Production)
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Target Play track and OTA channel"
+        required: true
+        type: choice
+        options:
+          - beta
+          - production
+      version:
+        description: "Version to promote (e.g., 1.2.0). If empty, uses latest mobile release tag."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-promote-${{ inputs.track }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION=$(git tag -l 'mobile-v*' --sort=-version:refname | head -1 | sed 's/mobile-v//')
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not determine version"
+            exit 1
+          fi
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid version format: '$VERSION'. Expected semver (e.g. 1.2.3)."
+            exit 1
+          fi
+          printf 'version=%s\n' "$VERSION" >> $GITHUB_OUTPUT
+          echo "Promoting version: $VERSION to track: ${{ inputs.track }}"
+
+      - name: Setup mobile CI environment
+        uses: ./.github/actions/setup-mobile-ci
+        with:
+          expo-token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Set app version
+        uses: ./.github/actions/set-app-version
+        with:
+          version: ${{ steps.version.outputs.version }}
+
+      - name: Compute fingerprint and decide build vs OTA
+        id: decide
+        uses: ./.github/actions/mobile-fingerprint-decide
+        with:
+          profile: ${{ inputs.track }}
+
+      - name: Build and submit AAB
+        if: steps.decide.outputs.mode == 'build'
+        working-directory: apps/mobile
+        run: |
+          eas build \
+            --platform android \
+            --profile ${{ inputs.track }} \
+            --non-interactive \
+            --auto-submit
+
+      - name: Publish OTA
+        if: steps.decide.outputs.mode == 'ota'
+        working-directory: apps/mobile
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          eas update \
+            --branch ${{ inputs.track }} \
+            --message "promote v${VERSION} to ${{ inputs.track }}" \
+            --non-interactive
+
+      - name: Job summary
+        run: |
+          echo "## Mobile Promotion" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Track | \`${{ inputs.track }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mode | \`${{ steps.decide.outputs.mode }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current fingerprint | \`${{ steps.decide.outputs.current }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Last fingerprint (${{ inputs.track }}) | \`${{ steps.decide.outputs.last || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| AAB built | ${{ steps.decide.outputs.mode == 'build' && 'yes' || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| OTA channel | ${{ inputs.track }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.track }}" = "production" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Reminder:** Configure staged rollout in Play Console (start 10–20%, ramp 24–48h)." >> $GITHUB_STEP_SUMMARY
+          fi

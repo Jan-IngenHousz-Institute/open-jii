@@ -1,6 +1,5 @@
 import type { ProjectTransferWebhookPayload } from "@repo/api/schemas/experiment.schema";
 
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import {
   AppError,
   assertFailure,
@@ -11,9 +10,10 @@ import {
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
-import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { ExecuteProjectTransferUseCase } from "./execute-project-transfer";
 
@@ -31,10 +31,6 @@ describe("ExecuteProjectTransferUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(ExecuteProjectTransferUseCase);
 
-    // Default: Databricks upload succeeds (DatabricksAdapter is a singleton from DatabricksModule)
-    const databricksAdapter = testApp.module.get(DatabricksAdapter);
-    vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
-
     // Default: Email sending succeeds
     const emailAdapter = testApp.module.get<EmailPort>(EMAIL_PORT);
     vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(success(undefined));
@@ -42,7 +38,6 @@ describe("ExecuteProjectTransferUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -87,35 +82,6 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.macroName).toBeDefined();
     });
 
-    it("should upload macro code to Databricks", async () => {
-      const databricksAdapter = testApp.module.get(DatabricksAdapter);
-      const uploadSpy = vi
-        .spyOn(databricksAdapter, "uploadMacroCode")
-        .mockResolvedValue(success({}));
-
-      const payload = buildPayload();
-      await useCase.execute(payload);
-
-      expect(uploadSpy).toHaveBeenCalledOnce();
-    });
-
-    it("should fail when Databricks upload fails (CreateMacroUseCase is fatal)", async () => {
-      const databricksAdapter = testApp.module.get(DatabricksAdapter);
-      vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(
-        failure({
-          message: "Databricks unavailable",
-          code: "DATABRICKS_ERROR",
-          statusCode: 500,
-          name: "",
-        }),
-      );
-
-      const payload = buildPayload();
-      const result = await useCase.execute(payload);
-
-      assertFailure(result);
-    });
-
     it("should create a flow with questions when provided", async () => {
       const payload = buildPayload({
         questions: [
@@ -140,6 +106,30 @@ describe("ExecuteProjectTransferUseCase", () => {
       // Flow should still be created (measurement + analysis nodes)
       // flowId may or may not be null depending on flow creation success
       expect(result.value.success).toBe(true);
+    });
+
+    it("materialises a workbook and v1 linked to the experiment (web parity)", async () => {
+      const payload = buildPayload({
+        questions: [{ kind: "yes_no", text: "Ready?", required: false }],
+      });
+
+      const result = await useCase.execute(payload);
+      assertSuccess(result);
+      const experimentId = result.value.experimentId;
+
+      const experimentRepo = testApp.module.get(ExperimentRepository);
+      const workbookRepo = testApp.module.get(WorkbookRepository);
+
+      const exp = await experimentRepo.findOne(experimentId);
+      assertSuccess(exp);
+      expect(exp.value?.workbookId).toBeDefined();
+      expect(exp.value?.workbookVersionId).toBeDefined();
+
+      const workbook = await workbookRepo.findById(exp.value?.workbookId ?? "");
+      assertSuccess(workbook);
+      expect(workbook.value?.name).toBe("Transfer Experiment - Workbook");
+      // 1 question + 1 measurement + 1 analysis = 3 cells
+      expect(workbook.value?.cells).toHaveLength(3);
     });
 
     it("should handle flow creation failure gracefully (non-fatal)", async () => {
@@ -207,19 +197,6 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-    });
-
-    it("should fail when experiment protocol association fails", async () => {
-      vi.spyOn(ExperimentProtocolRepository.prototype, "addProtocols").mockResolvedValue(
-        failure(AppError.internal("Association failed")),
-      );
-
-      const payload = buildPayload();
-      const result = await useCase.execute(payload);
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to associate protocol");
     });
 
     it("should handle multi_choice questions in flow", async () => {
@@ -437,35 +414,6 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.macroId).toBe(existingMacroId);
       // create should NOT be called because we reuse the existing one
       expect(createSpy).not.toHaveBeenCalled();
-    });
-
-    it("should skip Databricks upload when reusing existing macro", async () => {
-      const macroRepo = testApp.module.get(MacroRepository);
-      const databricksAdapter = testApp.module.get(DatabricksAdapter);
-      const uploadSpy = vi
-        .spyOn(databricksAdapter, "uploadMacroCode")
-        .mockResolvedValue(success({}));
-      const macroName = "Reuse No Upload Macro";
-
-      // Pre-create the macro
-      const preCreated = await macroRepo.create(
-        { name: macroName, description: null, language: "javascript", code: "Y29uc29sZQ==" },
-        testUserId,
-      );
-      assertSuccess(preCreated);
-
-      const payload = buildPayload({
-        macro: {
-          name: macroName,
-          language: "javascript",
-          code: "Y29uc29sZS5sb2coJ2hlbGxvJyk=",
-          createdBy: testUserId,
-        },
-      });
-      const result = await useCase.execute(payload);
-
-      assertSuccess(result);
-      expect(uploadSpy).not.toHaveBeenCalled();
     });
 
     it("should reuse both protocol and macro when both names already exist", async () => {

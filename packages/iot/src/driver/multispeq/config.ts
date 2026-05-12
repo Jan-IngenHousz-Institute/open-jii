@@ -24,7 +24,7 @@ export interface MultispeqTransportConfig {
     parity?: "none" | "even" | "odd";
   };
 
-  /** Response timeout in milliseconds (default: 30000) */
+  /** Response timeout in milliseconds (default: 60000 — 1 min) */
   timeout?: number;
 }
 
@@ -36,8 +36,7 @@ export const MULTISPEQ_FRAMING = {
   /** Length of checksum appended to responses */
   CHECKSUM_LENGTH: 8,
 
-  /** Default response timeout in ms */
-  DEFAULT_TIMEOUT: 30_000,
+  DEFAULT_TIMEOUT: 60_000,
 } as const;
 
 /** Supported MultispeQ transport types */

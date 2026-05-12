@@ -36,8 +36,6 @@ describe("UpdateInvitationRoleUseCase", () => {
     revokeUseCase = testApp.module.get(RevokeInvitationUseCase);
     emailPort = testApp.module.get(EMAIL_PORT);
     invitationRepo = testApp.module.get(InvitationRepository);
-
-    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -58,8 +56,6 @@ describe("UpdateInvitationRoleUseCase", () => {
       "member",
       testUserId,
     );
-
-    vi.restoreAllMocks();
 
     assertSuccess(result);
     return result.value;

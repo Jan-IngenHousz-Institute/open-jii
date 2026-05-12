@@ -1,0 +1,38 @@
+{
+  "workbooks": {
+    "title": "Werkboeken",
+    "workbook": "Werkboek",
+    "create": "Werkboek aanmaken",
+    "noWorkbooks": "Geen werkboeken gevonden",
+    "workbookCreated": "Werkboek succesvol aangemaakt",
+    "workbookUpdated": "Werkboek succesvol bijgewerkt",
+    "createError": "Kan werkboek niet aanmaken. Probeer het opnieuw.",
+    "listDescription": "Bekijk en beheer uw meetnotebooks.",
+    "noDescription": "Geen beschrijving beschikbaar",
+    "notFound": "Werkboek niet gevonden",
+    "searchPlaceholder": "Werkboeken zoeken...",
+    "errorLoading": "Fout bij het laden van werkboeken",
+    "filterMy": "Mijn werkboeken",
+    "filterAll": "Alle werkboeken",
+    "filterWorkbooks": "Werkboeken filteren",
+    "clearSearch": "Zoekopdracht wissen",
+    "lastUpdate": "Laatste update",
+    "noCells": "Nog geen cellen. Open het werkboek om uw notebook te bouwen.",
+    "saving": "Opslaan...",
+    "allChangesSaved": "Alle wijzigingen opgeslagen",
+    "viewWorkbook": "Werkboek bekijken"
+  },
+  "output": {
+    "label": "Uitvoer",
+    "expand": "Uitvoer uitvouwen",
+    "collapse": "Uitvoer samenvouwen",
+    "clear": "Uitvoer wissen",
+    "empty": "Geen meetgegevens beschikbaar — voer eerst een protocolcel uit",
+    "noData": "Geen uitvoergegevens",
+    "tabTable": "Tabel",
+    "tabJson": "JSON",
+    "copyJson": "JSON kopiëren",
+    "closeChart": "Diagram sluiten",
+    "expandChart": "Diagram voor {{column}} openen"
+  }
+}
