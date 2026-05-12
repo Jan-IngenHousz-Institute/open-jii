@@ -1,6 +1,6 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -24,28 +24,23 @@ vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
 }));
 
-const mockStartEditing = vi.fn();
-const mockCloseEditing = vi.fn();
-const mockHandleChange = vi.fn();
-let mockAutoSave = {
-  editedCode: null as unknown,
-  syncStatus: "synced" as string,
-  startEditing: mockStartEditing,
-  closeEditing: mockCloseEditing,
-  handleChange: mockHandleChange,
-  isEditing: false,
-};
-vi.mock("../../../hooks/useCodeAutoSave", () => ({
-  useCodeAutoSave: () => mockAutoSave,
-}));
-
 let mockSession: { user: { id: string } } | null = null;
 
+// Captured to drive the autosave path without the real CodeMirror pipeline.
+let capturedOnChange: ((value: Record<string, unknown>[] | string | undefined) => void) | null =
+  null;
 vi.mock("../../protocol-code-editor", () => ({
   __esModule: true,
-  default: ({ headerActions }: { headerActions?: React.ReactNode }) => (
-    <div data-testid="code-editor">{headerActions}</div>
-  ),
+  default: ({
+    headerActions,
+    onChange,
+  }: {
+    headerActions?: React.ReactNode;
+    onChange: (value: Record<string, unknown>[] | string | undefined) => void;
+  }) => {
+    capturedOnChange = onChange;
+    return <div data-testid="code-editor">{headerActions}</div>;
+  },
 }));
 
 vi.mock("../../json-code-viewer", () => ({
@@ -106,6 +101,7 @@ describe("<ProtocolRunContent />", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedOnChange = null;
     server.mount(contract.protocols.getProtocol, { body: mockProtocol });
     server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
     mockBrowserSupport = {
@@ -117,14 +113,6 @@ describe("<ProtocolRunContent />", () => {
     };
     mockSession = null;
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-    mockAutoSave = {
-      editedCode: null,
-      syncStatus: "synced",
-      startEditing: mockStartEditing,
-      closeEditing: mockCloseEditing,
-      handleChange: mockHandleChange,
-      isEditing: false,
-    };
   });
 
   it("should show loading state", () => {
@@ -195,30 +183,48 @@ describe("<ProtocolRunContent />", () => {
     expect(screen.queryByTestId("edit-trigger")).not.toBeInTheDocument();
   });
 
-  it("should show code editor with header actions when editing", async () => {
+  it("should show code editor with header actions after the user clicks Edit", async () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-    mockAutoSave = { ...mockAutoSave, isEditing: true, editedCode: [{ averages: 1 }] };
+    const user = userEvent.setup();
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("code-editor")).toBeInTheDocument();
-    });
+    await user.click(await screen.findByTestId("edit-trigger"));
+
+    expect(await screen.findByTestId("code-editor")).toBeInTheDocument();
     expect(screen.getByTestId("editor-header-actions")).toBeInTheDocument();
     expect(screen.queryByTestId("json-viewer")).not.toBeInTheDocument();
   });
 
-  it("should not show a separate save button", async () => {
+  it("should not show a separate save button when editing", async () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-    mockAutoSave = { ...mockAutoSave, isEditing: true };
+    const user = userEvent.setup();
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("code-editor")).toBeInTheDocument();
-    });
+    await user.click(await screen.findByTestId("edit-trigger"));
+
+    expect(await screen.findByTestId("code-editor")).toBeInTheDocument();
     expect(screen.queryByText("common.save")).not.toBeInTheDocument();
+  });
+
+  it("autosaves the edited protocol code after the debounce window", async () => {
+    mockSession = { user: { id: "user-1" } };
+    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
+    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    const user = userEvent.setup();
+
+    render(<ProtocolRunContent protocolId="proto-1" />);
+
+    await user.click(await screen.findByTestId("edit-trigger"));
+    await screen.findByTestId("code-editor");
+
+    expect(capturedOnChange).not.toBeNull();
+    capturedOnChange?.([{ averages: 2 }]);
+
+    await waitFor(() => expect(updateSpy.callCount).toBe(1), { timeout: 4000 });
+    expect(updateSpy.body).toEqual({ code: [{ averages: 2 }] });
   });
 });

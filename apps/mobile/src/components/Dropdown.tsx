@@ -1,16 +1,7 @@
 import { ChevronDown } from "lucide-react-native";
 import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  FlatList,
-  Pressable,
-  TextInput,
-  StyleSheet,
-} from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { View, Text, TouchableOpacity, Modal, FlatList, Pressable, TextInput } from "react-native";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 export interface DropdownOption {
   label: string;
@@ -33,8 +24,7 @@ export function Dropdown({
   onSelect,
   placeholder = "Select an option",
 }: DropdownProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const themeColors = useThemeColors();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,49 +45,17 @@ export function Dropdown({
   const MAX_VISIBLE_ITEMS = 6;
 
   return (
-    <View style={styles.container}>
-      {label && (
-        <Text
-          style={[
-            styles.label,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-      )}
+    <View className="mb-4">
+      {label && <Text className="text-on-surface mb-1.5 text-sm">{label}</Text>}
 
       <TouchableOpacity
-        style={[
-          styles.dropdownButton,
-          {
-            borderColor: theme.isDark ? colors.dark.border : colors.light.border,
-          },
-        ]}
+        className="border-border flex-row items-center justify-between rounded-xl border px-3 py-2.5"
         onPress={() => setModalVisible(true)}
       >
-        <Text
-          style={[
-            styles.selectedText,
-            {
-              color: selectedOption
-                ? theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface
-                : theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
-            },
-          ]}
-        >
+        <Text className={`text-base ${selectedOption ? "text-on-surface" : "text-inactive"}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <ChevronDown
-          size={24}
-          color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
-        />
+        <ChevronDown size={24} color={themeColors.onSurface} />
       </TouchableOpacity>
 
       <Modal
@@ -106,91 +64,53 @@ export function Dropdown({
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <View
-            style={[
-              styles.modalContent,
-              {
-                backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
-              },
-            ]}
-          >
+        <Pressable
+          className="flex-1 justify-center bg-black/50 p-4"
+          onPress={() => setModalVisible(false)}
+        >
+          <View className="bg-background max-h-[80%] w-full rounded-xl p-4">
             <TextInput
               placeholder={placeholder}
-              placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
-              style={[
-                styles.searchInput,
-                {
-                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                  borderColor: theme.isDark ? colors.dark.border : colors.light.border,
-                  backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
-                },
-              ]}
+              placeholderTextColor={themeColors.inactive}
+              className="border-border bg-surface text-on-surface mb-4 rounded-lg border px-3 py-2 text-base"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
 
-            <View style={[styles.listWrapper, { height: ITEM_HEIGHT * MAX_VISIBLE_ITEMS }]}>
+            <View style={{ height: ITEM_HEIGHT * MAX_VISIBLE_ITEMS, flexGrow: 0 }}>
               <FlatList
                 data={filteredOptions}
                 keyExtractor={(item) => item.value}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ flexGrow: 1 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.optionItem,
-                      selectedValue === item.value && {
-                        backgroundColor: colors.primary.dark + "20",
-                      },
-                    ]}
-                    onPress={() => {
-                      onSelect(item.value);
-                      setModalVisible(false);
-                      setSearchQuery("");
-                    }}
-                  >
-                    <View>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          {
-                            color:
-                              selectedValue === item.value
-                                ? colors.primary.dark
-                                : theme.isDark
-                                  ? colors.dark.onSurface
-                                  : colors.light.onSurface,
-                            fontWeight: selectedValue === item.value ? "bold" : "normal",
-                          },
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                      {item.description && (
+                renderItem={({ item }) => {
+                  const isSelected = selectedValue === item.value;
+                  return (
+                    <TouchableOpacity
+                      className={`rounded-lg px-4 py-3 ${isSelected ? "bg-jii-primary/20" : ""}`}
+                      onPress={() => {
+                        onSelect(item.value);
+                        setModalVisible(false);
+                        setSearchQuery("");
+                      }}
+                    >
+                      <View>
                         <Text
-                          style={{
-                            fontSize: 14,
-                            marginTop: 4,
-                            color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                          }}
+                          className={`text-base ${
+                            isSelected ? "text-jii-primary font-bold" : "text-on-surface"
+                          }`}
                         >
-                          {item.description}
+                          {item.label}
                         </Text>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                )}
+                        {item.description && (
+                          <Text className="text-inactive mt-1 text-sm">{item.description}</Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
                 ListEmptyComponent={
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      padding: 16,
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    }}
-                  >
-                    No results found
-                  </Text>
+                  <Text className="text-inactive p-4 text-center">No results found</Text>
                 }
               />
             </View>
@@ -200,56 +120,3 @@ export function Dropdown({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    marginBottom: 6,
-    fontSize: 14,
-  },
-  dropdownButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  selectedText: {
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    padding: 16,
-  },
-  modalContent: {
-    borderRadius: 12,
-    width: "100%",
-    maxHeight: "80%",
-    padding: 16,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 16,
-    fontSize: 16,
-  },
-  listWrapper: {
-    flexGrow: 0,
-  },
-  optionItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  optionText: {
-    fontSize: 16,
-  },
-});

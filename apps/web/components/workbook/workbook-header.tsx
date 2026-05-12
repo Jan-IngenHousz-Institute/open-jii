@@ -1,10 +1,9 @@
 "use client";
 
-import { useWorkbookSaveStatus } from "@/components/workbook-overview/workbook-save-context";
+import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { tsr } from "@/lib/tsr";
 import { decodeBase64 } from "@/util/base64";
 import {
-  CheckCircle2,
   ChevronDown,
   Circle,
   Code,
@@ -13,7 +12,6 @@ import {
   FileCode,
   FileJson,
   GitBranch,
-  Loader2,
   Play,
   Square,
   Trash2,
@@ -127,8 +125,6 @@ export function WorkbookHeader({
   onToggleFlowchart,
   isSticky,
 }: WorkbookHeaderProps) {
-  const { isSaving, isDirty } = useWorkbookSaveStatus();
-  const showSaving = isSaving || isDirty;
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isLgTablet = useIsLgTablet();
@@ -352,20 +348,11 @@ export function WorkbookHeader({
 
       <div
         className={cn(
-          "flex items-center gap-1.5 transition-opacity duration-300",
+          "transition-opacity duration-300",
           isSticky ? "opacity-100" : "pointer-events-none opacity-0",
         )}
       >
-        {showSaving ? (
-          <Loader2 className="size-4 animate-spin" style={{ color: "#68737B" }} />
-        ) : (
-          <CheckCircle2 className="size-4 text-emerald-500" />
-        )}
-        {!compact && (
-          <span className="text-[13px]" style={{ color: "#68737B" }}>
-            {showSaving ? "Saving..." : "Saved"}
-          </span>
-        )}
+        <AutosaveIndicator variant={compact ? "compact" : "full"} />
       </div>
 
       <DropdownMenu>

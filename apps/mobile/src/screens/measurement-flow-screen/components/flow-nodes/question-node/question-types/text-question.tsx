@@ -31,9 +31,7 @@ export function TextQuestion({ content, value, onChange }: TextQuestionProps) {
         textAlignVertical="top"
       />
       {content.required && !value && (
-        <Text className={clsx("mt-2 text-sm text-red-500", classes.text)}>
-          This field is required
-        </Text>
+        <Text className="text-destructive mt-2 text-sm">This field is required</Text>
       )}
     </View>
   );

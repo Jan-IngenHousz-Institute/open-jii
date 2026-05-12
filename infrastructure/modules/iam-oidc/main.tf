@@ -290,6 +290,7 @@ locals {
         "iam:DeleteRole",
         "iam:GetRole",
         "iam:ListRoles",
+        "iam:ListInstanceProfilesForRole",
         "iam:UpdateAssumeRolePolicy",
         "iam:PassRole",
         "iam:TagRole",

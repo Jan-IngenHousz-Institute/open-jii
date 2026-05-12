@@ -10,8 +10,8 @@ import { useTheme } from "~/hooks/use-theme";
 const iconBadgeVariants = cva("h-20 w-20 items-center justify-center rounded-full border", {
   variants: {
     permanentlyDenied: {
-      false: "bg-[#E2FCFC] border-[#005E5E]",
-      true: "bg-[#FFE5E5] border-[#DC2626]",
+      false: "bg-primary/10 border-primary",
+      true: "bg-error/10 border-error",
     },
   },
   defaultVariants: {
@@ -40,7 +40,7 @@ export function CameraPermissionState({
   if (!permission) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={colors.neutral.black} />
+        <ActivityIndicator size="large" color={colors.onSurface} />
       </View>
     );
   }
@@ -51,9 +51,9 @@ export function CameraPermissionState({
     <View className="flex-1 items-center justify-center gap-6 px-8">
       <View className={iconBadgeVariants({ permanentlyDenied })}>
         {permanentlyDenied ? (
-          <ShieldAlert size={40} color={"#DC2626"} />
+          <ShieldAlert size={40} color={colors.semantic.error} />
         ) : (
-          <CameraOff size={40} color={colors.primary.dark} />
+          <CameraOff size={40} color={colors.brand} />
         )}
       </View>
 

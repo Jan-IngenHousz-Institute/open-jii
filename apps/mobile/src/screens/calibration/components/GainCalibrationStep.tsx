@@ -1,8 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
-import { useTheme } from "~/hooks/use-theme";
 
 interface GainCalibrationStepProps {
   alertMessage: string;
@@ -15,34 +14,14 @@ export function GainCalibrationStep({
   isProcessing,
   onStartGainCalibration,
 }: GainCalibrationStepProps) {
-  const theme = useTheme();
-  const { colors } = theme;
-
   return (
-    <View style={styles.stepContainer}>
-      <Text
-        style={[
-          styles.stepTitle,
-          { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-        ]}
-      >
+    <View className="flex-1">
+      <Text className="text-on-surface mb-2 text-2xl font-bold">
         Gain Calibration (Auto-blanking)
       </Text>
-      <Text
-        style={[
-          styles.stepDescription,
-          { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-        ]}
-      >
-        {alertMessage}
-      </Text>
-      <Card style={styles.instructionCard}>
-        <Text
-          style={[
-            styles.instructionText,
-            { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-          ]}
-        >
+      <Text className="text-inactive mb-6 text-base leading-6">{alertMessage}</Text>
+      <Card className="mb-6">
+        <Text className="text-on-surface text-base leading-[22px]">
           The device will now perform auto-blanking to establish baseline readings for each LED
           channel.
         </Text>
@@ -51,34 +30,8 @@ export function GainCalibrationStep({
         title={isProcessing ? "Calibrating..." : "Start Auto-blanking"}
         onPress={onStartGainCalibration}
         isLoading={isProcessing}
-        style={styles.actionButton}
+        style={{ marginTop: 16 }}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  stepContainer: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  stepDescription: {
-    fontSize: 16,
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  instructionCard: {
-    marginBottom: 24,
-  },
-  instructionText: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  actionButton: {
-    marginTop: 16,
-  },
-});
