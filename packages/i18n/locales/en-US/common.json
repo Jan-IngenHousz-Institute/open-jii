@@ -805,5 +805,10 @@
     "enableAnalytics": "Enable Analytics",
     "analyticsEnabledToast": "Analytics cookies have been enabled.",
     "analyticsDisabledToast": "Analytics cookies have been disabled."
+  },
+  "autosave": {
+    "saving": "Saving…",
+    "saved": "All changes saved",
+    "failed": "Couldn't save your changes"
   }
 }

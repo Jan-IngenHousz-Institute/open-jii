@@ -51,7 +51,7 @@ export function MultipleChoiceQuestion({
   return (
     <View className="flex-1 gap-2">
       {content.required && !selectedValue && (
-        <Text className={clsx("text-center text-sm text-red-500")}>
+        <Text className="text-destructive text-center text-sm">
           Selecting an option is required
         </Text>
       )}

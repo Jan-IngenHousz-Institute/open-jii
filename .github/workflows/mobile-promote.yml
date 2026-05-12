@@ -52,69 +52,21 @@ jobs:
           printf 'version=%s\n' "$VERSION" >> $GITHUB_OUTPUT
           echo "Promoting version: $VERSION to track: ${{ inputs.track }}"
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
+      - name: Setup mobile CI environment
+        uses: ./.github/actions/setup-mobile-ci
         with:
-          node-version: "22"
-
-      - name: Setup Expo CLI
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: pnpm install
+          expo-token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Set app version
-        working-directory: apps/mobile
-        env:
-          APP_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          node -e "
-            const fs = require('fs');
-            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            app.expo.version = process.env.APP_VERSION;
-            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
-          "
+        uses: ./.github/actions/set-app-version
+        with:
+          version: ${{ steps.version.outputs.version }}
 
-      - name: Compute current fingerprint
-        id: fp
-        working-directory: apps/mobile
-        run: |
-          HASH=$(pnpm exec expo-updates fingerprint:generate --platform android | jq -r .hash)
-          if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
-            echo "::error::Failed to compute fingerprint"
-            exit 1
-          fi
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
-
-      - name: Get last build fingerprint for target track
-        id: last_fp
-        working-directory: apps/mobile
-        run: |
-          LAST=$(eas build:list \
-            --profile ${{ inputs.track }} \
-            --status finished \
-            --platform android \
-            --limit 1 \
-            --non-interactive \
-            --json 2>/dev/null | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
-          echo "hash=$LAST" >> $GITHUB_OUTPUT
-
-      - name: Decide build vs OTA
+      - name: Compute fingerprint and decide build vs OTA
         id: decide
-        run: |
-          CURRENT="${{ steps.fp.outputs.hash }}"
-          LAST="${{ steps.last_fp.outputs.hash }}"
-          if [ -n "$LAST" ] && [ "$CURRENT" = "$LAST" ]; then
-            echo "mode=ota" >> $GITHUB_OUTPUT
-            echo "Fingerprint unchanged for track ${{ inputs.track }} — OTA-only"
-          else
-            echo "mode=build" >> $GITHUB_OUTPUT
-            echo "Fingerprint changed (or no prior build) — full AAB rebuild"
-          fi
+        uses: ./.github/actions/mobile-fingerprint-decide
+        with:
+          profile: ${{ inputs.track }}
 
       - name: Build and submit AAB
         if: steps.decide.outputs.mode == 'build'
@@ -146,8 +98,8 @@ jobs:
           echo "| Version | \`${{ steps.version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Track | \`${{ inputs.track }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Mode | \`${{ steps.decide.outputs.mode }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Current fingerprint | \`${{ steps.fp.outputs.hash }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Last fingerprint (${{ inputs.track }}) | \`${{ steps.last_fp.outputs.hash || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current fingerprint | \`${{ steps.decide.outputs.current }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Last fingerprint (${{ inputs.track }}) | \`${{ steps.decide.outputs.last || '<none>' }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| AAB built | ${{ steps.decide.outputs.mode == 'build' && 'yes' || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| OTA channel | ${{ inputs.track }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ inputs.track }}" = "production" ]; then

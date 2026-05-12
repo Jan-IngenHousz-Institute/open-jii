@@ -100,10 +100,10 @@ export function CommentModal({
           <Text className={clsx("text-lg font-bold", classes.text)}>Add comment</Text>
 
           <TouchableOpacity onPress={onCancel} className="p-1">
-            <X size={24} color={colors.neutral.black} />
+            <X size={24} color={colors.onSurface} />
           </TouchableOpacity>
         </View>
-        <View className="gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
+        <View className="bg-muted gap-1.5 rounded-xl p-4">
           <View className="flex-row items-center">
             <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
 

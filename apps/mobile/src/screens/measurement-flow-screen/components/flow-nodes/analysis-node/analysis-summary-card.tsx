@@ -34,7 +34,7 @@ export function AnalysisSummaryCard({
 
   return (
     <TouchableOpacity activeOpacity={0.75} onPress={onPress}>
-      <View className="my-4 gap-1.5 rounded-xl bg-[#EDF2F6] p-4">
+      <View className="bg-muted my-4 gap-1.5 rounded-xl p-4">
         <View className="flex-row items-center">
           <Text className={clsx("font-semibold", classes.text)}>Experiment: </Text>
           <Text

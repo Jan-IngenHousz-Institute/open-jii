@@ -32,6 +32,15 @@ vulnerabilities:
           adapter. Sandbox has no IAM creds and no outbound HTTP.
       expired_at: 2026-06-07
 
+    # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
+    # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
+    - id: CVE-2026-44665
+      statement: >-
+          Attribute-quote bypass in fast-xml-builder. Bundled inside
+          @aws-sdk; sandbox has no IAM creds or outbound HTTP, so SDK
+          serialization paths that invoke the builder are unreachable.
+      expired_at: 2026-07-12
+
     # libnghttp2
     - id: CVE-2026-27135
       statement: >-
@@ -55,6 +64,16 @@ vulnerabilities:
     - id: CVE-2026-32280
       statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
     - id: CVE-2026-32282
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-33811
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-33814
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-39820
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-39836
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-42499
       statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
 
     # glibc in Amazon Linux 2023 base image

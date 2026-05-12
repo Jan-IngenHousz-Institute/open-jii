@@ -64,7 +64,7 @@ export function MeasurementResult({
     }
 
     if (isProcessing) {
-      return <ActivityIndicator size="large" color={colors.primary.dark} />;
+      return <ActivityIndicator size="large" color={colors.brand} />;
     }
 
     if (!processedMeasurement?.length) {
@@ -115,10 +115,10 @@ export function MeasurementResult({
           onPress={onCommentPress}
         >
           <View className="flex-row items-center gap-2">
-            <MessageCircle size={18} color={colors.primary.dark} />
+            <MessageCircle size={18} color={colors.brand} />
             <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
           </View>
-          <ChevronRight size={16} color={colors.primary.dark} />
+          <ChevronRight size={16} color={colors.brand} />
         </TouchableOpacity>
       )}
 

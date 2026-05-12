@@ -128,8 +128,8 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
             <ScanningState protocolName={protocol?.name} />
           </View>
           <View className="gap-4 px-4 py-3">
-            <View className="flex-row items-center gap-2 rounded-lg bg-[#EDF2F6] p-2">
-              <Info size={16} color={colors.primary.dark} />
+            <View className="bg-muted flex-row items-center gap-2 rounded-lg p-2">
+              <Info size={16} color={colors.brand} />
               <Text className={clsx("flex-1 text-sm leading-relaxed", classes.textMuted)}>
                 Your (gps)location and full name will be stored amongst other measurements data.
                 Note that these are publicly available.

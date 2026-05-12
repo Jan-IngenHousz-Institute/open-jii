@@ -129,7 +129,7 @@ export function QRScannerModal({
 
   return (
     <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
-      <View className="flex-1 bg-white">
+      <View className="bg-background flex-1">
         <TouchableOpacity
           className={closeButtonVariants({ cameraActive: !!permission?.granted })}
           onPress={onClose}

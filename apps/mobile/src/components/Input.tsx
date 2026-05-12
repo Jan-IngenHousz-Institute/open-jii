@@ -1,16 +1,7 @@
 import { Eye, EyeOff } from "lucide-react-native";
 import React, { useState } from "react";
-import {
-  View,
-  TextInput,
-  Text,
-  StyleSheet,
-  TextInputProps,
-  ViewStyle,
-  TouchableOpacity,
-} from "react-native";
-import { colors } from "~/constants/colors";
-import { useTheme } from "~/hooks/use-theme";
+import { View, TextInput, Text, TextInputProps, ViewStyle, TouchableOpacity } from "react-native";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -30,129 +21,40 @@ export function Input({
   helper,
   ...props
 }: InputProps) {
-  const theme = useTheme();
-  const { colors } = theme;
-
+  const themeColors = useThemeColors();
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const borderClass = error ? "border-destructive" : isFocused ? "border-primary" : "border-border";
+
   return (
-    <View style={[styles.container, containerStyle]}>
-      {label && (
-        <Text
-          style={[
-            styles.label,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-      )}
-      <View
-        style={[
-          styles.inputContainer,
-          {
-            backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
-            borderColor: error
-              ? colors.semantic.error
-              : isFocused
-                ? colors.primary.dark
-                : theme.isDark
-                  ? colors.dark.border
-                  : colors.light.border,
-          },
-          isFocused && styles.focused,
-          error && styles.error,
-        ]}
-      >
-        {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
+    <View className="mb-4" style={containerStyle}>
+      {label && <Text className="text-on-surface mb-1.5 text-sm">{label}</Text>}
+      <View className={`bg-surface flex-row items-center rounded-lg border ${borderClass}`}>
+        {leftIcon && <View className="pl-3">{leftIcon}</View>}
         <TextInput
-          style={[
-            styles.input,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-          placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
+          className="text-on-surface flex-1 px-3 py-2.5 text-base"
+          placeholderTextColor={themeColors.inactive}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           secureTextEntry={isPassword && !showPassword}
           {...props}
         />
         {isPassword && (
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2.5">
             {showPassword ? (
-              <EyeOff
-                size={20}
-                color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
-              />
+              <EyeOff size={20} color={themeColors.onSurface} />
             ) : (
-              <Eye
-                size={20}
-                color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
-              />
+              <Eye size={20} color={themeColors.onSurface} />
             )}
           </TouchableOpacity>
         )}
       </View>
       {error ? (
-        <Text style={[styles.errorText, { color: colors.semantic.error }]}>{error}</Text>
+        <Text className="text-destructive mt-1 text-xs">{error}</Text>
       ) : helper ? (
-        <Text
-          style={[
-            styles.helperText,
-            {
-              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-            },
-          ]}
-        >
-          {helper}
-        </Text>
+        <Text className="text-inactive mt-1 text-xs">{helper}</Text>
       ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    marginBottom: 6,
-    fontSize: 14,
-  },
-  inputContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  focused: {
-    borderColor: colors.primary.dark,
-  },
-  error: {
-    borderColor: colors.semantic.error,
-  },
-  errorText: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  helperText: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  eyeIcon: {
-    padding: 10,
-  },
-  leftIconContainer: {
-    paddingLeft: 12,
-  },
-});

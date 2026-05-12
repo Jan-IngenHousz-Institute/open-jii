@@ -101,7 +101,7 @@ export function RecentMeasurementsScreen() {
               variant="tertiary"
               onPress={handleExport}
               isDisabled={!hasAnyMeasurements}
-              icon={<Download size={16} color={colors.primary.dark} strokeWidth={1.4} />}
+              icon={<Download size={16} color={colors.brand} strokeWidth={1.4} />}
             />
           </View>
         }

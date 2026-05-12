@@ -1,12 +1,13 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { useWorkbookSaveStatus } from "@/components/workbook-overview/workbook-save-context";
+import { useReportAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
+import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useCallback, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -23,16 +24,45 @@ const AUTO_SAVE_DELAY = 1500;
 export default function WorkbookOverviewPage({ params }: WorkbookOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useWorkbook(id);
-  const { data: session } = useSession();
   const { t } = useTranslation(["workbook", "common"]);
-  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
-  const { markDirty, markSaving, markSaved } = useWorkbookSaveStatus();
 
-  const [cells, setCells] = useState<WorkbookCell[]>([]);
-  const cellsInitialized = useRef(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingCellsRef = useRef<WorkbookCell[] | null>(null);
-  const saveCellsRef = useRef<((c: WorkbookCell[]) => Promise<void>) | null>(null);
+  if (isLoading) {
+    return <div>{t("common.loading")}</div>;
+  }
+  if (error) {
+    return <ErrorDisplay error={error} title={t("workbooks.errorLoading")} />;
+  }
+  if (!data) {
+    return <div>{t("workbooks.notFound")}</div>;
+  }
+
+  // Mount the editor only after data loads so `useAutosave` sees the
+  // persisted state as its first value.
+  return (
+    <WorkbookEditorWithAutosave
+      id={id}
+      initialCells={data.cells as WorkbookCell[]}
+      createdBy={data.createdBy}
+      name={data.name}
+    />
+  );
+}
+
+function WorkbookEditorWithAutosave({
+  id,
+  initialCells,
+  createdBy,
+  name,
+}: {
+  id: string;
+  initialCells: WorkbookCell[];
+  createdBy: string;
+  name: string;
+}) {
+  const { data: session } = useSession();
+  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
+
+  const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
 
   const [promptedQuestionId, setPromptedQuestionId] = useState<string | undefined>();
   const questionResolverRef = useRef<((answer: string | undefined) => void) | null>(null);
@@ -50,50 +80,31 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
     setPromptedQuestionId(undefined);
   }, []);
 
-  useEffect(() => {
-    if (data && !cellsInitialized.current) {
-      setCells(data.cells as WorkbookCell[]);
-      cellsInitialized.current = true;
-    }
-  }, [data]);
-
-  const saveCells = useCallback(
-    async (updatedCells: WorkbookCell[]) => {
+  const save = useCallback(
+    async (next: WorkbookCell[]) => {
       try {
-        markSaving();
-        await updateWorkbook({
-          params: { id },
-          body: { cells: updatedCells },
-        });
-        markSaved();
+        await updateWorkbook({ params: { id }, body: { cells: next } });
       } catch (err) {
-        markSaved();
         const message = parseApiError(err)?.message;
-        if (message) {
-          toast({ description: message, variant: "destructive" });
-        }
+        if (message) toast({ description: message, variant: "destructive" });
+        throw err;
       }
     },
-    [id, updateWorkbook, markSaving, markSaved],
+    [id, updateWorkbook],
   );
 
-  useEffect(() => {
-    saveCellsRef.current = saveCells;
-  }, [saveCells]);
+  const autosave = useAutosave<WorkbookCell[]>({
+    value: cells,
+    toKey: (c) => JSON.stringify(c),
+    save,
+    delayMs: AUTO_SAVE_DELAY,
+  });
 
-  const handleCellsChange = useCallback(
-    (updatedCells: WorkbookCell[]) => {
-      setCells(updatedCells);
-      markDirty();
-      pendingCellsRef.current = updatedCells;
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        pendingCellsRef.current = null;
-        void saveCells(updatedCells);
-      }, AUTO_SAVE_DELAY);
-    },
-    [saveCells, markDirty],
-  );
+  useReportAutosaveStatus(autosave);
+
+  const handleCellsChange = useCallback((next: WorkbookCell[]) => {
+    setCells(next);
+  }, []);
 
   const {
     isConnected,
@@ -117,29 +128,7 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
     onPromptQuestion: handlePromptQuestion,
   });
 
-  useEffect(() => {
-    return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      if (pendingCellsRef.current && saveCellsRef.current) {
-        void saveCellsRef.current(pendingCellsRef.current);
-      }
-    };
-  }, []);
-
-  if (isLoading) {
-    return <div>{t("common.loading")}</div>;
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} title={t("workbooks.errorLoading")} />;
-  }
-
-  if (!data) {
-    return <div>{t("workbooks.notFound")}</div>;
-  }
-
-  const workbook = data;
-  const isCreator = session?.user.id === workbook.createdBy;
+  const isCreator = session?.user.id === createdBy;
 
   return (
     <div className="space-y-6">
@@ -147,7 +136,7 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
         cells={cells}
         onCellsChange={handleCellsChange}
         readOnly={!isCreator}
-        title={workbook.name}
+        title={name}
         executionStates={executionStates}
         isConnected={isConnected}
         isConnecting={isConnecting}
