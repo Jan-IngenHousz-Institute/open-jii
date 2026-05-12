@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { Flag, MessageCircle } from "lucide-react-native";
+import { Flag, MessageCircleMore } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { Button } from "~/components/Button";
@@ -104,7 +104,10 @@ export function QuestionsOnlySubmitNode() {
           className="flex-row items-center gap-1.5 py-1"
           activeOpacity={0.7}
         >
-          <MessageCircle size={18} color={trimmedComment ? colors.onSurface : colors.inactive} />
+          <MessageCircleMore
+            size={18}
+            color={trimmedComment ? colors.onSurface : colors.inactive}
+          />
           <Text className={clsx("text-sm", trimmedComment ? classes.text : classes.textMuted)}>
             {trimmedComment ? "Edit comment" : "Add comment"}
           </Text>
