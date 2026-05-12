@@ -21,6 +21,7 @@ Our project management runs on [Linear](https://linear.app/openjii). GitHub issu
 We do not offer an SLA or guaranteed response times. As an open-source non-profit project, our capacity varies. That said, we are doing our best to respond to issues promptly and support the researchers and developers who use our platform.
 
 What you can generally expect:
+
 - **Security issues** are treated with the highest priority.
 - **Bugs that block core workflows** (measurements, data access, authentication) are prioritised next.
 - **Feature requests and enhancements** are reviewed and planned into upcoming milestones as capacity allows.

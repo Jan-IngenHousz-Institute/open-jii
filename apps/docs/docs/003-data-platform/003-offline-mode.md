@@ -39,7 +39,7 @@ When internet is restored, measurements sync automatically to the server.
 
 If you are on the login screen without internet:
 
-- A yellow banner appears: *"You are offline. Please connect to the internet to log in."*
+- A yellow banner appears: _"You are offline. Please connect to the internet to log in."_
 - All login buttons (email, GitHub, ORCID) are disabled
 - OTP input and resend are disabled
 - Once connectivity returns, the banner disappears and login is re-enabled

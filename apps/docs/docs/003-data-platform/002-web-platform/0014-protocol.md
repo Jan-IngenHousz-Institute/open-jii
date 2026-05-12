@@ -48,6 +48,7 @@ Compatible macros are shown as mini-cards displaying the macro name and language
 Measurement flows can consist of **only questions and/or instruction nodes** — without requiring a sensor measurement step. This is useful for collecting survey data, field observations, or manual measurements.
 
 In a question-only flow:
+
 - The mobile app detects that no measurement node is present.
 - After all questions are answered, a summary screen shows the recorded answers.
 - Answers are submitted via MQTT without device or macro data.
@@ -65,7 +66,6 @@ In a question-only flow:
 - "Leaf Gas Exchange": gas-exchange protocol with extended inputs and analysis macro for photosynthetic parameters.
 
 For advanced usage and authoring of analysis macros, refer to the Developers guide and Analysis documentation.
-
 
 ## Macros
 
@@ -112,7 +112,6 @@ Compatible protocols are shown as mini-cards with protocol name and family badge
 
 Documentation on macros for the MultispeQ can be found on:
 https://help.photosynq.com/macros/coding-and-functions.html#code-structure along with code snippets
-
 
 ## Best practices
 

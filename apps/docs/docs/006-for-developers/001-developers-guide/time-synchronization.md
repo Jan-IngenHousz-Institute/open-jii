@@ -12,11 +12,11 @@ This three-step chain exists because each step solves a different problem that t
 
 ### Step 1: Location → Timezone (GPS coordinates via `expo-location` + `@photostructure/tz-lookup`)
 
-The device knows what time it *thinks* it is, but it does not reliably know what timezone it is in—especially at startup, after roaming, or when the user has changed timezones without restarting. The system timezone setting can lag reality.
+The device knows what time it _thinks_ it is, but it does not reliably know what timezone it is in—especially at startup, after roaming, or when the user has changed timezones without restarting. The system timezone setting can lag reality.
 
 We use GPS coordinates and a bundled timezone boundary database (`@photostructure/tz-lookup`) to resolve the correct [IANA timezone](https://www.iana.org/time-zones) (e.g. `"America/Chicago"`) from the device's physical location. This is done entirely offline—no network call needed. The resolved timezone is captured once per sync and stored alongside the time offset so it travels with every measurement.
 
-**Why not just use the system timezone?** The system timezone is user-controlled and can be wrong. A device roaming into a new timezone may not update until the next network sync. More critically, users can manually set both the timezone *and* the device clock to any value — meaning device time ≠ actual time. GPS is ground truth for location; the server is ground truth for time.
+**Why not just use the system timezone?** The system timezone is user-controlled and can be wrong. A device roaming into a new timezone may not update until the next network sync. More critically, users can manually set both the timezone _and_ the device clock to any value — meaning device time ≠ actual time. GPS is ground truth for location; the server is ground truth for time.
 
 ### Step 2: Server Time (API call to `GET /health/time`)
 

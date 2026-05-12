@@ -70,12 +70,12 @@ This uses the `preview` profile in your `eas.json` and creates a local build.
 
 The mobile app ships through four progressively-wider stages. Each stage has a **Play track** (where the AAB lives) and a matching **EAS Update channel** (where JS-only OTA patches are published).
 
-| Stage | Audience | Play track | OTA channel | Trigger |
-|---|---|---|---|---|
-| **preview** | devs | _(APK only)_ | `preview` | every push to `main` affecting mobile |
-| **internal** | internal QA + selected testers | `internal` | `internal` | semantic-release tag `mobile-vX.Y.Z` |
-| **beta** | extended testers (closed/open testing) | `beta` | `beta` | manual promotion |
-| **production** | general public | `production` | `production` | manual promotion + Play staged rollout |
+| Stage          | Audience                               | Play track   | OTA channel  | Trigger                                |
+| -------------- | -------------------------------------- | ------------ | ------------ | -------------------------------------- |
+| **preview**    | devs                                   | _(APK only)_ | `preview`    | every push to `main` affecting mobile  |
+| **internal**   | internal QA + selected testers         | `internal`   | `internal`   | semantic-release tag `mobile-vX.Y.Z`   |
+| **beta**       | extended testers (closed/open testing) | `beta`       | `beta`       | manual promotion                       |
+| **production** | general public                         | `production` | `production` | manual promotion + Play staged rollout |
 
 ### How OTA vs. AAB is decided
 

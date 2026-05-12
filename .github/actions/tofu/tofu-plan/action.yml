@@ -16,4 +16,4 @@ runs:
       working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
       run: |
         exec 2>&1
-        tofu plan 
+        tofu plan
