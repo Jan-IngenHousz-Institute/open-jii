@@ -131,10 +131,14 @@ resource "aws_iam_role_policy" "lambda_deny" {
         Resource = "*"
       },
       {
+        # Without scoping Resource to KMS, NotAction = ["kms:Decrypt"]
+        # denies every non-Decrypt action on every resource — including
+        # logs:PutLogEvents from the Lambda's own log forwarding, which
+        # silently swallows function stdout/stderr.
         Sid       = "DenyAllKMSExceptDecrypt"
         Effect    = "Deny"
         NotAction = ["kms:Decrypt"]
-        Resource  = "*"
+        Resource  = "arn:aws:kms:*:*:*"
       }
     ]
   })

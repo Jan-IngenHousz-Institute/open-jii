@@ -94,7 +94,7 @@ result <- tryCatch({
       "Rscript", WRAPPER_PATH, script_path, input_path, output_path
     ),
     stdout = FALSE,
-    stderr = FALSE
+    stderr = ""  # inherit Lambda stderr so wrapper crash messages reach CloudWatch
   )
 
   if (exit_code == 124) {
