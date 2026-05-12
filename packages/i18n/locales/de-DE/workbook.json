@@ -21,5 +21,18 @@
     "saving": "Speichern...",
     "allChangesSaved": "Alle Änderungen gespeichert",
     "viewWorkbook": "Arbeitsbuch anzeigen"
+  },
+  "output": {
+    "label": "Ausgabe",
+    "expand": "Ausgabe ausklappen",
+    "collapse": "Ausgabe einklappen",
+    "clear": "Ausgabe löschen",
+    "empty": "Keine Messdaten verfügbar — führen Sie zuerst eine Protokollzelle aus",
+    "noData": "Keine Ausgabedaten",
+    "tabTable": "Tabelle",
+    "tabJson": "JSON",
+    "copyJson": "JSON kopieren",
+    "closeChart": "Diagramm schließen",
+    "expandChart": "Diagramm für {{column}} öffnen"
   }
 }

@@ -554,6 +554,9 @@ importers:
       expo-symbols:
         specifier: ~55.0.7
         version: 55.0.7(expo-font@55.0.6)(expo@55.0.15)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+      expo-system-ui:
+        specifier: ~55.0.17
+        version: 55.0.17(expo@55.0.15)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))
       expo-updates:
         specifier: ~55.0.21
         version: 55.0.21(expo@55.0.15)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
@@ -563,9 +566,6 @@ importers:
       htmlparser2:
         specifier: ^10.1.0
         version: 10.1.0
-      lodash:
-        specifier: ^4.18.0
-        version: 4.18.1
       lucide-react-native:
         specifier: ^0.513.0
         version: 0.513.0(react-native-svg@15.15.3(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
@@ -590,6 +590,9 @@ importers:
       react-async-hook:
         specifier: ^4.0.0
         version: 4.0.0(react@19.2.4)
+      react-hook-form:
+        specifier: 'catalog:'
+        version: 7.72.0(react@19.2.4)
       react-native:
         specifier: 0.83.4
         version: 0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
@@ -644,6 +647,9 @@ importers:
       sonner-native:
         specifier: ^0.21.2
         version: 0.21.2(react-native-gesture-handler@2.30.1(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-reanimated@4.2.3(react-native-worklets@0.7.4(@babel/core@7.29.0)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-safe-area-context@5.6.2(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-screens@4.23.0(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-svg@15.15.3(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
       tailwindcss:
         specifier: 'catalog:'
         version: 3.4.19(tsx@4.21.0)(yaml@2.8.3)
@@ -693,9 +699,6 @@ importers:
       '@types/crypto-js':
         specifier: ^4.2.2
         version: 4.2.2
-      '@types/lodash':
-        specifier: ^4.17.24
-        version: 4.17.24
       '@types/luxon':
         specifier: ^3.7.1
         version: 3.7.1
@@ -749,7 +752,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.5.0)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@25.5.0)(typescript@5.9.3))(vite@7.3.2(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.5.0)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@25.5.0)(typescript@5.9.3))(vite@7.3.2(@types/node@25.5.0)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   apps/node-red:
     dependencies:
@@ -941,7 +944,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: catalog:testing
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/analytics:
     dependencies:
@@ -6967,6 +6970,9 @@ packages:
   '@react-native/normalize-colors@0.83.4':
     resolution: {integrity: sha512-9ezxaHjxqTkTOLg62SGg7YhFaE+fxa/jlrWP0nwf7eGFHlGOiTAaRR2KUfiN3K05e+EMbEhgcH/c7bgaXeGyJw==}
 
+  '@react-native/normalize-colors@0.83.6':
+    resolution: {integrity: sha512-bTM24b5v4qN3h52oflnv+OujFORn/kVi06WaWhnQQw14/ycilPqIsqsa+DpIBqdBrXxvLa9fXtCRrQtGATZCEw==}
+
   '@react-native/virtualized-lists@0.83.4':
     resolution: {integrity: sha512-vNF/8kokMW8JEjG4n+j7veLTjHRRABlt4CaTS6+wtqzvWxCJHNIC8fhCqrDPn9fIn8sNePd8DyiFVX5L9TBBRA==}
     engines: {node: '>= 20.19.4'}
@@ -8280,9 +8286,6 @@ packages:
 
   '@types/leaflet@1.9.21':
     resolution: {integrity: sha512-TbAd9DaPGSnzp6QvtYngntMZgcRk+igFELwR2N99XZn7RXUdKgsXMR+28bUO0rPsWp8MIu/f47luLIQuSLYv/w==}
-
-  '@types/lodash@4.17.24':
-    resolution: {integrity: sha512-gIW7lQLZbue7lRSWEFql49QJJWThrTFFeIMJdp3eH4tKoxm1OvEPg02rm4wCCSHS0cL3/Fizimb35b7k8atwsQ==}
 
   '@types/luxon@3.7.1':
     resolution: {integrity: sha512-H3iskjFIAn5SlJU7OuxUmTEpebK6TKB8rxZShDslBMZJ5u9S//KM1sbdAisiSrqwLQncVjnpi2OK2J51h+4lsg==}
@@ -11701,6 +11704,16 @@ packages:
       react: 19.2.4
       react-native: '*'
 
+  expo-system-ui@55.0.17:
+    resolution: {integrity: sha512-sCrQbp1VyMe63c7y7/luz88P9Ro3/jeUBXby2uYk0wHtkawUzBK9V69J3HTC4rI5eXiJMJPF2oCKO71c/7wtTg==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native-web:
+        optional: true
+
   expo-updates-interface@55.1.5:
     resolution: {integrity: sha512-YOk9vhplWi0djoeqxMlEQgcDFeOGhnj4dWU0v1QvF5RqpqwLGdx780E0k3zL85xw6LXljVN78d6g8z51qIZu5g==}
     peerDependencies:
@@ -11850,8 +11863,8 @@ packages:
   fast-uri@3.1.0:
     resolution: {integrity: sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==}
 
-  fast-xml-builder@1.1.4:
-    resolution: {integrity: sha512-f2jhpN4Eccy0/Uz9csxh3Nu6q4ErKxf0XIsasomfOihuSUa3/xw6w8dnOtCDgEItQFJG8KyXPzQXzcODDrrbOg==}
+  fast-xml-builder@1.2.0:
+    resolution: {integrity: sha512-00aAWieqff+ZJhsXA4g1g7M8k+7AYoMUUHF+/zFb5U6Uv/P0Vl4QZo84/IcufzYalLuEj9928bXN9PbbFzMF0Q==}
 
   fast-xml-parser@5.5.8:
     resolution: {integrity: sha512-Z7Fh2nVQSb2d+poDViM063ix2ZGt9jmY1nWhPfHBOK2Hgnb/OW3P4Et3P/81SEej0J7QbWtJqxO05h8QYfK7LQ==}
@@ -15301,6 +15314,10 @@ packages:
     resolution: {integrity: sha512-DwmPWeFn+tq7TiyJ2CxezCAirXjFxvaiD03npak3cRjlP9+OjTmSy1EpIrEbh+l6JgUundniloMLDQ/6VTdhLQ==}
     engines: {node: '>=14.0.0'}
 
+  path-expression-matcher@1.5.0:
+    resolution: {integrity: sha512-cbrerZV+6rvdQrrD+iGMcZFEiiSrbv9Tfdkvnusy6y0x0GKBXREFg/Y65GhIfm0tnLntThhzCnfKwp1WRjeCyQ==}
+    engines: {node: '>=14.0.0'}
+
   path-extra@1.0.3:
     resolution: {integrity: sha512-vYm3+GCkjUlT1rDvZnDVhNLXIRvwFPaN8ebHAFcuMJM/H0RBOPD7JrcldiNLd9AS3dhAyUHLa4Hny5wp1A+Ffw==}
 
@@ -18525,14 +18542,17 @@ packages:
 
   uuid@7.0.3:
     resolution: {integrity: sha512-DPSke0pXhTZgoF/d+WSt2QaKMCFSfx7QegxEWT+JOuHF5aWrKEn0G+ztjuJg/gG8/ItK+rbPCD/yNv8yyih6Cg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -19006,6 +19026,10 @@ packages:
   xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
     engines: {node: '>=18'}
+
+  xml-naming@0.1.0:
+    resolution: {integrity: sha512-k8KO9hrMyNk6tUWqUfkTEZbezRRpONVOzUTnc97VnCvyj6Tf9lyUR9EDAIeiVLv56jsMcoXEwjW8Kv5yPY52lw==}
+    engines: {node: '>=16.0.0'}
 
   xml2js@0.4.23:
     resolution: {integrity: sha512-ySPiMjM0+pLDftHgXY4By0uswI3SPKLDw/i3UXbnO8M/p28zqexCUoPmQFrYD+/1BzhGJSs2i1ERWKJAtiLrug==}
@@ -26153,6 +26177,8 @@ snapshots:
 
   '@react-native/normalize-colors@0.83.4': {}
 
+  '@react-native/normalize-colors@0.83.6': {}
+
   '@react-native/virtualized-lists@0.83.4(@types/react@19.2.14)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)':
     dependencies:
       invariant: 2.2.4
@@ -27948,8 +27974,6 @@ snapshots:
     dependencies:
       '@types/geojson': 7946.0.16
 
-  '@types/lodash@4.17.24': {}
-
   '@types/luxon@3.7.1': {}
 
   '@types/mapbox__point-geometry@0.1.4': {}
@@ -28306,7 +28330,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.4':
     dependencies:
@@ -28317,15 +28341,6 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.4(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))':
-    dependencies:
-      '@vitest/spy': 4.1.4
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      msw: 2.13.3(@types/node@22.19.15)(typescript@5.9.3)
-      vite: 7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
-
   '@vitest/mocker@4.1.4(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.1.4
@@ -28334,6 +28349,15 @@ snapshots:
     optionalDependencies:
       msw: 2.13.3(@types/node@22.19.15)(typescript@5.9.3)
       vite: 7.3.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  '@vitest/mocker@4.1.4(msw@2.13.3(@types/node@25.5.0)(typescript@5.9.3))(vite@7.3.2(@types/node@25.5.0)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))':
+    dependencies:
+      '@vitest/spy': 4.1.4
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      msw: 2.13.3(@types/node@25.5.0)(typescript@5.9.3)
+      vite: 7.3.2(@types/node@25.5.0)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
   '@vitest/mocker@4.1.4(msw@2.13.3(@types/node@25.5.0)(typescript@5.9.3))(vite@7.3.2(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
@@ -28371,7 +28395,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/utils@4.1.4':
     dependencies:
@@ -32095,6 +32119,15 @@ snapshots:
       react-native: 0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
       sf-symbols-typescript: 2.2.0
 
+  expo-system-ui@55.0.17(expo@55.0.15)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)):
+    dependencies:
+      '@react-native/normalize-colors': 0.83.6
+      debug: 4.4.3
+      expo: 55.0.15(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(@expo/metro-runtime@6.1.2)(expo-router@55.0.12)(react-dom@19.2.4(react@19.2.4))(react-native-webview@13.16.0(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-worklets@0.7.4(@babel/core@7.29.0)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
+      react-native: 0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
+    transitivePeerDependencies:
+      - supports-color
+
   expo-updates-interface@55.1.5(expo@55.0.15):
     dependencies:
       expo: 55.0.15(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(@expo/metro-runtime@6.1.2)(expo-router@55.0.12)(react-dom@19.2.4(react@19.2.4))(react-native-webview@13.16.0(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-worklets@0.7.4(@babel/core@7.29.0)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
@@ -32346,13 +32379,14 @@ snapshots:
 
   fast-uri@3.1.0: {}
 
-  fast-xml-builder@1.1.4:
+  fast-xml-builder@1.2.0:
     dependencies:
-      path-expression-matcher: 1.2.0
+      path-expression-matcher: 1.5.0
+      xml-naming: 0.1.0
 
   fast-xml-parser@5.5.8:
     dependencies:
-      fast-xml-builder: 1.1.4
+      fast-xml-builder: 1.2.0
       path-expression-matcher: 1.2.0
       strnum: 2.2.2
 
@@ -36457,6 +36491,8 @@ snapshots:
 
   path-expression-matcher@1.2.0: {}
 
+  path-expression-matcher@1.5.0: {}
+
   path-extra@1.0.3: {}
 
   path-is-absolute@1.0.1: {}
@@ -40386,23 +40422,6 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  vite@7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3):
-    dependencies:
-      esbuild: 0.27.7
-      fdir: 6.5.0(picomatch@4.0.4)
-      picomatch: 4.0.4
-      postcss: 8.5.12
-      rollup: 4.60.1
-      tinyglobby: 0.2.15
-    optionalDependencies:
-      '@types/node': 22.19.15
-      fsevents: 2.3.3
-      jiti: 1.21.7
-      lightningcss: 1.32.0
-      terser: 5.46.1
-      tsx: 4.21.0
-      yaml: 2.8.3
-
   vite@7.3.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.7
@@ -40454,37 +40473,6 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.3
 
-  vitest@4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)):
-    dependencies:
-      '@vitest/expect': 4.1.4
-      '@vitest/mocker': 4.1.4(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-      '@vitest/pretty-format': 4.1.4
-      '@vitest/runner': 4.1.4
-      '@vitest/snapshot': 4.1.4
-      '@vitest/spy': 4.1.4
-      '@vitest/utils': 4.1.4
-      es-module-lexer: 2.0.0
-      expect-type: 1.3.0
-      magic-string: 0.30.21
-      obug: 2.1.1
-      pathe: 2.0.3
-      picomatch: 4.0.4
-      std-env: 4.1.0
-      tinybench: 2.9.0
-      tinyexec: 1.0.4
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.1.0
-      vite: 7.3.2(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@opentelemetry/api': 1.9.1
-      '@types/node': 22.19.15
-      '@vitest/coverage-v8': 4.1.4(vitest@4.1.4)
-      '@vitest/ui': 4.1.4(vitest@4.1.4)
-      jsdom: 26.1.0
-    transitivePeerDependencies:
-      - msw
-
   vitest@4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.4
@@ -40510,6 +40498,37 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       '@types/node': 22.19.15
+      '@vitest/coverage-v8': 4.1.4(vitest@4.1.4)
+      '@vitest/ui': 4.1.4(vitest@4.1.4)
+      jsdom: 26.1.0
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.5.0)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@25.5.0)(typescript@5.9.3))(vite@7.3.2(@types/node@25.5.0)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)):
+    dependencies:
+      '@vitest/expect': 4.1.4
+      '@vitest/mocker': 4.1.4(msw@2.13.3(@types/node@25.5.0)(typescript@5.9.3))(vite@7.3.2(@types/node@25.5.0)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/pretty-format': 4.1.4
+      '@vitest/runner': 4.1.4
+      '@vitest/snapshot': 4.1.4
+      '@vitest/spy': 4.1.4
+      '@vitest/utils': 4.1.4
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.4
+      std-env: 4.1.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.4
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.1.0
+      vite: 7.3.2(@types/node@25.5.0)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
+      '@types/node': 25.5.0
       '@vitest/coverage-v8': 4.1.4(vitest@4.1.4)
       '@vitest/ui': 4.1.4(vitest@4.1.4)
       jsdom: 26.1.0
@@ -41025,6 +41044,8 @@ snapshots:
       sax: 1.6.0
 
   xml-name-validator@5.0.0: {}
+
+  xml-naming@0.1.0: {}
 
   xml2js@0.4.23:
     dependencies:

@@ -34,14 +34,14 @@ interface ButtonProps extends TouchableOpacityProps {
 const buttonVariants = cva("rounded-lg items-center justify-center", {
   variants: {
     variant: {
-      primary: "bg-[#005e5e]",
-      secondary: "bg-[#afd7f4]",
-      outline: "bg-transparent border border-[#005e5e]",
+      primary: "bg-primary",
+      secondary: "bg-jii-secondary-blue dark:bg-jii-secondary-blue/30",
+      outline: "bg-transparent border border-primary",
       ghost: "bg-transparent",
-      surface: "bg-gray-200",
-      light: "bg-[#EDF2F6]",
-      tertiary: "bg-[#E2FCFC] border border-[#005E5E]",
-      danger: "bg-[#FFE5E5] border border-[#DC2626]",
+      surface: "bg-surface",
+      light: "bg-muted",
+      tertiary: "bg-primary/10 border border-primary",
+      danger: "bg-error/10 border border-error",
     },
     size: {
       sm: "py-1.5 px-3",
@@ -57,17 +57,17 @@ const buttonVariants = cva("rounded-lg items-center justify-center", {
     {
       variant: "primary",
       disabled: true,
-      class: "bg-gray-400",
+      class: "bg-inactive",
     },
     {
       variant: "secondary",
       disabled: true,
-      class: "bg-gray-400",
+      class: "bg-inactive",
     },
     {
       variant: "outline",
       disabled: true,
-      class: "border-gray-400",
+      class: "border-inactive",
     },
   ],
 });
@@ -75,14 +75,14 @@ const buttonVariants = cva("rounded-lg items-center justify-center", {
 const textVariants = cva("font-semibold text-center", {
   variants: {
     variant: {
-      primary: "text-white",
-      secondary: "text-black",
-      outline: "text-[#005e5e]",
-      ghost: "text-[#005e5e]",
-      surface: "text-black",
-      light: "text-black",
-      tertiary: "text-[#005E5E]",
-      danger: "text-[#DC2626]",
+      primary: "text-primary-foreground",
+      secondary: "text-foreground",
+      outline: "text-primary",
+      ghost: "text-primary",
+      surface: "text-on-surface",
+      light: "text-foreground",
+      tertiary: "text-primary",
+      danger: "text-error",
     },
     size: {
       sm: "text-sm",
@@ -90,7 +90,7 @@ const textVariants = cva("font-semibold text-center", {
       lg: "text-lg",
     },
     disabled: {
-      true: "text-gray-400",
+      true: "text-inactive",
       false: "",
     },
   },

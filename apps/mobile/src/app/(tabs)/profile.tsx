@@ -1,33 +1,27 @@
 import { useQueryClient } from "@tanstack/react-query";
 import "expo-application";
 import * as Application from "expo-application";
-import { useRouter } from "expo-router";
 import * as Updates from "expo-updates";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Linking, Image } from "react-native";
+import { View, Text, ScrollView, Linking, Image } from "react-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
 import { useSession } from "~/hooks/use-session";
-import { useTheme } from "~/hooks/use-theme";
-import { clearSessionFlag } from "~/services/session-persistence";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 import { getEnvVar } from "~/stores/environment-store";
 import { formatRelativeTime } from "~/utils/format-relative-time";
 
 export default function ProfileScreen() {
   const { session, signOut } = useSession();
   const queryClient = useQueryClient();
-  const router = useRouter();
-  const theme = useTheme();
-  const { colors } = theme;
+  const themeColors = useThemeColors();
 
   const handleLogout = async () => {
     queryClient.resetQueries();
-    await clearSessionFlag();
     await signOut();
-    router.replace("/callback");
   };
 
   const handleOpenWebProfile = async () => {
@@ -48,232 +42,64 @@ export default function ProfileScreen() {
   const { user, expires } = session.data;
 
   return (
-    <ScrollView
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
-        },
-      ]}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <View style={styles.profileHeader}>
-        <View style={[styles.avatarContainer, { backgroundColor: colors.primary.dark + "30" }]}>
+    <ScrollView className="bg-background flex-1" contentContainerStyle={{ padding: 16 }}>
+      <View className="my-6 items-center">
+        <View
+          className="mb-4 h-20 w-20 items-center justify-center overflow-hidden rounded-full"
+          style={{ backgroundColor: themeColors.brand + "30" }}
+        >
           {user.image ? (
-            <Image source={{ uri: user.image }} style={styles.avatarImage} />
+            <Image source={{ uri: user.image }} className="h-full w-full rounded-full" />
           ) : (
-            <User size={40} color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface} />
+            <User size={40} color={themeColors.onSurface} />
           )}
         </View>
-        <Text
-          style={[
-            styles.userName,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          {user.name}
-        </Text>
-        <Text
-          style={[
-            styles.userEmail,
-            {
-              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-            },
-          ]}
-        >
-          {user.email}
-        </Text>
+        <Text className="text-on-surface mb-1 text-xl font-bold">{user.name}</Text>
+        <Text className="text-inactive text-base">{user.email}</Text>
       </View>
 
-      <Card style={styles.infoCard}>
-        <Text
-          style={[
-            styles.infoTitle,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          Account Information
-        </Text>
+      <Card className="mb-6">
+        <Text className="text-on-surface mb-4 text-lg font-bold">Account Information</Text>
 
-        <View
-          style={[
-            styles.infoRow,
-            {
-              borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.infoLabel,
-              {
-                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-              },
-            ]}
-          >
-            Organization
-          </Text>
-          <Text
-            style={[
-              styles.infoValue,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            N/A
-          </Text>
+        <View className="border-border flex-row justify-between border-b py-3">
+          <Text className="text-inactive text-base">Organization</Text>
+          <Text className="text-on-surface text-base font-medium">N/A</Text>
         </View>
 
-        <View
-          style={[
-            styles.infoRow,
-            {
-              borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.infoLabel,
-              {
-                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-              },
-            ]}
-          >
-            Login Expires
-          </Text>
-          <Text
-            style={[
-              styles.infoValue,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
+        <View className="border-border flex-row justify-between border-b py-3">
+          <Text className="text-inactive text-base">Login Expires</Text>
+          <Text className="text-on-surface text-base font-medium">
             {formatRelativeTime(expires)}
           </Text>
         </View>
       </Card>
 
-      <View style={styles.actionsContainer}>
+      <View className="mb-6">
         <Button
           title="Open Web Profile"
           onPress={handleOpenWebProfile}
           variant="outline"
-          style={styles.actionButton}
-          icon={<ExternalLink size={16} color={colors.primary.dark} />}
+          style={{ marginBottom: 12 }}
+          icon={
+            <ExternalLink size={16} color={themeColors.brand} />
+          }
         />
 
         <Button
           title="Log Out"
           onPress={handleLogout}
-          variant="outline"
-          style={[styles.actionButton, styles.logoutButton] as any}
-          textStyle={styles.logoutButtonText}
+          variant="danger"
+          style={{ marginBottom: 12 }}
           icon={<LogOut size={16} color={colors.semantic.error} />}
         />
       </View>
 
-      <Text
-        style={[
-          styles.versionText,
-          {
-            color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-          },
-        ]}
-      >
+      <Text className="text-inactive mt-6 text-center text-sm">
         openJII v{Application.nativeApplicationVersion} ({Application.nativeBuildVersion})
       </Text>
       {Updates.updateId && (
-        <Text
-          style={[
-            styles.versionText,
-            {
-              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-            },
-          ]}
-        >
-          {Updates.updateId}
-        </Text>
+        <Text className="text-inactive mt-6 text-center text-sm">{Updates.updateId}</Text>
       )}
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-  },
-  profileHeader: {
-    alignItems: "center",
-    marginVertical: 24,
-  },
-  avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    overflow: "hidden",
-  },
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 40,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 16,
-  },
-  infoCard: {
-    marginBottom: 24,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  infoLabel: {
-    fontSize: 16,
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  actionsContainer: {
-    marginBottom: 24,
-  },
-  actionButton: {
-    marginBottom: 12,
-  },
-  logoutButton: {
-    borderColor: colors.semantic.error,
-  },
-  logoutButtonText: {
-    color: colors.semantic.error,
-  },
-  versionText: {
-    textAlign: "center",
-    fontSize: 14,
-    marginTop: 24,
-  },
-});

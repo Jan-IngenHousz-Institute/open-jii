@@ -1,6 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
+import { act, cleanup } from "@testing-library/react";
 import { Code } from "lucide-react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { CellWrapper } from "./cell-wrapper";
 
@@ -101,5 +102,92 @@ describe("CellWrapper", () => {
     });
 
     expect(screen.getByTestId("badge")).toBeInTheDocument();
+  });
+
+  describe("RunTimer (running cell elapsed time)", () => {
+    afterEach(() => {
+      cleanup();
+      vi.useRealTimers();
+    });
+
+    it("renders next to the spinner only while executionStatus is 'running'", () => {
+      const { rerender } = renderWrapper({ executionStatus: "running" });
+      expect(screen.getByTestId("run-timer")).toBeInTheDocument();
+
+      rerender(
+        <CellWrapper
+          icon={<Code className="h-3.5 w-3.5" />}
+          label="Test Cell"
+          accentColor="#005E5E"
+          executionStatus="completed"
+        >
+          <div />
+        </CellWrapper>,
+      );
+      expect(screen.queryByTestId("run-timer")).not.toBeInTheDocument();
+    });
+
+    it("ticks the elapsed value as time advances", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      renderWrapper({ executionStatus: "running" });
+
+      // First paint reads 0ms.
+      expect(screen.getByTestId("run-timer")).toHaveTextContent("0ms");
+
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(screen.getByTestId("run-timer")).toHaveTextContent("300ms");
+
+      act(() => {
+        vi.advanceTimersByTime(900);
+      });
+      // 1.2s formatted with one decimal once we cross the 1s threshold.
+      expect(screen.getByTestId("run-timer")).toHaveTextContent("1.2s");
+
+      act(() => {
+        vi.advanceTimersByTime(15_000);
+      });
+      // Past 10s the formatter switches to integer seconds.
+      expect(screen.getByTestId("run-timer")).toHaveTextContent("16s");
+    });
+
+    it("resets to zero on a fresh running transition", () => {
+      vi.useFakeTimers();
+      const { rerender } = renderWrapper({ executionStatus: "running" });
+      act(() => {
+        vi.advanceTimersByTime(2_000);
+      });
+      expect(screen.getByTestId("run-timer")).toHaveTextContent("2.0s");
+
+      rerender(
+        <CellWrapper
+          icon={<Code className="h-3.5 w-3.5" />}
+          label="Test Cell"
+          accentColor="#005E5E"
+          executionStatus="completed"
+        >
+          <div />
+        </CellWrapper>,
+      );
+      // Re-enter running after a completed beat: timer should restart at 0.
+      rerender(
+        <CellWrapper
+          icon={<Code className="h-3.5 w-3.5" />}
+          label="Test Cell"
+          accentColor="#005E5E"
+          executionStatus="running"
+        >
+          <div />
+        </CellWrapper>,
+      );
+      expect(screen.getByTestId("run-timer")).toHaveTextContent("0ms");
+    });
+
+    it("does not render when not running", () => {
+      renderWrapper({ executionStatus: "idle" });
+      expect(screen.queryByTestId("run-timer")).not.toBeInTheDocument();
+    });
   });
 });

@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -19,9 +20,11 @@ import { TimeSyncProvider } from "~/components/time-sync-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useAutoUpload } from "~/hooks/use-auto-upload";
 import { useOtaUpdate } from "~/hooks/use-ota-update";
-import { useTheme } from "~/hooks/use-theme";
+import { useSession } from "~/hooks/use-session";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 import { db } from "~/services/db/client";
+import { shouldHideSplash } from "~/utils/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
 
@@ -33,45 +36,45 @@ function DrizzleDevTools() {
 }
 
 function RootLayoutNav() {
-  const theme = useTheme();
-  const { colors } = theme;
+  const themeColors = useThemeColors();
+  const { session, isLoaded } = useSession();
+
+  useEffect(() => {
+    if (isLoaded) {
+      void SplashScreen.hideAsync();
+    }
+  }, [isLoaded]);
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  const isSignedIn = !!session;
 
   return (
     <Stack
       screenOptions={{
         headerShown: false,
         headerStyle: {
-          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
+          backgroundColor: themeColors.background,
         },
-        headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+        headerTintColor: themeColors.onSurface,
         headerTitleStyle: {
           fontWeight: "bold",
           fontFamily: "Poppins-Bold",
         },
         headerShadowVisible: false,
         contentStyle: {
-          backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
+          backgroundColor: themeColors.surface,
         },
       }}
     >
-      <Stack.Screen
-        name="(auth)/login"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="callback"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
-      />
+      <Stack.Protected guard={isSignedIn}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={!isSignedIn}>
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -106,15 +109,21 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
     }
   }, [error, migrationsError]);
 
+  useEffect(() => {
+    if (shouldHideSplash(loaded, migrationsReady, migrationsError)) {
+      void SplashScreen.hideAsync();
+    }
+  }, [loaded, migrationsReady, migrationsError]);
+
   if (migrationsError) {
     return (
-      <View className="flex-1 items-center justify-center bg-white p-8">
-        <Text className="mb-3 text-xl font-bold text-[#c0392b]">Database Error</Text>
-        <Text className="mb-8 text-center text-sm text-[#555]">
+      <View className="bg-background flex-1 items-center justify-center p-8">
+        <Text className="text-destructive mb-3 text-xl font-bold">Database Error</Text>
+        <Text className="text-muted-foreground mb-8 text-center text-sm">
           {migrationsError.message ?? "A database migration failed. Please try again."}
         </Text>
-        <Pressable className="rounded-lg bg-[#c0392b] px-8 py-3" onPress={onRetry}>
-          <Text className="text-base font-semibold text-white">Retry</Text>
+        <Pressable className="bg-destructive rounded-lg px-8 py-3" onPress={onRetry}>
+          <Text className="text-destructive-foreground text-base font-semibold">Retry</Text>
         </Pressable>
       </View>
     );
@@ -139,7 +148,7 @@ function AutoUploadEffect() {
 }
 
 function RootLayoutContent() {
-  const theme = useTheme();
+  const { colorScheme } = useColorScheme();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -149,7 +158,7 @@ function RootLayoutContent() {
           <SafeAreaProvider>
             <PythonMacroProvider>
               <BottomSheetModalProvider>
-                <StatusBar style={theme.isDark ? "light" : "dark"} />
+                <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
                 {__DEV__ && <DrizzleDevTools />}
                 <RootLayoutNav />
                 <Toaster />

@@ -60,9 +60,7 @@ export function SingleChoiceQuestion({
       </View>
 
       {content.required && !selectedValue && (
-        <Text className={clsx("mt-2 text-sm text-red-500", classes.text)}>
-          Please select an option
-        </Text>
+        <Text className="text-destructive mt-2 text-sm">Please select an option</Text>
       )}
     </View>
   );

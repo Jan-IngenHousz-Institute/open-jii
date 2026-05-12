@@ -41,13 +41,10 @@ export function MeasurementResult({
     return await applyMacro(rawMeasurement, macro);
   }, [rawMeasurement, macro]);
 
-  const messageGroups: MacroMessageGroup[] = processedMeasurement?.messages
-    ? [processedMeasurement.messages]
-    : [];
-
-  const processedKeys = processedMeasurement
-    ? Object.keys(processedMeasurement).filter((key) => key !== "messages")
-    : [];
+  const messageGroups: MacroMessageGroup[] =
+    processedMeasurement
+      ?.map((output) => output.messages)
+      .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
 
   const renderRawContent = () => (
     <Text className={clsx("font-mono text-sm leading-5", classes.text)}>
@@ -67,10 +64,10 @@ export function MeasurementResult({
     }
 
     if (isProcessing) {
-      return <ActivityIndicator size="large" color={colors.primary.dark} />;
+      return <ActivityIndicator size="large" color={colors.brand} />;
     }
 
-    if (!processedMeasurement || processedKeys.length === 0) {
+    if (!processedMeasurement?.length) {
       return (
         <View className="items-center justify-center p-6">
           <Text className={clsx("text-center text-lg", classes.textSecondary)}>
@@ -82,15 +79,23 @@ export function MeasurementResult({
 
     return (
       <View>
-        {processedKeys.map((key) => {
-          const value = processedMeasurement[key];
-          if (typeof value === "string" || typeof value === "number") {
-            return <KeyValue key={key} value={value} name={key} />;
-          }
-          if (Array.isArray(value) && typeof value[0] === "number") {
-            return <Chart key={key} name={key} values={value} />;
-          }
-          return null;
+        {processedMeasurement.map((output, outputIndex) => {
+          return (
+            <View key={outputIndex}>
+              {Object.keys(output)
+                .filter((key) => key !== "messages")
+                .map((key) => {
+                  const value = output[key];
+                  if (typeof value === "string" || typeof value === "number") {
+                    return <KeyValue key={key} value={value} name={key} />;
+                  }
+                  if (Array.isArray(value) && typeof value[0] === "number") {
+                    return <Chart key={key} name={key} values={value} />;
+                  }
+                  return null;
+                })}
+            </View>
+          );
         })}
       </View>
     );
@@ -110,10 +115,10 @@ export function MeasurementResult({
           onPress={onCommentPress}
         >
           <View className="flex-row items-center gap-2">
-            <MessageCircle size={18} color={colors.primary.dark} />
+            <MessageCircle size={18} color={colors.brand} />
             <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
           </View>
-          <ChevronRight size={16} color={colors.primary.dark} />
+          <ChevronRight size={16} color={colors.brand} />
         </TouchableOpacity>
       )}
 

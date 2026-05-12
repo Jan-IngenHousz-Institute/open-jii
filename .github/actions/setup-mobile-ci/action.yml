@@ -1,0 +1,25 @@
+name: "Setup mobile CI environment"
+description: "Sets up Node.js, pnpm, and Expo/EAS CLI. Call after actions/checkout."
+inputs:
+  node-version:
+    description: "Node.js version"
+    required: false
+    default: "22"
+  expo-token:
+    description: "Expo access token (typically secrets.EXPO_TOKEN)"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js and pnpm
+      uses: ./.github/actions/setup-nodejs-pnpm
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Setup Expo CLI
+      uses: expo/expo-github-action@v8
+      with:
+        expo-version: latest
+        eas-version: latest
+        token: ${{ inputs.expo-token }}

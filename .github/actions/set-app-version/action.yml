@@ -1,0 +1,27 @@
+name: "Set Expo app version"
+description: "Writes inputs.version into app.json's expo.version field."
+inputs:
+  version:
+    description: "Semver version string"
+    required: true
+  working-directory:
+    description: "Directory containing app.json"
+    required: false
+    default: "apps/mobile"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set app version
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        APP_VERSION: ${{ inputs.version }}
+      run: |
+        node -e "
+          const fs = require('fs');
+          const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          app.expo.version = process.env.APP_VERSION;
+          fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+        "
+        echo "Set app version to $APP_VERSION"

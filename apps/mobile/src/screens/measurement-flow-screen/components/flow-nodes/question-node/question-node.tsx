@@ -1,10 +1,10 @@
-import { clsx } from "clsx";
 import { Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Keyboard } from "react-native";
 import { toast } from "sonner-native";
 import { Checkbox } from "~/components/Checkbox";
-import { useTheme } from "~/hooks/use-theme";
+import { colors } from "~/constants/colors";
+import { useThemeColors } from "~/hooks/use-theme-colors";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
@@ -25,8 +25,7 @@ interface QuestionNodeProps {
 
 export function QuestionNode({ node }: QuestionNodeProps) {
   const { iterationCount } = useMeasurementFlowStore();
-  const theme = useTheme();
-  const { classes, colors } = theme;
+  const themeColors = useThemeColors();
   const {
     setAnswer,
     getAnswer,
@@ -40,24 +39,18 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
 
-  // Get current answer from store (using node.id as key)
   const answerValue = getAnswer(iterationCount, node.id) ?? "";
 
-  // Handler to update answer in store
   const handleAnswerChange = (value: string) => {
     setAnswer(iterationCount, node.id, value);
   };
 
-  // Handler for yes/no and multi_choice that auto-advances
   const handleAnswerChangeAndAdvance = (value: string) => {
     Keyboard.dismiss();
-    // Set the answer
     setAnswer(iterationCount, node.id, value);
-    // Use shared utility to advance with proper answer handling
     advanceWithAnswer(node, value);
   };
 
-  // Handler called when a QR code is scanned — routes by question type
   const handleQRScanned = (data: string) => {
     switch (content.kind) {
       case "multi_choice": {
@@ -127,7 +120,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
       default:
         return (
           <View className="p-4">
-            <Text className={clsx("text-center", classes.textSecondary)}>
+            <Text className="text-muted-foreground text-center">
               Unsupported question kind: {content.kind}
             </Text>
           </View>
@@ -136,9 +129,9 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   };
 
   return (
-    <View className={clsx("flex-1 gap-4 rounded-xl px-4 pt-4")}>
+    <View className="flex-1 gap-4 rounded-xl px-4 pt-4">
       <AutoProceededSummary currentNodeId={node.id} iterationCount={iterationCount} />
-      <Text className={clsx("text-lg font-bold", classes.text)}>{content.text}</Text>
+      <Text className="text-foreground text-lg font-bold">{content.text}</Text>
       <QRScannerModal
         visible={qrScannerVisible}
         onClose={() => setQrScannerVisible(false)}
@@ -156,7 +149,6 @@ export function QuestionNode({ node }: QuestionNodeProps) {
               icon={<Bookmark size={16} color={colors.neutral.black} />}
               onChange={(enabled) => {
                 setRememberAnswer(node.id, enabled);
-                // Disable autoincrement when remember answer is enabled
                 if (enabled) {
                   setAutoincrement(node.id, false);
                 }
@@ -169,7 +161,6 @@ export function QuestionNode({ node }: QuestionNodeProps) {
               icon={<Repeat2 size={16} color={colors.neutral.black} />}
               onChange={(enabled) => {
                 setAutoincrement(node.id, enabled);
-                // Disable remember answer when autoincrement is enabled
                 if (enabled) {
                   setRememberAnswer(node.id, false);
                 }
@@ -188,44 +179,28 @@ export function QuestionNode({ node }: QuestionNodeProps) {
       </View>
 
       {content.kind === "multi_choice" && (
-        <View
-          className={clsx(
-            "flex-row items-center gap-2 rounded-xl border pl-4 pr-2",
-            classes.border,
-          )}
-        >
-          <Search size={20} color={theme.isDark ? colors.dark.inactive : colors.light.inactive} />
+        <View className="border-border flex-row items-center gap-2 rounded-xl border pl-4 pr-2">
+          <Search size={20} color={themeColors.inactive} />
 
           <TextInput
-            className="flex-1 text-base"
+            className="text-on-surface flex-1 text-base"
             placeholder="Search options..."
-            placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
-            style={{ color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface }}
+            placeholderTextColor={themeColors.inactive}
             value={searchTerm}
             onChangeText={setSearchTerm}
           />
 
           {searchTerm.length > 0 ? (
             <TouchableOpacity
-              className="rounded-md p-1"
-              style={{
-                backgroundColor: theme.isDark
-                  ? colors.dark.grayBackground
-                  : colors.light.grayBackground,
-              }}
+              className="bg-gray-background rounded-md p-1"
               onPress={() => setSearchTerm("")}
             >
               <X size={20} color={colors.neutral.black} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              className="rounded-md p-1"
+              className="bg-gray-background rounded-md p-1"
               onPress={() => setQrScannerVisible(true)}
-              style={{
-                backgroundColor: theme.isDark
-                  ? colors.dark.grayBackground
-                  : colors.light.grayBackground,
-              }}
             >
               <ScanQrCode size={20} color={colors.neutral.black} />
             </TouchableOpacity>

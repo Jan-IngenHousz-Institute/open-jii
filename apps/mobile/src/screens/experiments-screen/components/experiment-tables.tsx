@@ -1,6 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { View, Text, ScrollView } from "react-native";
 import { ParsedTableData } from "~/utils/parse-experiment-data";
 
 import { DataTable } from "./data-table";
@@ -11,33 +10,18 @@ interface ExperimentTablesProps {
 }
 
 export function ExperimentTables({ tables, isLoading }: ExperimentTablesProps) {
-  const theme = useTheme();
-  const { colors } = theme;
-
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text
-          style={[
-            styles.loadingText,
-            { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-          ]}
-        >
-          Loading experiment data...
-        </Text>
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-inactive text-base">Loading experiment data...</Text>
       </View>
     );
   }
 
   if (tables.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text
-          style={[
-            styles.emptyText,
-            { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-          ]}
-        >
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-inactive text-center text-base">
           No data available for this experiment
         </Text>
       </View>
@@ -45,13 +29,8 @@ export function ExperimentTables({ tables, isLoading }: ExperimentTablesProps) {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-        ]}
-      >
+    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <Text className="text-on-surface mb-4 text-xl font-bold">
         Experiment Data ({tables.length} tables)
       </Text>
 
@@ -61,31 +40,3 @@ export function ExperimentTables({ tables, isLoading }: ExperimentTablesProps) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 16,
-    textAlign: "center",
-  },
-});
