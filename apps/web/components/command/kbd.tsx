@@ -1,5 +1,7 @@
 "use client";
 
+import { modifierLabel } from "@/lib/platform";
+import * as React from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import { cn } from "@repo/ui/lib/utils";
@@ -38,10 +40,24 @@ export function KbdSequence({ keys, className }: KbdSequenceProps) {
   );
 }
 
+/**
+ * `useModifierKey` is client-only — render the fallback (⌘) during SSR so the
+ * markup matches the server tree, then swap in "Ctrl" after hydration on
+ * non-Mac platforms.
+ */
+function useModifierKey() {
+  const [mod, setMod] = React.useState<string>("⌘");
+  React.useEffect(() => {
+    setMod(modifierLabel());
+  }, []);
+  return mod;
+}
+
 export function CommandKHint({ className }: { className?: string }) {
+  const mod = useModifierKey();
   return (
     <span className={cn("inline-flex items-center gap-0.5", className)}>
-      <Kbd>⌘</Kbd>
+      <Kbd>{mod}</Kbd>
       <Kbd>K</Kbd>
     </span>
   );

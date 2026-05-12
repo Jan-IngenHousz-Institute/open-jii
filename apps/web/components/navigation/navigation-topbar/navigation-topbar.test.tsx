@@ -99,6 +99,8 @@ describe("NavigationTopbar", () => {
       setWidth: vi.fn(),
       dragging: false,
       setDragging: vi.fn(),
+      peeking: false,
+      setPeeking: vi.fn(),
     });
 
     render(<NavigationTopbar locale="en" user={testUser} />);

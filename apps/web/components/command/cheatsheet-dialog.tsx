@@ -2,6 +2,7 @@
 
 import { Kbd, KbdSequence } from "@/components/command/kbd";
 import { CHEATSHEET_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
+import { modifierLabel } from "@/lib/platform";
 import * as React from "react";
 
 import {
@@ -21,49 +22,54 @@ interface Section {
   rows: Row[];
 }
 
-const SECTIONS: Section[] = [
-  {
-    title: "Go to",
-    rows: [
-      { keys: ["G", "H"], label: "Home" },
-      { keys: ["G", "E"], label: "Experiments" },
-      { keys: ["G", "W"], label: "Workbooks" },
-      { keys: ["G", "P"], label: "Protocols" },
-      { keys: ["G", "M"], label: "Macros" },
-      { keys: ["G", "T"], label: "Transfer requests" },
-      { keys: ["G", "S"], label: "Settings" },
-      { keys: ["G", "R"], label: "What's new" },
-    ],
-  },
-  {
-    title: "Actions",
-    rows: [
-      { keys: ["C"], label: "Create new (route-aware)" },
-      { keys: ["E"], label: "Edit current item" },
-      { keys: ["/"], label: "Focus inline search" },
-      { keys: ["?"], label: "Open this cheatsheet" },
-      { keys: ["Esc"], label: "Close / cancel" },
-    ],
-  },
-  {
-    title: "Lists",
-    rows: [
-      { keys: ["J"], label: "Next item" },
-      { keys: ["K"], label: "Previous item" },
-      { keys: ["↵"], label: "Open focused item" },
-    ],
-  },
-  {
-    title: "Global",
-    rows: [
-      { keys: ["⌘", "K"], label: "Command palette" },
-      { keys: ["⌘", "B"], label: "Toggle sidebar" },
-    ],
-  },
-];
+function buildSections(mod: string): Section[] {
+  return [
+    {
+      title: "Go to",
+      rows: [
+        { keys: ["G", "H"], label: "Home" },
+        { keys: ["G", "E"], label: "Experiments" },
+        { keys: ["G", "W"], label: "Workbooks" },
+        { keys: ["G", "P"], label: "Protocols" },
+        { keys: ["G", "M"], label: "Macros" },
+        { keys: ["G", "T"], label: "Transfer requests" },
+        { keys: ["G", "S"], label: "Settings" },
+        { keys: ["G", "R"], label: "What's new" },
+      ],
+    },
+    {
+      title: "Actions",
+      rows: [
+        { keys: ["C"], label: "Create new (route-aware)" },
+        { keys: ["E"], label: "Edit current item" },
+        { keys: ["/"], label: "Focus inline search" },
+        { keys: ["?"], label: "Open this cheatsheet" },
+        { keys: ["Esc"], label: "Close / cancel" },
+      ],
+    },
+    {
+      title: "Lists",
+      rows: [
+        { keys: ["J"], label: "Next item" },
+        { keys: ["K"], label: "Previous item" },
+        { keys: ["↵"], label: "Open focused item" },
+      ],
+    },
+    {
+      title: "Global",
+      rows: [
+        { keys: [mod, "K"], label: "Command palette" },
+        { keys: [mod, "B"], label: "Toggle sidebar" },
+      ],
+    },
+  ];
+}
 
 export function CheatsheetDialog() {
   const [open, setOpen] = React.useState(false);
+  const [mod, setMod] = React.useState("⌘");
+  React.useEffect(() => setMod(modifierLabel()), []);
+  const SECTIONS = React.useMemo(() => buildSections(mod), [mod]);
 
   React.useEffect(() => {
     const onOpen = () => setOpen(true);
