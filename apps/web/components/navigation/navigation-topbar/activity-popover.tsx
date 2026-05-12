@@ -1,8 +1,15 @@
 "use client";
 
 import {
+  type ActivityEntry,
+  type ActivityJobKind,
+  type ActivityJobStatus,
+  useActivity,
+} from "@/components/activity/activity-context";
+import {
   Bell,
   CheckCircle2,
+  Clock,
   Database,
   Loader2,
   RefreshCw,
@@ -19,47 +26,9 @@ import {
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { cn } from "@repo/ui/lib/utils";
 
-type JobKind = "data_export" | "ambyte_processing" | "metadata_reprocess";
-type JobStatus = "queued" | "running" | "succeeded" | "failed";
-
-interface JobRun {
-  id: string;
-  kind: JobKind;
-  title: string;
-  status: JobStatus;
-  updatedAt: string; // ISO
-  resultUrl?: string;
-}
-
-// Mock data — replace with /job-runs in the OJD-1506 implementation.
-const MOCK_JOBS: JobRun[] = [
-  {
-    id: "1",
-    kind: "data_export",
-    title: "Export of Light Response 03",
-    status: "running",
-    updatedAt: new Date(Date.now() - 30 * 1000).toISOString(),
-  },
-  {
-    id: "2",
-    kind: "data_export",
-    title: "Export of Photosynthesis Curves",
-    status: "succeeded",
-    updatedAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    resultUrl: "#",
-  },
-  {
-    id: "3",
-    kind: "ambyte_processing",
-    title: "Ambyte upload — soil moisture batch",
-    status: "failed",
-    updatedAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-  },
-];
-
 const NOTIFICATION_BELL_TOGGLE_EVENT = "openjii:toggle-notification-bell";
 
-function kindIcon(kind: JobKind) {
+function kindIcon(kind: ActivityJobKind) {
   if (kind === "data_export") return Database;
   if (kind === "ambyte_processing") return Upload;
   return RefreshCw;
@@ -76,7 +45,7 @@ function relativeTime(iso: string) {
   return `${days}d ago`;
 }
 
-function statusBadge(status: JobStatus) {
+function StatusPill({ status }: { status: ActivityJobStatus }) {
   if (status === "running") {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-[hsl(180_100%_18.4%)] dark:text-[hsl(136_74%_58%)]">
@@ -102,14 +71,22 @@ function statusBadge(status: JobStatus) {
     );
   }
   return (
-    <span className="text-xs font-medium text-muted-foreground">Queued</span>
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+      <Clock className="size-3" />
+      Queued
+    </span>
+  );
+}
+
+function sortEntries(entries: ActivityEntry[]) {
+  return [...entries].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   );
 }
 
 export function ActivityPopover({ className }: { className?: string }) {
   const [open, setOpen] = React.useState(false);
-  const [jobs] = React.useState<JobRun[]>(MOCK_JOBS);
-  const unread = jobs.filter((j) => j.status === "running" || j.status === "failed").length;
+  const { entries, unreadCount, markAllRead } = useActivity();
 
   React.useEffect(() => {
     const onToggle = () => setOpen((o) => !o);
@@ -117,19 +94,26 @@ export function ActivityPopover({ className }: { className?: string }) {
     return () => window.removeEventListener(NOTIFICATION_BELL_TOGGLE_EVENT, onToggle);
   }, []);
 
+  // Clear unread count once the user has actually seen the list.
+  React.useEffect(() => {
+    if (open && unreadCount > 0) markAllRead();
+  }, [open, unreadCount, markAllRead]);
+
+  const sorted = React.useMemo(() => sortEntries(entries), [entries]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`Activity${unread > 0 ? ` (${unread} unread)` : ""}`}
+          aria-label={`Activity${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
           className={cn(
             "relative inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             className,
           )}
         >
           <Bell className="size-[18px]" />
-          {unread > 0 && (
+          {unreadCount > 0 && (
             <span
               aria-hidden="true"
               className="absolute right-1 top-1 size-1.5 rounded-full bg-[hsl(136_74%_58%)]"
@@ -137,28 +121,25 @@ export function ActivityPopover({ className }: { className?: string }) {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={6}
-        className="w-[360px] p-0"
-      >
+      <PopoverContent align="end" sideOffset={6} className="w-[360px] p-0">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-sm font-semibold">Activity</h3>
           <button
             type="button"
+            onClick={markAllRead}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
             Mark all read
           </button>
         </div>
         <ScrollArea className="max-h-[400px]">
-          {jobs.length === 0 ? (
+          {sorted.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
               Nothing to show. Long-running tasks like exports and uploads will appear here.
             </div>
           ) : (
             <ul className="divide-y">
-              {jobs.map((job) => {
+              {sorted.map((job) => {
                 const Icon = kindIcon(job.kind);
                 return (
                   <li key={job.id}>
@@ -170,7 +151,7 @@ export function ActivityPopover({ className }: { className?: string }) {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{job.title}</p>
                         <div className="mt-0.5 flex items-center gap-2">
-                          {statusBadge(job.status)}
+                          <StatusPill status={job.status} />
                           <span className="text-xs text-muted-foreground">
                             · {relativeTime(job.updatedAt)}
                           </span>
@@ -184,10 +165,7 @@ export function ActivityPopover({ className }: { className?: string }) {
           )}
         </ScrollArea>
         <div className="border-t bg-muted/30 px-4 py-2">
-          <a
-            href="#"
-            className="text-xs font-medium text-primary hover:underline"
-          >
+          <a href="#" className="text-xs font-medium text-primary hover:underline">
             Open all activity →
           </a>
         </div>
