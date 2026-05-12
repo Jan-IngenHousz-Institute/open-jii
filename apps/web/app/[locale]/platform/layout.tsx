@@ -1,3 +1,4 @@
+import { ActivityProvider } from "@/components/activity/activity-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { PageContainer } from "@/components/page-container";
@@ -50,7 +51,8 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <WhatsNewProvider>
+      <ActivityProvider>
+       <WhatsNewProvider>
         <NavigationSidebarWrapper locale={locale} />
         <SidebarFloatingReopen />
         <SidebarInset>
@@ -66,7 +68,8 @@ export default async function AppLayout({
         <CommandPalette locale={locale} />
         <WhatsNewSheet />
         <Toaster />
-      </WhatsNewProvider>
+       </WhatsNewProvider>
+      </ActivityProvider>
     </SidebarProvider>
   );
 }

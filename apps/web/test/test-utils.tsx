@@ -20,6 +20,7 @@
  * });
  * ```
  */
+import { ActivityProvider } from "@/components/activity/activity-context";
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
@@ -87,7 +88,9 @@ function render(ui: ReactElement, options?: CustomRenderOptions): CustomRenderRe
     const client = queryClient ?? createTestQueryClient();
     return (
       <QueryClientProvider client={client}>
-        <tsr.ReactQueryProvider>{children}</tsr.ReactQueryProvider>
+        <tsr.ReactQueryProvider>
+          <ActivityProvider>{children}</ActivityProvider>
+        </tsr.ReactQueryProvider>
       </QueryClientProvider>
     );
   }
@@ -117,7 +120,9 @@ function renderHook<TResult, TProps = undefined>(
     const client = queryClient ?? createTestQueryClient();
     return (
       <QueryClientProvider client={client}>
-        <tsr.ReactQueryProvider>{children}</tsr.ReactQueryProvider>
+        <tsr.ReactQueryProvider>
+          <ActivityProvider>{children}</ActivityProvider>
+        </tsr.ReactQueryProvider>
       </QueryClientProvider>
     );
   }
