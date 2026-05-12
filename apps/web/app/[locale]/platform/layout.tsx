@@ -11,7 +11,12 @@ import type React from "react";
 import { Suspense } from "react";
 import { auth } from "~/app/actions/auth";
 
-import { SidebarFloatingReopen, SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
+import {
+  SidebarEdgePeek,
+  SidebarFloatingReopen,
+  SidebarInset,
+  SidebarProvider,
+} from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
 
 import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
@@ -54,6 +59,7 @@ export default async function AppLayout({
       <ActivityProvider>
        <WhatsNewProvider>
         <NavigationSidebarWrapper locale={locale} />
+        <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>
           <NavigationTopbar locale={locale} user={session.user} />

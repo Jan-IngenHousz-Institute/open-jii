@@ -16,6 +16,14 @@ import { Skeleton } from "./skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 
 const SIDEBAR_STORAGE_KEY = "openjii.sidebar";
+
+function getModKey(): string {
+  if (typeof window === "undefined") return "⌘";
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.platform) ||
+    /Macintosh/.test(window.navigator.userAgent)
+    ? "⌘"
+    : "Ctrl";
+}
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH_DEFAULT = 264;
@@ -40,6 +48,13 @@ type SidebarContextProps = {
   setWidth: (width: number) => void;
   dragging: boolean;
   setDragging: (dragging: boolean) => void;
+  /**
+   * `peeking` is true while the user is hovering the left edge of the
+   * viewport with the sidebar collapsed. The sidebar slides in as an overlay
+   * (no layout shift) and slides back out when the mouse leaves it.
+   */
+  peeking: boolean;
+  setPeeking: (peeking: boolean) => void;
 };
 
 type StoredSidebarState = { width?: number; collapsed?: boolean };
@@ -113,6 +128,7 @@ const SidebarProvider = React.forwardRef<
     const open = openProp ?? _open;
     const [width, _setWidth] = React.useState(SIDEBAR_WIDTH_DEFAULT);
     const [dragging, setDragging] = React.useState(false);
+    const [peeking, setPeeking] = React.useState(false);
 
     // Hydrate width + collapsed from localStorage on mount (client only).
     React.useEffect(() => {
@@ -177,6 +193,12 @@ const SidebarProvider = React.forwardRef<
     // This makes it easier to style the sidebar with Tailwind classes.
     const state = open ? "expanded" : "collapsed";
 
+    // Clear peek whenever the sidebar opens for real or we hit mobile, so
+    // state doesn't get stuck.
+    React.useEffect(() => {
+      if (open || isMobile) setPeeking(false);
+    }, [open, isMobile]);
+
     const contextValue = React.useMemo<SidebarContextProps>(
       () => ({
         state,
@@ -190,6 +212,8 @@ const SidebarProvider = React.forwardRef<
         setWidth,
         dragging,
         setDragging,
+        peeking,
+        setPeeking,
       }),
       [
         state,
@@ -202,6 +226,7 @@ const SidebarProvider = React.forwardRef<
         width,
         setWidth,
         dragging,
+        peeking,
       ],
     );
 
@@ -253,7 +278,8 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile, dragging } = useSidebar();
+    const { isMobile, state, openMobile, setOpenMobile, dragging, peeking, setPeeking } =
+      useSidebar();
 
     if (collapsible === "none") {
       return (
@@ -294,6 +320,11 @@ const Sidebar = React.forwardRef<
       );
     }
 
+    // When the sidebar is collapsed in `hidden` mode but the user is hovering
+    // the edge peek strip, slide it in as an overlay (no layout shift). This
+    // matches Linear's "hover the edge to peek" pattern.
+    const isPeeking = peeking && collapsible === "hidden" && state === "collapsed";
+
     return (
       <div
         ref={ref}
@@ -303,6 +334,7 @@ const Sidebar = React.forwardRef<
         data-variant={variant}
         data-side={side}
         data-dragging={dragging || undefined}
+        data-peeking={isPeeking || undefined}
       >
         {/* This is what handles the sidebar gap on desktop */}
         <div
@@ -318,12 +350,19 @@ const Sidebar = React.forwardRef<
           )}
         />
         <div
+          onMouseLeave={() => {
+            if (isPeeking) setPeeking(false);
+          }}
           className={cn(
             "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex md:w-[--sidebar-width-tablet] lg:w-[--sidebar-width]",
             "group-data-[dragging=true]:transition-none",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] group-data-[collapsible=hidden]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] group-data-[collapsible=hidden]:right-[calc(var(--sidebar-width)*-1)]",
+            // Peek state: slide back to flush-left, raise z-index above the
+            // topbar (z-40) and other chrome so it overlays without pushing
+            // the page.
+            "group-data-[peeking=true]:!left-0 group-data-[peeking=true]:!right-auto group-data-[peeking=true]:z-50 group-data-[peeking=true]:shadow-xl",
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
@@ -521,13 +560,14 @@ SidebarRail.displayName = "SidebarRail";
 /**
  * Floating reopen affordance shown when the sidebar is collapsed in "hidden" mode.
  * Mount once at the layout level alongside `<Sidebar collapsible="hidden" />`.
+ * Hidden while the user is peeking (the sidebar itself is already visible).
  */
 const SidebarFloatingReopen = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, open, isMobile } = useSidebar();
-  if (open || isMobile) return null;
+  const { toggleSidebar, open, isMobile, peeking } = useSidebar();
+  if (open || isMobile || peeking) return null;
 
   return (
     <Tooltip>
@@ -550,11 +590,39 @@ const SidebarFloatingReopen = React.forwardRef<
           <PanelLeftOpen className="h-5 w-5" />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right">Show sidebar (⌘ B)</TooltipContent>
+      <TooltipContent side="right">Show sidebar ({getModKey()} B)</TooltipContent>
     </Tooltip>
   );
 });
 SidebarFloatingReopen.displayName = "SidebarFloatingReopen";
+
+/**
+ * Invisible left-edge strip that triggers a sidebar "peek" on hover when the
+ * sidebar is collapsed. Renders nothing when the sidebar is open, on mobile,
+ * or in any collapsible mode other than `hidden`.
+ */
+const SidebarEdgePeek = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
+  ({ className, ...props }, ref) => {
+    const { open, isMobile, peeking, setPeeking } = useSidebar();
+    if (open || isMobile) return null;
+
+    return (
+      <div
+        ref={ref}
+        aria-hidden="true"
+        onMouseEnter={() => setPeeking(true)}
+        data-peeking={peeking || undefined}
+        className={cn(
+          "fixed inset-y-0 left-0 z-20 w-2",
+          // The strip itself is invisible; only its hover triggers the peek.
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
+SidebarEdgePeek.displayName = "SidebarEdgePeek";
 
 const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
   ({ className, ...props }, ref) => {
@@ -966,6 +1034,7 @@ SidebarMenuSubButton.displayName = "SidebarMenuSubButton";
 export {
   Sidebar,
   SidebarContent,
+  SidebarEdgePeek,
   SidebarFloatingReopen,
   SidebarFooter,
   SidebarGroup,

@@ -1,20 +1,9 @@
 "use client";
 
+import { iconMap } from "@/components/navigation/navigation-config";
 import { CHEATSHEET_OPEN_EVENT, COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { useWhatsNew } from "@/components/whats-new/whats-new-context";
-import {
-  BarChart3,
-  BookOpen,
-  Database,
-  FileText,
-  HelpCircle,
-  Home,
-  Keyboard,
-  Send,
-  Settings,
-  Sparkles,
-  Wand2,
-} from "lucide-react";
+import { HelpCircle, Keyboard, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -64,7 +53,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         id: "page.dashboard",
         label: "Dashboard",
         group: "Pages",
-        icon: Home,
+        icon: iconMap.LayoutDashboard,
         shortcut: "G H",
         run: () => navigate(`/${locale}/platform`),
       },
@@ -72,7 +61,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         id: "page.experiments",
         label: "Experiments",
         group: "Pages",
-        icon: BarChart3,
+        icon: iconMap.Leaf,
         shortcut: "G E",
         run: () => navigate(`/${locale}/platform/experiments`),
       },
@@ -80,7 +69,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         id: "page.workbooks",
         label: "Workbooks",
         group: "Pages",
-        icon: BookOpen,
+        icon: iconMap.BookOpen,
         shortcut: "G W",
         run: () => navigate(`/${locale}/platform/workbooks`),
       },
@@ -88,7 +77,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         id: "page.protocols",
         label: "Protocols",
         group: "Pages",
-        icon: FileText,
+        icon: iconMap.FileSliders,
         shortcut: "G P",
         run: () => navigate(`/${locale}/platform/protocols`),
       },
@@ -96,7 +85,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         id: "page.macros",
         label: "Macros",
         group: "Pages",
-        icon: Wand2,
+        icon: iconMap.Code,
         shortcut: "G M",
         run: () => navigate(`/${locale}/platform/macros`),
       },
@@ -112,7 +101,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         id: "page.settings",
         label: "Settings",
         group: "Pages",
-        icon: Settings,
+        icon: iconMap.Settings,
         shortcut: "G S",
         run: () => navigate(`/${locale}/platform/account/settings`),
       },
@@ -120,7 +109,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         id: "action.create-experiment",
         label: "Create experiment",
         group: "Actions",
-        icon: Database,
+        icon: iconMap.CirclePlus,
         run: () => navigate(`/${locale}/platform/experiments/new`),
       },
       {
