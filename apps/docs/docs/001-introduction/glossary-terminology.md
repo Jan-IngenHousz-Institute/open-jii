@@ -2,7 +2,7 @@
 
 ### Admin
 
-An experiments' admin is capable of changing the settings of an experiment, including adding and removing other members.
+An experiment's admin is capable of changing the settings of an experiment, including adding and removing other members.
 
 ### Experiment
 
@@ -27,7 +27,7 @@ A single time-stamped result set, plus metadata (who, where, device, protocol, m
 
 ### Member
 
-A member of an experiment has less rights then an [admin](#admin). A member can see and contribute measurement, but not change the settings of an experiment
+A member of an experiment has fewer rights than an [admin](#admin). A member can view and contribute measurements, but cannot change the settings of an experiment.
 
 ### ORCID iD
 

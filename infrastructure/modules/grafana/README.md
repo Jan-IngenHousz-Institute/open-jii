@@ -378,7 +378,7 @@ aws cloudwatch get-metric-statistics \
 
 **Provider error:**
 
-```
+```text
 Error: Failed to configure Grafana provider
 ```
 
@@ -386,7 +386,7 @@ Error: Failed to configure Grafana provider
 
 **State lock:**
 
-```
+```text
 Error: Error acquiring the state lock
 ```
 

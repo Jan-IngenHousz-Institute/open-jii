@@ -25,4 +25,4 @@ The mobile app works seamlessly with the MultispeQ sensor. Additional sensors an
 
 Excited to try it?
 
-<DocButton href="../introduction/quick-start-guide" variant="primary"> Follow our Quick Start Guide </DocButton>
+<DocButton href="../introduction/quick-start-guide" variant="primary">Follow our Quick Start Guide</DocButton>
