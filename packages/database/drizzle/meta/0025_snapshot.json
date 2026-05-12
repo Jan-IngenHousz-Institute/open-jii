@@ -96,8 +96,12 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -151,8 +155,12 @@
           "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -249,8 +257,12 @@
           "name": "experiment_locations_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_locations",
           "tableTo": "experiments",
-          "columnsFrom": ["experiment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "experiment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -299,8 +311,12 @@
           "name": "experiment_members_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_members",
           "tableTo": "experiments",
-          "columnsFrom": ["experiment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "experiment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -308,8 +324,12 @@
           "name": "experiment_members_user_id_users_id_fk",
           "tableFrom": "experiment_members",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -317,7 +337,10 @@
       "compositePrimaryKeys": {
         "experiment_members_experiment_id_user_id_pk": {
           "name": "experiment_members_experiment_id_user_id_pk",
-          "columns": ["experiment_id", "user_id"]
+          "columns": [
+            "experiment_id",
+            "user_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -407,8 +430,12 @@
           "name": "experiment_visualizations_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_visualizations",
           "tableTo": "experiments",
-          "columnsFrom": ["experiment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "experiment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -416,8 +443,12 @@
           "name": "experiment_visualizations_created_by_users_id_fk",
           "tableFrom": "experiment_visualizations",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -513,8 +544,12 @@
           "name": "experiments_workbook_id_workbooks_id_fk",
           "tableFrom": "experiments",
           "tableTo": "workbooks",
-          "columnsFrom": ["workbook_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbook_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -522,8 +557,12 @@
           "name": "experiments_workbook_version_id_workbook_versions_id_fk",
           "tableFrom": "experiments",
           "tableTo": "workbook_versions",
-          "columnsFrom": ["workbook_version_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbook_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -531,8 +570,12 @@
           "name": "experiments_created_by_users_id_fk",
           "tableFrom": "experiments",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -542,7 +585,9 @@
         "experiments_name_unique": {
           "name": "experiments_name_unique",
           "nullsNotDistinct": false,
-          "columns": ["name"]
+          "columns": [
+            "name"
+          ]
         }
       },
       "policies": {},
@@ -593,8 +638,12 @@
           "name": "flows_experiment_id_experiments_id_fk",
           "tableFrom": "flows",
           "tableTo": "experiments",
-          "columnsFrom": ["experiment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "experiment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -604,7 +653,9 @@
         "flows_experiment_id_unique": {
           "name": "flows_experiment_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["experiment_id"]
+          "columns": [
+            "experiment_id"
+          ]
         }
       },
       "policies": {},
@@ -683,8 +734,12 @@
           "name": "invitations_invited_by_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
-          "columnsFrom": ["invited_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "invited_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -775,8 +830,12 @@
           "name": "macros_created_by_users_id_fk",
           "tableFrom": "macros",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -786,12 +845,16 @@
         "macros_name_unique": {
           "name": "macros_name_unique",
           "nullsNotDistinct": false,
-          "columns": ["name"]
+          "columns": [
+            "name"
+          ]
         },
         "macros_filename_unique": {
           "name": "macros_filename_unique",
           "nullsNotDistinct": false,
-          "columns": ["filename"]
+          "columns": [
+            "filename"
+          ]
         }
       },
       "policies": {},
@@ -944,8 +1007,12 @@
           "name": "profiles_user_id_users_id_fk",
           "tableFrom": "profiles",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -953,8 +1020,12 @@
           "name": "profiles_organization_id_organizations_id_fk",
           "tableFrom": "profiles",
           "tableTo": "organizations",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -964,7 +1035,9 @@
         "profiles_user_id_unique": {
           "name": "profiles_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["user_id"]
+          "columns": [
+            "user_id"
+          ]
         }
       },
       "policies": {},
@@ -1001,8 +1074,12 @@
           "name": "protocol_macros_protocol_id_protocols_id_fk",
           "tableFrom": "protocol_macros",
           "tableTo": "protocols",
-          "columnsFrom": ["protocol_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "protocol_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1010,8 +1087,12 @@
           "name": "protocol_macros_macro_id_macros_id_fk",
           "tableFrom": "protocol_macros",
           "tableTo": "macros",
-          "columnsFrom": ["macro_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "macro_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1019,7 +1100,10 @@
       "compositePrimaryKeys": {
         "protocol_macros_protocol_id_macro_id_pk": {
           "name": "protocol_macros_protocol_id_macro_id_pk",
-          "columns": ["protocol_id", "macro_id"]
+          "columns": [
+            "protocol_id",
+            "macro_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1096,8 +1180,12 @@
           "name": "protocols_created_by_users_id_fk",
           "tableFrom": "protocols",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1107,7 +1195,9 @@
         "protocols_name_unique": {
           "name": "protocols_name_unique",
           "nullsNotDistinct": false,
-          "columns": ["name"]
+          "columns": [
+            "name"
+          ]
         }
       },
       "policies": {},
@@ -1152,7 +1242,9 @@
         "rate_limits_key_unique": {
           "name": "rate_limits_key_unique",
           "nullsNotDistinct": false,
-          "columns": ["key"]
+          "columns": [
+            "key"
+          ]
         }
       },
       "policies": {},
@@ -1224,7 +1316,9 @@
         "sensors_serial_number_unique": {
           "name": "sensors_serial_number_unique",
           "nullsNotDistinct": false,
-          "columns": ["serial_number"]
+          "columns": [
+            "serial_number"
+          ]
         }
       },
       "policies": {},
@@ -1293,8 +1387,12 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1304,7 +1402,9 @@
         "sessions_token_unique": {
           "name": "sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       },
       "policies": {},
@@ -1376,7 +1476,9 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -1514,8 +1616,12 @@
           "name": "workbook_versions_workbook_id_workbooks_id_fk",
           "tableFrom": "workbook_versions",
           "tableTo": "workbooks",
-          "columnsFrom": ["workbook_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbook_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1523,8 +1629,12 @@
           "name": "workbook_versions_created_by_users_id_fk",
           "tableFrom": "workbook_versions",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1534,7 +1644,10 @@
         "workbook_versions_workbook_version_uniq": {
           "name": "workbook_versions_workbook_version_uniq",
           "nullsNotDistinct": false,
-          "columns": ["workbook_id", "version"]
+          "columns": [
+            "workbook_id",
+            "version"
+          ]
         }
       },
       "policies": {},
@@ -1621,8 +1734,12 @@
           "name": "workbooks_created_by_users_id_fk",
           "tableFrom": "workbooks",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1638,7 +1755,12 @@
     "public.chart_family": {
       "name": "chart_family",
       "schema": "public",
-      "values": ["basic", "scientific", "3d", "statistical"]
+      "values": [
+        "basic",
+        "scientific",
+        "3d",
+        "statistical"
+      ]
     },
     "public.chart_type": {
       "name": "chart_type",
@@ -1677,32 +1799,54 @@
     "public.experiment_members_role": {
       "name": "experiment_members_role",
       "schema": "public",
-      "values": ["admin", "member"]
+      "values": [
+        "admin",
+        "member"
+      ]
     },
     "public.experiment_status": {
       "name": "experiment_status",
       "schema": "public",
-      "values": ["active", "stale", "archived", "published"]
+      "values": [
+        "active",
+        "stale",
+        "archived",
+        "published"
+      ]
     },
     "public.experiment_visibility": {
       "name": "experiment_visibility",
       "schema": "public",
-      "values": ["private", "public"]
+      "values": [
+        "private",
+        "public"
+      ]
     },
     "public.invitation_resource_type": {
       "name": "invitation_resource_type",
       "schema": "public",
-      "values": ["platform", "experiment"]
+      "values": [
+        "platform",
+        "experiment"
+      ]
     },
     "public.invitation_status": {
       "name": "invitation_status",
       "schema": "public",
-      "values": ["pending", "accepted", "revoked"]
+      "values": [
+        "pending",
+        "accepted",
+        "revoked"
+      ]
     },
     "public.macro_language": {
       "name": "macro_language",
       "schema": "public",
-      "values": ["python", "r", "javascript"]
+      "values": [
+        "python",
+        "r",
+        "javascript"
+      ]
     },
     "public.organization_type": {
       "name": "organization_type",
@@ -1718,7 +1862,11 @@
     "public.sensor_family": {
       "name": "sensor_family",
       "schema": "public",
-      "values": ["multispeq", "ambit", "generic"]
+      "values": [
+        "multispeq",
+        "ambit",
+        "generic"
+      ]
     }
   },
   "schemas": {},
