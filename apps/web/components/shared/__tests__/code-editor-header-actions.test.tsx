@@ -1,14 +1,13 @@
+import type { AutosaveStatus } from "@/hooks/useAutosave";
 import { render, screen, userEvent, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { CodeEditorHeaderActions } from "../code-editor-header-actions";
 
-type SyncStatus = "synced" | "unsynced" | "syncing";
-
-function renderComponent(syncStatus: SyncStatus, onClose = vi.fn()) {
+function renderComponent(status: AutosaveStatus, onClose = vi.fn()) {
   return {
     onClose,
-    ...render(<CodeEditorHeaderActions syncStatus={syncStatus} onClose={onClose} />),
+    ...render(<CodeEditorHeaderActions status={status} onClose={onClose} />),
   };
 }
 
@@ -17,65 +16,65 @@ describe("CodeEditorHeaderActions", () => {
     vi.clearAllMocks();
   });
 
-  it("renders check icon when syncStatus is synced", () => {
-    renderComponent("synced");
-    expect(document.querySelector(".lucide-check")).toBeInTheDocument();
-    expect(document.querySelector(".lucide-circle")).not.toBeInTheDocument();
+  it("renders the saved-state check icon when status is idle", () => {
+    renderComponent("idle");
+    expect(document.querySelector(".lucide-circle-check")).toBeInTheDocument();
     expect(document.querySelector(".lucide-loader-circle")).not.toBeInTheDocument();
   });
 
-  it("renders circle icon when syncStatus is unsynced", () => {
-    renderComponent("unsynced");
-    expect(document.querySelector(".lucide-circle")).toBeInTheDocument();
-    expect(document.querySelector(".lucide-check")).not.toBeInTheDocument();
-    expect(document.querySelector(".lucide-loader-circle")).not.toBeInTheDocument();
-  });
-
-  it("renders loader icon when syncStatus is syncing", () => {
-    renderComponent("syncing");
+  it("renders the spinner when status is dirty (collapsed into the saving treatment)", () => {
+    renderComponent("dirty");
     expect(document.querySelector(".lucide-loader-circle")).toBeInTheDocument();
-    expect(document.querySelector(".lucide-check")).not.toBeInTheDocument();
-    expect(document.querySelector(".lucide-circle")).not.toBeInTheDocument();
+    expect(document.querySelector(".lucide-circle-check")).not.toBeInTheDocument();
   });
 
-  it("shows 'All changes saved' tooltip for synced", () => {
-    renderComponent("synced");
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const trigger = document.querySelector(".lucide-check")!.closest("span")!;
-    fireEvent.focus(trigger);
-    expect(screen.getByRole("tooltip")).toHaveTextContent("All changes saved");
+  it("renders the spinner when status is saving", () => {
+    renderComponent("saving");
+    expect(document.querySelector(".lucide-loader-circle")).toBeInTheDocument();
+    expect(document.querySelector(".lucide-circle-check")).not.toBeInTheDocument();
   });
 
-  it("shows 'Unsaved changes' tooltip for unsynced", () => {
-    renderComponent("unsynced");
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const trigger = document.querySelector(".lucide-circle")!.closest("span")!;
-    fireEvent.focus(trigger);
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Unsaved changes");
+  it("renders the destructive alert when status is error", () => {
+    renderComponent("error");
+    expect(document.querySelector(".lucide-circle-alert")).toBeInTheDocument();
   });
 
-  it("shows 'Saving...' tooltip for syncing", () => {
-    renderComponent("syncing");
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const trigger = document.querySelector(".lucide-loader-circle")!.closest("span")!;
-    fireEvent.focus(trigger);
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Saving...");
+  it("uses the saved label as the aria-label / tooltip when idle", () => {
+    renderComponent("idle");
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-label", "autosave.saved");
+    fireEvent.focus(status);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("autosave.saved");
   });
 
-  it("shows 'Close editor' tooltip for close button", () => {
-    renderComponent("synced");
+  it("uses the saving label when status is dirty (collapsed treatment)", () => {
+    renderComponent("dirty");
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saving");
+  });
+
+  it("uses the saving label while a save is in flight", () => {
+    renderComponent("saving");
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saving");
+  });
+
+  it("uses the failed label on error", () => {
+    renderComponent("error");
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.failed");
+  });
+
+  it("shows 'Close editor' tooltip for the close button", () => {
+    renderComponent("idle");
     const closeButton = screen.getByRole("button");
     fireEvent.focus(closeButton);
     expect(screen.getByRole("tooltip")).toHaveTextContent("Close editor");
   });
 
-  it("calls onClose when close button is clicked", async () => {
+  it("calls onClose when the close button is clicked", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderComponent("synced", onClose);
+    renderComponent("idle", onClose);
 
-    const button = screen.getByRole("button");
-    await user.click(button);
+    await user.click(screen.getByRole("button"));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

@@ -13,8 +13,8 @@ vi.mock("@/components/workbook-overview/workbook-layout-content", () => ({
   ),
 }));
 
-vi.mock("@/components/workbook-overview/workbook-save-context", () => ({
-  WorkbookSaveProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+vi.mock("@/components/shared/autosave/autosave-status-context", () => ({
+  AutosaveStatusProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/components/error-display", () => ({

@@ -12,7 +12,7 @@ import type { MockInstance } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { WorkbookSaveProvider } from "../workbook-overview/workbook-save-context";
+import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { WorkbookHeader } from "./workbook-header";
 
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
@@ -58,9 +58,9 @@ function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> =
 
   return {
     ...render(
-      <WorkbookSaveProvider>
+      <AutosaveStatusProvider>
         <WorkbookHeader {...defaultProps} />
-      </WorkbookSaveProvider>,
+      </AutosaveStatusProvider>,
     ),
     props: defaultProps,
   };
