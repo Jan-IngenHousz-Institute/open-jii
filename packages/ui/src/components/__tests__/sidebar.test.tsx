@@ -45,6 +45,16 @@ function SidebarConsumer() {
   );
 }
 
+// Clear persisted sidebar state before every test so each one starts from defaults.
+beforeEach(() => {
+  document.cookie = "sidebar_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  try {
+    window.localStorage.removeItem("openjii.sidebar");
+  } catch {
+    /* localStorage may be unavailable in some envs */
+  }
+});
+
 describe("SidebarProvider", () => {
   beforeEach(() => {
     // Clear cookies before each test

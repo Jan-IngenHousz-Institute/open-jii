@@ -1,5 +1,8 @@
 "use client";
 
+import { CommandKHint } from "@/components/command/kbd";
+import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
+import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
@@ -8,6 +11,13 @@ import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sideba
 
 import { NavItems } from "../nav-items/nav-items";
 import { iconMap } from "../navigation-config";
+
+const COMMAND_PALETTE_OPEN_EVENT = "openjii:open-command-palette";
+
+function openCommandPalette() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(COMMAND_PALETTE_OPEN_EVENT));
+}
 
 interface NavigationItem {
   title: string;
@@ -80,53 +90,51 @@ export function AppSidebar({
 
   return (
     <Sidebar
-      collapsible="icon"
+      collapsible="hidden"
       className="[&_[data-sidebar=sidebar]]:from-sidebar-gradient-from [&_[data-sidebar=sidebar]]:to-sidebar-gradient-to hidden md:flex [&_[data-sidebar=sidebar]]:bg-gradient-to-b"
       {...props}
     >
-      <div className="flex flex-col gap-8 pb-8 group-data-[collapsible=icon]:gap-8">
-        <div className="flex h-16 items-center justify-between px-4 group-data-[collapsible=icon]:h-16 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-3">
+      <div className="flex h-full flex-col">
+        <div className="flex h-16 items-center justify-between px-4">
           <Link href={`/${locale}/platform`} className="flex items-center gap-2">
             <Image
               src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
               alt={translations.logoAlt}
               width={116}
               height={34}
-              className="h-auto w-full max-w-[120px] group-data-[collapsible=icon]:hidden"
-            />
-            <Image
-              src="/openJII-logo-vertical-yellow-transparentBG.png"
-              alt={translations.logoAlt}
-              width={42}
-              height={42}
-              className="hidden h-[36px] w-auto group-data-[collapsible=icon]:block"
+              className="h-auto w-full max-w-[120px]"
             />
           </Link>
-          <SidebarTrigger className="bg-jii-dark-green hover:bg-sidebar-trigger-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white group-data-[state=collapsed]:hidden" />
+          <SidebarTrigger className="bg-jii-dark-green hover:bg-sidebar-trigger-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white" />
         </div>
-        {/* <div className="relative h-12 px-4 group-data-[collapsible=icon]:px-0">
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search by keyword..."
-            className="placeholder:text-sidebar-search-placeholder h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20 focus:outline-none group-data-[collapsible=icon]:hidden"
-          />
-          <Search className="text-sidebar-search-icon absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 group-data-[collapsible=icon]:hidden" />
+
+        <div className="px-4 pb-2">
           <button
-            onClick={handleSearchClick}
-            className="hidden h-12 w-12 items-center justify-center rounded-lg border border-white/10 text-white transition-colors hover:bg-white/10 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:flex"
+            type="button"
+            onClick={openCommandPalette}
+            aria-label="Open command palette"
+            className="flex h-9 w-full items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
-            <Search className="text-sidebar-search-icon h-4 w-4" />
+            <Search className="size-4 shrink-0" />
+            <span className="flex-1 truncate">Search…</span>
+            <CommandKHint />
           </button>
-        </div> */}
-        <div className="flex flex-col gap-4 px-4 group-data-[collapsible=icon]:gap-4 group-data-[collapsible=icon]:px-0">
+        </div>
+
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
           <NavItems items={processedNavDashboard} />
           <NavItems items={processedNavExperiments} />
           <NavItems items={processedNavWorkbooks} />
           <NavItems items={processedNavLibrary} />
         </div>
+
+        <div className="flex flex-col gap-1 border-t border-white/10 px-4 py-3">
+          <WhatsNewFooterItem label="What's new" />
+        </div>
       </div>
-      <SidebarRail />
+      <SidebarRail resizable />
     </Sidebar>
   );
 }
+
+export { COMMAND_PALETTE_OPEN_EVENT };

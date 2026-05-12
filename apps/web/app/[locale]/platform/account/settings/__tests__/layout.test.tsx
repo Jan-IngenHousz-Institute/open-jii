@@ -39,12 +39,12 @@ describe("AccountSettingsLayout", () => {
     expect(screen.getByText("account:security.title")).toBeInTheDocument();
   });
 
-  it("marks settings tab as active via aria-current", async () => {
+  it("marks settings tab as active via aria-selected", async () => {
     await renderLayout("/en-US/platform/account/settings");
 
     const activeTab = screen
       .getAllByRole("tab")
-      .find((el) => el.getAttribute("data-state") === "active");
+      .find((el) => el.getAttribute("aria-selected") === "true");
     expect(activeTab).toBeInTheDocument();
   });
 
