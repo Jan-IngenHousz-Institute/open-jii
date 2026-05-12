@@ -81,12 +81,8 @@
           "name": "accounts_userId_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -140,12 +136,8 @@
           "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -215,12 +207,8 @@
           "name": "authenticators_userId_users_id_fk",
           "tableFrom": "authenticators",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -230,9 +218,7 @@
         "authenticators_credentialID_unique": {
           "name": "authenticators_credentialID_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "credentialID"
-          ]
+          "columns": ["credentialID"]
         }
       },
       "policies": {},
@@ -325,12 +311,8 @@
           "name": "experiment_locations_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_locations",
           "tableTo": "experiments",
-          "columnsFrom": [
-            "experiment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["experiment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -379,12 +361,8 @@
           "name": "experiment_members_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_members",
           "tableTo": "experiments",
-          "columnsFrom": [
-            "experiment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["experiment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -392,12 +370,8 @@
           "name": "experiment_members_user_id_users_id_fk",
           "tableFrom": "experiment_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -405,10 +379,7 @@
       "compositePrimaryKeys": {
         "experiment_members_experiment_id_user_id_pk": {
           "name": "experiment_members_experiment_id_user_id_pk",
-          "columns": [
-            "experiment_id",
-            "user_id"
-          ]
+          "columns": ["experiment_id", "user_id"]
         }
       },
       "uniqueConstraints": {},
@@ -453,12 +424,8 @@
           "name": "experiment_protocols_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_protocols",
           "tableTo": "experiments",
-          "columnsFrom": [
-            "experiment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["experiment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -466,12 +433,8 @@
           "name": "experiment_protocols_protocol_id_protocols_id_fk",
           "tableFrom": "experiment_protocols",
           "tableTo": "protocols",
-          "columnsFrom": [
-            "protocol_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["protocol_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -479,10 +442,7 @@
       "compositePrimaryKeys": {
         "experiment_protocols_experiment_id_protocol_id_pk": {
           "name": "experiment_protocols_experiment_id_protocol_id_pk",
-          "columns": [
-            "experiment_id",
-            "protocol_id"
-          ]
+          "columns": ["experiment_id", "protocol_id"]
         }
       },
       "uniqueConstraints": {},
@@ -572,12 +532,8 @@
           "name": "experiment_visualizations_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_visualizations",
           "tableTo": "experiments",
-          "columnsFrom": [
-            "experiment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["experiment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -585,12 +541,8 @@
           "name": "experiment_visualizations_created_by_users_id_fk",
           "tableFrom": "experiment_visualizations",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -686,12 +638,8 @@
           "name": "experiments_created_by_users_id_fk",
           "tableFrom": "experiments",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -701,9 +649,7 @@
         "experiments_name_unique": {
           "name": "experiments_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -754,12 +700,8 @@
           "name": "flows_experiment_id_experiments_id_fk",
           "tableFrom": "flows",
           "tableTo": "experiments",
-          "columnsFrom": [
-            "experiment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["experiment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -769,9 +711,7 @@
         "flows_experiment_id_unique": {
           "name": "flows_experiment_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "experiment_id"
-          ]
+          "columns": ["experiment_id"]
         }
       },
       "policies": {},
@@ -847,12 +787,8 @@
           "name": "macros_created_by_users_id_fk",
           "tableFrom": "macros",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -862,16 +798,12 @@
         "macros_name_unique": {
           "name": "macros_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "macros_filename_unique": {
           "name": "macros_filename_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "filename"
-          ]
+          "columns": ["filename"]
         }
       },
       "policies": {},
@@ -1024,12 +956,8 @@
           "name": "profiles_user_id_users_id_fk",
           "tableFrom": "profiles",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1037,12 +965,8 @@
           "name": "profiles_organization_id_organizations_id_fk",
           "tableFrom": "profiles",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1052,9 +976,7 @@
         "profiles_user_id_unique": {
           "name": "profiles_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -1124,12 +1046,8 @@
           "name": "protocols_created_by_users_id_fk",
           "tableFrom": "protocols",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1139,9 +1057,7 @@
         "protocols_name_unique": {
           "name": "protocols_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -1213,9 +1129,7 @@
         "sensors_serial_number_unique": {
           "name": "sensors_serial_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "serial_number"
-          ]
+          "columns": ["serial_number"]
         }
       },
       "policies": {},
@@ -1251,12 +1165,8 @@
           "name": "sessions_userId_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1331,9 +1241,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -1376,12 +1284,7 @@
     "public.chart_family": {
       "name": "chart_family",
       "schema": "public",
-      "values": [
-        "basic",
-        "scientific",
-        "3d",
-        "statistical"
-      ]
+      "values": ["basic", "scientific", "3d", "statistical"]
     },
     "public.chart_type": {
       "name": "chart_type",
@@ -1420,39 +1323,22 @@
     "public.experiment_members_role": {
       "name": "experiment_members_role",
       "schema": "public",
-      "values": [
-        "admin",
-        "member"
-      ]
+      "values": ["admin", "member"]
     },
     "public.experiment_status": {
       "name": "experiment_status",
       "schema": "public",
-      "values": [
-        "provisioning",
-        "provisioning_failed",
-        "active",
-        "stale",
-        "archived",
-        "published"
-      ]
+      "values": ["provisioning", "provisioning_failed", "active", "stale", "archived", "published"]
     },
     "public.experiment_visibility": {
       "name": "experiment_visibility",
       "schema": "public",
-      "values": [
-        "private",
-        "public"
-      ]
+      "values": ["private", "public"]
     },
     "public.macro_language": {
       "name": "macro_language",
       "schema": "public",
-      "values": [
-        "python",
-        "r",
-        "javascript"
-      ]
+      "values": ["python", "r", "javascript"]
     },
     "public.organization_type": {
       "name": "organization_type",
@@ -1468,10 +1354,7 @@
     "public.sensor_family": {
       "name": "sensor_family",
       "schema": "public",
-      "values": [
-        "multispeq",
-        "ambit"
-      ]
+      "values": ["multispeq", "ambit"]
     }
   },
   "schemas": {},

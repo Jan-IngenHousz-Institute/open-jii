@@ -7,7 +7,7 @@ The openJII platform helps researchers collect, manage and analyse large-scale p
 ## Platform
 
 - **openJII Web platform:** register, create and manage experiments, design measurement flows, explore and analyse collected data.  
-[Learn more →](./web-platform/overview)
+  [Learn more →](./web-platform/overview)
 - **openJII Mobile app (Android):** perform measurements in the field with MultispeQ and compatible sensors; supports offline capture and sync. [Learn more →](./002-mobile-app.md)
 
 The mobile app works seamlessly with the MultispeQ sensor. Additional sensors and integrations are planned.

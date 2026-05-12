@@ -1,11 +1,12 @@
-import React from 'react';
-import styles from './styles.module.css';
+import React from "react";
+
+import styles from "./styles.module.css";
 
 type Props = {
   children?: React.ReactNode;
   href?: string;
   onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: "primary" | "secondary" | "ghost";
   className?: string;
   target?: string;
   rel?: string;
@@ -15,8 +16,8 @@ export default function DocButton({
   children,
   href,
   onClick,
-  variant = 'primary',
-  className = '',
+  variant = "primary",
+  className = "",
   target,
   rel,
 }: Props) {

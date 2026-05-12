@@ -82,7 +82,7 @@ const sidebars: SidebarsConfig = {
         "getting-started/hardware-device-linking/network-mqtt-configuration",
       ],
     },*/
-    
+
     {
       type: "html",
       value: `
@@ -331,7 +331,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
       ],
-    },/*
+    } /*
     {
       type: "html",
       value: `
@@ -356,7 +356,7 @@ const sidebars: SidebarsConfig = {
         "faq-support/support-channels/email-ticket-support",
         "faq-support/support-channels/live-chat-social-media",
       ],
-    }, */
+    }, */,
   ],
 };
 

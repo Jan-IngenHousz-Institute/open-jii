@@ -37,26 +37,26 @@ module "backend_ecr" {
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| `repository_name` | Name of the ECR repository | `string` | — | yes |
-| `service_name` | Service name (used in ECS policy ARN) | `string` | — | yes |
-| `aws_region` | AWS region | `string` | — | yes |
-| `environment` | Environment name | `string` | `dev` | no |
-| `image_tag_mutability` | `MUTABLE`, `IMMUTABLE`, or `IMMUTABLE_WITH_EXCLUSION` | `string` | `IMMUTABLE` | no |
-| `enable_vulnerability_scanning` | Scan images on push | `bool` | `true` | no |
-| `encryption_type` | `AES256` or `KMS` | `string` | `AES256` | no |
-| `kms_key_id` | KMS key ID (only if `encryption_type = "KMS"`) | `string` | `null` | no |
-| `max_image_count` | Max images to keep (older are deleted) | `number` | `10` | no |
-| `ci_cd_role_arn` | IAM role ARN for CI/CD push access | `string` | `null` | no |
-| `force_delete` | Allow deletion with images present | `bool` | `false` | no |
-| `tags` | Tags to apply | `map(string)` | `{}` | no |
+| Name                            | Description                                           | Type          | Default     | Required |
+| ------------------------------- | ----------------------------------------------------- | ------------- | ----------- | -------- |
+| `repository_name`               | Name of the ECR repository                            | `string`      | —           | yes      |
+| `service_name`                  | Service name (used in ECS policy ARN)                 | `string`      | —           | yes      |
+| `aws_region`                    | AWS region                                            | `string`      | —           | yes      |
+| `environment`                   | Environment name                                      | `string`      | `dev`       | no       |
+| `image_tag_mutability`          | `MUTABLE`, `IMMUTABLE`, or `IMMUTABLE_WITH_EXCLUSION` | `string`      | `IMMUTABLE` | no       |
+| `enable_vulnerability_scanning` | Scan images on push                                   | `bool`        | `true`      | no       |
+| `encryption_type`               | `AES256` or `KMS`                                     | `string`      | `AES256`    | no       |
+| `kms_key_id`                    | KMS key ID (only if `encryption_type = "KMS"`)        | `string`      | `null`      | no       |
+| `max_image_count`               | Max images to keep (older are deleted)                | `number`      | `10`        | no       |
+| `ci_cd_role_arn`                | IAM role ARN for CI/CD push access                    | `string`      | `null`      | no       |
+| `force_delete`                  | Allow deletion with images present                    | `bool`        | `false`     | no       |
+| `tags`                          | Tags to apply                                         | `map(string)` | `{}`        | no       |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| `repository_url` | ECR repository URL (use in ECS task definitions) |
-| `repository_arn` | ARN of the repository |
-| `repository_name` | Name of the repository |
-| `repository_registry_id` | Registry ID |
+| Name                     | Description                                      |
+| ------------------------ | ------------------------------------------------ |
+| `repository_url`         | ECR repository URL (use in ECS task definitions) |
+| `repository_arn`         | ARN of the repository                            |
+| `repository_name`        | Name of the repository                           |
+| `repository_registry_id` | Registry ID                                      |

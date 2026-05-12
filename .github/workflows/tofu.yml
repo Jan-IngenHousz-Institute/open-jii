@@ -3,7 +3,6 @@
 
 name: OpenTofu Workflow
 
-
 on:
   workflow_dispatch:
     inputs:
@@ -97,7 +96,7 @@ jobs:
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
-  
+
   approval_gate:
     name: Approval Gate
     needs: plan
@@ -110,12 +109,12 @@ jobs:
       - name: Await Approval for Apply
         run: |
           echo "Approved deployment for ${{ inputs.environment }} environment."
-  
+
   apply:
     name: OpenTofu Apply
     needs: [plan, approval_gate]
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}  # This environment should have required reviewers for approval
+    environment: ${{ inputs.environment }} # This environment should have required reviewers for approval
     permissions:
       id-token: write
       contents: read
