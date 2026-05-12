@@ -3,6 +3,18 @@
 # Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
 
 vulnerabilities:
+    # urllib3 in botocore/boto3 transitive (var/lang/lib/python3.12/site-packages/).
+    - id: CVE-2026-44431
+      statement: >-
+          Sensitive headers forwarded across origins on proxied
+          low-level redirects. Sandbox has no outbound HTTP.
+      expired_at: 2026-07-12
+    - id: CVE-2026-44432
+      statement: >-
+          Decompression-bomb safeguards bypassed in streaming API.
+          Sandbox has no outbound HTTP.
+      expired_at: 2026-07-12
+
     # libnghttp2
     - id: CVE-2026-27135
       statement: >-
@@ -26,6 +38,16 @@ vulnerabilities:
     - id: CVE-2026-32280
       statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
     - id: CVE-2026-32282
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-33811
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-33814
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-39820
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-39836
+      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+    - id: CVE-2026-42499
       statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
 
     # glibc in Amazon Linux 2023 base image
