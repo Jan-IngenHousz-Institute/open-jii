@@ -11,7 +11,7 @@ inputs:
   dry_run:
     description: "Run in dry-run mode (for PR previews)"
     required: false
-    default: 'false'
+    default: "false"
 
 outputs:
   releases_created:
@@ -27,7 +27,7 @@ runs:
         echo "📥 Installing semantic-release and plugins from tooling/release/package.json..."
         # Install all workspace dependencies (includes tooling/release)
         pnpm install --frozen-lockfile
-    
+
     - name: Process Releases
       id: release
       shell: bash
@@ -36,25 +36,25 @@ runs:
         DRY_RUN: ${{ inputs.dry_run }}
       run: |
         AFFECTED_APPS='${{ inputs.affected_apps }}'
-        
+
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "📦 Processing releases for affected apps"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "Affected apps: $AFFECTED_APPS"
         echo "Dry run: $DRY_RUN"
         echo ""
-        
+
         # Parse apps array
         APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
-        
+
         if [ ${#APPS[@]} -eq 0 ]; then
           echo "⚠️ No affected apps to release"
           echo "releases_created={}" >> $GITHUB_OUTPUT
           exit 0
         fi
-        
+
         RELEASES_JSON="{}"
-        
+
         # Process each app
         for APP in "${APPS[@]}"; do
           echo ""
@@ -122,16 +122,16 @@ runs:
           rm -f release-output.txt
           cd ../..
         done
-        
+
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "✨ Release Summary"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "$RELEASES_JSON" | jq '.'
-        
+
         # Set output (compact JSON on a single line)
         echo "releases_created=$(echo $RELEASES_JSON | jq -c '.')" >> $GITHUB_OUTPUT
-        
+
     - name: Upload Release Artifacts
       uses: actions/upload-artifact@v6
       if: inputs.dry_run == 'false'

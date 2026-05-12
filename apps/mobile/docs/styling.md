@@ -21,20 +21,20 @@ single styling system. The shared token set lives in `tailwind.config.js`
 
 Semantic tokens (CSS vars in `global.css`, mapped in `tailwind.config.js`):
 
-| Token              | Light                | Dark                 |
-| ------------------ | -------------------- | -------------------- |
-| `background`       | `#FFFFFF`            | `#121212`            |
-| `foreground`       | `#121212`            | `#FFFFFF`            |
-| `surface`          | `#F5F5F5`            | `#1E1E1E`            |
-| `card`             | `#FFFFFF`            | `#252525`            |
-| `border` / `input` | `#E0E0E0`            | `#2C2C2C`            |
-| `muted-foreground` | gray500              | gray300-ish          |
-| `primary`          | `#005e5e`            | `#49e06d`            |
-| `gray-background`  | `#F6F8FA`            | `#1C2128`            |
-| `success`          | `#10B981`            | same                 |
-| `warning`          | `#FBBF24`            | same                 |
-| `error` / `destructive` | `#EF4444`       | same                 |
-| `info`             | `#3B82F6`            | same                 |
+| Token                   | Light     | Dark        |
+| ----------------------- | --------- | ----------- |
+| `background`            | `#FFFFFF` | `#121212`   |
+| `foreground`            | `#121212` | `#FFFFFF`   |
+| `surface`               | `#F5F5F5` | `#1E1E1E`   |
+| `card`                  | `#FFFFFF` | `#252525`   |
+| `border` / `input`      | `#E0E0E0` | `#2C2C2C`   |
+| `muted-foreground`      | gray500   | gray300-ish |
+| `primary`               | `#005e5e` | `#49e06d`   |
+| `gray-background`       | `#F6F8FA` | `#1C2128`   |
+| `success`               | `#10B981` | same        |
+| `warning`               | `#FBBF24` | same        |
+| `error` / `destructive` | `#EF4444` | same        |
+| `info`                  | `#3B82F6` | same        |
 
 If a new visual needs a token that isn't here, extend `tailwind.config.js`
 and `global.css` instead of branching on `theme.isDark` at runtime.
@@ -45,7 +45,7 @@ There is exactly one place where Tailwind utilities cannot reach: React
 Navigation's native header / tab bar, configured via `screenOptions`
 (`headerStyle`, `headerTintColor`, `tabBarStyle`, `contentStyle`). These
 options take RN style objects, and React Navigation renders the native
-header *outside* the NativeWind view tree, so:
+header _outside_ the NativeWind view tree, so:
 
 - A `dark:` variant on the screen body never affects the header.
 - `vars()` from `nativewind` on a wrapper `<View>` does not propagate into
@@ -61,14 +61,16 @@ the CSS vars. Use it like:
 
 ```tsx
 const c = useThemeColors();
-<Stack screenOptions={{
-  headerStyle: { backgroundColor: c.background },
-  headerTintColor: c.onSurface,
-  contentStyle: { backgroundColor: c.surface },
-}} />
+<Stack
+  screenOptions={{
+    headerStyle: { backgroundColor: c.background },
+    headerTintColor: c.onSurface,
+    contentStyle: { backgroundColor: c.surface },
+  }}
+/>;
 ```
 
-This keeps a *single* source of truth (`constants/colors.ts`) for both
+This keeps a _single_ source of truth (`constants/colors.ts`) for both
 Tailwind tokens and the navigation header, while eliminating every
 `theme.isDark ? colors.dark.x : colors.light.x` ternary.
 

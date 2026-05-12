@@ -1,8 +1,8 @@
-name: 'Capture DORA Start'
-description: 'Captures deployment start time and commit timestamp for DORA metrics calculation'
+name: "Capture DORA Start"
+description: "Captures deployment start time and commit timestamp for DORA metrics calculation"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Capture timestamps
       shell: bash

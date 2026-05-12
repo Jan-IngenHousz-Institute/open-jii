@@ -21,7 +21,6 @@ We provide an open platform that connects field sensor measurements, experiment 
 
 ## Get started
 
-
 <div style={{marginTop: '0.6rem'}}>
 	<DocButton href="./quick-start-guide" variant="primary">Follow the Quick Start Guide</DocButton>
 

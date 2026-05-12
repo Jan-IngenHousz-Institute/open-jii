@@ -4,7 +4,7 @@ Metadata turns raw sensor readings into meaningful, analysable data. By attachin
 
 ## Why metadata matters
 
-Sensor data alone tells you *what* was measured, but not *why* or *under which conditions*. Metadata bridges that gap:
+Sensor data alone tells you _what_ was measured, but not _why_ or _under which conditions_. Metadata bridges that gap:
 
 - **Filter and group:** Compare genotypes, treatments (e.g. stress vs. control), or time points side by side.
 - **Enable analysis:** Most statistical analyses require at least one grouping variable. Without metadata you cannot run an ANOVA, build a regression, or produce meaningful plots.

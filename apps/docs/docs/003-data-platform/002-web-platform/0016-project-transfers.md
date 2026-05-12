@@ -19,13 +19,13 @@ Project transfers allow you to import experiments, protocols, macros, and measur
 
 ## Transfer statuses
 
-| Status | Meaning |
-| ------ | ------- |
-| Pending | Request submitted, awaiting validation |
-| Approved | Validation passed, transfer in progress |
-| Completed | All data imported successfully |
-| Failed | Transfer encountered an error |
-| Rejected | Validation failed (e.g. ownership mismatch) |
+| Status    | Meaning                                     |
+| --------- | ------------------------------------------- |
+| Pending   | Request submitted, awaiting validation      |
+| Approved  | Validation passed, transfer in progress     |
+| Completed | All data imported successfully              |
+| Failed    | Transfer encountered an error               |
+| Rejected  | Validation failed (e.g. ownership mismatch) |
 
 ## Data handling
 
