@@ -7,6 +7,7 @@ import { DataSourcesFieldArrayProvider } from "@/components/experiment-visualiza
 import { useVisualizationAutosave } from "@/components/experiment-visualizations/workspace/hooks/use-visualization-autosave";
 import { VisualizationLayoutContent } from "@/components/experiment-visualizations/workspace/layout/visualization-layout-content";
 import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
+import { PageContainer } from "@/components/page-container";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
@@ -36,7 +37,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="visualization-page flex flex-1 flex-col">
+    <PageContainer width="fluid">
       <EntityLayoutShell
         isLoading={isLoading}
         error={error}
@@ -53,7 +54,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
           </VisualizationFormShell>
         )}
       </EntityLayoutShell>
-    </div>
+    </PageContainer>
   );
 }
 

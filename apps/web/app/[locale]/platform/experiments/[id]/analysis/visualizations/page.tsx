@@ -11,11 +11,9 @@ import ExperimentVisualizationsList from "~/components/experiment-visualizations
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { cn } from "@repo/ui/lib/utils";
 
 export default function ExperimentVisualizationsPage() {
   const { t } = useTranslation("experimentVisualizations");
-  const { t: tExperiments } = useTranslation("experiments");
   const { id: experimentId } = useParams<{ id: string }>();
   const router = useRouter();
   const locale = useLocale();
@@ -65,37 +63,7 @@ export default function ExperimentVisualizationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        {/* Segmented control. Visualizations is the only real surface today;
-            Notebooks is a disabled segment so users can see what's coming
-            without us baking in a navigation contract for a route that
-            doesn't exist yet. Promote both segments to Links once Notebooks
-            ships. */}
-        <div
-          role="tablist"
-          aria-label={tExperiments("analysis.title")}
-          className="bg-muted text-muted-foreground inline-flex h-9 items-center justify-center rounded-lg p-1"
-        >
-          <span
-            role="tab"
-            aria-selected="true"
-            className={cn(
-              "bg-background text-foreground inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium shadow",
-            )}
-          >
-            {tExperiments("analysis.visualizations")}
-          </span>
-          <button
-            type="button"
-            role="tab"
-            aria-selected="false"
-            disabled
-            className="inline-flex cursor-not-allowed items-center justify-center rounded-md px-3 py-1 text-sm font-medium opacity-50"
-          >
-            {tExperiments("analysis.notebooks")}
-          </button>
-        </div>
-
+      <div className="flex items-center justify-end gap-4">
         <Button onClick={handleCreate} disabled={!hasAccess || isCreating}>
           {isCreating ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

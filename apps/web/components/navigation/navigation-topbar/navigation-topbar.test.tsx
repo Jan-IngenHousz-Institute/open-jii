@@ -52,9 +52,10 @@ describe("NavigationTopbar", () => {
     expect(logo.closest("a")).toHaveAttribute("href", "/en/platform");
   });
 
-  it("renders disabled notification button", () => {
+  it("renders activity bell as an enabled button", () => {
     render(<NavigationTopbar locale="en" user={testUser} />);
-    expect(screen.getByLabelText("common.notifications")).toBeDisabled();
+    const bell = screen.getByLabelText(/Activity/i);
+    expect(bell).toBeEnabled();
   });
 
   it("opens mobile menu and shows navigation items", async () => {
@@ -94,6 +95,10 @@ describe("NavigationTopbar", () => {
       setOpenMobile: vi.fn(),
       isMobile: false,
       toggleSidebar: vi.fn(),
+      width: 264,
+      setWidth: vi.fn(),
+      dragging: false,
+      setDragging: vi.fn(),
     });
 
     render(<NavigationTopbar locale="en" user={testUser} />);

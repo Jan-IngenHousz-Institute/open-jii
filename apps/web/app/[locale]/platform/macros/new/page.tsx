@@ -1,4 +1,5 @@
 import { NewMacroForm } from "@/components/new-macro/new-macro";
+import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 import React from "react";
 
@@ -20,12 +21,12 @@ export default async function NewMacroPage({ params }: NewMacroPageProps) {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="reading" className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">{t("macros.newMacro")}</h3>
         <p className="text-muted-foreground text-sm">{t("newMacro.description")}</p>
       </div>
       <NewMacroForm />
-    </div>
+    </PageContainer>
   );
 }

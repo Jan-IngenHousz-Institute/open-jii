@@ -67,22 +67,6 @@ describe("VisualizationsPage", () => {
       expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
     });
 
-    it("should render the segmented switcher with Visualizations active and Notebooks disabled", async () => {
-      mountDefaults();
-
-      render(<VisualizationsPage />);
-
-      await waitFor(() => {
-        const tabs = screen.getAllByRole("tab");
-        expect(tabs).toHaveLength(2);
-        expect(tabs[0]).toHaveTextContent("analysis.visualizations");
-        expect(tabs[0]).toHaveAttribute("aria-selected", "true");
-        expect(tabs[1]).toHaveTextContent("analysis.notebooks");
-        expect(tabs[1]).toHaveAttribute("aria-selected", "false");
-        expect(tabs[1]).toBeDisabled();
-      });
-    });
-
     it("should render create button", async () => {
       mountDefaults();
 

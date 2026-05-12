@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { PageContainer } from "@/components/page-container";
 import { BarChart3, Database, FileSpreadsheet, Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -45,29 +46,31 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (isLoading || isLoadingTables) {
     return (
-      <div className="space-y-8">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-5 w-96" />
+      <PageContainer width="fluid">
+        <div className="space-y-8">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-5 w-96" />
+            </div>
+            <Skeleton className="h-10 w-32" />
           </div>
-          <Skeleton className="h-10 w-32" />
-        </div>
 
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -93,11 +96,73 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (!tables || tables.length === 0) {
     return (
+      <PageContainer width="fluid">
+        <div className="space-y-8">
+          <div className="flex items-center justify-between gap-6">
+            <div>
+              <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
+              <p className="text-muted-foreground text-sm">
+                {t("experimentData.description")}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-3">
+              <Button variant="outline" onClick={openMetadataUpload} disabled={!hasAccess}>
+                {hasMetadata ? (
+                  <Pencil className="mr-2 h-4 w-4" />
+                ) : (
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                )}
+                {hasMetadata
+                  ? t("experimentData.editMetadata")
+                  : t("experimentData.uploadMetadata")}
+              </Button>
+              <Button onClick={openSensorDataUpload} disabled={!hasAccess}>
+                <Database className="mr-2 h-4 w-4" />
+                {t("experimentData.uploadSensorData")}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
+              <BarChart3 className="text-muted-foreground h-12 w-12" />
+            </div>
+            <p className="text-muted-foreground mb-4 text-center text-sm">
+              {t("experimentData.noData")}
+            </p>
+            <Link
+              href={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/mobile-app`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="muted">{t("experimentData.readMore")}</Button>
+            </Link>
+          </div>
+
+          <DataUploadModal
+            experimentId={id}
+            open={uploadModalOpen}
+            onOpenChange={setUploadModalOpen}
+          />
+          <MetadataUploadModal
+            experimentId={id}
+            open={metadataModalOpen}
+            onOpenChange={setMetadataModalOpen}
+          />
+        </div>
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer width="fluid">
       <div className="space-y-8">
         <div className="flex items-center justify-between gap-6">
           <div>
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
-            <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
+            <p className="text-muted-foreground text-sm">
+              {t("experimentData.description")}
+            </p>
           </div>
           <div className="flex shrink-0 gap-3">
             <Button variant="outline" onClick={openMetadataUpload} disabled={!hasAccess}>
@@ -106,7 +171,9 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
               ) : (
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
               )}
-              {hasMetadata ? t("experimentData.editMetadata") : t("experimentData.uploadMetadata")}
+              {hasMetadata
+                ? t("experimentData.editMetadata")
+                : t("experimentData.uploadMetadata")}
             </Button>
             <Button onClick={openSensorDataUpload} disabled={!hasAccess}>
               <Database className="mr-2 h-4 w-4" />
@@ -115,21 +182,29 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
-            <BarChart3 className="text-muted-foreground h-12 w-12" />
-          </div>
-          <p className="text-muted-foreground mb-4 text-center text-sm">
-            {t("experimentData.noData")}
-          </p>
-          <Link
-            href={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/mobile-app`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="muted">{t("experimentData.readMore")}</Button>
-          </Link>
-        </div>
+        <NavTabs defaultValue={tables[0].identifier} className="max-w-full">
+          <NavTabsList>
+            {tables.map((table) => (
+              <NavTabsTrigger key={table.identifier} value={table.identifier}>
+                <span className="truncate">
+                  {table.displayName} ({table.totalRows})
+                </span>
+              </NavTabsTrigger>
+            ))}
+          </NavTabsList>
+          {tables.map((table) => (
+            <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
+              <ExperimentDataTable
+                experimentId={id}
+                tableName={table.identifier}
+                displayName={table.displayName}
+                defaultSortColumn={table.defaultSortColumn}
+                errorColumn={table.errorColumn}
+                pageSize={10}
+              />
+            </NavTabsContent>
+          ))}
+        </NavTabs>
 
         <DataUploadModal
           experimentId={id}
@@ -142,62 +217,6 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           onOpenChange={setMetadataModalOpen}
         />
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-6">
-        <div>
-          <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
-          <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
-        </div>
-        <div className="flex shrink-0 gap-3">
-          <Button variant="outline" onClick={openMetadataUpload} disabled={!hasAccess}>
-            {hasMetadata ? (
-              <Pencil className="mr-2 h-4 w-4" />
-            ) : (
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-            )}
-            {hasMetadata ? t("experimentData.editMetadata") : t("experimentData.uploadMetadata")}
-          </Button>
-          <Button onClick={openSensorDataUpload} disabled={!hasAccess}>
-            <Database className="mr-2 h-4 w-4" />
-            {t("experimentData.uploadSensorData")}
-          </Button>
-        </div>
-      </div>
-
-      <NavTabs defaultValue={tables[0].identifier} className="max-w-full">
-        <NavTabsList>
-          {tables.map((table) => (
-            <NavTabsTrigger key={table.identifier} value={table.identifier}>
-              <span className="truncate">
-                {table.displayName} ({table.totalRows})
-              </span>
-            </NavTabsTrigger>
-          ))}
-        </NavTabsList>
-        {tables.map((table) => (
-          <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
-            <ExperimentDataTable
-              experimentId={id}
-              tableName={table.identifier}
-              displayName={table.displayName}
-              defaultSortColumn={table.defaultSortColumn}
-              errorColumn={table.errorColumn}
-              pageSize={10}
-            />
-          </NavTabsContent>
-        ))}
-      </NavTabs>
-
-      <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
-      <MetadataUploadModal
-        experimentId={id}
-        open={metadataModalOpen}
-        onOpenChange={setMetadataModalOpen}
-      />
-    </div>
+    </PageContainer>
   );
 }
