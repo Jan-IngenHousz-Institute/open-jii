@@ -1,12 +1,6 @@
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
-import {
-  UploadCloud,
-  Trash2,
-  CloudCheck,
-  CloudAlert,
-  MessageCircleMore,
-} from "lucide-react-native";
+import { UploadCloud, Trash2, CloudCheck, CloudAlert } from "lucide-react-native";
 import React from "react";
 import { View, Text, TouchableOpacity, Pressable } from "react-native";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
@@ -34,8 +28,6 @@ interface MeasurementItemProps {
   onDelete?: (id: string) => void;
   /** When true, action buttons (sync/delete) are hidden - e.g. when used inside a swipeable row */
   hideActions?: boolean;
-  /** When true, shows a comment indicator icon */
-  hasComment?: boolean;
 }
 
 export function MeasurementItem({
@@ -48,7 +40,6 @@ export function MeasurementItem({
   onSync,
   onDelete,
   hideActions = false,
-  hasComment = false,
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
   const isSynced = status === "synced";
@@ -74,12 +65,12 @@ export function MeasurementItem({
 
       {/* Bottom row: experiment name on left, timestamp + icon on right */}
       <View className="flex-row items-center justify-between">
-        <View className="mr-2 flex-1 flex-row items-center gap-1">
-          <Text className={clsx("shrink text-sm font-normal", classes.textMuted)} numberOfLines={1}>
-            {experimentName}
-          </Text>
-          {hasComment && <MessageCircleMore size={14} color={colors.inactive} />}
-        </View>
+        <Text
+          className={clsx("mr-2 flex-1 text-sm font-normal", classes.textMuted)}
+          numberOfLines={1}
+        >
+          {experimentName}
+        </Text>
 
         <View className="flex-row items-center gap-1.5">
           {!hideActions && (

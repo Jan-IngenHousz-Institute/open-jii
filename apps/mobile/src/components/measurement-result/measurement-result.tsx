@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { ChevronRight, MessageCircleMore } from "lucide-react-native";
+import { ChevronRight, MessageCircle } from "lucide-react-native";
 import React, { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
@@ -115,7 +115,7 @@ export function MeasurementResult({
           onPress={onCommentPress}
         >
           <View className="flex-row items-center gap-2">
-            <MessageCircleMore size={18} color={colors.primary.dark} />
+            <MessageCircle size={18} color={colors.primary.dark} />
             <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
           </View>
           <ChevronRight size={16} color={colors.primary.dark} />
