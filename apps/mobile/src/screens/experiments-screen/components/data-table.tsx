@@ -38,10 +38,7 @@ export function DataTable({ table }: DataTableProps) {
           <View className="min-w-full">
             <View className="border-border flex-row border-b py-1.5">
               {table.columns.map((column) => (
-                <View
-                  key={column.name}
-                  className={cn("min-w-[100px] max-w-[200px] flex-1 px-1.5")}
-                >
+                <View key={column.name} className={cn("min-w-[100px] max-w-[200px] flex-1 px-1.5")}>
                   <Text className="text-on-surface text-xs font-bold">{column.displayName}</Text>
                   {column.isArray && (
                     <Text className="text-jii-primary mt-px text-[8px] font-bold">[Array]</Text>
@@ -54,10 +51,7 @@ export function DataTable({ table }: DataTableProps) {
             </View>
 
             {table.rows.map((row, rowIndex) => (
-              <View
-                key={rowIndex}
-                className={cn("border-border flex-row border-b-[0.5px] py-1")}
-              >
+              <View key={rowIndex} className={cn("border-border flex-row border-b-[0.5px] py-1")}>
                 {table.columns.map((column) => (
                   <View
                     key={column.name}

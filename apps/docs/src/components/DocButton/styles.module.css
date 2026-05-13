@@ -10,7 +10,10 @@
   text-decoration: none;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: transform 120ms ease, box-shadow 120ms ease, opacity 80ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    opacity 80ms ease;
   will-change: transform, box-shadow;
 }
 

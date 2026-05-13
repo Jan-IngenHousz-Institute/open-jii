@@ -6,9 +6,9 @@ name: Rotate Grafana Token
 on:
   schedule:
     # Run on the 1st and 15th of every month at 00:00 UTC (every ~15 days)
-    - cron: '0 0 1,15 * *'
-  workflow_dispatch:  # Allow manual trigger
-  
+    - cron: "0 0 1,15 * *"
+  workflow_dispatch: # Allow manual trigger
+
 permissions:
   id-token: write
   contents: read
@@ -22,7 +22,7 @@ jobs:
       matrix:
         environment: [dev, prod]
     environment: ${{ matrix.environment }}
-    
+
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -50,7 +50,7 @@ jobs:
         id: create-token
         run: |
           echo "✅ Using configured Grafana workspace and service account for environment: ${{ matrix.environment }}"
-          
+
           # Create new token (30 days = 2592000 seconds)
           TOKEN_OUTPUT=$(aws grafana create-workspace-service-account-token \
             --name "github-actions-$(date +%Y%m%d-%H%M%S)" \
@@ -58,24 +58,24 @@ jobs:
             --service-account-id "$SERVICE_ACCOUNT_ID" \
             --seconds-to-live 2592000 \
             --region ${{ secrets.AWS_REGION }})
-          
+
           # Extract token details
           TOKEN_ID=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.id')
           TOKEN_VALUE=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.key')
           TOKEN_NAME=$(echo "$TOKEN_OUTPUT" | jq -r '.serviceAccountToken.name')
-          
+
           # Calculate dates (30 days = 2592000 seconds)
           CREATED_AT=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
           EXPIRES_AT=$(date -u -d '+30 days' '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date -u -v+30d '+%Y-%m-%d %H:%M:%S UTC')
-          
+
           echo "token_id=$TOKEN_ID" >> $GITHUB_OUTPUT
           echo "token_name=$TOKEN_NAME" >> $GITHUB_OUTPUT
           echo "created_at=$CREATED_AT" >> $GITHUB_OUTPUT
           echo "expires_at=$EXPIRES_AT" >> $GITHUB_OUTPUT
-          
+
           # Store token value securely for next step
           echo "TOKEN_VALUE=$TOKEN_VALUE" >> $GITHUB_ENV
-          
+
           echo "✅ Created new token: $TOKEN_NAME"
           echo "   Token ID: $TOKEN_ID"
           echo "   Created: $CREATED_AT"
@@ -89,25 +89,25 @@ jobs:
           echo "$TOKEN_VALUE" | gh secret set "GRAFANA_SERVICE_TOKEN" \
             --repo ${{ github.repository }} \
             --env ${{ matrix.environment }}
-          
+
           echo "✅ Updated GitHub Secret: GRAFANA_SERVICE_TOKEN in environment: ${{ matrix.environment }}"
           echo "   Token will be available as: secrets.GRAFANA_SERVICE_TOKEN"
 
       - name: List and Revoke Old Tokens
         run: |
           NEW_TOKEN_ID="${{ steps.create-token.outputs.token_id }}"
-          
+
           # List all tokens for this service account
           TOKENS=$(aws grafana list-workspace-service-account-tokens \
             --workspace-id "$WORKSPACE_ID" \
             --service-account-id "$SERVICE_ACCOUNT_ID" \
             --region ${{ secrets.AWS_REGION }})
-          
+
           # Extract token IDs (excluding the new token)
           OLD_TOKEN_IDS=$(echo "$TOKENS" | jq -r \
             --arg new_id "$NEW_TOKEN_ID" \
             '.serviceAccountTokens[] | select(.id != $new_id) | .id')
-          
+
           if [ -z "$OLD_TOKEN_IDS" ]; then
             echo "ℹ️  No old tokens to revoke"
           else
@@ -146,5 +146,5 @@ jobs:
           echo "Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo ""
           echo "Please investigate the logs above and rotate the token manually if needed."
-          
+
           exit 1

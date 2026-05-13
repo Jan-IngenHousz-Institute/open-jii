@@ -19,11 +19,13 @@ The architecture features a single medallion model within the `centrum` schema:
 openJII implements an **ELT (Extract, Load, Transform)** architecture rather than a traditional ETL approach:
 
 1. **Extract:**
+
    - Data is extracted from agricultural IoT sensors
    - Streamed through AWS IoT Core to Kinesis
    - MQTT payloads are compressed (gzip + base64) to reduce network transfer
 
 2. **Load:**
+
    - Raw, unprocessed data is loaded directly into the Databricks Bronze layer
    - The `raw_data` streaming table preserves original values, timestamps, and metadata
    - Imported data (e.g. from project transfers) enters via `raw_imported_data` streaming table using Auto Loader
@@ -63,11 +65,11 @@ This decouples table identity from display names. Macro tables use the macro's U
 
 The gold layer provides three core experiment-level tables:
 
-| Table | Purpose | Key Features |
-| ----- | ------- | ------------ |
-| `experiment_raw_data` | Per-sample measurements | VARIANT columns for flexible macro output and question answers |
-| `experiment_device_data` | Aggregated device metadata | Per-experiment device summaries |
-| `experiment_macro_data` | Unified macro outputs | VARIANT support, grouped by macro identifier |
+| Table                    | Purpose                    | Key Features                                                   |
+| ------------------------ | -------------------------- | -------------------------------------------------------------- |
+| `experiment_raw_data`    | Per-sample measurements    | VARIANT columns for flexible macro output and question answers |
+| `experiment_device_data` | Aggregated device metadata | Per-experiment device summaries                                |
+| `experiment_macro_data`  | Unified macro outputs      | VARIANT support, grouped by macro identifier                   |
 
 An `experiment_table_metadata` table caches row counts and schema information for all tables, enabling efficient pagination without expensive `COUNT(*)` queries.
 

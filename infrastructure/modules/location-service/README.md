@@ -34,20 +34,20 @@ resource "aws_iam_role_policy_attachment" "ecs_location" {
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| `place_index_name` | Name for the Place Index | `string` | — | yes |
-| `data_source` | Data provider: `Esri`, `Here`, or `Grab` | `string` | `Esri` | no |
-| `description` | Description for the Place Index | `string` | `"Place Index for search and geocoding operations"` | no |
-| `intended_use` | `SingleUse` or `Storage` | `string` | `SingleUse` | no |
-| `iam_policy_name` | Name for the IAM policy | `string` | `LocationServicePolicy` | no |
-| `tags` | Tags to apply to resources | `map(string)` | `{}` | no |
+| Name               | Description                              | Type          | Default                                             | Required |
+| ------------------ | ---------------------------------------- | ------------- | --------------------------------------------------- | -------- |
+| `place_index_name` | Name for the Place Index                 | `string`      | —                                                   | yes      |
+| `data_source`      | Data provider: `Esri`, `Here`, or `Grab` | `string`      | `Esri`                                              | no       |
+| `description`      | Description for the Place Index          | `string`      | `"Place Index for search and geocoding operations"` | no       |
+| `intended_use`     | `SingleUse` or `Storage`                 | `string`      | `SingleUse`                                         | no       |
+| `iam_policy_name`  | Name for the IAM policy                  | `string`      | `LocationServicePolicy`                             | no       |
+| `tags`             | Tags to apply to resources               | `map(string)` | `{}`                                                | no       |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| `place_index_name` | Name of the Place Index |
-| `place_index_arn` | ARN of the Place Index |
-| `iam_policy_arn` | ARN of the IAM policy for Location Service access |
-| `iam_policy_name` | Name of the IAM policy |
+| Name               | Description                                       |
+| ------------------ | ------------------------------------------------- |
+| `place_index_name` | Name of the Place Index                           |
+| `place_index_arn`  | ARN of the Place Index                            |
+| `iam_policy_arn`   | ARN of the IAM policy for Location Service access |
+| `iam_policy_name`  | Name of the IAM policy                            |

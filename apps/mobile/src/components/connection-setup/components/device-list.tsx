@@ -74,7 +74,9 @@ export function DeviceList({
                     <ActivityIndicator size="small" color={colors.brand} />
                   ) : (
                     <>
-                      {item.type === "bluetooth-classic" && <Bluetooth size={16} color={colors.brand} />}
+                      {item.type === "bluetooth-classic" && (
+                        <Bluetooth size={16} color={colors.brand} />
+                      )}
                       {item.type === "ble" && <Radio size={16} color={colors.brand} />}
                       {item.type === "usb" && <Usb size={16} color={colors.brand} />}
                     </>

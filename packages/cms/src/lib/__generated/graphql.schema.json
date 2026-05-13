@@ -53817,18 +53817,14 @@
         "name": "contentSourceMaps",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "QUERY"
-        ],
+        "locations": ["QUERY"],
         "args": []
       },
       {
         "name": "contentfulSchemaMetadata",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "SCHEMA"
-        ],
+        "locations": ["SCHEMA"],
         "args": [
           {
             "name": "contentTypePublishedCounters",
@@ -53848,10 +53844,7 @@
         "name": "delegatedResourceLink",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "FIELD_DEFINITION",
-          "OBJECT"
-        ],
+        "locations": ["FIELD_DEFINITION", "OBJECT"],
         "args": [
           {
             "name": "contentTypeId",
@@ -53908,9 +53901,7 @@
         "name": "enumMapper",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "ENUM_VALUE"
-        ],
+        "locations": ["ENUM_VALUE"],
         "args": [
           {
             "name": "value",
@@ -53930,9 +53921,7 @@
         "name": "featureFlag",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "FIELD"
-        ],
+        "locations": ["FIELD"],
         "args": [
           {
             "name": "featureName",
@@ -53952,9 +53941,7 @@
         "name": "fieldResolver",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "FIELD_DEFINITION"
-        ],
+        "locations": ["FIELD_DEFINITION"],
         "args": [
           {
             "name": "data",
@@ -53986,11 +53973,7 @@
         "name": "include",
         "description": "Directs the executor to include this field or fragment only when the `if` argument is true.",
         "isRepeatable": false,
-        "locations": [
-          "FIELD",
-          "FRAGMENT_SPREAD",
-          "INLINE_FRAGMENT"
-        ],
+        "locations": ["FIELD", "FRAGMENT_SPREAD", "INLINE_FRAGMENT"],
         "args": [
           {
             "name": "if",
@@ -54014,20 +53997,14 @@
         "name": "oneOf",
         "description": "Indicates exactly one field must be supplied and this field must not be `null`.",
         "isRepeatable": false,
-        "locations": [
-          "INPUT_OBJECT"
-        ],
+        "locations": ["INPUT_OBJECT"],
         "args": []
       },
       {
         "name": "skip",
         "description": "Directs the executor to skip this field or fragment when the `if` argument is true.",
         "isRepeatable": false,
-        "locations": [
-          "FIELD",
-          "FRAGMENT_SPREAD",
-          "INLINE_FRAGMENT"
-        ],
+        "locations": ["FIELD", "FRAGMENT_SPREAD", "INLINE_FRAGMENT"],
         "args": [
           {
             "name": "if",
@@ -54051,9 +54028,7 @@
         "name": "specifiedBy",
         "description": "Exposes a URL that specifies the behavior of this scalar.",
         "isRepeatable": false,
-        "locations": [
-          "SCALAR"
-        ],
+        "locations": ["SCALAR"],
         "args": [
           {
             "name": "url",
@@ -54077,9 +54052,7 @@
         "name": "timeline",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "QUERY"
-        ],
+        "locations": ["QUERY"],
         "args": [
           {
             "name": "where",
@@ -54103,9 +54076,7 @@
         "name": "typeIdentifier",
         "description": null,
         "isRepeatable": false,
-        "locations": [
-          "OBJECT"
-        ],
+        "locations": ["OBJECT"],
         "args": [
           {
             "name": "contentTypeId",

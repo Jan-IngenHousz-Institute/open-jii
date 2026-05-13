@@ -80,9 +80,7 @@ export default function ProfileScreen() {
           onPress={handleOpenWebProfile}
           variant="outline"
           style={{ marginBottom: 12 }}
-          icon={
-            <ExternalLink size={16} color={themeColors.brand} />
-          }
+          icon={<ExternalLink size={16} color={themeColors.brand} />}
         />
 
         <Button

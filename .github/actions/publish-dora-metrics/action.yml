@@ -1,23 +1,23 @@
-name: 'Publish DORA Metrics'
-description: 'Calculates and publishes all DORA metrics to CloudWatch in a single API call'
+name: "Publish DORA Metrics"
+description: "Calculates and publishes all DORA metrics to CloudWatch in a single API call"
 
 inputs:
   deployment-outcome:
-    description: 'The outcome of the deployment step (success or failure)'
+    description: "The outcome of the deployment step (success or failure)"
     required: true
   service:
-    description: 'Service name (backend, web, database, databricks, docs)'
+    description: "Service name (backend, web, database, databricks, docs)"
     required: true
   environment:
-    description: 'Deployment environment (dev, staging, prod)'
+    description: "Deployment environment (dev, staging, prod)"
     required: true
   aws-region:
-    description: 'AWS region for CloudWatch'
+    description: "AWS region for CloudWatch"
     required: false
-    default: 'eu-central-1'
+    default: "eu-central-1"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Publish DORA Metrics to CloudWatch
       shell: bash
