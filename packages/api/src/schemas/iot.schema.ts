@@ -10,7 +10,7 @@ export const zIotCredentials = z.object({
 
 // --- IoT Upload URL ---
 export const zIotUploadUrlRequest = z.object({
-  experimentId: z.string().describe("ID of the experiment to associate this upload with"),
+  experimentId: z.string().uuid().describe("UUID of the experiment to associate this upload with"),
 });
 
 export const zIotUploadUrl = z.object({

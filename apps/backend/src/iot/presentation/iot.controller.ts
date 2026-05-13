@@ -67,7 +67,7 @@ export class IotController {
         experimentId,
       });
 
-      const result = await this.getIotUploadUrlUseCase.execute(experimentId);
+      const result = await this.getIotUploadUrlUseCase.execute(experimentId, userId);
 
       if (result.isSuccess()) {
         this.logger.log({
