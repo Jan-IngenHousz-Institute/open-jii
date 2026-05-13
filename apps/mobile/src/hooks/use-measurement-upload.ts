@@ -160,14 +160,25 @@ export function useMeasurementUpload() {
         return;
       }
 
+      // Split into two phases: a publish failure means the data didn't reach
+      // the cloud (mark failed, surface error). A local-state update failure
+      // *after* a successful publish must not flip the row back to failed —
+      // the data is already on the cloud; only log/toast the local issue.
       try {
         await sendMqttEvent(topic, measurementData);
-        await markUploaded(savedId);
-        toast.success("Measurement uploaded!");
       } catch (uploadError) {
         console.error("Upload failed:", uploadError);
         await markFailed(savedId);
         toast.error("Upload not available, upload it later from Recent");
+        return;
+      }
+
+      try {
+        await markUploaded(savedId);
+        toast.success("Measurement uploaded!");
+      } catch (localError) {
+        console.error("Local status update failed after successful publish:", localError);
+        toast.info("Uploaded — local status will refresh on next sync");
       }
     },
   );

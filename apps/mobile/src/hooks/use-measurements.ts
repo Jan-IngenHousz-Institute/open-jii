@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
-import type { MeasurementItem } from "~/hooks/use-all-measurements";
 import {
   clearMeasurements,
   getMeasurements,
@@ -57,22 +56,24 @@ export function useMeasurements() {
 
     const taskFns = itemsToUpload.map(({ key, data }) => async () => {
       try {
-        await sendMqttEvent(data.topic, data.measurementResult);
-        await markAsSuccessful(key);
-        queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
-          old?.map((item) =>
-            item.key === key ? { ...item, status: "successful" satisfies MeasurementStatus } : item,
-          ),
-        );
-      } catch (error) {
-        console.warn(`Failed to upload item with key ${key}:`, error);
-        await markAsFailed(key);
-        queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
-          old?.map((item) =>
-            item.key === key ? { ...item, status: "failed" satisfies MeasurementStatus } : item,
-          ),
-        );
-        throw error;
+        try {
+          await sendMqttEvent(data.topic, data.measurementResult);
+        } catch (error) {
+          console.warn(`Failed to upload item with key ${key}:`, error);
+          await markAsFailed(key);
+          throw error;
+        }
+
+        // Publish succeeded — local-state failure must not flip the row
+        // back to failed.
+        try {
+          await markAsSuccessful(key);
+        } catch (localError) {
+          console.warn(
+            `Local status update failed after successful publish for ${key}:`,
+            localError,
+          );
+        }
       } finally {
         setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
       }
@@ -116,13 +117,27 @@ export function useMeasurements() {
       if (transitioned.length === 0) return;
       await queryClient.invalidateQueries({ queryKey: ["measurements"] });
 
+      // Only a publish failure should mark the row failed — if MQTT
+      // succeeded but the local status write later fails, the data is on
+      // the cloud and we must not regress the row to "failed".
       try {
-        await sendMqttEvent(item.data.topic, item.data.measurementResult);
-        await markAsSuccessful(key);
-      } catch (error) {
-        console.warn(`Failed to upload item with key ${key}:`, error);
-        await markAsFailed(key);
-        toast.info("Failed to upload, try again later");
+        try {
+          await sendMqttEvent(item.data.topic, item.data.measurementResult);
+        } catch (error) {
+          console.warn(`Failed to upload item with key ${key}:`, error);
+          await markAsFailed(key);
+          toast.info("Failed to upload, try again later");
+          return;
+        }
+
+        try {
+          await markAsSuccessful(key);
+        } catch (localError) {
+          console.warn(
+            `Local status update failed after successful publish for ${key}:`,
+            localError,
+          );
+        }
       } finally {
         await pruneExpiredMeasurements();
         await queryClient.invalidateQueries({ queryKey: ["measurements"] });

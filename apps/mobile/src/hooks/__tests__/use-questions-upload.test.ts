@@ -9,6 +9,7 @@ const {
   mockSendMqttEvent,
   mockToastSuccess,
   mockToastError,
+  mockToastInfo,
 } = vi.hoisted(() => ({
   mockSaveMeasurement: vi.fn(),
   mockMarkUploaded: vi.fn(),
@@ -16,6 +17,7 @@ const {
   mockSendMqttEvent: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockToastInfo: vi.fn(),
 }));
 
 let capturedCallback: (...args: any[]) => Promise<any>;
@@ -37,7 +39,7 @@ vi.mock("~/utils/get-multispeq-mqtt-topic", () => ({
 }));
 
 vi.mock("sonner-native", () => ({
-  toast: { success: mockToastSuccess, error: mockToastError },
+  toast: { success: mockToastSuccess, error: mockToastError, info: mockToastInfo },
 }));
 
 vi.mock("react-async-hook", () => ({
@@ -145,6 +147,29 @@ describe("useQuestionsUpload", () => {
       expect.any(Error),
     );
     expect(mockSendMqttEvent).not.toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
+  });
+
+  // Regression: a markUploaded failure that happens AFTER a successful MQTT
+  // publish must not flip the row back to "failed" — the answers are on the
+  // cloud, only the local status write failed.
+  it("does not mark the row failed when markUploaded errors after a successful publish", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
+    mockSendMqttEvent.mockResolvedValueOnce(undefined);
+    mockMarkUploaded.mockRejectedValueOnce(new Error("disk full"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+    await capturedCallback(baseArgs);
+
+    expect(mockMarkFailed).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockToastInfo).toHaveBeenCalledWith("Uploaded — local status will refresh on next sync");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Local status update failed after successful publish:",
+      expect.any(Error),
+    );
 
     consoleSpy.mockRestore();
   });

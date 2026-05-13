@@ -65,14 +65,24 @@ export function useQuestionsUpload() {
         return;
       }
 
+      // See use-measurement-upload.ts — split publish from local-state update
+      // so a successful publish followed by a markUploaded error doesn't
+      // incorrectly flip the row to failed.
       try {
         await sendMqttEvent(topic, payload);
-        await markUploaded(savedId);
-        toast.success("Answers uploaded!");
       } catch (uploadError) {
         console.error("Upload failed:", uploadError);
         await markFailed(savedId);
         toast.error("Upload not available, upload it later from Recent");
+        return;
+      }
+
+      try {
+        await markUploaded(savedId);
+        toast.success("Answers uploaded!");
+      } catch (localError) {
+        console.error("Local status update failed after successful publish:", localError);
+        toast.info("Uploaded — local status will refresh on next sync");
       }
     },
   );
