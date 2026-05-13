@@ -23,4 +23,3 @@ This page highlights the main capabilities of the openJII platform. For detailed
 - **Python macros:** run Python post-processing macros on-device via embedded Pyodide runtime.
 
 See the Mobile App [overview](../003-data-platform/002-mobile-app.md) for device-specific details.
-

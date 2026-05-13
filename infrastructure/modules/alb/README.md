@@ -36,27 +36,27 @@ module "alb" {
 
 ## Inputs
 
-| Name | Description | Default |
-|------|-------------|---------|
-| `service_name` | Name prefix for all resources | — |
-| `environment` | Environment name (`dev`, `prod`) | — |
-| `vpc_id` | VPC ID for the target group | — |
-| `public_subnet_ids` | Subnets for the ALB | — |
-| `security_groups` | Security groups attached to the ALB | — |
-| `certificate_arn` | ACM certificate ARN for HTTPS | — |
-| `container_port` | Port the backend container listens on | — |
-| `idle_timeout` | Idle timeout in seconds | `60` |
-| `cloudfront_header_name` | Custom header name for origin verification | — |
-| `cloudfront_header_value` | Custom header value for origin verification | — |
-| `enable_access_logs` | Enable ALB access logging | `false` |
-| `access_logs_bucket` | S3 bucket for access logs | `""` |
-| `health_check_*` | Health check path, interval, thresholds, timeout | see variables.tf |
+| Name                      | Description                                      | Default          |
+| ------------------------- | ------------------------------------------------ | ---------------- |
+| `service_name`            | Name prefix for all resources                    | —                |
+| `environment`             | Environment name (`dev`, `prod`)                 | —                |
+| `vpc_id`                  | VPC ID for the target group                      | —                |
+| `public_subnet_ids`       | Subnets for the ALB                              | —                |
+| `security_groups`         | Security groups attached to the ALB              | —                |
+| `certificate_arn`         | ACM certificate ARN for HTTPS                    | —                |
+| `container_port`          | Port the backend container listens on            | —                |
+| `idle_timeout`            | Idle timeout in seconds                          | `60`             |
+| `cloudfront_header_name`  | Custom header name for origin verification       | —                |
+| `cloudfront_header_value` | Custom header value for origin verification      | —                |
+| `enable_access_logs`      | Enable ALB access logging                        | `false`          |
+| `access_logs_bucket`      | S3 bucket for access logs                        | `""`             |
+| `health_check_*`          | Health check path, interval, thresholds, timeout | see variables.tf |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| `alb_arn` | ARN of the ALB |
-| `target_group_arn` | ARN of the target group (used by ECS) |
-| `alb_dns_name` | DNS name for CloudFront/Route53 origin |
-| `alb_zone_id` | Hosted zone ID for Route53 alias records |
+| Name               | Description                              |
+| ------------------ | ---------------------------------------- |
+| `alb_arn`          | ARN of the ALB                           |
+| `target_group_arn` | ARN of the target group (used by ECS)    |
+| `alb_dns_name`     | DNS name for CloudFront/Route53 origin   |
+| `alb_zone_id`      | Hosted zone ID for Route53 alias records |

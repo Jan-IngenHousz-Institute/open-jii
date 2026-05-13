@@ -1,4 +1,5 @@
 # Quick Start Guide
+
 1. Register at [openJII.org](https://openJII.org) — sign up with email (6-digit code), GitHub, or ORCID
 2. Complete your profile (first name, last name, organisation)
 3. Create an Experiment, or ask someone to invite you to an existing Experiment

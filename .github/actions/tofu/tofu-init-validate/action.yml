@@ -11,7 +11,7 @@ runs:
         else
           echo "RESOLVED_ENV=dev" >> "$GITHUB_ENV"
         fi
-    
+
     - name: OpenTofu Init
       shell: bash
       working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}

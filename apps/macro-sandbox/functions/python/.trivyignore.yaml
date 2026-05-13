@@ -3,37 +3,59 @@
 # Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
 
 vulnerabilities:
-    # libnghttp2
-    - id: CVE-2026-27135
-      statement: >-
-          libnghttp2 DoS via malformed HTTP/2 frames.
-          Sandbox cannot make outbound HTTP/2 connections.
+  # urllib3 in botocore/boto3 transitive (var/lang/lib/python3.12/site-packages/).
+  - id: CVE-2026-44431
+    statement: >-
+      Sensitive headers forwarded across origins on proxied
+      low-level redirects. Sandbox has no outbound HTTP.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44432
+    statement: >-
+      Decompression-bomb safeguards bypassed in streaming API.
+      Sandbox has no outbound HTTP.
+    expired_at: 2026-07-12
 
-    # openssl - all require specific protocol usage that Lambda does not do
-    - id: CVE-2026-28387
-      statement: "DANE TLSA use-after-free. Lambda does not use DANE."
-    - id: CVE-2026-28388
-      statement: "delta CRL NULL deref. Requires X509_V_FLAG_USE_DELTAS."
-    - id: CVE-2026-28389
-      statement: "CMS KeyAgree NULL deref. No CMS processing."
-    - id: CVE-2026-28390
-      statement: "CMS EnvelopedData NULL deref. No CMS processing."
-    - id: CVE-2026-31790
-      statement: "RSASVE info disclosure. No RSA key encapsulation."
+  # libnghttp2
+  - id: CVE-2026-27135
+    statement: >-
+      libnghttp2 DoS via malformed HTTP/2 frames.
+      Sandbox cannot make outbound HTTP/2 connections.
 
-    # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
-    # Only used for local testing - production Lambda ignores this binary.
-    - id: CVE-2026-32280
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-    - id: CVE-2026-32282
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  # openssl - all require specific protocol usage that Lambda does not do
+  - id: CVE-2026-28387
+    statement: "DANE TLSA use-after-free. Lambda does not use DANE."
+  - id: CVE-2026-28388
+    statement: "delta CRL NULL deref. Requires X509_V_FLAG_USE_DELTAS."
+  - id: CVE-2026-28389
+    statement: "CMS KeyAgree NULL deref. No CMS processing."
+  - id: CVE-2026-28390
+    statement: "CMS EnvelopedData NULL deref. No CMS processing."
+  - id: CVE-2026-31790
+    statement: "RSASVE info disclosure. No RSA key encapsulation."
 
-    # glibc in Amazon Linux 2023 base image
-    - id: CVE-2026-4046
-      statement: >-
-          glibc iconv() DoS triggered by IBM1390/IBM1399 destination
-          charset. Unreachable: CPython has no ibm1390/ibm1399 codec,
-          so bytes.decode/str.encode raise LookupError before any C
-          call; sandbox builtins also block __import__, open, eval.
-          Fix is in amzn2023.0.4; awaiting AWS base image republish.
-      expired_at: 2026-11-05
+  # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
+  # Only used for local testing - production Lambda ignores this binary.
+  - id: CVE-2026-32280
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-32282
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-33811
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-33814
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-39820
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-39836
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-42499
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+
+  # glibc in Amazon Linux 2023 base image
+  - id: CVE-2026-4046
+    statement: >-
+      glibc iconv() DoS triggered by IBM1390/IBM1399 destination
+      charset. Unreachable: CPython has no ibm1390/ibm1399 codec,
+      so bytes.decode/str.encode raise LookupError before any C
+      call; sandbox builtins also block __import__, open, eval.
+      Fix is in amzn2023.0.4; awaiting AWS base image republish.
+    expired_at: 2026-11-05

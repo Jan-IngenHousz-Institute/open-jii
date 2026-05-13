@@ -224,7 +224,7 @@ jobs:
         uses: ./.github/actions/publish-dora-metrics
         with:
           deployment-outcome: ${{ steps.verify-deployment.outcome || 'failure' }}
-          service: 'backend'
+          service: "backend"
           environment: ${{ env.ENV }}
           aws-region: ${{ secrets.AWS_REGION }}
 
@@ -254,5 +254,5 @@ jobs:
             echo "🔍 Please check the logs above for error details"
             echo "⚠️  The ${{ env.ENV }} environment may still be running the previous version"
           fi
-          
+
           echo "::endgroup::"

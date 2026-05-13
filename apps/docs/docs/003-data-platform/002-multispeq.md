@@ -10,6 +10,3 @@ https://help.photosynq.com/desktop-application/installation.htm
 
 The openJII platform has several protocols available for the MultispeQ. You can [choose one, or create one your self](./web-platform/protocol) in the openJII platform. More documentation on **formatting protocols** for the MultispeQ can be found on:  
 https://help.photosynq.com/protocols/protocol-basics.html
-
-
-
