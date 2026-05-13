@@ -139,6 +139,59 @@ describe("getCredentials — Cognito IdentityId persistence", () => {
     expect(getIdCalls).toHaveLength(1); // refresh after eviction
   });
 
+  it("still caches in memory if AsyncStorage.setItem throws when persisting a new IdentityId", async () => {
+    mockSend.mockImplementation((cmd: object) => {
+      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "minted" });
+      return Promise.resolve({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
+    });
+    mockSetItem.mockRejectedValueOnce(new Error("disk full"));
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+    const mod = await freshModule();
+    const creds = await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[mqtt] Failed to persist Cognito IdentityId:",
+      expect.any(Error),
+    );
+
+    // Second call within the same process uses the in-memory cache — no extra GetId.
+    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    const getIdCalls = mockSend.mock.calls.filter((c) => c[0] instanceof MockGetIdCommand);
+    expect(getIdCalls).toHaveLength(1);
+
+    consoleSpy.mockRestore();
+  });
+
+  it("continues when AsyncStorage.removeItem throws while clearing a stale IdentityId", async () => {
+    mockGetItem.mockResolvedValueOnce("stale-id");
+    mockRemoveItem.mockRejectedValueOnce(new Error("disk error"));
+
+    const stale = Object.assign(new Error("not found"), { name: "ResourceNotFoundException" });
+    let getCredsCalls = 0;
+    mockSend.mockImplementation((cmd: object) => {
+      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "fresh-id" });
+      if (cmd instanceof MockGetCredentialsForIdentityCommand) {
+        getCredsCalls += 1;
+        if (getCredsCalls === 1) return Promise.reject(stale);
+        return Promise.resolve({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
+      }
+      return Promise.reject(new Error("unexpected"));
+    });
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+    const mod = await freshModule();
+    const creds = await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+
+    expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[mqtt] Failed to clear persisted Cognito IdentityId:",
+      expect.any(Error),
+    );
+
+    consoleSpy.mockRestore();
+  });
+
   it("collapses concurrent first-time callers into one GetId + one GetCredentials", async () => {
     let resolveCreds: (v: unknown) => void = () => undefined;
     const credsPromise = new Promise((r) => {

@@ -240,6 +240,47 @@ describe("measurements-storage", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // countMeasurementsByStatus
+  // ---------------------------------------------------------------------------
+
+  describe("countMeasurementsByStatus", () => {
+    it("returns the per-status counts via a single GROUP BY query", async () => {
+      insertRow("p1", "pending");
+      insertRow("p2", "pending");
+      insertRow("f1", "failed");
+      insertRow("u1", "uploading");
+      insertRow("s1", "successful");
+      insertRow("s2", "successful");
+      insertRow("s3", "successful");
+
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countMeasurementsByStatus();
+
+      expect(counts).toEqual({ pending: 2, failed: 1, uploading: 1, successful: 3 });
+    });
+
+    it("returns zeros when the table is empty", async () => {
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countMeasurementsByStatus();
+      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
+    });
+
+    it("returns zeros and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      // Force the count query to throw by destroying the table mid-test.
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const counts = await mod.countMeasurementsByStatus();
+
+      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to count measurements:", expect.any(Error));
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // markAsSuccessful
   // ---------------------------------------------------------------------------
 
