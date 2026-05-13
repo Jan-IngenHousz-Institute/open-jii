@@ -1,6 +1,6 @@
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
-import { UploadCloud, Trash2, CloudCheck, CloudAlert } from "lucide-react-native";
+import { UploadCloud, Trash2, CloudCheck, CloudAlert, CloudUpload } from "lucide-react-native";
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, Pressable, ActivityIndicator } from "react-native";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
@@ -42,8 +42,9 @@ export const MeasurementItem = memo(function MeasurementItem({
   hideActions = false,
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
-  const isSynced = status === "synced";
-  const isSyncing = status === "syncing";
+  const isSynced = status === "successful";
+  const isSyncing = status === "uploading";
+  const isPending = status === "pending";
 
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
@@ -111,6 +112,8 @@ export const MeasurementItem = memo(function MeasurementItem({
             <ActivityIndicator size={16} color={colors.semantic.info} />
           ) : isSynced ? (
             <CloudCheck size={16} color={colors.semantic.success} />
+          ) : isPending ? (
+            <CloudUpload size={16} color={colors.semantic.info} />
           ) : (
             <CloudAlert size={16} color={colors.semantic.error} />
           )}

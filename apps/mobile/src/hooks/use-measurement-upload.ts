@@ -92,7 +92,7 @@ function promptMeasurementFileSave(measurement: {
 }
 
 export function useMeasurementUpload() {
-  const { saveMeasurement } = useMeasurements();
+  const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
     async ({
@@ -146,21 +146,28 @@ export function useMeasurementUpload() {
         },
       };
 
+      // Save locally first so the measurement appears in Recent immediately
+      // and can be flagged on-device, regardless of upload outcome. Status
+      // starts as "pending" — only flipped to "failed" once an actual MQTT
+      // attempt errors out, so field metrics distinguish never-tried from
+      // genuinely-failed rows.
+      let savedId: string;
       try {
-        await sendMqttEvent(topic, measurementData);
-        toast.success("Measurement uploaded!");
-        await saveMeasurement(failedUploadData, "successful");
-        return;
-      } catch (uploadError) {
-        console.error("Upload failed:", uploadError);
-        toast.error("Upload not available, upload it later from Recent");
-      }
-
-      try {
-        await saveMeasurement(failedUploadData, "failed");
+        savedId = await saveMeasurement(failedUploadData, "pending");
       } catch (storageError) {
         console.error("Failed to save measurement to local storage:", storageError);
         promptMeasurementFileSave(failedUploadData);
+        return;
+      }
+
+      try {
+        await sendMqttEvent(topic, measurementData);
+        await markUploaded(savedId);
+        toast.success("Measurement uploaded!");
+      } catch (uploadError) {
+        console.error("Upload failed:", uploadError);
+        await markFailed(savedId);
+        toast.error("Upload not available, upload it later from Recent");
       }
     },
   );

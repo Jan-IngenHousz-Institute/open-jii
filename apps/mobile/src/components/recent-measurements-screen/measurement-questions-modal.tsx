@@ -59,7 +59,7 @@ export function MeasurementQuestionsModal({
   const experimentName = measurement.experimentName;
   const protocolName = measurement.data.metadata.protocolName;
   const timestamp = new Date(measurement.timestamp).toLocaleString();
-  const isUnsynced = measurement.status === "unsynced";
+  const isUnsynced = measurement.status === "pending" || measurement.status === "failed";
 
   const currentComment = getCommentFromMeasurementResult(measurementResult);
   const currentFlagType = getFlagTypeFromMeasurementResult(measurementResult);

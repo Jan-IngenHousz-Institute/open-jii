@@ -28,7 +28,7 @@ function confirmAndRun({ title, message, confirmText, variant, errorMessage, run
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
-  const { measurements, allMeasurements, uploadingCount, invalidate } = useAllMeasurements(filter);
+  const { measurements, counts, uploadingCount, invalidate } = useAllMeasurements(filter);
   const {
     uploadAll,
     isUploading,
@@ -38,8 +38,10 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     updateMeasurementComment,
   } = useMeasurements();
 
-  const unsyncedCount = allMeasurements.filter(({ status }) => status === "unsynced").length;
-  const syncedCount = allMeasurements.filter(({ status }) => status === "synced").length;
+  // Counts come from SQL — independent of the active filter.
+  const unsyncedCount = counts.pending + counts.failed;
+  const syncedCount = counts.successful;
+  const totalCount = counts.pending + counts.failed + counts.uploading + counts.successful;
 
   const confirmSync = (m: MeasurementItem) =>
     confirmAndRun({
@@ -58,7 +60,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     });
 
   const confirmDelete = (m: MeasurementItem) => {
-    const isSynced = m.status === "synced";
+    const isSynced = m.status === "successful";
     confirmAndRun({
       title: isSynced ? "Delete Measurement" : "Remove Measurement",
       message: isSynced
@@ -114,7 +116,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
 
   return {
     measurements,
-    hasAnyMeasurements: allMeasurements.length > 0,
+    hasAnyMeasurements: totalCount > 0,
     syncedCount,
     unsyncedCount,
     uploadingCount,

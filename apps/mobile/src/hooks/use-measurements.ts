@@ -2,10 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
-import type {
-  MeasurementItem,
-  MeasurementStatus as MeasurementUiStatus,
-} from "~/hooks/use-all-measurements";
+import type { MeasurementItem } from "~/hooks/use-all-measurements";
 import {
   clearMeasurements,
   getMeasurements,
@@ -31,11 +28,15 @@ export function useMeasurements() {
   );
   const uploadingKeysRef = useRef<Set<string>>(new Set());
 
+  // Both "pending" (never tried) and "failed" (tried, errored) rows are
+  // candidates for the next upload attempt. The variable retains its old
+  // "failedUploads" name for callsite stability — semantically it's
+  // "everything-not-yet-on-the-cloud."
   const { data: failedUploads = [] } = useQuery({
-    queryKey: ["measurements", "failed"],
+    queryKey: ["measurements", "pending-or-failed"],
     queryFn: async () => {
-      const entries = await getMeasurements("failed");
-      return entries.map(([key, data]) => ({ key, data }));
+      const rows = await getMeasurements(["pending", "failed"]);
+      return rows.map(({ id, data }) => ({ key: id, data }));
     },
     networkMode: "always",
   });
@@ -44,7 +45,9 @@ export function useMeasurements() {
   failedUploadsRef.current = failedUploads;
 
   const uploadAsync = useAsyncCallback(async () => {
-    const CONCURRENCY = 10;
+    // 3 keeps a single phone's burst well below AWS Cognito Identity Pool
+    // throttling when multiple field devices come online at the same time.
+    const CONCURRENCY = 3;
     const items = [...failedUploadsRef.current];
 
     const transitioned = new Set(await markAsUploading(items.map(({ key }) => key)));
@@ -58,7 +61,7 @@ export function useMeasurements() {
         await markAsSuccessful(key);
         queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
           old?.map((item) =>
-            item.key === key ? { ...item, status: "synced" satisfies MeasurementUiStatus } : item,
+            item.key === key ? { ...item, status: "successful" satisfies MeasurementStatus } : item,
           ),
         );
       } catch (error) {
@@ -66,7 +69,7 @@ export function useMeasurements() {
         await markAsFailed(key);
         queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
           old?.map((item) =>
-            item.key === key ? { ...item, status: "unsynced" satisfies MeasurementUiStatus } : item,
+            item.key === key ? { ...item, status: "failed" satisfies MeasurementStatus } : item,
           ),
         );
         throw error;
@@ -130,7 +133,18 @@ export function useMeasurements() {
   };
 
   const saveMeasurement = async (upload: Measurement, status: MeasurementStatus) => {
-    await saveMeasurementToStorage(upload, status);
+    const id = await saveMeasurementToStorage(upload, status);
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    return id;
+  };
+
+  const markUploaded = async (key: string) => {
+    await markAsSuccessful(key);
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+  };
+
+  const markFailed = async (key: string) => {
+    await markAsFailed(key);
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
@@ -161,6 +175,8 @@ export function useMeasurements() {
     uploadAll: uploadAsync.execute,
     uploadOne,
     saveMeasurement,
+    markUploaded,
+    markFailed,
     removeMeasurement,
     clearSyncedMeasurements,
     updateMeasurementComment,

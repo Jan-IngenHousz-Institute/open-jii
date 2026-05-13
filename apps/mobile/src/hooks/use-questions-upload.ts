@@ -9,7 +9,7 @@ import { buildAnnotations } from "~/utils/measurement-annotations";
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
 export function useQuestionsUpload() {
-  const { saveMeasurement } = useMeasurements();
+  const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
 
   const { loading: isUploading, execute: uploadQuestions } = useAsyncCallback(
     async ({
@@ -53,23 +53,26 @@ export function useQuestionsUpload() {
         },
       };
 
+      // Persist before attempting MQTT (see use-measurement-upload.ts).
+      let savedId: string;
       try {
-        await sendMqttEvent(topic, payload);
-        toast.success("Answers uploaded!");
-        await saveMeasurement(failedUploadData, "successful");
-        return;
-      } catch (uploadError) {
-        console.error("Upload failed:", uploadError);
-        toast.error("Upload not available, upload it later from Recent");
-      }
-
-      try {
-        await saveMeasurement(failedUploadData, "failed");
+        savedId = await saveMeasurement(failedUploadData, "pending");
       } catch (storageError) {
         console.error("Failed to save answers to local storage:", storageError);
         toast.error(
           "Answers could not be saved on this device. Please export your data now to avoid losing it.",
         );
+        return;
+      }
+
+      try {
+        await sendMqttEvent(topic, payload);
+        await markUploaded(savedId);
+        toast.success("Answers uploaded!");
+      } catch (uploadError) {
+        console.error("Upload failed:", uploadError);
+        await markFailed(savedId);
+        toast.error("Upload not available, upload it later from Recent");
       }
     },
   );

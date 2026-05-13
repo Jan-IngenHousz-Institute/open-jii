@@ -4,6 +4,8 @@ import { useMeasurementUpload } from "../use-measurement-upload";
 
 const {
   mockSaveMeasurement,
+  mockMarkUploaded,
+  mockMarkFailed,
   mockSendMqttEvent,
   mockExportSingle,
   mockToastSuccess,
@@ -11,6 +13,8 @@ const {
   mockShowAlert,
 } = vi.hoisted(() => ({
   mockSaveMeasurement: vi.fn(),
+  mockMarkUploaded: vi.fn(),
+  mockMarkFailed: vi.fn(),
   mockSendMqttEvent: vi.fn(),
   mockExportSingle: vi.fn(),
   mockToastSuccess: vi.fn(),
@@ -21,7 +25,11 @@ const {
 let capturedCallback: (...args: any[]) => Promise<any>;
 
 vi.mock("~/hooks/use-measurements", () => ({
-  useMeasurements: () => ({ saveMeasurement: mockSaveMeasurement }),
+  useMeasurements: () => ({
+    saveMeasurement: mockSaveMeasurement,
+    markUploaded: mockMarkUploaded,
+    markFailed: mockMarkFailed,
+  }),
 }));
 
 vi.mock("~/services/mqtt/send-mqtt-event", () => ({
@@ -78,38 +86,44 @@ describe("useMeasurementUpload", () => {
     useMeasurementUpload();
   });
 
-  it("uploads successfully and saves as successful", async () => {
+  it("persists the measurement as pending first, then marks it uploaded on MQTT success", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockResolvedValueOnce(undefined);
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
+    mockMarkUploaded.mockResolvedValueOnce(undefined);
 
     await capturedCallback(baseArgs);
 
-    expect(mockSendMqttEvent).toHaveBeenCalled();
-    expect(mockToastSuccess).toHaveBeenCalledWith("Measurement uploaded!");
     expect(mockSaveMeasurement).toHaveBeenCalledWith(
       expect.objectContaining({ topic: "mock/topic" }),
-      "successful",
+      "pending",
     );
+    expect(mockSendMqttEvent).toHaveBeenCalled();
+    expect(mockMarkUploaded).toHaveBeenCalledWith("row-1");
+    expect(mockMarkFailed).not.toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith("Measurement uploaded!");
+    expect(mockSaveMeasurement).toHaveBeenCalledTimes(1);
   });
 
-  it("saves as failed when MQTT upload fails", async () => {
+  it("transitions the pending row to failed when MQTT upload errors out", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
+    mockMarkFailed.mockResolvedValueOnce(undefined);
 
     await capturedCallback(baseArgs);
 
-    expect(mockToastError).toHaveBeenCalledWith(
-      "Upload not available, upload it later from Recent",
-    );
     expect(mockSaveMeasurement).toHaveBeenCalledWith(
       expect.objectContaining({ topic: "mock/topic" }),
-      "failed",
+      "pending",
+    );
+    expect(mockMarkUploaded).not.toHaveBeenCalled();
+    expect(mockMarkFailed).toHaveBeenCalledWith("row-1");
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Upload not available, upload it later from Recent",
     );
     expect(mockShowAlert).not.toHaveBeenCalled();
   });
 
-  it("prompts file save when both upload and local storage fail", async () => {
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
+  it("prompts file save when local storage fails (upload is never attempted)", async () => {
     mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
@@ -133,7 +147,6 @@ describe("useMeasurementUpload", () => {
   });
 
   it("calls exportSingleMeasurementToFile when user taps Save to File", async () => {
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
     mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
     mockExportSingle.mockResolvedValueOnce(undefined);
 
@@ -158,7 +171,6 @@ describe("useMeasurementUpload", () => {
   });
 
   it("shows toast error when file export also fails", async () => {
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
     mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
     mockExportSingle.mockRejectedValueOnce(new Error("file system error"));
 
@@ -177,8 +189,9 @@ describe("useMeasurementUpload", () => {
   });
 
   it("forwards the UTC timestamp and timezone to the MQTT payload unchanged", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockResolvedValueOnce(undefined);
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
+    mockMarkUploaded.mockResolvedValueOnce(undefined);
 
     const utcTimestamp = "2026-03-16T13:00:18.022Z";
     const timezone = "Europe/Amsterdam";
@@ -200,8 +213,8 @@ describe("useMeasurementUpload", () => {
 
   it("logs the upload error", async () => {
     const uploadError = new Error("network timeout");
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockRejectedValueOnce(uploadError);
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 

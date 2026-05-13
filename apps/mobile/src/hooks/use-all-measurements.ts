@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
-import { getMeasurements } from "~/services/measurements-storage";
+import { countMeasurementsByStatus, getMeasurements } from "~/services/measurements-storage";
+import type { MeasurementCounts } from "~/services/measurements-storage";
+import type { MeasurementStatus } from "~/services/measurements-storage";
 import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import type { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 
-export type MeasurementStatus = "synced" | "unsynced" | "syncing";
+export type { MeasurementStatus } from "~/services/measurements-storage";
 
 export interface MeasurementItem {
   key: string;
@@ -25,78 +26,57 @@ export interface MeasurementItem {
 
 export type MeasurementFilter = "all" | "synced" | "unsynced";
 
+function statusesForFilter(filter: MeasurementFilter): MeasurementStatus[] {
+  if (filter === "synced") return ["successful"];
+  if (filter === "unsynced") return ["pending", "failed", "uploading"];
+  return ["pending", "failed", "uploading", "successful"];
+}
+
+const EMPTY_COUNTS: MeasurementCounts = {
+  pending: 0,
+  uploading: 0,
+  failed: 0,
+  successful: 0,
+};
+
 export function useAllMeasurements(filter: MeasurementFilter = "all") {
   const queryClient = useQueryClient();
 
-  const { data: allMeasurements = [] } = useQuery({
-    queryKey: ["measurements"],
+  // Only fetch the rows the filter actually wants — filtering happens in SQL.
+  const { data: measurements = [] } = useQuery({
+    queryKey: ["measurements", "list", filter],
     queryFn: async () => {
-      const [failedEntries, uploadingEntries, successfulEntries] = await Promise.all([
-        getMeasurements("failed"),
-        getMeasurements("uploading"),
-        getMeasurements("successful"),
-      ]);
-
-      const unsynced: MeasurementItem[] = failedEntries.map(([key, data]) => ({
-        key,
+      const rows = await getMeasurements(statusesForFilter(filter));
+      const items: MeasurementItem[] = rows.map(({ id, status, data }) => ({
+        key: id,
         timestamp: data.metadata.timestamp,
         experimentName: data.metadata.experimentName,
-        status: "unsynced" as MeasurementStatus,
+        status,
         questions: parseQuestions(data.measurementResult),
         data,
       }));
-
-      const syncing: MeasurementItem[] = uploadingEntries.map(([key, data]) => ({
-        key,
-        timestamp: data.metadata.timestamp,
-        experimentName: data.metadata.experimentName,
-        status: "syncing" as MeasurementStatus,
-        questions: parseQuestions(data.measurementResult),
-        data,
-      }));
-
-      const synced: MeasurementItem[] = successfulEntries.map(([key, data]) => ({
-        key,
-        timestamp: data.metadata.timestamp,
-        experimentName: data.metadata.experimentName,
-        status: "synced" as MeasurementStatus,
-        questions: parseQuestions(data.measurementResult),
-        data,
-      }));
-
-      const combined = [...unsynced, ...syncing, ...synced];
-
-      combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-      return combined;
+      items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return items;
     },
     networkMode: "always",
   });
 
-  const filteredMeasurements = useMemo(
-    () =>
-      allMeasurements.filter((item) => {
-        if (filter === "all") return true;
-        if (filter === "synced") return item.status === "synced";
-        if (filter === "unsynced") return item.status === "unsynced" || item.status === "syncing";
-        return true;
-      }),
-    [allMeasurements, filter],
-  );
-
-  const uploadingCount = useMemo(
-    () => allMeasurements.filter((item) => item.status === "syncing").length,
-    [allMeasurements],
-  );
+  // Lightweight COUNT … GROUP BY status — independent of the active filter so
+  // toolbar counts and counts shown in confirmations stay accurate.
+  const { data: counts = EMPTY_COUNTS } = useQuery({
+    queryKey: ["measurements", "counts"],
+    queryFn: countMeasurementsByStatus,
+    networkMode: "always",
+  });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
   return {
-    measurements: filteredMeasurements,
-    allMeasurements,
-    uploadingCount,
+    measurements,
+    counts,
+    uploadingCount: counts.uploading,
     invalidate,
   };
 }
