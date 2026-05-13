@@ -26,6 +26,7 @@ Dashboard Visualization
 ### Monitored Metrics
 
 #### Application Performance
+
 - **ECS Backend**: CPU, memory, task count, response time
 - **Lambda (NextJS)**: Invocations, duration, errors, throttles
 - **CloudFront**: Requests, bandwidth, cache hit rate, 4xx/5xx errors
@@ -33,6 +34,7 @@ Dashboard Visualization
 - **Database**: CPU, connections, IOPS, replication lag
 
 #### DORA Metrics (DevOps Performance)
+
 - **Deployment Frequency**: How often deployments succeed (24h/7d)
 - **Lead Time**: Time from commit to production deployment
 - **Change Failure Rate**: Percentage of deployments that fail
@@ -43,20 +45,24 @@ Dashboard Visualization
 Automated alerts notify your team when issues are detected:
 
 #### Backend API Alerts
+
 - **High Backend Error Rate**: Fires when 5XX error rate exceeds 5% for 5 minutes
 - **Backend High CPU Usage**: Fires when ECS CPU usage exceeds 80% for 5 minutes
 - **Backend Service Unhealthy**: Fires when unhealthy targets detected for 2 minutes
 
 #### CloudFront Alerts
+
 - **High CloudFront Error Rate**: Fires when 4XX + 5XX error rate exceeds 5% for 5 minutes
 
 #### Lambda Alerts
+
 - **Lambda High Error Rate**: Fires when Lambda errors exceed 5 in 5 minutes
 - **Lambda Throttling**: Fires when Lambda throttling detected for 5 minutes
 
 **Note**: Lambda alerts use CloudWatch `FILL(m1, 0)` to handle missing data (sparse metrics).
 
 #### Database Alerts
+
 - **Database High CPU**: Fires when RDS CPU usage exceeds 80% for 5 minutes
 - **Database High Connections**: Fires when connection count exceeds 80 for 5 minutes
 
@@ -64,13 +70,14 @@ Automated alerts notify your team when issues are detected:
 
 Alerts are routed to Slack via webhook with severity-based policies:
 
-| Severity | Repeat Interval | Examples |
-|----------|----------------|----------|
+| Severity | Repeat Interval  | Examples                             |
+| -------- | ---------------- | ------------------------------------ |
 | Critical | Every 30 minutes | Unhealthy targets, Lambda throttling |
-| Warning | Every 12 hours | High CPU, error rates |
-| DORA | Every 24 hours | DORA metric alerts |
+| Warning  | Every 12 hours   | High CPU, error rates                |
+| DORA     | Every 24 hours   | DORA metric alerts                   |
 
 **Alert States**:
+
 - **Normal**: All conditions OK
 - **Pending**: Condition met, waiting for `for` duration
 - **Firing**: Alert active, notification sent
@@ -143,10 +150,11 @@ tofu apply
 #### Option A: Use GitHub Actions Workflow (Recommended)
 
 1. Get workspace and service account IDs:
+
    ```bash
    # Workspace ID
    aws grafana list-workspaces --region eu-central-1
-   
+
    # Service account ID
    aws grafana list-workspace-service-accounts \
      --workspace-id YOUR_WORKSPACE_ID \
@@ -154,10 +162,12 @@ tofu apply
    ```
 
 2. Add to GitHub Secrets (Settings → Secrets → Environments → dev):
+
    - `GRAFANA_WORKSPACE_ID_DEV` = your workspace ID
    - `GRAFANA_SERVICE_ACCOUNT_ID_DEV` = your service account ID
 
 3. Run rotation workflow manually:
+
    ```bash
    gh workflow run rotate-grafana-token.yml
    ```
@@ -180,6 +190,7 @@ Add the token to GitHub Secrets as `GRAFANA_SERVICE_TOKEN` in the dev environmen
 ### Access Grafana Dashboard
 
 1. Get workspace URL:
+
    ```bash
    tofu output -json | jq -r '.managed_grafana_workspace.value.amg_url'
    ```
@@ -193,17 +204,20 @@ Add the token to GitHub Secrets as `GRAFANA_SERVICE_TOKEN` in the dev environmen
 Alert notifications require a Slack webhook:
 
 1. **Create Slack Webhook**:
+
    - Go to your Slack workspace → Apps → Incoming Webhooks
    - Create new webhook for your alerts channel
    - Copy the webhook URL
 
 2. **Add to Terraform Variables**:
+
    ```hcl
    # infrastructure/env/dev/terraform.tfvars
    slack_webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
    ```
 
 3. **Apply Configuration**:
+
    ```bash
    cd infrastructure/env/dev
    tofu apply -target=module.grafana_dashboard
@@ -215,6 +229,7 @@ Alert notifications require a Slack webhook:
    - Check Slack for test notification
 
 **Alert Testing in Dev**:
+
 - Temporarily lower thresholds (e.g., CPU > 40% instead of 80%)
 - Use short evaluation periods (1m instead of 5m)
 - Revert to production values after testing
@@ -230,12 +245,12 @@ Alert notifications require a Slack webhook:
 
 ### Metrics Details
 
-| Metric | Type | Dimensions | Description |
-|--------|------|-----------|-------------|
-| DeploymentFrequency | Count | Service, Environment | Number of deployments |
-| LeadTime | Milliseconds | Service, Environment | Commit timestamp to deployment complete |
-| DeploymentSuccess | Count | Service, Environment | Successful deployments |
-| DeploymentFailed | Count | Service, Environment | Failed deployments |
+| Metric              | Type         | Dimensions           | Description                             |
+| ------------------- | ------------ | -------------------- | --------------------------------------- |
+| DeploymentFrequency | Count        | Service, Environment | Number of deployments                   |
+| LeadTime            | Milliseconds | Service, Environment | Commit timestamp to deployment complete |
+| DeploymentSuccess   | Count        | Service, Environment | Successful deployments                  |
+| DeploymentFailed    | Count        | Service, Environment | Failed deployments                      |
 
 **Namespace**: `DORA/Metrics`
 
@@ -264,6 +279,7 @@ Each workflow uses `.github/actions/publish-dora-metric/action.yml` composite ac
 ### Token Rotation
 
 Tokens automatically rotate every ~15 days via GitHub Actions:
+
 - Workflow: `.github/workflows/rotate-grafana-token.yml`
 - Schedule: 1st and 15th of each month
 - Token validity: 30 days
@@ -281,6 +297,7 @@ Tokens automatically rotate every ~15 days via GitHub Actions:
 ### Adding New Metrics
 
 1. **Publish metric** in deployment workflow:
+
    ```yaml
    - uses: ./.github/actions/publish-dora-metric
      with:
@@ -292,6 +309,7 @@ Tokens automatically rotate every ~15 days via GitHub Actions:
    ```
 
 2. **Add panel** to `dashboard/dashboard.json.tftpl`:
+
    - Query CloudWatch namespace `DORA/Metrics`
    - Use dimensions: Service, Environment
    - Set `matchExact: false` for wildcard queries
@@ -303,6 +321,7 @@ Tokens automatically rotate every ~15 days via GitHub Actions:
 ### Dashboard Not Showing Data
 
 **Check CloudWatch metrics exist:**
+
 ```bash
 aws cloudwatch list-metrics \
   --namespace "DORA/Metrics" \
@@ -310,10 +329,12 @@ aws cloudwatch list-metrics \
 ```
 
 **Check metric dimensions:**
+
 - Service: backend, web, docs, database
 - Environment: dev, staging, prod
 
 **Verify Grafana datasource:**
+
 - Dashboard → Settings → Data sources
 - CloudWatch should be configured with correct region
 
@@ -322,6 +343,7 @@ aws cloudwatch list-metrics \
 If you see authentication errors:
 
 1. Run token rotation manually:
+
    ```bash
    gh workflow run rotate-grafana-token.yml
    ```
@@ -331,12 +353,15 @@ If you see authentication errors:
 ### Deployment Metrics Not Appearing
 
 **Check workflow ran successfully:**
+
 - GitHub Actions → Select workflow → Check "Publish DORA Metrics" steps
 
 **Verify IAM permissions:**
+
 - GitHub OIDC role needs `cloudwatch:PutMetricData`
 
 **Check metric publication:**
+
 ```bash
 # View recent metrics
 aws cloudwatch get-metric-statistics \
@@ -352,18 +377,21 @@ aws cloudwatch get-metric-statistics \
 ### Terraform Apply Issues
 
 **Provider error:**
-```
+
+```text
 Error: Failed to configure Grafana provider
 ```
 
 **Solution**: Apply workspace first, then dashboards (see Deployment steps above).
 
 **State lock:**
-```
+
+```text
 Error: Error acquiring the state lock
 ```
 
-**Solution**: 
+**Solution**:
+
 ```bash
 tofu force-unlock LOCK_ID
 ```
@@ -372,14 +400,15 @@ tofu force-unlock LOCK_ID
 
 ### Monthly Costs (Dev Environment)
 
-| Service | Cost | Notes |
-|---------|------|-------|
-| Amazon Managed Grafana | ~$9/month | Free tier: 744 hours |
-| CloudWatch Metrics | ~$0.50 | Custom metrics (DORA) |
-| CloudWatch Logs | ~$1 | Dashboard queries |
-| **Total** | **~$10.50/month** | Varies with usage |
+| Service                | Cost              | Notes                 |
+| ---------------------- | ----------------- | --------------------- |
+| Amazon Managed Grafana | ~$9/month         | Free tier: 744 hours  |
+| CloudWatch Metrics     | ~$0.50            | Custom metrics (DORA) |
+| CloudWatch Logs        | ~$1               | Dashboard queries     |
+| **Total**              | **~$10.50/month** | Varies with usage     |
 
 **Free Tier Included:**
+
 - CloudWatch: 10 custom metrics, 1M API requests
 - Lambda: 1M requests, 400K GB-seconds
 
@@ -393,6 +422,7 @@ tofu force-unlock LOCK_ID
 ## Support
 
 For issues or questions:
+
 1. Check troubleshooting section above
 2. Review GitHub Actions logs
 3. Check CloudWatch metrics console

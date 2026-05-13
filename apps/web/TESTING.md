@@ -29,7 +29,7 @@ The trade-off: **a `vi.mock(...)` in one file can leak into another file's modul
 ### Practical rules
 
 - **Prefer MSW over `vi.mock` for data-fetching hooks** (see below). MSW doesn't touch the module graph, so it's immune to this whole class of issue.
-- **Avoid `vi.mock("./some-local-module", ...)`**. If you stub an in-repo module, the stub is file-scoped *in principle* but cached *in practice* until the next `resetModules`. If another file imports the real module first, or the same file in the same worker, ordering gets flaky. Use real components + MSW, or lift a callback prop instead.
+- **Avoid `vi.mock("./some-local-module", ...)`**. If you stub an in-repo module, the stub is file-scoped _in principle_ but cached _in practice_ until the next `resetModules`. If another file imports the real module first, or the same file in the same worker, ordering gets flaky. Use real components + MSW, or lift a callback prop instead.
 - **Per-test `vi.mocked(...).mockReturnValue(...)` is fine** — the mock lives in the global setup, not in a file-scoped factory. Just reset defaults yourself if you're not mocking something `setup.ts` already resets (only `next/navigation` gets free reset right now).
 - **Partial overrides of `next/navigation`** (e.g. re-mocking with just `{ redirect }`) are supported — `setup.ts`'s `beforeEach` swallows the "export not defined" crash from vitest's mock proxy.
 

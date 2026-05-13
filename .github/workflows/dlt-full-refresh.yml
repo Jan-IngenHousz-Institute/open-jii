@@ -31,15 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     env:
-      DATABRICKS_HOST:          ${{ secrets.DATABRICKS_HOST }}
-      DATABRICKS_CLIENT_ID:     ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
       DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
       PID: ${{ vars.DLT_PIPELINE_ID }}
       TABLES: ${{ inputs.tables }}
 
     steps:
       - name: Setup Databricks CLI
-        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b  # v0.298.0
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
 
       - name: Validate pipeline id
         run: |

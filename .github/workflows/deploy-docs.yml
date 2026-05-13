@@ -206,7 +206,7 @@ jobs:
         uses: ./.github/actions/publish-dora-metrics
         with:
           deployment-outcome: ${{ steps.upload-docs.outcome || 'failure' }}
-          service: 'docs'
+          service: "docs"
           environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
 

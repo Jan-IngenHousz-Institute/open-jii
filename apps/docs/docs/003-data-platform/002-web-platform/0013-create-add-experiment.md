@@ -9,11 +9,15 @@ This page explains how to create or edit an experiment using the openJII web pla
 1. Go to the **Experiments** section in the Web platform.
 2. Click **Create Experiment** to open the experiment form (or select an existing experiment to edit).
 3. Fill in required fields such as:
-  - **Experiment name**
-  - **Description**
+
+- **Experiment name**
+- **Description**
+
 4. Optionally:
-  - Add members and set the experiment visibility (**Public** or **Private**). We encourage openness — a **maximum embargo of 12 months** may be applied.
-  - Add one or more locations for the experiment.
+
+- Add members and set the experiment visibility (**Public** or **Private**). We encourage openness — a **maximum embargo of 12 months** may be applied.
+- Add one or more locations for the experiment.
+
 5. Review settings and click **Create** (or **Save** when editing).
 
 ## Configure the Measurement Flow (Flow tab)
@@ -40,6 +44,7 @@ How to build the flow:
 6. Click **Save flow**.
 
 Notes:
+
 - For now, a valid flow should include at least one Measurement node and one Analysis node. More advanced flow options will be added over time.
 - Unconnected nodes are ignored when the flow runs.
 
@@ -55,4 +60,3 @@ Notes:
 - Use clear, descriptive experiment names to make search and collaboration easier.
 - Keep node layouts tidy — a top-left to bottom-right arrangement improves readability.
 - Click on a connection (edge) to reveal the option to remove it.
-

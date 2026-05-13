@@ -1,8 +1,8 @@
 "use client";
 
+import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { WorkbookLayoutContent } from "@/components/workbook-overview/workbook-layout-content";
-import { WorkbookSaveProvider } from "@/components/workbook-overview/workbook-save-context";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useParams } from "next/navigation";
 
@@ -26,11 +26,11 @@ export default function WorkbookLayout({ children }: WorkbookLayoutProps) {
         loadingMessage={t("common.loading")}
       >
         {data && (
-          <WorkbookSaveProvider>
+          <AutosaveStatusProvider>
             <WorkbookLayoutContent id={id} workbook={data}>
               {children}
             </WorkbookLayoutContent>
-          </WorkbookSaveProvider>
+          </AutosaveStatusProvider>
         )}
       </EntityLayoutShell>
     </div>

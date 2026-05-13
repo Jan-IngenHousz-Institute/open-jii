@@ -44,19 +44,19 @@ sync:
     - "src/pipelines/**"
     - "src/tasks/**"
     - "src/notebooks/**"
-  
+
   # Patterns to exclude
   exclude:
     - ".DS_Store"
-    - "lib/**"               # Libraries are deployed as wheels
-    - "*.json"               # package.json, tsconfig.json, etc.
-    - "*.toml"               # pyproject.toml
-    - "*.md"                 # README.md
-    - "*.yml"                # databricks.yml
-    - "*.yaml"               # Any YAML files
-    - "*.lock"               # Lock files
+    - "lib/**" # Libraries are deployed as wheels
+    - "*.json" # package.json, tsconfig.json, etc.
+    - "*.toml" # pyproject.toml
+    - "*.md" # README.md
+    - "*.yml" # databricks.yml
+    - "*.yaml" # Any YAML files
+    - "*.lock" # Lock files
     - ".gitignore"
-    - "src/lib/**"           # Library source code (deployed as wheels)
+    - "src/lib/**" # Library source code (deployed as wheels)
 
 # Deployment targets
 targets:

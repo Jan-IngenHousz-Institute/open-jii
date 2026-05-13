@@ -4,12 +4,12 @@ Mutation hooks use utility types from `~/lib/tsr` to handle API errors in a type
 
 ## Types
 
-| Type / Helper | Purpose |
-|---|---|
-| `TsrRoute<T>` | Extracts the route type from a `tsr.*.useMutation` accessor |
-| `ContractError<TRoute>` | Typed union of all error responses declared in the contract |
-| `TsRestMutationOptions<TRoute, TKeys>` | Typed mutation options — `onError` receives `ContractError` instead of `unknown` |
-| `getContractError(route, error)` | Returns a typed `ContractError`, or `undefined` for non-contract errors (network, crash) |
+| Type / Helper                          | Purpose                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `TsrRoute<T>`                          | Extracts the route type from a `tsr.*.useMutation` accessor                              |
+| `ContractError<TRoute>`                | Typed union of all error responses declared in the contract                              |
+| `TsRestMutationOptions<TRoute, TKeys>` | Typed mutation options — `onError` receives `ContractError` instead of `unknown`         |
+| `getContractError(route, error)`       | Returns a typed `ContractError`, or `undefined` for non-contract errors (network, crash) |
 
 ## Pattern
 
