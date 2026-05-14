@@ -50,7 +50,7 @@ describe("ScatterStylePanel", () => {
     expect(screen.getByText("workspace.style.markerSize")).toBeInTheDocument();
     expandSection("workspace.style.lineOptions");
     expect(screen.getByText("workspace.style.markerOpacity")).toBeInTheDocument();
-    // markerShape lives inside MarkerStyleSection (Markers / scatter) — the
+    // markerShape lives inside MarkerStyleSection (Markers / scatter); the
     // trigger above already opened it.
     expect(screen.getByText("workspace.style.markerShape")).toBeInTheDocument();
   });
