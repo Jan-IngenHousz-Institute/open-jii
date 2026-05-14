@@ -6,8 +6,10 @@ import { initReactI18next } from "react-i18next";
 
 import authEn from "./locales/en-US/auth.json";
 import commonEn from "./locales/en-US/common.json";
+import profileEn from "./locales/en-US/profile.json";
 import authNl from "./locales/nl-NL/auth.json";
 import commonNl from "./locales/nl-NL/common.json";
+import profileNl from "./locales/nl-NL/profile.json";
 
 export const SUPPORTED_LOCALES = ["en-US", "nl-NL"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -16,8 +18,8 @@ const LANGUAGE_PREF_KEY = "openjii_language";
 const FALLBACK_LOCALE: SupportedLocale = "en-US";
 
 const bundledResources = {
-  "en-US": { common: commonEn, auth: authEn },
-  "nl-NL": { common: commonNl, auth: authNl },
+  "en-US": { common: commonEn, auth: authEn, profile: profileEn },
+  "nl-NL": { common: commonNl, auth: authNl, profile: profileNl },
 } as const;
 
 function pickDeviceLocale(): SupportedLocale {
@@ -59,7 +61,7 @@ export function initI18n(): Promise<typeof i18next> {
     await i18next.use(initReactI18next).init({
       lng,
       fallbackLng: FALLBACK_LOCALE,
-      ns: ["common", "auth"],
+      ns: ["common", "auth", "profile"],
       defaultNS: "common",
       resources: bundledResources,
       interpolation: { escapeValue: false },

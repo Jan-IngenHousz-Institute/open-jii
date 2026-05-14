@@ -1,34 +1,38 @@
 import "expo-application";
 import * as Application from "expo-application";
 import * as Updates from "expo-updates";
-import { User, ExternalLink, LogOut, Sun, Moon } from "lucide-react-native";
-import React, { useContext } from "react";
+import { Moon, Sun, Smartphone, User, ExternalLink, LogOut } from "lucide-react-native";
+import React from "react";
 import { View, Text, ScrollView, Linking, Image, Pressable } from "react-native";
 import { useLogout } from "~/features/auth/hooks/use-logout";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { colors } from "~/shared/constants/colors";
+import { useTranslation } from "~/shared/i18n";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { showAlert } from "~/shared/ui/AlertDialog";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
-import { ThemeContext, ThemePreference } from "~/shared/ui/context/ThemeContext";
+import type { ThemePreference } from "~/shared/ui/context/ThemeContext";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { useThemePreference } from "~/shared/ui/hooks/use-theme-preference";
 import { formatRelativeTime } from "~/shared/utils/format-relative-time";
 
 const THEME_OPTIONS: {
-  value: ThemePreference;
-  label: string;
-  Icon: React.FC<{ size: number; color: string }>;
+  key: ThemePreference;
+  labelKey: "themeSystem" | "themeLight" | "themeDark";
+  Icon: typeof Sun;
 }[] = [
-  { value: "light", label: "Light", Icon: Sun },
-  { value: "dark", label: "Dark", Icon: Moon },
+  { key: "system", labelKey: "themeSystem", Icon: Smartphone },
+  { key: "light", labelKey: "themeLight", Icon: Sun },
+  { key: "dark", labelKey: "themeDark", Icon: Moon },
 ];
 
 export default function ProfileScreen() {
   const { session } = useSession();
   const handleLogout = useLogout();
   const themeColors = useThemeColors();
-  const { themePreference, changeTheme } = useContext(ThemeContext);
+  const { themePreference, changeTheme } = useThemePreference();
+  const { t } = useTranslation(["common", "profile"]);
 
   const handleOpenWebProfile = async () => {
     const url = getEnvVar("NEXT_AUTH_URI") + "/en-US/platform/experiments";
@@ -37,7 +41,7 @@ export default function ProfileScreen() {
     if (canOpen) {
       await Linking.openURL(url);
     } else {
-      showAlert("Error", "Cannot open web profile. Please check your internet connection.");
+      showAlert(t("common:errorTitle"), t("profile:cannotOpenWebProfile"));
     }
   };
 
@@ -65,15 +69,19 @@ export default function ProfileScreen() {
       </View>
 
       <Card className="mb-6">
-        <Text className="text-on-surface mb-4 text-lg font-bold">Account Information</Text>
+        <Text className="text-on-surface mb-4 text-lg font-bold">
+          {t("profile:accountInformation")}
+        </Text>
 
         <View className="border-border flex-row justify-between border-b py-3">
-          <Text className="text-inactive text-base">Organization</Text>
-          <Text className="text-on-surface text-base font-medium">N/A</Text>
+          <Text className="text-inactive text-base">{t("profile:organization")}</Text>
+          <Text className="text-on-surface text-base font-medium">
+            {t("profile:organizationNone")}
+          </Text>
         </View>
 
         <View className="border-border flex-row justify-between border-b py-3">
-          <Text className="text-inactive text-base">Login Expires</Text>
+          <Text className="text-inactive text-base">{t("profile:loginExpires")}</Text>
           <Text className="text-on-surface text-base font-medium">
             {formatRelativeTime(expires)}
           </Text>
@@ -81,26 +89,26 @@ export default function ProfileScreen() {
       </Card>
 
       <Card className="mb-6">
-        <Text className="text-on-surface mb-4 text-lg font-bold">Appearance</Text>
+        <Text className="text-on-surface mb-4 text-lg font-bold">{t("profile:appearance")}</Text>
         <View className="flex-row gap-2">
-          {THEME_OPTIONS.map(({ value, label, Icon }) => {
-            const active = themePreference === value;
+          {THEME_OPTIONS.map(({ key, labelKey, Icon }) => {
+            const isActive = themePreference === key;
             return (
               <Pressable
-                key={value}
-                onPress={() => changeTheme(value)}
-                className="flex-1 items-center gap-1.5 rounded-xl border py-3"
+                key={key}
+                onPress={() => void changeTheme(key)}
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-lg border px-3 py-2"
                 style={{
-                  borderColor: active ? themeColors.brand : themeColors.border,
-                  backgroundColor: active ? themeColors.brand + "18" : "transparent",
+                  borderColor: isActive ? themeColors.brand : themeColors.border,
+                  backgroundColor: isActive ? themeColors.brand + "15" : "transparent",
                 }}
               >
-                <Icon size={18} color={active ? themeColors.brand : themeColors.inactive} />
+                <Icon size={16} color={isActive ? themeColors.brand : themeColors.onSurface} />
                 <Text
-                  style={{ color: active ? themeColors.brand : themeColors.inactive }}
-                  className="text-sm font-medium"
+                  className="text-sm font-semibold"
+                  style={{ color: isActive ? themeColors.brand : themeColors.onSurface }}
                 >
-                  {label}
+                  {t(`profile:${labelKey}`)}
                 </Text>
               </Pressable>
             );
@@ -110,7 +118,7 @@ export default function ProfileScreen() {
 
       <View className="mb-6">
         <Button
-          title="Open Web Profile"
+          title={t("profile:openWebProfile")}
           onPress={handleOpenWebProfile}
           variant="outline"
           style={{ marginBottom: 12 }}
@@ -118,7 +126,7 @@ export default function ProfileScreen() {
         />
 
         <Button
-          title="Log Out"
+          title={t("profile:logOut")}
           onPress={handleLogout}
           variant="danger"
           style={{ marginBottom: 12 }}
@@ -127,7 +135,8 @@ export default function ProfileScreen() {
       </View>
 
       <Text className="text-inactive mt-6 text-center text-sm">
-        openJII v{Application.nativeApplicationVersion} ({Application.nativeBuildVersion})
+        {t("common:appName")} v{Application.nativeApplicationVersion} (
+        {Application.nativeBuildVersion})
       </Text>
       {Updates.updateId && (
         <Text className="text-inactive mt-6 text-center text-sm">{Updates.updateId}</Text>

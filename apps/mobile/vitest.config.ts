@@ -20,7 +20,31 @@ export default defineConfig({
       provider: "v8",
       reporter: [["json", { file: "../coverage.json" }], "text"],
       enabled: true,
-      exclude: ["**/node_modules/**", "**/dist/**", "**/*.config.*", "**/*.setup.*"],
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/*.config.*",
+        "**/*.setup.*",
+        "src/app/**", // expo-router routes are thin shells covered by manual smoke
+        "src/shared/i18n/locales/**", // pure JSON data
+        "scripts/**",
+        "drizzle/**",
+      ],
+      thresholds: {
+        // Global floor agreed in OJD-1525. Far below the current 83% baseline;
+        // a ratchet upward is left for follow-up.
+        lines: 35,
+        statements: 35,
+        branches: 35,
+        functions: 35,
+        // Per-layer floors so a future regression in a critical area trips CI
+        // long before the global average moves.
+        "src/features/**/services/**": { lines: 80, statements: 80, branches: 50, functions: 70 },
+        "src/features/**/api/**": { lines: 70, statements: 70, branches: 50, functions: 60 },
+        "src/features/**/hooks/**": { lines: 60, statements: 60, branches: 40, functions: 50 },
+        "src/shared/db/**": { lines: 80, statements: 80, branches: 70, functions: 80 },
+        "src/shared/api/**": { lines: 70, statements: 70, branches: 60, functions: 70 },
+      },
     },
     projects: [
       {
