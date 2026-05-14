@@ -4,10 +4,10 @@ import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native
 import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
 import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
-import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
 import { pruneExpiredMeasurements } from "~/shared/db/measurements-storage";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { DevIndicator } from "~/shared/ui/widgets/dev-indicator";
 import { DeviceConnectionWidget } from "~/shared/ui/widgets/device-connection-widget";
 

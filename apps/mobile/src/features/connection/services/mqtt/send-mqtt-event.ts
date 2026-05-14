@@ -1,4 +1,7 @@
-import { createMqttConnection, ReceivedMessage } from "~/features/connection/services/mqtt/create-mqtt-connection";
+import {
+  createMqttConnection,
+  ReceivedMessage,
+} from "~/features/connection/services/mqtt/create-mqtt-connection";
 
 // paho-mqtt + the Cognito handshake can hang silently when AWS is throttling
 // or the network is flapping. Without a hard ceiling the caller's promise

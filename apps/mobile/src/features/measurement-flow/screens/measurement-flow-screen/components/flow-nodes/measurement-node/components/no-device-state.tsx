@@ -1,9 +1,9 @@
 import { router } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Text, View } from "react-native";
-import { Button } from "~/shared/ui/Button";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useConnectToDevice } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
+import { Button } from "~/shared/ui/Button";
 
 export function NoDeviceState() {
   const { lastConnectedDevice } = useDeviceConnectionStore();

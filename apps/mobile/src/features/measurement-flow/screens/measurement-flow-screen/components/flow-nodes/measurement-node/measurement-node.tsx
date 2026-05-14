@@ -4,12 +4,12 @@ import { Info } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
 import { View, Text } from "react-native";
 import { toast } from "sonner-native";
-import { Button } from "~/shared/ui/Button";
-import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { useConnectedDevice } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
 import { useScanner } from "~/features/connection/services/scan-manager/scan-manager";
+import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { Button } from "~/shared/ui/Button";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { playSound } from "~/shared/utils/play-sound";
 
 import { ErrorState } from "./components/error-state";

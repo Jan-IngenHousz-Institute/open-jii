@@ -1,7 +1,7 @@
 import { HardHat, User } from "lucide-react-native";
 import { View, Text } from "react-native";
-import { colors } from "~/shared/constants/colors";
 import { useIsDevelopment } from "~/features/profile/hooks/use-is-development";
+import { colors } from "~/shared/constants/colors";
 
 interface Props {
   size: number;

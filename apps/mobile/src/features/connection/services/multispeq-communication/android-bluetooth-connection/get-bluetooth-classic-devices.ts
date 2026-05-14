@@ -1,6 +1,6 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-
 import { uniqBy } from "~/shared/utils/uniq";
+
 import { requestBluetoothPermission } from "../../request-bluetooth-permissions";
 
 export async function getBluetoothClassicDevices() {

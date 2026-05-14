@@ -6,10 +6,10 @@ import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { toast } from "sonner-native";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
-import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { useConnectedDevice } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
 import { useScannerCommandExecutor } from "~/features/connection/services/scan-manager/use-scanner-command-executor";
+import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { isOnline } from "~/shared/utils/is-online";
 
 export function DeviceConnectionWidget() {

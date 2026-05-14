@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { toast } from "sonner-native";
-import { Button } from "~/shared/ui/Button";
 import {
   useAllDevices,
   useConnectedDevice,
@@ -9,6 +8,7 @@ import {
   usePairedDevices,
   useSerialDevices,
 } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
+import { Button } from "~/shared/ui/Button";
 
 import { ConnectedDevice } from "./components/connected-device";
 import { DeviceList } from "./components/device-list";

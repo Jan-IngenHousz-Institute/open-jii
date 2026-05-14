@@ -1,7 +1,7 @@
 import type { BluetoothDevice } from "react-native-bluetooth-classic";
-
 import { Emitter } from "~/shared/utils/emitter";
 import { stringifyIfObject } from "~/shared/utils/stringify-if-object";
+
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
 
 export function bluetoothDeviceToMultispeqStream(connectedDevice: BluetoothDevice) {

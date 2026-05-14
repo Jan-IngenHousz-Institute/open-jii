@@ -1,9 +1,9 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View } from "react-native";
+import { supportedEnvsList, useEnvironmentStore } from "~/shared/stores/environment-store";
 import { Dropdown } from "~/shared/ui/Dropdown";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { supportedEnvsList, useEnvironmentStore } from "~/shared/stores/environment-store";
 
 export function EnvironmentSelector() {
   const { classes } = useTheme();

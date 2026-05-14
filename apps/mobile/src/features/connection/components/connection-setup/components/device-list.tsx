@@ -2,8 +2,8 @@ import { clsx } from "clsx";
 import { Bluetooth, Radio, Usb, Trash2 } from "lucide-react-native";
 import React, { useMemo } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { Device } from "~/shared/types/device";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface Props {
   devices: Device[];

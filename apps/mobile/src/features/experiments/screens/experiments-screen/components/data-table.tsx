@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { cn } from "~/shared/utils/cn";
-import { ParsedTableData, formatCellValue, getTableSummary } from "~/shared/utils/parse-experiment-data";
+import {
+  ParsedTableData,
+  formatCellValue,
+  getTableSummary,
+} from "~/shared/utils/parse-experiment-data";
 
 import { TableDetailModal } from "./table-detail-modal";
 

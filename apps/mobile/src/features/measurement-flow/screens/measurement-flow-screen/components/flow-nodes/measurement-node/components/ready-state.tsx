@@ -4,10 +4,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Bookmark, HelpCircle, Repeat2 } from "lucide-react-native";
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { colors } from "~/shared/constants/colors";
-import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { colors } from "~/shared/constants/colors";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import type { FlowNode } from "../../../../types";
 

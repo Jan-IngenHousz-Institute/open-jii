@@ -1,11 +1,11 @@
 import { RefreshCw } from "lucide-react-native";
 import React from "react";
 import { View, Text, TouchableOpacity, Animated } from "react-native";
-import { Dropdown } from "~/shared/ui/Dropdown";
 import { useExperimentMeasurements } from "~/features/experiments/hooks/use-experiment-measurements";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
-import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { Dropdown } from "~/shared/ui/Dropdown";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { parseExperimentData } from "~/shared/utils/parse-experiment-data";
 
 import { ExperimentTables } from "./components";

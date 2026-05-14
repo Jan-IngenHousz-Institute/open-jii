@@ -1,5 +1,4 @@
 import { PermissionsAndroid, Platform } from "react-native";
-
 import { keepTruthy } from "~/shared/utils/keep-truthy";
 
 export async function requestBluetoothPermission() {

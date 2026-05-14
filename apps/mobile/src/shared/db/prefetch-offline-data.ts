@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { tsr } from "~/shared/api/tsr";
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { tsr } from "~/shared/api/tsr";
 import { uniq } from "~/shared/utils/uniq";
 
 /**

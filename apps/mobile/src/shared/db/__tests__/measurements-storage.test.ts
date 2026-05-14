@@ -27,7 +27,7 @@ function createTestDb() {
   db = drizzle(sqlite, { schema });
 }
 
-vi.mock("../db/client", () => ({
+vi.mock("../client", () => ({
   get db() {
     return db;
   },
@@ -736,11 +736,11 @@ describe("measurements-storage", () => {
 
 describe("0001_add_pending_status migration — upgrade path", () => {
   const m0000Sql = readFileSync(
-    resolve(__dirname, "../../../drizzle/0000_outgoing_firebird.sql"),
+    resolve(__dirname, "../../../../drizzle/0000_outgoing_firebird.sql"),
     "utf-8",
   );
   const m0001Sql = readFileSync(
-    resolve(__dirname, "../../../drizzle/0001_add_pending_status.sql"),
+    resolve(__dirname, "../../../../drizzle/0001_add_pending_status.sql"),
     "utf-8",
   );
 

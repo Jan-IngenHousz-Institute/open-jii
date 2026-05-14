@@ -14,10 +14,13 @@ vi.mock("@repo/iot", () => ({
 
 // Replace the executor factory so the store never touches react-native or BT.
 const createMultispeqCommandExecutor = vi.fn();
-vi.mock("~/features/connection/services/scan-manager/utils/create-multispeq-command-executor", () => ({
-  createMultispeqCommandExecutor: (device: Device | undefined) =>
-    createMultispeqCommandExecutor(device),
-}));
+vi.mock(
+  "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor",
+  () => ({
+    createMultispeqCommandExecutor: (device: Device | undefined) =>
+      createMultispeqCommandExecutor(device),
+  }),
+);
 
 interface ExecuteCall {
   command: string | object;

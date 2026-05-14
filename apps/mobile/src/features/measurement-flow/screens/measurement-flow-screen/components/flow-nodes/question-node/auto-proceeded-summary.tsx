@@ -1,9 +1,9 @@
 import { Repeat2 } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
-import { colors } from "~/shared/constants/colors";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { colors } from "~/shared/constants/colors";
 
 interface AutoProceededSummaryProps {
   currentNodeId: string;

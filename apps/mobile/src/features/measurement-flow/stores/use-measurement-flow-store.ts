@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { FlowNode, isQuestionsOnlyFlow } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import {
+  FlowNode,
+  isQuestionsOnlyFlow,
+} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 interface MeasurementFlowStore {
   experimentId?: string;

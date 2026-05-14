@@ -1,9 +1,9 @@
 import React from "react";
 import { View, Text } from "react-native";
-import { Button } from "~/shared/ui/Button";
-import { Card } from "~/shared/ui/Card";
 import { useScannerCommandExecutor } from "~/features/connection/services/scan-manager/use-scanner-command-executor";
 import type { Device } from "~/shared/types/device";
+import { Button } from "~/shared/ui/Button";
+import { Card } from "~/shared/ui/Card";
 
 interface Props {
   device: Device;
