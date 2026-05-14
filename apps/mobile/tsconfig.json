@@ -10,6 +10,9 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
+      "~/features/*": ["./src/features/*"],
+      "~/shared/*": ["./src/shared/*"],
+      "~/app/*": ["./src/app/*"],
       "@/*": ["./*"]
     },
     "jsx": "react-native",
