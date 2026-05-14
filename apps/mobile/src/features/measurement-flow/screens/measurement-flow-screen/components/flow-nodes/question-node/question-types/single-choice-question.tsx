@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { QuestionContent } from "../../../../types";
 

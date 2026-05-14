@@ -1,5 +1,5 @@
 import { useAsyncCallback } from "react-async-hook";
-import { useAuthClient } from "~/services/auth";
+import { useAuthClient } from "~/features/auth/services/auth";
 
 export function useLoginFlow() {
   const authClient = useAuthClient();

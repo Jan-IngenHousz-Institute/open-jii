@@ -1,4 +1,4 @@
-import { tsr } from "~/api/tsr";
+import { tsr } from "~/shared/api/tsr";
 
 export function useProtocol(protocolId: string | undefined) {
   const { data, isLoading, error } = tsr.protocols.getProtocol.useQuery({

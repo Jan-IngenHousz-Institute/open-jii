@@ -9,7 +9,7 @@ import {
   TouchableOpacityProps,
   View,
 } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface ButtonProps extends TouchableOpacityProps {
   title?: string;

@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { useRecentMeasurementsActions } from "../../components/recent-measurements-screen/use-recent-measurements-actions";
+import { useRecentMeasurementsActions } from "../use-recent-measurements-actions";
 import type { MeasurementItem } from "../use-all-measurements";
 
 const mockUploadAll = vi.fn().mockResolvedValue(undefined);
@@ -15,7 +15,7 @@ const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockExportMeasurementsToFile = vi.fn().mockResolvedValue(undefined);
 
-vi.mock("~/hooks/use-all-measurements", () => ({
+vi.mock("~/features/recent-measurements/hooks/use-all-measurements", () => ({
   useAllMeasurements: vi.fn(() => ({
     measurements: mockAllMeasurements,
     counts: { pending: 0, uploading: 1, failed: 1, successful: 1 },
@@ -24,7 +24,7 @@ vi.mock("~/hooks/use-all-measurements", () => ({
   })),
 }));
 
-vi.mock("~/hooks/use-measurements", () => ({
+vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: vi.fn(() => ({
     uploadAll: mockUploadAll,
     isUploading: false,
@@ -35,7 +35,7 @@ vi.mock("~/hooks/use-measurements", () => ({
   })),
 }));
 
-vi.mock("~/components/AlertDialog", () => ({
+vi.mock("~/shared/ui/AlertDialog", () => ({
   showAlert: (...args: unknown[]) => mockShowAlert(...args),
 }));
 
@@ -46,7 +46,7 @@ vi.mock("sonner-native", () => ({
   },
 }));
 
-vi.mock("~/services/export-measurements", () => ({
+vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
   exportMeasurementsToFile: () => mockExportMeasurementsToFile(),
 }));
 

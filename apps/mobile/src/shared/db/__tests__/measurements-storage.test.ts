@@ -4,13 +4,13 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { compressForStorage } from "~/utils/storage-compression";
+import { compressForStorage } from "~/shared/utils/storage-compression";
 
-import * as schema from "../db/schema";
+import * as schema from "../schema";
 
 const migrationFiles = ["0000_outgoing_firebird.sql", "0001_add_pending_status.sql"];
 const migrationSqls = migrationFiles.map((f) =>
-  readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
+  readFileSync(resolve(__dirname, "../../../../drizzle", f), "utf-8"),
 );
 
 let sqlite: ReturnType<typeof Database>;

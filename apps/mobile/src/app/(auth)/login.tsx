@@ -16,16 +16,16 @@ import {
   Linking,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
-import { OTPInput } from "~/components/OTPInput";
-import { useIsOnline } from "~/hooks/use-is-online";
-import { useLoginFlow } from "~/hooks/use-login";
-import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
-import { useThemeColors } from "~/hooks/use-theme-colors";
-import { prefetchOfflineData } from "~/services/prefetch-offline-data";
-import { getEnvVar } from "~/stores/environment-store";
-import { EnvironmentSelector } from "~/widgets/environment-selector";
+import { Button } from "~/shared/ui/Button";
+import { Input } from "~/shared/ui/Input";
+import { OTPInput } from "~/shared/ui/OTPInput";
+import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
+import { useLoginFlow } from "~/features/auth/hooks/use-login";
+import { useMultiTapReveal } from "~/shared/ui/hooks/use-multi-tap-reveal";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
+import { getEnvVar } from "~/shared/stores/environment-store";
+import { EnvironmentSelector } from "~/features/profile/widgets/environment-selector";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 

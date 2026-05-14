@@ -2,15 +2,18 @@ import { clsx } from "clsx";
 import { ChevronsLeft, Download } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import { FlatList, Text, View } from "react-native";
-import { Button } from "~/components/Button";
-import { MeasurementsModals } from "~/components/recent-measurements-screen/measurements-modals";
-import type { ModalState } from "~/components/recent-measurements-screen/measurements-modals";
-import { MeasurementsToolbar } from "~/components/recent-measurements-screen/measurements-toolbar";
-import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
-import { useRecentMeasurementsActions } from "~/components/recent-measurements-screen/use-recent-measurements-actions";
-import type { MeasurementFilter, MeasurementItem } from "~/hooks/use-all-measurements";
-import { useTheme } from "~/hooks/use-theme";
-import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
+import { Button } from "~/shared/ui/Button";
+import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
+import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
+import { MeasurementsToolbar } from "~/features/recent-measurements/components/measurements-toolbar";
+import { SwipeableMeasurementRow } from "~/features/recent-measurements/components/swipeable-measurement-row";
+import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
+import type {
+  MeasurementFilter,
+  MeasurementItem,
+} from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();

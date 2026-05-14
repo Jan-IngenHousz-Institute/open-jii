@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Text, TextInput, ActivityIndicator } from "react-native";
-import { Button } from "~/components/Button";
-import { Card } from "~/components/Card";
-import { useThemeColors } from "~/hooks/use-theme-colors";
+import { Button } from "~/shared/ui/Button";
+import { Card } from "~/shared/ui/Card";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 interface MeasurementsStepProps {
   currentMeasurementIndex: number;

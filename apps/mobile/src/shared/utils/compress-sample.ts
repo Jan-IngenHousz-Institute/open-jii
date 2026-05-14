@@ -1,4 +1,4 @@
-import { gzipToBase64 } from "~/utils/gzip-base64";
+import { gzipToBase64 } from "~/shared/utils/gzip-base64";
 
 /**
  * Gzip-compress and base64-encode the `sample` field of a measurement payload.

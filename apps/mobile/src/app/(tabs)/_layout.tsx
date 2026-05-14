@@ -4,12 +4,12 @@ import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native
 import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RecentTabIcon } from "~/components/recent-tab-icon";
-import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
-import { useThemeColors } from "~/hooks/use-theme-colors";
-import { pruneExpiredMeasurements } from "~/services/measurements-storage";
-import { DevIndicator } from "~/widgets/dev-indicator";
-import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
+import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
+import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { pruneExpiredMeasurements } from "~/shared/db/measurements-storage";
+import { DevIndicator } from "~/shared/ui/widgets/dev-indicator";
+import { DeviceConnectionWidget } from "~/shared/ui/widgets/device-connection-widget";
 
 export default function TabLayout() {
   const themeColors = useThemeColors();

@@ -1,6 +1,6 @@
 import * as Sharing from "expo-sharing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getMeasurements } from "~/services/measurements-storage";
+import { getMeasurements } from "~/shared/db/measurements-storage";
 
 import { exportMeasurementsToFile, exportSingleMeasurementToFile } from "../export-measurements";
 
@@ -20,7 +20,7 @@ vi.mock("expo-sharing", () => ({
   shareAsync: vi.fn(),
 }));
 
-vi.mock("~/services/measurements-storage", () => ({
+vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurements: vi.fn().mockResolvedValue([]),
 }));
 

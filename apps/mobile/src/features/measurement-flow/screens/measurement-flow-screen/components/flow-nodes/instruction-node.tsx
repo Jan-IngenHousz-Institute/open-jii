@@ -2,8 +2,8 @@ import { clsx } from "clsx";
 import { FileText } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
-import { HtmlViewer } from "~/components/HtmlViewer";
-import { useTheme } from "~/hooks/use-theme";
+import { HtmlViewer } from "~/shared/ui/HtmlViewer";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface InstructionNodeProps {
   content: {

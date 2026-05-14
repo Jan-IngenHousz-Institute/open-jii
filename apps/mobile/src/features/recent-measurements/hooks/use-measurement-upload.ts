@@ -1,14 +1,14 @@
 import { useNetworkState } from "expo-network";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
-import { showAlert } from "~/components/AlertDialog";
-import { useMeasurements } from "~/hooks/use-measurements";
-import { exportSingleMeasurementToFile } from "~/services/export-measurements";
-import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
-import { compressSample } from "~/utils/compress-sample";
-import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
-import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
-import { buildAnnotations } from "~/utils/measurement-annotations";
+import { showAlert } from "~/shared/ui/AlertDialog";
+import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
+import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
+import { compressSample } from "~/shared/utils/compress-sample";
+import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
+import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
+import { buildAnnotations } from "~/shared/utils/measurement-annotations";
 
 interface MacroInfo {
   id: string;

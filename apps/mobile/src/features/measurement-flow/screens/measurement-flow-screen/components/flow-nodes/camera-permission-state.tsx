@@ -4,8 +4,8 @@ import { useCameraPermissions } from "expo-camera";
 import { CameraOff, ShieldAlert } from "lucide-react-native";
 import React from "react";
 import { ActivityIndicator, Linking, Text, View } from "react-native";
-import { Button } from "~/components/Button";
-import { useTheme } from "~/hooks/use-theme";
+import { Button } from "~/shared/ui/Button";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 const iconBadgeVariants = cva("h-20 w-20 items-center justify-center rounded-full border", {
   variants: {

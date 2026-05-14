@@ -1,4 +1,4 @@
-import { ExperimentDataTable } from "~/hooks/use-experiment-measurements";
+import { ExperimentDataTable } from "~/features/experiments/hooks/use-experiment-measurements";
 
 export interface ParsedTableData {
   name: string;

@@ -38,7 +38,7 @@ vi.mock("sonner-native", () => ({
 
 let mockServerUtcMs = Date.now();
 let getTimeCallCount = 0;
-vi.mock("~/api/client", () => ({
+vi.mock("~/shared/api/client", () => ({
   getApiClient: () => ({
     health: {
       getTime: () => {
@@ -272,7 +272,7 @@ describe("time-sync", () => {
       expect(getTimeSyncState().missedPings).toBe(0);
 
       // Now make the server fail
-      const clientModule = await import("~/api/client");
+      const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
           getTime: () => Promise.resolve({ status: 500, body: {} }),
@@ -300,7 +300,7 @@ describe("time-sync", () => {
       await vi.advanceTimersByTimeAsync(50);
 
       // Make server fail
-      const clientModule = await import("~/api/client");
+      const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
           getTime: () => Promise.resolve({ status: 500, body: {} }),
@@ -326,7 +326,7 @@ describe("time-sync", () => {
 
     it("should show toast.warning on initial sync failure", async () => {
       // Make server fail from the start
-      const clientModule = await import("~/api/client");
+      const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
           getTime: () => Promise.resolve({ status: 500, body: {} }),
@@ -353,7 +353,7 @@ describe("time-sync", () => {
       await vi.advanceTimersByTimeAsync(50);
 
       // Fail once
-      const clientModule = await import("~/api/client");
+      const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
           getTime: () => Promise.resolve({ status: 500, body: {} }),
@@ -412,7 +412,7 @@ describe("time-sync", () => {
       mockAsyncStorage.TIME_SYNC_STATE = JSON.stringify(persisted);
 
       // Make the initial sync fail so we can observe the restored state before sync overwrites it
-      const clientModule = await import("~/api/client");
+      const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
           getTime: () => Promise.resolve({ status: 500, body: {} }),
@@ -521,7 +521,7 @@ describe("time-sync", () => {
 
     it("should reject after timeout if sync never succeeds", async () => {
       // Make fetchServerTime always fail
-      const clientModule = await import("~/api/client");
+      const clientModule = await import("~/shared/api/client");
       const getApiClientSpy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
           getTime: () => Promise.resolve({ status: 500, body: {} }),

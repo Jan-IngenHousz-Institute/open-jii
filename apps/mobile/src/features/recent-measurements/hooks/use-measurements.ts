@@ -12,13 +12,13 @@ import {
   saveMeasurement as saveMeasurementToStorage,
   updateMeasurement,
   pruneExpiredMeasurements,
-} from "~/services/measurements-storage";
-import type { Measurement, MeasurementStatus } from "~/services/measurements-storage";
-import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
+} from "~/shared/db/measurements-storage";
+import type { Measurement, MeasurementStatus } from "~/shared/db/measurements-storage";
+import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
 import {
   buildAnnotations,
   getFlagTypeFromMeasurementResult,
-} from "~/utils/measurement-annotations";
+} from "~/shared/utils/measurement-annotations";
 
 export function useMeasurements() {
   const queryClient = useQueryClient();

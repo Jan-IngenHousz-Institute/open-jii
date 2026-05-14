@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import React from "react";
 import { Text, View } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface KeyValueProps {
   name: string;

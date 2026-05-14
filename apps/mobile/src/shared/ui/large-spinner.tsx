@@ -1,5 +1,5 @@
 import { ActivityIndicator, Text, View } from "react-native";
-import { useThemeColors } from "~/hooks/use-theme-colors";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function LargeSpinner({ children = "Loading..." }: { children?: string }) {
   const { brand } = useThemeColors();

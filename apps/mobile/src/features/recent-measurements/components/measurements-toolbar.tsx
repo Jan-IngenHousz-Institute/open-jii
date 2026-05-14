@@ -1,10 +1,10 @@
 import { Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
-import { Button } from "~/components/Button";
-import { TabBar } from "~/components/TabBar";
-import type { MeasurementFilter } from "~/hooks/use-all-measurements";
-import { useTheme } from "~/hooks/use-theme";
+import { Button } from "~/shared/ui/Button";
+import { TabBar } from "~/shared/ui/TabBar";
+import type { MeasurementFilter } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 const TABS: { key: MeasurementFilter; label: string }[] = [
   { key: "all", label: "All" },

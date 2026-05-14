@@ -24,7 +24,7 @@ const {
 
 let capturedCallback: (...args: any[]) => Promise<any>;
 
-vi.mock("~/hooks/use-measurements", () => ({
+vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => ({
     saveMeasurement: mockSaveMeasurement,
     markUploaded: mockMarkUploaded,
@@ -32,11 +32,11 @@ vi.mock("~/hooks/use-measurements", () => ({
   }),
 }));
 
-vi.mock("~/services/mqtt/send-mqtt-event", () => ({
+vi.mock("~/features/connection/services/mqtt/send-mqtt-event", () => ({
   sendMqttEvent: mockSendMqttEvent,
 }));
 
-vi.mock("~/utils/get-multispeq-mqtt-topic", () => ({
+vi.mock("~/features/connection/utils/get-multispeq-mqtt-topic", () => ({
   getMultispeqMqttTopic: () => "mock/topic",
 }));
 

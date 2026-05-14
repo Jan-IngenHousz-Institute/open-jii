@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { FlowNode } from "~/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 import { convertCycleAnswersToArray, parseQuestions } from "./convert-cycle-answers-to-array";
 

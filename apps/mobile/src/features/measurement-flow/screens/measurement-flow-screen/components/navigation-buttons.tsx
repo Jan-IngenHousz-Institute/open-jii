@@ -7,10 +7,10 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button } from "~/components/Button";
-import { useTheme } from "~/hooks/use-theme";
-import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import { Button } from "~/shared/ui/Button";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
 import { BackButton } from "./back-button";
 import { advanceWithAnswer } from "./flow-nodes/utils/advance-with-answer";

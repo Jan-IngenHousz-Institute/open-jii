@@ -3,7 +3,7 @@ import { CameraView } from "expo-camera";
 import { Info, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { CameraPermissionState, useCameraPermission } from "./camera-permission-state";
 

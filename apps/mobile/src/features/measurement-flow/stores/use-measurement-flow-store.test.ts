@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { FlowNode } from "~/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 

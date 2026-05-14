@@ -5,15 +5,15 @@ import * as Updates from "expo-updates";
 import { User, ExternalLink, LogOut, Sun, Moon } from "lucide-react-native";
 import React, { useContext } from "react";
 import { View, Text, ScrollView, Linking, Image, Pressable } from "react-native";
-import { showAlert } from "~/components/AlertDialog";
-import { Button } from "~/components/Button";
-import { Card } from "~/components/Card";
-import { colors } from "~/constants/colors";
-import { ThemeContext, ThemePreference } from "~/context/ThemeContext";
-import { useSession } from "~/hooks/use-session";
-import { useThemeColors } from "~/hooks/use-theme-colors";
-import { getEnvVar } from "~/stores/environment-store";
-import { formatRelativeTime } from "~/utils/format-relative-time";
+import { showAlert } from "~/shared/ui/AlertDialog";
+import { Button } from "~/shared/ui/Button";
+import { Card } from "~/shared/ui/Card";
+import { colors } from "~/shared/constants/colors";
+import { ThemeContext, ThemePreference } from "~/shared/ui/context/ThemeContext";
+import { useSession } from "~/features/auth/hooks/use-session";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { getEnvVar } from "~/shared/stores/environment-store";
+import { formatRelativeTime } from "~/shared/utils/format-relative-time";
 
 const THEME_OPTIONS: {
   value: ThemePreference;

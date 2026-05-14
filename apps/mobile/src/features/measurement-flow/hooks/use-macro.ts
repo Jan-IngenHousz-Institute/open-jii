@@ -1,4 +1,4 @@
-import { tsr } from "~/api/tsr";
+import { tsr } from "~/shared/api/tsr";
 
 export function useMacro(macroId: string | undefined) {
   const { data, isLoading, error } = tsr.macros.getMacro.useQuery({

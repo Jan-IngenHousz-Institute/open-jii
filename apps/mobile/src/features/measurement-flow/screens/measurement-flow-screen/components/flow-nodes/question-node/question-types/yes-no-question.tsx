@@ -1,7 +1,7 @@
 import { Check, X } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
-import { Button } from "~/components/Button";
+import { Button } from "~/shared/ui/Button";
 
 import { QuestionContent } from "../../../../types";
 

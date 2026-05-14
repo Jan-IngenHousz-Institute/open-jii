@@ -1,6 +1,6 @@
 import React from "react";
-import { showAlert } from "~/components/AlertDialog";
-import { Button } from "~/components/Button";
+import { showAlert } from "~/shared/ui/AlertDialog";
+import { Button } from "~/shared/ui/Button";
 
 interface EndFlowButtonProps {
   onPress: () => void;

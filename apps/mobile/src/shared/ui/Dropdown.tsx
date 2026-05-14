@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react-native";
 import React, { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, Modal, FlatList, Pressable, TextInput } from "react-native";
-import { useThemeColors } from "~/hooks/use-theme-colors";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export interface DropdownOption {
   label: string;

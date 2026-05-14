@@ -1,6 +1,6 @@
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { getMeasurements } from "~/services/measurements-storage";
+import { getMeasurements } from "~/shared/db/measurements-storage";
 
 export async function exportMeasurementsToFile(): Promise<void> {
   const [failedEntries, successfulEntries] = await Promise.all([

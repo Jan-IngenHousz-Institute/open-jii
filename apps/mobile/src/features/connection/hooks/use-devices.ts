@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { getBluetoothClassicDevices } from "~/services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
-import { listSerialPortDevices } from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
-import { listMockDevices } from "~/services/multispeq-communication/mock-device/list-mock-devices";
-import { Device, DeviceType } from "~/types/device";
+import { getBluetoothClassicDevices } from "~/features/connection/services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
+import { listSerialPortDevices } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import { listMockDevices } from "~/features/connection/services/multispeq-communication/mock-device/list-mock-devices";
+import { Device, DeviceType } from "~/shared/types/device";
 
 function getSerialDeviceName({ vendorId, productId }: { vendorId: number; productId: number }) {
   if (vendorId === 5824 && productId == 1155) {

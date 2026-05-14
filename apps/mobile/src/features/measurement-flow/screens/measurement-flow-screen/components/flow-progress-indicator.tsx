@@ -8,10 +8,10 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import { useTheme } from "~/hooks/use-theme";
-import { isQuestionsOnlyFlow } from "~/screens/measurement-flow-screen/types";
-import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
-import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { isQuestionsOnlyFlow } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
 export function FlowProgressIndicator() {
   const { classes } = useTheme();

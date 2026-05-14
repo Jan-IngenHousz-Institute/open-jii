@@ -1,6 +1,6 @@
 import React from "react";
 import { View, ScrollView } from "react-native";
-import { ConnectionSetup } from "~/components/connection-setup";
+import { ConnectionSetup } from "~/features/connection/components/connection-setup";
 
 export default function HomeScreen() {
   return (

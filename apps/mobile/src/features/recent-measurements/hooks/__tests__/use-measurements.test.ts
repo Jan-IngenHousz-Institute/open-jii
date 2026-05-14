@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getMeasurements } from "~/services/measurements-storage";
+import { getMeasurements } from "~/shared/db/measurements-storage";
 
 import { useMeasurements } from "../use-measurements";
 
@@ -31,7 +31,7 @@ const {
   mockToastInfo: vi.fn(),
 }));
 
-vi.mock("~/services/measurements-storage", () => ({
+vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurements: vi.fn().mockResolvedValue([]),
   markAsSuccessful: mockMarkAsSuccessful,
   markAsUploading: mockMarkAsUploading,
@@ -43,12 +43,12 @@ vi.mock("~/services/measurements-storage", () => ({
   pruneExpiredMeasurements: mockPruneExpiredMeasurements,
 }));
 
-vi.mock("~/utils/measurement-annotations", () => ({
+vi.mock("~/shared/utils/measurement-annotations", () => ({
   buildAnnotations: (text: string, flagType: string | null) => ({ comment: text, flagType }),
   getFlagTypeFromMeasurementResult: () => null,
 }));
 
-vi.mock("~/services/mqtt/send-mqtt-event", () => ({
+vi.mock("~/features/connection/services/mqtt/send-mqtt-event", () => ({
   sendMqttEvent: mockSendMqttEvent,
 }));
 

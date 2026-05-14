@@ -7,10 +7,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
 import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
-import { getEnvVar } from "~/stores/environment-store";
-import { Emitter } from "~/utils/emitter";
-import { generateRandomString } from "~/utils/generate-random-string";
-import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/utils/time-sync";
+import { getEnvVar } from "~/shared/stores/environment-store";
+import { Emitter } from "~/shared/utils/emitter";
+import { generateRandomString } from "~/shared/utils/generate-random-string";
+import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/utils/time-sync";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);

@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text, ActivityIndicator } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface ScanningStateProps {
   protocolName?: string;

@@ -16,12 +16,12 @@ const { mockGetMeasurements, mockCountMeasurementsByStatus, mockParseQuestions }
   }),
 );
 
-vi.mock("~/services/measurements-storage", () => ({
+vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurements: mockGetMeasurements,
   countMeasurementsByStatus: mockCountMeasurementsByStatus,
 }));
 
-vi.mock("~/utils/convert-cycle-answers-to-array", () => ({
+vi.mock("~/shared/utils/convert-cycle-answers-to-array", () => ({
   parseQuestions: mockParseQuestions,
 }));
 

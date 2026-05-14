@@ -11,10 +11,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button } from "~/components/Button";
-import { useTheme } from "~/hooks/use-theme";
-import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
-import { formatTimeAgo } from "~/utils/format-time-ago";
+import { Button } from "~/shared/ui/Button";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
+import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 
 const answersValueStyle = cva("flex-1", {
   variants: {

@@ -1,7 +1,7 @@
-import { openSerialPortConnection } from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
-import type { SerialPortEvents } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-events";
-import type { Device } from "~/types/device";
-import { Emitter } from "~/utils/emitter";
+import { openSerialPortConnection } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import type { SerialPortEvents } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/serial-port-events";
+import type { Device } from "~/shared/types/device";
+import { Emitter } from "~/shared/utils/emitter";
 
 let serialPortConnection: Emitter<SerialPortEvents> | undefined;
 let connectedSerialPortDevice: Device | undefined;

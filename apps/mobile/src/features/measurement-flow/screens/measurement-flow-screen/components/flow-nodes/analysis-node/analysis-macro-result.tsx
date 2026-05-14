@@ -1,8 +1,8 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
-import { MeasurementResult } from "~/components/measurement-result/measurement-result";
-import { useTheme } from "~/hooks/use-theme";
+import { MeasurementResult } from "~/features/measurement-flow/components/measurement-result/measurement-result";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
 

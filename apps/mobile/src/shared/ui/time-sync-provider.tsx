@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useEnvironmentStore } from "~/stores/environment-store";
-import { startTimeSync, stopTimeSync } from "~/utils/time-sync";
+import { useEnvironmentStore } from "~/shared/stores/environment-store";
+import { startTimeSync, stopTimeSync } from "~/shared/utils/time-sync";
 
 /**
  * Starts the time sync service once the environment store is rehydrated.

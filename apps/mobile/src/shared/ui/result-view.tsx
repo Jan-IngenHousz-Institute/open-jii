@@ -1,5 +1,5 @@
 import { ActivityIndicator, Text } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { JSONViewer } from "./json-viewer";
 

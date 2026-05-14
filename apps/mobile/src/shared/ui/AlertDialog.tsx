@@ -2,7 +2,7 @@ import clsx from "clsx";
 import React from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { create } from "zustand";
-import { Button } from "~/components/Button";
+import { Button } from "~/shared/ui/Button";
 
 interface AlertButton {
   text: string;

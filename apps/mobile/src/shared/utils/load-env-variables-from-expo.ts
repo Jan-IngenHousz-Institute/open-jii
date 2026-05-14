@@ -1,4 +1,4 @@
-import { EnvVariablesMap } from "~/types/env-variables";
+import { EnvVariablesMap } from "~/shared/types/env-variables";
 
 function required(value: string | undefined, name: string): string {
   if (!value) {

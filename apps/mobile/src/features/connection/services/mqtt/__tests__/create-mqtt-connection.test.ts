@@ -32,14 +32,14 @@ vi.mock("@aws-sdk/client-cognito-identity", () => ({
 // Stub out the rest of the module's heavy/native imports.
 vi.mock("paho-mqtt", () => ({ Client: vi.fn(), Message: vi.fn() }));
 vi.mock("react-native-get-random-values", () => ({}));
-vi.mock("~/stores/environment-store", () => ({ getEnvVar: () => "stub" }));
-vi.mock("~/utils/time-sync", () => ({
+vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: () => "stub" }));
+vi.mock("~/shared/utils/time-sync", () => ({
   ensureSynced: vi.fn(),
   getSyncedUtcDateTime: vi.fn(),
   getTimeSyncState: vi.fn(),
 }));
-vi.mock("~/utils/emitter", () => ({ Emitter: vi.fn() }));
-vi.mock("~/utils/generate-random-string", () => ({ generateRandomString: () => "rand" }));
+vi.mock("~/shared/utils/emitter", () => ({ Emitter: vi.fn() }));
+vi.mock("~/shared/utils/generate-random-string", () => ({ generateRandomString: () => "rand" }));
 vi.mock("crypto-js", () => ({
   HmacSHA256: () => ({ toString: () => "h" }),
   SHA256: () => ({ toString: () => "s" }),

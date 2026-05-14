@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FlowNode } from "~/screens/measurement-flow-screen/types";
+import { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 export const answerDataSchema = z.object({
   question_label: z.string(),

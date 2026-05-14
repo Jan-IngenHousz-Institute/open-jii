@@ -1,4 +1,4 @@
-import { getEnvVar, useEnvVar } from "~/stores/environment-store";
+import { getEnvVar, useEnvVar } from "~/shared/stores/environment-store";
 
 import { createOpenJiiAuthClient } from "@repo/auth/client.native";
 

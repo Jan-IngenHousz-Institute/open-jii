@@ -27,7 +27,7 @@ vi.mock("@tanstack/react-query", () => ({
 let mockFailedUploads: { key: string; data: unknown }[] = [];
 let mockIsUploading = false;
 
-vi.mock("~/hooks/use-measurements", () => ({
+vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => ({
     failedUploads: mockFailedUploads,
     uploadAll: mockUploadAll,
@@ -55,7 +55,7 @@ let capturedNetworkListener: ((state: { isInternetReachable: boolean | null }) =
   null;
 const mockNetworkRemove = vi.fn();
 
-vi.mock("~/services/measurements-storage", () => ({
+vi.mock("~/shared/db/measurements-storage", () => ({
   resetUploadingMeasurements: mockResetUploadingMeasurements,
 }));
 

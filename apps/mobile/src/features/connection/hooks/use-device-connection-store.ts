@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Device } from "~/types/device";
+import type { Device } from "~/shared/types/device";
 
 export type ConnectionType = "usb" | "bluetooth-classic" | "mock-device" | "ble";
 export type DeviceType = "multispeq";

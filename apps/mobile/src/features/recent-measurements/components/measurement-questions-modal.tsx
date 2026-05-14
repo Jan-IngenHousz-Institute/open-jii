@@ -4,16 +4,16 @@ import { Clock, Flag, FlaskConical, MessageCircleMore, X } from "lucide-react-na
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
-import type { MeasurementItem } from "~/hooks/use-all-measurements";
-import { useMeasurements } from "~/hooks/use-measurements";
-import { useTheme } from "~/hooks/use-theme";
-import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
+import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
+import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
 import {
   FLAG_TYPE_LABELS,
   getCommentFromMeasurementResult,
   getFlagTypeFromMeasurementResult,
-} from "~/utils/measurement-annotations";
+} from "~/shared/utils/measurement-annotations";
 
 interface MeasurementQuestionsModalProps {
   visible: boolean;

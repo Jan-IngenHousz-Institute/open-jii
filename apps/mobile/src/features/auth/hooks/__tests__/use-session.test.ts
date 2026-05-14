@@ -16,7 +16,7 @@ vi.mock("expo-secure-store", () => ({
   setItem: mockSetItem,
 }));
 
-vi.mock("~/services/auth", () => ({
+vi.mock("~/features/auth/services/auth", () => ({
   useAuthClient: () => ({
     useSession: mockUseSession,
     signOut: mockSignOut,

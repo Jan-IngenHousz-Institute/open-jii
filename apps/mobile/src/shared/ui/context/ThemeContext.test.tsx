@@ -3,7 +3,7 @@ import { act, render, waitFor } from "@testing-library/react-native";
 import React, { useContext } from "react";
 import { Text } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { lightTheme } from "~/constants/theme";
+import { lightTheme } from "~/shared/constants/theme";
 
 import { ThemeContext, ThemeContextValue, ThemeProvider } from "./ThemeContext";
 

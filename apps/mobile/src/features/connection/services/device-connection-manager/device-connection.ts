@@ -1,5 +1,5 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import type { Device } from "~/types/device";
+import type { Device } from "~/shared/types/device";
 
 import { setSerialPortConnection } from "./serial-port-connection";
 

@@ -1,7 +1,7 @@
 import { AlertCircle } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface ErrorStateProps {
   error: any;

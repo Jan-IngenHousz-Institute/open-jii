@@ -1,6 +1,6 @@
 import { useAsyncCallback } from "react-async-hook";
-import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
-import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-command-executor";
+import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useScannerCommandExecutor } from "~/features/connection/services/scan-manager/use-scanner-command-executor";
 
 export function useScanner() {
   const { executeCommand, cancelCommand } = useScannerCommandExecutor();

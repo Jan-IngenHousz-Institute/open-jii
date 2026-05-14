@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import { ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface NextButtonProps {
   onPress: () => void;

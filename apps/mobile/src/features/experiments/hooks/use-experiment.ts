@@ -1,4 +1,4 @@
-import { tsr } from "~/api/tsr";
+import { tsr } from "~/shared/api/tsr";
 
 export function useExperiment(experimentId: string | undefined) {
   const { data, isLoading, error } = tsr.experiments.getExperiment.useQuery({

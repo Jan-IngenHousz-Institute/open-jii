@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
 import { CartesianChart, Line } from "victory-native";
-import { useThemeColors } from "~/hooks/use-theme-colors";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 interface ChartProps {
   name: string;

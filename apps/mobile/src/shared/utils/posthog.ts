@@ -1,5 +1,5 @@
 import PostHog from "posthog-react-native";
-import { getEnvVar } from "~/stores/environment-store";
+import { getEnvVar } from "~/shared/stores/environment-store";
 
 /**
  * PostHog host — use the official endpoint directly.

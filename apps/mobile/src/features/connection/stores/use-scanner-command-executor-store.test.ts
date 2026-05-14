@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { IMultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
-import type { Device } from "~/types/device";
+import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/multispeq-command-executor";
+import type { Device } from "~/shared/types/device";
 
 import { useScannerCommandExecutorStore } from "./use-scanner-command-executor-store";
 
@@ -14,7 +14,7 @@ vi.mock("@repo/iot", () => ({
 
 // Replace the executor factory so the store never touches react-native or BT.
 const createMultispeqCommandExecutor = vi.fn();
-vi.mock("~/services/scan-manager/utils/create-multispeq-command-executor", () => ({
+vi.mock("~/features/connection/services/scan-manager/utils/create-multispeq-command-executor", () => ({
   createMultispeqCommandExecutor: (device: Device | undefined) =>
     createMultispeqCommandExecutor(device),
 }));

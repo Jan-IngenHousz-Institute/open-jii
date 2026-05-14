@@ -2,17 +2,17 @@ import { clsx } from "clsx";
 import { FileText } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
-import { Button } from "~/components/Button";
-import { Dropdown } from "~/components/Dropdown";
-import { HtmlViewer } from "~/components/HtmlViewer";
-import { useExperimentFlowQuery } from "~/hooks/use-experiment-flow-query";
-import { useExperiments } from "~/hooks/use-experiments";
-import { usePrecachedExperimentData } from "~/hooks/use-precached-experiment-data";
-import { useTheme } from "~/hooks/use-theme";
-import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
-import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
-import { orderFlowNodes } from "~/utils/order-flow-nodes";
+import { Button } from "~/shared/ui/Button";
+import { Dropdown } from "~/shared/ui/Dropdown";
+import { HtmlViewer } from "~/shared/ui/HtmlViewer";
+import { useExperimentFlowQuery } from "~/features/experiments/hooks/use-experiment-flow-query";
+import { useExperiments } from "~/features/experiments/hooks/use-experiments";
+import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-precached-experiment-data";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { orderFlowNodes } from "~/shared/utils/order-flow-nodes";
 
 import { OfflineModeIndicator } from "./offline-mode-indicator";
 

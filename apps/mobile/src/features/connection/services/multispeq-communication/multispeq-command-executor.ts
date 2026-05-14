@@ -1,4 +1,4 @@
-import type { Emitter } from "~/utils/emitter";
+import type { Emitter } from "~/shared/utils/emitter";
 
 import type { MultispeqStreamEvents } from "./multispeq-stream-events";
 

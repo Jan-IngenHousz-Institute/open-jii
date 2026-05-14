@@ -1,4 +1,4 @@
-import { useEnvironmentStore } from "~/stores/environment-store";
+import { useEnvironmentStore } from "~/shared/stores/environment-store";
 
 /**
  * Returns true when the app is running in a non-production environment (e.g. dev).

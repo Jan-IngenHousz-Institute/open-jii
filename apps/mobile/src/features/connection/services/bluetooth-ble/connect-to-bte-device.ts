@@ -1,9 +1,9 @@
-import { bleManager } from "~/services/bluetooth-ble/prepare-bluetooth";
-import { MultispeqStreamEvents } from "~/services/multispeq-communication/multispeq-stream-events";
-import { delay } from "~/utils/delay";
-import { Emitter } from "~/utils/emitter";
-import { safeAsync } from "~/utils/safe-async";
-import { stringifyIfObject } from "~/utils/stringify-if-object";
+import { bleManager } from "~/features/connection/services/bluetooth-ble/prepare-bluetooth";
+import { MultispeqStreamEvents } from "~/features/connection/services/multispeq-communication/multispeq-stream-events";
+import { delay } from "~/shared/utils/delay";
+import { Emitter } from "~/shared/utils/emitter";
+import { safeAsync } from "~/shared/utils/safe-async";
+import { stringifyIfObject } from "~/shared/utils/stringify-if-object";
 
 const SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef1";
 const WRITE_UUID = "abcdef01-1234-5678-9abc-def012345679";

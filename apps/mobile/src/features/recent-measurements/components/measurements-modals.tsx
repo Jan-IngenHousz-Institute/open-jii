@@ -1,8 +1,8 @@
 import React from "react";
-import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
-import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
-import type { MeasurementItem } from "~/hooks/use-all-measurements";
-import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
+import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
+import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
+import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 export type ModalState =
   | { kind: "none" }

@@ -1,13 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { EnvVariablesMap } from "~/types/env-variables";
-import { loadEnvVariablesFromExpo } from "~/utils/load-env-variables-from-expo";
+import { EnvVariablesMap } from "~/shared/types/env-variables";
+import { loadEnvVariablesFromExpo } from "~/shared/utils/load-env-variables-from-expo";
 
 function loadEnvVariables(): EnvVariablesMap {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require("~/env").env;
+    return require("~/shared/utils/env").env;
   } catch {
     return loadEnvVariablesFromExpo();
   }

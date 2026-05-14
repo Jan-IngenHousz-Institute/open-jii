@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FlowNode } from "~/screens/measurement-flow-screen/types";
-import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
 import { QuestionsOnlySubmitNode } from "./questions-only-submit-node";
 
@@ -27,16 +27,16 @@ const {
   getTimeSyncState: vi.fn(),
 }));
 
-vi.mock("~/hooks/use-experiments", () => ({
+vi.mock("~/features/experiments/hooks/use-experiments", () => ({
   useExperiments: () => useExperiments(),
 }));
-vi.mock("~/hooks/use-session", () => ({
+vi.mock("~/features/auth/hooks/use-session", () => ({
   useSession: () => useSession(),
 }));
-vi.mock("~/hooks/use-questions-upload", () => ({
+vi.mock("~/features/recent-measurements/hooks/use-questions-upload", () => ({
   useQuestionsUpload: () => useQuestionsUpload(),
 }));
-vi.mock("~/utils/time-sync", () => ({
+vi.mock("~/shared/utils/time-sync", () => ({
   getSyncedUtcISO: () => getSyncedUtcISO(),
   getSyncedLocalISO: () => getSyncedLocalISO(),
   getTimeSyncState: () => getTimeSyncState(),

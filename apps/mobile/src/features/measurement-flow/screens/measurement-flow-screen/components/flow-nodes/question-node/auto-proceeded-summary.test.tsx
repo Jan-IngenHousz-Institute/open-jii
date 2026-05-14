@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { FlowNode } from "~/screens/measurement-flow-screen/types";
+import { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 import { getCachedFirstManualNodeId } from "./auto-proceeded-summary";
 
@@ -7,7 +7,7 @@ import { getCachedFirstManualNodeId } from "./auto-proceeded-summary";
 vi.mock("react-native", () => ({ View: "View", Text: "Text" }));
 vi.mock("lucide-react-native", () => ({ Repeat2: "Repeat2" }));
 vi.mock("react", () => ({ default: { createElement: vi.fn() } }));
-vi.mock("~/hooks/use-theme", () => ({ useTheme: vi.fn() }));
+vi.mock("~/shared/ui/hooks/use-theme", () => ({ useTheme: vi.fn() }));
 
 const mockFlowStore = { flowNodes: [] as FlowNode[] };
 const mockFlowAnswersState = {
@@ -15,10 +15,10 @@ const mockFlowAnswersState = {
   isRememberAnswerEnabled: vi.fn((_id: string) => false),
 };
 
-vi.mock("~/stores/use-measurement-flow-store", () => ({
+vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
   useMeasurementFlowStore: { getState: () => mockFlowStore },
 }));
-vi.mock("~/stores/use-flow-answers-store", () => ({
+vi.mock("~/features/measurement-flow/stores/use-flow-answers-store", () => ({
   useFlowAnswersStore: { getState: () => mockFlowAnswersState },
 }));
 

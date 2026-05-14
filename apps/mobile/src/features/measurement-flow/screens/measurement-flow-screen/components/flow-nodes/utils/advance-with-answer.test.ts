@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { FlowNode } from "~/screens/measurement-flow-screen/types";
+import { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 import { advanceWithAnswer, findNextMandatoryStep } from "./advance-with-answer";
 
@@ -25,11 +25,11 @@ const mockFlowStore = {
   returnToOverview: mockReturnToOverview,
 };
 
-vi.mock("~/stores/use-flow-answers-store", () => ({
+vi.mock("~/features/measurement-flow/stores/use-flow-answers-store", () => ({
   useFlowAnswersStore: { getState: () => mockFlowAnswersState },
 }));
 
-vi.mock("~/stores/use-measurement-flow-store", () => ({
+vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
   useMeasurementFlowStore: { getState: () => mockFlowStore },
 }));
 

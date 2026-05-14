@@ -1,7 +1,7 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
-import { getAuthClient } from "~/services/auth";
-import { getEnvVar } from "~/stores/environment-store";
+import { getAuthClient } from "~/features/auth/services/auth";
+import { getEnvVar } from "~/shared/stores/environment-store";
 
 function removeTrailingSlashes(value: string) {
   return value.replace(/\/+$/, "");

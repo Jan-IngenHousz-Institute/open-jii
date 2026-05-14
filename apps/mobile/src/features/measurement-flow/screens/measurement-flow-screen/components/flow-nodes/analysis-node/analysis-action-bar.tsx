@@ -7,8 +7,8 @@ import {
   View,
   TouchableOpacity,
 } from "react-native";
-import { Button } from "~/components/Button";
-import { useTheme } from "~/hooks/use-theme";
+import { Button } from "~/shared/ui/Button";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 const SCROLL_THRESHOLD = 100;
 

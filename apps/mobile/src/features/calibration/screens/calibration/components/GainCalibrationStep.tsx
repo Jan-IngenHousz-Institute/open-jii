@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text } from "react-native";
-import { Button } from "~/components/Button";
-import { Card } from "~/components/Card";
+import { Button } from "~/shared/ui/Button";
+import { Card } from "~/shared/ui/Card";
 
 interface GainCalibrationStepProps {
   alertMessage: string;

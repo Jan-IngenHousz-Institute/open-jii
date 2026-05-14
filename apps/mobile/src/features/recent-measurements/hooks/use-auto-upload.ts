@@ -3,8 +3,8 @@ import { addNetworkStateListener } from "expo-network";
 import { useEffect, useCallback, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
-import { useMeasurements } from "~/hooks/use-measurements";
-import { resetUploadingMeasurements } from "~/services/measurements-storage";
+import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { resetUploadingMeasurements } from "~/shared/db/measurements-storage";
 
 export function useAutoUpload() {
   const { failedUploads, uploadAll, isUploading } = useMeasurements();

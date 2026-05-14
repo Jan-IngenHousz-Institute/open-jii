@@ -1,9 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FlowNode } from "~/screens/measurement-flow-screen/types";
-import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
 import { ReadyState } from "./ready-state";
 

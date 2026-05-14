@@ -1,8 +1,8 @@
 import { X } from "lucide-react-native";
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
-import { colors } from "~/constants/colors";
-import { useThemeColors } from "~/hooks/use-theme-colors";
+import { colors } from "~/shared/constants/colors";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { QuestionContent } from "../../../../types";
 

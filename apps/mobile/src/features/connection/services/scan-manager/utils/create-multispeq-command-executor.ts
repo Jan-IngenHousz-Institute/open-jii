@@ -1,6 +1,6 @@
-import { createBluetoothMultiseqCommandExecutor } from "~/services/scan-manager/utils/create-bluetooth-multiseq-command-executor";
-import { createSerialPortCommandExecutor } from "~/services/scan-manager/utils/create-serial-port-command-executor";
-import { Device } from "~/types/device";
+import { createBluetoothMultiseqCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-bluetooth-multiseq-command-executor";
+import { createSerialPortCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-serial-port-command-executor";
+import { Device } from "~/shared/types/device";
 
 export async function createMultispeqCommandExecutor(device: Device | undefined) {
   if (!device) {

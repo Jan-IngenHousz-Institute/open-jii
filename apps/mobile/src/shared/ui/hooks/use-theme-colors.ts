@@ -1,5 +1,5 @@
 import { useColorScheme } from "nativewind";
-import { colors } from "~/constants/colors";
+import { colors } from "~/shared/constants/colors";
 
 export type ThemeColorScheme = "light" | "dark";
 

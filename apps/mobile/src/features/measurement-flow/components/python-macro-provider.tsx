@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { View } from "react-native";
 import WebView from "react-native-webview";
-import { pythonMacroSandboxHtml } from "~/services/python/python-macro-sandbox";
-import type { MacroOutput } from "~/utils/process-scan/process-scan";
-import { registerPythonMacroRunner } from "~/utils/process-scan/python-macro-runner";
+import { pythonMacroSandboxHtml } from "~/features/measurement-flow/services/python/python-macro-sandbox";
+import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
+import { registerPythonMacroRunner } from "~/features/measurement-flow/utils/process-scan/python-macro-runner";
 
 interface Pending {
   resolve: (value: MacroOutput) => void;

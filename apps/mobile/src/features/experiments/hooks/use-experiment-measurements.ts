@@ -1,4 +1,4 @@
-import { tsr } from "~/api/tsr";
+import { tsr } from "~/shared/api/tsr";
 
 export interface ExperimentDataTable {
   name: string;

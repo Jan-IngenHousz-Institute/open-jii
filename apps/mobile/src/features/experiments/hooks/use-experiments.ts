@@ -1,6 +1,6 @@
-import { tsr } from "~/api/tsr";
-import { ellipsize } from "~/utils/ellipsize";
-import { extractTextFromHTML } from "~/utils/extract-text-from-html";
+import { tsr } from "~/shared/api/tsr";
+import { ellipsize } from "~/shared/utils/ellipsize";
+import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 
 export function useExperiments() {
   const { data, isLoading, error } = tsr.experiments.listExperiments.useQuery({

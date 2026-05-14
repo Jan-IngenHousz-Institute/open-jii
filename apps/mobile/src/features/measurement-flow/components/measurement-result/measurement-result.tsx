@@ -3,9 +3,9 @@ import { ChevronRight, MessageCircleMore } from "lucide-react-native";
 import React, { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
-import { TabBar } from "~/components/TabBar";
-import { useTheme } from "~/hooks/use-theme";
-import { applyMacro } from "~/utils/process-scan/process-scan";
+import { TabBar } from "~/shared/ui/TabBar";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { applyMacro } from "~/features/measurement-flow/utils/process-scan/process-scan";
 
 import { Chart } from "./components/chart";
 import { KeyValue } from "./components/key-value";

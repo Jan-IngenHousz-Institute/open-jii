@@ -1,5 +1,5 @@
 import { BluetoothDevice } from "react-native-bluetooth-classic";
-import type { Device } from "~/types/device";
+import type { Device } from "~/shared/types/device";
 
 export function bluetoothDeviceToDevice(d: BluetoothDevice): Device {
   return {

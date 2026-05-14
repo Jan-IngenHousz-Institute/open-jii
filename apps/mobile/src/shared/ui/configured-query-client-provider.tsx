@@ -4,7 +4,7 @@ import { QueryClient, QueryCache, onlineManager } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
-import { isOnline } from "~/utils/is-online";
+import { isOnline } from "~/shared/utils/is-online";
 
 const CHECK_INTERVAL = 10 * 1000;
 

@@ -3,11 +3,11 @@ import React, { memo, useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
-import { Button } from "~/components/Button";
-import { MeasurementItem } from "~/components/measurement-item";
-import type { MeasurementStatus } from "~/hooks/use-all-measurements";
-import { useTheme } from "~/hooks/use-theme";
-import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
+import { Button } from "~/shared/ui/Button";
+import { MeasurementItem } from "~/features/recent-measurements/components/measurement-item";
+import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 
 const SPRING_CONFIG = { damping: 40, stiffness: 350 };
 /** Horizontal movement (px) before pan activates - avoids revealing on light touch */

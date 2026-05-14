@@ -1,7 +1,7 @@
 import { Parity, UsbSerialManager } from "react-native-usb-serialport-for-android";
 
-import { delay } from "../../../utils/delay";
-import { Emitter } from "../../../utils/emitter";
+import { delay } from "~/shared/utils/delay";
+import { Emitter } from "~/shared/utils/emitter";
 import type { SerialPortEvents } from "./serial-port-events";
 
 export function toHex(data: string) {

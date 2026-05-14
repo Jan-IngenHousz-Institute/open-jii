@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { TouchableOpacity, Text, View } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 export interface Tab<K extends string = string> {
   key: K;

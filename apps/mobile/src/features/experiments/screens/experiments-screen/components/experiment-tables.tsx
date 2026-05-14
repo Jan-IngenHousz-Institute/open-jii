@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, ScrollView } from "react-native";
-import { ParsedTableData } from "~/utils/parse-experiment-data";
+import { ParsedTableData } from "~/shared/utils/parse-experiment-data";
 
 import { DataTable } from "./data-table";
 

@@ -7,7 +7,7 @@
  */
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import { useAuthClient } from "~/services/auth";
+import { useAuthClient } from "~/features/auth/services/auth";
 
 const SESSION_CACHE_KEY = "openjii_session_data";
 

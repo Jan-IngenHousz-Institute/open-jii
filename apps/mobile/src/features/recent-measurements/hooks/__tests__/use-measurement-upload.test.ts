@@ -28,7 +28,7 @@ const {
 
 let capturedCallback: (...args: any[]) => Promise<any>;
 
-vi.mock("~/hooks/use-measurements", () => ({
+vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => ({
     saveMeasurement: mockSaveMeasurement,
     markUploaded: mockMarkUploaded,
@@ -36,23 +36,23 @@ vi.mock("~/hooks/use-measurements", () => ({
   }),
 }));
 
-vi.mock("~/services/mqtt/send-mqtt-event", () => ({
+vi.mock("~/features/connection/services/mqtt/send-mqtt-event", () => ({
   sendMqttEvent: mockSendMqttEvent,
 }));
 
-vi.mock("~/services/export-measurements", () => ({
+vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
   exportSingleMeasurementToFile: mockExportSingle,
 }));
 
-vi.mock("~/utils/compress-sample", () => ({
+vi.mock("~/shared/utils/compress-sample", () => ({
   compressSample: (s: any) => s,
 }));
 
-vi.mock("~/utils/get-multispeq-mqtt-topic", () => ({
+vi.mock("~/features/connection/utils/get-multispeq-mqtt-topic", () => ({
   getMultispeqMqttTopic: () => "mock/topic",
 }));
 
-vi.mock("~/utils/measurement-annotations", () => ({
+vi.mock("~/shared/utils/measurement-annotations", () => ({
   buildAnnotations: (c?: string) =>
     c ? [{ type: "comment", content: { text: c, flagType: null } }] : [],
 }));
@@ -61,7 +61,7 @@ vi.mock("sonner-native", () => ({
   toast: { success: mockToastSuccess, error: mockToastError, info: mockToastInfo },
 }));
 
-vi.mock("~/components/AlertDialog", () => ({
+vi.mock("~/shared/ui/AlertDialog", () => ({
   showAlert: mockShowAlert,
 }));
 

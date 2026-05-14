@@ -1,9 +1,9 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
-import { useScannerCommandExecutorStore } from "~/stores/use-scanner-command-executor-store";
-import type { Device } from "~/types/device";
+import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
+import type { Device } from "~/shared/types/device";
 
 import { connectToDevice, disconnectFromDevice, unpairDevice } from "./device-connection";
 import {

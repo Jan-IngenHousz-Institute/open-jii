@@ -2,10 +2,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { eq, and, lt, inArray, count } from "drizzle-orm";
 import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
-import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
+import { compressForStorage, decompressFromStorage } from "~/shared/utils/storage-compression";
 
-import { db } from "./db/client";
-import { measurements } from "./db/schema";
+import { db } from "./client";
+import { measurements } from "./schema";
 
 const LEGACY_PREFIXES = [
   { prefix: "FAILED_UPLOAD_", status: "failed" as const },

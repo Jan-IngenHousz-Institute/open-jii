@@ -5,8 +5,8 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "~/hooks/use-theme";
-import { FLAG_TYPE_LABELS } from "~/utils/measurement-annotations";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { FLAG_TYPE_LABELS } from "~/shared/utils/measurement-annotations";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 

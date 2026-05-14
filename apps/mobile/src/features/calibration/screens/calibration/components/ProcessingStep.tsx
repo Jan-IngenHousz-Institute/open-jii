@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, ActivityIndicator } from "react-native";
-import { Card } from "~/components/Card";
-import { useThemeColors } from "~/hooks/use-theme-colors";
+import { Card } from "~/shared/ui/Card";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function ProcessingStep() {
   const { brand } = useThemeColors();

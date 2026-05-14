@@ -9,10 +9,10 @@ import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { Image, View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "~/hooks/use-theme";
-import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
-import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 
 import { EndFlowButton } from "./components/end-flow-button";
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";

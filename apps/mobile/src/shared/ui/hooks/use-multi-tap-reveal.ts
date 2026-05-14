@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMultiTapAction } from "~/hooks/use-multi-tap-action";
+import { useMultiTapAction } from "~/shared/ui/hooks/use-multi-tap-action";
 
 interface MultiTapRevealOptions {
   tapsRequired?: number;

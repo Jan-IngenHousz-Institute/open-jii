@@ -1,4 +1,4 @@
-import { getEnvVar } from "~/stores/environment-store";
+import { getEnvVar } from "~/shared/stores/environment-store";
 
 export function getMultispeqMqttTopic({ experimentId, protocolId }) {
   return getEnvVar("MQTT_TOPIC")

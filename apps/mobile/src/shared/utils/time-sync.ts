@@ -7,7 +7,7 @@ import { DateTime } from "luxon";
 import { AppState } from "react-native";
 import type { AppStateStatus } from "react-native";
 import { toast } from "sonner-native";
-import { getApiClient } from "~/api/client";
+import { getApiClient } from "~/shared/api/client";
 
 export interface TimeSyncState {
   /** Offset in ms: serverUtc - localDeviceTime at moment of sync */

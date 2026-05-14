@@ -1,4 +1,4 @@
-import { delay } from "~/utils/delay";
+import { delay } from "~/shared/utils/delay";
 
 export async function listMockDevices() {
   await delay(300);

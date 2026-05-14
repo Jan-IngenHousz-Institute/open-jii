@@ -1,4 +1,4 @@
-import { tsr } from "~/api/tsr";
+import { tsr } from "~/shared/api/tsr";
 
 export function useExperimentFlowQuery(experimentId: string | undefined) {
   return tsr.experiments.getFlow.useQuery({

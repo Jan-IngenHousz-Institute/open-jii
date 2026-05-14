@@ -2,9 +2,9 @@ import { clsx } from "clsx";
 import { Check } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
-import { Button } from "~/components/Button";
-import { useTheme } from "~/hooks/use-theme";
-import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-node/question-types/utils/grid-layout";
+import { Button } from "~/shared/ui/Button";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { calculateGridLayout } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/question-node/question-types/utils/grid-layout";
 
 import { FlowNode } from "../../../../types";
 

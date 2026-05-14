@@ -1,7 +1,7 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import { listSerialPortDevices } from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
-import { requestBluetoothPermission } from "~/services/request-bluetooth-permissions";
-import type { Device } from "~/types/device";
+import { listSerialPortDevices } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import { requestBluetoothPermission } from "~/features/connection/services/request-bluetooth-permissions";
+import type { Device } from "~/shared/types/device";
 
 import { bluetoothDeviceToDevice } from "./device-utils";
 import { getConnectedSerialPortDevice } from "./serial-port-connection";

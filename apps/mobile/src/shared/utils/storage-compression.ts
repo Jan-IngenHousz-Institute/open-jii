@@ -1,4 +1,4 @@
-import { base64ToGunzip, gzipToBase64 } from "~/utils/gzip-base64";
+import { base64ToGunzip, gzipToBase64 } from "~/shared/utils/gzip-base64";
 
 const COMPRESSED_PREFIX = "gz:";
 

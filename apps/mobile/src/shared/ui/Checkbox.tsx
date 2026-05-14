@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import { Check } from "lucide-react-native";
 import React from "react";
 import { TouchableOpacity, Text, View } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface CheckboxProps {
   value: boolean;
