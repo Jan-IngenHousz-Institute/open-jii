@@ -1,11 +1,9 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
-import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
@@ -37,19 +35,23 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
   const members = membersData?.body ?? [];
 
-  // Visualizations
-  const { data: visualizationsData, isLoading: visualizationsLoading } =
-    useExperimentVisualizations({ experimentId: id });
-
   const initialStatusRef = useRef<Experiment["status"] | null>(null);
 
-  if (isLoading) return <div>{t("loading")}</div>;
+  if (isLoading) {
+    return <div>{t("loading")}</div>;
+  }
 
-  if (error) return <ErrorDisplay error={error} title={t("failedToLoad")} />;
+  if (error) {
+    return <ErrorDisplay error={error} title={t("failedToLoad")} />;
+  }
 
-  if (!accessData) return <div>{t("notFound")}</div>;
+  if (!accessData) {
+    return <div>{t("notFound")}</div>;
+  }
 
-  if (!experiment) return <div>{t("notFound")}</div>;
+  if (!experiment) {
+    return <div>{t("notFound")}</div>;
+  }
 
   initialStatusRef.current ??= experiment.status;
 
@@ -59,7 +61,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
   return (
     <div className="flex flex-col gap-6 md:flex-row">
-      {/* RIGHT SIDE — EXPERIMENT DETAILS CARD (First on mobile) */}
+      {/* Right side: experiment details card (first on mobile). */}
       <ExperimentDetailsCard
         experimentId={id}
         experiment={experiment}
@@ -81,13 +83,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           workbookVersionId={experiment.workbookVersionId}
         />
         <ExperimentMeasurements experimentId={id} />
-
-        <ExperimentVisualizationsDisplay
-          experimentId={id}
-          visualizations={visualizationsData?.body ?? []}
-          isLoading={visualizationsLoading}
-          hasAccess={hasAccess}
-        />
       </div>
     </div>
   );

@@ -14,10 +14,6 @@ import { ExperimentDto } from "../models/experiment.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
-/**
- * Repository for experiment data operations
- * Handles data access for experiment schemas and metadata
- */
 @Injectable()
 export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
@@ -25,27 +21,35 @@ export class ExperimentDataRepository {
   constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
 
   /**
-   * Get table data with automatic metadata fetching for schemas and pagination
+   * Get table data via one of three paths: paginated read (cached row count),
+   * column projection (full scan), or filtered/aggregated read (capped by
+   * `limit`, totalRows reflects returned rows only).
    */
   async getTableData(params: {
     experimentId: string;
     experiment: ExperimentDto;
     tableName: string;
     columns?: string[];
+    filters?: FilterCondition[];
+    aggregation?: AggregationSpec;
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
     page?: number;
     pageSize?: number;
+    limit?: number;
   }): Promise<Result<TableDataDto[]>> {
     const {
       experimentId,
       experiment,
       tableName,
       columns,
+      filters,
+      aggregation,
       orderBy,
       orderDirection = "ASC",
       page = 1,
       pageSize = 5,
+      limit,
     } = params;
 
     const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
@@ -53,204 +57,60 @@ export class ExperimentDataRepository {
       includeSchemas: true,
     });
 
-    if (metadataResult.isFailure()) return metadataResult;
+    if (metadataResult.isFailure()) {
+      return metadataResult;
+    }
     if (metadataResult.value.length === 0) {
       return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
     }
 
     const metadata = metadataResult.value[0];
+    const hasAggregation =
+      (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
+    const hasFilters = (filters?.length ?? 0) > 0;
+    const usesAdhocPath = hasAggregation || hasFilters || Boolean(columns);
 
-    // Build query with appropriate parameters
-    const offset = columns ? undefined : (page - 1) * pageSize;
-    const limit = columns ? undefined : pageSize;
+    if (usesAdhocPath) {
+      // Aggregation defines its own projection; passing `columns` would shadow it.
+      const effectiveColumns = hasAggregation ? undefined : columns;
+      const queryResult = this.buildQuery(experimentId, metadata, {
+        columns: effectiveColumns,
+        filters,
+        aggregation,
+        orderBy,
+        orderDirection,
+        limit,
+      });
+      if (queryResult.isFailure()) {
+        return queryResult;
+      }
 
-    const queryResult = this.buildQuery(
-      experimentId,
-      metadata,
-      columns,
+      return this.getFullTableData({
+        tableName,
+        experiment,
+        query: queryResult.value,
+      });
+    }
+
+    const offset = (page - 1) * pageSize;
+    const queryResult = this.buildQuery(experimentId, metadata, {
       orderBy,
       orderDirection,
-      limit,
-      offset,
-    );
-    if (queryResult.isFailure()) return queryResult;
-
-    // Fetch based on whether specific columns were requested
-    return columns
-      ? this.getFullTableData({
-          tableName,
-          experiment,
-          query: queryResult.value,
-        })
-      : this.getTableDataPage({
-          tableName,
-          experiment,
-          page,
-          pageSize,
-          rowCount: metadata.rowCount,
-          query: queryResult.value,
-        });
-  }
-
-  /**
-   * Build query for experiment data using table metadata for type-aware configuration.
-   */
-  private buildQuery(
-    experimentId: string,
-    metadata: ExperimentTableMetadata,
-    columns?: string[],
-    orderBy?: string,
-    orderDirection?: "ASC" | "DESC",
-    limit?: number,
-    offset?: number,
-  ): Result<string> {
-    const {
-      identifier: tableName,
-      tableType,
-      macroSchema,
-      questionsSchema,
-      customMetadataSchema,
-    } = metadata;
-
-    const config = (() => {
-      if (tableType === "macro") return MACRO_TABLE_CONFIG;
-      return STATIC_TABLE_CONFIG[tableName];
-    })();
-
-    if (!config) {
-      return failure(
-        AppError.internal(
-          `No table configuration found for static table '${tableName}'`,
-          "UNKNOWN_TABLE_CONFIG",
-        ),
-      );
-    }
-
-    const exceptColumns = [...config.exceptColumns];
-    const variants: { columnName: string; schema: string }[] = [];
-
-    if (config.variantColumns.includes("macro_output")) {
-      if (macroSchema) {
-        variants.push({ columnName: "macro_output", schema: macroSchema });
-      } else {
-        exceptColumns.push("macro_output");
-      }
-    }
-
-    if (config.variantColumns.includes("questions_data")) {
-      if (questionsSchema) {
-        variants.push({ columnName: "questions_data", schema: questionsSchema });
-      } else {
-        exceptColumns.push("questions_data");
-      }
-    }
-
-    if (config.variantColumns.includes("custom_metadata")) {
-      if (customMetadataSchema) {
-        variants.push({ columnName: "custom_metadata", schema: customMetadataSchema });
-      } else {
-        exceptColumns.push("custom_metadata");
-      }
-    }
-
-    return this.databricksPort.buildExperimentQuery({
-      tableName,
-      tableType,
-      experimentId,
-      columns,
-      variants: variants.length > 0 ? variants : undefined,
-      exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
-      orderBy,
-      orderDirection,
-      limit,
+      limit: pageSize,
       offset,
     });
-  }
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
 
-  /**
-   * Get full table data with specific columns (no pagination)
-   */
-  private async getFullTableData(params: {
-    tableName: string;
-    experiment: ExperimentDto;
-    query: string;
-  }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, query } = params;
-
-    const dataResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      query,
-    );
-    if (dataResult.isFailure()) return dataResult;
-
-    const totalRows = dataResult.value.totalRows;
-
-    return success([
-      {
-        name: tableName,
-        catalog_name: experiment.name,
-        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value),
-        page: 1,
-        pageSize: totalRows,
-        totalRows,
-        totalPages: 1,
-      },
-    ]);
-  }
-
-  /**
-   * Get table data for a specific page
-   * @param rowCount - Total row count from metadata table (avoids separate count query)
-   */
-  private async getTableDataPage(params: {
-    tableName: string;
-    experiment: ExperimentDto;
-    page: number;
-    pageSize: number;
-    rowCount: number;
-    query: string;
-  }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, page, pageSize, rowCount, query } = params;
-
-    const totalPages = Math.ceil(rowCount / pageSize);
-
-    const dataResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      query,
-    );
-    if (dataResult.isFailure()) return dataResult;
-
-    return success([
-      {
-        name: tableName,
-        catalog_name: experiment.name,
-        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value),
-        page,
-        pageSize,
-        totalRows: rowCount,
-        totalPages,
-      },
-    ]);
-  }
-
-  /**
-   * Convert schema data to DTO format
-   */
-  private transformSchemaData(schemaData: SchemaData): SchemaDataDto {
-    return {
-      columns: schemaData.columns,
-      rows: schemaData.rows.map((row) => {
-        const dataRow: Record<string, string | null> = {};
-        row.forEach((value, index) => {
-          dataRow[schemaData.columns[index].name] = value;
-        });
-        return dataRow;
-      }),
-      totalRows: schemaData.totalRows,
-      truncated: schemaData.truncated,
-    };
+    return this.getTableDataPage({
+      tableName,
+      experiment,
+      page,
+      pageSize,
+      rowCount: metadata.rowCount,
+      query: queryResult.value,
+    });
   }
 
   /**
@@ -326,6 +186,87 @@ export class ExperimentDataRepository {
     return success({ values, truncated });
   }
 
+  private buildQuery(
+    experimentId: string,
+    metadata: ExperimentTableMetadata,
+    options: {
+      columns?: string[];
+      filters?: FilterCondition[];
+      aggregation?: AggregationSpec;
+      orderBy?: string;
+      orderDirection?: "ASC" | "DESC";
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Result<string> {
+    const { columns, filters, aggregation, orderBy, orderDirection, limit, offset } = options;
+    const {
+      identifier: tableName,
+      tableType,
+      macroSchema,
+      questionsSchema,
+      customMetadataSchema,
+    } = metadata;
+
+    const config = (() => {
+      if (tableType === "macro") {
+        return MACRO_TABLE_CONFIG;
+      }
+      return STATIC_TABLE_CONFIG[tableName];
+    })();
+
+    if (!config) {
+      return failure(
+        AppError.internal(
+          `No table configuration found for static table '${tableName}'`,
+          "UNKNOWN_TABLE_CONFIG",
+        ),
+      );
+    }
+
+    const exceptColumns = [...config.exceptColumns];
+    const variants: { columnName: string; schema: string }[] = [];
+
+    if (config.variantColumns.includes("macro_output")) {
+      if (macroSchema) {
+        variants.push({ columnName: "macro_output", schema: macroSchema });
+      } else {
+        exceptColumns.push("macro_output");
+      }
+    }
+
+    if (config.variantColumns.includes("questions_data")) {
+      if (questionsSchema) {
+        variants.push({ columnName: "questions_data", schema: questionsSchema });
+      } else {
+        exceptColumns.push("questions_data");
+      }
+    }
+
+    if (config.variantColumns.includes("custom_metadata")) {
+      if (customMetadataSchema) {
+        variants.push({ columnName: "custom_metadata", schema: customMetadataSchema });
+      } else {
+        exceptColumns.push("custom_metadata");
+      }
+    }
+
+    return this.databricksPort.buildExperimentQuery({
+      tableName,
+      tableType,
+      experimentId,
+      columns,
+      variants: variants.length > 0 ? variants : undefined,
+      exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
+      filters,
+      aggregation,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    });
+  }
+
   /**
    * Execute a generated SQL; on failure log the SQL too, since errors like
    * `UNRESOLVED_COLUMN` depend on the exact compiled query.
@@ -343,5 +284,83 @@ export class ExperimentDataRepository {
       });
     }
     return dataResult;
+  }
+
+  private async getFullTableData(params: {
+    tableName: string;
+    experiment: ExperimentDto;
+    query: string;
+  }): Promise<Result<TableDataDto[]>> {
+    const { tableName, experiment, query } = params;
+
+    const dataResult = await this.executeQuery(query);
+    if (dataResult.isFailure()) {
+      return dataResult;
+    }
+
+    const totalRows = dataResult.value.totalRows;
+
+    return success([
+      {
+        name: tableName,
+        catalog_name: experiment.name,
+        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
+        data: this.transformSchemaData(dataResult.value),
+        page: 1,
+        pageSize: totalRows,
+        totalRows,
+        totalPages: 1,
+      },
+    ]);
+  }
+
+  private async getTableDataPage(params: {
+    tableName: string;
+    experiment: ExperimentDto;
+    page: number;
+    pageSize: number;
+    rowCount: number;
+    query: string;
+  }): Promise<Result<TableDataDto[]>> {
+    const { tableName, experiment, page, pageSize, rowCount, query } = params;
+
+    const totalPages = Math.ceil(rowCount / pageSize);
+
+    const dataResult = await this.executeQuery(query);
+    if (dataResult.isFailure()) {
+      return dataResult;
+    }
+
+    return success([
+      {
+        name: tableName,
+        catalog_name: experiment.name,
+        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
+        data: this.transformSchemaData(dataResult.value),
+        page,
+        pageSize,
+        totalRows: rowCount,
+        totalPages,
+      },
+    ]);
+  }
+
+  /**
+   * Convert schema data to DTO.
+   */
+  private transformSchemaData(schemaData: SchemaData): SchemaDataDto {
+    const rows = schemaData.rows.map((row) => {
+      const dataRow: Record<string, string | null> = {};
+      row.forEach((value, index) => {
+        dataRow[schemaData.columns[index].name] = value;
+      });
+      return dataRow;
+    });
+    return {
+      columns: schemaData.columns,
+      rows,
+      totalRows: schemaData.totalRows,
+      truncated: schemaData.truncated,
+    };
   }
 }

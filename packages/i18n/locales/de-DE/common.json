@@ -639,6 +639,14 @@
     "detailsTitle": "Protokolldetails",
     "testerTitle": "Verbinden & Testen"
   },
+  "columnPicker": {
+    "dragHandle": "{{name}} ziehen",
+    "remove": "{{name}} entfernen",
+    "emptyState": "Keine Spalten ausgewählt.",
+    "addColumn": "Spalte hinzufügen",
+    "searchPlaceholder": "Spalten suchen…",
+    "noColumnsLeft": "Keine Spalten mehr zum Hinzufügen."
+  },
   "dataFilters": {
     "placeholderSubstring": "Teilstring",
     "placeholderValue": "Wert",

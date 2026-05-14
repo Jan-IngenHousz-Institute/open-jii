@@ -4,11 +4,15 @@ import type { PlotData } from "plotly.js";
 import React from "react";
 
 import { cn } from "../../lib/utils";
+import type { FacetGridConfig } from "./cartesian-chart";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
+import { facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
+  applyReferenceLines,
   createBaseLayout,
   createPlotlyConfig,
+  extendLayoutForFacets,
   getPlotType,
   getRenderer,
   refineAxisType,
@@ -17,6 +21,9 @@ import {
 export interface LineSeriesData extends BaseSeries {
   x: (string | number | Date)[];
   y: (string | number)[];
+  /** Facet routing: pins this trace to a specific subplot cell. */
+  xaxisId?: string;
+  yaxisId?: string;
   mode?: "lines" | "markers" | "lines+markers" | "text" | "none";
   line?: LineConfig;
   marker?: MarkerConfig;
@@ -45,6 +52,8 @@ export interface LineSeriesData extends BaseSeries {
 
 export interface LineChartProps extends BaseChartProps {
   data: LineSeriesData[];
+  /** Optional facet grid spec, same shape used by other faceted charts. */
+  subplots?: FacetGridConfig;
 }
 
 export function LineChart({
@@ -53,8 +62,14 @@ export function LineChart({
   className,
   loading,
   error,
+  subplots,
   ...eventHandlers
 }: LineChartProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
+    subplots
+      ? { grid: { rows: subplots.rows, columns: subplots.columns } }
+      : {},
+  );
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
@@ -62,6 +77,8 @@ export function LineChart({
     const mappedSeries = {
       x: series.x,
       y: series.y,
+      xaxis: series.xaxisId,
+      yaxis: series.yaxisId,
       name: series.name,
       type: plotType,
       mode: series.mode || "lines",
@@ -111,8 +128,8 @@ export function LineChart({
     return mappedSeries;
   });
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  const layout = createBaseLayout(config, sizing);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   layout.xaxis = refineAxisType(
     layout.xaxis,
@@ -123,8 +140,32 @@ export function LineChart({
     data.flatMap((s) => s.y ?? []),
   );
 
+  // Faceted layout: convert single-axis xaxis/yaxis (now refined to the
+  // right type) into a grid of numbered axes + per-cell title
+  // annotations. Refining first lets the per-cell axis configs inherit
+  // the auto-detected type.
+  if (subplots) {
+    const { cellTitleFontSize } = facetTierStyles(sizing);
+    const forceSharedTitles = sizing.cellVeryCompact;
+    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
+    const faceted = extendLayoutForFacets(layout, subplots.cells, {
+      rows: subplots.rows,
+      columns: subplots.columns,
+      sharedX: subplots.sharedX,
+      sharedY: subplots.sharedY,
+      sharedXTitle: effectiveSharedXTitle,
+      sharedYTitle: effectiveSharedYTitle,
+      roworder: subplots.roworder,
+      titleFontSize: cellTitleFontSize,
+    });
+    Object.assign(layout, faceted);
+  }
+
+  applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
+
   return (
-    <div className={cn("flex h-full w-full flex-col", className)}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

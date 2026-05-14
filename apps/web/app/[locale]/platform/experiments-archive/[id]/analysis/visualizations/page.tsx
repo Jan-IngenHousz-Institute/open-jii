@@ -2,7 +2,7 @@
 
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { useParams } from "next/navigation";
-import ExperimentVisualizationsList from "~/components/experiment-visualizations/experiment-visualizations-list";
+import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";
 
 import { useTranslation } from "@repo/i18n";
 

@@ -1,7 +1,9 @@
-import { createVisualization } from "@/test/factories";
+import { createExperimentDataTable, createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
-import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 

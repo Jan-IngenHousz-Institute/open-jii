@@ -3,8 +3,10 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, ErrorBarConfig } from "./types";
+import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface BarSeriesData extends BaseSeries {
@@ -63,6 +65,7 @@ export function BarChart({
   bargap,
   bargroupgap,
 }: BarChartProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("bar", renderer);
 
@@ -113,7 +116,7 @@ export function BarChart({
   );
 
   const layout = {
-    ...createBaseLayout(config),
+    ...createBaseLayout(config, sizing),
     barmode,
     barnorm,
     bargap,
@@ -129,10 +132,10 @@ export function BarChart({
     };
   }
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}
