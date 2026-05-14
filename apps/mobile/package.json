@@ -63,6 +63,8 @@
     "expo-linear-gradient": "~55.0.13",
     "expo-linking": "~55.0.12",
     "expo-localization": "~55.0.13",
+    "i18next": "^25.10.10",
+    "react-i18next": "^15.7.4",
     "expo-location": "~55.1.8",
     "expo-network": "~55.0.13",
     "expo-router": "~55.0.11",

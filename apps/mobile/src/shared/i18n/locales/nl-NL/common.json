@@ -1,0 +1,18 @@
+{
+  "appName": "openJII",
+  "appTagline": "Sensorgegevensverzameling",
+  "cancel": "Annuleren",
+  "continue": "Doorgaan",
+  "confirm": "Bevestigen",
+  "dismiss": "Sluiten",
+  "save": "Opslaan",
+  "retry": "Opnieuw proberen",
+  "delete": "Verwijderen",
+  "remove": "Verwijderen",
+  "back": "Terug",
+  "close": "Sluiten",
+  "loading": "Laden…",
+  "offline": "Je bent offline. Maak verbinding met internet om in te loggen.",
+  "errorGeneric": "Er ging iets mis",
+  "errorTitle": "Fout"
+}

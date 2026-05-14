@@ -17,6 +17,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { useLoginFlow } from "~/features/auth/hooks/use-login";
 import { EnvironmentSelector } from "~/features/profile/widgets/environment-selector";
+import { useTranslation } from "~/shared/i18n";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
@@ -38,13 +39,12 @@ interface OfflineBannerProps {
 
 function OfflineBanner({ online }: OfflineBannerProps) {
   const { warningFg } = useThemeColors();
+  const { t } = useTranslation();
   if (online !== false) return null;
   return (
     <View className="mb-4 flex-row items-center gap-2 rounded-lg bg-amber-100 p-3 dark:bg-amber-900/30">
       <MaterialIcons name="wifi-off" size={18} color={warningFg} />
-      <Text className="flex-1 text-sm text-amber-800 dark:text-amber-200">
-        You are offline. Please connect to the internet to log in.
-      </Text>
+      <Text className="flex-1 text-sm text-amber-800 dark:text-amber-200">{t("offline")}</Text>
     </View>
   );
 }
@@ -65,10 +65,11 @@ function OAuthIcons({
   online,
 }: OAuthIconsProps) {
   const themeColors = useThemeColors();
+  const { t } = useTranslation("auth");
   return (
     <View className="mb-3 flex-col gap-3">
       <Button
-        title="GitHub"
+        title={t("github")}
         variant="surface"
         onPress={onGitHubPress}
         isDisabled={githubLoading || online === false}
@@ -81,7 +82,7 @@ function OAuthIcons({
       />
 
       <Button
-        title="ORCID"
+        title={t("orcid")}
         variant="surface"
         onPress={onOrcidPress}
         isDisabled={orcidLoading || online === false}
@@ -101,6 +102,7 @@ function OAuthIcons({
 
 export default function LoginScreen() {
   const themeColors = useThemeColors();
+  const { t } = useTranslation(["common", "auth"]);
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
   const {
     startGitHubLogin,
@@ -146,19 +148,16 @@ export default function LoginScreen() {
     async (otpValue: string) => {
       clearErrors();
       if (otpValue.length !== 6) {
-        setError("otp", { message: "Please enter a valid 6-digit code" });
+        setError("otp", { message: t("auth:errors.invalidOtp") });
         return;
       }
 
       const result = await verifyEmailOTP(email, otpValue);
       if (result?.error) {
-        setError("otp", {
-          message:
-            "The code you entered is invalid or has expired. Please try again or request a new one.",
-        });
+        setError("otp", { message: t("auth:errors.expiredOtp") });
       }
     },
-    [email, verifyEmailOTP, clearErrors, setError],
+    [email, verifyEmailOTP, clearErrors, setError, t],
   );
 
   useEffect(() => {
@@ -187,13 +186,13 @@ export default function LoginScreen() {
 
   const onEmailSubmit = handleSubmit(async ({ email: submittedEmail }) => {
     if (!submittedEmail.includes("@")) {
-      setError("email", { message: "Please enter a valid email address" });
+      setError("email", { message: t("auth:errors.invalidEmail") });
       return;
     }
 
     const result = await sendEmailOTP(submittedEmail);
     if (result?.error) {
-      setError("email", { message: result.error.message ?? "Failed to send code" });
+      setError("email", { message: result.error.message ?? t("auth:errors.sendFailed") });
       return;
     }
 
@@ -207,7 +206,7 @@ export default function LoginScreen() {
     clearErrors();
     const result = await sendEmailOTP(email);
     if (result?.error) {
-      setError("email", { message: result.error.message ?? "Failed to resend code" });
+      setError("email", { message: result.error.message ?? t("auth:errors.resendFailed") });
       return;
     }
 
@@ -245,8 +244,8 @@ export default function LoginScreen() {
                 className="h-24 w-24 rounded-[20px]"
               />
             </Pressable>
-            <Text className="text-on-surface mt-4 text-[28px] font-bold">openJII</Text>
-            <Text className="text-inactive mt-2 text-base">Sensor Data Collection</Text>
+            <Text className="text-on-surface mt-4 text-[28px] font-bold">{t("appName")}</Text>
+            <Text className="text-inactive mt-2 text-base">{t("appTagline")}</Text>
           </View>
 
           <View className="w-full">
@@ -256,15 +255,19 @@ export default function LoginScreen() {
 
             {!showOTPInput ? (
               <>
-                <Text className="text-on-surface mb-4 text-2xl font-bold">Log in or sign up</Text>
+                <Text className="text-on-surface mb-4 text-2xl font-bold">
+                  {t("auth:headerLogin")}
+                </Text>
 
-                <Text className="text-on-surface mb-2 text-sm font-medium">Email address</Text>
+                <Text className="text-on-surface mb-2 text-sm font-medium">
+                  {t("auth:emailLabel")}
+                </Text>
                 <Controller
                   control={control}
                   name="email"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <Input
-                      placeholder="Enter your email..."
+                      placeholder={t("auth:emailPlaceholder")}
                       value={value}
                       onChangeText={onChange}
                       onBlur={onBlur}
@@ -278,7 +281,7 @@ export default function LoginScreen() {
                   )}
                 />
                 <Button
-                  title="Continue with Email"
+                  title={t("auth:continueWithEmail")}
                   variant="primary"
                   onPress={() => void onEmailSubmit()}
                   style={{ marginBottom: 12 }}
@@ -288,7 +291,9 @@ export default function LoginScreen() {
 
                 <View className="my-5 flex-row items-center">
                   <View className="bg-border h-px flex-1" />
-                  <Text className="text-inactive mx-3 text-sm font-medium">or continue with</Text>
+                  <Text className="text-inactive mx-3 text-sm font-medium">
+                    {t("auth:orContinueWith")}
+                  </Text>
                   <View className="bg-border h-px flex-1" />
                 </View>
 
@@ -301,12 +306,12 @@ export default function LoginScreen() {
                 />
 
                 <Text className="text-inactive mt-6 text-xs leading-[18px]">
-                  By continuing you accept the{" "}
+                  {t("auth:termsPrefix")}
                   <Text
                     className="text-jii-primary font-semibold underline"
                     onPress={() => void Linking.openURL(`${webBaseUrl}/terms-and-conditions`)}
                   >
-                    terms and conditions
+                    {t("auth:termsLink")}
                   </Text>
                 </Text>
               </>
@@ -317,10 +322,10 @@ export default function LoginScreen() {
                 </Pressable>
 
                 <Text className="text-on-surface mb-4 text-2xl font-bold">
-                  Check your email for a sign-in code
+                  {t("auth:checkEmailTitle")}
                 </Text>
                 <Text className="text-inactive mb-5 text-sm leading-5">
-                  Please enter the 6-digit code we sent to{" "}
+                  {t("auth:otpHelper")}
                   <Text
                     className="text-jii-primary font-semibold underline"
                     onPress={handleEditEmail}
@@ -365,7 +370,9 @@ export default function LoginScreen() {
                         : "text-jii-primary"
                     }`}
                   >
-                    {countdown > 0 ? `Re-send code (${countdown}s)` : "Re-send code"}
+                    {countdown > 0
+                      ? t("auth:resendCodeCountdown", { seconds: countdown })
+                      : t("auth:resendCode")}
                   </Text>
                 </Pressable>
               </>

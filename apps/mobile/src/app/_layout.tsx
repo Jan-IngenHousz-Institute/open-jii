@@ -18,6 +18,7 @@ import { PythonMacroProvider } from "~/features/measurement-flow/components/pyth
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
 import { useAutoUpload } from "~/features/recent-measurements/hooks/use-auto-upload";
 import { db } from "~/shared/db/client";
+import { useI18nReady } from "~/shared/i18n";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
 import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
 import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
@@ -97,6 +98,7 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   });
 
   const { success: migrationsReady, error: migrationsError } = useMigrations(db, migrations);
+  const i18nReady = useI18nReady();
 
   useOtaUpdate();
 
@@ -129,7 +131,7 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
     );
   }
 
-  if (!loaded || !migrationsReady) {
+  if (!loaded || !migrationsReady || !i18nReady) {
     return null;
   }
 
