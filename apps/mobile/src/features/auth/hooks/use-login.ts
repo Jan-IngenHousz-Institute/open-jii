@@ -1,19 +1,28 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   sendEmailLoginOtp,
   signInWithGitHub,
   signInWithOrcid,
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
+import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
 
 export function useLoginFlow() {
+  const queryClient = useQueryClient();
+
+  const prefetch = () => {
+    void prefetchOfflineData(queryClient);
+  };
+
   const github = useMutation({
     mutationFn: signInWithGitHub,
+    onSuccess: prefetch,
     onError: (error) => console.error("GitHub login error:", error),
   });
 
   const orcid = useMutation({
     mutationFn: signInWithOrcid,
+    onSuccess: prefetch,
     onError: (error) => console.error("ORCID login error:", error),
   });
 
@@ -24,6 +33,11 @@ export function useLoginFlow() {
 
   const verifyOtp = useMutation({
     mutationFn: verifyEmailLoginOtp,
+    // Better Auth returns { error } on soft-failure rather than throwing; only
+    // prefetch when the verify actually succeeded.
+    onSuccess: (result) => {
+      if (!result?.error) prefetch();
+    },
     onError: (error) => console.error("Email OTP verify error:", error),
   });
 

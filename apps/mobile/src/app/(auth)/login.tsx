@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useCallback } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -18,7 +17,6 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { useLoginFlow } from "~/features/auth/hooks/use-login";
 import { EnvironmentSelector } from "~/features/profile/widgets/environment-selector";
-import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
@@ -103,7 +101,6 @@ function OAuthIcons({
 
 export default function LoginScreen() {
   const themeColors = useThemeColors();
-  const queryClient = useQueryClient();
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
   const {
     startGitHubLogin,
@@ -159,12 +156,9 @@ export default function LoginScreen() {
           message:
             "The code you entered is invalid or has expired. Please try again or request a new one.",
         });
-        return;
       }
-
-      void prefetchOfflineData(queryClient);
     },
-    [email, verifyEmailOTP, queryClient, clearErrors, setError],
+    [email, verifyEmailOTP, clearErrors, setError],
   );
 
   useEffect(() => {
@@ -184,13 +178,11 @@ export default function LoginScreen() {
   async function handleGitHubLogin() {
     clearErrors();
     await startGitHubLogin();
-    void prefetchOfflineData(queryClient);
   }
 
   async function handleOrcidLogin() {
     clearErrors();
     await startOrcidLogin();
-    void prefetchOfflineData(queryClient);
   }
 
   const onEmailSubmit = handleSubmit(async ({ email: submittedEmail }) => {

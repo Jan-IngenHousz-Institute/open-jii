@@ -1,10 +1,10 @@
-import { useQueryClient } from "@tanstack/react-query";
 import "expo-application";
 import * as Application from "expo-application";
 import * as Updates from "expo-updates";
 import { User, ExternalLink, LogOut, Sun, Moon } from "lucide-react-native";
 import React, { useContext } from "react";
 import { View, Text, ScrollView, Linking, Image, Pressable } from "react-native";
+import { useLogout } from "~/features/auth/hooks/use-logout";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { colors } from "~/shared/constants/colors";
 import { getEnvVar } from "~/shared/stores/environment-store";
@@ -25,15 +25,10 @@ const THEME_OPTIONS: {
 ];
 
 export default function ProfileScreen() {
-  const { session, signOut } = useSession();
-  const queryClient = useQueryClient();
+  const { session } = useSession();
+  const handleLogout = useLogout();
   const themeColors = useThemeColors();
   const { themePreference, changeTheme } = useContext(ThemeContext);
-
-  const handleLogout = async () => {
-    queryClient.resetQueries();
-    await signOut();
-  };
 
   const handleOpenWebProfile = async () => {
     const url = getEnvVar("NEXT_AUTH_URI") + "/en-US/platform/experiments";
