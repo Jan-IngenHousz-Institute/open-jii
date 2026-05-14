@@ -11,6 +11,7 @@ import { contract } from "@repo/api/contract";
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
@@ -22,6 +23,7 @@ export class ExperimentDataController {
   constructor(
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
+    private readonly getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
   ) {}
 
@@ -99,6 +101,39 @@ export class ExperimentDataController {
 
       return handleFailure(result, this.logger);
     });
+  }
+
+  @TsRestHandler(contract.experiments.getDistinctColumnValues)
+  getDistinctColumnValues(@Session() session: UserSession) {
+    return tsRestHandler(
+      contract.experiments.getDistinctColumnValues,
+      async ({ params, query }) => {
+        const { id: experimentId } = params;
+
+        this.logger.log({
+          msg: "Processing distinct values request",
+          operation: "getDistinctColumnValues",
+          experimentId,
+          userId: session.user.id,
+          column: query.column,
+        });
+
+        const result = await this.getDistinctColumnValuesUseCase.execute(
+          experimentId,
+          session.user.id,
+          query,
+        );
+
+        if (result.isSuccess()) {
+          return {
+            status: StatusCodes.OK,
+            body: result.value,
+          };
+        }
+
+        return handleFailure(result, this.logger);
+      },
+    );
   }
 
   @TsRestHandler(contract.experiments.uploadExperimentData)

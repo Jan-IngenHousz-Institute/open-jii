@@ -164,18 +164,29 @@ interface RenderWithFormOptions<T extends FieldValues> extends CustomRenderOptio
   useFormProps?: UseFormProps<T>;
 }
 
+interface RenderWithFormResult<T extends FieldValues> extends RenderResult {
+  /** Live form ref captured on first render. Tests assert against `form.getValues(...)`. */
+  form: ReturnType<typeof useForm<T>>;
+}
+
 function renderWithForm<T extends FieldValues>(
   renderFn: (form: ReturnType<typeof useForm<T>>) => ReactElement,
   options?: RenderWithFormOptions<T>,
-): RenderResult {
+): RenderWithFormResult<T> {
   const { useFormProps, ...renderOptions } = options ?? {};
+  const formRef: { current: ReturnType<typeof useForm<T>> | null } = { current: null };
 
   function FormWrapper() {
     const form = useForm<T>(useFormProps);
+    formRef.current = form;
     return <FormProvider {...form}>{renderFn(form)}</FormProvider>;
   }
 
-  return render(<FormWrapper />, renderOptions);
+  const result = render(<FormWrapper />, renderOptions);
+  if (!formRef.current) {
+    throw new Error("renderWithForm: form did not mount");
+  }
+  return { ...result, form: formRef.current };
 }
 
 function assertExists<T>(value: T, message?: string): asserts value is NonNullable<T> {

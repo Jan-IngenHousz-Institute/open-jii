@@ -17,6 +17,8 @@ import {
   zExperimentMemberPathParam,
   zExperimentDataQuery,
   zExperimentDataResponse,
+  zDistinctValuesQuery,
+  zDistinctValuesResponse,
   zExperimentTablesMetadataList,
   zExperimentAccess,
   zUploadExperimentDataBody,
@@ -216,6 +218,22 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment data",
     description: "Retrieves data tables from the experiment with pagination support",
+  },
+
+  getDistinctColumnValues: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/data/distinct",
+    pathParams: zIdPathParam,
+    query: zDistinctValuesQuery,
+    responses: {
+      200: zDistinctValuesResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get distinct values for a column",
+    description:
+      "Returns the distinct (non-null) values of a single column on an experiment table, capped at `limit`. Powers the searchable categorical filter combobox and any consumer that needs a values list.",
   },
 
   getExperimentTables: {

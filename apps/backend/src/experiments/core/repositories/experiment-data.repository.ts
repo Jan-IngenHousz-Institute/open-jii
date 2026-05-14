@@ -250,4 +250,85 @@ export class ExperimentDataRepository {
       truncated: schemaData.truncated,
     };
   }
+
+  /**
+   * Distinct values for one column, capped at `limit`. NULLs are stripped
+   * server-side so the picker doesn't surface a `(null)` entry.
+   */
+  async getDistinctColumnValues(params: {
+    experimentId: string;
+    tableName: string;
+    column: string;
+    limit: number;
+  }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
+    const { experimentId, tableName, column, limit } = params;
+
+    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+      identifier: tableName,
+      includeSchemas: false,
+    });
+    if (metadataResult.isFailure()) {
+      return metadataResult;
+    }
+    if (metadataResult.value.length === 0) {
+      return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
+    }
+
+    const { tableType } = metadataResult.value[0];
+
+    const queryResult = this.databricksPort.buildExperimentQuery({
+      tableName,
+      tableType,
+      experimentId,
+      columns: [column],
+      distinct: true,
+      orderBy: column,
+      orderDirection: "ASC",
+      // +1 so we can detect truncation: if the SQL returned exactly limit+1
+      // rows, the column has more values than we returned.
+      limit: limit + 1,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const dataResult = await this.executeQuery(queryResult.value);
+    if (dataResult.isFailure()) {
+      return dataResult;
+    }
+
+    // SchemaData.rows is `string[][]`; single-column response means each
+    // row is `[value]`. Strip nulls and coerce numeric strings so the
+    // frontend gets typed values it can compare directly.
+    const raw = dataResult.value.rows
+      .map((row) => row[0])
+      .filter((v): v is string => v != null && v !== "");
+    const truncated = raw.length > limit;
+    const trimmed = truncated ? raw.slice(0, limit) : raw;
+    const values: (string | number)[] = trimmed.map((v) => {
+      const n = Number(v);
+      return Number.isFinite(n) && v.trim() !== "" ? n : v;
+    });
+
+    return success({ values, truncated });
+  }
+
+  /**
+   * Execute a generated SQL; on failure log the SQL too, since errors like
+   * `UNRESOLVED_COLUMN` depend on the exact compiled query.
+   */
+  private async executeQuery(query: string): Promise<Result<SchemaData>> {
+    const dataResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      query,
+    );
+    if (dataResult.isFailure()) {
+      this.logger.error({
+        msg: "Experiment data query failed",
+        sql: query,
+        error: dataResult.error.message,
+      });
+    }
+    return dataResult;
+  }
 }
