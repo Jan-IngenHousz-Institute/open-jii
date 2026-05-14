@@ -18,9 +18,11 @@ import { Separator } from "@repo/ui/components/separator";
 
 import type { ChartFormValues } from "../../charts/chart-config";
 import { getChartTypeDef } from "../../charts/chart-registry";
+import { FiltersShelf } from "../shelves/filters-shelf";
 
 export interface DataTabContentProps {
   form: UseFormReturn<ChartFormValues>;
+  experimentId: string;
   tables: ExperimentTableMetadata[];
   isTablesLoading?: boolean;
   tablesError?: unknown;
@@ -33,6 +35,7 @@ export interface DataTabContentProps {
 
 export function DataTabContent({
   form,
+  experimentId,
   tables,
   isTablesLoading = false,
   tablesError,
@@ -112,6 +115,19 @@ export function DataTabContent({
       >
         {def ? <def.DataPanel form={form} columns={columns} /> : <UnsupportedPanel />}
       </ColumnsState>
+
+      {Boolean(selectedTableName) && columns.length > 0 && (
+        <>
+          <Separator />
+          <FiltersShelf
+            form={form}
+            columns={columns}
+            experimentId={experimentId}
+            tableName={selectedTableName}
+          />
+          <Separator />
+        </>
+      )}
     </>
   );
 }

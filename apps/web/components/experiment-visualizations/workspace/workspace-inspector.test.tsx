@@ -49,6 +49,7 @@ function renderInspector(opts: RenderOpts = {}) {
         <DataSourcesFieldArrayProvider form={form}>
           <WorkspaceInspector
             form={form}
+            experimentId="test-experiment"
             tables={opts.tablesError ? [] : tables}
             isTablesLoading={opts.isTablesLoading ?? false}
             tablesError={opts.tablesError}
@@ -113,6 +114,7 @@ describe("WorkspaceInspector", () => {
         <DataSourcesFieldArrayProvider form={form}>
           <WorkspaceInspector
             form={form}
+            experimentId="test-experiment"
             tables={[]}
             selectedTableName=""
             onTableChange={vi.fn()}

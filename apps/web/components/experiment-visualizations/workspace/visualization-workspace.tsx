@@ -177,6 +177,7 @@ export function VisualizationWorkspace({
           <div className="w-full lg:w-[320px] lg:shrink-0 xl:w-[380px] 2xl:w-[440px]">
             <WorkspaceInspector
               form={form}
+              experimentId={experimentId}
               tables={tables ?? []}
               isTablesLoading={isLoadingTables}
               tablesError={tablesError}
