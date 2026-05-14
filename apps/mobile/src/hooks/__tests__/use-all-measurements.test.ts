@@ -203,7 +203,7 @@ describe("useAllMeasurements", () => {
     it("re-queries SQL when the filter prop changes (no JS-side filtering)", async () => {
       const { rerender } = renderHook(
         ({ filter }: { filter: "all" | "synced" | "unsynced" }) => useAllMeasurements(filter),
-        { wrapper, initialProps: { filter: "all" as const } },
+        { wrapper, initialProps: { filter: "all" } },
       );
 
       await waitFor(() =>

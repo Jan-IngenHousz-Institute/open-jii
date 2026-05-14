@@ -12,6 +12,7 @@ import { useAllMeasurements } from "~/hooks/use-all-measurements";
 import type {
   MeasurementFilter,
   MeasurementItem as MeasurementItemType,
+  MeasurementStatus,
 } from "~/hooks/use-all-measurements";
 import { useMeasurements } from "~/hooks/use-measurements";
 import { useTheme } from "~/hooks/use-theme";
@@ -55,15 +56,15 @@ export function CompletedState() {
     ]);
   };
 
-  const handleDelete = (id: string, status: "synced" | "unsynced", experimentName: string) => {
-    const message =
-      status === "synced"
-        ? `Are you sure you want to delete "${experimentName}" from local storage?`
-        : `Are you sure you want to remove "${experimentName}"? This will delete it from local storage.`;
+  const handleDelete = (id: string, status: MeasurementStatus, experimentName: string) => {
+    const isSynced = status === "successful";
+    const message = isSynced
+      ? `Are you sure you want to delete "${experimentName}" from local storage?`
+      : `Are you sure you want to remove "${experimentName}"? This will delete it from local storage.`;
 
-    showAlert(status === "synced" ? "Delete Measurement" : "Remove Measurement", message, [
+    showAlert(isSynced ? "Delete Measurement" : "Remove Measurement", message, [
       {
-        text: status === "synced" ? "Delete" : "Remove",
+        text: isSynced ? "Delete" : "Remove",
         variant: "danger",
         onPress: () => {
           void (() => {
@@ -118,16 +119,16 @@ export function CompletedState() {
               questions={parseQuestions(measurement.data.measurementResult)}
               onPress={() => setSelectedMeasurement(measurement)}
               onComment={
-                measurement.status === "unsynced"
+                measurement.status === "pending" || measurement.status === "failed"
                   ? () => setSelectedForComment(measurement)
                   : undefined
               }
               onDelete={() => {
-                if (measurement.status === "syncing") return;
+                if (measurement.status === "uploading") return;
                 handleDelete(measurement.key, measurement.status, measurement.experimentName);
               }}
               onSync={
-                measurement.status === "unsynced"
+                measurement.status === "pending" || measurement.status === "failed"
                   ? () => handleSync(measurement.key, measurement.experimentName)
                   : undefined
               }
