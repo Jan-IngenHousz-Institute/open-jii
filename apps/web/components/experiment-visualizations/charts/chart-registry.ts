@@ -8,6 +8,14 @@ import { lineChartType } from "./basic/line";
 import { lollipopChartType } from "./basic/lollipop";
 import { pieChartType } from "./basic/pie";
 import { scatterChartType } from "./basic/scatter";
+import { boxPlotChartType } from "./statistical/box-plot";
+import { densityPlotChartType } from "./statistical/density-plot";
+import { densityPlot2DChartType } from "./statistical/density-plot-2d";
+import { histogramChartType } from "./statistical/histogram";
+import { histogram2DChartType } from "./statistical/histogram-2d";
+import { ridgePlotChartType } from "./statistical/ridge-plot";
+import { spcControlChartType } from "./statistical/spc-control-chart";
+import { violinPlotChartType } from "./statistical/violin-plot";
 import type { ChartTypeDef } from "./types";
 
 const REGISTRY: Partial<Record<ChartType, ChartTypeDef>> = {
@@ -19,6 +27,14 @@ const REGISTRY: Partial<Record<ChartType, ChartTypeDef>> = {
   lollipop: lollipopChartType,
   bubble: bubbleChartType,
   pie: pieChartType,
+  histogram: histogramChartType,
+  "box-plot": boxPlotChartType,
+  "violin-plot": violinPlotChartType,
+  "density-plot": densityPlotChartType,
+  "ridge-plot": ridgePlotChartType,
+  "histogram-2d": histogram2DChartType,
+  "density-plot-2d": densityPlot2DChartType,
+  "spc-control-chart": spcControlChartType,
 };
 
 export function getChartTypeDef(type: ChartType): ChartTypeDef | undefined {

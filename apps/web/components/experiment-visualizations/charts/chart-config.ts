@@ -20,6 +20,14 @@ import type {
   ReferenceLinesOptions,
   SecondaryAxisOptions,
 } from "./chart-options";
+import type { BoxPlotChartOptions } from "./statistical/box-plot/options";
+import type { DensityPlot2DChartOptions } from "./statistical/density-plot-2d/options";
+import type { DensityPlotChartOptions } from "./statistical/density-plot/options";
+import type { Histogram2DChartOptions } from "./statistical/histogram-2d/options";
+import type { HistogramChartOptions } from "./statistical/histogram/options";
+import type { RidgePlotChartOptions } from "./statistical/ridge-plot/options";
+import type { SPCChartOptions } from "./statistical/spc-control-chart/options";
+import type { ViolinPlotChartOptions } from "./statistical/violin-plot/options";
 
 export type ChartFormConfig = PlotlyChartConfig &
   Partial<Omit<LineSeriesData, "x" | "y">> &
@@ -30,8 +38,16 @@ export type ChartFormConfig = PlotlyChartConfig &
   LollipopChartOptions &
   BubbleChartOptions &
   PieChartOptions &
+  HistogramChartOptions &
+  Histogram2DChartOptions &
   FacetOptions &
   ReferenceLinesOptions &
+  DensityPlot2DChartOptions &
+  BoxPlotChartOptions &
+  ViolinPlotChartOptions &
+  DensityPlotChartOptions &
+  RidgePlotChartOptions &
+  SPCChartOptions &
   ErrorBarChartOptions &
   SecondaryAxisOptions;
 

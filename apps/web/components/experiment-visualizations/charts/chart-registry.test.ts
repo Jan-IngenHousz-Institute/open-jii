@@ -29,6 +29,14 @@ describe("chart-type registry", () => {
     ["lollipop", "basic"],
     ["bubble", "basic"],
     ["pie", "basic"],
+    ["histogram", "statistical"],
+    ["box-plot", "statistical"],
+    ["violin-plot", "statistical"],
+    ["density-plot", "statistical"],
+    ["ridge-plot", "statistical"],
+    ["histogram-2d", "statistical"],
+    ["density-plot-2d", "statistical"],
+    ["spc-control-chart", "statistical"],
   ] as const)("returns the %s definition under the %s family", (type, family) => {
     const def = getChartTypeDef(type);
     expect(def?.type).toBe(type);
@@ -38,6 +46,7 @@ describe("chart-type registry", () => {
   it("returns true from isSupportedChartType for registered types", () => {
     expect(isSupportedChartType("line")).toBe(true);
     expect(isSupportedChartType("bar")).toBe(true);
+    expect(isSupportedChartType("histogram")).toBe(true);
   });
 
   it("listChartTypes returns only registered types", () => {
@@ -46,12 +55,20 @@ describe("chart-type registry", () => {
     expect(types).toEqual([
       "area",
       "bar",
+      "box-plot",
       "bubble",
+      "density-plot",
+      "density-plot-2d",
       "dot-plot",
+      "histogram",
+      "histogram-2d",
       "line",
       "lollipop",
       "pie",
+      "ridge-plot",
       "scatter",
+      "spc-control-chart",
+      "violin-plot",
     ]);
   });
 
@@ -67,7 +84,16 @@ describe("chart-type registry", () => {
       "pie",
       "scatter",
     ]);
-    expect(grouped.statistical).toEqual([]);
+    expect(grouped.statistical.map((d) => d.type).sort()).toEqual([
+      "box-plot",
+      "density-plot",
+      "density-plot-2d",
+      "histogram",
+      "histogram-2d",
+      "ridge-plot",
+      "spc-control-chart",
+      "violin-plot",
+    ]);
     expect(grouped.scientific).toEqual([]);
     expect(grouped["3d"]).toEqual([]);
   });
