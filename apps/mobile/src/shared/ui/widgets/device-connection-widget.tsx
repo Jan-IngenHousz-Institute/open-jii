@@ -1,13 +1,12 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { Unplug, RefreshCw, WifiOff } from "lucide-react-native";
 import { useState } from "react";
-import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { toast } from "sonner-native";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useScannerCommandExecutor } from "~/features/connection/hooks/use-scanner-command-executor";
 import { useConnectedDevice } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
-import { useScannerCommandExecutor } from "~/features/connection/services/scan-manager/use-scanner-command-executor";
 import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { isOnline } from "~/shared/utils/is-online";
@@ -21,18 +20,19 @@ export function DeviceConnectionWidget() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: isOnlineStatus = true } = useIsOnline();
 
-  useAsync(async () => {
-    if (!connectedDevice) return;
-
-    const batteryResponse = await executeCommand("battery");
-    if (typeof batteryResponse !== "string") return;
-
-    const batteryPercentage = parseInt(batteryResponse.replace("battery:", ""));
-    if (isNaN(batteryPercentage)) {
-      return;
-    }
-    setBatteryLevel(batteryPercentage);
-  }, [connectedDevice?.id]);
+  useQuery({
+    queryKey: ["device", connectedDevice?.id, "battery"],
+    queryFn: async () => {
+      if (!connectedDevice) return null;
+      const batteryResponse = await executeCommand("battery");
+      if (typeof batteryResponse !== "string") return null;
+      const batteryPercentage = parseInt(batteryResponse.replace("battery:", ""));
+      if (isNaN(batteryPercentage)) return null;
+      setBatteryLevel(batteryPercentage);
+      return batteryPercentage;
+    },
+    enabled: !!connectedDevice,
+  });
 
   const isConnected = !!connectedDevice;
 

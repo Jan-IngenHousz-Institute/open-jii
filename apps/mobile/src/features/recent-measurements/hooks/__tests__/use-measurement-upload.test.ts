@@ -65,10 +65,10 @@ vi.mock("~/shared/ui/AlertDialog", () => ({
   showAlert: mockShowAlert,
 }));
 
-vi.mock("react-async-hook", () => ({
-  useAsyncCallback: (fn: (...args: any[]) => Promise<any>) => {
-    capturedCallback = fn;
-    return { loading: false, execute: fn };
+vi.mock("@tanstack/react-query", () => ({
+  useMutation: ({ mutationFn }: { mutationFn: (...args: any[]) => Promise<any> }) => {
+    capturedCallback = mutationFn;
+    return { isPending: false, mutateAsync: mutationFn };
   },
 }));
 

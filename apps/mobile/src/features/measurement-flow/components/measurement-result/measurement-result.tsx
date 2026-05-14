@@ -1,7 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { ChevronRight, MessageCircleMore } from "lucide-react-native";
 import React, { useState } from "react";
-import { useAsync } from "react-async-hook";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { applyMacro } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { TabBar } from "~/shared/ui/TabBar";
@@ -34,12 +34,13 @@ export function MeasurementResult({
   const [activeTab, setActiveTab] = useState<TabKey>("result");
 
   const {
-    result: processedMeasurement,
-    loading: isProcessing,
+    data: processedMeasurement,
+    isLoading: isProcessing,
     error: processingError,
-  } = useAsync(async () => {
-    return await applyMacro(rawMeasurement, macro);
-  }, [rawMeasurement, macro]);
+  } = useQuery({
+    queryKey: ["measurement-result", rawMeasurement, macro],
+    queryFn: () => applyMacro(rawMeasurement, macro),
+  });
 
   const messageGroups: MacroMessageGroup[] =
     processedMeasurement

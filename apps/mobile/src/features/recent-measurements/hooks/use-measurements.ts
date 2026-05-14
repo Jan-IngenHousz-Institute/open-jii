@@ -1,6 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
 import {
@@ -43,66 +42,68 @@ export function useMeasurements() {
   const failedUploadsRef = useRef(failedUploads);
   failedUploadsRef.current = failedUploads;
 
-  const uploadAsync = useAsyncCallback(async () => {
-    // 3 keeps a single phone's burst well below AWS Cognito Identity Pool
-    // throttling when multiple field devices come online at the same time.
-    const CONCURRENCY = 3;
-    const items = [...failedUploadsRef.current];
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      // 3 keeps a single phone's burst well below AWS Cognito Identity Pool
+      // throttling when multiple field devices come online at the same time.
+      const CONCURRENCY = 3;
+      const items = [...failedUploadsRef.current];
 
-    const transitioned = new Set(await markAsUploading(items.map(({ key }) => key)));
-    const itemsToUpload = items.filter(({ key }) => transitioned.has(key));
-    setUploadProgress({ done: 0, total: itemsToUpload.length });
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      const transitioned = new Set(await markAsUploading(items.map(({ key }) => key)));
+      const itemsToUpload = items.filter(({ key }) => transitioned.has(key));
+      setUploadProgress({ done: 0, total: itemsToUpload.length });
+      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
 
-    const taskFns = itemsToUpload.map(({ key, data }) => async () => {
-      try {
+      const taskFns = itemsToUpload.map(({ key, data }) => async () => {
         try {
-          await sendMqttEvent(data.topic, data.measurementResult);
-        } catch (error) {
-          console.warn(`Failed to upload item with key ${key}:`, error);
-          await markAsFailed(key);
-          throw error;
-        }
-
-        // Publish succeeded — local-state failure must not flip the row
-        // back to failed.
-        try {
-          await markAsSuccessful(key);
-        } catch (localError) {
-          console.warn(
-            `Local status update failed after successful publish for ${key}:`,
-            localError,
-          );
-        }
-      } finally {
-        setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
-      }
-    });
-
-    let next = 0;
-    const settled: PromiseSettledResult<void>[] = [];
-    await Promise.all(
-      Array.from({ length: Math.min(CONCURRENCY, taskFns.length) }, async () => {
-        while (next < taskFns.length) {
-          const fn = taskFns[next++];
           try {
-            await fn();
-            settled.push({ status: "fulfilled", value: undefined });
-          } catch (reason) {
-            settled.push({ status: "rejected", reason });
+            await sendMqttEvent(data.topic, data.measurementResult);
+          } catch (error) {
+            console.warn(`Failed to upload item with key ${key}:`, error);
+            await markAsFailed(key);
+            throw error;
           }
+
+          // Publish succeeded — local-state failure must not flip the row
+          // back to failed.
+          try {
+            await markAsSuccessful(key);
+          } catch (localError) {
+            console.warn(
+              `Local status update failed after successful publish for ${key}:`,
+              localError,
+            );
+          }
+        } finally {
+          setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
         }
-      }),
-    );
+      });
 
-    setUploadProgress(null);
-    await pruneExpiredMeasurements();
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      let next = 0;
+      const settled: PromiseSettledResult<void>[] = [];
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, taskFns.length) }, async () => {
+          while (next < taskFns.length) {
+            const fn = taskFns[next++];
+            try {
+              await fn();
+              settled.push({ status: "fulfilled", value: undefined });
+            } catch (reason) {
+              settled.push({ status: "rejected", reason });
+            }
+          }
+        }),
+      );
 
-    const rejected = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected");
-    if (rejected.length > 0) {
-      throw rejected[rejected.length - 1].reason;
-    }
+      setUploadProgress(null);
+      await pruneExpiredMeasurements();
+      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+
+      const rejected = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (rejected.length > 0) {
+        throw rejected[rejected.length - 1].reason;
+      }
+    },
   });
 
   const uploadOne = async (key: string) => {
@@ -186,8 +187,8 @@ export function useMeasurements() {
   return {
     failedUploads,
     uploadProgress,
-    isUploading: uploadAsync.loading,
-    uploadAll: uploadAsync.execute,
+    isUploading: uploadMutation.isPending,
+    uploadAll: () => uploadMutation.mutateAsync(),
     uploadOne,
     saveMeasurement,
     markUploaded,

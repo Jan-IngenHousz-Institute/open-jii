@@ -1,5 +1,5 @@
+import { useMutation } from "@tanstack/react-query";
 import { useNetworkState } from "expo-network";
-import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
 import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
@@ -96,8 +96,8 @@ export function useMeasurementUpload() {
   const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
   const networkState = useNetworkState();
 
-  const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
-    async ({
+  const mutation = useMutation({
+    mutationFn: async ({
       rawMeasurement,
       timestamp,
       timezone,
@@ -193,7 +193,7 @@ export function useMeasurementUpload() {
         toast.info("Uploaded — local status will refresh on next sync");
       }
     },
-  );
+  });
 
-  return { isUploading, uploadMeasurement };
+  return { isUploading: mutation.isPending, uploadMeasurement: mutation.mutateAsync };
 }

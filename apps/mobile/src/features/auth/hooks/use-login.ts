@@ -1,70 +1,40 @@
-import { useAsyncCallback } from "react-async-hook";
-import { useAuthClient } from "~/features/auth/services/auth";
+import { useMutation } from "@tanstack/react-query";
+import {
+  sendEmailLoginOtp,
+  signInWithGitHub,
+  signInWithOrcid,
+  verifyEmailLoginOtp,
+} from "~/features/auth/api/login.api";
 
 export function useLoginFlow() {
-  const authClient = useAuthClient();
-  const { execute: startGitHubLogin, loading: githubLoading } = useAsyncCallback(async () => {
-    try {
-      await authClient.signIn.social({
-        provider: "github",
-        callbackURL: "/",
-      });
-    } catch (error) {
-      console.error("GitHub login error:", error);
-      throw error;
-    }
+  const github = useMutation({
+    mutationFn: signInWithGitHub,
+    onError: (error) => console.error("GitHub login error:", error),
   });
 
-  const { execute: startOrcidLogin, loading: orcidLoading } = useAsyncCallback(async () => {
-    try {
-      await authClient.signIn.oauth2({
-        providerId: "orcid",
-        callbackURL: "openjii://(tabs)/", // Use absolute URL with proper scheme
-      });
-    } catch (error) {
-      console.error("ORCID login error:", error);
-      throw error;
-    }
+  const orcid = useMutation({
+    mutationFn: signInWithOrcid,
+    onError: (error) => console.error("ORCID login error:", error),
   });
 
-  const { execute: sendEmailOTP, loading: emailLoading } = useAsyncCallback(
-    async (email: string) => {
-      try {
-        const result = await authClient.emailOtp.sendVerificationOtp({
-          email,
-          type: "sign-in",
-        });
-        return result;
-      } catch (error) {
-        console.error("Email OTP send error:", error);
-        throw error;
-      }
-    },
-  );
+  const sendOtp = useMutation({
+    mutationFn: sendEmailLoginOtp,
+    onError: (error) => console.error("Email OTP send error:", error),
+  });
 
-  const { execute: verifyEmailOTP, loading: verifyLoading } = useAsyncCallback(
-    async (email: string, code: string) => {
-      try {
-        const result = await authClient.signIn.emailOtp({
-          email,
-          otp: code,
-        });
-        return result;
-      } catch (error) {
-        console.error("Email OTP verify error:", error);
-        throw error;
-      }
-    },
-  );
+  const verifyOtp = useMutation({
+    mutationFn: verifyEmailLoginOtp,
+    onError: (error) => console.error("Email OTP verify error:", error),
+  });
 
   return {
-    startGitHubLogin,
-    startOrcidLogin,
-    sendEmailOTP,
-    verifyEmailOTP,
-    githubLoading,
-    orcidLoading,
-    emailLoading,
-    verifyLoading,
+    startGitHubLogin: () => github.mutateAsync(),
+    startOrcidLogin: () => orcid.mutateAsync(),
+    sendEmailOTP: (email: string) => sendOtp.mutateAsync(email),
+    verifyEmailOTP: (email: string, code: string) => verifyOtp.mutateAsync({ email, code }),
+    githubLoading: github.isPending,
+    orcidLoading: orcid.isPending,
+    emailLoading: sendOtp.isPending,
+    verifyLoading: verifyOtp.isPending,
   };
 }
