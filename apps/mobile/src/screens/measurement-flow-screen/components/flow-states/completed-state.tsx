@@ -59,12 +59,12 @@ export function CompletedState() {
   const handleDelete = (id: string, status: MeasurementStatus, experimentName: string) => {
     const isSynced = status === "successful";
     const message = isSynced
-      ? `Are you sure you want to delete "${experimentName}" from local storage?`
-      : `Are you sure you want to remove "${experimentName}"? This will delete it from local storage.`;
+      ? `"${experimentName}" is already uploaded to the cloud. Remove it from this phone? The cloud copy stays intact.`
+      : `"${experimentName}" has not been uploaded yet. Deleting it now means the measurement will be lost permanently.`;
 
-    showAlert(isSynced ? "Delete Measurement" : "Remove Measurement", message, [
+    showAlert(isSynced ? "Remove from phone" : "Delete unsynced measurement", message, [
       {
-        text: isSynced ? "Delete" : "Remove",
+        text: isSynced ? "Remove" : "Delete",
         variant: "danger",
         onPress: () => {
           void (() => {
