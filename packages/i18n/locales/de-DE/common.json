@@ -97,6 +97,7 @@
     "viewDetails": "Details anzeigen",
     "experimentCreated": "Experiment erfolgreich erstellt",
     "experimentUpdated": "Experiment erfolgreich aktualisiert",
+    "experimentUpdateFailed": "Aktualisierung des Experiments fehlgeschlagen",
     "experimentDeleted": "Experiment erfolgreich gelöscht",
     "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Experimente.",
     "archiveDescription": "Diese Seite zeigt eine Liste der archivierten Experimente.",

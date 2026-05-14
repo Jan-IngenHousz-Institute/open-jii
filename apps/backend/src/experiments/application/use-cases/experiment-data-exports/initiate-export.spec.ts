@@ -167,4 +167,76 @@ describe("InitiateExportUseCase", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toBe("Failed to verify experiment access");
   });
+
+  describe("anonymizeContributors override", () => {
+    it("forwards the experiment's stored setting when no override is supplied", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Anonymise_Default",
+        userId: testUserId,
+      });
+      // Flip the experiment's stored flag on so the default-path is testable.
+      await testApp.module
+        .get(ExperimentRepository)
+        .update(experiment.id, { anonymizeContributors: true });
+
+      vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
+
+      const result = await useCase.execute(experiment.id, testUserId, {
+        tableName: "raw_data",
+        format: "csv",
+      });
+
+      expect(result.isSuccess()).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(exportsRepository.initiateExport).toHaveBeenCalledWith(
+        expect.objectContaining({ anonymizeContributors: true }),
+      );
+    });
+
+    it("honours an explicit override that diverges from the experiment default", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Anonymise_Override",
+        userId: testUserId,
+      });
+      // Experiment is anonymise-OFF by default; the override flips it ON
+      // for this export only.
+      vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
+
+      const result = await useCase.execute(experiment.id, testUserId, {
+        tableName: "raw_data",
+        format: "csv",
+        anonymizeContributors: true,
+      });
+
+      expect(result.isSuccess()).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(exportsRepository.initiateExport).toHaveBeenCalledWith(
+        expect.objectContaining({ anonymizeContributors: true }),
+      );
+    });
+
+    it("respects an explicit `false` override even when the experiment is anonymised", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Anonymise_OptOut",
+        userId: testUserId,
+      });
+      await testApp.module
+        .get(ExperimentRepository)
+        .update(experiment.id, { anonymizeContributors: true });
+
+      vi.spyOn(exportsRepository, "initiateExport").mockResolvedValue(success(undefined));
+
+      const result = await useCase.execute(experiment.id, testUserId, {
+        tableName: "raw_data",
+        format: "csv",
+        anonymizeContributors: false,
+      });
+
+      expect(result.isSuccess()).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(exportsRepository.initiateExport).toHaveBeenCalledWith(
+        expect.objectContaining({ anonymizeContributors: false }),
+      );
+    });
+  });
 });

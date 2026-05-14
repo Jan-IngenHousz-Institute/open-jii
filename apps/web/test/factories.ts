@@ -53,6 +53,7 @@ export function createExperiment(overrides: Partial<Experiment> = {}): Experimen
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-15T00:00:00.000Z",
     embargoUntil: "2025-12-31T23:59:59.999Z",
+    anonymizeContributors: false,
     workbookId: null,
     workbookVersionId: null,
     ownerFirstName: "John",

@@ -140,6 +140,7 @@ describe("Experiment Schema", () => {
       status: "active",
       visibility: "private",
       embargoUntil: isoTime,
+      anonymizeContributors: false,
       workbookId: null,
       workbookVersionId: null,
       createdBy: uuidB,
@@ -216,6 +217,7 @@ describe("Experiment Schema", () => {
         status: "active",
         visibility: "public",
         embargoUntil: isoTime,
+        anonymizeContributors: false,
         workbookId: null,
         workbookVersionId: null,
         createdBy: uuidB,
@@ -1535,6 +1537,18 @@ describe("Experiment Schema", () => {
           zDistinctValuesResponse.safeParse({ values: [true], truncated: false }).success,
         ).toBe(false);
       });
+    });
+  });
+
+  describe("anonymizeContributors on update/export bodies", () => {
+    it("zUpdateExperimentBody accepts the new flag", () => {
+      const body = { anonymizeContributors: true };
+      expect(zUpdateExperimentBody.parse(body)).toEqual(body);
+    });
+
+    it("zInitiateExportBody accepts the per-export override", () => {
+      const body = { tableName: "t", format: "csv" as const, anonymizeContributors: true };
+      expect(zInitiateExportBody.parse(body)).toEqual(body);
     });
   });
 });

@@ -102,6 +102,7 @@
     "viewDetails": "View Details",
     "experimentCreated": "Experiment created successfully",
     "experimentUpdated": "Experiment updated successfully",
+    "experimentUpdateFailed": "Failed to update experiment",
     "experimentDeleted": "Experiment deleted successfully",
     "listDescription": "This page will show a list of existing experiments.",
     "archiveDescription": "This page will show a list of archived experiments.",
@@ -360,7 +361,7 @@
     "changeToPrivateDescription": "Making this experiment private will restrict access to only members."
   },
   "experimentAnonymize": {
-    "title": "Anonymise contributors",
+    "title": "Anonymize contributors",
     "description": "Replaces participant names and avatars with stable pseudonyms in tables and charts."
   },
   "dashboard": {

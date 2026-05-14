@@ -200,6 +200,7 @@ export function ExperimentDetailsCard({
                   experimentId={experimentId}
                   initialVisibility={experiment.visibility}
                   embargoUntil={experiment.embargoUntil}
+                  initialAnonymize={experiment.anonymizeContributors}
                   isArchived={isArchived}
                 />
               ) : null}

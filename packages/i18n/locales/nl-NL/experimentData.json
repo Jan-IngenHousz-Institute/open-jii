@@ -54,7 +54,9 @@
       "creationSuccess": "Export succesvol aangemaakt!",
       "creationSuccessDescription": "Uw export is in de wachtrij geplaatst en is binnenkort beschikbaar om te downloaden.",
       "creationError": "Export aanmaken mislukt",
-      "backToList": "Terug naar exports"
+      "backToList": "Terug naar exports",
+      "anonymizeContributors": "Bijdragers anonimiseren in het geëxporteerde bestand",
+      "overridingDefault": "overschrijft experimentstandaard"
     }
   }
 }

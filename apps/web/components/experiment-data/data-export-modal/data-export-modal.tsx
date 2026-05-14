@@ -2,10 +2,12 @@
 
 import { Download } from "lucide-react";
 import * as React from "react";
+import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 import { useInitiateExport } from "~/hooks/experiment/useInitiateExport/useInitiateExport";
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n/client";
+import { Checkbox } from "@repo/ui/components/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
+import { Label } from "@repo/ui/components/label";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExportListStep } from "./steps/export-list-step";
@@ -37,11 +40,17 @@ export function DataExportModal({
   const { t } = useTranslation("experimentData");
   const [creationStatus, setCreationStatus] = React.useState<CreationStatus>("idle");
 
-  // Reset state when modal closes
+  // Toggle inherits the experiment's stored setting; user can override per-export.
+  const { data: experimentData } = useExperiment(experimentId);
+  const experimentAnonymize = experimentData?.body.anonymizeContributors;
+  const [anonymizeOverride, setAnonymizeOverride] = React.useState<boolean | undefined>();
+  const effectiveAnonymize = anonymizeOverride ?? experimentAnonymize;
+
   React.useEffect(() => {
     if (!open) {
       const timer = setTimeout(() => {
         setCreationStatus("idle");
+        setAnonymizeOverride(undefined);
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -67,6 +76,10 @@ export function DataExportModal({
         body: {
           tableName,
           format: format as "csv" | "ndjson" | "json-array" | "parquet",
+          // Omit when not overridden so backend falls back to the stored setting.
+          ...(anonymizeOverride !== undefined && {
+            anonymizeContributors: anonymizeOverride,
+          }),
         },
       },
       {
@@ -98,6 +111,28 @@ export function DataExportModal({
             {t("experimentData.exportModal.description", { tableName: displayName ?? tableName })}
           </DialogDescription>
         </DialogHeader>
+
+        <div className="bg-muted/30 -mb-2 flex items-center gap-2 rounded-md border p-3">
+          <Checkbox
+            id="export-anonymize-contributors"
+            checked={Boolean(effectiveAnonymize)}
+            disabled={experimentAnonymize === undefined}
+            onCheckedChange={(checked) => setAnonymizeOverride(checked === true)}
+          />
+          <Label
+            htmlFor="export-anonymize-contributors"
+            className="cursor-pointer text-xs font-medium"
+          >
+            {t("experimentData.exportModal.anonymizeContributors")}
+            {anonymizeOverride !== undefined &&
+              experimentAnonymize !== undefined &&
+              anonymizeOverride !== experimentAnonymize && (
+                <span className="text-muted-foreground ml-1.5 font-normal">
+                  ({t("experimentData.exportModal.overridingDefault")})
+                </span>
+              )}
+          </Label>
+        </div>
 
         <ExportListStep
           experimentId={experimentId}

@@ -16,6 +16,7 @@ import { ProtocolRepository } from "../protocols/core/repositories/protocol.repo
 import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
+import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
@@ -166,6 +167,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
     // Services
     EmbargoProcessorService,
+    ContributorAnonymizerService,
 
     // General experiment use cases
     CreateExperimentUseCase,
