@@ -8,6 +8,9 @@ vi.mock("react-native", () => ({ View: "View", Text: "Text" }));
 vi.mock("lucide-react-native", () => ({ Repeat2: "Repeat2" }));
 vi.mock("react", () => ({ default: { createElement: vi.fn() } }));
 vi.mock("~/shared/ui/hooks/use-theme", () => ({ useTheme: vi.fn() }));
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 
 const mockFlowStore = { flowNodes: [] as FlowNode[] };
 const mockFlowAnswersState = {

@@ -1,0 +1,27 @@
+{
+  "screen": {
+    "dropdownPlaceholder": "Kies een experiment",
+    "emptySelection": "Selecteer een experiment om gegevens te bekijken"
+  },
+  "tables": {
+    "loading": "Experimentgegevens laden...",
+    "empty": "Geen gegevens beschikbaar voor dit experiment",
+    "heading": "Experimentgegevens ({{count}} tabellen)"
+  },
+  "dataTable": {
+    "arrayBadge": "[Reeks]",
+    "objectBadge": "[Object]"
+  },
+  "tableDetail": {
+    "summary": "{{rowCount}} rijen, {{columnCount}} kolommen",
+    "row": "Rij {{index}}",
+    "emptyArray": "Lege reeks",
+    "arraySummary": "[{{length}} {{type}} items]",
+    "objectSummary": "{{{count}} sleutels}",
+    "itemTypeMixed": "gemengde",
+    "itemTypeString": "tekst",
+    "itemTypeNumber": "numerieke",
+    "itemTypeBoolean": "boolean",
+    "itemTypeObject": "object"
+  }
+}

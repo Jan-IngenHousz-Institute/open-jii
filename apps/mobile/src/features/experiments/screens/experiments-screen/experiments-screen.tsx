@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { useExperimentMeasurements } from "~/features/experiments/hooks/use-experiment-measurements";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { useTranslation } from "~/shared/i18n";
 import { Dropdown } from "~/shared/ui/Dropdown";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { parseExperimentData } from "~/shared/utils/parse-experiment-data";
@@ -11,6 +12,7 @@ import { parseExperimentData } from "~/shared/utils/parse-experiment-data";
 import { ExperimentTables } from "./components";
 
 export function ExperimentsScreen() {
+  const { t } = useTranslation(["common", "experiments"]);
   const themeColors = useThemeColors();
   const rotateValue = React.useRef(new Animated.Value(0)).current;
 
@@ -49,7 +51,7 @@ export function ExperimentsScreen() {
             options={experiments}
             selectedValue={selectedExperimentId ?? undefined}
             onSelect={(experimentId) => setSelectedExperimentId(experimentId)}
-            placeholder="Choose an experiment"
+            placeholder={t("experiments:screen.dropdownPlaceholder")}
           />
         </View>
 
@@ -84,7 +86,7 @@ export function ExperimentsScreen() {
       ) : (
         <View className="flex-1 items-center justify-center">
           <Text className="text-inactive text-center text-base">
-            Select an experiment to view data
+            {t("experiments:screen.emptySelection")}
           </Text>
         </View>
       )}

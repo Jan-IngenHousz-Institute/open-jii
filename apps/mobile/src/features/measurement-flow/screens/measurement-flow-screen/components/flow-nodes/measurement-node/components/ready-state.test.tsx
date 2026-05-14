@@ -7,6 +7,21 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 
 import { ReadyState } from "./ready-state";
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        "measurementFlow:measurementNode.readyState.noQuestions":
+          "This flow has no questions, start measuring directly!",
+        "measurementFlow:measurementNode.readyState.overviewHeading": "Overview of your answers",
+        "measurementFlow:measurementNode.readyState.defaultQuestionLabel": "Question",
+        "measurementFlow:measurementNode.readyState.notSet": "Not set",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 const makeQuestion = (id: string, overrides: Partial<FlowNode> = {}): FlowNode =>
   ({
     id,

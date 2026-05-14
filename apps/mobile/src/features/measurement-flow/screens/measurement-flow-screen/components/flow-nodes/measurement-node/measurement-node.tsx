@@ -8,6 +8,7 @@ import { useScanner } from "~/features/connection/hooks/use-scan-manager";
 import { useConnectedDevice } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
 import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { playSound } from "~/shared/utils/play-sound";
@@ -26,6 +27,7 @@ interface MeasurementNodeProps {
 
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const { protocol } = useProtocol(content.protocolId);
   const {
     executeScan,
@@ -68,11 +70,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
   const handleStartScan = async () => {
     if (!device) {
-      toast.error("Not connected to sensor");
+      toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
       return;
     }
     if (!content.protocolId) {
-      toast.error("No protocol selected");
+      toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
       return;
     }
 
@@ -89,7 +91,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       nextStep();
     } catch (error) {
       console.log("scan error", error);
-      toast.error("Scan error");
+      toast.error(t("measurementFlow:measurementNode.toast.scanError"));
     }
   };
 
@@ -106,13 +108,13 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           </View>
           <View className="flex-row gap-4 px-4 py-3">
             <Button
-              title="Retry measurement"
+              title={t("measurementFlow:measurementNode.retryMeasurement")}
               onPress={handleStartScan}
               variant="tertiary"
               style={{ flex: 1, height: 44, borderColor: "transparent" }}
             />
             <Button
-              title="Connect to device"
+              title={t("measurementFlow:measurementNode.connectToDevice")}
               onPress={() => router.push("/(tabs)/")}
               style={{ height: 44, flex: 1 }}
             />
@@ -131,13 +133,12 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
             <View className="bg-muted flex-row items-center gap-2 rounded-lg p-2">
               <Info size={16} color={colors.brand} />
               <Text className={clsx("flex-1 text-sm leading-relaxed", classes.textMuted)}>
-                Your (gps)location and full name will be stored amongst other measurements data.
-                Note that these are publicly available.
+                {t("measurementFlow:measurementNode.privacyNote")}
               </Text>
             </View>
 
             <Button
-              title="Cancel Measurement"
+              title={t("measurementFlow:measurementNode.cancelMeasurement")}
               onPress={handleCancelMeasurement}
               style={{ height: 44 }}
             />
@@ -150,7 +151,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       <View className="flex-1">
         <ReadyState onCardPress={handleCardPress} />
         <View className="px-4 py-3">
-          <Button title="Start measurement" onPress={handleStartScan} style={{ height: 44 }} />
+          <Button
+            title={t("measurementFlow:measurementNode.startMeasurement")}
+            onPress={handleStartScan}
+            style={{ height: 44 }}
+          />
         </View>
       </View>
     );

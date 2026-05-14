@@ -5,10 +5,12 @@ import { AppState } from "react-native";
 import { toast } from "sonner-native";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { resetUploadingMeasurements } from "~/shared/db/measurements-storage";
+import { useTranslation } from "~/shared/i18n";
 
 export function useAutoUpload() {
   const { failedUploads, uploadAll, isUploading } = useMeasurements();
   const queryClient = useQueryClient();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
 
   const stateRef = useRef({ failedUploads, uploadAll, isUploading });
   stateRef.current = { failedUploads, uploadAll, isUploading };
@@ -34,16 +36,16 @@ export function useAutoUpload() {
     autoUploadInFlight.current = true;
     const count = failedUploads.length;
 
-    toast.info(`Uploading ${count} unsynced measurement${count !== 1 ? "s" : ""}…`);
+    toast.info(t("recentMeasurements:toasts.uploadingMeasurements", { count }));
     try {
       await uploadAll();
-      toast.success(`${count} measurement${count !== 1 ? "s" : ""} synced`);
+      toast.success(t("recentMeasurements:toasts.measurementsSynced", { count }));
     } catch {
-      toast.error("Upload failed. Please try again.");
+      toast.error(t("recentMeasurements:toasts.uploadFailed"));
     } finally {
       autoUploadInFlight.current = false;
     }
-  }, []);
+  }, [t]);
 
   // Trigger once when data first loads with unsynced measurements,
   // after stuck-row reset has flushed into the query cache.

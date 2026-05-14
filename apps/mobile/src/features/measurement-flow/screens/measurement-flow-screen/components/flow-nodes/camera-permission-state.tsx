@@ -4,6 +4,7 @@ import { useCameraPermissions } from "expo-camera";
 import { CameraOff, ShieldAlert } from "lucide-react-native";
 import React from "react";
 import { ActivityIndicator, Linking, Text, View } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -36,6 +37,7 @@ export function CameraPermissionState({
   requestPermission,
 }: CameraPermissionStateProps) {
   const { colors, classes } = useTheme();
+  const { t } = useTranslation("measurementFlow");
 
   if (!permission) {
     return (
@@ -59,19 +61,29 @@ export function CameraPermissionState({
 
       <View className="items-center gap-2">
         <Text className={clsx("text-xl font-bold", classes.text)}>
-          {permanentlyDenied ? "Permission disabled" : "Camera access required"}
+          {permanentlyDenied
+            ? t("measurementFlow:cameraPermission.deniedTitle")
+            : t("measurementFlow:cameraPermission.requiredTitle")}
         </Text>
         <Text className={clsx("text-center text-sm leading-5", classes.textMuted)}>
           {permanentlyDenied
-            ? "Camera access has been permanently denied. Open your device settings to enable it for openJII."
-            : "openJII needs access to your camera to scan QR codes."}
+            ? t("measurementFlow:cameraPermission.deniedMessage")
+            : t("measurementFlow:cameraPermission.requiredMessage")}
         </Text>
       </View>
 
       {!permanentlyDenied ? (
-        <Button onPress={requestPermission} title="Grant permission" variant="primary" />
+        <Button
+          onPress={requestPermission}
+          title={t("measurementFlow:cameraPermission.grant")}
+          variant="primary"
+        />
       ) : (
-        <Button onPress={() => Linking.openSettings()} title="Open settings" variant="outline" />
+        <Button
+          onPress={() => Linking.openSettings()}
+          title={t("measurementFlow:cameraPermission.openSettings")}
+          variant="outline"
+        />
       )}
     </View>
   );

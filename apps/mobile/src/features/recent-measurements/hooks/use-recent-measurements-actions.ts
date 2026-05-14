@@ -6,7 +6,10 @@ import type {
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { exportMeasurementsToFile } from "~/features/recent-measurements/services/export-measurements";
+import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
+
+type TFn = ReturnType<typeof useTranslation>["t"];
 
 interface ConfirmConfig {
   title: string;
@@ -17,7 +20,10 @@ interface ConfirmConfig {
   run: () => Promise<void>;
 }
 
-function confirmAndRun({ title, message, confirmText, variant, errorMessage, run }: ConfirmConfig) {
+function confirmAndRun(
+  t: TFn,
+  { title, message, confirmText, variant, errorMessage, run }: ConfirmConfig,
+) {
   showAlert(title, message, [
     {
       text: confirmText,
@@ -26,7 +32,7 @@ function confirmAndRun({ title, message, confirmText, variant, errorMessage, run
         void run().catch(() => toast.error(errorMessage));
       },
     },
-    { text: "Cancel", variant: "ghost" },
+    { text: t("common:cancel"), variant: "ghost" },
   ]);
 }
 
@@ -40,6 +46,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     clearSyncedMeasurements,
     updateMeasurementComment,
   } = useMeasurements();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
 
   // Counts come from SQL — independent of the active filter.
   const unsyncedCount = counts.pending + counts.failed;
@@ -47,12 +54,12 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
   const totalCount = counts.pending + counts.failed + counts.uploading + counts.successful;
 
   const confirmSync = (m: MeasurementItem) =>
-    confirmAndRun({
-      title: "Upload Measurement",
-      message: `Are you sure you want to upload "${m.experimentName}"?`,
-      confirmText: "Upload",
+    confirmAndRun(t, {
+      title: t("recentMeasurements:alerts.uploadMeasurementTitle"),
+      message: t("recentMeasurements:alerts.uploadMeasurementMessage", { name: m.experimentName }),
+      confirmText: t("recentMeasurements:alerts.uploadButton"),
       variant: "primary",
-      errorMessage: "Failed to upload measurement. Please try again.",
+      errorMessage: t("recentMeasurements:alerts.uploadMeasurementError"),
       run: async () => {
         try {
           await uploadOne(m.key);
@@ -64,14 +71,16 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
 
   const confirmDelete = (m: MeasurementItem) => {
     const isSynced = m.status === "successful";
-    confirmAndRun({
-      title: isSynced ? "Remove from phone" : "Delete unsynced measurement",
+    confirmAndRun(t, {
+      title: isSynced
+        ? t("recentMeasurements:alerts.removeMeasurementTitle")
+        : t("recentMeasurements:alerts.deleteMeasurementTitle"),
       message: isSynced
-        ? `"${m.experimentName}" is already uploaded to the cloud. Remove it from this phone? The cloud copy stays intact.`
-        : `"${m.experimentName}" has not been uploaded yet. Deleting it now means the measurement will be lost permanently.`,
-      confirmText: isSynced ? "Remove" : "Delete",
+        ? t("recentMeasurements:alerts.removeMeasurementMessage", { name: m.experimentName })
+        : t("recentMeasurements:alerts.deleteMeasurementMessage", { name: m.experimentName }),
+      confirmText: isSynced ? t("recentMeasurements:alerts.removeButton") : t("common:delete"),
       variant: "danger",
-      errorMessage: "Failed to delete measurement. Please try again.",
+      errorMessage: t("recentMeasurements:alerts.deleteMeasurementError"),
       run: async () => {
         await removeMeasurement(m.key);
         invalidate();
@@ -80,26 +89,26 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
   };
 
   const confirmSyncAll = () =>
-    confirmAndRun({
-      title: "Upload All Measurements",
-      message: `Are you sure you want to sync ${unsyncedCount} unsynced measurement${unsyncedCount !== 1 ? "s" : ""}?`,
-      confirmText: "Upload All",
+    confirmAndRun(t, {
+      title: t("recentMeasurements:alerts.uploadAllTitle"),
+      message: t("recentMeasurements:alerts.uploadAllMessage", { count: unsyncedCount }),
+      confirmText: t("recentMeasurements:alerts.uploadAllButton"),
       variant: "primary",
-      errorMessage: "Sync failed. Please try again.",
+      errorMessage: t("recentMeasurements:alerts.uploadAllError"),
       run: async () => {
         await uploadAll();
-        toast.success("All measurements synced successfully");
+        toast.success(t("recentMeasurements:alerts.uploadAllSuccess"));
         invalidate();
       },
     });
 
   const confirmDeleteAllSynced = () =>
-    confirmAndRun({
-      title: "Delete all synced measurements",
-      message: `Are you sure you want to delete all ${syncedCount} synced measurements from local storage?`,
-      confirmText: "Delete",
+    confirmAndRun(t, {
+      title: t("recentMeasurements:alerts.deleteAllSyncedTitle"),
+      message: t("recentMeasurements:alerts.deleteAllSyncedMessage", { count: syncedCount }),
+      confirmText: t("common:delete"),
       variant: "danger",
-      errorMessage: "Failed to delete synced measurements",
+      errorMessage: t("recentMeasurements:alerts.deleteAllSyncedError"),
       run: async () => {
         await clearSyncedMeasurements();
         invalidate();
@@ -108,7 +117,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
 
   const handleExport = () => {
     void exportMeasurementsToFile().catch(() => {
-      toast.error("Export failed. Please try again.");
+      toast.error(t("recentMeasurements:alerts.exportError"));
     });
   };
 

@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface NextButtonProps {
@@ -11,6 +12,7 @@ interface NextButtonProps {
 
 export function NextButton({ onPress, isDisabled = false }: NextButtonProps) {
   const { classes, colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
 
   // WORKAROUND: Key with timestamp to force remount on every render
   // This bypasses React Native's native style caching bug in Expo SDK 54
@@ -26,7 +28,9 @@ export function NextButton({ onPress, isDisabled = false }: NextButtonProps) {
         isDisabled && "opacity-50",
       )}
     >
-      <Text className={clsx("text-lg font-medium", classes.text)}>Next</Text>
+      <Text className={clsx("text-lg font-medium", classes.text)}>
+        {t("measurementFlow:navigation.next")}
+      </Text>
       <ChevronRight size={20} color={colors.onSurface} />
     </TouchableOpacity>
   );

@@ -3,6 +3,7 @@ import { clsx } from "clsx";
 import { DateTime } from "luxon";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import type { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 
@@ -31,12 +32,15 @@ export function AnalysisSummaryCard({
   onPress,
 }: AnalysisSummaryCardProps) {
   const { classes } = useTheme();
+  const { t } = useTranslation("measurementFlow");
 
   return (
     <TouchableOpacity activeOpacity={0.75} onPress={onPress}>
       <View className="bg-muted my-4 gap-1.5 rounded-xl p-4">
         <View className="flex-row items-center">
-          <Text className={clsx("font-semibold", classes.text)}>Experiment: </Text>
+          <Text className={clsx("font-semibold", classes.text)}>
+            {t("measurementFlow:analysis.summary.experiment")}
+          </Text>
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
@@ -47,7 +51,9 @@ export function AnalysisSummaryCard({
         </View>
         {protocolName && (
           <View className="flex-row items-center">
-            <Text className={clsx("font-semibold", classes.text)}>Protocol: </Text>
+            <Text className={clsx("font-semibold", classes.text)}>
+              {t("measurementFlow:analysis.summary.protocol")}
+            </Text>
             <Text
               numberOfLines={1}
               ellipsizeMode="tail"
@@ -58,7 +64,9 @@ export function AnalysisSummaryCard({
           </View>
         )}
         <View className="flex-row items-center">
-          <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
+          <Text className={clsx("font-semibold", classes.text)}>
+            {t("measurementFlow:analysis.summary.answers")}
+          </Text>
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
@@ -68,12 +76,14 @@ export function AnalysisSummaryCard({
             )}
           >
             {questions.length === 0
-              ? "No questions answered"
+              ? t("measurementFlow:analysis.summary.noQuestionsAnswered")
               : questions.map((q) => q.question_answer).join(" | ")}
           </Text>
         </View>
         <View className="flex-row items-center">
-          <Text className={clsx("font-semibold", classes.text)}>Date: </Text>
+          <Text className={clsx("font-semibold", classes.text)}>
+            {t("measurementFlow:analysis.summary.date")}
+          </Text>
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"

@@ -2,15 +2,10 @@ import { Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
 import type { MeasurementFilter } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { TabBar } from "~/shared/ui/TabBar";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-
-const TABS: { key: MeasurementFilter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "synced", label: "Synced" },
-  { key: "unsynced", label: "Unsynced" },
-];
 
 interface Props {
   filter: MeasurementFilter;
@@ -34,10 +29,17 @@ export function MeasurementsToolbar({
   onDeleteAllSynced,
 }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
+
+  const tabs: { key: MeasurementFilter; label: string }[] = [
+    { key: "all", label: t("recentMeasurements:filters.all") },
+    { key: "synced", label: t("recentMeasurements:filters.synced") },
+    { key: "unsynced", label: t("recentMeasurements:filters.unsynced") },
+  ];
 
   return (
     <View className="flex-row items-center justify-between p-4">
-      <TabBar tabs={TABS} activeTab={filter} onTabChange={onFilterChange} />
+      <TabBar tabs={tabs} activeTab={filter} onTabChange={onFilterChange} />
 
       <View className="flex-row gap-3">
         <Button
@@ -47,8 +49,8 @@ export function MeasurementsToolbar({
           icon={<Trash2 size={24} color={colors.brand} strokeWidth={1.4} />}
           style={{ borderColor: "transparent", padding: 9 }}
           accessibilityRole="button"
-          accessibilityLabel="Delete all synced measurements"
-          accessibilityHint="Removes measurements that have already been uploaded"
+          accessibilityLabel={t("recentMeasurements:toolbar.deleteAllSyncedAccessibilityLabel")}
+          accessibilityHint={t("recentMeasurements:toolbar.deleteAllSyncedAccessibilityHint")}
         />
         <View>
           <Button
@@ -59,8 +61,8 @@ export function MeasurementsToolbar({
             icon={<UploadCloud size={24} color={colors.brand} strokeWidth={1.4} />}
             style={{ borderColor: "transparent", padding: 9 }}
             accessibilityRole="button"
-            accessibilityLabel="Sync all measurements"
-            accessibilityHint="Uploads all unsynced measurements"
+            accessibilityLabel={t("recentMeasurements:toolbar.syncAllAccessibilityLabel")}
+            accessibilityHint={t("recentMeasurements:toolbar.syncAllAccessibilityHint")}
           />
           {uploadingCount > 0 && (
             <View

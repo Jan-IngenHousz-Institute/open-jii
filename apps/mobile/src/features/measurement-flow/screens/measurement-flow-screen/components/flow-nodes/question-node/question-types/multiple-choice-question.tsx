@@ -3,6 +3,7 @@ import { Check } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { calculateGridLayout } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/question-node/question-types/utils/grid-layout";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -24,6 +25,7 @@ export function MultipleChoiceQuestion({
   searchTerm = "",
 }: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const content = node.content;
 
   // If required, can't deselect by tapping again
@@ -52,7 +54,7 @@ export function MultipleChoiceQuestion({
     <View className="flex-1 gap-2">
       {content.required && !selectedValue && (
         <Text className="text-destructive text-center text-sm">
-          Selecting an option is required
+          {t("measurementFlow:questionTypes.multipleChoice.selectionRequired")}
         </Text>
       )}
       <View className="flex-row flex-wrap justify-center gap-2">
@@ -81,7 +83,7 @@ export function MultipleChoiceQuestion({
 
       {disabledOptions.length > 0 && (
         <Text className={clsx("mt-3 text-center text-xs", classes.textMuted)}>
-          Previously used options are disabled
+          {t("measurementFlow:questionTypes.multipleChoice.disabledHint")}
         </Text>
       )}
     </View>

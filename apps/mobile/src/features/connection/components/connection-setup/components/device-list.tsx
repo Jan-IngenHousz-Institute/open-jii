@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { Bluetooth, Radio, Usb, Trash2 } from "lucide-react-native";
 import React, { useMemo } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { Device } from "~/shared/types/device";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -22,6 +23,7 @@ export function DeviceList({
   onDelete,
   title,
 }: Props) {
+  const { t } = useTranslation(["common", "connection"]);
   const { colors, classes } = useTheme();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -30,12 +32,12 @@ export function DeviceList({
   return (
     <View className="mb-6">
       <Text className={clsx("mb-3 text-base font-bold", classes.text)}>
-        {loading ? "Scanning for devices..." : title}
+        {loading ? t("connection:deviceList.scanning") : title}
       </Text>
 
       {!loading && devices.length === 0 && (
         <Text className={clsx("py-4 text-center", classes.textMuted)}>
-          No devices found. Try scanning again.
+          {t("connection:deviceList.empty")}
         </Text>
       )}
 
@@ -60,11 +62,18 @@ export function DeviceList({
             >
               <View className="flex-1">
                 <Text className={clsx("text-base font-medium", classes.text)}>
-                  {item.name ?? "N/A"}
+                  {item.name ?? t("connection:deviceList.fallbackName")}
                 </Text>
                 {item.rssi && (
                   <Text className={clsx("mt-1 text-xs", classes.textMuted)}>
-                    Signal: {item.rssi > -70 ? "Strong" : item.rssi > -80 ? "Medium" : "Weak"}
+                    {t("connection:deviceList.signal", {
+                      strength:
+                        item.rssi > -70
+                          ? t("connection:deviceList.signalStrong")
+                          : item.rssi > -80
+                            ? t("connection:deviceList.signalMedium")
+                            : t("connection:deviceList.signalWeak"),
+                    })}
                   </Text>
                 )}
               </View>

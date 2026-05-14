@@ -7,10 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
 import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
 import {
-  FLAG_TYPE_LABELS,
   getCommentFromMeasurementResult,
   getFlagTypeFromMeasurementResult,
 } from "~/shared/utils/measurement-annotations";
@@ -27,6 +27,7 @@ export function MeasurementQuestionsModal({
   onClose,
 }: MeasurementQuestionsModalProps) {
   const { colors, classes } = useTheme();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
   const insets = useSafeAreaInsets();
   const { updateMeasurementComment } = useMeasurements();
   const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -162,7 +163,7 @@ export function MeasurementQuestionsModal({
                   classes.textMuted,
                 )}
               >
-                Annotations
+                {t("recentMeasurements:questionsModal.annotationsHeading")}
               </Text>
 
               {currentFlagType && (
@@ -175,7 +176,7 @@ export function MeasurementQuestionsModal({
                 >
                   <Flag size={14} color={colors.brand} />
                   <Text className={clsx("text-sm font-semibold", classes.text)}>
-                    {FLAG_TYPE_LABELS[currentFlagType]}
+                    {t(`recentMeasurements:flagType.${currentFlagType}`)}
                   </Text>
                 </View>
               )}
@@ -198,7 +199,7 @@ export function MeasurementQuestionsModal({
           {questions.length === 0 ? (
             <View className="items-center justify-center py-8">
               <Text className={clsx("text-center", classes.textSecondary)}>
-                No questions answered for this measurement
+                {t("recentMeasurements:questionsModal.noQuestionsAnswered")}
               </Text>
             </View>
           ) : (
@@ -210,7 +211,7 @@ export function MeasurementQuestionsModal({
                     classes.textMuted,
                   )}
                 >
-                  Questions & Answers
+                  {t("recentMeasurements:questionsModal.questionsHeading")}
                 </Text>
                 <View
                   className="rounded-full px-2 py-0.5"

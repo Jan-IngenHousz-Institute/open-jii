@@ -55,6 +55,25 @@ vi.mock("expo-network", () => ({
   useNetworkState: mockUseNetworkState,
 }));
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        "recentMeasurements:toasts.answersSaveFailed":
+          "Answers could not be saved on this device. Please export your data now to avoid losing it.",
+        "recentMeasurements:toasts.uploadNotAvailable":
+          "Upload not available, upload it later from Recent",
+        "recentMeasurements:toasts.answersUploaded": "Answers uploaded!",
+        "recentMeasurements:toasts.uploadedLocalStatusRefresh":
+          "Uploaded — local status will refresh on next sync",
+        "recentMeasurements:toasts.savedOffline":
+          "Saved offline — will upload when you're back online",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 const baseArgs = {
   timestamp: "2026-03-02T10:00:00.000Z",
   timezone: "Europe/Amsterdam",

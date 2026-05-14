@@ -3,6 +3,7 @@ import { CameraView } from "expo-camera";
 import { Info, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { CameraPermissionState, useCameraPermission } from "./camera-permission-state";
@@ -35,6 +36,7 @@ export function QRScannerModal({
   const [permission, requestPermission] = useCameraPermission();
   const [scanned, setScanned] = useState(false);
   const { colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const { height } = Dimensions.get("window");
   // Reset scan state whenever the modal becomes visible
   useEffect(() => {
@@ -107,7 +109,9 @@ export function QRScannerModal({
           style={{ top: height / 2 - 144 - 50 }} // center - half of frame - offset
         >
           <View className="rounded-full border border-white/20 bg-white/10 px-5 py-2.5">
-            <Text className="text-sm font-medium text-white">Align a QR code within the frame</Text>
+            <Text className="text-sm font-medium text-white">
+              {t("measurementFlow:qrScanner.alignPrompt")}
+            </Text>
           </View>
         </View>
 
@@ -119,7 +123,7 @@ export function QRScannerModal({
           >
             <Info size={18} color="rgba(255,255,255,0.9)" />
             <Text className="flex-1 text-xs leading-5 text-white">
-              The QR code must match exactly one of the available options.
+              {t("measurementFlow:qrScanner.matchNote")}
             </Text>
           </View>
         )}

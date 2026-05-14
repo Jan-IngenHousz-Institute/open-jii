@@ -11,12 +11,14 @@ import type {
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
@@ -77,7 +79,9 @@ export function RecentMeasurementsScreen() {
       {hasItems && (
         <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />
-          <Text className={clsx("text-sm font-normal", classes.textMuted)}>Swipe</Text>
+          <Text className={clsx("text-sm font-normal", classes.textMuted)}>
+            {t("recentMeasurements:list.swipeHint")}
+          </Text>
         </View>
       )}
 
@@ -92,21 +96,21 @@ export function RecentMeasurementsScreen() {
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center p-4">
             <Text className={clsx("text-center text-lg", classes.textSecondary)}>
-              No measurements found
+              {t("recentMeasurements:list.emptyTitle")}
             </Text>
             <Text className={clsx("mt-2 text-center", classes.textMuted)}>
               {filter === "all"
-                ? "Start measuring to see your data here"
+                ? t("recentMeasurements:list.emptyHintAll")
                 : filter === "synced"
-                  ? "No synced measurements yet"
-                  : "All measurements have been synced"}
+                  ? t("recentMeasurements:list.emptyHintSynced")
+                  : t("recentMeasurements:list.emptyHintUnsynced")}
             </Text>
           </View>
         }
         ListFooterComponent={
           <View className="px-4 pt-4">
             <Button
-              title="Export measurements"
+              title={t("recentMeasurements:list.exportButton")}
               variant="tertiary"
               onPress={handleExport}
               isDisabled={!hasAnyMeasurements}

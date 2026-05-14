@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { ChevronLeft } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface BackButtonProps {
@@ -10,6 +11,7 @@ interface BackButtonProps {
 
 export function BackButton({ onPress }: BackButtonProps) {
   const { classes, colors } = useTheme();
+  const { t } = useTranslation("common");
 
   // WORKAROUND: Key with timestamp to force remount on every render
   // This bypasses React Native's native style caching bug in Expo SDK 54
@@ -22,7 +24,7 @@ export function BackButton({ onPress }: BackButtonProps) {
       className={clsx("h-[44px] flex-row items-center justify-end gap-1 rounded-lg px-4")}
     >
       <ChevronLeft size={20} color={colors.onSurface} />
-      <Text className={clsx("text-lg font-medium", classes.text)}>Back</Text>
+      <Text className={clsx("text-lg font-medium", classes.text)}>{t("common:back")}</Text>
     </TouchableOpacity>
   );
 }

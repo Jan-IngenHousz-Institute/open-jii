@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { QuestionContent } from "../../../../types";
@@ -17,6 +18,7 @@ export function SingleChoiceQuestion({
   onSelect,
 }: SingleChoiceQuestionProps) {
   const { classes } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const handleOptionSelect = (value: string) => {
     onSelect(value);
   };
@@ -60,7 +62,9 @@ export function SingleChoiceQuestion({
       </View>
 
       {content.required && !selectedValue && (
-        <Text className="text-destructive mt-2 text-sm">Please select an option</Text>
+        <Text className="text-destructive mt-2 text-sm">
+          {t("measurementFlow:questionTypes.singleChoice.required")}
+        </Text>
       )}
     </View>
   );

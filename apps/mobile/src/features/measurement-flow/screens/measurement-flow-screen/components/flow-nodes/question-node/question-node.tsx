@@ -5,6 +5,7 @@ import { toast } from "sonner-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
+import { useTranslation } from "~/shared/i18n";
 import { Checkbox } from "~/shared/ui/Checkbox";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
@@ -26,6 +27,7 @@ interface QuestionNodeProps {
 export function QuestionNode({ node }: QuestionNodeProps) {
   const { iterationCount } = useMeasurementFlowStore();
   const themeColors = useThemeColors();
+  const { t } = useTranslation("measurementFlow");
   const {
     setAnswer,
     getAnswer,
@@ -58,20 +60,20 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           (opt) => opt.trim().toLowerCase() === data.trim().toLowerCase(),
         );
         if (!match) {
-          toast.error(`"${data}" does not exist.`);
+          toast.error(t("measurementFlow:questionNode.qrNotMatch", { data }));
           return;
         }
         handleAnswerChangeAndAdvance(match);
-        toast.success(`"${match}" selected successfully!`);
+        toast.success(t("measurementFlow:questionNode.qrSelected", { match }));
         break;
       }
       case "open_ended":
         handleAnswerChange(data);
-        toast.success("QR applied successfully!");
+        toast.success(t("measurementFlow:questionNode.qrApplied"));
         break;
       default:
         handleAnswerChange(data);
-        toast.success("QR applied successfully!");
+        toast.success(t("measurementFlow:questionNode.qrApplied"));
     }
   };
 
@@ -121,7 +123,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         return (
           <View className="p-4">
             <Text className="text-muted-foreground text-center">
-              Unsupported question kind: {content.kind}
+              {t("measurementFlow:questionNode.unsupportedKind", { kind: content.kind })}
             </Text>
           </View>
         );
@@ -144,7 +146,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           <>
             <Checkbox
               value={isRememberAnswerEnabled(node.id)}
-              text="Remember answer"
+              text={t("measurementFlow:questionNode.rememberAnswer")}
               textSize="sm"
               icon={<Bookmark size={16} color={colors.neutral.black} />}
               onChange={(enabled) => {
@@ -156,7 +158,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
             />
             <Checkbox
               value={isAutoincrementEnabled(node.id)}
-              text="Auto proceed"
+              text={t("measurementFlow:questionNode.autoProceed")}
               textSize="sm"
               icon={<Repeat2 size={16} color={colors.neutral.black} />}
               onChange={(enabled) => {
@@ -170,7 +172,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
         ) : (
           <Checkbox
             value={isRememberAnswerEnabled(node.id)}
-            text="Remember answer"
+            text={t("measurementFlow:questionNode.rememberAnswer")}
             textSize="sm"
             icon={<Bookmark size={16} color={colors.neutral.black} />}
             onChange={(enabled) => setRememberAnswer(node.id, enabled)}
@@ -184,7 +186,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
 
           <TextInput
             className="text-on-surface flex-1 text-base"
-            placeholder="Search options..."
+            placeholder={t("measurementFlow:questionNode.searchPlaceholder")}
             placeholderTextColor={themeColors.inactive}
             value={searchTerm}
             onChangeText={setSearchTerm}

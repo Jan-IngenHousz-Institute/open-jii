@@ -39,6 +39,24 @@ vi.mock("sonner-native", () => ({
   toast: { info: mockToastInfo, success: mockToastSuccess, error: mockToastError },
 }));
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, vars?: Record<string, unknown>) => {
+      const count = vars?.count as number | undefined;
+      const map: Record<string, string> = {
+        "recentMeasurements:toasts.uploadingMeasurements":
+          count === 1
+            ? `Uploading ${count} unsynced measurement…`
+            : `Uploading ${count} unsynced measurements…`,
+        "recentMeasurements:toasts.measurementsSynced":
+          count === 1 ? `${count} measurement synced` : `${count} measurements synced`,
+        "recentMeasurements:toasts.uploadFailed": "Upload failed. Please try again.",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 let capturedAppStateListener: ((state: string) => void) | null = null;
 const mockAppStateRemove = vi.fn();
 

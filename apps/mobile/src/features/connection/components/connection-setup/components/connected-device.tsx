@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { useScannerCommandExecutor } from "~/features/connection/hooks/use-scanner-command-executor";
+import { useTranslation } from "~/shared/i18n";
 import type { Device } from "~/shared/types/device";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
@@ -12,15 +13,18 @@ interface Props {
 
 export function ConnectedDevice(props: Props) {
   const { device, onDisconnect } = props;
+  const { t } = useTranslation(["common", "connection"]);
   const { executeCommand, isExecuting } = useScannerCommandExecutor();
 
   return (
     <Card className="mb-4">
       <View className="mb-2 flex-row items-center justify-between">
-        <Text className="text-foreground text-sm font-semibold">Connected Device</Text>
+        <Text className="text-foreground text-sm font-semibold">
+          {t("connection:connectedDevice.heading")}
+        </Text>
         <View className="bg-jii-primary/15 dark:bg-jii-primary-bright/15 rounded-full px-2 py-0.5">
           <Text className="text-jii-primary dark:text-jii-primary-bright text-xs font-semibold">
-            Connected
+            {t("connection:connectedDevice.statusConnected")}
           </Text>
         </View>
       </View>
@@ -30,10 +34,14 @@ export function ConnectedDevice(props: Props) {
       </Text>
       {!!onDisconnect && (
         <View className="mt-3 flex-row items-stretch gap-2">
-          <Button title="Disconnect" onPress={() => onDisconnect(device)} style={{ flex: 1 }} />
+          <Button
+            title={t("connection:connectedDevice.disconnectButton")}
+            onPress={() => onDisconnect(device)}
+            style={{ flex: 1 }}
+          />
           <Button
             disabled={isExecuting}
-            title="Turn off MultispeQ"
+            title={t("connection:connectedDevice.turnOffMultispeQ")}
             onPress={async () => {
               await executeCommand("sleep");
               onDisconnect(device);

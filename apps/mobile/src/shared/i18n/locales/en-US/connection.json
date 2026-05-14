@@ -1,0 +1,25 @@
+{
+  "setup": {
+    "title": "Device connection",
+    "scanButton": "Scan for Devices",
+    "errorDisconnect": "Could not disconnect",
+    "errorConnect": "Could not connect"
+  },
+  "connectedDevice": {
+    "heading": "Connected Device",
+    "statusConnected": "Connected",
+    "disconnectButton": "Disconnect",
+    "turnOffMultispeQ": "Turn off MultispeQ"
+  },
+  "deviceList": {
+    "scanning": "Scanning for devices...",
+    "nearbyTitle": "Nearby Devices",
+    "pairedTitle": "Paired Devices",
+    "empty": "No devices found. Try scanning again.",
+    "fallbackName": "N/A",
+    "signal": "Signal: {{strength}}",
+    "signalStrong": "Strong",
+    "signalMedium": "Medium",
+    "signalWeak": "Weak"
+  }
+}

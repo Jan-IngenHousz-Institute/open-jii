@@ -14,5 +14,9 @@
   "loading": "Laden…",
   "offline": "Je bent offline. Maak verbinding met internet om in te loggen.",
   "errorGeneric": "Er ging iets mis",
-  "errorTitle": "Fout"
+  "errorTitle": "Fout",
+  "notFoundTitle": "Dit scherm bestaat niet.",
+  "notFoundCta": "Ga naar het startscherm!",
+  "modalTitle": "Modaal",
+  "modalExample": "Dit is een voorbeeldmodaal. Je kunt het bewerken in app/modal.tsx."
 }

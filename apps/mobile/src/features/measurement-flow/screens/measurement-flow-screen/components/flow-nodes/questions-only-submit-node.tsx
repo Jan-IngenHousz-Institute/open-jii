@@ -9,6 +9,7 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
 import { FlagTypeModal } from "~/features/recent-measurements/components/flag-type-modal";
 import { useQuestionsUpload } from "~/features/recent-measurements/hooks/use-questions-upload";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
@@ -29,6 +30,7 @@ export function QuestionsOnlySubmitNode() {
     navigateToQuestionFromOverview,
   } = useMeasurementFlowStore();
   const { classes, colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const { experiments } = useExperiments();
   const { session } = useSession();
   const { getCycleAnswers } = useFlowAnswersStore();
@@ -43,7 +45,9 @@ export function QuestionsOnlySubmitNode() {
 
   const displayTimestamp = useRef<string>(getSyncedLocalISO()).current;
 
-  const experimentName = experiments.find((e) => e.value === experimentId)?.label ?? "Experiment";
+  const experimentName =
+    experiments.find((e) => e.value === experimentId)?.label ??
+    t("measurementFlow:questionsSubmit.defaultExperimentName");
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
@@ -109,7 +113,9 @@ export function QuestionsOnlySubmitNode() {
             color={trimmedComment ? colors.onSurface : colors.inactive}
           />
           <Text className={clsx("text-sm", trimmedComment ? classes.text : classes.textMuted)}>
-            {trimmedComment ? "Edit comment" : "Add comment"}
+            {trimmedComment
+              ? t("measurementFlow:questionsSubmit.editComment")
+              : t("measurementFlow:questionsSubmit.addComment")}
           </Text>
         </TouchableOpacity>
 
@@ -120,21 +126,25 @@ export function QuestionsOnlySubmitNode() {
         >
           <Flag size={18} color={flagType ? colors.semantic.error : colors.inactive} />
           <Text className={clsx("text-sm", flagType ? classes.text : classes.textMuted)}>
-            {flagType ? FLAG_TYPE_LABELS[flagType] : "Flag"}
+            {flagType ? FLAG_TYPE_LABELS[flagType] : t("measurementFlow:questionsSubmit.flag")}
           </Text>
         </TouchableOpacity>
       </View>
 
       <View className="flex-row gap-4 px-4 py-3">
         <Button
-          title="Finish"
+          title={t("measurementFlow:questionsSubmit.finish")}
           onPress={() => handleFinish().catch(console.error)}
           disabled={isUploading || !canUpload}
           variant="tertiary"
           style={{ flex: 1, height: 44, borderColor: "transparent" }}
         />
         <Button
-          title={isUploading ? "Uploading..." : "Submit & Continue"}
+          title={
+            isUploading
+              ? t("measurementFlow:questionsSubmit.uploading")
+              : t("measurementFlow:questionsSubmit.submitContinue")
+          }
           onPress={() => handleSubmitAndContinue().catch(console.error)}
           disabled={isUploading || !canUpload}
           style={{ flex: 1, height: 44 }}

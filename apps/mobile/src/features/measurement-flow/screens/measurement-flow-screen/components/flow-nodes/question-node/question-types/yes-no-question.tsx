@@ -1,6 +1,7 @@
 import { Check, X } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 import { QuestionContent } from "../../../../types";
@@ -12,6 +13,7 @@ export interface YesNoQuestionProps {
 }
 
 export function YesNoQuestion({ content, selectedValue, onSelect }: YesNoQuestionProps) {
+  const { t } = useTranslation("measurementFlow");
   // If required, can't deselect by tapping again
   // if not required, tapping again deselects (sets value to empty string)
   // Both cases it auto advances on select to the next step
@@ -28,7 +30,7 @@ export function YesNoQuestion({ content, selectedValue, onSelect }: YesNoQuestio
     <View className="flex-1 items-start justify-start">
       <View className="flex-row gap-4">
         <Button
-          title="Yes"
+          title={t("measurementFlow:questionTypes.yesNo.yes")}
           variant={selectedValue === "Yes" ? "tertiary" : "light"}
           style={{ flex: 1, minHeight: 70 }}
           textStyle={{ fontSize: 20 }}
@@ -42,7 +44,7 @@ export function YesNoQuestion({ content, selectedValue, onSelect }: YesNoQuestio
         />
 
         <Button
-          title="No"
+          title={t("measurementFlow:questionTypes.yesNo.no")}
           variant={selectedValue === "No" ? "danger" : "light"}
           style={{ flex: 1, minHeight: 70 }}
           textStyle={{ fontSize: 20 }}
@@ -55,7 +57,9 @@ export function YesNoQuestion({ content, selectedValue, onSelect }: YesNoQuestio
       </View>
 
       {content.required && !selectedValue && (
-        <Text className="text-destructive mt-2 text-center text-sm">Please select an option</Text>
+        <Text className="text-destructive mt-2 text-center text-sm">
+          {t("measurementFlow:questionTypes.yesNo.required")}
+        </Text>
       )}
     </View>
   );

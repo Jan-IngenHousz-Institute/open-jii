@@ -11,6 +11,7 @@ import {
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, Pressable, ActivityIndicator } from "react-native";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/utils/format-time-ago";
@@ -52,6 +53,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   hasComment = false,
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
   const isSynced = status === "successful";
   const isSyncing = status === "uploading";
   const isPending = status === "pending";
@@ -72,7 +74,7 @@ export const MeasurementItem = memo(function MeasurementItem({
         )}
         numberOfLines={1}
       >
-        {hasAnswers ? answersText : "No questions answered"}
+        {hasAnswers ? answersText : t("recentMeasurements:list.noQuestionsAnswered")}
       </Text>
 
       {/* Bottom row: experiment name on left, timestamp + icon on right */}

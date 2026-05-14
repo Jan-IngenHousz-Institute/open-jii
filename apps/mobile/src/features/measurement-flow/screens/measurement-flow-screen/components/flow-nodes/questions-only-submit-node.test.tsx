@@ -41,6 +41,27 @@ vi.mock("~/shared/utils/time-sync", () => ({
   getSyncedLocalISO: () => getSyncedLocalISO(),
   getTimeSyncState: () => getTimeSyncState(),
 }));
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        "measurementFlow:questionsSubmit.editComment": "Edit comment",
+        "measurementFlow:questionsSubmit.addComment": "Add comment",
+        "measurementFlow:questionsSubmit.flag": "Flag",
+        "measurementFlow:questionsSubmit.finish": "Finish",
+        "measurementFlow:questionsSubmit.uploading": "Uploading...",
+        "measurementFlow:questionsSubmit.submitContinue": "Submit & Continue",
+        "measurementFlow:questionsSubmit.defaultExperimentName": "Experiment",
+        "measurementFlow:measurementNode.readyState.noQuestions":
+          "This flow has no questions, start measuring directly!",
+        "measurementFlow:measurementNode.readyState.overviewHeading": "Overview of your answers",
+        "measurementFlow:measurementNode.readyState.defaultQuestionLabel": "Question",
+        "measurementFlow:measurementNode.readyState.notSet": "Not set",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
 
 const makeQuestion = (id: string, text = `${id} text`): FlowNode =>
   ({

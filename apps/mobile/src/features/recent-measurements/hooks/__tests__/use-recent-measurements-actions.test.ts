@@ -50,6 +50,44 @@ vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
   exportMeasurementsToFile: () => mockExportMeasurementsToFile(),
 }));
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, vars?: Record<string, unknown>) => {
+      const count = vars?.count as number | undefined;
+      const name = vars?.name as string | undefined;
+      const map: Record<string, string> = {
+        "common:cancel": "Cancel",
+        "common:delete": "Delete",
+        "recentMeasurements:alerts.uploadMeasurementTitle": "Upload Measurement",
+        "recentMeasurements:alerts.uploadMeasurementMessage": `Are you sure you want to upload "${name}"?`,
+        "recentMeasurements:alerts.uploadButton": "Upload",
+        "recentMeasurements:alerts.uploadMeasurementError":
+          "Failed to upload measurement. Please try again.",
+        "recentMeasurements:alerts.deleteMeasurementTitle": "Delete Measurement",
+        "recentMeasurements:alerts.removeMeasurementTitle": "Remove Measurement",
+        "recentMeasurements:alerts.deleteMeasurementMessage": `Are you sure you want to delete "${name}" from local storage?`,
+        "recentMeasurements:alerts.removeMeasurementMessage": `Are you sure you want to remove "${name}"? This will delete it from local storage.`,
+        "recentMeasurements:alerts.removeButton": "Remove",
+        "recentMeasurements:alerts.deleteMeasurementError":
+          "Failed to delete measurement. Please try again.",
+        "recentMeasurements:alerts.uploadAllTitle": "Upload All Measurements",
+        "recentMeasurements:alerts.uploadAllMessage":
+          count === 1
+            ? `Are you sure you want to sync ${count} unsynced measurement?`
+            : `Are you sure you want to sync ${count} unsynced measurements?`,
+        "recentMeasurements:alerts.uploadAllButton": "Upload All",
+        "recentMeasurements:alerts.uploadAllError": "Sync failed. Please try again.",
+        "recentMeasurements:alerts.uploadAllSuccess": "All measurements synced successfully",
+        "recentMeasurements:alerts.deleteAllSyncedTitle": "Delete all synced measurements",
+        "recentMeasurements:alerts.deleteAllSyncedMessage": `Are you sure you want to delete all ${count} synced measurements from local storage?`,
+        "recentMeasurements:alerts.deleteAllSyncedError": "Failed to delete synced measurements",
+        "recentMeasurements:alerts.exportError": "Export failed. Please try again.",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 const makeItem = (
   key: string,
   status: MeasurementItem["status"],

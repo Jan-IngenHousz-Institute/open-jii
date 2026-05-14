@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 interface SetupStepProps {
@@ -7,24 +8,30 @@ interface SetupStepProps {
 }
 
 export function SetupStep({ onStartCalibration }: SetupStepProps) {
+  const { t } = useTranslation(["common", "calibration"]);
+
   return (
     <View className="flex-1">
-      <Text className="text-on-surface mb-2 text-2xl font-bold">Device Calibration Setup</Text>
-      <Text className="text-inactive mb-6 text-base leading-6">
-        This calibration process will help ensure accurate device measurements. You'll need:
+      <Text className="text-on-surface mb-2 text-2xl font-bold">
+        {t("calibration:setup.title")}
       </Text>
+      <Text className="text-inactive mb-6 text-base leading-6">{t("calibration:setup.intro")}</Text>
       <View className="mb-6">
         <Text className="text-on-surface mb-2 text-base leading-[22px]">
-          • MultispeQ device connected
+          {t("calibration:setup.bulletDevice")}
         </Text>
         <Text className="text-on-surface mb-2 text-base leading-[22px]">
-          • Chlorophyll calibration cards (panels #2, #3, #4, #6, #7, #8, #10, #11, #12)
+          {t("calibration:setup.bulletCards")}
         </Text>
         <Text className="text-on-surface mb-2 text-base leading-[22px]">
-          • Known reference values for each calibration card
+          {t("calibration:setup.bulletReferences")}
         </Text>
       </View>
-      <Button title="Start Calibration" onPress={onStartCalibration} style={{ marginTop: 16 }} />
+      <Button
+        title={t("calibration:setup.startButton")}
+        onPress={onStartCalibration}
+        style={{ marginTop: 16 }}
+      />
     </View>
   );
 }

@@ -14,6 +14,7 @@ import {
   pruneExpiredMeasurements,
 } from "~/shared/db/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/shared/db/measurements-storage";
+import { useTranslation } from "~/shared/i18n";
 import {
   buildAnnotations,
   getFlagTypeFromMeasurementResult,
@@ -21,6 +22,7 @@ import {
 
 export function useMeasurements() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
@@ -127,7 +129,7 @@ export function useMeasurements() {
         } catch (error) {
           console.warn(`Failed to upload item with key ${key}:`, error);
           await markAsFailed(key);
-          toast.info("Failed to upload, try again later");
+          toast.info(t("recentMeasurements:toasts.uploadOneFailed"));
           return;
         }
 

@@ -12,11 +12,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { EndFlowButton } from "./components/end-flow-button";
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
 import { NavigationButtons } from "./components/navigation-buttons";
+
+type StepLabelTranslator = (key: string) => string;
 
 function getStepLabel(
   experimentId: string | undefined,
@@ -24,21 +27,22 @@ function getStepLabel(
   flowNodes: any[],
   isFlowFinished: boolean,
   isQuestionsSubmitPending: boolean,
+  t: StepLabelTranslator,
 ): string {
   // No experiment selected yet
   if (!experimentId) {
-    return "Choose an experiment to begin your experiment workflow.";
+    return t("measurementFlow:screen.stepLabel.chooseExperiment");
   }
 
   // Questions-only submit screen
   if (isQuestionsSubmitPending) {
-    return "Review your answers and upload them before continuing.";
+    return t("measurementFlow:screen.stepLabel.reviewAnswers");
   }
 
   // Flow completed
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
   if (isFlowCompleted && isFlowFinished) {
-    return "Check your recent measurements before you continue the flow.";
+    return t("measurementFlow:screen.stepLabel.checkRecent");
   }
 
   // Get current node and show its name/type
@@ -50,13 +54,13 @@ function getStepLabel(
   // You can customize these labels based on node type
   switch (currentNode.type) {
     case "instruction":
-      return "Read these instructions carefully.";
+      return t("measurementFlow:screen.stepLabel.instruction");
     case "question":
-      return "Answer the questions below to continue to do the measurement.";
+      return t("measurementFlow:screen.stepLabel.question");
     case "measurement":
-      return "Below you can see and edit the answers given in the questions.";
+      return t("measurementFlow:screen.stepLabel.measurement");
     case "analysis":
-      return "Check out the measurement data and accept or discard.";
+      return t("measurementFlow:screen.stepLabel.analysis");
     default:
       return currentNode.name;
   }
@@ -70,6 +74,7 @@ interface MeasurementFlowScreenProps {
 export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
   const { classes } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const {
     resetFlow,
     flowNodes,
@@ -100,6 +105,7 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
     flowNodes,
     isFlowFinished,
     isQuestionsSubmitPending,
+    t,
   );
 
   return (

@@ -1,6 +1,7 @@
 import { CheckCircle2 } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface OfflineModeIndicatorProps {
@@ -9,6 +10,7 @@ interface OfflineModeIndicatorProps {
 
 export function OfflineModeIndicator({ isVisible }: OfflineModeIndicatorProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
 
   if (!isVisible) {
     return null;
@@ -24,7 +26,7 @@ export function OfflineModeIndicator({ isVisible }: OfflineModeIndicatorProps) {
     >
       <CheckCircle2 size={12} color={colors.semantic.success} />
       <Text className="text-[10px] font-medium" style={{ color: colors.semantic.success }}>
-        Offline ready
+        {t("measurementFlow:offlineIndicator.ready")}
       </Text>
     </View>
   );

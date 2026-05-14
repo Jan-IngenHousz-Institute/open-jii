@@ -7,6 +7,7 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
+import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import type { FlowNode } from "../../../../types";
@@ -26,6 +27,7 @@ interface ReadyStateProps {
 
 export function ReadyState({ onCardPress }: ReadyStateProps) {
   const themeColors = useThemeColors();
+  const { t } = useTranslation("measurementFlow");
   const { flowNodes, iterationCount } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore();
 
@@ -42,7 +44,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
           <HelpCircle size={26} color={themeColors.onSurface} />
         </View>
         <Text className="text-muted-foreground text-center text-base font-medium">
-          This flow has no questions, start measuring directly!
+          {t("measurementFlow:measurementNode.readyState.noQuestions")}
         </Text>
       </View>
     );
@@ -51,7 +53,9 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
   return (
     <View className="flex-1">
       <View className="px-4 pt-4">
-        <Text className="text-foreground text-lg font-bold">Overview of your answers</Text>
+        <Text className="text-foreground text-lg font-bold">
+          {t("measurementFlow:measurementNode.readyState.overviewHeading")}
+        </Text>
       </View>
 
       <ScrollView
@@ -60,7 +64,10 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
         keyboardShouldPersistTaps="handled"
       >
         {questionEntries.map(({ node, index }, position) => {
-          const label = node.content?.text ?? node.name ?? "Question";
+          const label =
+            node.content?.text ??
+            node.name ??
+            t("measurementFlow:measurementNode.readyState.defaultQuestionLabel");
           const answer = getAnswer(iterationCount, node.id);
           const hasAnswer = !!answer?.trim();
           const isAutoincrement = isAutoincrementEnabled(node.id);
@@ -103,7 +110,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
                       hasAnswer ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
-                    {hasAnswer ? answer : "Not set"}
+                    {hasAnswer ? answer : t("measurementFlow:measurementNode.readyState.notSet")}
                   </Text>
 
                   {(isAutoincrement || isRemember) &&

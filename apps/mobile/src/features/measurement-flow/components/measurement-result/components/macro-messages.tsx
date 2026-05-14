@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { AlertCircle, Info, AlertTriangle } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 
 export interface MacroMessageGroup {
   info?: string[];
@@ -14,6 +15,8 @@ interface MacroMessagesProps {
 }
 
 export function MacroMessages({ messages }: MacroMessagesProps) {
+  const { t } = useTranslation("measurementFlow");
+
   if (!messages || messages.length === 0) {
     return null;
   }
@@ -43,7 +46,7 @@ export function MacroMessages({ messages }: MacroMessagesProps) {
           <View className="mb-2 flex-row items-center gap-2">
             <AlertCircle size={20} color="#ef4444" />
             <Text className="text-base font-semibold text-red-800 dark:text-red-300">
-              Critical Issues
+              {t("measurementFlow:result.messages.criticalIssues")}
             </Text>
           </View>
           <View className="gap-1.5">
@@ -68,7 +71,7 @@ export function MacroMessages({ messages }: MacroMessagesProps) {
           <View className="mb-2 flex-row items-center gap-2">
             <AlertTriangle size={20} color="#eab308" />
             <Text className="text-base font-semibold text-yellow-800 dark:text-yellow-300">
-              Warnings
+              {t("measurementFlow:result.messages.warnings")}
             </Text>
           </View>
           <View className="gap-1.5">
@@ -93,7 +96,7 @@ export function MacroMessages({ messages }: MacroMessagesProps) {
           <View className="mb-2 flex-row items-center gap-2">
             <Info size={20} color="#3b82f6" />
             <Text className="text-base font-semibold text-blue-800 dark:text-blue-300">
-              Information
+              {t("measurementFlow:result.messages.information")}
             </Text>
           </View>
           <View className="gap-1.5">

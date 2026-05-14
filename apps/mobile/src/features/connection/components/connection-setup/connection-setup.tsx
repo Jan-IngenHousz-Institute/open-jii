@@ -8,12 +8,14 @@ import {
   usePairedDevices,
   useSerialDevices,
 } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 import { ConnectedDevice } from "./components/connected-device";
 import { DeviceList } from "./components/device-list";
 
 export function ConnectionSetup() {
+  const { t } = useTranslation(["common", "connection"]);
   const { data: device } = useConnectedDevice();
   const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
 
@@ -26,7 +28,7 @@ export function ConnectionSetup() {
 
   return (
     <View>
-      <Text className="text-on-surface mb-4 text-lg font-bold">Device connection</Text>
+      <Text className="text-on-surface mb-4 text-lg font-bold">{t("connection:setup.title")}</Text>
 
       {device && (
         <ConnectedDevice
@@ -36,7 +38,7 @@ export function ConnectionSetup() {
               await disconnectFromDevice(device);
             } catch (e) {
               console.log("connection error", e);
-              toast.error("Could not disconnect");
+              toast.error(t("connection:setup.errorDisconnect"));
             }
           }}
         />
@@ -45,7 +47,7 @@ export function ConnectionSetup() {
       <View className="mb-6 flex-row justify-between">
         {!device && (
           <Button
-            title="Scan for Devices"
+            title={t("connection:setup.scanButton")}
             onPress={() => refreshDevices()}
             isLoading={isFetching}
             isDisabled={isFetching || !!connectingDeviceId}
@@ -59,20 +61,20 @@ export function ConnectionSetup() {
           devices={isFetching ? [] : devices}
           loading={isFetching}
           connectingDeviceId={connectingDeviceId}
-          title="Nearby Devices"
+          title={t("connection:deviceList.nearbyTitle")}
           onConnect={async (device) => {
             try {
               await connectToDevice(device);
             } catch (e) {
               console.log("connection error", e);
-              toast.error("Could not disconnect");
+              toast.error(t("connection:setup.errorDisconnect"));
             }
           }}
         />
       )}
       <DeviceList
         devices={[...pairedDevices, ...serialDevices]}
-        title="Paired Devices"
+        title={t("connection:deviceList.pairedTitle")}
         loading={false}
         connectingDeviceId={connectingDeviceId}
         onDelete={(device) => unpairDevice(device)}
@@ -80,7 +82,7 @@ export function ConnectionSetup() {
           try {
             await connectToDevice(device);
           } catch {
-            toast.error("Could not connect");
+            toast.error(t("connection:setup.errorConnect"));
           }
         }}
       />

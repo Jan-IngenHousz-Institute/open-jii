@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Chart } from "~/features/measurement-flow/components/measurement-result/components/chart";
 import { KeyValue } from "~/features/measurement-flow/components/measurement-result/components/key-value";
 import { MeasurementHeader } from "~/features/measurement-flow/components/measurement-result/components/measurement-header";
+import { useTranslation } from "~/shared/i18n";
 import { ParsedTableData } from "~/shared/utils/parse-experiment-data";
 
 interface TableDetailModalProps {
@@ -13,6 +14,7 @@ interface TableDetailModalProps {
 }
 
 export function TableDetailModal({ visible, table, onClose }: TableDetailModalProps) {
+  const { t } = useTranslation(["common", "experiments"]);
   const insets = useSafeAreaInsets();
 
   if (!table) return null;
@@ -37,7 +39,9 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
     }
 
     if (typeof parsedValue === "object" && parsedValue !== null) {
-      const summary = `{${Object.keys(parsedValue).length} keys}`;
+      const summary = t("experiments:tableDetail.objectSummary", {
+        count: Object.keys(parsedValue).length,
+      });
       return <KeyValue key={`${rowIndex}-${key}`} value={summary} name={key} />;
     }
 
@@ -50,22 +54,30 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
 
   function getArraySummary(array: any[]): string {
     if (array.length === 0) {
-      return "Empty array";
+      return t("experiments:tableDetail.emptyArray");
     }
 
     const length = array.length;
-    let type = "mixed";
+    let typeKey:
+      | "itemTypeMixed"
+      | "itemTypeString"
+      | "itemTypeNumber"
+      | "itemTypeBoolean"
+      | "itemTypeObject" = "itemTypeMixed";
     if (array.every((item) => typeof item === "string")) {
-      type = "string";
+      typeKey = "itemTypeString";
     } else if (array.every((item) => typeof item === "number")) {
-      type = "number";
+      typeKey = "itemTypeNumber";
     } else if (array.every((item) => typeof item === "boolean")) {
-      type = "boolean";
+      typeKey = "itemTypeBoolean";
     } else if (array.every((item) => typeof item === "object")) {
-      type = "object";
+      typeKey = "itemTypeObject";
     }
 
-    return `[${length} ${type} items]`;
+    return t("experiments:tableDetail.arraySummary", {
+      length,
+      type: t(`experiments:tableDetail.${typeKey}`),
+    });
   }
 
   return (
@@ -87,12 +99,17 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
         >
           <View className="p-4">
             <Text className="text-on-surface mb-4 text-center text-base font-semibold">
-              {table.totalRows} rows, {table.columns.length} columns
+              {t("experiments:tableDetail.summary", {
+                rowCount: table.totalRows,
+                columnCount: table.columns.length,
+              })}
             </Text>
 
             {table.rows.map((row, rowIndex) => (
               <View key={rowIndex} className="mb-6">
-                <Text className="text-on-surface mb-3 text-lg font-bold">Row {rowIndex + 1}</Text>
+                <Text className="text-on-surface mb-3 text-lg font-bold">
+                  {t("experiments:tableDetail.row", { index: rowIndex + 1 })}
+                </Text>
                 <View className="gap-2">
                   {Object.keys(row).map((key) => renderDataItem(key, row[key], rowIndex))}
                 </View>

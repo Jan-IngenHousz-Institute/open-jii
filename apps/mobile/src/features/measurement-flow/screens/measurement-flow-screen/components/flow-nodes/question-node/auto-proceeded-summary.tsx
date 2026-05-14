@@ -4,6 +4,7 @@ import { View, Text } from "react-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
+import { useTranslation } from "~/shared/i18n";
 
 interface AutoProceededSummaryProps {
   currentNodeId: string;
@@ -39,6 +40,7 @@ export function getCachedFirstManualNodeId(iterationCount: number): string | und
 export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProceededSummaryProps) {
   const { flowNodes } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled } = useFlowAnswersStore();
+  const { t } = useTranslation("measurementFlow");
 
   const firstManualNodeId = getCachedFirstManualNodeId(iterationCount);
 
@@ -56,7 +58,7 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
   return (
     <View className="bg-gray-background gap-1 rounded-xl p-2">
       <Text numberOfLines={1} ellipsizeMode="tail" className="text-muted-foreground text-sm">
-        Your current plot
+        {t("measurementFlow:questionNode.autoProceeded.currentPlot")}
       </Text>
 
       {autoProceededWithAnswers.map((n) => (

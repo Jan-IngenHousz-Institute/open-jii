@@ -3,11 +3,13 @@ import React from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useConnectToDevice } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 export function NoDeviceState() {
   const { lastConnectedDevice } = useDeviceConnectionStore();
   const { connectToDevice, connectingDeviceId } = useConnectToDevice();
+  const { t } = useTranslation("measurementFlow");
 
   const isReconnecting =
     lastConnectedDevice !== undefined && connectingDeviceId === lastConnectedDevice.id;
@@ -22,16 +24,20 @@ export function NoDeviceState() {
         ) : (
           <>
             <Text className="text-muted-foreground text-center text-sm">
-              Device disconnected — {lastConnectedDevice.name}
+              {t("measurementFlow:measurementNode.noDevice.disconnected", {
+                name: lastConnectedDevice.name,
+              })}
             </Text>
             <Button
-              title={`Reconnect to ${lastConnectedDevice.name}`}
+              title={t("measurementFlow:measurementNode.noDevice.reconnect", {
+                name: lastConnectedDevice.name,
+              })}
               onPress={() => void connectToDevice(lastConnectedDevice)}
               isDisabled={!!connectingDeviceId}
               style={{ height: 44, width: "100%" }}
             />
             <Button
-              title="Connect a different device"
+              title={t("measurementFlow:measurementNode.noDevice.connectDifferent")}
               onPress={() => router.push("/(tabs)/")}
               variant="tertiary"
               isDisabled={!!connectingDeviceId}
@@ -46,7 +52,7 @@ export function NoDeviceState() {
   return (
     <View className="flex-1 items-center justify-center">
       <Button
-        title="Please connect to a device first"
+        title={t("measurementFlow:measurementNode.noDevice.connectFirst")}
         onPress={() => router.push("/(tabs)/")}
         style={{ height: 44 }}
       />

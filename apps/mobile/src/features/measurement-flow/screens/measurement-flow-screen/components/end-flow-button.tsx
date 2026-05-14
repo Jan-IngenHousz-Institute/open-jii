@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 import { Button } from "~/shared/ui/Button";
 
@@ -7,15 +8,17 @@ interface EndFlowButtonProps {
 }
 
 export function EndFlowButton({ onPress }: EndFlowButtonProps) {
+  const { t } = useTranslation(["common", "measurementFlow"]);
+
   const handlePress = () => {
-    showAlert("Finish Flow", "If you finish now, this measurement flow will not be saved.", [
+    showAlert(t("measurementFlow:endFlow.alertTitle"), t("measurementFlow:endFlow.alertMessage"), [
       {
-        text: "Finish Flow",
+        text: t("measurementFlow:endFlow.confirm"),
         variant: "primary",
         onPress: onPress,
       },
       {
-        text: "Continue",
+        text: t("common:continue"),
         variant: "ghost",
       },
     ]);
@@ -23,7 +26,7 @@ export function EndFlowButton({ onPress }: EndFlowButtonProps) {
 
   return (
     <Button
-      title="Finish flow"
+      title={t("measurementFlow:endFlow.buttonTitle")}
       onPress={handlePress}
       variant="light"
       style={{ height: 32, paddingTop: 0, paddingBottom: 0 }}

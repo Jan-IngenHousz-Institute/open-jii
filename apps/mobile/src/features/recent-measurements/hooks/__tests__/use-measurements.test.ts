@@ -56,6 +56,17 @@ vi.mock("sonner-native", () => ({
   toast: { info: mockToastInfo },
 }));
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        "recentMeasurements:toasts.uploadOneFailed": "Failed to upload, try again later",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 const mockMeasurement = {
   topic: "test/topic",
   measurementResult: { value: 42 },

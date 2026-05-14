@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
@@ -45,6 +46,7 @@ export function CommentModal({
   timestamp,
 }: CommentModalProps) {
   const { colors, classes } = useTheme();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
   const [text, setText] = useState(initialText);
   const sheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
@@ -99,7 +101,9 @@ export function CommentModal({
     >
       <BottomSheetView className="gap-4 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <View className="flex-row items-center justify-between">
-          <Text className={clsx("text-lg font-bold", classes.text)}>Add comment</Text>
+          <Text className={clsx("text-lg font-bold", classes.text)}>
+            {t("recentMeasurements:commentModal.title")}
+          </Text>
 
           <TouchableOpacity onPress={onCancel} className="p-1">
             <X size={24} color={colors.onSurface} />
@@ -107,7 +111,9 @@ export function CommentModal({
         </View>
         <View className="bg-muted gap-1.5 rounded-xl p-4">
           <View className="flex-row items-center">
-            <Text className={clsx("font-semibold", classes.text)}>Answers: </Text>
+            <Text className={clsx("font-semibold", classes.text)}>
+              {t("recentMeasurements:commentModal.answersLabel")}
+            </Text>
 
             <Text
               numberOfLines={1}
@@ -118,13 +124,15 @@ export function CommentModal({
               )}
             >
               {questions.length === 0
-                ? "No questions answered"
+                ? t("recentMeasurements:list.noQuestionsAnswered")
                 : questions.map((q) => q.question_answer).join(" | ")}
             </Text>
           </View>
           {experimentName && (
             <View className="flex-row items-center">
-              <Text className={clsx("font-semibold", classes.text)}>Experiment: </Text>
+              <Text className={clsx("font-semibold", classes.text)}>
+                {t("recentMeasurements:commentModal.experimentLabel")}
+              </Text>
               <Text
                 numberOfLines={1}
                 ellipsizeMode="tail"
@@ -136,7 +144,9 @@ export function CommentModal({
           )}
           {timestamp && (
             <View className="flex-row items-center">
-              <Text className={clsx("font-semibold", classes.text)}>Measurement done: </Text>
+              <Text className={clsx("font-semibold", classes.text)}>
+                {t("recentMeasurements:commentModal.measurementDoneLabel")}
+              </Text>
               <Text
                 numberOfLines={1}
                 ellipsizeMode="tail"
@@ -150,7 +160,7 @@ export function CommentModal({
         <BottomSheetTextInput
           value={text}
           onChangeText={setText}
-          placeholder="Enter your comment here..."
+          placeholder={t("recentMeasurements:commentModal.placeholder")}
           placeholderTextColor={colors.inactive}
           multiline
           numberOfLines={4}
@@ -165,7 +175,7 @@ export function CommentModal({
             color: colors.onSurface,
           }}
         />
-        <Button title="Save comment" onPress={handleSave} />
+        <Button title={t("recentMeasurements:commentModal.saveButton")} onPress={handleSave} />
       </BottomSheetView>
     </BottomSheetModal>
   );

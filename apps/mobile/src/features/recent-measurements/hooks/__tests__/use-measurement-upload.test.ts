@@ -65,6 +65,28 @@ vi.mock("~/shared/ui/AlertDialog", () => ({
   showAlert: mockShowAlert,
 }));
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        "common:dismiss": "Dismiss",
+        "recentMeasurements:alerts.saveErrorTitle": "Something went wrong",
+        "recentMeasurements:alerts.saveErrorMessage":
+          "Could not save the measurement. Would you like to save it as a file instead?",
+        "recentMeasurements:alerts.saveToFileButton": "Save to File",
+        "recentMeasurements:alerts.saveToFileError":
+          "Could not save measurement. Please try again.",
+        "recentMeasurements:toasts.uploadNotAvailable":
+          "Upload not available, upload it later from Recent",
+        "recentMeasurements:toasts.measurementUploaded": "Measurement uploaded!",
+        "recentMeasurements:toasts.uploadedLocalStatusRefresh":
+          "Uploaded — local status will refresh on next sync",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 vi.mock("@tanstack/react-query", () => ({
   useMutation: ({ mutationFn }: { mutationFn: (...args: any[]) => Promise<any> }) => {
     capturedCallback = mutationFn;

@@ -5,11 +5,21 @@ import { useEffect, useState } from "react";
 import { initReactI18next } from "react-i18next";
 
 import authEn from "./locales/en-US/auth.json";
+import calibrationEn from "./locales/en-US/calibration.json";
 import commonEn from "./locales/en-US/common.json";
+import connectionEn from "./locales/en-US/connection.json";
+import experimentsEn from "./locales/en-US/experiments.json";
+import measurementFlowEn from "./locales/en-US/measurement-flow.json";
 import profileEn from "./locales/en-US/profile.json";
+import recentMeasurementsEn from "./locales/en-US/recent-measurements.json";
 import authNl from "./locales/nl-NL/auth.json";
+import calibrationNl from "./locales/nl-NL/calibration.json";
 import commonNl from "./locales/nl-NL/common.json";
+import connectionNl from "./locales/nl-NL/connection.json";
+import experimentsNl from "./locales/nl-NL/experiments.json";
+import measurementFlowNl from "./locales/nl-NL/measurement-flow.json";
 import profileNl from "./locales/nl-NL/profile.json";
+import recentMeasurementsNl from "./locales/nl-NL/recent-measurements.json";
 
 export const SUPPORTED_LOCALES = ["en-US", "nl-NL"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -18,8 +28,26 @@ const LANGUAGE_PREF_KEY = "openjii_language";
 const FALLBACK_LOCALE: SupportedLocale = "en-US";
 
 const bundledResources = {
-  "en-US": { common: commonEn, auth: authEn, profile: profileEn },
-  "nl-NL": { common: commonNl, auth: authNl, profile: profileNl },
+  "en-US": {
+    common: commonEn,
+    auth: authEn,
+    profile: profileEn,
+    measurementFlow: measurementFlowEn,
+    experiments: experimentsEn,
+    calibration: calibrationEn,
+    connection: connectionEn,
+    recentMeasurements: recentMeasurementsEn,
+  },
+  "nl-NL": {
+    common: commonNl,
+    auth: authNl,
+    profile: profileNl,
+    measurementFlow: measurementFlowNl,
+    experiments: experimentsNl,
+    calibration: calibrationNl,
+    connection: connectionNl,
+    recentMeasurements: recentMeasurementsNl,
+  },
 } as const;
 
 function pickDeviceLocale(): SupportedLocale {
@@ -61,7 +89,16 @@ export function initI18n(): Promise<typeof i18next> {
     await i18next.use(initReactI18next).init({
       lng,
       fallbackLng: FALLBACK_LOCALE,
-      ns: ["common", "auth", "profile"],
+      ns: [
+        "common",
+        "auth",
+        "profile",
+        "measurementFlow",
+        "experiments",
+        "calibration",
+        "connection",
+        "recentMeasurements",
+      ],
       defaultNS: "common",
       resources: bundledResources,
       interpolation: { escapeValue: false },

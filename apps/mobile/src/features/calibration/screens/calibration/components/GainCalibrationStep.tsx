@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
 
@@ -14,20 +15,21 @@ export function GainCalibrationStep({
   isProcessing,
   onStartGainCalibration,
 }: GainCalibrationStepProps) {
+  const { t } = useTranslation(["common", "calibration"]);
+
   return (
     <View className="flex-1">
-      <Text className="text-on-surface mb-2 text-2xl font-bold">
-        Gain Calibration (Auto-blanking)
-      </Text>
+      <Text className="text-on-surface mb-2 text-2xl font-bold">{t("calibration:gain.title")}</Text>
       <Text className="text-inactive mb-6 text-base leading-6">{alertMessage}</Text>
       <Card className="mb-6">
         <Text className="text-on-surface text-base leading-[22px]">
-          The device will now perform auto-blanking to establish baseline readings for each LED
-          channel.
+          {t("calibration:gain.body")}
         </Text>
       </Card>
       <Button
-        title={isProcessing ? "Calibrating..." : "Start Auto-blanking"}
+        title={
+          isProcessing ? t("calibration:gain.buttonProcessing") : t("calibration:gain.buttonIdle")
+        }
         onPress={onStartGainCalibration}
         isLoading={isProcessing}
         style={{ marginTop: 16 }}

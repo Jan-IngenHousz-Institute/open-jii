@@ -7,6 +7,19 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 
 import { NavigationButtons } from "./navigation-buttons";
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        "common:back": "Back",
+        "measurementFlow:navigation.next": "Next",
+        "measurementFlow:navigation.backToOverview": "Back to overview",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 const makeQuestion = (id: string, content: any = { kind: "text", required: false }): FlowNode =>
   ({ id, name: id, type: "question", content }) as FlowNode;
 

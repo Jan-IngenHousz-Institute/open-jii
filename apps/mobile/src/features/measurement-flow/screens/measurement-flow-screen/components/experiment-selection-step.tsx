@@ -8,6 +8,7 @@ import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-pre
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Dropdown } from "~/shared/ui/Dropdown";
 import { HtmlViewer } from "~/shared/ui/HtmlViewer";
@@ -18,6 +19,7 @@ import { OfflineModeIndicator } from "./offline-mode-indicator";
 
 export function ExperimentSelectionStep() {
   const { classes, colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const { setExperimentId, setFlowNodes } = useMeasurementFlowStore();
@@ -50,7 +52,9 @@ export function ExperimentSelectionStep() {
     <View className={clsx("flex-1")}>
       <View className="flex-1 px-4 pt-4">
         <View className="mb-2 flex-row items-center justify-between">
-          <Text className={clsx("text-lg font-bold", classes.text)}>Select experiment</Text>
+          <Text className={clsx("text-lg font-bold", classes.text)}>
+            {t("measurementFlow:experimentSelection.heading")}
+          </Text>
           <OfflineModeIndicator isVisible={!!precachedData} />
         </View>
 
@@ -58,7 +62,7 @@ export function ExperimentSelectionStep() {
           <View className="items-center py-8">
             <ActivityIndicator size="large" color={colors.brand} />
             <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
-              Loading experiments...
+              {t("measurementFlow:experimentSelection.loadingExperiments")}
             </Text>
           </View>
         )}
@@ -66,7 +70,7 @@ export function ExperimentSelectionStep() {
         {!isLoading && error && (
           <View className="items-center py-8">
             <Text className="text-destructive text-center">
-              Failed to load experiments. Please try again.
+              {t("measurementFlow:experimentSelection.loadFailed")}
             </Text>
           </View>
         )}
@@ -77,12 +81,14 @@ export function ExperimentSelectionStep() {
               options={experiments}
               selectedValue={selectedExperimentId}
               onSelect={(value) => setSelectedExperimentId(value)}
-              placeholder="Choose an experiment"
+              placeholder={t("measurementFlow:experimentSelection.chooseExperimentPlaceholder")}
             />
 
             {selectedExperimentId && (
               <View className="flex-1 gap-2">
-                <Text className={clsx("font-bold", classes.text)}>Description</Text>
+                <Text className={clsx("font-bold", classes.text)}>
+                  {t("measurementFlow:experimentSelection.description")}
+                </Text>
 
                 {selectedExperiment?.fullDescription ? (
                   <View className="flex-1">
@@ -103,7 +109,7 @@ export function ExperimentSelectionStep() {
                       <Text
                         className={clsx("text-center text-base font-medium", classes.textSecondary)}
                       >
-                        No description available
+                        {t("measurementFlow:experimentSelection.noDescription")}
                       </Text>
                     </>
                   </View>
@@ -116,7 +122,7 @@ export function ExperimentSelectionStep() {
 
       <View className="px-4 py-3">
         <Button
-          title="Start flow"
+          title={t("measurementFlow:experimentSelection.startFlow")}
           onPress={handleStartFlow}
           isDisabled={!selectedExperimentId || !experimentFlow}
           style={{ height: 44 }}

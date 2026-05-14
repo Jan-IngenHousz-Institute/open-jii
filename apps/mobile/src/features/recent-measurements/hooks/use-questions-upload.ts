@@ -4,6 +4,7 @@ import { toast } from "sonner-native";
 import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
 import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/utils/measurement-annotations";
 
@@ -12,6 +13,7 @@ import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 export function useQuestionsUpload() {
   const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
   const networkState = useNetworkState();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
 
   const mutation = useMutation({
     mutationFn: async ({
@@ -61,9 +63,7 @@ export function useQuestionsUpload() {
         savedId = await saveMeasurement(failedUploadData, "pending");
       } catch (storageError) {
         console.error("Failed to save answers to local storage:", storageError);
-        toast.error(
-          "Answers could not be saved on this device. Please export your data now to avoid losing it.",
-        );
+        toast.error(t("recentMeasurements:toasts.answersSaveFailed"));
         return;
       }
 
@@ -71,7 +71,7 @@ export function useQuestionsUpload() {
       // rather than letting Cognito's credential fetch throw and trip the
       // "failed" path. useAutoUpload retries pending rows on reconnect.
       if (networkState.isInternetReachable === false) {
-        toast.info("Saved offline — will upload when you're back online");
+        toast.info(t("recentMeasurements:toasts.savedOffline"));
         return;
       }
 
@@ -83,16 +83,16 @@ export function useQuestionsUpload() {
       } catch (uploadError) {
         console.error("Upload failed:", uploadError);
         await markFailed(savedId);
-        toast.error("Upload not available, upload it later from Recent");
+        toast.error(t("recentMeasurements:toasts.uploadNotAvailable"));
         return;
       }
 
       try {
         await markUploaded(savedId);
-        toast.success("Answers uploaded!");
+        toast.success(t("recentMeasurements:toasts.answersUploaded"));
       } catch (localError) {
         console.error("Local status update failed after successful publish:", localError);
-        toast.info("Uploaded — local status will refresh on next sync");
+        toast.info(t("recentMeasurements:toasts.uploadedLocalStatusRefresh"));
       }
     },
   });

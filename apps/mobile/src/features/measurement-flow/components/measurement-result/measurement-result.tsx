@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { ChevronRight, MessageCircleMore } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { applyMacro } from "~/features/measurement-flow/utils/process-scan/process-scan";
+import { useTranslation } from "~/shared/i18n";
 import { TabBar } from "~/shared/ui/TabBar";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -11,12 +12,7 @@ import { Chart } from "./components/chart";
 import { KeyValue } from "./components/key-value";
 import { MacroMessages, MacroMessageGroup } from "./components/macro-messages";
 
-const TABS = [
-  { key: "result", label: "Results" },
-  { key: "raw", label: "Raw data" },
-];
-
-type TabKey = (typeof TABS)[number]["key"];
+type TabKey = "result" | "raw";
 
 interface MeasurementResultProps {
   rawMeasurement: any;
@@ -31,7 +27,16 @@ export function MeasurementResult({
   onCommentPress,
 }: MeasurementResultProps) {
   const { classes, colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const [activeTab, setActiveTab] = useState<TabKey>("result");
+
+  const tabs = useMemo<{ key: TabKey; label: string }[]>(
+    () => [
+      { key: "result", label: t("measurementFlow:result.tabResults") },
+      { key: "raw", label: t("measurementFlow:result.tabRaw") },
+    ],
+    [t],
+  );
 
   const {
     data: processedMeasurement,
@@ -58,7 +63,7 @@ export function MeasurementResult({
       return (
         <View className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
           <Text className={clsx("text-sm text-red-600 dark:text-red-400", classes.text)}>
-            Processing Error: {processingError.message}
+            {t("measurementFlow:result.processingError", { message: processingError.message })}
           </Text>
         </View>
       );
@@ -72,7 +77,7 @@ export function MeasurementResult({
       return (
         <View className="items-center justify-center p-6">
           <Text className={clsx("text-center text-lg", classes.textSecondary)}>
-            No Data Available
+            {t("measurementFlow:result.noDataAvailable")}
           </Text>
         </View>
       );
@@ -117,7 +122,9 @@ export function MeasurementResult({
         >
           <View className="flex-row items-center gap-2">
             <MessageCircleMore size={18} color={colors.brand} />
-            <Text className={clsx("text-[15px] font-medium", classes.text)}>Comment</Text>
+            <Text className={clsx("text-[15px] font-medium", classes.text)}>
+              {t("measurementFlow:result.comment")}
+            </Text>
           </View>
           <ChevronRight size={16} color={colors.brand} />
         </TouchableOpacity>
@@ -127,7 +134,7 @@ export function MeasurementResult({
       {messageGroups.length > 0 && <MacroMessages messages={messageGroups} />}
 
       {/* Tab bar */}
-      <TabBar tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Tab content */}
       {activeTab === "raw" ? renderRawContent() : renderProcessedContent()}

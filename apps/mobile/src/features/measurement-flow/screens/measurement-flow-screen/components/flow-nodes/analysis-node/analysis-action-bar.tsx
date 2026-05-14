@@ -7,6 +7,7 @@ import {
   View,
   TouchableOpacity,
 } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -43,6 +44,7 @@ export function AnalysisActionBar({
   onUpload,
 }: AnalysisActionBarProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
 
   return (
     <View className="relative w-full py-3">
@@ -61,13 +63,17 @@ export function AnalysisActionBar({
       )}
       <View className="flex-row gap-4">
         <Button
-          title="Discard & retry"
+          title={t("measurementFlow:analysis.actionBar.discardRetry")}
           onPress={onRetry}
           variant="tertiary"
           style={{ flex: 1, height: 44, borderColor: "transparent" }}
         />
         <Button
-          title={isUploading ? "Uploading..." : "Accept data"}
+          title={
+            isUploading
+              ? t("measurementFlow:analysis.actionBar.uploading")
+              : t("measurementFlow:analysis.actionBar.acceptData")
+          }
           onPress={onUpload}
           disabled={isUploading}
           style={{ flex: 1, height: 44 }}

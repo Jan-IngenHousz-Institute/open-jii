@@ -118,6 +118,9 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   }, [loaded, migrationsReady, migrationsError]);
 
   if (migrationsError) {
+    // Recovery fallback. i18n init runs in the same wrapper, so when the
+    // migration fails before i18n is ready, t() would return key strings.
+    // Keep this UI in English so it always renders something usable.
     return (
       <View className="bg-background flex-1 items-center justify-center p-8">
         <Text className="text-destructive mb-3 text-xl font-bold">Database Error</Text>

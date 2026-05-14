@@ -12,6 +12,7 @@ import { CommentModal } from "~/features/recent-measurements/components/comment-
 import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
 import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/utils/time-sync";
@@ -29,6 +30,7 @@ interface AnalysisNodeProps {
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
+  const { t } = useTranslation("measurementFlow");
   const { macro, isLoading } = useMacro(content.macroId);
   const {
     scanResult,
@@ -43,7 +45,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { session } = useSession();
 
   const experimentName =
-    experiments.find((experiment) => experiment.value === experimentId)?.label ?? "Experiment";
+    experiments.find((experiment) => experiment.value === experimentId)?.label ??
+    t("measurementFlow:analysis.node.defaultExperimentName");
 
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
@@ -142,13 +145,15 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         showsVerticalScrollIndicator={true}
       >
         <View className="flex-row items-center gap-2">
-          <Text className={clsx("text-lg font-bold", classes.text)}>Measurement complete</Text>
+          <Text className={clsx("text-lg font-bold", classes.text)}>
+            {t("measurementFlow:analysis.node.heading")}
+          </Text>
           <CircleCheckBig size={16} />
         </View>
 
         <AnalysisSummaryCard
           experimentName={experimentName}
-          protocolName={protocol?.name ?? "Protocol"}
+          protocolName={protocol?.name ?? t("measurementFlow:analysis.node.defaultProtocolName")}
           questions={questions}
           displayTimestamp={displayTimestamp}
           onPress={() => setQuestionsModalVisible(true)}

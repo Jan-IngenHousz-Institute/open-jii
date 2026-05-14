@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { MeasurementItem } from "~/features/recent-measurements/components/measurement-item";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
@@ -42,6 +43,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   hasComment = false,
 }: SwipeableMeasurementRowProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
   const translateX = useSharedValue(0);
   const startX = useSharedValue(0);
   const actionWidthSV = useSharedValue(0);
@@ -99,7 +101,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
       >
         {showSync && (
           <Button
-            title="Upload"
+            title={t("recentMeasurements:swipe.uploadButton")}
             onPress={handleSync}
             variant="tertiary"
             style={{ borderColor: "transparent", width: COMMENT_BUTTON_WIDTH }}
@@ -108,7 +110,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
 
         {showComment && (
           <Button
-            title="Comment"
+            title={t("recentMeasurements:swipe.commentButton")}
             onPress={handleComment}
             variant="light"
             style={{ width: COMMENT_BUTTON_WIDTH }}

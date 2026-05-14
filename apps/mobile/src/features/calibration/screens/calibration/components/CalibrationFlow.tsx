@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ScrollView } from "react-native";
 import { toast } from "sonner-native";
+import { useTranslation } from "~/shared/i18n";
 
 import {
   CalibrationProtocol,
@@ -23,6 +24,7 @@ interface CalibrationFlowProps {
 }
 
 export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
+  const { t } = useTranslation(["common", "calibration"]);
   const [currentStep, setCurrentStep] = useState<CalibrationStep>("setup");
   const [isProcessing, setIsProcessing] = useState(false);
   const [measurements, setMeasurements] = useState<MeasurementData[]>([]);
@@ -40,7 +42,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
     setMeasurements([]);
     setCurrentMeasurementIndex(0);
     setProcessedOutput(null);
-    toast.info("Calibration started. Please follow the instructions.");
+    toast.info(t("calibration:flow.toastStarted"));
   };
 
   const handleGainCalibration = async () => {
@@ -60,7 +62,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
     console.log("Gain calibration completed");
     setCurrentStep("measurements");
-    toast.success("Gain calibration completed. Proceeding to measurements.");
+    toast.success(t("calibration:flow.toastGainComplete"));
   };
 
   const handleMeasurement = async (panelNumber: number) => {
@@ -103,7 +105,12 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
       setCurrentMeasurementIndex((prev) => prev + 1);
       const nextPanelNumber =
         measurementSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
-      toast.info(`Panel #${panelNumber} measured. Next: Panel #${nextPanelNumber}`);
+      toast.info(
+        t("calibration:flow.toastPanelMeasured", {
+          panel: panelNumber,
+          next: nextPanelNumber,
+        }),
+      );
     } else {
       setCurrentStep("processing");
       handleDataProcessing();
@@ -127,10 +134,10 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
       await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
 
       setCurrentStep("complete");
-      toast.success("Calibration completed successfully!");
+      toast.success(t("calibration:flow.toastComplete"));
     } catch (error) {
       console.error("Error processing calibration data:", error);
-      toast.error("Error processing calibration data. Please try again.");
+      toast.error(t("calibration:flow.toastProcessingError"));
     } finally {
       setIsProcessing(false);
     }

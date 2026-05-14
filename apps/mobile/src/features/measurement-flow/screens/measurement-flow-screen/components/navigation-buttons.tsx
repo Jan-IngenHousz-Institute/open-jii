@@ -9,6 +9,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -17,6 +18,7 @@ import { advanceWithAnswer } from "./flow-nodes/utils/advance-with-answer";
 import { NextButton } from "./next-button";
 
 export function NavigationButtons() {
+  const { t } = useTranslation("measurementFlow");
   const {
     flowNodes,
     currentFlowStep,
@@ -116,7 +118,7 @@ export function NavigationButtons() {
       {isFromOverview ? (
         <View className="px-4 py-3">
           <Button
-            title="Back to overview"
+            title={t("measurementFlow:navigation.backToOverview")}
             onPress={handleReturnToOverview}
             isDisabled={isNextDisabled}
             style={{ height: 44 }}

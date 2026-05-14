@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { Calendar, FlaskConical, X } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { formatIsoDateString } from "~/shared/utils/format-iso-date-string";
 
@@ -13,6 +14,7 @@ interface MeasurementHeaderProps {
 
 export function MeasurementHeader({ timestamp, experimentName, onClose }: MeasurementHeaderProps) {
   const { classes, colors } = useTheme();
+  const { t } = useTranslation("measurementFlow");
 
   return (
     <View
@@ -25,7 +27,9 @@ export function MeasurementHeader({ timestamp, experimentName, onClose }: Measur
       <View className="flex-1">
         <View className="mb-1 flex-row items-center">
           <FlaskConical size={20} color={colors.brand} />
-          <Text className={clsx("ml-2 text-xl font-bold", classes.text)}>Measurement Results</Text>
+          <Text className={clsx("ml-2 text-xl font-bold", classes.text)}>
+            {t("measurementFlow:result.header.title")}
+          </Text>
         </View>
 
         {timestamp && (

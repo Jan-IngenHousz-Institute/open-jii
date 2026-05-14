@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { cn } from "~/shared/utils/cn";
 import {
   ParsedTableData,
@@ -14,6 +15,7 @@ interface DataTableProps {
 }
 
 export function DataTable({ table }: DataTableProps) {
+  const { t } = useTranslation(["common", "experiments"]);
   const [modalVisible, setModalVisible] = useState(false);
 
   function renderCell(value: any, column: ParsedTableData["columns"][0]) {
@@ -45,10 +47,14 @@ export function DataTable({ table }: DataTableProps) {
                 <View key={column.name} className={cn("min-w-[100px] max-w-[200px] flex-1 px-1.5")}>
                   <Text className="text-on-surface text-xs font-bold">{column.displayName}</Text>
                   {column.isArray && (
-                    <Text className="text-jii-primary mt-px text-[8px] font-bold">[Array]</Text>
+                    <Text className="text-jii-primary mt-px text-[8px] font-bold">
+                      {t("experiments:dataTable.arrayBadge")}
+                    </Text>
                   )}
                   {column.isObject && (
-                    <Text className="text-jii-primary mt-px text-[8px] font-bold">[Object]</Text>
+                    <Text className="text-jii-primary mt-px text-[8px] font-bold">
+                      {t("experiments:dataTable.objectBadge")}
+                    </Text>
                   )}
                 </View>
               ))}

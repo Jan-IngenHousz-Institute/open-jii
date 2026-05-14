@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TextInput, ActivityIndicator } from "react-native";
+import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -29,6 +30,7 @@ export function MeasurementsStep({
   onTakeMeasurement,
   onCancelMeasurement,
 }: MeasurementsStepProps) {
+  const { t } = useTranslation(["common", "calibration"]);
   const themeColors = useThemeColors();
 
   const handleTakeMeasurement = () => {
@@ -40,13 +42,16 @@ export function MeasurementsStep({
   return (
     <View className="flex-1">
       <Text className="text-on-surface mb-2 text-2xl font-bold">
-        Calibration Measurements ({currentMeasurementIndex + 1}/{totalMeasurements})
+        {t("calibration:measurements.title", {
+          current: currentMeasurementIndex + 1,
+          total: totalMeasurements,
+        })}
       </Text>
       <Text className="text-inactive mb-6 text-base leading-6">{prompt}</Text>
 
       <Card className="mb-6">
         <Text className="text-on-surface mb-3 text-base font-semibold">
-          Panel #{currentPanelNumber} Value:
+          {t("calibration:measurements.panelLabel", { panel: currentPanelNumber })}
         </Text>
         {isProcessing ? (
           <View className="items-center justify-center py-6">
@@ -57,7 +62,7 @@ export function MeasurementsStep({
             className="border-border bg-surface text-on-surface rounded-lg border p-3 text-base"
             value={currentUserInput}
             onChangeText={onUserInputChange}
-            placeholder="Enter value"
+            placeholder={t("calibration:measurements.inputPlaceholder")}
             placeholderTextColor={themeColors.inactive}
             keyboardType="numeric"
           />
@@ -66,14 +71,14 @@ export function MeasurementsStep({
 
       {isProcessing ? (
         <Button
-          title="Cancel Measurement"
+          title={t("calibration:measurements.cancelButton")}
           onPress={onCancelMeasurement}
           variant="danger"
           style={{ marginTop: 16 }}
         />
       ) : (
         <Button
-          title="Start Measurement"
+          title={t("calibration:measurements.startButton")}
           onPress={handleTakeMeasurement}
           isDisabled={!currentUserInput.trim()}
           style={{ marginTop: 16 }}
@@ -88,7 +93,10 @@ export function MeasurementsStep({
           />
         </View>
         <Text className="text-inactive text-center text-sm">
-          {currentMeasurementIndex + 1} of {totalMeasurements} measurements completed
+          {t("calibration:measurements.progress", {
+            current: currentMeasurementIndex + 1,
+            total: totalMeasurements,
+          })}
         </Text>
       </View>
     </View>
