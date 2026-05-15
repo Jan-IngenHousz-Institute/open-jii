@@ -1,8 +1,8 @@
 import { createMqttConnection, ReceivedMessage } from "~/services/mqtt/create-mqtt-connection";
 
-// paho-mqtt + the Cognito handshake can hang silently when the device is
-// offline or AWS is throttling. Without a hard ceiling the caller's promise
-// never settles, leaving the measurement in limbo (not saved, not failed).
+// paho-mqtt + the Cognito handshake can hang silently when AWS is throttling
+// or the network is flapping. Without a hard ceiling the caller's promise
+// never settles, blocking the UI on a row that's already saved as "pending".
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 export async function sendMqttEvent(

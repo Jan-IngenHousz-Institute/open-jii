@@ -137,9 +137,12 @@ describe("useMeasurementUpload", () => {
   });
 
   it("transitions the pending row to failed when MQTT upload errors out", async () => {
+    const uploadError = new Error("network timeout");
     mockSaveMeasurement.mockResolvedValueOnce("row-1");
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
+    mockSendMqttEvent.mockRejectedValueOnce(uploadError);
     mockMarkFailed.mockResolvedValueOnce(undefined);
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     await capturedCallback(baseArgs);
 
@@ -153,6 +156,9 @@ describe("useMeasurementUpload", () => {
       "Upload not available, upload it later from Recent",
     );
     expect(mockShowAlert).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith("Upload failed:", uploadError);
+
+    consoleSpy.mockRestore();
   });
 
   it("prompts file save when local storage fails (upload is never attempted)", async () => {
@@ -243,11 +249,10 @@ describe("useMeasurementUpload", () => {
     expect(mockSaveMeasurement).not.toHaveBeenCalled();
   });
 
-  // Regression: a markUploaded failure that happens AFTER a successful MQTT
-  // publish must not flip the row back to "failed" — the data is on the
-  // cloud, only the local status write failed. The user sees an info toast,
-  // not the "upload not available" error toast.
-  it("does not mark the row failed when markUploaded errors after a successful publish", async () => {
+  // Once the MQTT publish has succeeded the data is on the cloud, so a
+  // later local-state write failure must surface as an info toast (and
+  // leave the row's status alone) rather than the "upload failed" path.
+  it("shows an info toast and does not touch status when markUploaded errors after a successful publish", async () => {
     mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockResolvedValueOnce(undefined);
     mockMarkUploaded.mockRejectedValueOnce(new Error("disk full"));
@@ -263,20 +268,6 @@ describe("useMeasurementUpload", () => {
       "Local status update failed after successful publish:",
       expect.any(Error),
     );
-
-    consoleSpy.mockRestore();
-  });
-
-  it("logs the upload error", async () => {
-    const uploadError = new Error("network timeout");
-    mockSaveMeasurement.mockResolvedValueOnce("row-1");
-    mockSendMqttEvent.mockRejectedValueOnce(uploadError);
-
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
-
-    await capturedCallback(baseArgs);
-
-    expect(consoleSpy).toHaveBeenCalledWith("Upload failed:", uploadError);
 
     consoleSpy.mockRestore();
   });

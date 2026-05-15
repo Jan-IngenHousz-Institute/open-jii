@@ -168,12 +168,11 @@ describe("useMeasurements", () => {
       consoleSpy.mockRestore();
     });
 
-    // Regression: the previous implementation called
-    // setQueryData(["measurements"], ...), which does NOT match the list cache
-    // keyed ["measurements", "list", filter] read by the Recent screen, so
-    // in-place status updates silently missed visible rows. The fix relies on
-    // invalidateQueries({ queryKey: ["measurements"] }) which prefix-matches
-    // every measurements-derived cache.
+    // Status changes must propagate to the list cache the Recent screen
+    // reads (["measurements", "list", filter]). Writing to ["measurements"]
+    // alone wouldn't, so this asserts we never take that shortcut and rely
+    // on prefix-matching invalidateQueries({ queryKey: ["measurements"] })
+    // instead.
     it("does not call setQueryData with the bare ['measurements'] key", async () => {
       const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
       const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
@@ -199,9 +198,9 @@ describe("useMeasurements", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
 
-    // Once published, a local markAsSuccessful failure must NOT regress the
-    // row to "failed" — the data is already on the cloud. The error is
-    // logged but swallowed so the batch keeps going.
+    // Once the publish succeeds the data is on the cloud, so a local
+    // markAsSuccessful failure must be swallowed (logged, not surfaced) and
+    // must not flip the row to "failed". The batch keeps going.
     it("does not mark the row failed when markAsSuccessful errors after a successful publish", async () => {
       const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
       await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));

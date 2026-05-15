@@ -122,11 +122,12 @@ describe("useQuestionsUpload", () => {
   });
 
   it("transitions the pending row to failed when MQTT upload errors out", async () => {
+    const uploadError = new Error("network timeout");
     mockSaveMeasurement.mockResolvedValueOnce("row-1");
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
+    mockSendMqttEvent.mockRejectedValueOnce(uploadError);
     mockMarkFailed.mockResolvedValueOnce(undefined);
 
-    vi.spyOn(console, "error").mockImplementation(vi.fn());
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     await capturedCallback(baseArgs);
 
@@ -146,25 +147,12 @@ describe("useQuestionsUpload", () => {
     expect(mockToastError).toHaveBeenCalledWith(
       "Upload not available, upload it later from Recent",
     );
-
-    vi.restoreAllMocks();
-  });
-
-  it("logs the upload error when MQTT fails", async () => {
-    const uploadError = new Error("network timeout");
-    mockSaveMeasurement.mockResolvedValueOnce("row-1");
-    mockSendMqttEvent.mockRejectedValueOnce(uploadError);
-
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
-
-    await capturedCallback(baseArgs);
-
     expect(consoleSpy).toHaveBeenCalledWith("Upload failed:", uploadError);
 
     consoleSpy.mockRestore();
   });
 
-  it("logs storage error and does not attempt MQTT when local save fails", async () => {
+  it("surfaces storage failure via toast + log and never attempts MQTT", async () => {
     mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
@@ -175,15 +163,18 @@ describe("useQuestionsUpload", () => {
       "Failed to save answers to local storage:",
       expect.any(Error),
     );
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Answers could not be saved on this device. Please export your data now to avoid losing it.",
+    );
     expect(mockSendMqttEvent).not.toHaveBeenCalled();
 
     consoleSpy.mockRestore();
   });
 
-  // Regression: a markUploaded failure that happens AFTER a successful MQTT
-  // publish must not flip the row back to "failed" — the answers are on the
-  // cloud, only the local status write failed.
-  it("does not mark the row failed when markUploaded errors after a successful publish", async () => {
+  // Once the MQTT publish has succeeded the answers are on the cloud, so a
+  // later local-state write failure must surface as an info toast (and
+  // leave the row's status alone) rather than the "upload failed" path.
+  it("shows an info toast and does not touch status when markUploaded errors after a successful publish", async () => {
     mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockResolvedValueOnce(undefined);
     mockMarkUploaded.mockRejectedValueOnce(new Error("disk full"));
@@ -201,19 +192,5 @@ describe("useQuestionsUpload", () => {
     );
 
     consoleSpy.mockRestore();
-  });
-
-  it("shows error toast when local storage save fails", async () => {
-    mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
-
-    vi.spyOn(console, "error").mockImplementation(vi.fn());
-
-    await capturedCallback(baseArgs);
-
-    expect(mockToastError).toHaveBeenCalledWith(
-      "Answers could not be saved on this device. Please export your data now to avoid losing it.",
-    );
-
-    vi.restoreAllMocks();
   });
 });
