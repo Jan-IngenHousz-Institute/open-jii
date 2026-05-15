@@ -155,6 +155,42 @@ describe("groupAndAggregate", () => {
     expect(byKey.get("B")).toBe(3);
     expect(byKey.get(UNKNOWN_KEY)).toBe(4);
   });
+
+  it("groups by a numeric / boolean cell by stringifying it", () => {
+    const rows = [
+      { pass: true, score: 1 },
+      { pass: false, score: 2 },
+      { pass: true, score: 3 },
+    ];
+    const numeric = groupAndAggregate(
+      [{ n: 1 }, { n: 2 }, { n: 1 }],
+      "n",
+      "BIGINT",
+      undefined,
+      "count",
+    );
+    expect(new Map(numeric.map((b) => [b.key, b.value]))).toEqual(
+      new Map([
+        ["1", 2],
+        ["2", 1],
+      ]),
+    );
+    const byPass = groupAndAggregate(rows, "pass", "BOOLEAN", "score", "sum");
+    const map = new Map(byPass.map((b) => [b.key, b.value]));
+    expect(map.get("true")).toBe(4);
+    expect(map.get("false")).toBe(2);
+  });
+
+  it("buckets unsupported cell types (objects / arrays) into Unknown", () => {
+    const out = groupAndAggregate(
+      [{ x: { foo: "bar" } }, { x: [1, 2] }],
+      "x",
+      "STRING",
+      undefined,
+      "count",
+    );
+    expect(out).toEqual([{ key: UNKNOWN_KEY, label: UNKNOWN_LABEL, value: 2, count: 2 }]);
+  });
 });
 
 const QUESTIONS_TYPE = WellKnownColumnTypes.QUESTIONS;
