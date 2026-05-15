@@ -1,23 +1,16 @@
 import { clsx } from "clsx";
 import { ChevronsLeft } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text, FlatList } from "react-native";
-import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { TabBar } from "~/components/TabBar";
-import { CommentModal } from "~/components/recent-measurements-screen/comment-modal";
-import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
+import { MeasurementsModals } from "~/components/recent-measurements-screen/measurements-modals";
+import type { ModalState } from "~/components/recent-measurements-screen/measurements-modals";
 import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen/swipeable-measurement-row";
-import { useAllMeasurements } from "~/hooks/use-all-measurements";
-import type {
-  MeasurementFilter,
-  MeasurementItem as MeasurementItemType,
-  MeasurementStatus,
-} from "~/hooks/use-all-measurements";
-import { useMeasurements } from "~/hooks/use-measurements";
+import { useRecentMeasurementsActions } from "~/components/recent-measurements-screen/use-recent-measurements-actions";
+import type { MeasurementFilter, MeasurementItem } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
-import { parseQuestions } from "~/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 const TABS = [
@@ -31,54 +24,41 @@ type TabKey = (typeof TABS)[number]["key"];
 export function CompletedState() {
   const { classes, colors } = useTheme();
   const [filter, setFilter] = useState<TabKey>("all");
-  const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
-  const [selectedForComment, setSelectedForComment] = useState<MeasurementItemType | null>(null);
+  const [modal, setModal] = useState<ModalState>({ kind: "none" });
+  const closeModal = useCallback(() => setModal({ kind: "none" }), []);
   const { startNewIteration } = useMeasurementFlowStore();
-  const { measurements, invalidate } = useAllMeasurements(filter as MeasurementFilter);
-  const { uploadOne, removeMeasurement, updateMeasurementComment } = useMeasurements();
 
-  const handleSync = (id: string, experimentName: string) => {
-    showAlert("Upload Measurement", `Are you sure you want to upload "${experimentName}"?`, [
-      {
-        text: "Upload",
-        variant: "primary",
-        onPress: () => {
-          void (async () => {
-            await uploadOne(id);
-            invalidate();
-          })();
-        },
-      },
-      {
-        text: "Cancel",
-        variant: "ghost",
-      },
-    ]);
-  };
+  const { measurements, confirmSync, confirmDelete, saveComment } = useRecentMeasurementsActions(
+    filter as MeasurementFilter,
+  );
 
-  const handleDelete = (id: string, status: MeasurementStatus, experimentName: string) => {
-    const isSynced = status === "successful";
-    const message = isSynced
-      ? `"${experimentName}" is already uploaded to the cloud. Remove it from this phone? The cloud copy stays intact.`
-      : `"${experimentName}" has not been uploaded yet. Deleting it now means the measurement will be lost permanently.`;
+  const renderItem = ({ item }: { item: MeasurementItem }) => (
+    <SwipeableMeasurementRow
+      id={item.key}
+      timestamp={item.timestamp}
+      experimentName={item.experimentName}
+      status={item.status}
+      questions={item.questions}
+      onPress={() => setModal({ kind: "questions", measurement: item })}
+      onComment={
+        item.status === "pending" || item.status === "failed"
+          ? () => setModal({ kind: "comment", measurement: item })
+          : undefined
+      }
+      onDelete={() => {
+        if (item.status === "uploading") return;
+        confirmDelete(item);
+      }}
+      onSync={
+        item.status === "pending" || item.status === "failed" ? () => confirmSync(item) : undefined
+      }
+      hasComment={
+        !!getCommentFromMeasurementResult(item.data.measurementResult as Record<string, unknown>)
+      }
+    />
+  );
 
-    showAlert(isSynced ? "Remove from phone" : "Delete unsynced measurement", message, [
-      {
-        text: isSynced ? "Remove" : "Delete",
-        variant: "danger",
-        onPress: () => {
-          void (() => {
-            removeMeasurement(id);
-            invalidate();
-          })();
-        },
-      },
-      {
-        text: "Cancel",
-        variant: "ghost",
-      },
-    ]);
-  };
+  const hasItems = measurements.length > 0;
 
   return (
     <View className="flex-1">
@@ -86,85 +66,42 @@ export function CompletedState() {
         <TabBar tabs={TABS} activeTab={filter} onTabChange={setFilter} />
       </View>
 
-      {measurements && measurements.length > 0 && (
+      {hasItems && (
         <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
           <ChevronsLeft size={13} color={colors.neutral.gray500} />
           <Text className={clsx("text-sm font-normal", classes.textMuted)}>Swipe</Text>
         </View>
       )}
-      {!measurements || measurements.length === 0 ? (
-        <View className="flex-1 items-center justify-center p-4">
-          <Text className={clsx("text-center text-lg", classes.textSecondary)}>
-            No measurements found
-          </Text>
-          <Text className={clsx("mt-2 text-center text-sm", classes.textMuted)}>
-            {filter === "all"
-              ? "Your uploaded measurement will appear here"
-              : filter === "synced"
-                ? "No synced measurements yet"
-                : "All measurements have been synced"}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={measurements}
-          keyExtractor={(item) => item.key}
-          contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
-          renderItem={({ item: measurement }) => (
-            <SwipeableMeasurementRow
-              id={measurement.key}
-              timestamp={measurement.timestamp}
-              experimentName={measurement.experimentName}
-              status={measurement.status}
-              questions={parseQuestions(measurement.data.measurementResult)}
-              onPress={() => setSelectedMeasurement(measurement)}
-              onComment={
-                measurement.status === "pending" || measurement.status === "failed"
-                  ? () => setSelectedForComment(measurement)
-                  : undefined
-              }
-              onDelete={() => {
-                if (measurement.status === "uploading") return;
-                handleDelete(measurement.key, measurement.status, measurement.experimentName);
-              }}
-              onSync={
-                measurement.status === "pending" || measurement.status === "failed"
-                  ? () => handleSync(measurement.key, measurement.experimentName)
-                  : undefined
-              }
-            />
-          )}
-        />
-      )}
+
+      <FlatList
+        data={measurements}
+        keyExtractor={(item) => item.key}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: 16, flexGrow: 1 }}
+        windowSize={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews
+        ListEmptyComponent={
+          <View className="flex-1 items-center justify-center p-4">
+            <Text className={clsx("text-center text-lg", classes.textSecondary)}>
+              No measurements found
+            </Text>
+            <Text className={clsx("mt-2 text-center text-sm", classes.textMuted)}>
+              {filter === "all"
+                ? "Your uploaded measurement will appear here"
+                : filter === "synced"
+                  ? "No synced measurements yet"
+                  : "All measurements have been synced"}
+            </Text>
+          </View>
+        }
+      />
 
       <View className="px-4 py-3">
         <Button title="Start next measurement" onPress={startNewIteration} style={{ height: 44 }} />
       </View>
 
-      {selectedMeasurement && (
-        <MeasurementQuestionsModal
-          visible={!!selectedMeasurement}
-          measurement={selectedMeasurement}
-          onClose={() => setSelectedMeasurement(null)}
-        />
-      )}
-
-      {selectedForComment && (
-        <CommentModal
-          visible={!!selectedForComment}
-          initialText={getCommentFromMeasurementResult(
-            selectedForComment.data.measurementResult as Record<string, unknown>,
-          )}
-          experimentName={selectedForComment.experimentName}
-          questions={parseQuestions(selectedForComment.data.measurementResult)}
-          timestamp={selectedForComment.timestamp}
-          onSave={async (text) => {
-            await updateMeasurementComment(selectedForComment.key, selectedForComment.data, text);
-            setSelectedForComment(null);
-          }}
-          onCancel={() => setSelectedForComment(null)}
-        />
-      )}
+      <MeasurementsModals state={modal} onClose={closeModal} onSaveComment={saveComment} />
     </View>
   );
 }

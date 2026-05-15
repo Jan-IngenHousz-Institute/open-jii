@@ -62,11 +62,11 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
   const confirmDelete = (m: MeasurementItem) => {
     const isSynced = m.status === "successful";
     confirmAndRun({
-      title: isSynced ? "Delete Measurement" : "Remove Measurement",
+      title: isSynced ? "Remove from phone" : "Delete unsynced measurement",
       message: isSynced
-        ? `Are you sure you want to delete "${m.experimentName}" from local storage?`
-        : `Are you sure you want to remove "${m.experimentName}"? This will delete it from local storage.`,
-      confirmText: isSynced ? "Delete" : "Remove",
+        ? `"${m.experimentName}" is already uploaded to the cloud. Remove it from this phone? The cloud copy stays intact.`
+        : `"${m.experimentName}" has not been uploaded yet. Deleting it now means the measurement will be lost permanently.`,
+      confirmText: isSynced ? "Remove" : "Delete",
       variant: "danger",
       errorMessage: "Failed to delete measurement. Please try again.",
       run: async () => {
