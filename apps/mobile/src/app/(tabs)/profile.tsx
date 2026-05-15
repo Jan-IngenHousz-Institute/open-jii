@@ -2,22 +2,33 @@ import { useQueryClient } from "@tanstack/react-query";
 import "expo-application";
 import * as Application from "expo-application";
 import * as Updates from "expo-updates";
-import { User, ExternalLink, LogOut } from "lucide-react-native";
-import React from "react";
-import { View, Text, ScrollView, Linking, Image } from "react-native";
+import { User, ExternalLink, LogOut, Sun, Moon } from "lucide-react-native";
+import React, { useContext } from "react";
+import { View, Text, ScrollView, Linking, Image, Pressable } from "react-native";
 import { showAlert } from "~/components/AlertDialog";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
+import { ThemeContext, ThemePreference } from "~/context/ThemeContext";
 import { useSession } from "~/hooks/use-session";
 import { useThemeColors } from "~/hooks/use-theme-colors";
 import { getEnvVar } from "~/stores/environment-store";
 import { formatRelativeTime } from "~/utils/format-relative-time";
 
+const THEME_OPTIONS: {
+  value: ThemePreference;
+  label: string;
+  Icon: React.FC<{ size: number; color: string }>;
+}[] = [
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+];
+
 export default function ProfileScreen() {
   const { session, signOut } = useSession();
   const queryClient = useQueryClient();
   const themeColors = useThemeColors();
+  const { themePreference, changeTheme } = useContext(ThemeContext);
 
   const handleLogout = async () => {
     queryClient.resetQueries();
@@ -71,6 +82,34 @@ export default function ProfileScreen() {
           <Text className="text-on-surface text-base font-medium">
             {formatRelativeTime(expires)}
           </Text>
+        </View>
+      </Card>
+
+      <Card className="mb-6">
+        <Text className="text-on-surface mb-4 text-lg font-bold">Appearance</Text>
+        <View className="flex-row gap-2">
+          {THEME_OPTIONS.map(({ value, label, Icon }) => {
+            const active = themePreference === value;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => changeTheme(value)}
+                className="flex-1 items-center gap-1.5 rounded-xl border py-3"
+                style={{
+                  borderColor: active ? themeColors.brand : themeColors.border,
+                  backgroundColor: active ? themeColors.brand + "18" : "transparent",
+                }}
+              >
+                <Icon size={18} color={active ? themeColors.brand : themeColors.inactive} />
+                <Text
+                  style={{ color: active ? themeColors.brand : themeColors.inactive }}
+                  className="text-sm font-medium"
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </Card>
 
