@@ -53,11 +53,19 @@ function extractGroupKey(value: unknown, isContributor: boolean): { key: string;
     if (c) return { key: c.id, label: c.name };
     return { key: UNKNOWN_KEY, label: UNKNOWN_LABEL };
   }
-  if (value == null || value === "") {
-    return { key: UNKNOWN_KEY, label: UNKNOWN_LABEL };
+  // Only primitive-like cells produce meaningful string keys. Anything else
+  // (objects, functions, symbols) would collapse into "[object Object]" or
+  // throw, so we treat those as Unknown rather than merge unrelated rows
+  // into one bucket.
+  if (typeof value === "string") {
+    if (value === "") return { key: UNKNOWN_KEY, label: UNKNOWN_LABEL };
+    return { key: value, label: value };
   }
-  const stringified = String(value);
-  return { key: stringified, label: stringified };
+  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
+    const stringified = String(value);
+    return { key: stringified, label: stringified };
+  }
+  return { key: UNKNOWN_KEY, label: UNKNOWN_LABEL };
 }
 
 function toNumeric(value: unknown): number | null {
@@ -119,8 +127,7 @@ export function groupAndAggregate(
       else if (fn === "avg") value = sum / numericValues.length;
       else if (fn === "min")
         value = numericValues.reduce((acc, n) => (n < acc ? n : acc), numericValues[0]);
-      else if (fn === "max")
-        value = numericValues.reduce((acc, n) => (n > acc ? n : acc), numericValues[0]);
+      else value = numericValues.reduce((acc, n) => (n > acc ? n : acc), numericValues[0]);
     }
     out.push({ key, label, value, count: rowCount });
   }

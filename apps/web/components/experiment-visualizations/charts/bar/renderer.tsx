@@ -24,10 +24,10 @@ export function BarRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const xEntry = dataSourcesByRole(visualization.dataConfig.dataSources, "x")[0]?.source;
-  const yEntry = dataSourcesByRole(visualization.dataConfig.dataSources, "y")[0]?.source;
-  const xColumn = xEntry?.columnName;
-  const yColumn = yEntry?.columnName;
+  const xColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "x")[0]?.source
+    .columnName;
+  const yColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "y")[0]?.source
+    .columnName;
 
   const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
 
@@ -88,6 +88,7 @@ export function BarRenderer({
   }, [
     displayBuckets,
     orientation,
+    sortDirection,
     yColumn,
     aggregationFunction,
     chartConfig.colorMap,
