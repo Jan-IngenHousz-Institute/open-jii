@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 
 import {
+  applyRowFilters,
   applyTopN,
   collectQuestionLabels,
   groupAndAggregate,
@@ -336,5 +337,46 @@ describe("applyTopN", () => {
     const buckets = makeBuckets([5, 1, 9]);
     expect(applyTopN(buckets, "desc", 0)).toHaveLength(3);
     expect(applyTopN(buckets, "desc", -1)).toHaveLength(3);
+  });
+});
+
+describe("applyRowFilters", () => {
+  const rows = [
+    { school: "Lincoln", team: "Red", v: 1 },
+    { school: "Lincoln", team: "Blue", v: 2 },
+    { school: "Madison", team: "Red", v: 3 },
+    { school: "Madison", team: "Blue", v: 4 },
+    { school: null, team: "Red", v: 5 },
+  ];
+
+  it("returns rows unchanged when filters is undefined or empty", () => {
+    expect(applyRowFilters(rows, undefined)).toEqual(rows);
+    expect(applyRowFilters(rows, [])).toEqual(rows);
+  });
+
+  it("ignores half-configured filters (empty column or value)", () => {
+    expect(applyRowFilters(rows, [{ column: "", operator: "equals", value: "Lincoln" }])).toEqual(
+      rows,
+    );
+    expect(applyRowFilters(rows, [{ column: "school", operator: "equals", value: "" }])).toEqual(
+      rows,
+    );
+  });
+
+  it("keeps only rows matching every active filter (AND semantics)", () => {
+    const out = applyRowFilters(rows, [{ column: "school", operator: "equals", value: "Lincoln" }]);
+    expect(out).toHaveLength(2);
+    expect(out.every((r) => r.school === "Lincoln")).toBe(true);
+
+    const both = applyRowFilters(rows, [
+      { column: "school", operator: "equals", value: "Madison" },
+      { column: "team", operator: "equals", value: "Blue" },
+    ]);
+    expect(both).toEqual([{ school: "Madison", team: "Blue", v: 4 }]);
+  });
+
+  it("drops rows where the filtered cell is null", () => {
+    const out = applyRowFilters(rows, [{ column: "school", operator: "equals", value: "Lincoln" }]);
+    expect(out.some((r) => r.school === null)).toBe(false);
   });
 });

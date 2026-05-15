@@ -12,8 +12,8 @@ import type { ChartFormConfig } from "../form-values";
 import { dataSourcesByRole, getCategoryColor } from "../form-values";
 import type { ChartRendererProps } from "../types";
 import { useChartData } from "../use-chart-data";
-import type { AggregationFunction } from "./aggregate";
-import { applyTopN, groupAndAggregate } from "./aggregate";
+import type { AggregationFunction, RowFilter } from "./aggregate";
+import { applyRowFilters, applyTopN, groupAndAggregate } from "./aggregate";
 
 type BarConfig = PlotlyChartConfig & ChartFormConfig;
 
@@ -42,12 +42,18 @@ export function BarRenderer({
   const xColumnType = chartConfig.xColumnType;
   const questionLabel = chartConfig.questionLabel;
 
+  // dataConfig.filters is the schema-defined home for row filters. The bar
+  // chart honours `equals` filters AND-combined before aggregation; rows
+  // not matching every active filter never reach `groupAndAggregate`.
+  const filters = visualization.dataConfig.filters as RowFilter[] | undefined;
+  const filteredRows = useMemo(() => applyRowFilters(rows, filters), [rows, filters]);
+
   const buckets = useMemo(
     () =>
-      groupAndAggregate(rows, xColumn, xColumnType, yColumn, aggregationFunction, {
+      groupAndAggregate(filteredRows, xColumn, xColumnType, yColumn, aggregationFunction, {
         questionLabel,
       }),
-    [rows, xColumn, xColumnType, yColumn, aggregationFunction, questionLabel],
+    [filteredRows, xColumn, xColumnType, yColumn, aggregationFunction, questionLabel],
   );
 
   const displayBuckets = useMemo(
@@ -119,7 +125,7 @@ export function BarRenderer({
       experimentId={experimentId}
       isLoading={isLoading}
       error={error}
-      hasRows={rows.length > 0}
+      hasRows={filteredRows.length > 0}
     >
       <div className="flex h-full w-full flex-col">
         <BarChart data={barData} config={effectiveConfig} />
