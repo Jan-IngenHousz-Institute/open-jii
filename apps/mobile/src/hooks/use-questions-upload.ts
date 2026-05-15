@@ -1,3 +1,4 @@
+import { useNetworkState } from "expo-network";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { useMeasurements } from "~/hooks/use-measurements";
@@ -10,6 +11,7 @@ import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
 export function useQuestionsUpload() {
   const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
+  const networkState = useNetworkState();
 
   const { loading: isUploading, execute: uploadQuestions } = useAsyncCallback(
     async ({
@@ -62,6 +64,14 @@ export function useQuestionsUpload() {
         toast.error(
           "Answers could not be saved on this device. Please export your data now to avoid losing it.",
         );
+        return;
+      }
+
+      // See use-measurement-upload.ts — when offline, leave the row pending
+      // rather than letting Cognito's credential fetch throw and trip the
+      // "failed" path. useAutoUpload retries pending rows on reconnect.
+      if (networkState.isInternetReachable === false) {
+        toast.info("Saved offline — will upload when you're back online");
         return;
       }
 

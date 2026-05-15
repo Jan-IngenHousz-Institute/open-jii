@@ -1,3 +1,4 @@
+import { useNetworkState } from "expo-network";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
@@ -93,6 +94,7 @@ function promptMeasurementFileSave(measurement: {
 
 export function useMeasurementUpload() {
   const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
+  const networkState = useNetworkState();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
     async ({
@@ -157,6 +159,16 @@ export function useMeasurementUpload() {
       } catch (storageError) {
         console.error("Failed to save measurement to local storage:", storageError);
         promptMeasurementFileSave(failedUploadData);
+        return;
+      }
+
+      // If the device is offline, skip the publish entirely. Cognito's
+      // credential fetch inside sendMqttEvent would throw and we'd mark the
+      // row "failed" — but the schema reserves "failed" for rows that
+      // actually attempted a publish. Leaving it "pending" lets
+      // useAutoUpload's network-restore listener pick it up on reconnect.
+      if (networkState.isInternetReachable === false) {
+        toast.info("Saved offline — will upload when you're back online");
         return;
       }
 

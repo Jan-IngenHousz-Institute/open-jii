@@ -10,6 +10,7 @@ const {
   mockToastSuccess,
   mockToastError,
   mockToastInfo,
+  mockUseNetworkState,
 } = vi.hoisted(() => ({
   mockSaveMeasurement: vi.fn(),
   mockMarkUploaded: vi.fn(),
@@ -18,6 +19,7 @@ const {
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
   mockToastInfo: vi.fn(),
+  mockUseNetworkState: vi.fn(),
 }));
 
 let capturedCallback: (...args: any[]) => Promise<any>;
@@ -49,6 +51,10 @@ vi.mock("react-async-hook", () => ({
   },
 }));
 
+vi.mock("expo-network", () => ({
+  useNetworkState: mockUseNetworkState,
+}));
+
 const baseArgs = {
   timestamp: "2026-03-02T10:00:00.000Z",
   timezone: "Europe/Amsterdam",
@@ -61,6 +67,7 @@ const baseArgs = {
 describe("useQuestionsUpload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseNetworkState.mockReturnValue({ isInternetReachable: true });
     useQuestionsUpload();
   });
 
@@ -90,6 +97,28 @@ describe("useQuestionsUpload", () => {
     expect(mockMarkFailed).not.toHaveBeenCalled();
     expect(mockToastSuccess).toHaveBeenCalledWith("Answers uploaded!");
     expect(mockSaveMeasurement).toHaveBeenCalledTimes(1);
+  });
+
+  // Regression: when the device is offline we must not attempt the MQTT
+  // publish (Cognito would throw) and must not flip the row to "failed".
+  it("leaves the row pending and skips MQTT when the device is offline", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
+    mockUseNetworkState.mockReturnValue({ isInternetReachable: false });
+    useQuestionsUpload();
+
+    await capturedCallback(baseArgs);
+
+    expect(mockSaveMeasurement).toHaveBeenCalledWith(
+      expect.objectContaining({ topic: "mock/topic" }),
+      "pending",
+    );
+    expect(mockSendMqttEvent).not.toHaveBeenCalled();
+    expect(mockMarkFailed).not.toHaveBeenCalled();
+    expect(mockMarkUploaded).not.toHaveBeenCalled();
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      "Saved offline — will upload when you're back online",
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it("transitions the pending row to failed when MQTT upload errors out", async () => {
