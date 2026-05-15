@@ -134,25 +134,25 @@ describe("useRecentMeasurementsActions", () => {
   });
 
   describe("confirmDelete", () => {
-    it("shows 'Delete Measurement' title for synced items", () => {
+    it("shows 'Remove from phone' title for synced items", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
       act(() => result.current.confirmDelete(makeItem("k2", "successful")));
 
       expect(mockShowAlert).toHaveBeenCalledWith(
-        "Delete Measurement",
+        "Remove from phone",
         expect.any(String),
         expect.any(Array),
       );
     });
 
-    it("shows 'Remove Measurement' title for unsynced items", () => {
+    it("shows 'Delete unsynced measurement' title for unsynced items", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
       act(() => result.current.confirmDelete(makeItem("k1", "failed")));
 
       expect(mockShowAlert).toHaveBeenCalledWith(
-        "Remove Measurement",
+        "Delete unsynced measurement",
         expect.any(String),
         expect.any(Array),
       );

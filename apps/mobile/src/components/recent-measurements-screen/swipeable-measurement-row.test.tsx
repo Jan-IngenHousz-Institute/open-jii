@@ -25,7 +25,7 @@ const defaultProps = {
   id: "m1",
   timestamp: "2026-04-20T10:00:00.000Z",
   experimentName: "Photosynthesis",
-  status: "unsynced" as const,
+  status: "pending" as const,
 };
 
 describe("SwipeableMeasurementRow", () => {
@@ -39,28 +39,28 @@ describe("SwipeableMeasurementRow", () => {
   });
 
   it("shows the Upload button for unsynced rows when onSync is provided", () => {
-    render(<SwipeableMeasurementRow {...defaultProps} status="unsynced" onSync={vi.fn()} />);
+    render(<SwipeableMeasurementRow {...defaultProps} status="pending" onSync={vi.fn()} />);
     expect(screen.getByText("Upload")).toBeTruthy();
   });
 
   it("does not show the Upload button for synced rows", () => {
-    render(<SwipeableMeasurementRow {...defaultProps} status="synced" onSync={vi.fn()} />);
+    render(<SwipeableMeasurementRow {...defaultProps} status="successful" onSync={vi.fn()} />);
     expect(screen.queryByText("Upload")).toBeNull();
   });
 
   it("shows the Comment button for unsynced rows when onComment is provided", () => {
-    render(<SwipeableMeasurementRow {...defaultProps} status="unsynced" onComment={vi.fn()} />);
+    render(<SwipeableMeasurementRow {...defaultProps} status="pending" onComment={vi.fn()} />);
     expect(screen.getByText("Comment")).toBeTruthy();
   });
 
   it("does not show the Comment button for synced rows", () => {
-    render(<SwipeableMeasurementRow {...defaultProps} status="synced" onComment={vi.fn()} />);
+    render(<SwipeableMeasurementRow {...defaultProps} status="successful" onComment={vi.fn()} />);
     expect(screen.queryByText("Comment")).toBeNull();
   });
 
   it("calls onDelete with the row id when the delete button is pressed", () => {
     const onDelete = vi.fn();
-    render(<SwipeableMeasurementRow {...defaultProps} status="synced" onDelete={onDelete} />);
+    render(<SwipeableMeasurementRow {...defaultProps} status="successful" onDelete={onDelete} />);
     const touchables = screen.UNSAFE_getAllByType(TouchableOpacity);
     fireEvent.press(touchables[0]);
     expect(onDelete).toHaveBeenCalledWith("m1");
