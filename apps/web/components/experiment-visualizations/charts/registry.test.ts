@@ -22,21 +22,27 @@ describe("chart-type registry", () => {
     expect(def?.family).toBe("basic");
   });
 
+  it("returns the bar definition for chartType=bar", () => {
+    const def = getChartTypeDef("bar");
+    expect(def?.type).toBe("bar");
+    expect(def?.family).toBe("basic");
+  });
+
   it("returns undefined for an unregistered chart type", () => {
-    expect(getChartTypeDef("bar")).toBeUndefined();
+    expect(getChartTypeDef("alluvial")).toBeUndefined();
     expect(isSupportedChartType("line")).toBe(true);
-    expect(isSupportedChartType("bar")).toBe(false);
+    expect(isSupportedChartType("alluvial")).toBe(false);
   });
 
   it("listChartTypes returns only registered types", () => {
     const all = listChartTypes();
     const types = all.map((d) => d.type).sort();
-    expect(types).toEqual(["line", "scatter"]);
+    expect(types).toEqual(["bar", "line", "scatter"]);
   });
 
   it("listChartTypesByFamily groups registered types under their family", () => {
     const grouped = listChartTypesByFamily();
-    expect(grouped.basic.map((d) => d.type).sort()).toEqual(["line", "scatter"]);
+    expect(grouped.basic.map((d) => d.type).sort()).toEqual(["bar", "line", "scatter"]);
     expect(grouped.scientific).toEqual([]);
     expect(grouped["3d"]).toEqual([]);
     expect(grouped.statistical).toEqual([]);
@@ -57,6 +63,24 @@ describe("chart-type registry", () => {
     const config = def.defaultConfig();
     expect(config.mode).toBe("markers");
     expect(config.marker).toMatchObject({ size: 6, symbol: "circle" });
+  });
+
+  it("bar defaults expose orientation + aggregation + ranking fields", () => {
+    const def = getChartTypeDef("bar");
+    if (!def) throw new Error("bar def missing from registry");
+    const config = def.defaultConfig();
+    expect(config.orientation).toBe("v");
+    expect(config.aggregationFunction).toBe("count");
+    expect(config.sortDirection).toBeNull();
+    expect(config.xAxisType).toBe("category");
+  });
+
+  it("bar default data config seeds X and Y data sources", () => {
+    const def = getChartTypeDef("bar");
+    if (!def) throw new Error("bar def missing from registry");
+    const data = def.defaultDataConfig("raw_data");
+    expect(data.tableName).toBe("raw_data");
+    expect(data.dataSources.map((ds) => ds.role)).toEqual(["x", "y"]);
   });
 
   it("default data config seeds X and Y data sources", () => {

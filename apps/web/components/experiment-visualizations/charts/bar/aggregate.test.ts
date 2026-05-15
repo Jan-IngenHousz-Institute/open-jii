@@ -1,0 +1,195 @@
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import { describe, expect, it } from "vitest";
+
+import {
+  applyTopN,
+  groupAndAggregate,
+  parseContributorCell,
+  UNKNOWN_KEY,
+  UNKNOWN_LABEL,
+} from "./aggregate";
+import type { AggregatedBucket } from "./aggregate";
+
+describe("parseContributorCell", () => {
+  it("returns null for null, undefined, and empty string", () => {
+    expect(parseContributorCell(null)).toBeNull();
+    expect(parseContributorCell(undefined)).toBeNull();
+    expect(parseContributorCell("")).toBeNull();
+  });
+
+  it("parses a JSON-string contributor", () => {
+    const c = parseContributorCell('{"id":"u1","name":"Ada","avatar":"https://x/y"}');
+    expect(c).toEqual({ id: "u1", name: "Ada", avatar: "https://x/y" });
+  });
+
+  it("accepts an already-parsed contributor object", () => {
+    const c = parseContributorCell({ id: "u2", name: "Grace", avatar: null });
+    expect(c).toEqual({ id: "u2", name: "Grace", avatar: null });
+  });
+
+  it("treats a missing avatar as null", () => {
+    const c = parseContributorCell('{"id":"u3","name":"Linus"}');
+    expect(c).toEqual({ id: "u3", name: "Linus", avatar: null });
+  });
+
+  it("returns null when JSON is malformed", () => {
+    expect(parseContributorCell("{not json")).toBeNull();
+  });
+
+  it("returns null when JSON parses to a non-contributor shape", () => {
+    expect(parseContributorCell('{"foo":"bar"}')).toBeNull();
+    expect(parseContributorCell('"just a string"')).toBeNull();
+    expect(parseContributorCell("42")).toBeNull();
+  });
+});
+
+const CONTRIBUTOR_TYPE = WellKnownColumnTypes.CONTRIBUTOR;
+
+function contributorCell(id: string, name: string) {
+  return JSON.stringify({ id, name, avatar: null });
+}
+
+describe("groupAndAggregate", () => {
+  it("returns an empty list when xColumn is undefined", () => {
+    expect(groupAndAggregate([{ a: 1 }], undefined, undefined, undefined, "count")).toEqual([]);
+  });
+
+  it("counts rows per contributor and labels by name", () => {
+    const rows = [
+      { contributor: contributorCell("u1", "Ada"), phi2: 0.8 },
+      { contributor: contributorCell("u2", "Grace"), phi2: 0.5 },
+      { contributor: contributorCell("u1", "Ada"), phi2: 0.9 },
+    ];
+    const out = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, undefined, "count");
+    expect(out).toHaveLength(2);
+    const byKey = new Map(out.map((b) => [b.key, b]));
+    expect(byKey.get("u1")).toMatchObject({ label: "Ada", value: 2, count: 2 });
+    expect(byKey.get("u2")).toMatchObject({ label: "Grace", value: 1, count: 1 });
+  });
+
+  it("buckets null/missing contributors under Unknown", () => {
+    const rows = [
+      { contributor: contributorCell("u1", "Ada") },
+      { contributor: null },
+      { contributor: "" },
+      { contributor: "{garbage" },
+    ];
+    const out = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, undefined, "count");
+    const unknown = out.find((b) => b.key === UNKNOWN_KEY);
+    expect(unknown).toMatchObject({ label: UNKNOWN_LABEL, value: 3, count: 3 });
+  });
+
+  it("computes mean of a numeric column per group", () => {
+    const rows = [
+      { contributor: contributorCell("u1", "Ada"), phi2: 0.8 },
+      { contributor: contributorCell("u1", "Ada"), phi2: 0.4 },
+      { contributor: contributorCell("u2", "Grace"), phi2: 0.6 },
+    ];
+    const out = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, "phi2", "avg");
+    const byKey = new Map(out.map((b) => [b.key, b]));
+    expect(byKey.get("u1")?.value).toBeCloseTo(0.6);
+    expect(byKey.get("u2")?.value).toBeCloseTo(0.6);
+  });
+
+  it("skips non-numeric and empty cells when aggregating numerically", () => {
+    const rows = [
+      { contributor: contributorCell("u1", "Ada"), phi2: 1 },
+      { contributor: contributorCell("u1", "Ada"), phi2: null },
+      { contributor: contributorCell("u1", "Ada"), phi2: "" },
+      { contributor: contributorCell("u1", "Ada"), phi2: "not a number" },
+      { contributor: contributorCell("u1", "Ada"), phi2: 3 },
+    ];
+    const out = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, "phi2", "avg");
+    expect(out).toHaveLength(1);
+    expect(out[0].value).toBeCloseTo(2);
+    expect(out[0].count).toBe(5);
+  });
+
+  it("returns 0 when no numeric values fall into a bucket (avg/min/max degenerate)", () => {
+    const rows = [
+      { contributor: contributorCell("u1", "Ada"), phi2: null },
+      { contributor: contributorCell("u1", "Ada"), phi2: "" },
+    ];
+    const out = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, "phi2", "avg");
+    expect(out[0].value).toBe(0);
+    expect(out[0].count).toBe(2);
+  });
+
+  it("coerces numeric strings (silver-layer columns commonly store '5.3' as STRING)", () => {
+    const rows = [
+      { contributor: contributorCell("u1", "Ada"), phi2: "0.8" },
+      { contributor: contributorCell("u1", "Ada"), phi2: "0.4" },
+    ];
+    const out = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, "phi2", "avg");
+    expect(out[0].value).toBeCloseTo(0.6);
+  });
+
+  it("computes max and min", () => {
+    const rows = [
+      { contributor: contributorCell("u1", "Ada"), phi2: 0.4 },
+      { contributor: contributorCell("u1", "Ada"), phi2: 0.9 },
+      { contributor: contributorCell("u2", "Grace"), phi2: 0.6 },
+    ];
+    const max = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, "phi2", "max");
+    const min = groupAndAggregate(rows, "contributor", CONTRIBUTOR_TYPE, "phi2", "min");
+    const maxByKey = new Map(max.map((b) => [b.key, b.value]));
+    const minByKey = new Map(min.map((b) => [b.key, b.value]));
+    expect(maxByKey.get("u1")).toBeCloseTo(0.9);
+    expect(maxByKey.get("u2")).toBeCloseTo(0.6);
+    expect(minByKey.get("u1")).toBeCloseTo(0.4);
+  });
+
+  it("groups by a categorical column using string-key", () => {
+    const rows = [
+      { team: "A", v: 1 },
+      { team: "A", v: 2 },
+      { team: "B", v: 3 },
+      { team: null, v: 4 },
+    ];
+    const out = groupAndAggregate(rows, "team", "STRING", "v", "sum");
+    const byKey = new Map(out.map((b) => [b.key, b.value]));
+    expect(byKey.get("A")).toBe(3);
+    expect(byKey.get("B")).toBe(3);
+    expect(byKey.get(UNKNOWN_KEY)).toBe(4);
+  });
+});
+
+describe("applyTopN", () => {
+  function makeBuckets(values: number[]): AggregatedBucket[] {
+    return values.map((v, i) => ({
+      key: `k${i}`,
+      label: `L${i}`,
+      value: v,
+      count: 1,
+    }));
+  }
+
+  it("returns input order when sortDirection is null/undefined", () => {
+    const buckets = makeBuckets([5, 1, 3]);
+    expect(applyTopN(buckets, null, undefined).map((b) => b.value)).toEqual([5, 1, 3]);
+    expect(applyTopN(buckets, undefined, undefined).map((b) => b.value)).toEqual([5, 1, 3]);
+  });
+
+  it("sorts descending and limits to topN", () => {
+    const buckets = makeBuckets([5, 1, 9, 3, 7]);
+    const out = applyTopN(buckets, "desc", 3);
+    expect(out.map((b) => b.value)).toEqual([9, 7, 5]);
+  });
+
+  it("sorts ascending", () => {
+    const buckets = makeBuckets([5, 1, 9, 3, 7]);
+    const out = applyTopN(buckets, "asc", undefined);
+    expect(out.map((b) => b.value)).toEqual([1, 3, 5, 7, 9]);
+  });
+
+  it("does not trim when topN >= length", () => {
+    const buckets = makeBuckets([1, 2, 3]);
+    expect(applyTopN(buckets, "desc", 99)).toHaveLength(3);
+  });
+
+  it("ignores invalid topN (0 or negative)", () => {
+    const buckets = makeBuckets([5, 1, 9]);
+    expect(applyTopN(buckets, "desc", 0)).toHaveLength(3);
+    expect(applyTopN(buckets, "desc", -1)).toHaveLength(3);
+  });
+});
