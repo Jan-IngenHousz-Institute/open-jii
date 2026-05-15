@@ -1,7 +1,8 @@
 import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 import { describe, expect, it } from "vitest";
+
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 
 import type { ChartFormConfig } from "../form-values";
 import { barDefaultConfig } from "./defaults";

@@ -104,8 +104,8 @@ export function BarRenderer({
   const effectiveConfig: PlotlyChartConfig = {
     ...chartConfig,
     autosizable: true,
-    xAxisType: orientation === "h" ? chartConfig.xAxisType ?? "linear" : "category",
-    yAxisType: orientation === "h" ? "category" : chartConfig.yAxisType ?? "linear",
+    xAxisType: orientation === "h" ? (chartConfig.xAxisType ?? "linear") : "category",
+    yAxisType: orientation === "h" ? "category" : (chartConfig.yAxisType ?? "linear"),
   };
 
   return (

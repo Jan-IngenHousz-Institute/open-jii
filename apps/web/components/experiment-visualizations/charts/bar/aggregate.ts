@@ -47,10 +47,7 @@ export function parseContributorCell(raw: unknown): ContributorCell | null {
   }
 }
 
-function extractGroupKey(
-  value: unknown,
-  isContributor: boolean,
-): { key: string; label: string } {
+function extractGroupKey(value: unknown, isContributor: boolean): { key: string; label: string } {
   if (isContributor) {
     const c = parseContributorCell(value);
     if (c) return { key: c.id, label: c.name };
@@ -94,10 +91,7 @@ export function groupAndAggregate(
   if (!xColumn) return [];
 
   const isContributor = xColumnType === WellKnownColumnTypes.CONTRIBUTOR;
-  const buckets = new Map<
-    string,
-    { label: string; numericValues: number[]; rowCount: number }
-  >();
+  const buckets = new Map<string, { label: string; numericValues: number[]; rowCount: number }>();
 
   for (const row of rows) {
     const { key, label } = extractGroupKey(row[xColumn], isContributor);

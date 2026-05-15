@@ -1,5 +1,6 @@
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 import { describe, expect, it } from "vitest";
+
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 
 import {
   applyTopN,

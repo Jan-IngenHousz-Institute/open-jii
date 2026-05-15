@@ -35,7 +35,9 @@ export function BarStylePanel({ form }: ChartPanelProps) {
             name="config.orientation"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-medium">{t("workspace.bar.orientation")}</FormLabel>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.bar.orientation")}
+                </FormLabel>
                 <Select value={String(field.value ?? "v")} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
