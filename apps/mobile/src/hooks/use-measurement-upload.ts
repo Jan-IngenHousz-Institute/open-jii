@@ -1,3 +1,4 @@
+import { useNetworkState } from "expo-network";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { showAlert } from "~/components/AlertDialog";
@@ -92,7 +93,8 @@ function promptMeasurementFileSave(measurement: {
 }
 
 export function useMeasurementUpload() {
-  const { saveMeasurement } = useMeasurements();
+  const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
+  const networkState = useNetworkState();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
     async ({
@@ -146,21 +148,49 @@ export function useMeasurementUpload() {
         },
       };
 
+      // Save locally first so the measurement appears in Recent immediately
+      // and can be flagged on-device, regardless of upload outcome. Status
+      // starts as "pending" — only flipped to "failed" once an actual MQTT
+      // attempt errors out, so field metrics distinguish never-tried from
+      // genuinely-failed rows.
+      let savedId: string;
       try {
-        await sendMqttEvent(topic, measurementData);
-        toast.success("Measurement uploaded!");
-        await saveMeasurement(failedUploadData, "successful");
-        return;
-      } catch (uploadError) {
-        console.error("Upload failed:", uploadError);
-        toast.error("Upload not available, upload it later from Recent");
-      }
-
-      try {
-        await saveMeasurement(failedUploadData, "failed");
+        savedId = await saveMeasurement(failedUploadData, "pending");
       } catch (storageError) {
         console.error("Failed to save measurement to local storage:", storageError);
         promptMeasurementFileSave(failedUploadData);
+        return;
+      }
+
+      // If the device is offline, skip the publish entirely. Cognito's
+      // credential fetch inside sendMqttEvent would throw and we'd mark the
+      // row "failed" — but the schema reserves "failed" for rows that
+      // actually attempted a publish. Leaving it "pending" lets
+      // useAutoUpload's network-restore listener pick it up on reconnect.
+      if (networkState.isInternetReachable === false) {
+        toast.info("Saved offline — will upload when you're back online");
+        return;
+      }
+
+      // Split into two phases: a publish failure means the data didn't reach
+      // the cloud (mark failed, surface error). A local-state update failure
+      // *after* a successful publish must not flip the row back to failed —
+      // the data is already on the cloud; only log/toast the local issue.
+      try {
+        await sendMqttEvent(topic, measurementData);
+      } catch (uploadError) {
+        console.error("Upload failed:", uploadError);
+        await markFailed(savedId);
+        toast.error("Upload not available, upload it later from Recent");
+        return;
+      }
+
+      try {
+        await markUploaded(savedId);
+        toast.success("Measurement uploaded!");
+      } catch (localError) {
+        console.error("Local status update failed after successful publish:", localError);
+        toast.info("Uploaded — local status will refresh on next sync");
       }
     },
   );

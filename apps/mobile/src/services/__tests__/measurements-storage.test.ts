@@ -8,9 +8,9 @@ import { compressForStorage } from "~/utils/storage-compression";
 
 import * as schema from "../db/schema";
 
-const migrationSql = readFileSync(
-  resolve(__dirname, "../../../drizzle/0000_outgoing_firebird.sql"),
-  "utf-8",
+const migrationFiles = ["0000_outgoing_firebird.sql", "0001_add_pending_status.sql"];
+const migrationSqls = migrationFiles.map((f) =>
+  readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
 );
 
 let sqlite: ReturnType<typeof Database>;
@@ -18,7 +18,12 @@ let db: ReturnType<typeof drizzle>;
 
 function createTestDb() {
   sqlite = new Database(":memory:");
-  sqlite.exec(migrationSql);
+  for (const sql of migrationSqls) {
+    // Drizzle uses "--> statement-breakpoint" markers as a hint to its mobile
+    // migrator; better-sqlite3.exec already understands ; separators, so
+    // stripping the marker is enough.
+    sqlite.exec(sql.replace(/-->\s*statement-breakpoint/g, ""));
+  }
   db = drizzle(sqlite, { schema });
 }
 
@@ -55,7 +60,7 @@ const mockMeasurement = {
 
 function insertRow(
   id: string,
-  status: "failed" | "uploading" | "successful",
+  status: "pending" | "failed" | "uploading" | "successful",
   overrides: Partial<{ topic: string; timestamp: string; createdAt: number }> = {},
 ) {
   sqlite
@@ -87,14 +92,25 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("saveMeasurement", () => {
-    it("inserts a failed row", async () => {
+    it("inserts a pending row and returns its id (save-first default)", async () => {
       const mod = await import("../measurements-storage");
-      await mod.saveMeasurement(mockMeasurement, "failed");
+      const id = await mod.saveMeasurement(mockMeasurement, "pending");
+
+      const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe("pending");
+      expect(rows[0].id).toBe("test-uuid-1234");
+      expect(id).toBe("test-uuid-1234");
+    });
+
+    it("inserts a failed row and returns its id", async () => {
+      const mod = await import("../measurements-storage");
+      const id = await mod.saveMeasurement(mockMeasurement, "failed");
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].status).toBe("failed");
-      expect(rows[0].id).toBe("test-uuid-1234");
+      expect(id).toBe("test-uuid-1234");
     });
 
     it("inserts a successful row", async () => {
@@ -104,6 +120,19 @@ describe("measurements-storage", () => {
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].status).toBe("successful");
+    });
+
+    it("rejects an unknown status at the database level (CHECK constraint)", () => {
+      // The DB-level CHECK constraint must reject anything outside the enum,
+      // even if a type-cast slips past the TS guard.
+      expect(() =>
+        sqlite
+          .prepare(
+            `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+             VALUES ('bad', 'gibberish', 't', '{}', 'e', 'p', '2026-01-01', 0)`,
+          )
+          .run(),
+      ).toThrow(/CHECK constraint/i);
     });
   });
 
@@ -120,7 +149,8 @@ describe("measurements-storage", () => {
       const result = await mod.getMeasurements("failed");
 
       expect(result).toHaveLength(1);
-      expect(result[0][0]).toBe("f1");
+      expect(result[0].id).toBe("f1");
+      expect(result[0].status).toBe("failed");
     });
 
     it("returns only successful rows when status is successful", async () => {
@@ -131,7 +161,8 @@ describe("measurements-storage", () => {
       const result = await mod.getMeasurements("successful");
 
       expect(result).toHaveLength(1);
-      expect(result[0][0]).toBe("s1");
+      expect(result[0].id).toBe("s1");
+      expect(result[0].status).toBe("successful");
     });
 
     it("returns empty array when no rows match", async () => {
@@ -144,9 +175,33 @@ describe("measurements-storage", () => {
       insertRow("f1", "failed");
 
       const mod = await import("../measurements-storage");
-      const [[, measurement]] = await mod.getMeasurements("failed");
+      const [first] = await mod.getMeasurements("failed");
 
-      expect(measurement).toEqual(mockMeasurement);
+      expect(first.data).toEqual(mockMeasurement);
+    });
+
+    it("returns rows for multiple statuses in one query (array form)", async () => {
+      insertRow("p1", "pending");
+      insertRow("f1", "failed");
+      insertRow("s1", "successful");
+
+      const mod = await import("../measurements-storage");
+      const result = await mod.getMeasurements(["pending", "failed"]);
+
+      expect(result).toHaveLength(2);
+      const byId = new Map(result.map((r) => [r.id, r.status]));
+      expect(byId.get("p1")).toBe("pending");
+      expect(byId.get("f1")).toBe("failed");
+      expect(byId.has("s1")).toBe(false);
+    });
+
+    it("returns empty array when called with an empty status list", async () => {
+      insertRow("p1", "pending");
+
+      const mod = await import("../measurements-storage");
+      const result = await mod.getMeasurements([]);
+
+      expect(result).toEqual([]);
     });
   });
 
@@ -181,6 +236,47 @@ describe("measurements-storage", () => {
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'u2'").get() as any;
       expect(row.topic).toBe("updated/topic");
       expect(row.status).toBe("successful");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // countMeasurementsByStatus
+  // ---------------------------------------------------------------------------
+
+  describe("countMeasurementsByStatus", () => {
+    it("returns the per-status counts via a single GROUP BY query", async () => {
+      insertRow("p1", "pending");
+      insertRow("p2", "pending");
+      insertRow("f1", "failed");
+      insertRow("u1", "uploading");
+      insertRow("s1", "successful");
+      insertRow("s2", "successful");
+      insertRow("s3", "successful");
+
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countMeasurementsByStatus();
+
+      expect(counts).toEqual({ pending: 2, failed: 1, uploading: 1, successful: 3 });
+    });
+
+    it("returns zeros when the table is empty", async () => {
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countMeasurementsByStatus();
+      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
+    });
+
+    it("returns zeros and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      // Force the count query to throw by destroying the table mid-test.
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const counts = await mod.countMeasurementsByStatus();
+
+      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to count measurements:", expect.any(Error));
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -232,14 +328,24 @@ describe("measurements-storage", () => {
       expect(rows[0].status).toBe("successful");
     });
 
-    it("is a no-op on a failed row", async () => {
+    it("transitions a failed row directly to successful (manual retry)", async () => {
       insertRow("m1", "failed");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("m1");
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
-      expect(row.status).toBe("failed");
+      expect(row.status).toBe("successful");
+    });
+
+    it("transitions a pending row directly to successful (save-first flow)", async () => {
+      insertRow("m1", "pending");
+
+      const mod = await import("../measurements-storage");
+      await mod.markAsSuccessful("m1");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.status).toBe("successful");
     });
   });
 
@@ -281,15 +387,28 @@ describe("measurements-storage", () => {
       expect(ids).toEqual([]);
     });
 
-    it("returns only failed rows when given a mixed batch", async () => {
+    it("returns only pending or failed rows when given a mixed batch", async () => {
+      insertRow("m0", "pending");
       insertRow("m1", "failed");
       insertRow("m2", "uploading");
       insertRow("m3", "successful");
 
       const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["m1", "m2", "m3"]);
+      const ids = await mod.markAsUploading(["m0", "m1", "m2", "m3"]);
 
-      expect(ids).toEqual(["m1"]);
+      expect([...ids].sort()).toEqual(["m0", "m1"]);
+    });
+
+    it("transitions pending rows to uploading", async () => {
+      insertRow("p1", "pending");
+      insertRow("p2", "pending");
+
+      const mod = await import("../measurements-storage");
+      const ids = await mod.markAsUploading(["p1", "p2"]);
+
+      expect([...ids].sort()).toEqual(["p1", "p2"]);
+      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
+      expect(rows.map((r) => r.status)).toEqual(["uploading", "uploading"]);
     });
   });
 
@@ -422,6 +541,16 @@ describe("measurements-storage", () => {
       expect(row.status).toBe("failed");
     });
 
+    it("transitions a pending row to failed (save-first MQTT errored)", async () => {
+      insertRow("m1", "pending");
+
+      const mod = await import("../measurements-storage");
+      await mod.markAsFailed("m1");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.status).toBe("failed");
+    });
+
     it("is a no-op on a row that is already failed", async () => {
       insertRow("m1", "failed");
 
@@ -460,7 +589,7 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("resetUploadingMeasurements", () => {
-    it("reverts all uploading rows to failed", async () => {
+    it("reverts all uploading rows to pending (interrupted, not actually failed)", async () => {
       insertRow("u1", "uploading");
       insertRow("u2", "uploading");
       insertRow("f1", "failed");
@@ -470,8 +599,8 @@ describe("measurements-storage", () => {
       await mod.resetUploadingMeasurements();
 
       const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.find((r) => r.id === "u1")?.status).toBe("failed");
-      expect(rows.find((r) => r.id === "u2")?.status).toBe("failed");
+      expect(rows.find((r) => r.id === "u1")?.status).toBe("pending");
+      expect(rows.find((r) => r.id === "u2")?.status).toBe("pending");
       expect(rows.find((r) => r.id === "f1")?.status).toBe("failed");
       expect(rows.find((r) => r.id === "s1")?.status).toBe("successful");
     });
@@ -598,5 +727,147 @@ describe("measurements-storage", () => {
 
       expect(AsyncStorage.getAllKeys).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+// =============================================================================
+// Migration upgrade path: seed a v0 DB, run 0001, verify data + CHECK constraint
+// =============================================================================
+
+describe("0001_add_pending_status migration — upgrade path", () => {
+  const m0000Sql = readFileSync(
+    resolve(__dirname, "../../../drizzle/0000_outgoing_firebird.sql"),
+    "utf-8",
+  );
+  const m0001Sql = readFileSync(
+    resolve(__dirname, "../../../drizzle/0001_add_pending_status.sql"),
+    "utf-8",
+  );
+
+  function applyMigration(target: ReturnType<typeof Database>, sql: string) {
+    target.exec(sql.replace(/-->\s*statement-breakpoint/g, ""));
+  }
+
+  function seedV0Rows(target: ReturnType<typeof Database>) {
+    const stmt = target.prepare(
+      `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    stmt.run("a", "failed", "topic/a", "{}", "Exp", "P", "2026-03-01T10:00:00Z", 1000);
+    stmt.run("b", "uploading", "topic/b", "{}", "Exp", "P", "2026-03-01T11:00:00Z", 2000);
+    stmt.run("c", "successful", "topic/c", "{}", "Exp", "P", "2026-03-01T12:00:00Z", 3000);
+  }
+
+  it("preserves every existing row with its original status", () => {
+    const target = new Database(":memory:");
+    applyMigration(target, m0000Sql);
+    seedV0Rows(target);
+
+    applyMigration(target, m0001Sql);
+
+    const rows = target.prepare("SELECT id, status FROM measurements ORDER BY id").all() as {
+      id: string;
+      status: string;
+    }[];
+    expect(rows).toEqual([
+      { id: "a", status: "failed" },
+      { id: "b", status: "uploading" },
+      { id: "c", status: "successful" },
+    ]);
+  });
+
+  it("preserves every non-status column (topic, measurement_result, timestamps, etc.)", () => {
+    const target = new Database(":memory:");
+    applyMigration(target, m0000Sql);
+    seedV0Rows(target);
+
+    applyMigration(target, m0001Sql);
+
+    const a = target.prepare("SELECT * FROM measurements WHERE id = 'a'").get() as any;
+    expect(a).toMatchObject({
+      id: "a",
+      status: "failed",
+      topic: "topic/a",
+      measurement_result: "{}",
+      experiment_name: "Exp",
+      protocol_name: "P",
+      timestamp: "2026-03-01T10:00:00Z",
+      created_at: 1000,
+    });
+  });
+
+  it("activates the CHECK constraint after migration (rejects unknown statuses)", () => {
+    const target = new Database(":memory:");
+    applyMigration(target, m0000Sql);
+    seedV0Rows(target);
+
+    // Pre-migration: SQLite has no CHECK so anything goes.
+    expect(() =>
+      target
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES ('pre', 'gibberish', 't', '{}', 'e', 'p', '2026-01-01', 0)`,
+        )
+        .run(),
+    ).not.toThrow();
+    target.prepare("DELETE FROM measurements WHERE id = 'pre'").run();
+
+    applyMigration(target, m0001Sql);
+
+    // Post-migration: same gibberish is rejected.
+    expect(() =>
+      target
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES ('post', 'gibberish', 't', '{}', 'e', 'p', '2026-01-01', 0)`,
+        )
+        .run(),
+    ).toThrow(/CHECK constraint/i);
+  });
+
+  it("accepts the new 'pending' status after migration", () => {
+    const target = new Database(":memory:");
+    applyMigration(target, m0000Sql);
+    seedV0Rows(target);
+    applyMigration(target, m0001Sql);
+
+    expect(() =>
+      target
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES ('p1', 'pending', 't', '{}', 'e', 'p', '2026-01-01', 0)`,
+        )
+        .run(),
+    ).not.toThrow();
+    const row = target.prepare("SELECT status FROM measurements WHERE id = 'p1'").get() as any;
+    expect(row.status).toBe("pending");
+  });
+
+  it("is safely re-runnable: data + constraint survive a second apply", () => {
+    // Drizzle's mobile migrator tracks applied migrations and won't normally
+    // re-run a tagged migration, but we still want the SQL itself to be
+    // re-runnable without corrupting data — the recreate-then-rename pattern
+    // is naturally idempotent because each apply rebuilds the table fresh
+    // from the current rows.
+    const target = new Database(":memory:");
+    applyMigration(target, m0000Sql);
+    seedV0Rows(target);
+    applyMigration(target, m0001Sql);
+    applyMigration(target, m0001Sql); // second run
+
+    const rows = target.prepare("SELECT id, status FROM measurements ORDER BY id").all() as {
+      id: string;
+      status: string;
+    }[];
+    expect(rows.map((r) => r.id)).toEqual(["a", "b", "c"]);
+    // Constraint still enforced after the second apply.
+    expect(() =>
+      target
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
+           VALUES ('post', 'gibberish', 't', '{}', 'e', 'p', '2026-01-01', 0)`,
+        )
+        .run(),
+    ).toThrow(/CHECK constraint/i);
   });
 });

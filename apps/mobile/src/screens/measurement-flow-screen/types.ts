@@ -1,4 +1,4 @@
-export type FlowNodeType = "instruction" | "question" | "measurement" | "analysis";
+export type FlowNodeType = "instruction" | "question" | "measurement" | "analysis" | "branch";
 
 export type QuestionKind =
   | "text"

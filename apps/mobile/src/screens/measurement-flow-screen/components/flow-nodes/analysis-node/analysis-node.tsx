@@ -66,7 +66,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       key: "current", // Random key, measurement not saved or uploaded yet
       timestamp: displayTimestamp,
       experimentName,
-      status: "synced", // To hide the comment button in modal
+      status: "successful", // To hide the comment button in modal
       questions,
       data: {
         topic: "",

@@ -46,8 +46,9 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   const startX = useSharedValue(0);
   const actionWidthSV = useSharedValue(0);
 
-  const showComment = status === "unsynced" && !!onComment;
-  const showSync = status === "unsynced" && !!onSync;
+  const canFlag = status === "pending" || status === "failed";
+  const showComment = canFlag && !!onComment;
+  const showSync = canFlag && !!onSync;
   const showDelete = !!onDelete;
 
   useEffect(() => {

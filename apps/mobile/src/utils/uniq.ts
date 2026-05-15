@@ -1,5 +1,5 @@
 export function uniq<T>(items: readonly T[]): T[] {
-  return [...new Set(items)];
+  return Array.from(new Set(items));
 }
 
 export function uniqBy<T, K>(items: readonly T[], key: (item: T) => K): T[] {

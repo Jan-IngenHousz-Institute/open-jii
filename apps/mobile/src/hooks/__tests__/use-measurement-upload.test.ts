@@ -4,24 +4,36 @@ import { useMeasurementUpload } from "../use-measurement-upload";
 
 const {
   mockSaveMeasurement,
+  mockMarkUploaded,
+  mockMarkFailed,
   mockSendMqttEvent,
   mockExportSingle,
   mockToastSuccess,
   mockToastError,
+  mockToastInfo,
   mockShowAlert,
+  mockUseNetworkState,
 } = vi.hoisted(() => ({
   mockSaveMeasurement: vi.fn(),
+  mockMarkUploaded: vi.fn(),
+  mockMarkFailed: vi.fn(),
   mockSendMqttEvent: vi.fn(),
   mockExportSingle: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockToastInfo: vi.fn(),
   mockShowAlert: vi.fn(),
+  mockUseNetworkState: vi.fn(),
 }));
 
 let capturedCallback: (...args: any[]) => Promise<any>;
 
 vi.mock("~/hooks/use-measurements", () => ({
-  useMeasurements: () => ({ saveMeasurement: mockSaveMeasurement }),
+  useMeasurements: () => ({
+    saveMeasurement: mockSaveMeasurement,
+    markUploaded: mockMarkUploaded,
+    markFailed: mockMarkFailed,
+  }),
 }));
 
 vi.mock("~/services/mqtt/send-mqtt-event", () => ({
@@ -46,7 +58,7 @@ vi.mock("~/utils/measurement-annotations", () => ({
 }));
 
 vi.mock("sonner-native", () => ({
-  toast: { success: mockToastSuccess, error: mockToastError },
+  toast: { success: mockToastSuccess, error: mockToastError, info: mockToastInfo },
 }));
 
 vi.mock("~/components/AlertDialog", () => ({
@@ -58,6 +70,10 @@ vi.mock("react-async-hook", () => ({
     capturedCallback = fn;
     return { loading: false, execute: fn };
   },
+}));
+
+vi.mock("expo-network", () => ({
+  useNetworkState: mockUseNetworkState,
 }));
 
 const baseArgs = {
@@ -75,41 +91,77 @@ const baseArgs = {
 describe("useMeasurementUpload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseNetworkState.mockReturnValue({ isInternetReachable: true });
     useMeasurementUpload();
   });
 
-  it("uploads successfully and saves as successful", async () => {
+  it("persists the measurement as pending first, then marks it uploaded on MQTT success", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockResolvedValueOnce(undefined);
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
+    mockMarkUploaded.mockResolvedValueOnce(undefined);
 
     await capturedCallback(baseArgs);
 
-    expect(mockSendMqttEvent).toHaveBeenCalled();
-    expect(mockToastSuccess).toHaveBeenCalledWith("Measurement uploaded!");
     expect(mockSaveMeasurement).toHaveBeenCalledWith(
       expect.objectContaining({ topic: "mock/topic" }),
-      "successful",
+      "pending",
     );
+    expect(mockSendMqttEvent).toHaveBeenCalled();
+    expect(mockMarkUploaded).toHaveBeenCalledWith("row-1");
+    expect(mockMarkFailed).not.toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith("Measurement uploaded!");
+    expect(mockSaveMeasurement).toHaveBeenCalledTimes(1);
   });
 
-  it("saves as failed when MQTT upload fails", async () => {
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
+  // Regression: when the device is offline we must not attempt the MQTT
+  // publish (Cognito would throw) and must not flip the row to "failed".
+  // The row stays "pending" so useAutoUpload picks it up on reconnect.
+  it("leaves the row pending and skips MQTT when the device is offline", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
+    mockUseNetworkState.mockReturnValue({ isInternetReachable: false });
+    useMeasurementUpload();
 
     await capturedCallback(baseArgs);
 
+    expect(mockSaveMeasurement).toHaveBeenCalledWith(
+      expect.objectContaining({ topic: "mock/topic" }),
+      "pending",
+    );
+    expect(mockSendMqttEvent).not.toHaveBeenCalled();
+    expect(mockMarkFailed).not.toHaveBeenCalled();
+    expect(mockMarkUploaded).not.toHaveBeenCalled();
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      "Saved offline — will upload when you're back online",
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("transitions the pending row to failed when MQTT upload errors out", async () => {
+    const uploadError = new Error("network timeout");
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
+    mockSendMqttEvent.mockRejectedValueOnce(uploadError);
+    mockMarkFailed.mockResolvedValueOnce(undefined);
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+    await capturedCallback(baseArgs);
+
+    expect(mockSaveMeasurement).toHaveBeenCalledWith(
+      expect.objectContaining({ topic: "mock/topic" }),
+      "pending",
+    );
+    expect(mockMarkUploaded).not.toHaveBeenCalled();
+    expect(mockMarkFailed).toHaveBeenCalledWith("row-1");
     expect(mockToastError).toHaveBeenCalledWith(
       "Upload not available, upload it later from Recent",
     );
-    expect(mockSaveMeasurement).toHaveBeenCalledWith(
-      expect.objectContaining({ topic: "mock/topic" }),
-      "failed",
-    );
     expect(mockShowAlert).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith("Upload failed:", uploadError);
+
+    consoleSpy.mockRestore();
   });
 
-  it("prompts file save when both upload and local storage fail", async () => {
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
+  it("prompts file save when local storage fails (upload is never attempted)", async () => {
     mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
@@ -133,7 +185,6 @@ describe("useMeasurementUpload", () => {
   });
 
   it("calls exportSingleMeasurementToFile when user taps Save to File", async () => {
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
     mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
     mockExportSingle.mockResolvedValueOnce(undefined);
 
@@ -158,7 +209,6 @@ describe("useMeasurementUpload", () => {
   });
 
   it("shows toast error when file export also fails", async () => {
-    mockSendMqttEvent.mockRejectedValueOnce(new Error("offline"));
     mockSaveMeasurement.mockRejectedValueOnce(new Error("storage full"));
     mockExportSingle.mockRejectedValueOnce(new Error("file system error"));
 
@@ -177,8 +227,9 @@ describe("useMeasurementUpload", () => {
   });
 
   it("forwards the UTC timestamp and timezone to the MQTT payload unchanged", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockResolvedValueOnce(undefined);
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
+    mockMarkUploaded.mockResolvedValueOnce(undefined);
 
     const utcTimestamp = "2026-03-16T13:00:18.022Z";
     const timezone = "Europe/Amsterdam";
@@ -198,16 +249,25 @@ describe("useMeasurementUpload", () => {
     expect(mockSaveMeasurement).not.toHaveBeenCalled();
   });
 
-  it("logs the upload error", async () => {
-    const uploadError = new Error("network timeout");
-    mockSendMqttEvent.mockRejectedValueOnce(uploadError);
-    mockSaveMeasurement.mockResolvedValueOnce(undefined);
-
+  // Once the MQTT publish has succeeded the data is on the cloud, so a
+  // later local-state write failure must surface as an info toast (and
+  // leave the row's status alone) rather than the "upload failed" path.
+  it("shows an info toast and does not touch status when markUploaded errors after a successful publish", async () => {
+    mockSaveMeasurement.mockResolvedValueOnce("row-1");
+    mockSendMqttEvent.mockResolvedValueOnce(undefined);
+    mockMarkUploaded.mockRejectedValueOnce(new Error("disk full"));
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     await capturedCallback(baseArgs);
 
-    expect(consoleSpy).toHaveBeenCalledWith("Upload failed:", uploadError);
+    expect(mockMarkFailed).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockToastInfo).toHaveBeenCalledWith("Uploaded — local status will refresh on next sync");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Local status update failed after successful publish:",
+      expect.any(Error),
+    );
 
     consoleSpy.mockRestore();
   });
