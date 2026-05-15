@@ -409,6 +409,9 @@
     },
     "bar": {
       "aggregation": "Aggregation",
+      "question": "Question",
+      "questionPlaceholder": "Select a question",
+      "questionLoading": "Loading questions…",
       "aggregations": {
         "count": "Count of rows",
         "sum": "Sum of Y",

@@ -406,6 +406,9 @@
     },
     "bar": {
       "aggregation": "Aggregation",
+      "question": "Frage",
+      "questionPlaceholder": "Frage auswählen",
+      "questionLoading": "Fragen werden geladen…",
       "aggregations": {
         "count": "Anzahl Zeilen",
         "sum": "Summe von Y",

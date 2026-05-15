@@ -68,16 +68,19 @@ export function VisualizationWorkspace({
   // data-panel applies per-role kind filtering on top via
   // `filterColumnsForRole` from the visualization contracts.
   //
-  // CONTRIBUTOR is a STRUCT (kind="complex") and would normally be stripped
-  // here, but the bar chart accepts it on its X axis to support per-
-  // contributor histograms / leaderboards. Keeping it in the list is safe
-  // for other chart types because `filterColumnsForRole` re-drops complex
-  // kinds for any role whose contract doesn't explicitly accept it.
+  // CONTRIBUTOR (STRUCT) and QUESTIONS (ARRAY<STRUCT>) would normally be
+  // stripped here as kind="complex", but the bar chart accepts them on its
+  // X axis to support per-contributor and per-question-answer histograms.
+  // Keeping them in the list is safe for other chart types because
+  // `filterColumnsForRole` re-drops complex kinds for any role whose
+  // contract doesn't explicitly accept them.
   const columns = useMemo(
     () =>
       (tableMetadata?.rawColumns ?? []).filter(
         (col) =>
-          isPlottableColumn(col.type_text) || col.type_text === WellKnownColumnTypes.CONTRIBUTOR,
+          isPlottableColumn(col.type_text) ||
+          col.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
+          col.type_text === WellKnownColumnTypes.QUESTIONS,
       ),
     [tableMetadata],
   );

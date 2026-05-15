@@ -39,6 +39,11 @@ export interface BarChartOptions {
   topN?: number;
   aggregationFunction?: "count" | "sum" | "avg" | "min" | "max";
   xColumnType?: string;
+  /**
+   * Only meaningful when `xColumnType` is the QUESTIONS well-known array;
+   * picks which entry's `question_answer` to use as the group key.
+   */
+  questionLabel?: string;
 }
 
 export type ChartFormConfig = PlotlyChartConfig &

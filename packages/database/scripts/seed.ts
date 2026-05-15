@@ -21,6 +21,9 @@ const SEED_PREFIX = "[Seed]%";
 // real measurements without any local-only data plumbing.
 const EXPERIMENT_ID_SOIL_HEALTH = "06c68043-c4da-41e6-889e-75e3bad6b6fb";
 const EXPERIMENT_ID_WINTER_WHEAT = "3e5309b8-d5f2-4f7a-b20a-8b5e1e73a9f1";
+// Has a real QUESTIONS-typed column in the silver layer, useful for
+// demoing per-answer grouping on the bar chart.
+const EXPERIMENT_ID_CORN_QUESTIONS = "e917055f-b786-4d7b-a9da-acad73c4dab4";
 
 // Contributor UUIDs that appear inside the contributor STRUCT on those
 // Databricks rows. Local user rows aren't strictly required for chart
@@ -396,6 +399,7 @@ async function main() {
     visibility: "public" | "private";
   }[] = [
     {
+      id: EXPERIMENT_ID_CORN_QUESTIONS,
       name: "[Seed] Field Trial 2025 — Corn Photosynthesis",
       description:
         "Active field trial measuring photosynthetic efficiency across corn varieties in central Iowa.",

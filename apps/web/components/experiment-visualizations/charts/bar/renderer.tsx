@@ -37,13 +37,17 @@ export function BarRenderer({
   const sortDirection = chartConfig.sortDirection ?? null;
   const topN = typeof chartConfig.topN === "number" ? chartConfig.topN : undefined;
   // The data panel records the picked x column's database type so the
-  // aggregator can branch on CONTRIBUTOR struct cells. Other column kinds
-  // fall through the aggregator's plain-string-key path.
+  // aggregator can branch on CONTRIBUTOR / QUESTIONS cells. Other column
+  // kinds fall through the aggregator's plain-string-key path.
   const xColumnType = chartConfig.xColumnType;
+  const questionLabel = chartConfig.questionLabel;
 
   const buckets = useMemo(
-    () => groupAndAggregate(rows, xColumn, xColumnType, yColumn, aggregationFunction),
-    [rows, xColumn, xColumnType, yColumn, aggregationFunction],
+    () =>
+      groupAndAggregate(rows, xColumn, xColumnType, yColumn, aggregationFunction, {
+        questionLabel,
+      }),
+    [rows, xColumn, xColumnType, yColumn, aggregationFunction, questionLabel],
   );
 
   const displayBuckets = useMemo(

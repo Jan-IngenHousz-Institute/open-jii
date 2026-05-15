@@ -8,6 +8,12 @@ export interface ContributorCell {
   avatar: string | null;
 }
 
+export interface QuestionEntry {
+  questionLabel: string;
+  questionText: string | null;
+  questionAnswer: string | null;
+}
+
 export interface AggregatedBucket {
   key: string;
   label: string;
@@ -47,11 +53,77 @@ export function parseContributorCell(raw: unknown): ContributorCell | null {
   }
 }
 
-function extractGroupKey(value: unknown, isContributor: boolean): { key: string; label: string } {
-  if (isContributor) {
+/**
+ * Parse a row's `questions` cell. Returns the array as-is when already
+ * deserialised, parses it from a JSON string when the API returned it as
+ * text, and returns an empty array otherwise — callers treat "no entry
+ * matched" as Unknown, identical to a null cell.
+ */
+export function parseQuestionsCell(raw: unknown): QuestionEntry[] {
+  let arr: unknown = raw;
+  if (typeof raw === "string") {
+    if (raw === "") return [];
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  const out: QuestionEntry[] = [];
+  for (const entry of arr) {
+    if (!entry || typeof entry !== "object") continue;
+    const obj = entry as Record<string, unknown>;
+    const questionLabel =
+      typeof obj.question_label === "string"
+        ? obj.question_label
+        : typeof obj.questionLabel === "string"
+          ? obj.questionLabel
+          : null;
+    if (!questionLabel) continue;
+    out.push({
+      questionLabel,
+      questionText:
+        typeof obj.question_text === "string"
+          ? obj.question_text
+          : typeof obj.questionText === "string"
+            ? obj.questionText
+            : null,
+      questionAnswer:
+        typeof obj.question_answer === "string"
+          ? obj.question_answer
+          : typeof obj.questionAnswer === "string"
+            ? obj.questionAnswer
+            : null,
+    });
+  }
+  return out;
+}
+
+interface GroupKeyOptions {
+  isContributor?: boolean;
+  isQuestions?: boolean;
+  /** Required when `isQuestions` is true; selects which question's answer to group by. */
+  questionLabel?: string;
+}
+
+function extractGroupKey(value: unknown, opts: GroupKeyOptions): { key: string; label: string } {
+  if (opts.isContributor) {
     const c = parseContributorCell(value);
     if (c) return { key: c.id, label: c.name };
     return { key: UNKNOWN_KEY, label: UNKNOWN_LABEL };
+  }
+  if (opts.isQuestions) {
+    // Without a picked question label we can't choose which entry's answer
+    // to use, so the bucket isn't meaningful — collapse to Unknown.
+    if (!opts.questionLabel) return { key: UNKNOWN_KEY, label: UNKNOWN_LABEL };
+    const entries = parseQuestionsCell(value);
+    const match = entries.find((e) => e.questionLabel === opts.questionLabel);
+    const answer = match?.questionAnswer;
+    if (answer == null || answer === "") {
+      return { key: UNKNOWN_KEY, label: UNKNOWN_LABEL };
+    }
+    return { key: answer, label: answer };
   }
   // Only primitive-like cells produce meaningful string keys. Anything else
   // (objects, functions, symbols) would collapse into "[object Object]" or
@@ -87,7 +159,9 @@ function toNumeric(value: unknown): number | null {
  *
  * When `xColumnType` is the CONTRIBUTOR well-known struct, cells are
  * parsed as `{ id, name, avatar }` and grouped by id but labelled by name.
- * Null/invalid contributor cells collapse into one "Unknown" bucket.
+ * When `xColumnType` is the QUESTIONS array, `options.questionLabel` picks
+ * one entry per row and its `question_answer` becomes the group key — a
+ * row without a matching entry collapses to "Unknown".
  */
 export function groupAndAggregate(
   rows: Record<string, unknown>[],
@@ -95,14 +169,19 @@ export function groupAndAggregate(
   xColumnType: string | undefined,
   yColumn: string | undefined,
   fn: AggregationFunction,
+  options: { questionLabel?: string } = {},
 ): AggregatedBucket[] {
   if (!xColumn) return [];
 
-  const isContributor = xColumnType === WellKnownColumnTypes.CONTRIBUTOR;
+  const keyOpts: GroupKeyOptions = {
+    isContributor: xColumnType === WellKnownColumnTypes.CONTRIBUTOR,
+    isQuestions: xColumnType === WellKnownColumnTypes.QUESTIONS,
+    questionLabel: options.questionLabel,
+  };
   const buckets = new Map<string, { label: string; numericValues: number[]; rowCount: number }>();
 
   for (const row of rows) {
-    const { key, label } = extractGroupKey(row[xColumn], isContributor);
+    const { key, label } = extractGroupKey(row[xColumn], keyOpts);
     let bucket = buckets.get(key);
     if (!bucket) {
       bucket = { label, numericValues: [], rowCount: 0 };
@@ -130,6 +209,30 @@ export function groupAndAggregate(
       else value = numericValues.reduce((acc, n) => (n > acc ? n : acc), numericValues[0]);
     }
     out.push({ key, label, value, count: rowCount });
+  }
+  return out;
+}
+
+/**
+ * Walk `rows` and return the unique `question_label` values found in the
+ * cells of `xColumn`, in first-seen order. Used by the bar data panel to
+ * populate the "Question" picker without a separate API call.
+ */
+export function collectQuestionLabels(
+  rows: Record<string, unknown>[],
+  xColumn: string | undefined,
+): string[] {
+  if (!xColumn) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const row of rows) {
+    const entries = parseQuestionsCell(row[xColumn]);
+    for (const e of entries) {
+      if (!seen.has(e.questionLabel)) {
+        seen.add(e.questionLabel);
+        out.push(e.questionLabel);
+      }
+    }
   }
   return out;
 }

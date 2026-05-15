@@ -4,8 +4,10 @@ import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 
 import {
   applyTopN,
+  collectQuestionLabels,
   groupAndAggregate,
   parseContributorCell,
+  parseQuestionsCell,
   UNKNOWN_KEY,
   UNKNOWN_LABEL,
 } from "./aggregate";
@@ -152,6 +154,112 @@ describe("groupAndAggregate", () => {
     expect(byKey.get("A")).toBe(3);
     expect(byKey.get("B")).toBe(3);
     expect(byKey.get(UNKNOWN_KEY)).toBe(4);
+  });
+});
+
+const QUESTIONS_TYPE = WellKnownColumnTypes.QUESTIONS;
+
+function questionEntry(label: string, answer: string | null) {
+  return {
+    question_label: label,
+    question_text: `Text for ${label}`,
+    question_answer: answer,
+  };
+}
+
+describe("parseQuestionsCell", () => {
+  it("accepts a pre-parsed array of entries", () => {
+    const arr = [questionEntry("Plot", "A1"), questionEntry("Crop", "Maize")];
+    const parsed = parseQuestionsCell(arr);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0]).toMatchObject({ questionLabel: "Plot", questionAnswer: "A1" });
+  });
+
+  it("parses a JSON-string array", () => {
+    const raw = JSON.stringify([questionEntry("Plot", "A1")]);
+    expect(parseQuestionsCell(raw)).toEqual([
+      { questionLabel: "Plot", questionText: "Text for Plot", questionAnswer: "A1" },
+    ]);
+  });
+
+  it("returns [] for null / empty / non-array", () => {
+    expect(parseQuestionsCell(null)).toEqual([]);
+    expect(parseQuestionsCell("")).toEqual([]);
+    expect(parseQuestionsCell("{not json")).toEqual([]);
+    expect(parseQuestionsCell({ foo: "bar" })).toEqual([]);
+  });
+
+  it("ignores entries with no question_label", () => {
+    const arr = [{ question_text: "orphan" }, questionEntry("Plot", "A1")];
+    expect(parseQuestionsCell(arr)).toEqual([
+      { questionLabel: "Plot", questionText: "Text for Plot", questionAnswer: "A1" },
+    ]);
+  });
+});
+
+describe("groupAndAggregate (QUESTIONS column)", () => {
+  it("buckets rows by the answer to the picked question label", () => {
+    const rows = [
+      { qs: [questionEntry("Plot", "A1"), questionEntry("Crop", "Maize")] },
+      { qs: [questionEntry("Plot", "A1"), questionEntry("Crop", "Wheat")] },
+      { qs: [questionEntry("Plot", "B2"), questionEntry("Crop", "Wheat")] },
+    ];
+    const byPlot = groupAndAggregate(rows, "qs", QUESTIONS_TYPE, undefined, "count", {
+      questionLabel: "Plot",
+    });
+    const map = new Map(byPlot.map((b) => [b.key, b]));
+    expect(map.get("A1")?.value).toBe(2);
+    expect(map.get("B2")?.value).toBe(1);
+  });
+
+  it("collapses to Unknown when the picked label is missing on a row", () => {
+    const rows = [
+      { qs: [questionEntry("Plot", "A1")] },
+      { qs: [questionEntry("Crop", "Wheat")] }, // no Plot answer
+      { qs: null },
+    ];
+    const out = groupAndAggregate(rows, "qs", QUESTIONS_TYPE, undefined, "count", {
+      questionLabel: "Plot",
+    });
+    const map = new Map(out.map((b) => [b.key, b]));
+    expect(map.get("A1")?.value).toBe(1);
+    expect(map.get(UNKNOWN_KEY)?.value).toBe(2);
+  });
+
+  it("returns one Unknown bucket when no questionLabel is configured", () => {
+    const rows = [{ qs: [questionEntry("Plot", "A1")] }];
+    const out = groupAndAggregate(rows, "qs", QUESTIONS_TYPE, undefined, "count");
+    expect(out).toEqual([{ key: UNKNOWN_KEY, label: UNKNOWN_LABEL, value: 1, count: 1 }]);
+  });
+
+  it("aggregates a numeric Y per question-answer bucket", () => {
+    const rows = [
+      { qs: [questionEntry("Plot", "A1")], phi2: 0.4 },
+      { qs: [questionEntry("Plot", "A1")], phi2: 0.6 },
+      { qs: [questionEntry("Plot", "B2")], phi2: 0.9 },
+    ];
+    const out = groupAndAggregate(rows, "qs", QUESTIONS_TYPE, "phi2", "avg", {
+      questionLabel: "Plot",
+    });
+    const map = new Map(out.map((b) => [b.key, b]));
+    expect(map.get("A1")?.value).toBeCloseTo(0.5);
+    expect(map.get("B2")?.value).toBeCloseTo(0.9);
+  });
+});
+
+describe("collectQuestionLabels", () => {
+  it("returns unique labels in first-seen order across rows", () => {
+    const rows = [
+      { qs: [questionEntry("Plot", "A1"), questionEntry("Crop", "Maize")] },
+      { qs: [questionEntry("Crop", "Wheat")] },
+      { qs: [questionEntry("Site", "North")] },
+      { qs: null },
+    ];
+    expect(collectQuestionLabels(rows, "qs")).toEqual(["Plot", "Crop", "Site"]);
+  });
+
+  it("returns [] for missing column", () => {
+    expect(collectQuestionLabels([{ qs: [] }], undefined)).toEqual([]);
   });
 });
 

@@ -406,6 +406,9 @@
     },
     "bar": {
       "aggregation": "Aggregatie",
+      "question": "Vraag",
+      "questionPlaceholder": "Selecteer een vraag",
+      "questionLoading": "Vragen laden…",
       "aggregations": {
         "count": "Aantal rijen",
         "sum": "Som van Y",

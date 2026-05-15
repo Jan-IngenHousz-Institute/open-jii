@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import { useWatch } from "react-hook-form";
 
@@ -18,25 +19,29 @@ import {
 } from "@repo/ui/components/select";
 import { Separator } from "@repo/ui/components/separator";
 
+import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { firstDataSourceByRole } from "../form-values";
 import type { ChartPanelProps } from "../types";
+import { collectQuestionLabels } from "./aggregate";
 
 const AGG_NEEDING_Y = new Set(["sum", "avg", "min", "max"]);
 
 export function BarDataPanel({ form, columns }: ChartPanelProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  // X accepts categorical columns plus the CONTRIBUTOR well-known struct.
-  // `filterColumnsForRole` strips complex kinds globally, so we union the
-  // contributor column(s) back in here rather than relaxing the contract
-  // for every chart type.
+  // X accepts categorical columns plus the well-known CONTRIBUTOR struct
+  // and QUESTIONS array. `filterColumnsForRole` strips complex kinds
+  // globally, so we union the well-known struct/array columns back in here
+  // rather than relaxing the contract for every chart type.
   const xColumns = useMemo<DataColumn[]>(() => {
     const base = filterColumnsForRole(columns, "bar", "x");
-    const contributorExtras = columns.filter(
+    const wellKnownExtras = columns.filter(
       (c) =>
-        c.type_text === WellKnownColumnTypes.CONTRIBUTOR && !base.some((b) => b.name === c.name),
+        (c.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
+          c.type_text === WellKnownColumnTypes.QUESTIONS) &&
+        !base.some((b) => b.name === c.name),
     );
-    return [...contributorExtras, ...base];
+    return [...wellKnownExtras, ...base];
   }, [columns]);
 
   const yColumns = useMemo(() => filterColumnsForRole(columns, "bar", "y"), [columns]);
@@ -50,13 +55,41 @@ export function BarDataPanel({ form, columns }: ChartPanelProps) {
   const aggregationFunction =
     useWatch({ control: form.control, name: "config.aggregationFunction" }) ?? "count";
   const yColumnName = yIndexed?.source.columnName ?? "";
+  const xColumnType = useWatch({ control: form.control, name: "config.xColumnType" });
+  const isQuestionsX = xColumnType === WellKnownColumnTypes.QUESTIONS;
+  const xColumnName = xIndexed?.source.columnName ?? "";
+
+  // When the X column is a QUESTIONS array, fetch a sample of rows so we
+  // can populate the "Question" picker with the labels that actually exist
+  // in the data. We only need the one column, and only when the picker is
+  // visible — otherwise this hook stays disabled to avoid extra requests.
+  // The route segment is `[id]`, hence `id` here is the experiment id.
+  const routeParams = useParams<{ id: string }>();
+  const resolvedExperimentId = routeParams.id;
+  const tableName = useWatch({ control: form.control, name: "dataConfig.tableName" });
+  const { data: questionSample } = useExperimentVisualizationData(
+    resolvedExperimentId,
+    { tableName, columns: xColumnName ? [xColumnName] : undefined },
+    isQuestionsX && Boolean(tableName) && Boolean(xColumnName) && Boolean(resolvedExperimentId),
+  );
+  const questionLabels = useMemo(
+    () => (isQuestionsX ? collectQuestionLabels(questionSample?.rows ?? [], xColumnName) : []),
+    [isQuestionsX, questionSample, xColumnName],
+  );
 
   const handleXChange = (columnName: string) => {
     const tableName = form.getValues("dataConfig.tableName");
     form.setValue(`dataConfig.dataSources.${xIndex}.tableName`, tableName);
     form.setValue("config.xAxisTitle", columnName);
     const picked = columns.find((c) => c.name === columnName);
-    form.setValue("config.xColumnType", picked?.type_text ?? "", { shouldDirty: true });
+    const nextType = picked?.type_text ?? "";
+    form.setValue("config.xColumnType", nextType, { shouldDirty: true });
+    // Switching X off of a QUESTIONS column makes the stored questionLabel
+    // a phantom — clear it so the renderer doesn't keep looking up a key
+    // that no longer applies.
+    if (nextType !== WellKnownColumnTypes.QUESTIONS) {
+      form.setValue("config.questionLabel", undefined, { shouldDirty: true });
+    }
   };
 
   const handleYChange = (columnName: string) => {
@@ -114,6 +147,44 @@ export function BarDataPanel({ form, columns }: ChartPanelProps) {
             </FormItem>
           )}
         />
+        {isQuestionsX && (
+          <FormField
+            control={form.control}
+            name="config.questionLabel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.bar.question", "Question")}
+                </FormLabel>
+                <Select
+                  value={typeof field.value === "string" && field.value ? field.value : undefined}
+                  onValueChange={(value) => field.onChange(value)}
+                  disabled={questionLabels.length === 0}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          questionLabels.length === 0
+                            ? t("workspace.bar.questionLoading", "Loading questions…")
+                            : t("workspace.bar.questionPlaceholder", "Select a question")
+                        }
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {questionLabels.map((label) => (
+                      <SelectItem key={label} value={label}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
       </section>
 
       <Separator />
