@@ -17,6 +17,7 @@
     "update:production": "eas update --branch production",
     "lint": "eslint 'src/**/*' --fix",
     "typecheck": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, lt, inArray } from "drizzle-orm";
+import { eq, and, lt, inArray, count } from "drizzle-orm";
 import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import { compressForStorage, decompressFromStorage } from "~/utils/storage-compression";
@@ -14,7 +14,7 @@ const LEGACY_PREFIXES = [
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export type MeasurementStatus = "failed" | "uploading" | "successful";
+export type MeasurementStatus = "pending" | "uploading" | "failed" | "successful";
 
 export interface Measurement {
   topic: string;
@@ -89,11 +89,12 @@ async function ensureMigrated(): Promise<void> {
 export async function saveMeasurement(
   upload: Measurement,
   status: MeasurementStatus,
-): Promise<void> {
+): Promise<string> {
   await ensureMigrated();
+  const id = uuidv4();
   db.insert(measurements)
     .values({
-      id: uuidv4(),
+      id,
       status,
       topic: upload.topic,
       measurementResult: compressForStorage(upload.measurementResult),
@@ -102,31 +103,70 @@ export async function saveMeasurement(
       timestamp: upload.metadata.timestamp,
     })
     .run();
+  return id;
 }
 
-export async function getMeasurements(status: MeasurementStatus): Promise<[string, Measurement][]> {
+export interface StoredMeasurement {
+  id: string;
+  status: MeasurementStatus;
+  data: Measurement;
+}
+
+export type MeasurementCounts = Record<MeasurementStatus, number>;
+
+export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
+  await ensureMigrated();
+  try {
+    const rows = db
+      .select({ status: measurements.status, total: count() })
+      .from(measurements)
+      .groupBy(measurements.status)
+      .all();
+    const out: MeasurementCounts = { pending: 0, uploading: 0, failed: 0, successful: 0 };
+    for (const r of rows) {
+      out[r.status] = r.total;
+    }
+    return out;
+  } catch (error) {
+    console.error("Failed to count measurements:", error);
+    return { pending: 0, uploading: 0, failed: 0, successful: 0 };
+  }
+}
+
+export async function getMeasurements(
+  status: MeasurementStatus | MeasurementStatus[],
+): Promise<StoredMeasurement[]> {
   try {
     await ensureMigrated();
-    const rows = db.select().from(measurements).where(eq(measurements.status, status)).all();
+    const statusList = Array.isArray(status) ? status : [status];
+    if (statusList.length === 0) return [];
+    const whereClause =
+      statusList.length === 1
+        ? eq(measurements.status, statusList[0])
+        : inArray(measurements.status, statusList);
+    const rows = db.select().from(measurements).where(whereClause).all();
 
     return rows
-      .map((row) => {
+      .map((row): StoredMeasurement | null => {
         try {
-          const measurement: Measurement = {
-            topic: row.topic,
-            measurementResult: decompressFromStorage(row.measurementResult),
-            metadata: {
-              experimentName: row.experimentName,
-              protocolName: row.protocolName,
-              timestamp: row.timestamp,
+          return {
+            id: row.id,
+            status: row.status,
+            data: {
+              topic: row.topic,
+              measurementResult: decompressFromStorage(row.measurementResult),
+              metadata: {
+                experimentName: row.experimentName,
+                protocolName: row.protocolName,
+                timestamp: row.timestamp,
+              },
             },
           };
-          return [row.id, measurement] as [string, Measurement];
         } catch {
           return null;
         }
       })
-      .filter(Boolean) as [string, Measurement][];
+      .filter((m): m is StoredMeasurement => m !== null);
   } catch (error) {
     console.error("Failed to fetch measurements:", error);
     throw error;
@@ -155,10 +195,14 @@ export async function markAsUploading(keys: string[]): Promise<string[]> {
   if (keys.length === 0) return [];
   await ensureMigrated();
   try {
+    // Both "pending" (never tried) and "failed" (tried before) rows are
+    // eligible for an upload attempt.
     const rows = db
       .update(measurements)
       .set({ status: "uploading" })
-      .where(and(inArray(measurements.id, keys), eq(measurements.status, "failed")))
+      .where(
+        and(inArray(measurements.id, keys), inArray(measurements.status, ["pending", "failed"])),
+      )
       .returning({ id: measurements.id })
       .all();
     return rows.map((r) => r.id);
@@ -171,20 +215,25 @@ export async function markAsUploading(keys: string[]): Promise<string[]> {
 export async function markAsFailed(key: string): Promise<void> {
   await ensureMigrated();
   try {
+    // Accept transitions from uploading (batch flow) or pending (save-first
+    // single-measurement flow whose MQTT publish errored).
     db.update(measurements)
       .set({ status: "failed" })
-      .where(and(eq(measurements.id, key), eq(measurements.status, "uploading")))
+      .where(and(eq(measurements.id, key), inArray(measurements.status, ["uploading", "pending"])))
       .run();
   } catch (error) {
-    console.error("Failed to revert measurement to failed:", error);
+    console.error("Failed to mark measurement as failed:", error);
   }
 }
 
 export async function resetUploadingMeasurements(): Promise<void> {
   await ensureMigrated();
   try {
+    // A row stuck in "uploading" was interrupted (app killed mid-publish);
+    // it never confirmed a failure, so return it to "pending" rather than
+    // marking it as failed.
     db.update(measurements)
-      .set({ status: "failed" })
+      .set({ status: "pending" })
       .where(eq(measurements.status, "uploading"))
       .run();
   } catch (error) {
@@ -195,9 +244,17 @@ export async function resetUploadingMeasurements(): Promise<void> {
 export async function markAsSuccessful(key: string): Promise<void> {
   await ensureMigrated();
   try {
+    // Accept any pre-success state. "pending" covers the save-first single
+    // flow that goes pending → successful directly, "uploading" the batch
+    // flow, "failed" a retry that finally went through.
     db.update(measurements)
       .set({ status: "successful" })
-      .where(and(eq(measurements.id, key), eq(measurements.status, "uploading")))
+      .where(
+        and(
+          eq(measurements.id, key),
+          inArray(measurements.status, ["pending", "uploading", "failed"]),
+        ),
+      )
       .run();
   } catch (error) {
     console.error("Failed to mark measurement as successful:", error);

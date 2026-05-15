@@ -5,6 +5,7 @@ import {
   Trash2,
   CloudCheck,
   CloudAlert,
+  CloudUpload,
   MessageCircleMore,
 } from "lucide-react-native";
 import React, { memo } from "react";
@@ -51,8 +52,9 @@ export const MeasurementItem = memo(function MeasurementItem({
   hasComment = false,
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
-  const isSynced = status === "synced";
-  const isSyncing = status === "syncing";
+  const isSynced = status === "successful";
+  const isSyncing = status === "uploading";
+  const isPending = status === "pending";
 
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
@@ -120,6 +122,8 @@ export const MeasurementItem = memo(function MeasurementItem({
             <ActivityIndicator size={16} color={colors.semantic.info} />
           ) : isSynced ? (
             <CloudCheck size={16} color={colors.semantic.success} />
+          ) : isPending ? (
+            <CloudUpload size={16} color={colors.semantic.info} />
           ) : (
             <CloudAlert size={16} color={colors.semantic.error} />
           )}

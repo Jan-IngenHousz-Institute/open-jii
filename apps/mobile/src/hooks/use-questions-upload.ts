@@ -1,3 +1,4 @@
+import { useNetworkState } from "expo-network";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { useMeasurements } from "~/hooks/use-measurements";
@@ -9,7 +10,8 @@ import { buildAnnotations } from "~/utils/measurement-annotations";
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
 export function useQuestionsUpload() {
-  const { saveMeasurement } = useMeasurements();
+  const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
+  const networkState = useNetworkState();
 
   const { loading: isUploading, execute: uploadQuestions } = useAsyncCallback(
     async ({
@@ -53,23 +55,44 @@ export function useQuestionsUpload() {
         },
       };
 
+      // Persist before attempting MQTT (see use-measurement-upload.ts).
+      let savedId: string;
       try {
-        await sendMqttEvent(topic, payload);
-        toast.success("Answers uploaded!");
-        await saveMeasurement(failedUploadData, "successful");
-        return;
-      } catch (uploadError) {
-        console.error("Upload failed:", uploadError);
-        toast.error("Upload not available, upload it later from Recent");
-      }
-
-      try {
-        await saveMeasurement(failedUploadData, "failed");
+        savedId = await saveMeasurement(failedUploadData, "pending");
       } catch (storageError) {
         console.error("Failed to save answers to local storage:", storageError);
         toast.error(
           "Answers could not be saved on this device. Please export your data now to avoid losing it.",
         );
+        return;
+      }
+
+      // See use-measurement-upload.ts — when offline, leave the row pending
+      // rather than letting Cognito's credential fetch throw and trip the
+      // "failed" path. useAutoUpload retries pending rows on reconnect.
+      if (networkState.isInternetReachable === false) {
+        toast.info("Saved offline — will upload when you're back online");
+        return;
+      }
+
+      // See use-measurement-upload.ts — split publish from local-state update
+      // so a successful publish followed by a markUploaded error doesn't
+      // incorrectly flip the row to failed.
+      try {
+        await sendMqttEvent(topic, payload);
+      } catch (uploadError) {
+        console.error("Upload failed:", uploadError);
+        await markFailed(savedId);
+        toast.error("Upload not available, upload it later from Recent");
+        return;
+      }
+
+      try {
+        await markUploaded(savedId);
+        toast.success("Answers uploaded!");
+      } catch (localError) {
+        console.error("Local status update failed after successful publish:", localError);
+        toast.info("Uploaded — local status will refresh on next sync");
       }
     },
   );

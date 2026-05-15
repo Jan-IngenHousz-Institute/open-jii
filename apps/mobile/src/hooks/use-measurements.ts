@@ -2,10 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
-import type {
-  MeasurementItem,
-  MeasurementStatus as MeasurementUiStatus,
-} from "~/hooks/use-all-measurements";
 import {
   clearMeasurements,
   getMeasurements,
@@ -31,11 +27,15 @@ export function useMeasurements() {
   );
   const uploadingKeysRef = useRef<Set<string>>(new Set());
 
+  // Both "pending" (never tried) and "failed" (tried, errored) rows are
+  // candidates for the next upload attempt. The variable retains its old
+  // "failedUploads" name for callsite stability — semantically it's
+  // "everything-not-yet-on-the-cloud."
   const { data: failedUploads = [] } = useQuery({
-    queryKey: ["measurements", "failed"],
+    queryKey: ["measurements", "pending-or-failed"],
     queryFn: async () => {
-      const entries = await getMeasurements("failed");
-      return entries.map(([key, data]) => ({ key, data }));
+      const rows = await getMeasurements(["pending", "failed"]);
+      return rows.map(({ id, data }) => ({ key: id, data }));
     },
     networkMode: "always",
   });
@@ -44,7 +44,9 @@ export function useMeasurements() {
   failedUploadsRef.current = failedUploads;
 
   const uploadAsync = useAsyncCallback(async () => {
-    const CONCURRENCY = 10;
+    // 3 keeps a single phone's burst well below AWS Cognito Identity Pool
+    // throttling when multiple field devices come online at the same time.
+    const CONCURRENCY = 3;
     const items = [...failedUploadsRef.current];
 
     const transitioned = new Set(await markAsUploading(items.map(({ key }) => key)));
@@ -54,22 +56,24 @@ export function useMeasurements() {
 
     const taskFns = itemsToUpload.map(({ key, data }) => async () => {
       try {
-        await sendMqttEvent(data.topic, data.measurementResult);
-        await markAsSuccessful(key);
-        queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
-          old?.map((item) =>
-            item.key === key ? { ...item, status: "synced" satisfies MeasurementUiStatus } : item,
-          ),
-        );
-      } catch (error) {
-        console.warn(`Failed to upload item with key ${key}:`, error);
-        await markAsFailed(key);
-        queryClient.setQueryData(["measurements"], (old: MeasurementItem[] | undefined) =>
-          old?.map((item) =>
-            item.key === key ? { ...item, status: "unsynced" satisfies MeasurementUiStatus } : item,
-          ),
-        );
-        throw error;
+        try {
+          await sendMqttEvent(data.topic, data.measurementResult);
+        } catch (error) {
+          console.warn(`Failed to upload item with key ${key}:`, error);
+          await markAsFailed(key);
+          throw error;
+        }
+
+        // Publish succeeded — local-state failure must not flip the row
+        // back to failed.
+        try {
+          await markAsSuccessful(key);
+        } catch (localError) {
+          console.warn(
+            `Local status update failed after successful publish for ${key}:`,
+            localError,
+          );
+        }
       } finally {
         setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
       }
@@ -113,13 +117,27 @@ export function useMeasurements() {
       if (transitioned.length === 0) return;
       await queryClient.invalidateQueries({ queryKey: ["measurements"] });
 
+      // Only a publish failure should mark the row failed — if MQTT
+      // succeeded but the local status write later fails, the data is on
+      // the cloud and we must not regress the row to "failed".
       try {
-        await sendMqttEvent(item.data.topic, item.data.measurementResult);
-        await markAsSuccessful(key);
-      } catch (error) {
-        console.warn(`Failed to upload item with key ${key}:`, error);
-        await markAsFailed(key);
-        toast.info("Failed to upload, try again later");
+        try {
+          await sendMqttEvent(item.data.topic, item.data.measurementResult);
+        } catch (error) {
+          console.warn(`Failed to upload item with key ${key}:`, error);
+          await markAsFailed(key);
+          toast.info("Failed to upload, try again later");
+          return;
+        }
+
+        try {
+          await markAsSuccessful(key);
+        } catch (localError) {
+          console.warn(
+            `Local status update failed after successful publish for ${key}:`,
+            localError,
+          );
+        }
       } finally {
         await pruneExpiredMeasurements();
         await queryClient.invalidateQueries({ queryKey: ["measurements"] });
@@ -130,7 +148,18 @@ export function useMeasurements() {
   };
 
   const saveMeasurement = async (upload: Measurement, status: MeasurementStatus) => {
-    await saveMeasurementToStorage(upload, status);
+    const id = await saveMeasurementToStorage(upload, status);
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    return id;
+  };
+
+  const markUploaded = async (key: string) => {
+    await markAsSuccessful(key);
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+  };
+
+  const markFailed = async (key: string) => {
+    await markAsFailed(key);
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
@@ -161,6 +190,8 @@ export function useMeasurements() {
     uploadAll: uploadAsync.execute,
     uploadOne,
     saveMeasurement,
+    markUploaded,
+    markFailed,
     removeMeasurement,
     clearSyncedMeasurements,
     updateMeasurementComment,

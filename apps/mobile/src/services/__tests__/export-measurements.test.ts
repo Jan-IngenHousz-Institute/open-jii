@@ -46,8 +46,10 @@ describe("exportMeasurementsToFile", () => {
 
   it("creates and writes a file with correct counts", async () => {
     mockGetMeasurements
-      .mockResolvedValueOnce([["failed-1", mockStoredMeasurement()]])
-      .mockResolvedValueOnce([["synced-1", mockStoredMeasurement()]]);
+      .mockResolvedValueOnce([{ id: "failed-1", status: "failed", data: mockStoredMeasurement() }])
+      .mockResolvedValueOnce([
+        { id: "synced-1", status: "successful", data: mockStoredMeasurement() },
+      ]);
 
     await exportMeasurementsToFile();
 
@@ -59,8 +61,20 @@ describe("exportMeasurementsToFile", () => {
 
   it("marks failed entries as unsynced and successful as synced", async () => {
     mockGetMeasurements
-      .mockResolvedValueOnce([["failed-1", mockStoredMeasurement({ experimentName: "Exp A" })]])
-      .mockResolvedValueOnce([["synced-1", mockStoredMeasurement({ experimentName: "Exp B" })]]);
+      .mockResolvedValueOnce([
+        {
+          id: "failed-1",
+          status: "failed",
+          data: mockStoredMeasurement({ experimentName: "Exp A" }),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "synced-1",
+          status: "successful",
+          data: mockStoredMeasurement({ experimentName: "Exp B" }),
+        },
+      ]);
 
     await exportMeasurementsToFile();
 
@@ -77,8 +91,16 @@ describe("exportMeasurementsToFile", () => {
   it("sorts measurements newest first", async () => {
     mockGetMeasurements
       .mockResolvedValueOnce([
-        ["old", mockStoredMeasurement({ timestamp: "2026-01-01T00:00:00.000Z" })],
-        ["new", mockStoredMeasurement({ timestamp: "2026-03-01T00:00:00.000Z" })],
+        {
+          id: "old",
+          status: "failed",
+          data: mockStoredMeasurement({ timestamp: "2026-01-01T00:00:00.000Z" }),
+        },
+        {
+          id: "new",
+          status: "failed",
+          data: mockStoredMeasurement({ timestamp: "2026-03-01T00:00:00.000Z" }),
+        },
       ])
       .mockResolvedValueOnce([]);
 

@@ -42,12 +42,14 @@ export function RecentMeasurementsScreen() {
       questions={item.questions}
       onPress={() => setModal({ kind: "questions", measurement: item })}
       onComment={
-        item.status === "unsynced"
+        item.status === "pending" || item.status === "failed"
           ? () => setModal({ kind: "comment", measurement: item })
           : undefined
       }
       onDelete={() => confirmDelete(item)}
-      onSync={item.status === "unsynced" ? () => confirmSync(item) : undefined}
+      onSync={
+        item.status === "pending" || item.status === "failed" ? () => confirmSync(item) : undefined
+      }
       hasComment={
         !!getCommentFromMeasurementResult(item.data.measurementResult as Record<string, unknown>)
       }

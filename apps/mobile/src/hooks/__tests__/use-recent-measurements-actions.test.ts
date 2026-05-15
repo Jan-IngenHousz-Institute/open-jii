@@ -18,7 +18,7 @@ const mockExportMeasurementsToFile = vi.fn().mockResolvedValue(undefined);
 vi.mock("~/hooks/use-all-measurements", () => ({
   useAllMeasurements: vi.fn(() => ({
     measurements: mockAllMeasurements,
-    allMeasurements: mockAllMeasurements,
+    counts: { pending: 0, uploading: 1, failed: 1, successful: 1 },
     uploadingCount: 1,
     invalidate: mockInvalidate,
   })),
@@ -68,9 +68,9 @@ const makeItem = (
 });
 
 const mockAllMeasurements: MeasurementItem[] = [
-  makeItem("k1", "unsynced", "Exp Unsynced"),
-  makeItem("k2", "synced", "Exp Synced"),
-  makeItem("k3", "syncing", "Exp Syncing"),
+  makeItem("k1", "failed", "Exp Unsynced"),
+  makeItem("k2", "successful", "Exp Synced"),
+  makeItem("k3", "uploading", "Exp Syncing"),
 ];
 
 describe("useRecentMeasurementsActions", () => {
@@ -92,7 +92,7 @@ describe("useRecentMeasurementsActions", () => {
   describe("confirmSync", () => {
     it("shows upload alert with measurement name", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
-      const m = makeItem("k1", "unsynced", "My Experiment");
+      const m = makeItem("k1", "failed", "My Experiment");
 
       act(() => result.current.confirmSync(m));
 
@@ -105,7 +105,7 @@ describe("useRecentMeasurementsActions", () => {
 
     it("calls uploadOne and invalidates on confirm", async () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
-      const m = makeItem("k1", "unsynced");
+      const m = makeItem("k1", "failed");
 
       act(() => result.current.confirmSync(m));
       const [confirmBtn] = mockShowAlert.mock.calls[0][2];
@@ -119,7 +119,7 @@ describe("useRecentMeasurementsActions", () => {
       mockUploadOne.mockRejectedValueOnce(new Error("network"));
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
-      act(() => result.current.confirmSync(makeItem("k1", "unsynced")));
+      act(() => result.current.confirmSync(makeItem("k1", "failed")));
       const [confirmBtn] = mockShowAlert.mock.calls[0][2];
       await act(async () => {
         confirmBtn.onPress();
@@ -134,25 +134,25 @@ describe("useRecentMeasurementsActions", () => {
   });
 
   describe("confirmDelete", () => {
-    it("shows 'Delete Measurement' title for synced items", () => {
+    it("shows 'Remove from phone' title for synced items", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
-      act(() => result.current.confirmDelete(makeItem("k2", "synced")));
+      act(() => result.current.confirmDelete(makeItem("k2", "successful")));
 
       expect(mockShowAlert).toHaveBeenCalledWith(
-        "Delete Measurement",
+        "Remove from phone",
         expect.any(String),
         expect.any(Array),
       );
     });
 
-    it("shows 'Remove Measurement' title for unsynced items", () => {
+    it("shows 'Delete unsynced measurement' title for unsynced items", () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
-      act(() => result.current.confirmDelete(makeItem("k1", "unsynced")));
+      act(() => result.current.confirmDelete(makeItem("k1", "failed")));
 
       expect(mockShowAlert).toHaveBeenCalledWith(
-        "Remove Measurement",
+        "Delete unsynced measurement",
         expect.any(String),
         expect.any(Array),
       );
@@ -160,7 +160,7 @@ describe("useRecentMeasurementsActions", () => {
 
     it("calls removeMeasurement and invalidates on confirm", async () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
-      const m = makeItem("k1", "unsynced");
+      const m = makeItem("k1", "failed");
 
       act(() => result.current.confirmDelete(m));
       const [confirmBtn] = mockShowAlert.mock.calls[0][2];
@@ -246,7 +246,7 @@ describe("useRecentMeasurementsActions", () => {
   describe("saveComment", () => {
     it("calls updateMeasurementComment and invalidates", async () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
-      const m = makeItem("k1", "unsynced");
+      const m = makeItem("k1", "failed");
 
       await act(() => result.current.saveComment(m, "great result"));
 

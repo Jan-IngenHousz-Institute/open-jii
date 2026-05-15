@@ -23,7 +23,7 @@ const {
   mockMarkAsUploading: vi.fn().mockImplementation((keys: string[]) => Promise.resolve(keys)),
   mockMarkAsFailed: vi.fn().mockResolvedValue(undefined),
   mockRemoveMeasurement: vi.fn().mockResolvedValue(undefined),
-  mockSaveMeasurement: vi.fn().mockResolvedValue(undefined),
+  mockSaveMeasurement: vi.fn().mockResolvedValue("generated-id"),
   mockUpdateMeasurement: vi.fn().mockResolvedValue(undefined),
   mockClearMeasurements: vi.fn().mockResolvedValue(undefined),
   mockSendMqttEvent: vi.fn(),
@@ -72,8 +72,27 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(QueryClientProvider, { client: queryClient }, children);
 }
 
-function renderMeasurements(failedUploads: { key: string; data: typeof mockMeasurement }[] = []) {
-  vi.mocked(getMeasurements).mockResolvedValue(failedUploads.map(({ key, data }) => [key, data]));
+function renderMeasurements(
+  failedUploads: { key: string; data: typeof mockMeasurement }[] = [],
+  pendingUploads: { key: string; data: typeof mockMeasurement }[] = [],
+) {
+  // The hook batches pending + failed into a single getMeasurements call and
+  // expects { id, status, data } objects back.
+  vi.mocked(getMeasurements).mockImplementation((status) => {
+    const wanted = new Set(Array.isArray(status) ? status : [status]);
+    const out: { id: string; status: "pending" | "failed"; data: typeof mockMeasurement }[] = [];
+    if (wanted.has("failed")) {
+      out.push(
+        ...failedUploads.map(({ key, data }) => ({ id: key, status: "failed" as const, data })),
+      );
+    }
+    if (wanted.has("pending")) {
+      out.push(
+        ...pendingUploads.map(({ key, data }) => ({ id: key, status: "pending" as const, data })),
+      );
+    }
+    return Promise.resolve(out);
+  });
   return renderHook(() => useMeasurements(), { wrapper });
 }
 
@@ -136,25 +155,7 @@ describe("useMeasurements", () => {
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
     });
 
-    it("calls setQueryData with synced status on per-item success", async () => {
-      const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
-      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
-      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
-      mockSendMqttEvent.mockResolvedValueOnce(undefined);
-
-      await act(() => result.current.uploadAll());
-
-      expect(setQueryDataSpy).toHaveBeenCalledWith(["measurements"], expect.any(Function));
-      // Verify the updater flips the right key to "synced"
-      const updater = setQueryDataSpy.mock.calls.find(
-        ([key]) => Array.isArray(key) && key[0] === "measurements",
-      )?.[1] as (old: { key: string; status: string }[]) => { key: string; status: string }[];
-      const old = [{ key: "upload-key-1", status: "syncing" }];
-      expect(updater(old)).toEqual([{ key: "upload-key-1", status: "synced" }]);
-    });
-
-    it("calls markAsFailed and setQueryData with unsynced status on per-item failure", async () => {
-      const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+    it("calls markAsFailed on per-item failure", async () => {
       const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
       await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockRejectedValueOnce(new Error("network error"));
@@ -164,13 +165,56 @@ describe("useMeasurements", () => {
 
       expect(mockMarkAsFailed).toHaveBeenCalledWith("upload-key-1");
 
-      const updater = setQueryDataSpy.mock.calls
-        .reverse()
-        .find(([key]) => Array.isArray(key) && key[0] === "measurements")?.[1] as (
-        old: { key: string; status: string }[],
-      ) => { key: string; status: string }[];
-      const old = [{ key: "upload-key-1", status: "syncing" }];
-      expect(updater(old)).toEqual([{ key: "upload-key-1", status: "unsynced" }]);
+      consoleSpy.mockRestore();
+    });
+
+    // Status changes must propagate to the list cache the Recent screen
+    // reads (["measurements", "list", filter]). Writing to ["measurements"]
+    // alone wouldn't, so this asserts we never take that shortcut and rely
+    // on prefix-matching invalidateQueries({ queryKey: ["measurements"] })
+    // instead.
+    it("does not call setQueryData with the bare ['measurements'] key", async () => {
+      const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValueOnce(undefined);
+
+      await act(() => result.current.uploadAll());
+
+      const bareMeasurementsCalls = setQueryDataSpy.mock.calls.filter(
+        ([key]) => Array.isArray(key) && key.length === 1 && key[0] === "measurements",
+      );
+      expect(bareMeasurementsCalls).toHaveLength(0);
+    });
+
+    it("invalidates ['measurements'] so list and counts caches refresh", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValueOnce(undefined);
+
+      await act(() => result.current.uploadAll());
+
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+    });
+
+    // Once the publish succeeds the data is on the cloud, so a local
+    // markAsSuccessful failure must be swallowed (logged, not surfaced) and
+    // must not flip the row to "failed". The batch keeps going.
+    it("does not mark the row failed when markAsSuccessful errors after a successful publish", async () => {
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValueOnce(undefined);
+      mockMarkAsSuccessful.mockRejectedValueOnce(new Error("disk full"));
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await act(() => result.current.uploadAll());
+
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Local status update failed after successful publish"),
+        expect.any(Error),
+      );
 
       consoleSpy.mockRestore();
     });
@@ -381,6 +425,40 @@ describe("useMeasurements", () => {
       expect(mockPruneExpiredMeasurements).not.toHaveBeenCalled();
     });
 
+    // See the matching uploadAll regression test — list caches are keyed
+    // ["measurements", "list", filter], so bare ["measurements"] writes miss
+    // every visible row. uploadOne must rely on invalidateQueries instead.
+    it("does not call setQueryData with the bare ['measurements'] key", async () => {
+      const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValueOnce(undefined);
+
+      await act(() => result.current.uploadOne("upload-key-1"));
+
+      const bareMeasurementsCalls = setQueryDataSpy.mock.calls.filter(
+        ([key]) => Array.isArray(key) && key.length === 1 && key[0] === "measurements",
+      );
+      expect(bareMeasurementsCalls).toHaveLength(0);
+    });
+
+    it("does not mark the row failed when markAsSuccessful errors after a successful publish", async () => {
+      const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
+      mockSendMqttEvent.mockResolvedValueOnce(undefined);
+      mockMarkAsSuccessful.mockRejectedValueOnce(new Error("disk full"));
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      await act(() => result.current.uploadOne("upload-key-1"));
+
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      expect(mockToastInfo).not.toHaveBeenCalledWith("Failed to upload, try again later");
+      // Prune + invalidate still run via the finally so the UI refreshes.
+      expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
+
+      consoleSpy.mockRestore();
+    });
+
     it("releases the in-flight key when transition is rejected", async () => {
       mockMarkAsUploading.mockResolvedValueOnce([]).mockResolvedValueOnce(["upload-key-1"]);
       const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
@@ -400,14 +478,19 @@ describe("useMeasurements", () => {
   // ---------------------------------------------------------------------------
 
   describe("saveMeasurement", () => {
-    it("saves as failed and invalidates measurements", async () => {
+    it("saves as failed, invalidates, and returns the new id", async () => {
+      mockSaveMeasurement.mockResolvedValueOnce("new-id");
       const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
       const { result } = renderMeasurements([]);
 
-      await act(() => result.current.saveMeasurement(mockMeasurement, "failed"));
+      let returned: string | undefined;
+      await act(async () => {
+        returned = await result.current.saveMeasurement(mockMeasurement, "failed");
+      });
 
       expect(mockSaveMeasurement).toHaveBeenCalledWith(mockMeasurement, "failed");
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(returned).toBe("new-id");
     });
 
     it("saves as successful and invalidates measurements", async () => {
@@ -418,6 +501,55 @@ describe("useMeasurements", () => {
 
       expect(mockSaveMeasurement).toHaveBeenCalledWith(mockMeasurement, "successful");
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // markUploaded
+  // ---------------------------------------------------------------------------
+
+  describe("markUploaded", () => {
+    it("marks the row as successful and invalidates measurements", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([]);
+
+      await act(() => result.current.markUploaded("key-1"));
+
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("key-1");
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // markFailed
+  // ---------------------------------------------------------------------------
+
+  describe("markFailed", () => {
+    it("marks the row as failed and invalidates measurements", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderMeasurements([]);
+
+      await act(() => result.current.markFailed("key-1"));
+
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("key-1");
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // failedUploads query — covers both pending and failed rows
+  // ---------------------------------------------------------------------------
+
+  describe("failedUploads query", () => {
+    it("includes both pending and failed rows", async () => {
+      const { result } = renderMeasurements(
+        [{ key: "failed-1", data: mockMeasurement }],
+        [{ key: "pending-1", data: mockMeasurement }],
+      );
+
+      await waitFor(() => expect(result.current.failedUploads).toHaveLength(2));
+      const keys = result.current.failedUploads.map((u) => u.key).sort();
+      expect(keys).toEqual(["failed-1", "pending-1"]);
     });
   });
 
