@@ -10,6 +10,7 @@ import { SwipeableMeasurementRow } from "~/components/recent-measurements-screen
 import { useRecentMeasurementsActions } from "~/components/recent-measurements-screen/use-recent-measurements-actions";
 import type { MeasurementFilter, MeasurementItem } from "~/hooks/use-all-measurements";
 import { useTheme } from "~/hooks/use-theme";
+import { getCommentFromMeasurementResult } from "~/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
@@ -47,6 +48,9 @@ export function RecentMeasurementsScreen() {
       }
       onDelete={() => confirmDelete(item)}
       onSync={item.status === "unsynced" ? () => confirmSync(item) : undefined}
+      hasComment={
+        !!getCommentFromMeasurementResult(item.data.measurementResult as Record<string, unknown>)
+      }
     />
   );
 

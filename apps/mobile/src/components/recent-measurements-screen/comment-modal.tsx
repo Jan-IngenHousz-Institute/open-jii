@@ -54,7 +54,6 @@ export function CommentModal({
       setText(initialText);
       sheetRef.current?.present();
     } else {
-      Keyboard.dismiss();
       sheetRef.current?.dismiss();
     }
   }, [visible, initialText]);
@@ -89,7 +88,10 @@ export function CommentModal({
       ref={sheetRef}
       enableDynamicSizing
       backdropComponent={renderBackdrop}
-      onDismiss={onCancel}
+      onDismiss={() => {
+        Keyboard.dismiss();
+        onCancel();
+      }}
       handleIndicatorStyle={{ backgroundColor: colors.inactive }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
