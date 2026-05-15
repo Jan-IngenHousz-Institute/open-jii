@@ -1,6 +1,6 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
-import { Clock, Flag, FlaskConical, MessageCircle, X } from "lucide-react-native";
+import { Clock, Flag, FlaskConical, MessageCircleMore, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -61,11 +61,14 @@ export function MeasurementQuestionsModal({
   const timestamp = new Date(measurement.timestamp).toLocaleString();
   const isUnsynced = measurement.status === "unsynced";
 
-  const currentComment = getCommentFromMeasurementResult(measurementResult);
+  const [currentComment, setCurrentComment] = useState(() =>
+    getCommentFromMeasurementResult(measurementResult),
+  );
   const currentFlagType = getFlagTypeFromMeasurementResult(measurementResult);
 
   const handleSaveComment = async (text: string) => {
     await updateMeasurementComment(measurement.key, measurement.data, text);
+    setCurrentComment(text);
     setCommentModalVisible(false);
   };
 
@@ -127,7 +130,7 @@ export function MeasurementQuestionsModal({
                 style={{ backgroundColor: colors.surface }}
                 activeOpacity={0.7}
               >
-                <MessageCircle size={20} color={colors.onSurface} />
+                <MessageCircleMore size={20} color={colors.onSurface} />
               </TouchableOpacity>
             )}
 
@@ -185,7 +188,7 @@ export function MeasurementQuestionsModal({
                     classes.border,
                   )}
                 >
-                  <MessageCircle size={14} color={colors.brand} style={{ marginTop: 2 }} />
+                  <MessageCircleMore size={14} color={colors.brand} style={{ marginTop: 2 }} />
                   <Text className={clsx("flex-1 text-sm", classes.text)}>{currentComment}</Text>
                 </View>
               )}
