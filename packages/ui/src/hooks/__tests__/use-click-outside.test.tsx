@@ -1,5 +1,5 @@
 import { fireEvent, render } from "@testing-library/react";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { useClickOutside } from "../use-click-outside";
@@ -68,6 +68,38 @@ describe("useClickOutside", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onEscape).toHaveBeenCalledTimes(1);
     expect(onOutside).not.toHaveBeenCalled();
+  });
+
+  it("does not fire for a target already detached from the document", () => {
+    const onOutside = vi.fn();
+    render(<Probe onOutside={onOutside} />);
+    const orphan = document.createElement("button");
+    fireEvent.pointerDown(orphan);
+    expect(onOutside).not.toHaveBeenCalled();
+  });
+
+  it("invokes the latest handler after the parent re-renders", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+
+    function Swapper() {
+      const [useSecond, setUseSecond] = useState(false);
+      return (
+        <>
+          <button data-testid="swap" onClick={() => setUseSecond(true)}>
+            swap
+          </button>
+          <Probe onOutside={useSecond ? second : first} />
+        </>
+      );
+    }
+
+    const { getByTestId } = render(<Swapper />);
+    fireEvent.click(getByTestId("swap"));
+    fireEvent.pointerDown(getByTestId("outside-button"));
+
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
   });
 
   it("honours additional ignoreSelectors", () => {
