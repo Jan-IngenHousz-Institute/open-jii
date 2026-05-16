@@ -125,7 +125,15 @@ export function BarStylePanel({ form }: ChartPanelProps) {
                         return;
                       }
                       const parsed = Number(raw);
-                      field.onChange(Number.isFinite(parsed) ? parsed : undefined);
+                      // Reject non-finite + non-positive + non-integer input
+                      // so a stray "0", "-3", or "2.5" can't produce a
+                      // nonsense top-N slice at render time.
+                      if (!Number.isFinite(parsed)) {
+                        field.onChange(undefined);
+                        return;
+                      }
+                      const normalized = Math.floor(parsed);
+                      field.onChange(normalized >= 1 ? normalized : undefined);
                     }}
                     onBlur={field.onBlur}
                     name={field.name}

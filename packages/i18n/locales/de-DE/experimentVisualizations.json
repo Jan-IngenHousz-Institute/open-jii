@@ -82,7 +82,7 @@
       "bar": "Balkendiagramm",
       "lineDescription": "Zeigt Datenpunkte verbunden durch gerade Liniensegmente an",
       "scatterDescription": "Zeigt Daten als Punkte auf x- und y-Koordinaten an",
-      "barDescription": "Gruppiere Zeilen nach Spalte und vergleiche Anzahl oder Aggregate"
+      "barDescription": "Gruppiert Zeilen nach Spalte und vergleicht Anzahl oder Aggregate"
     },
     "families": {
       "basic": "Grunddiagramme"
@@ -275,6 +275,7 @@
       "colorDimension": "Color dimension",
       "column": "Column",
       "selectColumn": "Select a column",
+      "none": "Keine",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
@@ -375,7 +376,7 @@
       "descriptions": {
         "line": "Datenpunkte durch Liniensegmente verbunden",
         "scatter": "Daten als Punkte auf x- und y-Koordinaten",
-        "bar": "Gruppiere Zeilen nach Spalte und vergleiche Anzahl oder Aggregate"
+        "bar": "Gruppiert Zeilen nach Spalte und vergleicht Anzahl oder Aggregate"
       }
     },
     "families": {

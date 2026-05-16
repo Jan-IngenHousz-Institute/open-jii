@@ -237,13 +237,22 @@ export function applyRowFilters(
 ): Record<string, unknown>[] {
   if (!filters || filters.length === 0) return rows;
   const active = filters.filter(
-    (f) => f.column && f.value !== undefined && f.value !== null && f.value !== "",
+    (f) =>
+      f.operator === "equals" &&
+      f.column &&
+      f.value !== undefined &&
+      f.value !== null &&
+      f.value !== "",
   );
   if (active.length === 0) return rows;
   return rows.filter((row) =>
     active.every((f) => {
-      const cell = row[f.column];
-      return stringifyForCompare(cell) === stringifyForCompare(f.value);
+      const cellStr = stringifyForCompare(row[f.column]);
+      const valStr = stringifyForCompare(f.value);
+      // Reject when either side stringified to null — that's our signal
+      // that the cell was an object / array / null / undefined, and a
+      // null === null match would let two unrelated cells appear equal.
+      return cellStr !== null && valStr !== null && cellStr === valStr;
     }),
   );
 }

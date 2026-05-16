@@ -1,4 +1,5 @@
-import { renderWithForm, screen } from "@/test/test-utils";
+import { fireEvent, renderWithForm, screen, userEvent } from "@/test/test-utils";
+import { useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
@@ -68,5 +69,34 @@ describe("BarStylePanel", () => {
   it("renders an empty topN input when the form value is undefined", () => {
     renderPanel();
     expect(screen.getByRole("spinbutton")).toHaveValue(null);
+  });
+
+  it("writes a numeric value to the form when topN is typed", async () => {
+    const user = userEvent.setup();
+    let formRef!: ReturnType<typeof useForm<ChartFormValues>>;
+    function Harness() {
+      formRef = useForm<ChartFormValues>({ defaultValues: defaults() });
+      return <BarStylePanel form={formRef} columns={columns} />;
+    }
+    renderWithForm<ChartFormValues>(() => <Harness />, {});
+    const input = screen.getByRole("spinbutton");
+    await user.type(input, "7");
+    expect(formRef.getValues("config.topN")).toBe(7);
+  });
+
+  it("clears the topN form value when the input is emptied", () => {
+    let formRef!: ReturnType<typeof useForm<ChartFormValues>>;
+    function Harness() {
+      formRef = useForm<ChartFormValues>({
+        defaultValues: defaults({ config: { ...barChartType.defaultConfig(), topN: 5 } }),
+      });
+      return <BarStylePanel form={formRef} columns={columns} />;
+    }
+    renderWithForm<ChartFormValues>(() => <Harness />, {});
+    const input = screen.getByRole("spinbutton");
+    // fireEvent.change writes a single change without per-keystroke parsing,
+    // which is what the empty-input branch needs.
+    fireEvent.change(input, { target: { value: "" } });
+    expect(formRef.getValues("config.topN")).toBeUndefined();
   });
 });

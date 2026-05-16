@@ -27,6 +27,9 @@ import type { ChartPanelProps } from "../types";
 import { collectQuestionLabels } from "./aggregate";
 
 const AGG_NEEDING_Y = new Set(["sum", "avg", "min", "max"]);
+// Radix Select can't bind to an empty string, so we surface "no column"
+// as an explicit sentinel option and map it back to "" at the form seam.
+const EMPTY_Y_VALUE = "__none__";
 
 export function BarDataPanel({ form, columns }: ChartPanelProps) {
   const { t } = useTranslation("experimentVisualizations");
@@ -246,10 +249,11 @@ export function BarDataPanel({ form, columns }: ChartPanelProps) {
             <FormItem>
               <FormLabel className="text-xs font-medium">{t("workspace.shelves.column")}</FormLabel>
               <Select
-                value={field.value || undefined}
+                value={field.value || EMPTY_Y_VALUE}
                 onValueChange={(value) => {
-                  field.onChange(value);
-                  handleYChange(value);
+                  const next = value === EMPTY_Y_VALUE ? "" : value;
+                  field.onChange(next);
+                  handleYChange(next);
                 }}
               >
                 <FormControl>
@@ -258,6 +262,9 @@ export function BarDataPanel({ form, columns }: ChartPanelProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value={EMPTY_Y_VALUE}>
+                    {t("workspace.shelves.none", "None")}
+                  </SelectItem>
                   {yColumns.map((column) => (
                     <SelectItem key={column.name} value={column.name}>
                       <div className="flex items-center gap-2">

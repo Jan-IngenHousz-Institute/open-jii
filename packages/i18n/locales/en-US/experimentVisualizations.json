@@ -278,6 +278,7 @@
       "colorDimension": "Color dimension",
       "column": "Column",
       "selectColumn": "Select a column",
+      "none": "None",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",

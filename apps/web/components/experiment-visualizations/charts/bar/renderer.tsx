@@ -71,10 +71,11 @@ export function BarRenderer({
     // Reverse the input for horizontal+sorted so the rank order reads
     // top-down without touching the underlying bucket order downstream
     // code might rely on.
+    // Only reverse when sorting is actually active — any invalid persisted
+    // value should leave bar order untouched.
+    const isSorted = sortDirection === "asc" || sortDirection === "desc";
     const ordered =
-      orientation === "h" && sortDirection !== null
-        ? [...displayBuckets].reverse()
-        : displayBuckets;
+      orientation === "h" && isSorted ? [...displayBuckets].reverse() : displayBuckets;
 
     const labels = ordered.map((b) => b.label);
     const values = ordered.map((b) => b.value);
