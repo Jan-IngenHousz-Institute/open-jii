@@ -7,6 +7,7 @@ import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
 
 import { AddFilterPopover } from "../add-filter/add-filter-popover";
 import { parentColumnName } from "../filter-column-path";
+import { useStableFilterKeys } from "../use-stable-filter-keys";
 import { FilterChipItem } from "./filter-chip-item";
 
 interface FilterChipListProps {
@@ -59,12 +60,13 @@ export function FilterChipList({
   };
 
   const columnByName = useMemo(() => new Map(columns.map((c) => [c.name, c])), [columns]);
+  const keys = useStableFilterKeys(value);
 
   return (
     <div ref={containerRef} className="space-y-2">
       {value.map((filter, index) => (
         <FilterChipItem
-          key={index}
+          key={keys[index] ?? index}
           filter={filter}
           column={columnByName.get(parentColumnName(filter.column))}
           columns={columns}

@@ -68,7 +68,7 @@ describe("FilterChipBar", () => {
 
   it("resolves the column metadata for struct sub-paths via the parent column name", () => {
     mountDistinct();
-    const filters: DataFilter[] = [{ column: "label", operator: "equals", value: "hi" }];
+    const filters: DataFilter[] = [{ column: "label.value", operator: "equals", value: "hi" }];
     render(
       <FilterChipBar
         value={filters}

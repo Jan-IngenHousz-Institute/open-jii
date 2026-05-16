@@ -35,19 +35,14 @@ describe("DateTimeInput", () => {
     expect(screen.getByDisplayValue("00:00")).toBeInTheDocument();
   });
 
-  it("emits an ISO string for the current day when the time changes with no prior date", async () => {
+  it("disables the time input and emits nothing until a date is picked", () => {
     const onChange = vi.fn();
     render(<DateTimeInput value="" onChange={onChange} />);
 
-    // No prior date → handleTimeChange falls back to `new Date()` and emits
-    // an ISO for today with the typed time.
+    // No date selected: the time input must not fabricate "today".
     const time = screen.getByDisplayValue("00:00");
-    await userEvent.setup().clear(time);
-    await userEvent.setup().type(time, "12:34");
-
-    expect(onChange).toHaveBeenLastCalledWith(
-      expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
-    );
+    expect(time).toBeDisabled();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("opens the calendar popover when the date button is clicked", async () => {

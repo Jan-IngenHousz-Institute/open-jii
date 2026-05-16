@@ -1,5 +1,7 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
+import { isDecimalType, isNumericType } from "@repo/api/utils/column-type-utils";
+
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
 import { STATIC_TABLE_CONFIG, MACRO_TABLE_CONFIG } from "../models/experiment-data.model";
@@ -297,15 +299,26 @@ export class ExperimentDataRepository {
       return dataResult;
     }
 
-    // SchemaData.rows is `string[][]`; single-column response means each
-    // row is `[value]`. Strip nulls and coerce numeric strings so the
-    // frontend gets typed values it can compare directly.
+    // Truncation is detected from the raw fetched count (query asked for
+    // limit + 1): null/empty filtering below must not influence it.
+    const truncated = dataResult.value.rows.length > limit;
+
+    // SchemaData.rows is `(string | null)[][]`; single-column response means
+    // each row is `[value]`. Drop nulls/blanks so the picker doesn't surface
+    // a `(null)` entry.
     const raw = dataResult.value.rows
       .map((row) => row[0])
       .filter((v): v is string => v != null && v !== "");
-    const truncated = raw.length > limit;
-    const trimmed = truncated ? raw.slice(0, limit) : raw;
+    const trimmed = raw.slice(0, limit);
+
+    // Coerce to a number only when the column's own type is numeric, so a
+    // string column with numeric-looking codes (e.g. "007") keeps its form.
+    const columnType = dataResult.value.columns[0]?.type_text;
+    const isNumericColumn = isNumericType(columnType) || isDecimalType(columnType);
     const values: (string | number)[] = trimmed.map((v) => {
+      if (!isNumericColumn) {
+        return v;
+      }
       const n = Number(v);
       return Number.isFinite(n) && v.trim() !== "" ? n : v;
     });

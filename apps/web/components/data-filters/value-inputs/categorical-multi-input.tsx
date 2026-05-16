@@ -71,6 +71,21 @@ export function CategoricalMultiInput({
 
   const getChipKey = (raw: string | number) => String(chipValueForOption(raw, isContributor));
 
+  // DISTINCT keys on the whole contributor struct, so one person can return
+  // several snapshots (name/avatar drift) that all collapse to the same id.
+  // Render one option per logical chip key.
+  const uniqueValues = useMemo(() => {
+    const seen = new Set<string>();
+    return values.filter((v) => {
+      const key = String(chipValueForOption(v, isContributor));
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }, [values, isContributor]);
+
   return (
     <div className="flex flex-col gap-1.5">
       <Popover open={open} onOpenChange={setOpen}>
@@ -101,7 +116,7 @@ export function CategoricalMultiInput({
               )}
               {!isLoading && <CommandEmpty>{t("dataFilters.noValues")}</CommandEmpty>}
               <CommandGroup>
-                {values.map((v) => (
+                {uniqueValues.map((v) => (
                   <CategoricalOption
                     key={getChipKey(v)}
                     optionValue={String(v)}

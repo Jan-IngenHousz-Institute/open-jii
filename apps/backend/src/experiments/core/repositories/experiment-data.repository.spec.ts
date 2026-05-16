@@ -586,26 +586,26 @@ describe("ExperimentDataRepository", () => {
       },
     ];
 
-    function mockRows(values: (string | null)[]) {
+    function mockRows(values: (string | null)[], typeText = "STRING") {
       return {
-        columns: [{ name: "site", type_name: "string", type_text: "string", position: 0 }],
+        columns: [{ name: "site", type_name: typeText, type_text: typeText, position: 0 }],
         rows: values.map((v) => [v]),
         totalRows: values.length,
         truncated: false,
       };
     }
 
-    it("returns distinct values, coercing numeric strings and stripping nulls/blanks", async () => {
+    it("strips nulls/blanks and preserves string-column values verbatim", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
-        success(mockRows(["alpha", null, "", "42", "3.5"])),
+        success(mockRows(["alpha", null, "", "007"])),
       );
 
-      const result = await repository.getDistinctColumnValues(baseParams);
+      const result = await repository.getDistinctColumnValues({ ...baseParams, limit: 10 });
 
       assertSuccess(result);
-      expect(result.value).toEqual({ values: ["alpha", 42, 3.5], truncated: false });
+      expect(result.value).toEqual({ values: ["alpha", "007"], truncated: false });
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
         tableName: "raw_data",
         tableType: "static",
@@ -614,8 +614,21 @@ describe("ExperimentDataRepository", () => {
         distinct: true,
         orderBy: "site",
         orderDirection: "ASC",
-        limit: 4,
+        limit: 11,
       });
+    });
+
+    it("coerces values to numbers only for a numeric column", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success(mockRows(["42", "3.5", null], "DOUBLE")),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: [42, 3.5], truncated: false });
     });
 
     it("flags truncation and trims to the requested limit", async () => {

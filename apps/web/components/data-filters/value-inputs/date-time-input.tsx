@@ -34,8 +34,11 @@ export function DateTimeInput({ value, onChange }: DateTimeInputProps) {
   };
 
   const handleTimeChange = (raw: string) => {
-    const base = date ?? new Date();
-    const next = applyTimeOfDay(base, raw);
+    if (!date) {
+      return;
+    }
+
+    const next = applyTimeOfDay(date, raw);
     onChange(next.toISOString());
   };
 
@@ -63,6 +66,7 @@ export function DateTimeInput({ value, onChange }: DateTimeInputProps) {
         type="time"
         className="h-9 w-[100px]"
         value={timeValue}
+        disabled={!date}
         onChange={(e) => handleTimeChange(e.target.value)}
       />
     </div>

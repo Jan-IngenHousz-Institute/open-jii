@@ -652,7 +652,7 @@
     "searchPlaceholder": "Suchen…",
     "loading": "Lädt…",
     "noValues": "Keine Werte gefunden.",
-    "truncatedNotice": "Zeige die ersten {{count}} Werte; verfeinern Sie die Suche, um mehr zu finden.",
+    "truncatedNotice": "Die ersten {{count}} Werte werden angezeigt. Verfeinern Sie die Suche, um mehr zu finden.",
     "removeValue": "{{name}} entfernen",
     "addFilter": "Filter hinzufügen",
     "apply": "Anwenden",

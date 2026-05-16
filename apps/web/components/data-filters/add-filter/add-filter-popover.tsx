@@ -54,10 +54,7 @@ export function AddFilterPopover({
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) return;
-    const parsed = zDataFilter.safeParse(form.getValues());
-    if (parsed.success) onAdd(parsed.data);
-    reset();
+    if (!next) reset();
   };
 
   const handlePick = (col: DataColumn) => {
@@ -77,7 +74,6 @@ export function AddFilterPopover({
     reset();
   });
 
-  // Drop draft before closing so the open-change commit branch can't fire.
   const handleCancel = () => {
     reset();
     setOpen(false);

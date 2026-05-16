@@ -1472,6 +1472,9 @@ describe("Experiment Schema", () => {
             value: "2024-01-01",
           }).success,
         ).toBe(true);
+        expect(
+          zDataFilter.safeParse({ ...base, operator: "greater_than", value: "not-a-date" }).success,
+        ).toBe(false);
       });
 
       it("'contains' requires a string value", () => {

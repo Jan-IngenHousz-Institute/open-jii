@@ -72,7 +72,7 @@ function parseContributor(
     return null;
   }
   if (typeof data === "object") {
-    return data;
+    return isContributorStruct(data) ? data : null;
   }
   try {
     const parsed: unknown = JSON.parse(data);

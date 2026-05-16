@@ -1377,7 +1377,10 @@ export const zDataFilter = z
       operator === "greater_than_or_equal" ||
       operator === "less_than_or_equal"
     ) {
-      if (typeof value !== "number" && typeof value !== "string") {
+      const isComparable =
+        typeof value === "number" ||
+        (typeof value === "string" && !Number.isNaN(Date.parse(value)));
+      if (!isComparable) {
         issue(`Operator '${operator}' requires a number or ISO date string`);
       }
     }
