@@ -1,7 +1,13 @@
 import { faker } from "@faker-js/faker";
 import { expect } from "vitest";
 
-import { AppError, success, failure, assertSuccess } from "../../../common/utils/fp-utils";
+import {
+  AppError,
+  success,
+  failure,
+  assertSuccess,
+  assertFailure,
+} from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 import type { ExperimentDto } from "../models/experiment.model";
@@ -563,6 +569,104 @@ describe("ExperimentDataRepository", () => {
       if (result.isFailure()) {
         expect(result.error.code).toBe("UNKNOWN_TABLE_CONFIG");
       }
+    });
+  });
+
+  describe("getDistinctColumnValues", () => {
+    const experimentId = faker.string.uuid();
+    const baseParams = { experimentId, tableName: "raw_data", column: "site", limit: 3 };
+    const metadata: ExperimentTableMetadata[] = [
+      {
+        identifier: "raw_data",
+        tableType: "static",
+        rowCount: 10,
+        macroSchema: null,
+        questionsSchema: null,
+        customMetadataSchema: null,
+      },
+    ];
+
+    function mockRows(values: (string | null)[]) {
+      return {
+        columns: [{ name: "site", type_name: "string", type_text: "string", position: 0 }],
+        rows: values.map((v) => [v]),
+        totalRows: values.length,
+        truncated: false,
+      };
+    }
+
+    it("returns distinct values, coercing numeric strings and stripping nulls/blanks", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success(mockRows(["alpha", null, "", "42", "3.5"])),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: ["alpha", 42, 3.5], truncated: false });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId,
+        columns: ["site"],
+        distinct: true,
+        orderBy: "site",
+        orderDirection: "ASC",
+        limit: 4,
+      });
+    });
+
+    it("flags truncation and trims to the requested limit", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success(mockRows(["a", "b", "c", "d"])),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: ["a", "b", "c"], truncated: true });
+    });
+
+    it("propagates a metadata lookup failure", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        failure(AppError.internal("boom")),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+      assertFailure(result);
+    });
+
+    it("returns notFound when the table is absent from metadata", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+      assertFailure(result);
+      expect(result.error.code).toBe("NOT_FOUND");
+    });
+
+    it("propagates a query-builder failure", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        failure(AppError.badRequest("bad query")),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+      assertFailure(result);
+    });
+
+    it("propagates an executeSqlQuery failure", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        failure(AppError.internal("UNRESOLVED_COLUMN")),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+      assertFailure(result);
     });
   });
 });

@@ -71,6 +71,13 @@ import {
   // Custom metadata
   zCustomMetadataPayload,
   makeCustomMetadataFormSchema,
+  // Data filter primitives & distinct values
+  zDataFilterOperator,
+  zDataFilterValue,
+  zDataFilter,
+  zDistinctValuesQuery,
+  zDistinctValuesResponse,
+  DISTINCT_VALUES_MAX_LIMIT,
 } from "./experiment.schema";
 
 // -------- Helpers --------
@@ -1370,6 +1377,160 @@ describe("Experiment Schema", () => {
 
     it("should reject missing required fields", () => {
       expect(() => zProjectTransferWebhookResponse.parse({ success: true })).toThrow();
+    });
+  });
+
+  describe("Data filter primitives & distinct values", () => {
+    describe("zDataFilterOperator", () => {
+      it("accepts every supported operator", () => {
+        for (const op of [
+          "equals",
+          "not_equals",
+          "greater_than",
+          "less_than",
+          "greater_than_or_equal",
+          "less_than_or_equal",
+          "between",
+          "contains",
+          "in",
+        ]) {
+          expect(zDataFilterOperator.parse(op)).toBe(op);
+        }
+      });
+
+      it("rejects an unknown operator", () => {
+        expect(zDataFilterOperator.safeParse("starts_with").success).toBe(false);
+      });
+    });
+
+    describe("zDataFilterValue", () => {
+      it("accepts non-empty scalars", () => {
+        expect(zDataFilterValue.parse("x")).toBe("x");
+        expect(zDataFilterValue.parse(3)).toBe(3);
+        expect(zDataFilterValue.parse(false)).toBe(false);
+      });
+
+      it("accepts a non-empty array of strings/numbers", () => {
+        expect(zDataFilterValue.parse(["a", 2])).toEqual(["a", 2]);
+      });
+
+      it("rejects an empty string, empty array, and array with an empty string", () => {
+        expect(zDataFilterValue.safeParse("").success).toBe(false);
+        expect(zDataFilterValue.safeParse([]).success).toBe(false);
+        expect(zDataFilterValue.safeParse([""]).success).toBe(false);
+      });
+    });
+
+    describe("zDataFilter.superRefine", () => {
+      const base = { column: "temp" };
+
+      it("requires a non-empty column", () => {
+        expect(zDataFilter.safeParse({ column: "", operator: "equals", value: "x" }).success).toBe(
+          false,
+        );
+      });
+
+      it("'in' requires an array; accepts an array", () => {
+        expect(zDataFilter.safeParse({ ...base, operator: "in", value: "x" }).success).toBe(false);
+        expect(zDataFilter.safeParse({ ...base, operator: "in", value: ["a", "b"] }).success).toBe(
+          true,
+        );
+      });
+
+      it("'between' requires a same-typed 2-tuple", () => {
+        expect(zDataFilter.safeParse({ ...base, operator: "between", value: 5 }).success).toBe(
+          false,
+        );
+        expect(zDataFilter.safeParse({ ...base, operator: "between", value: [1] }).success).toBe(
+          false,
+        );
+        expect(
+          zDataFilter.safeParse({ ...base, operator: "between", value: [1, "2"] }).success,
+        ).toBe(false);
+        expect(zDataFilter.safeParse({ ...base, operator: "between", value: [1, 9] }).success).toBe(
+          true,
+        );
+      });
+
+      it("rejects array values for non-array operators", () => {
+        expect(
+          zDataFilter.safeParse({ ...base, operator: "equals", value: ["a", "b"] }).success,
+        ).toBe(false);
+      });
+
+      it("comparison operators require a number or ISO date string", () => {
+        expect(
+          zDataFilter.safeParse({ ...base, operator: "greater_than", value: true }).success,
+        ).toBe(false);
+        expect(
+          zDataFilter.safeParse({ ...base, operator: "greater_than", value: 10 }).success,
+        ).toBe(true);
+        expect(
+          zDataFilter.safeParse({
+            ...base,
+            operator: "less_than_or_equal",
+            value: "2024-01-01",
+          }).success,
+        ).toBe(true);
+      });
+
+      it("'contains' requires a string value", () => {
+        expect(zDataFilter.safeParse({ ...base, operator: "contains", value: 5 }).success).toBe(
+          false,
+        );
+        expect(zDataFilter.safeParse({ ...base, operator: "contains", value: "lf" }).success).toBe(
+          true,
+        );
+      });
+
+      it("accepts a plain equals filter", () => {
+        expect(
+          zDataFilter.safeParse({ ...base, operator: "equals", value: "active" }).success,
+        ).toBe(true);
+      });
+    });
+
+    describe("zDistinctValuesQuery", () => {
+      it("accepts a minimal query and leaves limit optional", () => {
+        const parsed = zDistinctValuesQuery.parse({ tableName: "raw_data", column: "site" });
+        expect(parsed.limit).toBeUndefined();
+      });
+
+      it("coerces a numeric-string limit", () => {
+        expect(
+          zDistinctValuesQuery.parse({ tableName: "raw_data", column: "site", limit: "50" }).limit,
+        ).toBe(50);
+      });
+
+      it("rejects a missing column and an over-cap limit", () => {
+        expect(zDistinctValuesQuery.safeParse({ tableName: "raw_data", column: "" }).success).toBe(
+          false,
+        );
+        expect(
+          zDistinctValuesQuery.safeParse({
+            tableName: "raw_data",
+            column: "site",
+            limit: DISTINCT_VALUES_MAX_LIMIT + 1,
+          }).success,
+        ).toBe(false);
+      });
+    });
+
+    describe("zDistinctValuesResponse", () => {
+      it("accepts string and number values with a truncated flag", () => {
+        const parsed = zDistinctValuesResponse.parse({
+          values: ["a", 1, "b"],
+          truncated: true,
+        });
+        expect(parsed.values).toEqual(["a", 1, "b"]);
+        expect(parsed.truncated).toBe(true);
+      });
+
+      it("rejects boolean values", () => {
+        expect(
+          zDistinctValuesResponse.safeParse({ values: [true], truncated: false }).success,
+        ).toBe(false);
+      });
     });
   });
 });
