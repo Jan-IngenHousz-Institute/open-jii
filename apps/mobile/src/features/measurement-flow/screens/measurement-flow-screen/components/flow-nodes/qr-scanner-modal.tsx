@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 import { CameraView } from "expo-camera";
 import { Info, X } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useRef } from "react";
 import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
@@ -34,20 +34,23 @@ export function QRScannerModal({
   showMatchNote,
 }: QRScannerModalProps) {
   const [permission, requestPermission] = useCameraPermission();
-  const [scanned, setScanned] = useState(false);
   const { colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { height } = Dimensions.get("window");
-  // Reset scan state whenever the modal becomes visible
-  useEffect(() => {
-    if (visible) {
-      setScanned(false);
-    }
-  }, [visible]);
+
+  // scanned is a guard for double-fires during a single visibility cycle, not
+  // a value that drives render. Reset synchronously when visible transitions
+  // false → true (React's recommended "reset state on prop change" pattern).
+  const scannedRef = useRef(false);
+  const prevVisibleRef = useRef(visible);
+  if (prevVisibleRef.current !== visible) {
+    if (visible) scannedRef.current = false;
+    prevVisibleRef.current = visible;
+  }
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return;
-    setScanned(true);
+    if (scannedRef.current) return;
+    scannedRef.current = true;
     console.log("[qr-scanner] Scan successful:", data);
     onScanned(data);
     onClose();

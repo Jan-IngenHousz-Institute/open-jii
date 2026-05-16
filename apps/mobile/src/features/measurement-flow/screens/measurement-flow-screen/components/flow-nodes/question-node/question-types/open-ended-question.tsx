@@ -1,5 +1,5 @@
 import { ScanQrCode } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
@@ -17,21 +17,6 @@ interface OpenEndedQuestionProps {
 export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenEndedQuestionProps) {
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
-  const [internal, setInternal] = useState(value);
-
-  useEffect(() => {
-    setInternal(value);
-  }, [value]);
-
-  const handleChange = (text: string) => {
-    setInternal(text);
-    onChange(text);
-  };
-
-  const handleClear = () => {
-    setInternal("");
-    onChange("");
-  };
 
   return (
     <View className="flex-1 items-start justify-start gap-2">
@@ -42,17 +27,17 @@ export function OpenEndedQuestion({ content, value, onChange, onQRPress }: OpenE
             content.placeholder ?? t("measurementFlow:questionTypes.openEnded.placeholder")
           }
           placeholderTextColor={themeColors.inactive}
-          value={internal}
-          onChangeText={handleChange}
+          value={value}
+          onChangeText={onChange}
           multiline
           numberOfLines={8}
           textAlignVertical="top"
         />
 
-        {internal.length > 0 && (
+        {value.length > 0 && (
           <TouchableOpacity
             className="bg-gray-background absolute bottom-2 left-2 rounded-md p-1"
-            onPress={handleClear}
+            onPress={() => onChange("")}
           >
             <Text className="text-foreground font-semibold">
               {t("measurementFlow:questionTypes.openEnded.clear")}
