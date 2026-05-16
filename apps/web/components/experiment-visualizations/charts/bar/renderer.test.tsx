@@ -8,11 +8,18 @@ import type { ChartFormConfig } from "../form-values";
 import { barDefaultConfig } from "./defaults";
 import { BarRenderer } from "./renderer";
 
+// The factory accepts `config: Record<string, unknown>`, but the bar's
+// strongly-typed `ChartFormConfig` lacks an index signature. Cast once
+// here at the seam so individual scenarios stay readable.
+function asConfig(c: ChartFormConfig): Record<string, unknown> {
+  return c as unknown as Record<string, unknown>;
+}
+
 function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
   return createVisualization({
     chartType: "bar",
     chartFamily: "basic",
-    config: barDefaultConfig() satisfies ChartFormConfig,
+    config: asConfig(barDefaultConfig()),
     dataConfig: {
       tableName: "raw_data",
       dataSources: [
@@ -44,11 +51,11 @@ describe("BarRenderer", () => {
 
   it("renders the chart frame for a count histogram by contributor", () => {
     const viz = buildViz({
-      config: {
+      config: asConfig({
         ...barDefaultConfig(),
         aggregationFunction: "count",
         xColumnType: WellKnownColumnTypes.CONTRIBUTOR,
-      } satisfies ChartFormConfig,
+      }),
     });
     const rows = [
       { contributor: contributorCell("u1", "Ada") },
@@ -65,11 +72,11 @@ describe("BarRenderer", () => {
 
   it("renders the mean-value scenario with a Y column", () => {
     const viz = buildViz({
-      config: {
+      config: asConfig({
         ...barDefaultConfig(),
         aggregationFunction: "avg",
         xColumnType: WellKnownColumnTypes.CONTRIBUTOR,
-      } satisfies ChartFormConfig,
+      }),
       dataConfig: {
         tableName: "raw_data",
         dataSources: [
@@ -89,14 +96,14 @@ describe("BarRenderer", () => {
 
   it("renders the leaderboard scenario (horizontal + sort desc + topN)", () => {
     const viz = buildViz({
-      config: {
+      config: asConfig({
         ...barDefaultConfig(),
         aggregationFunction: "max",
         xColumnType: WellKnownColumnTypes.CONTRIBUTOR,
         orientation: "h",
         sortDirection: "desc",
         topN: 3,
-      } satisfies ChartFormConfig,
+      }),
       dataConfig: {
         tableName: "raw_data",
         dataSources: [
@@ -119,11 +126,11 @@ describe("BarRenderer", () => {
 
   it("renders an Unknown bucket without crashing when a contributor is null", () => {
     const viz = buildViz({
-      config: {
+      config: asConfig({
         ...barDefaultConfig(),
         aggregationFunction: "count",
         xColumnType: WellKnownColumnTypes.CONTRIBUTOR,
-      } satisfies ChartFormConfig,
+      }),
     });
     const rows = [
       { contributor: contributorCell("u1", "Ada") },
