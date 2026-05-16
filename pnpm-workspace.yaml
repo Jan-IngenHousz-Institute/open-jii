@@ -42,8 +42,6 @@ catalogs:
     "@testing-library/user-event": 14.6.1
     "@vitejs/plugin-react": 4.7.0
   aws-sdk:
-    "@aws-sdk/client-cognito-identity": 3.1019.0
-    "@aws-sdk/client-location": 3.1019.0
-    "@aws-sdk/client-lambda": 3.1019.0
-    "@aws-sdk/client-s3": 3.1019.0
-    "@aws-sdk/s3-request-presigner": 3.1019.0
+    "@aws-sdk/client-cognito-identity": 3.1048.0
+    "@aws-sdk/client-location": 3.1048.0
+    "@aws-sdk/client-lambda": 3.1048.0
