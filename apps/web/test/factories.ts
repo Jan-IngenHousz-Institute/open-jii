@@ -35,6 +35,7 @@ import type {
 } from "@repo/api/schemas/workbook-cells.schema";
 import type { WorkbookVersionSummary } from "@repo/api/schemas/workbook-version.schema";
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Session } from "@repo/auth/types";
 
 // ── Experiment ──────────────────────────────────────────────────
 
@@ -98,26 +99,37 @@ export function createExperimentAccess(
 // ── Session / Auth ──────────────────────────────────────────────
 
 export function createSession(
-  overrides: Partial<{
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      registered: boolean;
-      firstName: string;
-      lastName: string;
-    };
-  }> = {},
-) {
+  overrides: {
+    user?: Partial<NonNullable<Session>["user"]>;
+    session?: Partial<NonNullable<Session>["session"]>;
+  } = {},
+): NonNullable<Session> {
+  // Resolve the user first so the session's `userId` follows a caller's
+  // `user.id` override automatically — without this, tests that override
+  // only one of the two would silently produce inconsistent fixtures.
+  const user: NonNullable<Session>["user"] = {
+    id: "user-1",
+    name: "Test User",
+    email: "test@example.com",
+    emailVerified: true,
+    createdAt: new Date("2025-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+    image: null,
+    registered: true,
+    ...overrides.user,
+  };
   return {
-    user: {
-      id: "user-1",
-      name: "Test User",
-      email: "test@example.com",
-      registered: true,
-      firstName: "Test",
-      lastName: "User",
-      ...overrides.user,
+    user,
+    session: {
+      id: "session-1",
+      userId: user.id,
+      token: "test-token",
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+      createdAt: new Date("2025-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2025-01-01T00:00:00.000Z"),
+      ipAddress: null,
+      userAgent: null,
+      ...overrides.session,
     },
   };
 }

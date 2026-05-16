@@ -9,7 +9,7 @@ function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
   return createVisualization({
     chartType: "scatter",
     chartFamily: "basic",
-    config: scatterDefaultConfig(),
+    config: scatterDefaultConfig() as unknown as Record<string, unknown>,
     dataConfig: {
       tableName: "readings",
       dataSources: [
@@ -56,7 +56,10 @@ describe("ScatterRenderer", () => {
 
   it("handles multiple Y series with categorical color (multi-trace path)", () => {
     const viz = buildViz({
-      config: { ...scatterDefaultConfig(), colorMode: "categorical" },
+      config: { ...scatterDefaultConfig(), colorMode: "categorical" } as unknown as Record<
+        string,
+        unknown
+      >,
       dataConfig: {
         tableName: "readings",
         dataSources: [
@@ -80,7 +83,10 @@ describe("ScatterRenderer", () => {
 
   it("handles a continuous color column (single trace with colorscale)", () => {
     const viz = buildViz({
-      config: { ...scatterDefaultConfig(), colorMode: "continuous" },
+      config: { ...scatterDefaultConfig(), colorMode: "continuous" } as unknown as Record<
+        string,
+        unknown
+      >,
       dataConfig: {
         tableName: "readings",
         dataSources: [

@@ -128,6 +128,7 @@ function mountWithWorkbook(overrides?: {
         createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
       ],
       metadata: {},
+      entitySnapshots: { protocols: {}, macros: {} },
     },
   });
 }

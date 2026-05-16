@@ -111,8 +111,8 @@ describe("<MacroLayout />", () => {
       });
     });
 
-    it("calls notFound for 400 errors (invalid UUID)", async () => {
-      server.mount(contract.macros.getMacro, { status: 400 });
+    it("calls notFound for 404 errors (invalid UUID)", async () => {
+      server.mount(contract.macros.getMacro, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -135,8 +135,8 @@ describe("<MacroLayout />", () => {
       expect(vi.mocked(notFound)).not.toHaveBeenCalled();
     });
 
-    it("renders error display for 403 forbidden errors", async () => {
-      server.mount(contract.macros.getMacro, { status: 403 });
+    it("renders error display for 500 server errors (forbidden)", async () => {
+      server.mount(contract.macros.getMacro, { status: 500 });
       renderLayout();
 
       await waitFor(() => {

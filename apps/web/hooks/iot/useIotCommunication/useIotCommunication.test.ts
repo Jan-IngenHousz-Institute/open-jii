@@ -237,7 +237,7 @@ describe("useIotCommunication", () => {
           statusCallback = cb;
         }),
         disconnect: vi.fn().mockResolvedValue(undefined),
-      });
+      } as unknown as InstanceType<typeof WebSerialAdapter>);
 
       const { result } = renderHook(() => useIotCommunication("multispeq", "serial"));
 

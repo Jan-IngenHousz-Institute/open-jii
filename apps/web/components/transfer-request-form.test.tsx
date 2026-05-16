@@ -1,3 +1,4 @@
+import { createTransferRequest } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -51,7 +52,7 @@ describe("TransferRequestForm", () => {
 
   it("submits valid form data", async () => {
     const spy = server.mount(contract.experiments.createTransferRequest, {
-      body: { requestId: "req-1" },
+      body: createTransferRequest({ requestId: "req-1" }),
     });
     const user = userEvent.setup();
     render(<TransferRequestForm />);
@@ -79,7 +80,7 @@ describe("TransferRequestForm", () => {
 
   it("shows success state and allows submitting another", async () => {
     server.mount(contract.experiments.createTransferRequest, {
-      body: { requestId: "req-2" },
+      body: createTransferRequest({ requestId: "req-2" }),
     });
     const user = userEvent.setup();
     render(<TransferRequestForm />);

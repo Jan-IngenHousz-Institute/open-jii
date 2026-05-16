@@ -64,7 +64,7 @@ describe("useMacroDelete", () => {
       ],
     });
 
-    server.mount(contract.macros.deleteMacro, { status: 403 });
+    server.mount(contract.macros.deleteMacro, { status: 500 });
 
     const { result } = renderHook(() => useMacroDelete(), { queryClient });
 

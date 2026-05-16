@@ -128,7 +128,7 @@ Return valid defaults. Override only what the test cares about.
 
 ```tsx
 createExperiment({ name: "Study A", status: "archived" });
-createSession({ user: { firstName: "Jane" } });
+createSession({ user: { registered: false } });
 createVisualization({ experimentId: "exp-1" });
 ```
 
