@@ -7,7 +7,7 @@ import {
   useConnectToDevice,
   usePairedDevices,
   useSerialDevices,
-} from "~/features/connection/services/device-connection-manager/device-connection-hooks";
+} from "~/features/connection/hooks/use-device-connection";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 

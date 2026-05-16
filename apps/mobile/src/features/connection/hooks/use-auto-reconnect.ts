@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
-import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import {
   useConnectedDevice,
   useConnectToDevice,
-} from "~/features/connection/services/device-connection-manager/device-connection-hooks";
+} from "~/features/connection/hooks/use-device-connection";
+import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 
 /**
  * Automatically attempts to reconnect to the last known Bluetooth device

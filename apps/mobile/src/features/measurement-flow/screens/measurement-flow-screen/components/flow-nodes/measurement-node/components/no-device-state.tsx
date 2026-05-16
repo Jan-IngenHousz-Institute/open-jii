@@ -1,8 +1,8 @@
 import { router } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Text, View } from "react-native";
+import { useConnectToDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
-import { useConnectToDevice } from "~/features/connection/services/device-connection-manager/device-connection-hooks";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
