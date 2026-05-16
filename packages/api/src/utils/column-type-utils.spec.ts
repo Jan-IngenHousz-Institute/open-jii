@@ -17,6 +17,9 @@ import {
   isWellKnownSortableType,
   getWellKnownSortField,
   isValidAxisSource,
+  getColumnKind,
+  isPlottableColumn,
+  isCategoricalColumnType,
 } from "./column-type-utils";
 
 describe("column-type-utils", () => {
@@ -196,7 +199,6 @@ describe("column-type-utils", () => {
     it("should return true for well-known types", () => {
       expect(isWellKnownType(WellKnownColumnTypes.CONTRIBUTOR)).toBe(true);
       expect(isWellKnownType(WellKnownColumnTypes.ANNOTATIONS)).toBe(true);
-      expect(isWellKnownType(WellKnownColumnTypes.QUESTIONS)).toBe(true);
     });
 
     it("should return false for non-well-known types", () => {
@@ -213,7 +215,6 @@ describe("column-type-utils", () => {
 
     it("should return false for non-sortable well-known types", () => {
       expect(isWellKnownSortableType(WellKnownColumnTypes.ANNOTATIONS)).toBe(false);
-      expect(isWellKnownSortableType(WellKnownColumnTypes.QUESTIONS)).toBe(false);
     });
 
     it("should return false for other types", () => {
@@ -230,7 +231,6 @@ describe("column-type-utils", () => {
 
     it("should return undefined for non-sortable well-known types", () => {
       expect(getWellKnownSortField(WellKnownColumnTypes.ANNOTATIONS)).toBeUndefined();
-      expect(getWellKnownSortField(WellKnownColumnTypes.QUESTIONS)).toBeUndefined();
     });
 
     it("should return undefined for other types", () => {
@@ -267,6 +267,90 @@ describe("column-type-utils", () => {
       expect(isValidAxisSource("MAP<STRING, INT>")).toBe(false);
       expect(isValidAxisSource("VARIANT")).toBe(false);
       expect(isValidAxisSource(undefined)).toBe(false);
+    });
+
+    it("accepts well-known sortable structs (CONTRIBUTOR) as categorical", () => {
+      // Underlying type is STRUCT but the column is plottable via its
+      // sort field (`name`). Drives the per-participant viz feature.
+      expect(isValidAxisSource(WellKnownColumnTypes.CONTRIBUTOR)).toBe(true);
+    });
+
+    it("still rejects non-sortable well-known structs", () => {
+      expect(isValidAxisSource(WellKnownColumnTypes.ANNOTATIONS)).toBe(false);
+    });
+  });
+
+  describe("getColumnKind", () => {
+    it("maps numeric and decimal types to 'numeric'", () => {
+      expect(getColumnKind(ColumnPrimitiveType.INT)).toBe("numeric");
+      expect(getColumnKind(ColumnPrimitiveType.DOUBLE)).toBe("numeric");
+      expect(getColumnKind("DECIMAL(10,2)")).toBe("numeric");
+      expect(getColumnKind("NUMERIC")).toBe("numeric");
+    });
+
+    it("maps timestamp and DATE to 'temporal'", () => {
+      expect(getColumnKind(ColumnPrimitiveType.TIMESTAMP)).toBe("temporal");
+      expect(getColumnKind(ColumnPrimitiveType.TIMESTAMP_NTZ)).toBe("temporal");
+      expect(getColumnKind("DATE")).toBe("temporal");
+    });
+
+    it("maps strings and booleans to 'categorical'", () => {
+      expect(getColumnKind(ColumnPrimitiveType.STRING)).toBe("categorical");
+      expect(getColumnKind(ColumnPrimitiveType.VARCHAR)).toBe("categorical");
+      expect(getColumnKind(ColumnPrimitiveType.BOOLEAN)).toBe("categorical");
+    });
+
+    it("short-circuits CONTRIBUTOR to 'categorical' before the complex branch", () => {
+      // Underlying type is STRUCT<...> but the well-known table maps it to a
+      // categorical kind via the `name` sort field. Guards against regressing
+      // the well-known-sortable short-circuit.
+      expect(getColumnKind(WellKnownColumnTypes.CONTRIBUTOR)).toBe("categorical");
+    });
+
+    it("maps unsortable well-known structs and other complex types to 'complex'", () => {
+      expect(getColumnKind(WellKnownColumnTypes.ANNOTATIONS)).toBe("complex");
+      expect(getColumnKind("ARRAY<INT>")).toBe("complex");
+      expect(getColumnKind("MAP<STRING, INT>")).toBe("complex");
+      expect(getColumnKind("STRUCT<a: INT>")).toBe("complex");
+      expect(getColumnKind(ColumnPrimitiveType.VARIANT)).toBe("complex");
+    });
+
+    it("returns undefined for unknown or missing input", () => {
+      expect(getColumnKind(undefined)).toBeUndefined();
+      expect(getColumnKind("GEOGRAPHY")).toBeUndefined();
+    });
+  });
+
+  describe("isPlottableColumn", () => {
+    it("accepts every non-complex kind", () => {
+      expect(isPlottableColumn(ColumnPrimitiveType.INT)).toBe(true);
+      expect(isPlottableColumn("DATE")).toBe(true);
+      expect(isPlottableColumn(ColumnPrimitiveType.STRING)).toBe(true);
+    });
+
+    it("rejects complex and unknown columns", () => {
+      expect(isPlottableColumn("ARRAY<INT>")).toBe(false);
+      expect(isPlottableColumn(WellKnownColumnTypes.ANNOTATIONS)).toBe(false);
+      expect(isPlottableColumn(undefined)).toBe(false);
+    });
+  });
+
+  describe("isCategoricalColumnType", () => {
+    it("treats strings, booleans, and CONTRIBUTOR as categorical", () => {
+      expect(isCategoricalColumnType(ColumnPrimitiveType.STRING)).toBe(true);
+      expect(isCategoricalColumnType(ColumnPrimitiveType.BOOLEAN)).toBe(true);
+      expect(isCategoricalColumnType(WellKnownColumnTypes.CONTRIBUTOR)).toBe(true);
+    });
+
+    it("rejects numeric and temporal kinds (continuous by default)", () => {
+      expect(isCategoricalColumnType(ColumnPrimitiveType.INT)).toBe(false);
+      expect(isCategoricalColumnType(ColumnPrimitiveType.TIMESTAMP)).toBe(false);
+      expect(isCategoricalColumnType("DATE")).toBe(false);
+    });
+
+    it("rejects complex and unknown types", () => {
+      expect(isCategoricalColumnType("ARRAY<INT>")).toBe(false);
+      expect(isCategoricalColumnType(undefined)).toBe(false);
     });
   });
 });

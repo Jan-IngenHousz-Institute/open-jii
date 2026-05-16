@@ -3,6 +3,25 @@ import { ColumnPrimitiveType, WellKnownColumnTypes } from "../schemas/experiment
 /**
  * Utility functions for checking column data types.
  * These functions help identify the type of data stored in experiment columns.
+ *
+ * ## DB type → chart kind mapping
+ *
+ * Single source of truth for how raw column types collapse into the
+ * plotting taxonomy used by chart-type role contracts. The `is*Type`
+ * predicates below are implementation details of this table; adding a
+ * new column type means adding it here, not editing per-shelf filters.
+ *
+ * | Chart kind     | Axis / encoding behavior                                  | DB types                                                                                  |
+ * | -------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+ * | `numeric`      | linear / log axis, continuous color scale                 | TINYINT, SMALLINT, INT, BIGINT, LONG, FLOAT, DOUBLE, REAL, DECIMAL[(p,s)], NUMERIC[(p,s)] |
+ * | `temporal`     | date axis, continuous color scale ordered by time         | TIMESTAMP, TIMESTAMP_NTZ, DATE                                                            |
+ * | `categorical`  | category axis, one trace per unique value                 | STRING, VARCHAR, CHAR, BOOLEAN, well-known CONTRIBUTOR struct                             |
+ * | `complex`      | not plottable as a single value (excluded from pickers)   | ARRAY<...>, MAP<...>, STRUCT<...>, VARIANT                                                |
+ *
+ * `getColumnKind()` resolves any DB type string to one of these kinds (or
+ * `undefined` for unknown types). Chart-type role contracts in
+ * `visualization-contracts.ts` declare which kinds each role accepts, and
+ * `filterColumnsForRole()` is the one place that consults both.
  */
 
 /**
@@ -157,28 +176,17 @@ export function getWellKnownSortField(type?: string): string | undefined {
   }
 }
 
-/**
- * High-level taxonomy of column data for plotting purposes. Every plottable
- * column maps to exactly one kind, and chart-type role contracts declare
- * which kinds each role accepts. This is the single seam between database
- * column types and chart eligibility — adding a new column type means
- * mapping it to a kind here, not editing per-shelf filter functions.
- *
- * - `numeric`: integers/floats/decimals — placed on a linear/log axis or a
- *   continuous color scale.
- * - `temporal`: timestamps and dates — date axis or continuous color scale
- *   ordered by time.
- * - `categorical`: strings and booleans — category axis or one bucket per
- *   unique value when used as a color/group dimension.
- * - `complex`: arrays, structs, maps, variants — not plottable as a single
- *   value; excluded from picker UIs.
- */
+/** High-level chart-kind taxonomy. See the DB type → kind table at the top of this file. */
 export type ColumnKind = "numeric" | "temporal" | "categorical" | "complex";
 
 export function getColumnKind(type?: string): ColumnKind | undefined {
   if (!type) return undefined;
   if (isNumericType(type) || isDecimalType(type)) return "numeric";
   if (isTimestampType(type) || type === ColumnPrimitiveType.DATE) return "temporal";
+  // Well-known sortable structs project as categorical via their sort field
+  // (CONTRIBUTOR groups by name). Must short-circuit before the generic
+  // complex branch since the underlying type is still STRUCT.
+  if (isWellKnownSortableType(type)) return "categorical";
   if (isArrayType(type) || isMapType(type) || isStructType(type) || isVariantType(type)) {
     return "complex";
   }
@@ -188,7 +196,7 @@ export function getColumnKind(type?: string): ColumnKind | undefined {
 
 /**
  * Whether a column can be plotted at all. Used as the global filter when
- * surfacing columns in any picker UI — per-role kind constraints (e.g.
+ * surfacing columns in any picker UI; per-role kind constraints (e.g.
  * "Y must be numeric") are then applied on top via
  * `filterColumnsForRole` from the visualization contracts.
  */
