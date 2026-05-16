@@ -4,7 +4,7 @@ import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentData } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentData, ExperimentDataResponse } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 
 import { getColumnWidth, useExperimentData } from "./useExperimentData";
@@ -98,7 +98,7 @@ describe("useExperimentData", () => {
     truncated: false,
   };
 
-  function mountData(body?: unknown, opts?: { status?: number }) {
+  function mountData(body?: ExperimentDataResponse) {
     return server.mount(contract.experiments.getExperimentData, {
       body: body ?? [
         createExperimentDataTable({
@@ -108,7 +108,6 @@ describe("useExperimentData", () => {
           totalRows: 100,
         }),
       ],
-      ...(opts?.status ? { status: opts.status } : {}),
     });
   }
 

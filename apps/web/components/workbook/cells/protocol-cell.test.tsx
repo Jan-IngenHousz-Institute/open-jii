@@ -188,7 +188,9 @@ describe("ProtocolCellComponent", () => {
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(
@@ -213,7 +215,9 @@ describe("ProtocolCellComponent", () => {
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(
@@ -237,7 +241,9 @@ describe("ProtocolCellComponent", () => {
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(
@@ -261,7 +267,9 @@ describe("ProtocolCellComponent", () => {
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: { id: "p1" } });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(
