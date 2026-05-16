@@ -68,7 +68,7 @@ describe("useExperimentUpdate", () => {
       body: createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
     });
 
-    server.mount(contract.experiments.updateExperiment, { status: 403 });
+    server.mount(contract.experiments.updateExperiment, { status: 500 });
 
     server.mount(contract.experiments.getExperiment, {
       body: createExperiment({ id: "exp-1", name: "Original", description: "desc" }),

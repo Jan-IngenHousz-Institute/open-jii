@@ -39,7 +39,6 @@ describe("ReviewStep", () => {
             embargoUntil: undefined,
             status: "active",
             members: [],
-            protocols: [],
             locations: [],
             ...defaultValues,
           },

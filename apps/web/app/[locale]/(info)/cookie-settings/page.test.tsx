@@ -1,4 +1,5 @@
 import { render, screen, userEvent } from "@/test/test-utils";
+import type { PostHog } from "posthog-js";
 import { usePostHog } from "posthog-js/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { setConsentStatus } from "~/lib/cookie-consent";
@@ -26,7 +27,7 @@ describe("CookieSettingsPage", () => {
       opt_out_capturing: vi.fn(),
       reset: vi.fn(),
       capture: vi.fn(),
-    };
+    } as unknown as PostHog;
     vi.mocked(usePostHog).mockReturnValue(posthog);
   });
 

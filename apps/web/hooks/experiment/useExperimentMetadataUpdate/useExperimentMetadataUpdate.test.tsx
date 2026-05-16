@@ -6,11 +6,19 @@ import { contract } from "@repo/api/contract";
 
 import { useExperimentMetadataUpdate } from "./useExperimentMetadataUpdate";
 
+const metadataPayload = {
+  name: "Plates",
+  columns: [{ id: "col-1", name: "plate_id", type: "string" as const }],
+  rows: [],
+  identifierColumnId: "col-1",
+  experimentQuestionId: "q-1",
+};
+
 const metadataResponse = {
-  metadataId: "meta-1",
-  experimentId: "exp-123",
-  metadata: { key: "updated" },
-  createdBy: "user-1",
+  metadataId: "00000000-0000-0000-0000-000000000001",
+  experimentId: "00000000-0000-0000-0000-0000000000aa",
+  metadata: metadataPayload,
+  createdBy: "00000000-0000-0000-0000-0000000000bb",
   createdAt: "2025-01-01T00:00:00.000Z",
   updatedAt: "2025-01-02T00:00:00.000Z",
 };
@@ -26,14 +34,14 @@ describe("useExperimentMetadataUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: { key: "updated" } },
+        body: { metadata: metadataPayload },
       });
     });
 
     await waitFor(() => {
       expect(spy.params.id).toBe("exp-123");
       expect(spy.params.metadataId).toBe("meta-1");
-      expect(spy.body).toMatchObject({ metadata: { key: "updated" } });
+      expect(spy.body).toMatchObject({ metadata: metadataPayload });
     });
   });
 
@@ -54,7 +62,7 @@ describe("useExperimentMetadataUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: { key: "updated" } },
+        body: { metadata: metadataPayload },
       });
     });
 
@@ -77,7 +85,7 @@ describe("useExperimentMetadataUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: { key: "updated" } },
+        body: { metadata: metadataPayload },
       });
     });
 
@@ -100,7 +108,7 @@ describe("useExperimentMetadataUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: { key: "new" } },
+        body: { metadata: metadataPayload },
       });
     });
 

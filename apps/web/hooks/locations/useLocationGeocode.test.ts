@@ -10,7 +10,7 @@ import { useLocationGeocode } from "./useLocationGeocode";
 describe("useLocationGeocode", () => {
   it("returns geocoded data for valid coordinates", async () => {
     const place = createPlace({ label: "Berlin Office", latitude: 52.52, longitude: 13.405 });
-    server.mount(contract.experiments.geocodeLocation, { body: { place } });
+    server.mount(contract.experiments.geocodeLocation, { body: [place] });
 
     const { result } = renderHook(() => useLocationGeocode(52.52, 13.405));
 
@@ -18,9 +18,7 @@ describe("useLocationGeocode", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toMatchObject({
-      place: { label: "Berlin Office" },
-    });
+    expect(result.current.data?.body).toMatchObject([{ label: "Berlin Office" }]);
   });
 
   it("does not fire when latitude is NaN", async () => {
@@ -45,7 +43,7 @@ describe("useLocationGeocode", () => {
   });
 
   it("works with zero coordinates", async () => {
-    server.mount(contract.experiments.geocodeLocation, { body: { place: createPlace() } });
+    server.mount(contract.experiments.geocodeLocation, { body: [createPlace()] });
 
     const { result } = renderHook(() => useLocationGeocode(0, 0));
 
@@ -58,7 +56,7 @@ describe("useLocationGeocode", () => {
   });
 
   it("works with negative coordinates", async () => {
-    const spy = server.mount(contract.experiments.geocodeLocation, { body: {} });
+    const spy = server.mount(contract.experiments.geocodeLocation, { body: [] });
 
     const { result } = renderHook(() => useLocationGeocode(-40.7128, -74.006));
 
