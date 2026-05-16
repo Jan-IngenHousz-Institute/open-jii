@@ -52,7 +52,6 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@react-email/preview-server": "5.2.10",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/qrcode": "^1.5.6",

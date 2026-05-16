@@ -1,16 +1,16 @@
 diff --git a/dist/client.js b/dist/client.js
-index 95d09477aa152b81457fbcaebc5e665e64f50ade..0fe7ffbdcc1a131428628b8bd504bece7f1c967d 100644
+index 1a9f999c1e3201f579d82e3fbed6a63123e47698..47e459ef1163101559333a70c0c3d65f22336e45 100644
 --- a/dist/client.js
 +++ b/dist/client.js
-@@ -2,6 +2,7 @@ import { safeJSONParse } from "@better-auth/core/utils/json";
+@@ -3,6 +3,7 @@ import { safeJSONParse } from "@better-auth/core/utils/json";
  import { SECURE_COOKIE_PREFIX, parseSetCookieHeader, parseSetCookieHeader as parseSetCookieHeader$1, stripSecureCookiePrefix } from "better-auth/cookies";
  import Constants from "expo-constants";
  import * as Linking from "expo-linking";
 +import * as WebBrowser from "expo-web-browser";
  import { AppState, Platform } from "react-native";
  import { kFocusManager, kOnlineManager } from "better-auth/client";
- 
-@@ -250,16 +251,7 @@ const expoClient = (opts) => {
+ //#region \0rolldown/runtime.js
+@@ -260,16 +261,7 @@ const expoClient = (opts) => {
  				if (context.data?.redirect && (context.request.url.toString().includes("/sign-in") || context.request.url.toString().includes("/link-social")) && !context.request?.body.includes("idToken")) {
  					const to = JSON.parse(context.request.body)?.callbackURL;
  					const signInURL = context.data?.url;
