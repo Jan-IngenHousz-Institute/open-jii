@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ChartType } from "@repo/api/schemas/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 import { isPlottableColumn } from "@repo/api/utils/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -66,8 +67,21 @@ export function VisualizationWorkspace({
   // One plottable column list (complex types stripped). Each chart's
   // data-panel applies per-role kind filtering on top via
   // `filterColumnsForRole` from the visualization contracts.
+  //
+  // CONTRIBUTOR (STRUCT) and QUESTIONS (ARRAY<STRUCT>) would normally be
+  // stripped here as kind="complex", but the bar chart accepts them on its
+  // X axis to support per-contributor and per-question-answer histograms.
+  // Keeping them in the list is safe for other chart types because
+  // `filterColumnsForRole` re-drops complex kinds for any role whose
+  // contract doesn't explicitly accept them.
   const columns = useMemo(
-    () => (tableMetadata?.rawColumns ?? []).filter((col) => isPlottableColumn(col.type_text)),
+    () =>
+      (tableMetadata?.rawColumns ?? []).filter(
+        (col) =>
+          isPlottableColumn(col.type_text) ||
+          col.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
+          col.type_text === WellKnownColumnTypes.QUESTIONS,
+      ),
     [tableMetadata],
   );
 
