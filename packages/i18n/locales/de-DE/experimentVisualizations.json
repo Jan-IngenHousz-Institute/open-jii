@@ -79,8 +79,10 @@
     "types": {
       "line": "Liniendiagramm",
       "scatter": "Streudiagramm",
+      "bar": "Balkendiagramm",
       "lineDescription": "Zeigt Datenpunkte verbunden durch gerade Liniensegmente an",
-      "scatterDescription": "Zeigt Daten als Punkte auf x- und y-Koordinaten an"
+      "scatterDescription": "Zeigt Daten als Punkte auf x- und y-Koordinaten an",
+      "barDescription": "Gruppiert Zeilen nach Spalte und vergleicht Anzahl oder Aggregate"
     },
     "families": {
       "basic": "Grunddiagramme"
@@ -267,11 +269,13 @@
       "expandLabel": "Configuration"
     },
     "shelves": {
-      "xAxis": "X axis",
-      "yAxis": "Y axis",
+      "xAxis": "X-Achse",
+      "yAxis": "Y-Achse",
+      "barYAxisHelp": "Optional. Leer lassen, um Zeilen pro X-Wert zu zählen.",
       "colorDimension": "Color dimension",
       "column": "Column",
       "selectColumn": "Select a column",
+      "none": "Keine",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
@@ -349,6 +353,7 @@
       "hoverMode": "Hover behaviour",
       "lineOptions": "Line options",
       "scatterOptions": "Scatter options",
+      "barOptions": "Balkendiagramm-Optionen",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",
@@ -364,12 +369,14 @@
       "switchConfirmDescription": "Switching to a different chart type resets your column choices and style settings. This change saves automatically.",
       "switchConfirm": "Switch",
       "types": {
-        "line": "Line",
-        "scatter": "Scatter"
+        "line": "Linie",
+        "scatter": "Streuung",
+        "bar": "Balken"
       },
       "descriptions": {
-        "line": "Data points connected by line segments",
-        "scatter": "Data plotted as points on x and y coordinates"
+        "line": "Datenpunkte durch Liniensegmente verbunden",
+        "scatter": "Daten als Punkte auf x- und y-Koordinaten",
+        "bar": "Gruppiert Zeilen nach Spalte und vergleicht Anzahl oder Aggregate"
       }
     },
     "families": {
@@ -397,6 +404,43 @@
       "earth": "Earth",
       "electric": "Electric",
       "bluered": "Blue-Red"
+    },
+    "bar": {
+      "aggregation": "Aggregation",
+      "filters": "Filter",
+      "addFilter": "Filter hinzufügen",
+      "removeFilter": "Filter entfernen",
+      "noFiltersHelp": "Keine Filter. Alle Zeilen fließen in die Grafik ein.",
+      "filterColumn": "Spalte",
+      "filterValue": "Wert",
+      "filterValuePlaceholder": "Wert auswählen",
+      "filterValueLoading": "Werte werden geladen…",
+      "filterValuePickColumn": "Zuerst Spalte wählen",
+      "question": "Frage",
+      "questionPlaceholder": "Frage auswählen",
+      "questionLoading": "Fragen werden geladen…",
+      "aggregations": {
+        "count": "Anzahl Zeilen",
+        "sum": "Summe von Y",
+        "avg": "Durchschnitt von Y",
+        "min": "Min von Y",
+        "max": "Max von Y"
+      },
+      "layoutSubsection": "Layout",
+      "rankingSubsection": "Rangfolge",
+      "orientation": "Ausrichtung",
+      "orientations": {
+        "vertical": "Vertikal",
+        "horizontal": "Horizontal"
+      },
+      "sortDirection": "Nach Wert sortieren",
+      "sortOptions": {
+        "none": "Keine (Eingabereihenfolge)",
+        "asc": "Niedrigste zuerst",
+        "desc": "Höchste zuerst"
+      },
+      "topN": "Top N anzeigen",
+      "topNPlaceholder": "Alle"
     }
   }
 }

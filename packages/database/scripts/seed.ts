@@ -1,4 +1,4 @@
-import { eq, like, inArray } from "drizzle-orm";
+import { eq, inArray, like } from "drizzle-orm";
 
 import { db } from "../src/database";
 import {
@@ -15,6 +15,57 @@ import {
 
 const SEED_EMAIL = "seed@openjii.local";
 const SEED_PREFIX = "[Seed]%";
+
+// Fixed UUIDs so two seeded experiments line up with measurement data in
+// dev/staging Databricks: the silver pipeline joins on experiment_id, so
+// pointing the local row at a real id makes /tables and /data return the
+// real measurements without any local-only data plumbing.
+const EXPERIMENT_ID_SOIL_HEALTH = "06c68043-c4da-41e6-889e-75e3bad6b6fb";
+const EXPERIMENT_ID_WINTER_WHEAT = "3e5309b8-d5f2-4f7a-b20a-8b5e1e73a9f1";
+// Has a real QUESTIONS-typed column in the silver layer, useful for
+// demoing per-answer grouping on the bar chart.
+const EXPERIMENT_ID_CORN_QUESTIONS = "e917055f-b786-4d7b-a9da-acad73c4dab4";
+
+// Contributor UUIDs that appear inside the contributor STRUCT on those
+// Databricks rows. Local user rows aren't strictly required for chart
+// rendering — the silver pipeline bakes name+avatar into each row — but
+// any code that looks up a user by id (member roster, profile fetch)
+// expects them to exist. Names are placeholders; bars still label by
+// whatever the silver pipeline embedded in the row.
+const CONTRIBUTOR_SEEDS = [
+  {
+    id: "e2b4c44b-a848-4686-8b03-e42e7abfa1de",
+    name: "Participant One",
+    email: "participant1@openjii.local",
+    firstName: "Participant",
+    lastName: "One",
+    experimentId: EXPERIMENT_ID_SOIL_HEALTH,
+  },
+  {
+    id: "25ea2f58-11aa-4b11-947d-5178ed2ecb76",
+    name: "Participant Two",
+    email: "participant2@openjii.local",
+    firstName: "Participant",
+    lastName: "Two",
+    experimentId: EXPERIMENT_ID_SOIL_HEALTH,
+  },
+  {
+    id: "96119c40-251f-439e-80ad-273234b22795",
+    name: "Participant Three",
+    email: "participant3@openjii.local",
+    firstName: "Participant",
+    lastName: "Three",
+    experimentId: EXPERIMENT_ID_WINTER_WHEAT,
+  },
+  {
+    id: "1cab43f8-252b-4044-a23b-a77a73c22fac",
+    name: "Participant Four",
+    email: "participant4@openjii.local",
+    firstName: "Participant",
+    lastName: "Four",
+    experimentId: EXPERIMENT_ID_WINTER_WHEAT,
+  },
+] as const;
 
 async function clearSeedData() {
   // Find seed experiment IDs for join table cleanup
@@ -38,6 +89,12 @@ async function clearSeedData() {
     await db.delete(profiles).where(eq(profiles.userId, seedUsers[0].id));
     await db.delete(users).where(eq(users.id, seedUsers[0].id));
   }
+
+  // Contributor users keyed by fixed UUIDs. We can't filter by email
+  // pattern since the silver pipeline picks the contributor UUIDs, not us.
+  const contributorIds = CONTRIBUTOR_SEEDS.map((c) => c.id);
+  await db.delete(profiles).where(inArray(profiles.userId, contributorIds));
+  await db.delete(users).where(inArray(users.id, contributorIds));
 }
 
 async function main() {
@@ -295,9 +352,18 @@ async function main() {
   await db.insert(protocolMacros).values(pmLinks);
   console.log(`  Created ${pmLinks.length} protocol-macro links`);
 
-  // 5. Create experiments
-  const experimentData = [
+  // 5. Create experiments. Two experiments use fixed UUIDs so they line up
+  // with dev/staging Databricks measurement data; the other three get
+  // generated UUIDs as before.
+  const experimentData: {
+    id?: string;
+    name: string;
+    description: string;
+    status: "active" | "published" | "archived";
+    visibility: "public" | "private";
+  }[] = [
     {
+      id: EXPERIMENT_ID_CORN_QUESTIONS,
       name: "[Seed] Field Trial 2025 — Corn Photosynthesis",
       description: "Active field trial measuring photosynthetic efficiency across corn varieties in central Iowa.",
       status: "active" as const,
@@ -316,12 +382,14 @@ async function main() {
       visibility: "private" as const,
     },
     {
+      id: EXPERIMENT_ID_WINTER_WHEAT,
       name: "[Seed] Winter Wheat Phenotyping",
       description: "Active high-throughput phenotyping study of winter wheat cultivars for cold tolerance traits.",
       status: "active" as const,
       visibility: "public" as const,
     },
     {
+      id: EXPERIMENT_ID_SOIL_HEALTH,
       name: "[Seed] Soil Health Monitoring — Midwest",
       description: "Long-running soil health monitoring across multiple sites in the US Midwest, tracking EC, pH, and moisture.",
       status: "active" as const,
@@ -331,10 +399,12 @@ async function main() {
 
   const createdExperiments = [];
   for (const e of experimentData) {
+    const { id, ...rest } = e;
     const [experiment] = await db
       .insert(experiments)
       .values({
-        ...e,
+        ...(id ? { id } : {}),
+        ...rest,
         createdBy: user.id,
         embargoUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       })

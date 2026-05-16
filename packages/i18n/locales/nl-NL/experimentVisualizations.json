@@ -79,8 +79,10 @@
     "types": {
       "line": "Lijndiagram",
       "scatter": "Spreidingsdiagram",
+      "bar": "Staafdiagram",
       "lineDescription": "Toont datapunten verbonden door rechte lijnsegmenten",
-      "scatterDescription": "Toont gegevens als punten uitgezet op x- en y-coördinaten"
+      "scatterDescription": "Toont gegevens als punten uitgezet op x- en y-coördinaten",
+      "barDescription": "Groepeer rijen op kolom en vergelijk tellingen of aggregaties"
     },
     "families": {
       "basic": "Basisgrafieken"
@@ -267,11 +269,13 @@
       "expandLabel": "Configuration"
     },
     "shelves": {
-      "xAxis": "X axis",
-      "yAxis": "Y axis",
+      "xAxis": "X-as",
+      "yAxis": "Y-as",
+      "barYAxisHelp": "Optioneel. Laat leeg om rijen per X-waarde te tellen.",
       "colorDimension": "Color dimension",
       "column": "Column",
       "selectColumn": "Select a column",
+      "none": "Geen",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
@@ -349,6 +353,7 @@
       "hoverMode": "Hover behaviour",
       "lineOptions": "Line options",
       "scatterOptions": "Scatter options",
+      "barOptions": "Staafdiagram opties",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",
@@ -364,12 +369,14 @@
       "switchConfirmDescription": "Switching to a different chart type resets your column choices and style settings. This change saves automatically.",
       "switchConfirm": "Switch",
       "types": {
-        "line": "Line",
-        "scatter": "Scatter"
+        "line": "Lijn",
+        "scatter": "Spreiding",
+        "bar": "Staaf"
       },
       "descriptions": {
-        "line": "Data points connected by line segments",
-        "scatter": "Data plotted as points on x and y coordinates"
+        "line": "Datapunten verbonden door lijnsegmenten",
+        "scatter": "Gegevens als punten op x- en y-coördinaten",
+        "bar": "Groepeer rijen op kolom en vergelijk tellingen of aggregaties"
       }
     },
     "families": {
@@ -397,6 +404,43 @@
       "earth": "Earth",
       "electric": "Electric",
       "bluered": "Blue-Red"
+    },
+    "bar": {
+      "aggregation": "Aggregatie",
+      "filters": "Filters",
+      "addFilter": "Filter toevoegen",
+      "removeFilter": "Filter verwijderen",
+      "noFiltersHelp": "Geen filters. Alle rijen tellen mee in de grafiek.",
+      "filterColumn": "Kolom",
+      "filterValue": "Waarde",
+      "filterValuePlaceholder": "Selecteer een waarde",
+      "filterValueLoading": "Waarden laden…",
+      "filterValuePickColumn": "Kies eerst een kolom",
+      "question": "Vraag",
+      "questionPlaceholder": "Selecteer een vraag",
+      "questionLoading": "Vragen laden…",
+      "aggregations": {
+        "count": "Aantal rijen",
+        "sum": "Som van Y",
+        "avg": "Gemiddelde van Y",
+        "min": "Min van Y",
+        "max": "Max van Y"
+      },
+      "layoutSubsection": "Layout",
+      "rankingSubsection": "Rangschikking",
+      "orientation": "Oriëntatie",
+      "orientations": {
+        "vertical": "Verticaal",
+        "horizontal": "Horizontaal"
+      },
+      "sortDirection": "Sorteren op waarde",
+      "sortOptions": {
+        "none": "Geen (invoervolgorde)",
+        "asc": "Laagste eerst",
+        "desc": "Hoogste eerst"
+      },
+      "topN": "Top N weergeven",
+      "topNPlaceholder": "Alles"
     }
   }
 }

@@ -50,6 +50,16 @@ export const CHART_TYPE_ROLE_CONTRACTS: Partial<Record<ChartType, RoleContract>>
     y: { required: true, cardinality: "many", acceptedKinds: ANY_PLOTTABLE },
     color: { required: false, cardinality: "single", acceptedKinds: ANY_PLOTTABLE },
   },
+  // Bar charts in this codebase group rows by their X column and aggregate
+  // a numeric Y per group, or fall back to row counts when Y is empty.
+  // The bar data panel additionally surfaces the CONTRIBUTOR well-known
+  // struct as an X option even though `filterColumnsForRole` strips
+  // complex kinds — the role contract stays "categorical-only" so the
+  // generic picker filter behaves the same as for every other chart type.
+  bar: {
+    x: { required: true, cardinality: "single", acceptedKinds: ["categorical"] },
+    y: { required: false, cardinality: "single", acceptedKinds: ["numeric"] },
+  },
 };
 
 /**

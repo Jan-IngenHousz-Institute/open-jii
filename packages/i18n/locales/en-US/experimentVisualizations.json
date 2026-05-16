@@ -80,8 +80,10 @@
     "types": {
       "line": "Line Chart",
       "scatter": "Scatter Plot",
+      "bar": "Bar Chart",
       "lineDescription": "Display data points connected by straight line segments",
-      "scatterDescription": "Display data as points plotted on x and y coordinates"
+      "scatterDescription": "Display data as points plotted on x and y coordinates",
+      "barDescription": "Group rows by a column and compare counts or aggregates"
     },
     "families": {
       "basic": "Basic Charts"
@@ -272,9 +274,11 @@
     "shelves": {
       "xAxis": "X axis",
       "yAxis": "Y axis",
+      "barYAxisHelp": "Optional. Leave empty to count rows per X value.",
       "colorDimension": "Color dimension",
       "column": "Column",
       "selectColumn": "Select a column",
+      "none": "None",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
@@ -352,6 +356,7 @@
       "hoverMode": "Hover behaviour",
       "lineOptions": "Line options",
       "scatterOptions": "Scatter options",
+      "barOptions": "Bar options",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",
@@ -368,11 +373,13 @@
       "switchConfirm": "Switch",
       "types": {
         "line": "Line",
-        "scatter": "Scatter"
+        "scatter": "Scatter",
+        "bar": "Bar"
       },
       "descriptions": {
         "line": "Data points connected by line segments",
-        "scatter": "Data plotted as points on x and y coordinates"
+        "scatter": "Data plotted as points on x and y coordinates",
+        "bar": "Group rows by a column and compare counts or aggregates"
       }
     },
     "families": {
@@ -400,6 +407,43 @@
       "earth": "Earth",
       "electric": "Electric",
       "bluered": "Blue-Red"
+    },
+    "bar": {
+      "aggregation": "Aggregation",
+      "filters": "Filters",
+      "addFilter": "Add filter",
+      "removeFilter": "Remove filter",
+      "noFiltersHelp": "No filters. All rows contribute to the chart.",
+      "filterColumn": "Column",
+      "filterValue": "Value",
+      "filterValuePlaceholder": "Select a value",
+      "filterValueLoading": "Loading values…",
+      "filterValuePickColumn": "Pick a column first",
+      "question": "Question",
+      "questionPlaceholder": "Select a question",
+      "questionLoading": "Loading questions…",
+      "aggregations": {
+        "count": "Count of rows",
+        "sum": "Sum of Y",
+        "avg": "Average of Y",
+        "min": "Min of Y",
+        "max": "Max of Y"
+      },
+      "layoutSubsection": "Layout",
+      "rankingSubsection": "Ranking",
+      "orientation": "Orientation",
+      "orientations": {
+        "vertical": "Vertical",
+        "horizontal": "Horizontal"
+      },
+      "sortDirection": "Sort by value",
+      "sortOptions": {
+        "none": "None (input order)",
+        "asc": "Lowest first",
+        "desc": "Highest first"
+      },
+      "topN": "Show top N",
+      "topNPlaceholder": "All"
     }
   }
 }
