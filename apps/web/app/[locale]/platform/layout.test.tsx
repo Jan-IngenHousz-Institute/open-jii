@@ -58,8 +58,6 @@ describe("AppLayout", () => {
           name: "New",
           email: "a@b.com",
           registered: false,
-          firstName: "New",
-          lastName: "User",
         },
       }),
     );

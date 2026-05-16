@@ -6,12 +6,12 @@ import { ExperimentMeasurements } from "./experiment-measurements";
 // Hoisted: must precede vi.mock calls that reference these spies
 const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   return {
-    useExperimentDataSpy: vi.fn(() => ({
+    useExperimentDataSpy: vi.fn((_args?: unknown) => ({
       tableRows: null as unknown[] | null,
       isLoading: false,
       error: null as Error | null,
     })),
-    useExperimentTablesSpy: vi.fn(() => ({
+    useExperimentTablesSpy: vi.fn((_args?: unknown) => ({
       tables: [{ identifier: "device", tableType: "static", displayName: "Device", totalRows: 10 }],
       isLoading: false,
       error: null as Error | null,
@@ -20,11 +20,11 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
 });
 
 vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
-  useExperimentData: (...args: unknown[]) => useExperimentDataSpy(...args),
+  useExperimentData: (args: unknown) => useExperimentDataSpy(args),
 }));
 
 vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
-  useExperimentTables: (...args: unknown[]) => useExperimentTablesSpy(...args),
+  useExperimentTables: (args: unknown) => useExperimentTablesSpy(args),
 }));
 
 vi.mock("~/util/date", () => ({
@@ -188,7 +188,7 @@ describe("ExperimentMeasurements", () => {
 
   it("renders loading state when tables are loading", () => {
     useExperimentTablesSpy.mockReturnValue({
-      tables: undefined,
+      tables: [],
       isLoading: true,
       error: null,
     });

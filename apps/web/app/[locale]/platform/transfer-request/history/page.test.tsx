@@ -52,8 +52,8 @@ describe("<TransferRequestHistoryPage />", () => {
       });
     });
 
-    it("shows error for 404 status", async () => {
-      server.mount(contract.experiments.listTransferRequests, { status: 404 });
+    it("shows error for 401 status", async () => {
+      server.mount(contract.experiments.listTransferRequests, { status: 401 });
 
       render(<TransferRequestHistoryPage />);
 

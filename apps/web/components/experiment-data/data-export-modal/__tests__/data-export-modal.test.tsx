@@ -30,13 +30,17 @@ vi.mock("../steps/export-list-step", () => ({
 }));
 
 function mountExportHandlers(initiateOverrides?: {
-  status?: number;
+  status?: 201 | 400 | 403 | 404 | 500;
   body?: unknown;
-  delay?: number;
+  delay?: number | "infinite";
 }) {
   const spy = server.mount(contract.experiments.initiateExport, {
-    body: { status: "queued" },
-    ...initiateOverrides,
+    body: { status: "queued" as const },
+    ...(initiateOverrides as {
+      status?: 201 | 400 | 403 | 404 | 500;
+      body?: { status: "queued" } | { message: string };
+      delay?: number | "infinite";
+    }),
   });
   server.mount(contract.experiments.listExports, { body: { exports: [] } });
   return spy;

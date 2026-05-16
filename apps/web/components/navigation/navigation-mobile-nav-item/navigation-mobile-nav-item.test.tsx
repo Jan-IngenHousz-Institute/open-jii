@@ -13,7 +13,7 @@ describe("NavigationMobileNavItem", () => {
       namespace: "auth",
       url: (locale: string) => `/${locale}/platform/account/settings`,
       icon: "User",
-    };
+    } as const;
 
     render(<NavigationMobileNavItem item={item} locale={locale} onItemClick={mockOnItemClick} />);
 
@@ -30,7 +30,7 @@ describe("NavigationMobileNavItem", () => {
       url: (_locale: string) => "https://docs.openjii.org",
       icon: "LifeBuoy",
       external: true,
-    };
+    } as const;
 
     render(<NavigationMobileNavItem item={item} locale={locale} onItemClick={mockOnItemClick} />);
 
@@ -47,7 +47,7 @@ describe("NavigationMobileNavItem", () => {
       namespace: "navigation",
       url: (locale: string) => `/${locale}/faq`,
       icon: "HelpCircle",
-    };
+    } as const;
 
     render(<NavigationMobileNavItem item={item} locale={locale} onItemClick={mockOnItemClick} />);
 
