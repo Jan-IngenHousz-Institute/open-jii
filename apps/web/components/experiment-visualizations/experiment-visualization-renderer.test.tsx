@@ -17,6 +17,12 @@ vi.mock("./charts/scatter/renderer", () => ({
   ),
 }));
 
+vi.mock("./charts/bar/renderer", () => ({
+  BarRenderer: ({ visualization }: { visualization: { name: string } }) => (
+    <div data-testid="bar-chart-renderer">Bar Chart: {visualization.name}</div>
+  ),
+}));
+
 describe("ExperimentVisualizationRenderer", () => {
   const experimentId = "exp-123";
 
@@ -38,8 +44,16 @@ describe("ExperimentVisualizationRenderer", () => {
     );
   });
 
+  it("dispatches to BarRenderer for chartType=bar", () => {
+    const visualization = createVisualization({ chartType: "bar", name: "My Bar" });
+    render(
+      <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
+    );
+    expect(screen.getByTestId("bar-chart-renderer")).toHaveTextContent("Bar Chart: My Bar");
+  });
+
   it("renders the unsupported placeholder for an unregistered chart type", () => {
-    const visualization = createVisualization({ chartType: "bar" });
+    const visualization = createVisualization({ chartType: "alluvial" });
     render(
       <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
     );
