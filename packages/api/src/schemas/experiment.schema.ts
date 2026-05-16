@@ -1309,3 +1309,118 @@ export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
 export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetadataBody>;
 export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;
 export type CustomMetadataPayload = z.infer<typeof zCustomMetadataPayload>;
+
+// --- Generic filter primitives ---
+// Operator-aware filter shape consumed by the data-filters UI and the
+// SQL builder. Same shape powers both the ad-hoc data query endpoint and
+// (later) persisted visualization configs.
+
+export const zDataFilterOperator = z.enum([
+  "equals",
+  "not_equals",
+  "greater_than",
+  "less_than",
+  "greater_than_or_equal",
+  "less_than_or_equal",
+  "between",
+  "contains",
+  "in",
+]);
+
+// Non-empty scalar / non-empty array enforced natively so the schema is
+// also the FE "this filter is applicable" gate.
+export const zDataFilterValue = z.union([
+  z.string().min(1),
+  z.number(),
+  z.boolean(),
+  z.array(z.union([z.string().min(1), z.number()])).min(1),
+]);
+
+// superRefine enforces operator-specific value shape that the value union
+// can't express natively (between needs a 2-tuple, contains needs a string).
+export const zDataFilter = z
+  .object({
+    column: z.string().min(1, "Filter column is required"),
+    operator: zDataFilterOperator,
+    value: zDataFilterValue,
+  })
+  .superRefine((filter, ctx) => {
+    const { operator, value } = filter;
+    const isArray = Array.isArray(value);
+    const issue = (message: string) =>
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message });
+
+    if (operator === "in") {
+      if (!isArray) {
+        issue("'in' operator requires a non-empty array of values");
+      }
+      return;
+    }
+    if (operator === "between") {
+      if (!isArray || value.length !== 2) {
+        issue("'between' operator requires a [start, end] array");
+        return;
+      }
+      const [start, end] = value;
+      if (typeof start !== typeof end) {
+        issue("'between' bounds must be the same type");
+      }
+      return;
+    }
+    if (isArray) {
+      issue(`Operator '${operator}' does not accept array values`);
+      return;
+    }
+    if (
+      operator === "greater_than" ||
+      operator === "less_than" ||
+      operator === "greater_than_or_equal" ||
+      operator === "less_than_or_equal"
+    ) {
+      const isComparable =
+        typeof value === "number" ||
+        (typeof value === "string" && !Number.isNaN(Date.parse(value)));
+      if (!isComparable) {
+        issue(`Operator '${operator}' requires a number or ISO date string`);
+      }
+    }
+    if (operator === "contains" && typeof value !== "string") {
+      issue("'contains' operator requires a string value");
+    }
+  });
+
+// --- Distinct values for filter dropdowns ---
+// Powers the searchable categorical filter UI: GET this endpoint with a
+// table + column and you get back the distinct (non-null) values, capped
+// at `limit`. Used by the data-filters Combobox so users pick from the
+// real values in their data instead of typing free-form strings.
+
+export const DISTINCT_VALUES_DEFAULT_LIMIT = 200;
+export const DISTINCT_VALUES_MAX_LIMIT = 1_000;
+
+export const zDistinctValuesQuery = z.object({
+  tableName: zTableNameInput.describe("Table to scan"),
+  column: z.string().min(1).describe("Column whose distinct values to return"),
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(DISTINCT_VALUES_MAX_LIMIT)
+    .optional()
+    .describe(
+      `Hard cap on returned values (default ${DISTINCT_VALUES_DEFAULT_LIMIT}, max ${DISTINCT_VALUES_MAX_LIMIT}).`,
+    ),
+});
+
+export const zDistinctValuesResponse = z.object({
+  values: z
+    .array(z.union([z.string(), z.number()]))
+    .describe("Distinct non-null values, sorted ascending"),
+  truncated: z.boolean().describe("True when the column has more values than `limit` returned"),
+});
+
+export type DataFilterOperator = z.infer<typeof zDataFilterOperator>;
+export type DataFilter = z.infer<typeof zDataFilter>;
+export type DataFilterValue = z.infer<typeof zDataFilterValue>;
+export type DistinctValuesQuery = z.infer<typeof zDistinctValuesQuery>;
+export type DistinctValuesResponse = z.infer<typeof zDistinctValuesResponse>;
