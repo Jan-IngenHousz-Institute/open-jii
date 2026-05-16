@@ -63,6 +63,25 @@ jobs:
             echo "No infrastructure changes detected"
           fi
 
+  format_check:
+    name: Prettier Format Check
+    runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Prettier Check
+        shell: bash
+        run: pnpm format:check
+
   mobile_styling_guard:
     name: Mobile Styling Guard
     runs-on: ubuntu-latest
@@ -117,6 +136,19 @@ jobs:
         uses: ./.github/actions/lint-packages
         with:
           affected_apps: ${{ needs.detect.outputs.affected_apps }}
+
+      - name: Type Check Packages
+        shell: bash
+        run: |
+          echo "🔎 Type-checking affected packages"
+          AFFECTED_APPS='${{ needs.detect.outputs.affected_apps }}'
+          APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+          CHECK_CMD="pnpm turbo run check-types"
+          for APP in "${APPS[@]}"; do
+            CHECK_CMD="$CHECK_CMD --filter=$APP"
+          done
+          echo "Running: $CHECK_CMD"
+          eval "$CHECK_CMD"
 
       - name: Test Packages
         uses: ./.github/actions/test-packages

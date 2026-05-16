@@ -1,12 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colorScheme } from "nativewind";
 import React, { createContext, useState, useEffect } from "react";
-import { useColorScheme } from "react-native";
 import { Theme, darkTheme, lightTheme } from "~/constants/theme";
 
-type ThemePreference = "system" | "light" | "dark";
+export type ThemePreference = "light" | "dark";
 
-export const ThemeContext = createContext<Theme>(lightTheme);
+export interface ThemeContextValue extends Theme {
+  themePreference: ThemePreference;
+  changeTheme: (preference: ThemePreference) => Promise<void>;
+}
+
+export const ThemeContext = createContext<ThemeContextValue>({
+  ...lightTheme,
+  themePreference: "light",
+  changeTheme: () => Promise.resolve(),
+});
 
 interface ThemeProviderProps {
   children: React.ReactNode;
@@ -19,43 +27,19 @@ interface ThemeProviderProps {
 // fix is a `MainActivity.onConfigurationChanged` override (wiped by
 // `expo prebuild --clean`) or a config plugin — neither in scope right now.
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const systemColorScheme = useColorScheme();
-  const [theme, setTheme] = useState<Theme>(lightTheme);
-  const [themePreference, setThemePreference] = useState<ThemePreference>("system");
+  const [themePreference, setThemePreference] = useState<ThemePreference>("light");
 
   useEffect(() => {
-    const loadThemePreference = async () => {
-      try {
-        const savedPreference = await AsyncStorage.getItem("themePreference");
-        if (savedPreference) {
-          setThemePreference(savedPreference as ThemePreference);
-        }
-      } catch (error) {
-        console.error("Failed to load theme preference:", error);
-      }
-    };
-
-    loadThemePreference();
+    AsyncStorage.getItem("themePreference")
+      .then((saved) => {
+        if (saved === "light" || saved === "dark") setThemePreference(saved);
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
-    // Resolve "system" to an explicit "light" | "dark" before driving
-    // NativeWind. Passing "system" to `colorScheme.set` clears its
-    // observable and falls back to NativeWind's internal `systemColorScheme`
-    // — which doesn't reliably refresh CSS-var subscriptions on Android
-    // when the OS preference is set before the first set() call. Driving an
-    // explicit value keeps NativeWind's class-mode + var swap in sync with
-    // the legacy JS theme object.
-    const themesByScheme = { light: lightTheme, dark: darkTheme } as const;
-    const activeScheme: "light" | "dark" =
-      themePreference === "system"
-        ? systemColorScheme === "dark"
-          ? "dark"
-          : "light"
-        : themePreference;
-    colorScheme.set(activeScheme);
-    setTheme(themesByScheme[activeScheme]);
-  }, [themePreference, systemColorScheme]);
+    colorScheme.set(themePreference);
+  }, [themePreference]);
 
   const changeTheme = async (newPreference: ThemePreference) => {
     try {
@@ -66,11 +50,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
   };
 
-  const enhancedTheme = {
-    ...theme,
-    changeTheme,
-    themePreference,
-  };
+  const theme = themePreference === "dark" ? darkTheme : lightTheme;
 
-  return <ThemeContext.Provider value={enhancedTheme}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ ...theme, changeTheme, themePreference }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 };

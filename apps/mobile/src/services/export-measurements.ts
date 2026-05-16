@@ -9,15 +9,15 @@ export async function exportMeasurementsToFile(): Promise<void> {
   ]);
 
   const measurements = [
-    ...failedEntries.map(([key, data]) => ({
-      key,
+    ...failedEntries.map(({ id, data }) => ({
+      key: id,
       status: "unsynced" as const,
       timestamp: data.metadata.timestamp,
       experimentName: data.metadata.experimentName,
       data,
     })),
-    ...successfulEntries.map(([key, data]) => ({
-      key,
+    ...successfulEntries.map(({ id, data }) => ({
+      key: id,
       status: "synced" as const,
       timestamp: data.metadata.timestamp,
       experimentName: data.metadata.experimentName,

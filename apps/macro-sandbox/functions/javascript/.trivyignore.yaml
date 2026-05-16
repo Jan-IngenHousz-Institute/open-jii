@@ -3,85 +3,85 @@
 # Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
 
 vulnerabilities:
-    # axios in Lambda runtime SDK (/var/runtime/node_modules/@aws-sdk/).
-    # Version drifts as AWS refreshes the base image; observed 1.13.5, 1.15.0.
-    - id: CVE-2025-62718
-      statement: >-
-          axios SSRF requires proxy config that Lambda does not have.
-    - id: CVE-2026-40175
-      statement: >-
-          axios RCE chain needs a separate prototype-pollution gadget
-          that does not exist in our code.
-    - id: CVE-2026-42033
-      statement: >-
-          HTTP transport hijack via prototype pollution. Sandbox has
-          no outbound HTTP.
-      expired_at: 2026-06-07
-    - id: CVE-2026-42035
-      statement: >-
-          Header injection via prototype pollution. Sandbox has no
-          outbound HTTP.
-      expired_at: 2026-06-07
-    - id: CVE-2026-42043
-      statement: >-
-          NO_PROXY bypass on crafted URL. Sandbox has no outbound HTTP.
-      expired_at: 2026-06-07
-    - id: CVE-2026-42264
-      statement: >-
-          Credential exfil via prototype-pollution gadget in HTTP
-          adapter. Sandbox has no IAM creds and no outbound HTTP.
-      expired_at: 2026-06-07
+  # axios in Lambda runtime SDK (/var/runtime/node_modules/@aws-sdk/).
+  # Version drifts as AWS refreshes the base image; observed 1.13.5, 1.15.0.
+  - id: CVE-2025-62718
+    statement: >-
+      axios SSRF requires proxy config that Lambda does not have.
+  - id: CVE-2026-40175
+    statement: >-
+      axios RCE chain needs a separate prototype-pollution gadget
+      that does not exist in our code.
+  - id: CVE-2026-42033
+    statement: >-
+      HTTP transport hijack via prototype pollution. Sandbox has
+      no outbound HTTP.
+    expired_at: 2026-06-07
+  - id: CVE-2026-42035
+    statement: >-
+      Header injection via prototype pollution. Sandbox has no
+      outbound HTTP.
+    expired_at: 2026-06-07
+  - id: CVE-2026-42043
+    statement: >-
+      NO_PROXY bypass on crafted URL. Sandbox has no outbound HTTP.
+    expired_at: 2026-06-07
+  - id: CVE-2026-42264
+    statement: >-
+      Credential exfil via prototype-pollution gadget in HTTP
+      adapter. Sandbox has no IAM creds and no outbound HTTP.
+    expired_at: 2026-06-07
 
-    # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
-    # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
-    - id: CVE-2026-44665
-      statement: >-
-          Attribute-quote bypass in fast-xml-builder. Bundled inside
-          @aws-sdk; sandbox has no IAM creds or outbound HTTP, so SDK
-          serialization paths that invoke the builder are unreachable.
-      expired_at: 2026-07-12
+  # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
+  # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
+  - id: CVE-2026-44665
+    statement: >-
+      Attribute-quote bypass in fast-xml-builder. Bundled inside
+      @aws-sdk; sandbox has no IAM creds or outbound HTTP, so SDK
+      serialization paths that invoke the builder are unreachable.
+    expired_at: 2026-07-12
 
-    # libnghttp2
-    - id: CVE-2026-27135
-      statement: >-
-          libnghttp2 DoS via malformed HTTP/2 frames.
-          Sandbox cannot make outbound HTTP/2 connections.
+  # libnghttp2
+  - id: CVE-2026-27135
+    statement: >-
+      libnghttp2 DoS via malformed HTTP/2 frames.
+      Sandbox cannot make outbound HTTP/2 connections.
 
-    # openssl - all require specific protocol usage that Lambda does not do
-    - id: CVE-2026-28387
-      statement: "DANE TLSA use-after-free. Lambda does not use DANE."
-    - id: CVE-2026-28388
-      statement: "delta CRL NULL deref. Requires X509_V_FLAG_USE_DELTAS."
-    - id: CVE-2026-28389
-      statement: "CMS KeyAgree NULL deref. No CMS processing."
-    - id: CVE-2026-28390
-      statement: "CMS EnvelopedData NULL deref. No CMS processing."
-    - id: CVE-2026-31790
-      statement: "RSASVE info disclosure. No RSA key encapsulation."
+  # openssl - all require specific protocol usage that Lambda does not do
+  - id: CVE-2026-28387
+    statement: "DANE TLSA use-after-free. Lambda does not use DANE."
+  - id: CVE-2026-28388
+    statement: "delta CRL NULL deref. Requires X509_V_FLAG_USE_DELTAS."
+  - id: CVE-2026-28389
+    statement: "CMS KeyAgree NULL deref. No CMS processing."
+  - id: CVE-2026-28390
+    statement: "CMS EnvelopedData NULL deref. No CMS processing."
+  - id: CVE-2026-31790
+    statement: "RSASVE info disclosure. No RSA key encapsulation."
 
-    # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
-    # Only used for local testing - production Lambda ignores this binary.
-    - id: CVE-2026-32280
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-    - id: CVE-2026-32282
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-    - id: CVE-2026-33811
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-    - id: CVE-2026-33814
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-    - id: CVE-2026-39820
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-    - id: CVE-2026-39836
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-    - id: CVE-2026-42499
-      statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
+  # Only used for local testing - production Lambda ignores this binary.
+  - id: CVE-2026-32280
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-32282
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-33811
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-33814
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-39820
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-39836
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-42499
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
 
-    # glibc in Amazon Linux 2023 base image
-    - id: CVE-2026-4046
-      statement: >-
-          glibc iconv() DoS triggered by IBM1390/IBM1399 destination
-          charset. Unreachable: macro vm context has no Buffer,
-          TextDecoder, require, or Function, and Buffer.transcode
-          would not accept these charsets anyway. Fix is in
-          amzn2023.0.4; awaiting AWS base image republish.
-      expired_at: 2026-11-05
+  # glibc in Amazon Linux 2023 base image
+  - id: CVE-2026-4046
+    statement: >-
+      glibc iconv() DoS triggered by IBM1390/IBM1399 destination
+      charset. Unreachable: macro vm context has no Buffer,
+      TextDecoder, require, or Function, and Buffer.transcode
+      would not accept these charsets anyway. Fix is in
+      amzn2023.0.4; awaiting AWS base image republish.
+    expired_at: 2026-11-05

@@ -24,6 +24,5 @@ The openJII Web Platform (https://openjii.org/) provides a secure, scalable envi
 
 See [features of mobile app](../002-mobile-app.md)
 
-
 Excited?
 <DocButton href="../../introduction/quick-start-guide" variant="primary"> Follow our Quick Start Guide to try it out</DocButton>

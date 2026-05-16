@@ -22,11 +22,11 @@ module "cloud_trail" {
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| `project_name` | Project name (used in resource naming) | `string` | — | yes |
-| `environment` | Environment name | `string` | — | yes |
-| `region` | AWS region | `string` | `eu-central-1` | no |
+| Name           | Description                            | Type     | Default        | Required |
+| -------------- | -------------------------------------- | -------- | -------------- | -------- |
+| `project_name` | Project name (used in resource naming) | `string` | —              | yes      |
+| `environment`  | Environment name                       | `string` | —              | yes      |
+| `region`       | AWS region                             | `string` | `eu-central-1` | no       |
 
 ## Outputs
 

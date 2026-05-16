@@ -1,6 +1,13 @@
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
-import { UploadCloud, Trash2, CloudCheck, CloudAlert } from "lucide-react-native";
+import {
+  UploadCloud,
+  Trash2,
+  CloudCheck,
+  CloudAlert,
+  CloudUpload,
+  MessageCircleMore,
+} from "lucide-react-native";
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, Pressable, ActivityIndicator } from "react-native";
 import type { MeasurementStatus } from "~/hooks/use-all-measurements";
@@ -28,6 +35,8 @@ interface MeasurementItemProps {
   onDelete?: (id: string) => void;
   /** When true, action buttons (sync/delete) are hidden - e.g. when used inside a swipeable row */
   hideActions?: boolean;
+  /** When true, shows a comment indicator icon */
+  hasComment?: boolean;
 }
 
 export const MeasurementItem = memo(function MeasurementItem({
@@ -40,10 +49,12 @@ export const MeasurementItem = memo(function MeasurementItem({
   onSync,
   onDelete,
   hideActions = false,
+  hasComment = false,
 }: MeasurementItemProps) {
   const { colors, classes } = useTheme();
-  const isSynced = status === "synced";
-  const isSyncing = status === "syncing";
+  const isSynced = status === "successful";
+  const isSyncing = status === "uploading";
+  const isPending = status === "pending";
 
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
@@ -66,12 +77,12 @@ export const MeasurementItem = memo(function MeasurementItem({
 
       {/* Bottom row: experiment name on left, timestamp + icon on right */}
       <View className="flex-row items-center justify-between">
-        <Text
-          className={clsx("mr-2 flex-1 text-sm font-normal", classes.textMuted)}
-          numberOfLines={1}
-        >
-          {experimentName}
-        </Text>
+        <View className="mr-2 flex-1 flex-row items-center gap-1">
+          <Text className={clsx("shrink text-sm font-normal", classes.textMuted)} numberOfLines={1}>
+            {experimentName}
+          </Text>
+          {hasComment && <MessageCircleMore size={14} color={colors.inactive} />}
+        </View>
 
         <View className="flex-row items-center gap-1.5">
           {!hideActions && (
@@ -111,6 +122,8 @@ export const MeasurementItem = memo(function MeasurementItem({
             <ActivityIndicator size={16} color={colors.semantic.info} />
           ) : isSynced ? (
             <CloudCheck size={16} color={colors.semantic.success} />
+          ) : isPending ? (
+            <CloudUpload size={16} color={colors.semantic.info} />
           ) : (
             <CloudAlert size={16} color={colors.semantic.error} />
           )}

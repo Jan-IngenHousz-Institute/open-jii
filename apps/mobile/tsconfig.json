@@ -3,14 +3,14 @@
   "compilerOptions": {
     "lib": ["es2017"],
     "module": "ESNext",
+    "declaration": false,
+    "declarationMap": false,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     },
     "jsx": "react-native",
     "checkJs": false,

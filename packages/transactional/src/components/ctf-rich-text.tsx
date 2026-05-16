@@ -108,7 +108,7 @@ const emailRichTextOptions = (links?: EmailRichTextInterface["links"]): Options 
       if (entry.__typename === "ComponentButton") {
         const button = entry as EmbeddedButton;
         return (
-          <div className="my-6 text-center">
+          <div className="mb-10 mt-6 text-center">
             <a
               href={button.url ?? "#"}
               target="_blank"
@@ -140,7 +140,7 @@ const emailRichTextOptions = (links?: EmailRichTextInterface["links"]): Options 
 
 export const EmailRichText = ({ json, links }: EmailRichTextInterface) => {
   return (
-    <div className="rounded-t-xl bg-white px-8 py-1">
+    <div className="rounded-t-xl bg-white px-8 pb-8 pt-1">
       {documentToReactComponents(json, emailRichTextOptions(links))}
     </div>
   );

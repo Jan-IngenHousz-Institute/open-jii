@@ -59,7 +59,7 @@ jobs:
           echo "seconds=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_OUTPUT
           echo "MIGRATION_TIMEOUT=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_ENV
           echo "Setting migration timeout to $((${{ inputs.timeout_minutes }} * 60)) seconds"
-          
+
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -405,7 +405,7 @@ jobs:
         uses: ./.github/actions/publish-dora-metrics
         with:
           deployment-outcome: ${{ steps.run-task.outcome || 'failure' }}
-          service: 'database'
+          service: "database"
           environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
 
