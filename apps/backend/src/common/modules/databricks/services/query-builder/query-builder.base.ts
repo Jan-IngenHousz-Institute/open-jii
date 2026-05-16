@@ -33,10 +33,7 @@ export abstract class BaseQueryBuilder {
       .join(".");
   }
 
-  /**
-   * Escape a string value for SQL
-   * Escapes single quotes to prevent SQL injection
-   */
+  /** SQL string literal; doubles single quotes to prevent injection. */
   escapeValue(value: string): string {
     return `'${value.replace(/'/g, "''")}'`;
   }
@@ -95,10 +92,7 @@ export abstract class BaseQueryBuilder {
     return buildCumsumExpression(agg, opts, this);
   }
 
-  /**
-   * Build a simple WHERE clause with AND conditions
-   * Each condition should be a tuple of [column, value]
-   */
+  /** AND-joined `column = value` equality conditions from [column, value] tuples. */
   buildWhereClause(conditions: [string, string][]): string {
     return conditions
       .map(([column, value]) => `${this.escapeIdentifier(column)} = ${this.escapeValue(value)}`)
@@ -127,9 +121,6 @@ export abstract class BaseQueryBuilder {
   }
 }
 
-/**
- * SQL Query Builder using fluent interface pattern
- */
 export class SqlQueryBuilder extends BaseQueryBuilder {
   private selectClause = "*";
   private fromClause = "";
@@ -154,10 +145,7 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  /**
-   * Set raw SQL expression for SELECT clause (without identifier escaping)
-   * Use this for aggregate functions, expressions, etc.
-   */
+  /** Raw SELECT expression, not identifier-escaped. For aggregates/expressions. */
   selectRaw(expression: string): this {
     this.selectClause = expression;
     return this;
@@ -186,8 +174,7 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   }
 
   orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    // Handle nested struct field access (e.g., "contributor.name")
-    // Split by dot and escape each part separately
+    // Struct field paths (e.g. "contributor.name") escape per segment.
     if (column.includes(".")) {
       const parts = column.split(".");
       const escapedParts = parts.map((part) => this.escapeIdentifier(part));
@@ -258,9 +245,6 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   }
 }
 
-/**
- * VARIANT Query Builder for parsing VARIANT columns
- */
 export class VariantQueryBuilder extends BaseQueryBuilder {
   private selectClause = "*";
   private fromClause = "";
@@ -361,8 +345,7 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
   }
 
   orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    // Handle nested struct field access (e.g., "contributor.name")
-    // Split by dot and escape each part separately
+    // Struct field paths (e.g. "contributor.name") escape per segment.
     if (column.includes(".")) {
       const parts = column.split(".");
       const escapedParts = parts.map((part) => this.escapeIdentifier(part));
@@ -419,7 +402,6 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       ...this.exceptColumns,
     ].join(", ");
 
-    // Generate from_json() calls to parse each VARIANT column
     const parsedColumns = this.variantColumns
       .map((v) => {
         const transformedSchema = this.transformSchemaForFromJson(v.schema);
@@ -427,7 +409,6 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       })
       .join(",\n          ");
 
-    // Generate expansion expressions (parsed_alias.*) to flatten VARIANT fields
     const expandedColumns = this.variantColumns.map((v) => `${v.alias}.*`).join(",\n        ");
 
     // Query structure:

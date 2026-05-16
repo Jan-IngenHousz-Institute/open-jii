@@ -10,10 +10,9 @@ export function hasAggregationContent(spec: AggregationSpec | undefined): boolea
 }
 
 /**
- * Build a single aggregate function call (`SUM(col)`, `AVG(col)`, `COUNT(*)`,
- * `CORR(a, b)`, …) plus the alias the outer SELECT should expose it under.
- * Cumsum is rejected — it's a window function and routes through
- * `buildCumsumExpression` instead.
+ * Build a single aggregate call (`SUM(col)`, `COUNT(*)`, `CORR(a, b)`, ...)
+ * plus the alias the outer SELECT exposes it under. Cumsum is rejected here:
+ * it's a window function, handled by `buildCumsumExpression`.
  */
 export function buildAggregateExpression(
   agg: AggregateExpression,
@@ -33,10 +32,9 @@ export function buildAggregateExpression(
       alias: agg.alias ?? `${agg.column}_${agg.function}_${agg.secondColumn}`,
     };
   }
-  // Exhaustive `Record` so adding a new `AggregateFunction` (without also
-  // adding it to the cumsum / corr branches above) is a TS error here.
-  // Databricks spells these out — `STD`/`VAR` aren't recognized, `STDDEV`/
-  // `VARIANCE` are.
+  // Exhaustive Record: adding an AggregateFunction without also handling it
+  // in the cumsum/corr branches above is a TS error here. Databricks needs
+  // the spelled-out names (STDDEV/VARIANCE, not STD/VAR).
   const ROW_AGGREGATE_SQL: Record<
     Exclude<AggregateExpression["function"], "cumsum" | "corr">,
     string
@@ -61,17 +59,17 @@ export function buildAggregateExpression(
 }
 
 /**
- * Wrap an already-built inner SQL with an outer SELECT applying GROUP BY +
- * aggregate functions and final ordering/pagination. User filters are *not*
- * applied here — they belong in the inner WHERE so filtering happens
- * pre-aggregation, against the full table.
+ * Wrap already-built inner SQL with an outer SELECT applying GROUP BY +
+ * aggregates and final ordering/pagination. User filters are not applied
+ * here; they belong in the inner WHERE so filtering runs pre-aggregation
+ * against the full table.
  *
- * Two SELECT shapes depending on what the spec asks for:
- *   - GROUP BY path:    `SELECT <groupBy>, <row aggs>, <windows> FROM (…) GROUP BY …`
- *   - Window-only path: `SELECT *, <windows> FROM (…)` — preserves raw rows.
- * The window-only path activates only when there are no groupBy entries
- * AND no row-aggregating functions (cumsum is the only thing happening),
- * so a series with no aggregate can coexist with a cumsum sibling.
+ * Two SELECT shapes:
+ *   - GROUP BY path:    `SELECT <groupBy>, <row aggs>, <windows> FROM (...) GROUP BY ...`
+ *   - Window-only path: `SELECT *, <windows> FROM (...)`, preserving raw rows.
+ * The window-only path activates only with no groupBy entries and no
+ * row-aggregating functions (cumsum alone), so a no-aggregate series can
+ * coexist with a cumsum sibling.
  */
 export function wrapWithAggregation(
   innerSql: string,

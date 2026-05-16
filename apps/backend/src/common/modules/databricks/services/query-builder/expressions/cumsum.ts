@@ -3,12 +3,12 @@ import type { AggregateExpression } from "../query-builder.types";
 
 /**
  * Build a cumulative-sum window expression. Composes with a surrounding
- * GROUP BY: when grouping is active the inner sum aggregates each group and
- * the window runs a running total of those group sums; without grouping the
- * window runs over raw rows. `*` becomes a row count in both regimes.
+ * GROUP BY: grouped, the inner SUM aggregates each group and the window
+ * runs a running total over the group sums; ungrouped, the window runs
+ * over raw rows. `*` becomes a row count either way.
  *
- * `orderBy` is already-escaped SQL (identifier or `date_trunc(...)`)
- * supplied by the caller because it knows the surrounding query shape.
+ * `orderBy` is already-escaped SQL (an identifier or `date_trunc(...)`);
+ * the caller supplies it since it knows the surrounding query shape.
  */
 export function buildCumsumExpression(
   agg: AggregateExpression,
