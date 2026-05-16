@@ -111,7 +111,7 @@ vi.mock("@repo/ui/components/select", async (importOriginal) => {
           disabled={disabled}
           onChange={(e) => {
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            const result = onValueChange?.(e.target.value);
+            const result: unknown = onValueChange?.(e.target.value);
             if (result instanceof Promise)
               result.catch(() => {
                 /* noop */

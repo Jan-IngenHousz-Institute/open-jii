@@ -25,14 +25,14 @@ describe("useExperimentTables", () => {
   it("returns tables metadata", async () => {
     const mockTables = [
       createExperimentTable({
-        name: "measurements",
+        identifier: "measurements",
         displayName: "Measurements",
         totalRows: 500,
         defaultSortColumn: "timestamp",
         errorColumn: "error_info",
       }),
       createExperimentTable({
-        name: "table2",
+        identifier: "table2",
         displayName: "Table 2",
         totalRows: 100,
         defaultSortColumn: "id",
@@ -48,7 +48,7 @@ describe("useExperimentTables", () => {
     });
 
     expect(result.current.tables?.[0]).toMatchObject({
-      name: "measurements",
+      identifier: "measurements",
       displayName: "Measurements",
       totalRows: 500,
     });

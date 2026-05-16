@@ -18,12 +18,12 @@ describe("ProtocolOverviewCards", () => {
   it("renders protocol cards with name and family", () => {
     render(
       <ProtocolOverviewCards
-        protocols={[createProtocol({ name: "Test Protocol", family: "MultispeQ" })]}
+        protocols={[createProtocol({ name: "Test Protocol", family: "multispeq" })]}
       />,
     );
 
     expect(screen.getByText("Test Protocol")).toBeInTheDocument();
-    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
+    expect(screen.getByText("multispeq")).toBeInTheDocument();
   });
 
   it("shows preferred badge for sorted protocols", () => {

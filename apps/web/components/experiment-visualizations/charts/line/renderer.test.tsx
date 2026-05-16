@@ -9,7 +9,7 @@ function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
   return createVisualization({
     chartType: "line",
     chartFamily: "basic",
-    config: lineDefaultConfig(),
+    config: lineDefaultConfig() as unknown as Record<string, unknown>,
     dataConfig: {
       tableName: "readings",
       dataSources: [

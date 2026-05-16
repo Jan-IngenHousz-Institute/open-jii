@@ -25,6 +25,7 @@ function makeBranchCell(overrides: Partial<BranchCell> = {}): BranchCell {
 const questionCell: WorkbookCell = {
   id: "q-1",
   type: "question",
+  name: "q1",
   question: { kind: "open_ended", text: "How are you?", required: false },
   isCollapsed: false,
   isAnswered: false,
