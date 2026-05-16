@@ -434,3 +434,28 @@ export const workbookVersions = pgTable(
     index("workbook_versions_workbook_id_idx").on(table.workbookId),
   ],
 );
+
+// Composes widgets (visualization references + rich-text blocks) into a
+// CSS-grid layout. Widgets denormalized inside the row for MVP.
+export const experimentDashboards = pgTable(
+  "experiment_dashboards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    experimentId: uuid("experiment_id")
+      .notNull()
+      .references(() => experiments.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    layout: jsonb("layout")
+      .notNull()
+      .default(sql`'{"columns":12,"rowHeight":80,"gap":16}'::jsonb`),
+    widgets: jsonb("widgets")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
+);

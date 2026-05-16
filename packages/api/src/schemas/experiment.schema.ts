@@ -921,6 +921,140 @@ export const zExperimentVisualizationPathParam = z.object({
 export const zCreateExperimentVisualizationResponse = zExperimentVisualization;
 export const zUpdateExperimentVisualizationResponse = zExperimentVisualization;
 
+// --- Dashboard Schemas ---
+
+// Per-widget grid placement. Coordinates are 0-indexed; a widget at
+// `{ col: 0, row: 0, colSpan: 6, rowSpan: 4 }` on a 12-column grid takes the
+// left half of rows 0..3.
+export const zWidgetLayout = z.object({
+  col: z.number().int().min(0),
+  row: z.number().int().min(0),
+  colSpan: z.number().int().min(1).max(24),
+  rowSpan: z.number().int().min(1).max(48),
+});
+
+const zWidgetBase = z.object({
+  id: z.string().uuid(),
+  layout: zWidgetLayout,
+});
+
+// Visualization widget: references an existing chart by id (BI pattern).
+// `visualizationId` is optional so a freshly added widget persists in a draft
+// state until the user picks a chart. `title` / `description` override the
+// linked visualization's name / description when set; `showTitle` /
+// `showDescription` are independent visibility toggles.
+export const zVisualizationWidget = zWidgetBase.extend({
+  type: z.literal("visualization"),
+  config: z.object({
+    visualizationId: z.string().uuid().optional(),
+    showTitle: z.boolean().optional().default(true),
+    showDescription: z.boolean().optional().default(false),
+    title: z.string().optional(),
+    description: z.string().optional(),
+  }),
+});
+
+// Rich-text widget: stores Quill-produced HTML inline.
+export const zRichTextWidget = zWidgetBase.extend({
+  type: z.literal("richText"),
+  config: z.object({
+    html: z.string().default(""),
+  }),
+});
+
+// Table widget: paginated rows from one of the experiment's data tables.
+// `tableName` is optional so a freshly added widget persists in a draft state.
+// `columns` (when set) is the explicit ordered subset to project; when unset
+// the renderer falls back to all columns in natural metadata order.
+export const zTableWidget = zWidgetBase.extend({
+  type: z.literal("table"),
+  config: z.object({
+    tableName: z.string().optional(),
+    columns: z.array(z.string().min(1)).optional(),
+    pageSize: z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100)]).default(25),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    showTitle: z.boolean().optional().default(true),
+    showDescription: z.boolean().optional().default(true),
+    // Per-widget filters. AND-merged with dashboard-level filter widgets
+    // (`useDashboardFiltersForTable`) at fetch time; both layers contribute
+    // conditions to the same WHERE clause.
+    filters: z.array(zDataFilter).optional(),
+  }),
+});
+
+// Filter widget: a single-column control card. AND-merges into every
+// visualization widget whose `tableName` matches. One control per widget
+// mirrors Tableau / Looker / Sigma filter cards. `tableName` / `column` /
+// `operator` are optional only while freshly added. `defaultValue` is the
+// dashboard's saved value; viewer overrides don't persist.
+export const zFilterWidget = zWidgetBase.extend({
+  type: z.literal("filter"),
+  config: z.object({
+    tableName: z.string().optional(),
+    column: z.string().optional(),
+    operator: zDataFilterOperator.optional(),
+    defaultValue: zDataFilterValue.optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    showTitle: z.boolean().optional().default(true),
+    showDescription: z.boolean().optional().default(true),
+  }),
+});
+
+export const zDashboardWidget = z.discriminatedUnion("type", [
+  zVisualizationWidget,
+  zRichTextWidget,
+  zTableWidget,
+  zFilterWidget,
+]);
+
+// Dashboard-level grid configuration.
+export const zDashboardLayout = z.object({
+  columns: z.number().int().min(1).max(24).default(12),
+  rowHeight: z.number().int().min(20).max(400).default(80),
+  gap: z.number().int().min(0).max(64).default(16),
+});
+
+export const zExperimentDashboard = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().nullable(),
+  layout: zDashboardLayout,
+  widgets: z.array(zDashboardWidget),
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zExperimentDashboardList = z.array(zExperimentDashboard);
+
+export const zCreateExperimentDashboardBody = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  layout: zDashboardLayout.partial().optional(),
+  widgets: z.array(zDashboardWidget).optional(),
+});
+
+// Update body: every top-level field is optional. When `widgets` is supplied
+// the array fully replaces existing; matches how the editor saves snapshots.
+export const zUpdateExperimentDashboardBody = zCreateExperimentDashboardBody.partial();
+
+export const zListExperimentDashboardsQuery = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+
+export const zExperimentDashboardPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  dashboardId: z.string().uuid().describe("ID of the dashboard"),
+});
+
+export const zCreateExperimentDashboardResponse = zExperimentDashboard;
+export const zUpdateExperimentDashboardResponse = zExperimentDashboard;
+
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
@@ -1743,6 +1877,20 @@ export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizatio
 export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
 export type UpdateExperimentVisualizationBody = z.infer<typeof zUpdateExperimentVisualizationBody>;
 export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVisualizationsQuery>;
+
+// Dashboard types
+export type WidgetLayout = z.infer<typeof zWidgetLayout>;
+export type VisualizationWidget = z.infer<typeof zVisualizationWidget>;
+export type RichTextWidget = z.infer<typeof zRichTextWidget>;
+export type TableWidget = z.infer<typeof zTableWidget>;
+export type FilterWidget = z.infer<typeof zFilterWidget>;
+export type DashboardWidget = z.infer<typeof zDashboardWidget>;
+export type DashboardLayout = z.infer<typeof zDashboardLayout>;
+export type ExperimentDashboard = z.infer<typeof zExperimentDashboard>;
+export type ExperimentDashboardList = z.infer<typeof zExperimentDashboardList>;
+export type CreateExperimentDashboardBody = z.infer<typeof zCreateExperimentDashboardBody>;
+export type UpdateExperimentDashboardBody = z.infer<typeof zUpdateExperimentDashboardBody>;
+export type ListExperimentDashboardsQuery = z.infer<typeof zListExperimentDashboardsQuery>;
 
 // Annotation types
 export type AnnotationType = z.infer<typeof zAnnotationType>;

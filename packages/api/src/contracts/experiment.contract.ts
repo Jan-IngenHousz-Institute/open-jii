@@ -72,6 +72,15 @@ import {
   zExperimentVisualizationPathParam,
   zCreateExperimentVisualizationResponse,
   zUpdateExperimentVisualizationResponse,
+  // Dashboard schemas
+  zExperimentDashboard,
+  zExperimentDashboardList,
+  zCreateExperimentDashboardBody,
+  zUpdateExperimentDashboardBody,
+  zListExperimentDashboardsQuery,
+  zExperimentDashboardPathParam,
+  zCreateExperimentDashboardResponse,
+  zUpdateExperimentDashboardResponse,
 } from "../schemas/experiment.schema";
 import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
 import { zAttachWorkbookBody, zAttachWorkbookResponse } from "../schemas/workbook-version.schema";
@@ -652,6 +661,84 @@ export const experimentContract = c.router({
     },
     summary: "Delete experiment visualization",
     description: "Permanently deletes a visualization",
+  },
+
+  // --- Dashboard Endpoints ---
+  listExperimentDashboards: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/dashboards",
+    pathParams: zIdPathParam,
+    query: zListExperimentDashboardsQuery,
+    responses: {
+      200: zExperimentDashboardList,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List experiment dashboards",
+    description: "Retrieves a list of dashboards for a specific experiment",
+  },
+
+  createExperimentDashboard: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/dashboards",
+    pathParams: zIdPathParam,
+    body: zCreateExperimentDashboardBody,
+    responses: {
+      201: zCreateExperimentDashboardResponse,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Create experiment dashboard",
+    description: "Creates a new dashboard for an experiment",
+  },
+
+  getExperimentDashboard: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/dashboards/:dashboardId",
+    pathParams: zExperimentDashboardPathParam,
+    responses: {
+      200: zExperimentDashboard,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get experiment dashboard",
+    description: "Retrieves a specific dashboard by its ID",
+  },
+
+  updateExperimentDashboard: {
+    method: "PATCH",
+    path: "/api/v1/experiments/:id/dashboards/:dashboardId",
+    pathParams: zExperimentDashboardPathParam,
+    body: zUpdateExperimentDashboardBody,
+    responses: {
+      200: zUpdateExperimentDashboardResponse,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update experiment dashboard",
+    description:
+      "Updates an existing dashboard. When `widgets` is supplied, the array fully replaces the existing widgets.",
+  },
+
+  deleteExperimentDashboard: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/dashboards/:dashboardId",
+    pathParams: zExperimentDashboardPathParam,
+    responses: {
+      204: null,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Delete experiment dashboard",
+    description: "Permanently deletes a dashboard",
   },
 
   // Annotation endpoints

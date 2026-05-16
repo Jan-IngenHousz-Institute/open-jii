@@ -135,6 +135,13 @@ export enum ErrorCodes {
   EXPERIMENT_VISUALIZATIONS_DELETE_FAILED = "EXPERIMENT_VISUALIZATIONS_DELETE_FAILED", // Failed to delete visualization
   EXPERIMENT_VISUALIZATIONS_LIST_FAILED = "EXPERIMENT_VISUALIZATIONS_LIST_FAILED", // Failed to list visualizations
 
+  // ==================== Domain Operations - Experiments Dashboards ====================
+  // Location: src/experiments/application/use-cases/
+  EXPERIMENT_DASHBOARDS_CREATE_FAILED = "EXPERIMENT_DASHBOARDS_CREATE_FAILED", // Failed to create dashboard
+  EXPERIMENT_DASHBOARDS_UPDATE_FAILED = "EXPERIMENT_DASHBOARDS_UPDATE_FAILED", // Failed to update dashboard
+  EXPERIMENT_DASHBOARDS_DELETE_FAILED = "EXPERIMENT_DASHBOARDS_DELETE_FAILED", // Failed to delete dashboard
+  EXPERIMENT_DASHBOARDS_LIST_FAILED = "EXPERIMENT_DASHBOARDS_LIST_FAILED", // Failed to list dashboards
+
   // ==================== Domain Operations - Experiments Annotations ====================
   // Location: src/experiments/application/use-cases/
   EXPERIMENT_ANNOTATIONS_ADD_FAILED = "EXPERIMENT_ANNOTATIONS_ADD_FAILED", // Failed to add annotations

@@ -1,0 +1,213 @@
+/* ---------------------------------------------------------------------
+ * Dashboard editor grid styles.
+ *
+ * react-resizable ships with a single SE-corner SVG that it rotates per
+ * axis (e.g. `transform: rotate(225deg)` on the N handle). The rotation
+ * cascades to children, so any pseudo-element bar we draw also gets
+ * rotated. We reset transforms + sizes per axis so our bars sit flat.
+ * ------------------------------------------------------------------- */
+
+.dashboard-canvas-root .react-grid-item {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Active gesture: kill the 180ms transform transition so the dragged /
+ * resized item tracks the pointer 1:1. Critical for N/W/NW/NE/SW
+ * handles, where resize moves the item's top-left and would otherwise
+ * lag a fifth of a second behind the cursor. */
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging,
+.dashboard-canvas-root .react-grid-item.resizing {
+  transition: none;
+  z-index: 3;
+}
+
+.dashboard-canvas-root .react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.08);
+  border: 1px dashed hsl(var(--primary) / 0.5);
+  border-radius: 0;
+  opacity: 1;
+  transition-duration: 80ms;
+}
+
+/* While the user is actively resizing or dragging, force the inner
+ * widget card to drop its rounded corners — matches the selected look
+ * so handles never sit on a curve. */
+.dashboard-canvas-root .react-grid-item.resizing [data-dashboard-widget],
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging [data-dashboard-widget] {
+  border-radius: 0 !important;
+}
+
+/* Wipe the default SVG + padding + per-axis rotation across all handles
+ * so each axis can position itself cleanly below. RGL's own CSS hides
+ * handles via `opacity: 0` and reveals on `.react-grid-item:hover`,
+ * which composes with our `::before` opacity and breaks our
+ * selection-based reveal. Force the hit area to stay opaque; visibility
+ * of the visible bar is controlled by the `::before` rules below. */
+.dashboard-canvas-root .react-resizable-handle {
+  background-image: none !important;
+  padding: 0 !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Kill RGL's `::after` chevron — it draws an L-bracket via right+bottom
+ * borders that rotates with the per-axis transform and shows as a tick
+ * at each corner. We render our own visuals via `::before`. */
+.dashboard-canvas-root .react-resizable-handle::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+}
+
+/* --- Edge handles: thin bars centered on each edge ------------------ */
+.dashboard-canvas-root .react-resizable-handle-n,
+.dashboard-canvas-root .react-resizable-handle-s {
+  left: 12px !important;
+  right: 12px !important;
+  width: auto !important;
+  height: 8px !important;
+  margin-left: 0 !important;
+  cursor: ns-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-n {
+  top: -4px !important;
+  bottom: auto !important;
+}
+.dashboard-canvas-root .react-resizable-handle-s {
+  bottom: -4px !important;
+  top: auto !important;
+}
+
+.dashboard-canvas-root .react-resizable-handle-e,
+.dashboard-canvas-root .react-resizable-handle-w {
+  top: 12px !important;
+  bottom: 12px !important;
+  height: auto !important;
+  width: 8px !important;
+  margin-top: 0 !important;
+  cursor: ew-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-e {
+  right: -4px !important;
+  left: auto !important;
+}
+.dashboard-canvas-root .react-resizable-handle-w {
+  left: -4px !important;
+  right: auto !important;
+}
+
+/* Edge handle visual: white pill with primary border, sitting on the
+ * widget's edge. Small enough not to compete with the chart. */
+.dashboard-canvas-root .react-resizable-handle-n::before,
+.dashboard-canvas-root .react-resizable-handle-s::before,
+.dashboard-canvas-root .react-resizable-handle-e::before,
+.dashboard-canvas-root .react-resizable-handle-w::before {
+  content: "";
+  position: absolute;
+  background: hsl(var(--background));
+  border: 1.5px solid hsl(var(--primary));
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.dashboard-canvas-root .react-resizable-handle-n::before,
+.dashboard-canvas-root .react-resizable-handle-s::before {
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 6px;
+  margin-left: -14px;
+  margin-top: -3px;
+}
+.dashboard-canvas-root .react-resizable-handle-e::before,
+.dashboard-canvas-root .react-resizable-handle-w::before {
+  top: 50%;
+  left: 50%;
+  height: 28px;
+  width: 6px;
+  margin-top: -14px;
+  margin-left: -3px;
+}
+
+/* --- Corner handles: small squares centered on the geometric corner.
+ * Selected widgets drop their rounded corners (see WidgetCard), so the
+ * 8×8 visible square sits exactly on the corner point — no curve to
+ * fight. Hit area (14×14) extends 7px out from the corner in each axis. */
+.dashboard-canvas-root .react-resizable-handle-nw,
+.dashboard-canvas-root .react-resizable-handle-ne,
+.dashboard-canvas-root .react-resizable-handle-sw,
+.dashboard-canvas-root .react-resizable-handle-se {
+  width: 14px !important;
+  height: 14px !important;
+}
+.dashboard-canvas-root .react-resizable-handle-nw {
+  top: -7px !important;
+  left: -7px !important;
+  cursor: nwse-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-ne {
+  top: -7px !important;
+  right: -7px !important;
+  cursor: nesw-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-sw {
+  bottom: -7px !important;
+  left: -7px !important;
+  cursor: nesw-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-se {
+  bottom: -7px !important;
+  right: -7px !important;
+  cursor: nwse-resize;
+}
+
+/* Corner handle visual: small white square with primary border. */
+.dashboard-canvas-root .react-resizable-handle-nw::before,
+.dashboard-canvas-root .react-resizable-handle-ne::before,
+.dashboard-canvas-root .react-resizable-handle-sw::before,
+.dashboard-canvas-root .react-resizable-handle-se::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: hsl(var(--background));
+  border: 1.5px solid hsl(var(--primary));
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+/* Handles only show on selection (or while the user is mid-action).
+ * The selected class lives on the inner widget card, not on the
+ * `.react-grid-item` wrapper RGL controls — `:has()` walks down to
+ * find it. Keeps the canvas calm at rest. */
+.dashboard-canvas-root
+  .react-grid-item:has(.dashboard-widget--selected)
+  .react-resizable-handle::before,
+.dashboard-canvas-root .react-grid-item.resizing .react-resizable-handle::before,
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging .react-resizable-handle::before {
+  opacity: 1;
+}
+
+/* Grab cursor on widget chrome (interactive children opt out via cancel). */
+.dashboard-canvas-root .react-grid-item {
+  cursor: grab;
+}
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging {
+  cursor: grabbing;
+}
+.dashboard-canvas-root .react-grid-item .js-plotly-plot,
+.dashboard-canvas-root .react-grid-item .ProseMirror,
+.dashboard-canvas-root .react-grid-item [contenteditable="true"],
+.dashboard-canvas-root .react-grid-item button,
+.dashboard-canvas-root .react-grid-item input,
+.dashboard-canvas-root .react-grid-item textarea,
+.dashboard-canvas-root .react-grid-item select,
+.dashboard-canvas-root .react-grid-item [data-no-drag] {
+  cursor: auto;
+}

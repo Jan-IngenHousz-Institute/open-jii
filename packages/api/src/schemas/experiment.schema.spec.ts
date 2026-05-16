@@ -93,6 +93,20 @@ import {
   UPLOAD_KIND_CONSTANTS,
   UPLOAD_FILENAME_SCHEMAS,
   inferUploadSourceKind,
+  // Dashboards
+  zWidgetLayout,
+  zVisualizationWidget,
+  zRichTextWidget,
+  zTableWidget,
+  zFilterWidget,
+  zDashboardWidget,
+  zDashboardLayout,
+  zExperimentDashboard,
+  zExperimentDashboardList,
+  zCreateExperimentDashboardBody,
+  zUpdateExperimentDashboardBody,
+  zListExperimentDashboardsQuery,
+  zExperimentDashboardPathParam,
 } from "./experiment.schema";
 
 // -------- Helpers --------
@@ -1840,6 +1854,259 @@ describe("Experiment Schema", () => {
 
       it("rejects unknown status values", () => {
         expect(zUploadMetadata.safeParse({ ...valid, status: "halfway" }).success).toBe(false);
+      });
+    });
+  });
+
+  // ----- Dashboard schemas -----
+  describe("Dashboard schemas", () => {
+    const layout = { col: 0, row: 0, colSpan: 6, rowSpan: 4 };
+
+    describe("zWidgetLayout", () => {
+      it("accepts a valid layout block", () => {
+        expect(zWidgetLayout.parse(layout)).toEqual(layout);
+      });
+
+      it("rejects negative coordinates", () => {
+        expect(zWidgetLayout.safeParse({ ...layout, col: -1 }).success).toBe(false);
+      });
+
+      it("rejects zero spans (min is 1)", () => {
+        expect(zWidgetLayout.safeParse({ ...layout, colSpan: 0 }).success).toBe(false);
+        expect(zWidgetLayout.safeParse({ ...layout, rowSpan: 0 }).success).toBe(false);
+      });
+
+      it("caps colSpan at 24 and rowSpan at 48", () => {
+        expect(zWidgetLayout.safeParse({ ...layout, colSpan: 25 }).success).toBe(false);
+        expect(zWidgetLayout.safeParse({ ...layout, rowSpan: 49 }).success).toBe(false);
+      });
+    });
+
+    describe("zVisualizationWidget", () => {
+      it("applies default showTitle=true, showDescription=false", () => {
+        const w = {
+          id: uuidA,
+          layout,
+          type: "visualization" as const,
+          config: { visualizationId: uuidB },
+        };
+        const parsed = zVisualizationWidget.parse(w);
+        expect(parsed.config.showTitle).toBe(true);
+        expect(parsed.config.showDescription).toBe(false);
+      });
+
+      it("allows visualizationId to be omitted (draft state)", () => {
+        const w = { id: uuidA, layout, type: "visualization" as const, config: {} };
+        expect(zVisualizationWidget.parse(w).config.visualizationId).toBeUndefined();
+      });
+    });
+
+    describe("zRichTextWidget", () => {
+      it("defaults html to empty string when omitted", () => {
+        const w = { id: uuidA, layout, type: "richText" as const, config: {} };
+        expect(zRichTextWidget.parse(w).config.html).toBe("");
+      });
+    });
+
+    describe("zTableWidget", () => {
+      it("defaults pageSize to 25", () => {
+        const w = { id: uuidA, layout, type: "table" as const, config: {} };
+        expect(zTableWidget.parse(w).config.pageSize).toBe(25);
+      });
+
+      it("rejects unsupported pageSize values", () => {
+        const w = {
+          id: uuidA,
+          layout,
+          type: "table" as const,
+          config: { pageSize: 30 },
+        };
+        expect(zTableWidget.safeParse(w).success).toBe(false);
+      });
+
+      it("rejects empty column names in the projection list", () => {
+        const w = {
+          id: uuidA,
+          layout,
+          type: "table" as const,
+          config: { columns: [""] },
+        };
+        expect(zTableWidget.safeParse(w).success).toBe(false);
+      });
+
+      it("propagates zDataFilter refinements to per-widget filters", () => {
+        const w = {
+          id: uuidA,
+          layout,
+          type: "table" as const,
+          config: { filters: [{ column: "x", operator: "between", value: [1] }] },
+        };
+        expect(zTableWidget.safeParse(w).success).toBe(false);
+      });
+    });
+
+    describe("zFilterWidget", () => {
+      it("allows all selection fields to be unset (draft state)", () => {
+        const w = { id: uuidA, layout, type: "filter" as const, config: {} };
+        const parsed = zFilterWidget.parse(w);
+        expect(parsed.config.column).toBeUndefined();
+        expect(parsed.config.operator).toBeUndefined();
+      });
+
+      it("accepts a fully configured filter card", () => {
+        const w = {
+          id: uuidA,
+          layout,
+          type: "filter" as const,
+          config: {
+            tableName: "readings",
+            column: "tag",
+            operator: "in" as const,
+            defaultValue: ["a", "b"],
+          },
+        };
+        expect(zFilterWidget.parse(w)).toBeDefined();
+      });
+    });
+
+    describe("zDashboardWidget (discriminated union)", () => {
+      it("dispatches on `type`", () => {
+        const viz = {
+          id: uuidA,
+          layout,
+          type: "visualization" as const,
+          config: { visualizationId: uuidB },
+        };
+        const text = {
+          id: uuidB,
+          layout,
+          type: "richText" as const,
+          config: { html: "<p>hi</p>" },
+        };
+        expect(zDashboardWidget.parse(viz).type).toBe("visualization");
+        expect(zDashboardWidget.parse(text).type).toBe("richText");
+      });
+
+      it("rejects unknown discriminator values", () => {
+        const bad = { id: uuidA, layout, type: "iframe", config: {} };
+        expect(zDashboardWidget.safeParse(bad).success).toBe(false);
+      });
+    });
+
+    describe("zDashboardLayout", () => {
+      it("applies grid defaults when fields omitted", () => {
+        const parsed = zDashboardLayout.parse({});
+        expect(parsed.columns).toBe(12);
+        expect(parsed.rowHeight).toBe(80);
+        expect(parsed.gap).toBe(16);
+      });
+
+      it("rejects out-of-range values", () => {
+        expect(zDashboardLayout.safeParse({ columns: 0 }).success).toBe(false);
+        expect(zDashboardLayout.safeParse({ rowHeight: 500 }).success).toBe(false);
+        expect(zDashboardLayout.safeParse({ gap: 100 }).success).toBe(false);
+      });
+    });
+
+    describe("zExperimentDashboard", () => {
+      const dashboard = {
+        id: uuidA,
+        experimentId: uuidB,
+        name: "My Dashboard",
+        description: null,
+        layout: { columns: 12, rowHeight: 80, gap: 16 },
+        widgets: [],
+        createdBy: uuidC,
+        createdAt: isoTime,
+        updatedAt: isoTime2,
+      };
+
+      it("accepts a complete dashboard with empty widgets list", () => {
+        expect(zExperimentDashboard.parse(dashboard)).toEqual(dashboard);
+      });
+
+      it("accepts a dashboard with widgets of every type", () => {
+        const widgets = [
+          { id: uuidA, layout, type: "visualization", config: {} },
+          { id: uuidB, layout, type: "richText", config: { html: "" } },
+          { id: uuidC, layout, type: "table", config: { pageSize: 25 } },
+          {
+            id: "44444444-4444-4444-4444-444444444444",
+            layout,
+            type: "filter",
+            config: {},
+          },
+        ];
+        const full = { ...dashboard, widgets };
+        const parsed = zExperimentDashboard.parse(full);
+        expect(parsed.widgets).toHaveLength(4);
+      });
+
+      it("rejects an empty name", () => {
+        expect(zExperimentDashboard.safeParse({ ...dashboard, name: "" }).success).toBe(false);
+      });
+
+      it("rejects a non-UUID experimentId", () => {
+        expect(zExperimentDashboard.safeParse({ ...dashboard, experimentId: "nope" }).success).toBe(
+          false,
+        );
+      });
+
+      it("zExperimentDashboardList accepts arrays", () => {
+        expect(zExperimentDashboardList.parse([dashboard, dashboard])).toHaveLength(2);
+      });
+    });
+
+    describe("zCreateExperimentDashboardBody / zUpdateExperimentDashboardBody", () => {
+      it("create body requires only name", () => {
+        expect(zCreateExperimentDashboardBody.parse({ name: "X" })).toEqual({ name: "X" });
+      });
+
+      it("create body rejects empty name", () => {
+        expect(zCreateExperimentDashboardBody.safeParse({ name: "" }).success).toBe(false);
+      });
+
+      it("create body accepts a partial layout", () => {
+        const parsed = zCreateExperimentDashboardBody.parse({
+          name: "X",
+          layout: { columns: 16 },
+        });
+        expect(parsed.layout).toEqual({ columns: 16 });
+      });
+
+      it("update body makes every field optional including name", () => {
+        expect(zUpdateExperimentDashboardBody.parse({})).toEqual({});
+        expect(zUpdateExperimentDashboardBody.parse({ description: "new" })).toEqual({
+          description: "new",
+        });
+      });
+    });
+
+    describe("zListExperimentDashboardsQuery", () => {
+      it("applies default limit and offset", () => {
+        const parsed = zListExperimentDashboardsQuery.parse({});
+        expect(parsed.limit).toBe(50);
+        expect(parsed.offset).toBe(0);
+      });
+
+      it("coerces stringified limit and offset", () => {
+        const parsed = zListExperimentDashboardsQuery.parse({ limit: "10", offset: "20" });
+        expect(parsed.limit).toBe(10);
+        expect(parsed.offset).toBe(20);
+      });
+
+      it("rejects a limit above 100", () => {
+        expect(zListExperimentDashboardsQuery.safeParse({ limit: "101" }).success).toBe(false);
+      });
+    });
+
+    describe("zExperimentDashboardPathParam", () => {
+      it("accepts valid UUIDs and rejects non-UUIDs", () => {
+        const ok = { id: uuidA, dashboardId: uuidB };
+        expect(zExperimentDashboardPathParam.parse(ok)).toEqual(ok);
+        expect(
+          zExperimentDashboardPathParam.safeParse({ id: uuidA, dashboardId: "nope" }).success,
+        ).toBe(false);
       });
     });
   });
