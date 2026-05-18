@@ -5,6 +5,7 @@ import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkboo
 import { formatDate } from "@/util/date";
 import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
@@ -131,6 +132,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
   const { t } = useTranslation("workbook");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
+  const router = useRouter();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const { mutate: deleteWorkbook, isPending: isDeleting } = useWorkbookDelete();
@@ -152,10 +154,17 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
 
   return (
     <>
-      <TableRow className={cn("group bg-white hover:bg-[#F6F8FA]", TABLE_BORDER)}>
+      <TableRow
+        className={cn(
+          "group cursor-pointer bg-white hover:bg-[#F6F8FA] has-[[data-state=open]]:bg-[#F6F8FA]",
+          TABLE_BORDER,
+        )}
+        onClick={() => router.push(viewHref)}
+      >
         <TableCell className={cn("px-6 py-3 text-[13px] font-semibold", TEXT_STRONG)}>
           <Link
             href={viewHref}
+            onClick={(e) => e.stopPropagation()}
             className="focus-visible:ring-primary/40 hover:underline focus-visible:outline-none focus-visible:ring-2"
           >
             {workbook.name}
@@ -174,15 +183,18 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
         <TableCell className={cn("px-6 py-3 text-[13px] tabular-nums", TEXT_MUTED)}>
           {formatDate(workbook.updatedAt)}
         </TableCell>
-        <TableCell className="w-12 px-3 py-3 text-right">
-          <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+        <TableCell
+          className="w-12 px-3 py-3 text-right"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   aria-label={t("workbooks.actions.edit", "Edit")}
                   className={cn(
-                    "hover:bg-accent data-[state=open]:bg-accent inline-flex size-8 items-center justify-center rounded-md hover:text-[#011111] data-[state=open]:text-[#011111]",
+                    "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
                     TEXT_MUTED,
                   )}
                 >
