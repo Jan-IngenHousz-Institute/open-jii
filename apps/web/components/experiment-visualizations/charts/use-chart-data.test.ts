@@ -136,6 +136,32 @@ describe("useChartData", () => {
     expect(spy.calls[0].query.orderDirection).toBe("ASC");
   });
 
+  it("includes filter columns in the projection so applyRowFilters has the cells to compare", async () => {
+    const viz = createVisualization({
+      id: "viz-1",
+      dataConfig: {
+        tableName: "readings",
+        dataSources: [
+          { tableName: "readings", columnName: "time", role: "x" },
+          { tableName: "readings", columnName: "temp", role: "y" },
+        ],
+        filters: [{ column: "school", operator: "equals", value: "Lincoln" }],
+      },
+    });
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          data: { columns: [], rows: [], totalRows: 0, truncated: false },
+        }),
+      ],
+    });
+
+    renderHook(() => useChartData(viz, "exp-1", undefined));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.calls[0].query.columns).toBe("time,temp,school");
+  });
+
   it("omits orderDirection when orderBy is not set", async () => {
     const spy = server.mount(contract.experiments.getExperimentData, {
       body: [

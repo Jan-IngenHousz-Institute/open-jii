@@ -213,61 +213,6 @@ export function groupAndAggregate(
   return out;
 }
 
-export interface RowFilter {
-  /** Column name to filter on. */
-  column: string;
-  /**
-   * Operator. Only `equals` is honoured by the bar chart today — other
-   * operators in the schema are reserved for future filter UI.
-   */
-  operator: string;
-  /** Comparison value. Stringified at compare time. */
-  value: unknown;
-}
-
-/**
- * Apply the configured row filters (AND-combined) before aggregation.
- * Filters with empty column / value are treated as not-configured and
- * skipped — that way a half-edited filter row in the UI doesn't make
- * the chart go empty mid-typing.
- */
-export function applyRowFilters(
-  rows: Record<string, unknown>[],
-  filters: RowFilter[] | undefined,
-): Record<string, unknown>[] {
-  if (!filters || filters.length === 0) return rows;
-  const active = filters.filter(
-    (f) =>
-      f.operator === "equals" &&
-      f.column &&
-      f.value !== undefined &&
-      f.value !== null &&
-      f.value !== "",
-  );
-  if (active.length === 0) return rows;
-  return rows.filter((row) =>
-    active.every((f) => {
-      const cellStr = stringifyForCompare(row[f.column]);
-      const valStr = stringifyForCompare(f.value);
-      // Reject when either side stringified to null — that's our signal
-      // that the cell was an object / array / null / undefined, and a
-      // null === null match would let two unrelated cells appear equal.
-      return cellStr !== null && valStr !== null && cellStr === valStr;
-    }),
-  );
-}
-
-function stringifyForCompare(value: unknown): string | null {
-  if (value == null) return null;
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
-    return String(value);
-  }
-  // Objects / arrays would collapse to "[object Object]"; treat them as a
-  // mismatch by returning null so two unrelated cells don't compare equal.
-  return null;
-}
-
 /**
  * Walk `rows` and return the unique `question_label` values found in the
  * cells of `xColumn`, in first-seen order. Used by the bar data panel to

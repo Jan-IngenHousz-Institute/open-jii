@@ -8,12 +8,14 @@ import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
 import { ChartConfigError, ChartFrame } from "../chart-frame";
+import { applyRowFilters } from "../data-filters";
+import type { RowFilter } from "../data-filters";
 import type { ChartFormConfig } from "../form-values";
 import { dataSourcesByRole, getCategoryColor } from "../form-values";
 import type { ChartRendererProps } from "../types";
 import { useChartData } from "../use-chart-data";
-import type { AggregationFunction, RowFilter } from "./aggregate";
-import { applyRowFilters, applyTopN, groupAndAggregate } from "./aggregate";
+import type { AggregationFunction } from "./aggregate";
+import { applyTopN, groupAndAggregate } from "./aggregate";
 
 type BarConfig = PlotlyChartConfig & ChartFormConfig;
 

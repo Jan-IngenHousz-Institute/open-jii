@@ -8,6 +8,8 @@ import { LineChart } from "@repo/ui/components/charts/line-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
 import { ChartConfigError, ChartFrame } from "../chart-frame";
+import { applyRowFilters } from "../data-filters";
+import type { RowFilter } from "../data-filters";
 import { dataSourcesByRole } from "../form-values";
 import { buildXValues, coerceCell, resolveSeries } from "../series-helpers";
 import type { ChartRendererProps } from "../types";
@@ -35,6 +37,12 @@ export function LineRenderer({
     orderBy: xColumn,
   });
 
+  // Row pre-filters narrow the dataset before series construction so the
+  // chart agrees with the bar's filter semantics — same `dataConfig.filters`
+  // shape, same client-side evaluator.
+  const filters = visualization.dataConfig.filters as RowFilter[] | undefined;
+  const filteredRows = useMemo(() => applyRowFilters(rows, filters), [rows, filters]);
+
   const { effectiveYEntries, useIndexForX } = useMemo(
     () => resolveSeries(yEntries, xColumn),
     [yEntries, xColumn],
@@ -46,8 +54,8 @@ export function LineRenderer({
 
     const chartConfig = visualization.config as PlotlyChartConfig & Omit<LineSeriesData, "x" | "y">;
     return effectiveYEntries.map(({ source }, index) => ({
-      x: buildXValues(rows, xColumn, useIndexForX),
-      y: rows.map((row) => coerceCell(row[source.columnName])),
+      x: buildXValues(filteredRows, xColumn, useIndexForX),
+      y: filteredRows.map((row) => coerceCell(row[source.columnName])),
       name: source.alias ?? source.columnName,
       color: Array.isArray(chartConfig.color) ? chartConfig.color[index] : chartConfig.color,
       mode: chartConfig.mode,
@@ -63,7 +71,7 @@ export function LineRenderer({
       error_y: chartConfig.error_y,
     }));
   }, [
-    rows,
+    filteredRows,
     xColumn,
     effectiveYEntries,
     useIndexForX,
@@ -91,11 +99,11 @@ export function LineRenderer({
       experimentId={experimentId}
       isLoading={isLoading}
       error={error}
-      // We pass `hasRows` as just "did the API return rows?" so that an
+      // We pass `hasRows` as just "did filtered rows survive?" so that an
       // X-only / Y-only draft state still renders the chart frame with the
       // configured axis. Plotly handles an empty `data` array by drawing
       // axes only — no synthesised series.
-      hasRows={rows.length > 0}
+      hasRows={filteredRows.length > 0}
     >
       <div className="flex h-full w-full flex-col">
         <LineChart data={chartSeries} config={effectiveConfig} />

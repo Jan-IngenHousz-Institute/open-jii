@@ -8,6 +8,8 @@ import { ScatterChart } from "@repo/ui/components/charts/scatter-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
 import { ChartConfigError, ChartFrame } from "../chart-frame";
+import { applyRowFilters } from "../data-filters";
+import type { RowFilter } from "../data-filters";
 import { dataSourcesByRole, getCategoryColor } from "../form-values";
 import type { ChartFormConfig } from "../form-values";
 import { buildXValues, coerceCell, resolveSeries } from "../series-helpers";
@@ -38,6 +40,12 @@ export function ScatterRenderer({
     orderBy: xColumn,
   });
 
+  // Row pre-filters narrow the dataset before series construction so the
+  // chart agrees with the bar's filter semantics — same `dataConfig.filters`
+  // shape, same client-side evaluator.
+  const filters = visualization.dataConfig.filters as RowFilter[] | undefined;
+  const filteredRows = useMemo(() => applyRowFilters(rows, filters), [rows, filters]);
+
   const chartConfig = visualization.config as PlotlyChartConfig &
     Omit<ScatterSeriesData, "x" | "y"> &
     Pick<ChartFormConfig, "colorMode" | "colorMap">;
@@ -53,7 +61,7 @@ export function ScatterRenderer({
     if (visualization.chartType !== "scatter") return [];
     if (effectiveYEntries.length === 0) return [];
 
-    const xValues = buildXValues(rows, xColumn, useIndexForX);
+    const xValues = buildXValues(filteredRows, xColumn, useIndexForX);
 
     if (isCategoricalColor && colorColumn) {
       // Multi-trace path: emit one trace per unique value of the color column
@@ -61,8 +69,8 @@ export function ScatterRenderer({
       // color and supports show/hide toggling per category. We pre-build
       // per-category index buckets in a single pass to keep this O(n).
       const categoryIndexMap = new Map<string, number[]>();
-      for (let i = 0; i < rows.length; i++) {
-        const key = String(rows[i][colorColumn]);
+      for (let i = 0; i < filteredRows.length; i++) {
+        const key = String(filteredRows[i][colorColumn]);
         const bucket = categoryIndexMap.get(key);
         if (bucket) {
           bucket.push(i);
@@ -75,7 +83,7 @@ export function ScatterRenderer({
       const traces: ScatterSeriesData[] = [];
       for (const yEntry of effectiveYEntries) {
         const ySource = yEntry.source;
-        const yValues = rows.map((row) => coerceCell(row[ySource.columnName]));
+        const yValues = filteredRows.map((row) => coerceCell(row[ySource.columnName]));
 
         for (let cIdx = 0; cIdx < categoryKeys.length; cIdx++) {
           const category = categoryKeys[cIdx];
@@ -119,8 +127,10 @@ export function ScatterRenderer({
     // Continuous (or no color column): one trace per Y series, with the
     // existing colorscale/colorbar treatment.
     return effectiveYEntries.map(({ source }, index) => {
-      const yValues = rows.map((row) => coerceCell(row[source.columnName]));
-      const colorValues = colorColumn ? rows.map((row) => String(row[colorColumn])) : undefined;
+      const yValues = filteredRows.map((row) => coerceCell(row[source.columnName]));
+      const colorValues = colorColumn
+        ? filteredRows.map((row) => String(row[colorColumn]))
+        : undefined;
 
       const color =
         colorValues ??
@@ -168,7 +178,7 @@ export function ScatterRenderer({
       };
     });
   }, [
-    rows,
+    filteredRows,
     xColumn,
     effectiveYEntries,
     useIndexForX,
@@ -203,11 +213,11 @@ export function ScatterRenderer({
       experimentId={experimentId}
       isLoading={isLoading}
       error={error}
-      // We pass `hasRows` as just "did the API return rows?" so that an
+      // We pass `hasRows` as just "did filtered rows survive?" so that an
       // X-only / Y-only draft state still renders the chart frame with the
       // configured axis. Plotly handles an empty `data` array by drawing
       // axes only — no synthesised series.
-      hasRows={rows.length > 0}
+      hasRows={filteredRows.length > 0}
     >
       <div className="flex h-full w-full flex-col">
         <ScatterChart data={scatterData} config={effectiveConfig} />

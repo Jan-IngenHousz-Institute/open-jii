@@ -9,7 +9,7 @@ function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
   return createVisualization({
     chartType: "scatter",
     chartFamily: "basic",
-    config: scatterDefaultConfig(),
+    config: scatterDefaultConfig() as unknown as Record<string, unknown>,
     dataConfig: {
       tableName: "readings",
       dataSources: [
@@ -110,6 +110,45 @@ describe("ScatterRenderer", () => {
     });
     const rows = [{ temp: 21 }, { temp: 22 }];
     render(<ScatterRenderer visualization={viz} experimentId="exp-1" data={rows} />);
+    expect(screen.queryByText("errors.invalidConfiguration")).not.toBeInTheDocument();
+  });
+
+  it("falls through to the empty-state when every row is excluded by a filter", () => {
+    const viz = buildViz({
+      dataConfig: {
+        tableName: "readings",
+        dataSources: [
+          { tableName: "readings", columnName: "time", role: "x" },
+          { tableName: "readings", columnName: "temp", role: "y" },
+        ],
+        filters: [{ column: "site", operator: "equals", value: "absent" }],
+      },
+    });
+    const rows = [
+      { time: 1, temp: 21, site: "A" },
+      { time: 2, temp: 22, site: "B" },
+    ];
+    render(<ScatterRenderer visualization={viz} experimentId="exp-1" data={rows} />);
+    expect(screen.getByText("errors.noData")).toBeInTheDocument();
+  });
+
+  it("keeps the chart rendered when a filter narrows but does not empty the rows", () => {
+    const viz = buildViz({
+      dataConfig: {
+        tableName: "readings",
+        dataSources: [
+          { tableName: "readings", columnName: "time", role: "x" },
+          { tableName: "readings", columnName: "temp", role: "y" },
+        ],
+        filters: [{ column: "site", operator: "equals", value: "A" }],
+      },
+    });
+    const rows = [
+      { time: 1, temp: 21, site: "A" },
+      { time: 2, temp: 22, site: "B" },
+    ];
+    render(<ScatterRenderer visualization={viz} experimentId="exp-1" data={rows} />);
+    expect(screen.queryByText("errors.noData")).not.toBeInTheDocument();
     expect(screen.queryByText("errors.invalidConfiguration")).not.toBeInTheDocument();
   });
 });

@@ -46,6 +46,16 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
     [dataConfig.dataSources],
   );
   const xColumn = dataSourcesByRole(configuredSources, "x")[0]?.source.columnName;
+  // Project filter columns into the API request alongside x/y/color — without
+  // them `applyRowFilters` in the renderer would see `row[col] === undefined`
+  // for every row and exclude the whole dataset, producing an empty chart.
+  const projectedColumns = useMemo(() => {
+    const dataSourceColumns = configuredSources.map((ds) => ds.columnName);
+    const filterColumns = (dataConfig.filters ?? [])
+      .map((f) => f.column)
+      .filter((name) => name.length > 0);
+    return Array.from(new Set([...dataSourceColumns, ...filterColumns]));
+  }, [configuredSources, dataConfig.filters]);
 
   const def = getChartTypeDef(chartType);
   // Render as soon as one column is configured. The renderers handle the
@@ -65,7 +75,7 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
     tableName
       ? {
           tableName,
-          columns: configuredSources.map((ds) => ds.columnName),
+          columns: projectedColumns,
           orderBy: xColumn,
           orderDirection: "ASC",
         }

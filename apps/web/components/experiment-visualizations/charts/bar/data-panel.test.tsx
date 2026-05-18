@@ -173,16 +173,16 @@ describe("BarDataPanel", () => {
 
   it("shows an empty-state message when no filter rows have been added", () => {
     renderPanel();
-    expect(screen.getByText("workspace.bar.noFiltersHelp")).toBeInTheDocument();
+    expect(screen.getByText("workspace.shelves.noFiltersHelp")).toBeInTheDocument();
   });
 
   it("adds a filter row when the 'Add filter' button is clicked", async () => {
     const user = userEvent.setup();
     renderPanel();
-    expect(screen.queryByText("workspace.bar.filterColumn")).not.toBeInTheDocument();
+    expect(screen.queryByText("workspace.shelves.filterColumn")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /addFilter/i }));
-    expect(screen.getByText("workspace.bar.filterColumn")).toBeInTheDocument();
-    expect(screen.getByText("workspace.bar.filterValue")).toBeInTheDocument();
+    expect(screen.getByText("workspace.shelves.filterColumn")).toBeInTheDocument();
+    expect(screen.getByText("workspace.shelves.filterValue")).toBeInTheDocument();
   });
 
   it("hydrates existing filters from the form state and renders one row each", () => {
@@ -202,8 +202,8 @@ describe("BarDataPanel", () => {
         },
       }),
     );
-    expect(screen.getAllByText("workspace.bar.filterColumn")).toHaveLength(2);
-    expect(screen.getAllByText("workspace.bar.filterValue")).toHaveLength(2);
+    expect(screen.getAllByText("workspace.shelves.filterColumn")).toHaveLength(2);
+    expect(screen.getAllByText("workspace.shelves.filterValue")).toHaveLength(2);
   });
 
   it("removes a filter when its trash button is clicked", async () => {
@@ -221,9 +221,9 @@ describe("BarDataPanel", () => {
         },
       }),
     );
-    expect(screen.getAllByText("workspace.bar.filterColumn")).toHaveLength(1);
+    expect(screen.getAllByText("workspace.shelves.filterColumn")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /removeFilter/i }));
-    expect(screen.queryByText("workspace.bar.filterColumn")).not.toBeInTheDocument();
-    expect(screen.getByText("workspace.bar.noFiltersHelp")).toBeInTheDocument();
+    expect(screen.queryByText("workspace.shelves.filterColumn")).not.toBeInTheDocument();
+    expect(screen.getByText("workspace.shelves.noFiltersHelp")).toBeInTheDocument();
   });
 });

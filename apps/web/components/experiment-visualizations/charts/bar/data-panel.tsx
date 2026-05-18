@@ -1,16 +1,14 @@
 "use client";
 
-import { Plus, X as XIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
-import { useFieldArray, useWatch } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import {
   Select,
@@ -22,6 +20,7 @@ import {
 import { Separator } from "@repo/ui/components/separator";
 
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import { FiltersShelf } from "../../workspace/shelves/filters-shelf";
 import { firstDataSourceByRole } from "../form-values";
 import type { ChartPanelProps } from "../types";
 import { collectQuestionLabels } from "./aggregate";
@@ -110,48 +109,10 @@ export function BarDataPanel({ form, columns }: ChartPanelProps) {
     }
   };
 
-  // ─── Filters ────────────────────────────────────────────────────
-  // Row pre-filters live in `dataConfig.filters` (schema-defined). For v1
-  // the bar chart honours `equals` filters on categorical STRING columns;
-  // that covers the classroom workflow (filter by school answer, then
-  // group by team name). Each filter row has its own column + value
-  // dropdown; values are populated from a sample fetch so kids don't
-  // have to remember exact spellings.
-  const filterEligibleColumns = useMemo(() => filterColumnsForRole(columns, "bar", "x"), [columns]);
-  const {
-    fields: filterFields,
-    append: appendFilter,
-    remove: removeFilter,
-  } = useFieldArray({ control: form.control, name: "dataConfig.filters" });
-  const filtersWatchedRaw = useWatch({ control: form.control, name: "dataConfig.filters" });
-  const filtersWatched = useMemo(() => filtersWatchedRaw ?? [], [filtersWatchedRaw]);
-  const activeFilterColumns = useMemo(() => {
-    const set = new Set<string>();
-    for (const f of filtersWatched) {
-      if (f.column) set.add(f.column);
-    }
-    return Array.from(set);
-  }, [filtersWatched]);
-  const { data: filterSample } = useExperimentVisualizationData(
-    resolvedExperimentId,
-    { tableName, columns: activeFilterColumns },
-    activeFilterColumns.length > 0 && Boolean(tableName) && Boolean(resolvedExperimentId),
-  );
-  const filterValuesByColumn = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const col of activeFilterColumns) {
-      const seen = new Set<string>();
-      for (const row of filterSample?.rows ?? []) {
-        const v = row[col];
-        if (typeof v === "string" && v !== "") seen.add(v);
-        else if (typeof v === "number" || typeof v === "bigint" || typeof v === "boolean") {
-          seen.add(String(v));
-        }
-      }
-      map.set(col, Array.from(seen).sort());
-    }
-    return map;
-  }, [activeFilterColumns, filterSample]);
+  // Filter shelf wants the same categorical-only column set the bar's
+  // X picker offers (string / boolean) — that's the row narrowing that's
+  // useful for the classroom workflow ("only this school's rows, please").
+  const filterableColumns = useMemo(() => filterColumnsForRole(columns, "bar", "x"), [columns]);
 
   return (
     <div className="space-y-6">
@@ -329,121 +290,7 @@ export function BarDataPanel({ form, columns }: ChartPanelProps) {
 
       <Separator />
 
-      <section className="space-y-3">
-        <header className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">{t("workspace.bar.filters")}</h3>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => appendFilter({ column: "", operator: "equals", value: "" })}
-          >
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            {t("workspace.bar.addFilter", "Add filter")}
-          </Button>
-        </header>
-        {filterFields.length === 0 && (
-          <p className="text-muted-foreground text-xs">
-            {t("workspace.bar.noFiltersHelp", "No filters. All rows contribute to the chart.")}
-          </p>
-        )}
-        {filterFields.map((field, idx) => {
-          const pickedColumn = filtersWatched[idx]?.column ?? "";
-          const valueOptions = filterValuesByColumn.get(pickedColumn) ?? [];
-          return (
-            <div
-              key={field.id}
-              className="bg-muted/30 grid grid-cols-[1fr_1fr_auto] items-end gap-2 rounded-md border p-3"
-            >
-              <FormField
-                control={form.control}
-                name={`dataConfig.filters.${idx}.column` as const}
-                render={({ field: colField }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-xs font-medium">
-                      {t("workspace.bar.filterColumn", "Column")}
-                    </FormLabel>
-                    <Select
-                      value={typeof colField.value === "string" ? colField.value : ""}
-                      onValueChange={(v) => {
-                        colField.onChange(v);
-                        // Switching the column makes the previous value
-                        // meaningless — clear it so the renderer doesn't
-                        // keep a dangling filter active.
-                        form.setValue(`dataConfig.filters.${idx}.value`, "", {
-                          shouldDirty: true,
-                        });
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("workspace.shelves.selectColumn")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filterEligibleColumns.map((column) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            {column.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name={`dataConfig.filters.${idx}.value` as const}
-                render={({ field: valField }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-xs font-medium">
-                      {t("workspace.bar.filterValue", "Value")}
-                    </FormLabel>
-                    <Select
-                      value={typeof valField.value === "string" ? valField.value : ""}
-                      onValueChange={(v) => valField.onChange(v)}
-                      disabled={!pickedColumn || valueOptions.length === 0}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              !pickedColumn
-                                ? t("workspace.bar.filterValuePickColumn", "Pick a column first")
-                                : valueOptions.length === 0
-                                  ? t("workspace.bar.filterValueLoading", "Loading values…")
-                                  : t("workspace.bar.filterValuePlaceholder", "Select a value")
-                            }
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {valueOptions.map((v) => (
-                          <SelectItem key={v} value={v}>
-                            {v}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-destructive h-9 w-9"
-                onClick={() => removeFilter(idx)}
-                aria-label={t("workspace.bar.removeFilter", "Remove filter")}
-              >
-                <XIcon className="h-4 w-4" />
-              </Button>
-            </div>
-          );
-        })}
-      </section>
+      <FiltersShelf form={form} filterableColumns={filterableColumns} />
     </div>
   );
 }

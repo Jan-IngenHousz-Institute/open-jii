@@ -28,9 +28,17 @@ export function useChartData(
   providedData: Record<string, unknown>[] | undefined,
   options: { orderBy?: string } = {},
 ): UseChartDataResult {
-  const columns = visualization.dataConfig.dataSources
+  const dataSourceColumns = visualization.dataConfig.dataSources
     .map((ds) => ds.columnName)
     .filter((name) => name.length > 0);
+  // Pull filter columns into the projection too — otherwise `applyRowFilters`
+  // would see `row[filterColumn] === undefined` for every row and exclude
+  // them all, leaving the chart with an empty dataset whenever the filter
+  // is on something other than X/Y/color.
+  const filterColumns = (visualization.dataConfig.filters ?? [])
+    .map((f) => f.column)
+    .filter((name) => name.length > 0);
+  const columns = Array.from(new Set([...dataSourceColumns, ...filterColumns]));
 
   const {
     data: fetched,
