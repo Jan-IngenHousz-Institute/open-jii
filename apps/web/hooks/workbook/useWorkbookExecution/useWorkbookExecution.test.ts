@@ -125,23 +125,6 @@ describe("useWorkbookExecution", () => {
       );
     });
 
-    it("fires onRequireDevice when running a protocol with no device", async () => {
-      const proto = createProtocolCell();
-      const protocol = createProtocol({
-        id: proto.payload.protocolId,
-        code: [{ _protocol_set_: [] }],
-      });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
-      mockIsConnected = false;
-
-      const onRequireDevice = vi.fn();
-      const { result } = renderExecution([proto], { onRequireDevice });
-
-      await act(() => result.current.runCell(proto.id));
-
-      expect(onRequireDevice).toHaveBeenCalledOnce();
-    });
-
     it("executes protocol and produces output cell", async () => {
       const proto = createProtocolCell();
       const protocol = createProtocol({

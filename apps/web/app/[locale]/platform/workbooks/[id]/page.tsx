@@ -13,7 +13,6 @@ import { parseApiError } from "~/util/apiError";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { ToastAction } from "@repo/ui/components/toast";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 interface WorkbookOverviewPageProps {
@@ -108,30 +107,6 @@ function WorkbookEditorWithAutosave({
     setCells(next);
   }, []);
 
-  // `connect` is returned by useWorkbookExecution below, but the toast that
-  // prompts the user to connect is fired from inside that same hook —
-  // bridge them with a ref so the toast's action can call `connect` without
-  // creating a hook-call cycle.
-  const connectRef = useRef<(() => Promise<void> | void) | null>(null);
-
-  const handleRequireDevice = useCallback(() => {
-    const connectLabel = t("workbooks.connect");
-    toast({
-      title: t("workbooks.deviceRequired"),
-      description: t("workbooks.deviceRequiredDescription"),
-      action: (
-        <ToastAction
-          altText={connectLabel}
-          onClick={() => {
-            void connectRef.current?.();
-          }}
-        >
-          {connectLabel}
-        </ToastAction>
-      ),
-    });
-  }, [t]);
-
   const {
     isConnected,
     isConnecting,
@@ -152,11 +127,24 @@ function WorkbookEditorWithAutosave({
     cells,
     onCellsChange: handleCellsChange,
     onPromptQuestion: handlePromptQuestion,
-    onRequireDevice: handleRequireDevice,
   });
-  connectRef.current = connect;
 
   const isCreator = session?.user.id === createdBy;
+
+  // Trigger the same `connect()` the toolbar uses when the user clicks Run on
+  // a Protocol cell with no device. Done before any await so the browser's
+  // Web Serial / Web Bluetooth picker still sees a live user gesture.
+  const handleRunCell = useCallback(
+    (cellId: string) => {
+      const cell = cells.find((c) => c.id === cellId);
+      if (cell?.type === "protocol" && !isConnected) {
+        void connect();
+        return;
+      }
+      void runCell(cellId);
+    },
+    [cells, isConnected, connect, runCell],
+  );
 
   const handleClearOutputs = useCallback(() => {
     const count = cells.filter((c) => c.type === "output").length;
@@ -187,7 +175,7 @@ function WorkbookEditorWithAutosave({
         onRunAll={runAll}
         onStopExecution={stopExecution}
         onClearOutputs={handleClearOutputs}
-        onRunCell={runCell}
+        onRunCell={handleRunCell}
         promptedQuestionId={promptedQuestionId}
         onQuestionAnswered={handleQuestionAnswered}
       />

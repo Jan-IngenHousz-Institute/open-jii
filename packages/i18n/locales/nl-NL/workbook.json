@@ -22,10 +22,7 @@
     "allChangesSaved": "Alle wijzigingen opgeslagen",
     "viewWorkbook": "Werkboek bekijken",
     "outputsCleared_one": "{{count}} uitvoer gewist",
-    "outputsCleared_other": "{{count}} uitvoeren gewist",
-    "deviceRequired": "Verbind een apparaat",
-    "deviceRequiredDescription": "Verbind een MultispeQ om deze protocolcel uit te voeren.",
-    "connect": "Verbinden"
+    "outputsCleared_other": "{{count}} uitvoeren gewist"
   },
   "output": {
     "label": "Uitvoer",
