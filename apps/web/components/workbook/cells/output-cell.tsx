@@ -12,7 +12,7 @@ import {
   Clock,
   Copy,
   Info,
-  X,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -203,7 +203,7 @@ export function OutputCellComponent({
   const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (
-    <div className="group/output relative overflow-hidden rounded-b-[10px] border border-t-0 border-[#EDF2F6] bg-white">
+    <div className="group/output relative mt-1 overflow-hidden rounded-[10px] border border-[#EDF2F6] bg-white">
       <div className={`px-4 ${isCollapsed ? "py-2" : "pb-3 pt-3"}`}>
         <div className={isCollapsed ? "flex items-center gap-2" : "mb-2 flex items-center gap-2"}>
           <button
@@ -222,9 +222,9 @@ export function OutputCellComponent({
             {t("output.label")}
           </span>
           {cell.executionTime != null && (
-            <span className="flex items-center gap-1 text-[11px] text-[#CDD5DB]">
+            <span className="inline-flex items-center gap-1 text-[11px] leading-none text-[#CDD5DB]">
               <Clock className="size-3" />
-              {formatExecutionTime(cell.executionTime)}
+              <span className="leading-none">{formatExecutionTime(cell.executionTime)}</span>
             </span>
           )}
           <div className="flex-1" />
@@ -234,7 +234,7 @@ export function OutputCellComponent({
               onClick={onDelete}
               title={t("output.clear")}
             >
-              <X className="size-3 text-[#68737B]" />
+              <Trash2 className="size-3 text-[#68737B]" />
             </button>
           )}
         </div>
