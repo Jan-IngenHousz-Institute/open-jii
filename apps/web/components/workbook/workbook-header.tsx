@@ -3,20 +3,7 @@
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { tsr } from "@/lib/tsr";
 import { decodeBase64 } from "@/util/base64";
-import {
-  ChevronDown,
-  Circle,
-  Code,
-  Download,
-  File,
-  FileCode,
-  FileJson,
-  GitBranch,
-  Play,
-  Square,
-  Trash2,
-  Usb,
-} from "lucide-react";
+import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
 import { useCallback } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
@@ -218,10 +205,11 @@ export function WorkbookHeader({
 
   const hasProtocols = cells.some((c) => c.type === "protocol");
   const hasMacros = cells.some((c) => c.type === "macro");
+  const hasOutputs = cells.some((c) => c.type === "output");
 
   return (
     <div
-      className="sticky top-16 z-30 flex items-center gap-2 rounded-b-xl border-b px-4 py-2 xl:gap-3 xl:py-3"
+      className="sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3"
       style={{ background: "#FFFFFF", borderColor: "#EDF2F6" }}
     >
       <div className="flex items-center gap-1.5 xl:gap-2.5">
@@ -336,7 +324,7 @@ export function WorkbookHeader({
           className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
           style={
             flowchartOpen
-              ? { background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }
+              ? { background: "rgba(0, 94, 94, 0.1)", borderRadius: 8, color: "#005E5E" }
               : { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
           }
           onClick={onToggleFlowchart}
@@ -358,7 +346,7 @@ export function WorkbookHeader({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
+            className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 border px-2.5 text-[12px] font-normal leading-[18px] hover:bg-[#EDF2F6] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
             style={{
               borderColor: "#CDD5DB",
               borderRadius: 12,
@@ -366,44 +354,36 @@ export function WorkbookHeader({
               background: "#FFFFFF",
             }}
           >
-            <Download className="size-4" />
             <span className="hidden xl:inline">Export</span>
             <ChevronDown className="size-3 xl:size-4" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onClick={handleExportJSON} className="gap-2">
-            <FileJson className="size-4 text-blue-600" />
-            Export as JSON
-          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJSON}>Export as JSON</DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => void handleExportProtocol()}
-            className="gap-2"
             disabled={!hasProtocols}
           >
-            <FileCode className="size-4 text-emerald-600" />
             Export Protocol Only
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => void handleExportMacro()}
-            className="gap-2"
-            disabled={!hasMacros}
-          >
-            <Code className="size-4 text-violet-600" />
+          <DropdownMenuItem onClick={() => void handleExportMacro()} disabled={!hasMacros}>
             Export Macro Only
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleDownloadWorkbook} className="gap-2">
-            <File className="size-4 text-amber-600" />
+          <DropdownMenuItem onClick={handleDownloadWorkbook}>
             Download Workbook (.jii)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <button
-        className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
+        className={cn(
+          "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+          !hasOutputs && "cursor-not-allowed opacity-50",
+        )}
         style={{ background: "#EDF2F6", borderRadius: 8, color: "#011111" }}
         onClick={onClearOutputs}
+        disabled={!hasOutputs}
       >
         <Trash2 className="size-4" />
         <span className="hidden xl:inline">Clear all</span>

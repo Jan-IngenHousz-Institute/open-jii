@@ -60,6 +60,7 @@ function WorkbookEditorWithAutosave({
   name: string;
 }) {
   const { data: session } = useSession();
+  const { t } = useTranslation(["workbook", "common"]);
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
@@ -130,6 +131,14 @@ function WorkbookEditorWithAutosave({
 
   const isCreator = session?.user.id === createdBy;
 
+  const handleClearOutputs = useCallback(() => {
+    const count = cells.filter((c) => c.type === "output").length;
+    clearOutputs();
+    if (count > 0) {
+      toast({ description: t("workbooks.outputsCleared", { count }) });
+    }
+  }, [cells, clearOutputs, t]);
+
   return (
     <div className="space-y-6">
       <WorkbookEditor
@@ -150,7 +159,7 @@ function WorkbookEditorWithAutosave({
         onDisconnect={disconnect}
         onRunAll={runAll}
         onStopExecution={stopExecution}
-        onClearOutputs={clearOutputs}
+        onClearOutputs={handleClearOutputs}
         onRunCell={runCell}
         promptedQuestionId={promptedQuestionId}
         onQuestionAnswered={handleQuestionAnswered}

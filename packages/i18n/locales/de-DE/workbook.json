@@ -20,7 +20,12 @@
     "noCells": "Noch keine Zellen. Offnen Sie die Arbeitsmappe, um Ihr Notebook zu erstellen.",
     "saving": "Speichern...",
     "allChangesSaved": "Alle Änderungen gespeichert",
-    "viewWorkbook": "Arbeitsbuch anzeigen"
+    "viewWorkbook": "Arbeitsbuch anzeigen",
+    "outputsCleared_one": "{{count}} Ausgabe gelöscht",
+    "outputsCleared_other": "{{count}} Ausgaben gelöscht",
+    "deviceRequired": "Gerät verbinden",
+    "deviceRequiredDescription": "Verbinden Sie ein MultispeQ, um diese Protokollzelle auszuführen.",
+    "connect": "Verbinden"
   },
   "output": {
     "label": "Ausgabe",

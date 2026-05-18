@@ -2,6 +2,7 @@ import {
   createMacro,
   createMarkdownCell,
   createMacroCell,
+  createOutputCell,
   createProtocol,
   createProtocolCell,
 } from "@/test/factories";
@@ -138,12 +139,22 @@ describe("WorkbookHeader", () => {
 
   it("calls onClearOutputs when user clicks Clear all", async () => {
     const user = userEvent.setup();
-    const { props } = renderHeader();
+    const outputCell = createOutputCell({ producedBy: protocolCell.id });
+    const { props } = renderHeader({
+      cells: [markdownCell, protocolCell, macroCell, outputCell],
+    });
 
     const clearButton = screen.getByRole("button", { name: /clear all/i });
     await user.click(clearButton);
 
     expect(props.onClearOutputs).toHaveBeenCalledOnce();
+  });
+
+  it("disables Clear all when there are no output cells", () => {
+    renderHeader();
+
+    const clearButton = screen.getByRole("button", { name: /clear all/i });
+    expect(clearButton).toBeDisabled();
   });
 
   it("calls onToggleFlowchart when user clicks Flow button", async () => {

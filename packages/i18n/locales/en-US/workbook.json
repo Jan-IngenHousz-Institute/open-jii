@@ -20,7 +20,12 @@
     "noCells": "No cells yet. Open the workbook to start building your notebook.",
     "saving": "Saving...",
     "allChangesSaved": "All changes saved",
-    "viewWorkbook": "View Workbook"
+    "viewWorkbook": "View Workbook",
+    "outputsCleared_one": "Cleared {{count}} output",
+    "outputsCleared_other": "Cleared {{count}} outputs",
+    "deviceRequired": "Connect a device",
+    "deviceRequiredDescription": "Connect a MultispeQ to run this protocol cell.",
+    "connect": "Connect"
   },
   "output": {
     "label": "Output",

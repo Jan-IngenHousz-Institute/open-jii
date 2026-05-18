@@ -20,7 +20,12 @@
     "noCells": "Nog geen cellen. Open het werkboek om uw notebook te bouwen.",
     "saving": "Opslaan...",
     "allChangesSaved": "Alle wijzigingen opgeslagen",
-    "viewWorkbook": "Werkboek bekijken"
+    "viewWorkbook": "Werkboek bekijken",
+    "outputsCleared_one": "{{count}} uitvoer gewist",
+    "outputsCleared_other": "{{count}} uitvoeren gewist",
+    "deviceRequired": "Verbind een apparaat",
+    "deviceRequiredDescription": "Verbind een MultispeQ om deze protocolcel uit te voeren.",
+    "connect": "Verbinden"
   },
   "output": {
     "label": "Uitvoer",
