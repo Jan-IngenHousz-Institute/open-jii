@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 /** Accent color per cell type, matching the cell components. */
@@ -77,6 +78,7 @@ export function WorkbookSidebar({
   collapsed,
   onToggleCollapsed,
 }: WorkbookSidebarProps) {
+  const { t } = useTranslation("workbook");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
@@ -254,7 +256,7 @@ export function WorkbookSidebar({
                         <Asterisk
                           className="size-3 shrink-0"
                           style={{ color: "#005E5E" }}
-                          aria-label="Required"
+                          aria-label={t("workbooks.required")}
                         />
                       )}
                     </span>

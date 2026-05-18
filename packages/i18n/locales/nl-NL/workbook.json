@@ -21,6 +21,7 @@
     "saving": "Opslaan...",
     "allChangesSaved": "Alle wijzigingen opgeslagen",
     "viewWorkbook": "Werkboek bekijken",
+    "required": "Verplicht",
     "outputsCleared_one": "{{count}} uitvoer gewist",
     "outputsCleared_other": "{{count}} uitvoeren gewist"
   },

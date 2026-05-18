@@ -21,6 +21,7 @@
     "saving": "Saving...",
     "allChangesSaved": "All changes saved",
     "viewWorkbook": "View Workbook",
+    "required": "Required",
     "outputsCleared_one": "Cleared {{count}} output",
     "outputsCleared_other": "Cleared {{count}} outputs"
   },

@@ -401,6 +401,23 @@ describe("explodeRecords", () => {
     expect(records.map((r) => r.sub_protocol_index)).toEqual([0, 1, 2]);
     expect(records[1]?.protocol_id).toBe(2);
   });
+
+  it("preserves valid v2 records when the top-level array mixes v1 and v2 items", () => {
+    // A stray v1 item between two v2 items shouldn't make the parser drop the
+    // nested set data — each item is decoded by its own shape.
+    const mixed = JSON.stringify([
+      { protocol_id: 1, set: [{ label: "A", data_raw: [1] }] },
+      { protocol_id: 2, data_raw: [9, 8, 7] },
+      { protocol_id: 3, set: [{ label: "B", data_raw: [2, 3] }] },
+    ]);
+    const records = explodeRecords({ sample_raw: mixed });
+    expect(records).toHaveLength(3);
+    const labels = records.map((r) => r.label);
+    expect(labels).toContain("A");
+    expect(labels).toContain("B");
+    const v1Row = records.find((r) => r.label === "");
+    expect(v1Row?.data_raw).toEqual([9, 8, 7]);
+  });
 });
 
 describe("measurementToTimeseries", () => {
@@ -757,5 +774,16 @@ describe("isMultispeqOutput", () => {
     const m = extractMeasurement({ set: [{ data_raw: [1] }] });
     expect(m).not.toBeNull();
     expect(Array.isArray(m?.sample_raw)).toBe(true);
+  });
+
+  it("recognises a sample array even when the first item is malformed", () => {
+    // looksLikeSampleRaw now scans every item, so a leading null doesn't
+    // disqualify the rest of the payload.
+    expect(
+      isMultispeqOutput({
+        device_id: "dev-1",
+        sample: [null, "junk", { set: [{ data_raw: [1, 2] }] }],
+      }),
+    ).toBe(true);
   });
 });

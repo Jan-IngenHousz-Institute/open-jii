@@ -140,7 +140,12 @@ export function MacroCellComponent({
             className="text-muted-foreground h-7 w-7 p-0 hover:text-[#005E5E]"
             title="Open macro in new tab"
           >
-            <Link href={`/platform/macros/${macroId}`} target="_blank">
+            <Link
+              href={`/platform/macros/${macroId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open macro in new tab"
+            >
               <ExternalLink className="h-3 w-3" />
             </Link>
           </Button>

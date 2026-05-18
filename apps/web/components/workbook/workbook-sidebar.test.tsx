@@ -63,4 +63,32 @@ describe("WorkbookSidebar", () => {
     render(<WorkbookSidebar cells={[emptyMd]} onCellClick={onCellClick} />);
     expect(screen.getByText("Empty")).toBeInTheDocument();
   });
+
+  it("shows a Required asterisk next to required question rows", () => {
+    const required = createQuestionCell({
+      id: "q-required",
+      name: "consent",
+      question: { kind: "yes_no", text: "Consent?", required: true },
+    });
+    render(<WorkbookSidebar cells={[required]} onCellClick={onCellClick} />);
+    // aria-label comes from the i18n "workbooks.required" key.
+    expect(screen.getByLabelText("workbooks.required")).toBeInTheDocument();
+  });
+
+  it("makes the whole card the drag source when onReorder is provided", () => {
+    const onReorder = vi.fn();
+    render(
+      <WorkbookSidebar
+        cells={[markdownCell, protocolCell]}
+        onCellClick={onCellClick}
+        onReorder={onReorder}
+      />,
+    );
+
+    // The outer row button carries `draggable=true` so the user can grab
+    // anywhere on the card, not just the GripVertical icon.
+    const rows = screen.getAllByRole("button").filter((el) => el.getAttribute("draggable"));
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    rows.forEach((row) => expect(row).toHaveAttribute("draggable", "true"));
+  });
 });

@@ -479,22 +479,23 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
   const measurementId = measurement.measurement_id ?? null;
   const projectId = measurement.project_id ?? null;
 
-  if (items.every(isV2Item)) {
-    const out: SubProtocolRecord[] = [];
-    let offset = 0;
-    for (const item of items) {
-      const records = explodeV2Item(item, measurementId, projectId, offset);
-      out.push(...records);
-      offset += Array.isArray(item.set) ? item.set.length : 0;
-    }
-    return out;
-  }
-
+  // Walk items independently so a v2 envelope's nested `set` data isn't lost
+  // just because one stray non-v2 item snuck in. Track per-branch indices so
+  // the sub_protocol_index stays globally unique.
   const out: SubProtocolRecord[] = [];
-  items.forEach((item, idx) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return;
-    out.push(explodeV1Item(item as Record<string, unknown>, measurementId, projectId, idx));
-  });
+  let v2Offset = 0;
+  let v1Index = 0;
+  for (const item of items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    if (isV2Item(item)) {
+      const records = explodeV2Item(item, measurementId, projectId, v2Offset);
+      out.push(...records);
+      v2Offset += Array.isArray(item.set) ? item.set.length : 0;
+      continue;
+    }
+    out.push(explodeV1Item(item as Record<string, unknown>, measurementId, projectId, v1Index));
+    v1Index += 1;
+  }
   return out;
 }
 

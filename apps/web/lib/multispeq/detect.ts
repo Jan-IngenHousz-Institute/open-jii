@@ -49,11 +49,12 @@ export function extractMeasurement(data: unknown): MeasurementInput | null {
 
 function looksLikeSampleRaw(items: unknown[]): boolean {
   if (items.length === 0) return false;
-  const first = items[0];
-  if (!first || typeof first !== "object") return false;
-  const f = first as Record<string, unknown>;
-  if (Array.isArray(f.set) && f.set.some(hasDataRaw)) return true;
-  return hasDataRaw(first);
+  return items.some((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const obj = item as Record<string, unknown>;
+    if (Array.isArray(obj.set) && obj.set.some(hasDataRaw)) return true;
+    return hasDataRaw(item);
+  });
 }
 
 function hasDataRaw(item: unknown): boolean {

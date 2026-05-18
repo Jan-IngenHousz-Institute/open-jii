@@ -135,7 +135,12 @@ export function ProtocolCellComponent({
             className="text-muted-foreground h-7 w-7 p-0 hover:text-[#005E5E]"
             title="Open protocol in new tab"
           >
-            <Link href={`/platform/protocols/${protocolId}`} target="_blank">
+            <Link
+              href={`/platform/protocols/${protocolId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open protocol in new tab"
+            >
               <ExternalLink className="h-3 w-3" />
             </Link>
           </Button>
