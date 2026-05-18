@@ -110,10 +110,7 @@ export function MarkdownCellComponent({
         </div>
       ) : (
         <p
-          className={cn(
-            "px-1 py-3 text-sm italic text-[#68737B]",
-            !readOnly && "cursor-text",
-          )}
+          className={cn("px-1 py-3 text-sm italic text-[#68737B]", !readOnly && "cursor-text")}
           onClick={enterEditMode}
         >
           {readOnly ? "No content" : "Click to add content..."}

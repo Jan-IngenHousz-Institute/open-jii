@@ -64,18 +64,12 @@ function groupOutputs(outputs: OutputRecord[]): SeriesGroup[] {
 
 // Stable palette so the same detector index gets a consistent colour across
 // re-renders; cycles for measurements with more detectors than entries.
-const DETECTOR_PALETTE = [
-  "#1565c0",
-  "#388e3c",
-  "#e65100",
-  "#6a1b9a",
-  "#c62828",
-  "#00838f",
-];
+const DETECTOR_PALETTE = ["#1565c0", "#388e3c", "#e65100", "#6a1b9a", "#c62828", "#00838f"];
 
 function detectorColor(detector: number): string {
   if (!Number.isFinite(detector)) return "#005E5E";
-  const idx = ((Math.trunc(detector) - 1) % DETECTOR_PALETTE.length + DETECTOR_PALETTE.length) %
+  const idx =
+    (((Math.trunc(detector) - 1) % DETECTOR_PALETTE.length) + DETECTOR_PALETTE.length) %
     DETECTOR_PALETTE.length;
   return DETECTOR_PALETTE[idx] ?? "#005E5E";
 }

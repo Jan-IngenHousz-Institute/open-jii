@@ -360,10 +360,7 @@ export function WorkbookHeader({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem onClick={handleExportJSON}>Export as JSON</DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => void handleExportProtocol()}
-            disabled={!hasProtocols}
-          >
+          <DropdownMenuItem onClick={() => void handleExportProtocol()} disabled={!hasProtocols}>
             Export Protocol Only
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void handleExportMacro()} disabled={!hasMacros}>

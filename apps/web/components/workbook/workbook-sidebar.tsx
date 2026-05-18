@@ -140,12 +140,8 @@ export function WorkbookSidebar({
         style={{ marginTop: 20 }}
         title="Expand sidebar"
       >
-        <List
-          className="h-4 w-4 text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]"
-        />
-        <span
-          className="text-[11px] font-medium leading-none text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]"
-        >
+        <List className="h-4 w-4 text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]" />
+        <span className="text-[11px] font-medium leading-none text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]">
           {visibleCells.length}
         </span>
       </button>
@@ -185,8 +181,7 @@ export function WorkbookSidebar({
 
           // The whole card is the drag source so the user can grab anywhere on
           // it; the GripVertical icon is purely a visual hint.
-          const isRequiredQuestion =
-            cell.type === "question" && cell.question.required === true;
+          const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
 
           return (
             <div key={cell.id}>

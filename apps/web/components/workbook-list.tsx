@@ -183,10 +183,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
         <TableCell className={cn("px-6 py-3 text-[13px] tabular-nums", TEXT_MUTED)}>
           {formatDate(workbook.updatedAt)}
         </TableCell>
-        <TableCell
-          className="w-12 px-3 py-3 text-right"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <TableCell className="w-12 px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
           <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

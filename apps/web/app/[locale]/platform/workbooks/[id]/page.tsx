@@ -112,7 +112,7 @@ function WorkbookEditorWithAutosave({
   // prompts the user to connect is fired from inside that same hook —
   // bridge them with a ref so the toast's action can call `connect` without
   // creating a hook-call cycle.
-  const connectRef = useRef<(() => void) | null>(null);
+  const connectRef = useRef<(() => Promise<void> | void) | null>(null);
 
   const handleRequireDevice = useCallback(() => {
     const connectLabel = t("workbooks.connect");
@@ -120,7 +120,12 @@ function WorkbookEditorWithAutosave({
       title: t("workbooks.deviceRequired"),
       description: t("workbooks.deviceRequiredDescription"),
       action: (
-        <ToastAction altText={connectLabel} onClick={() => connectRef.current?.()}>
+        <ToastAction
+          altText={connectLabel}
+          onClick={() => {
+            void connectRef.current?.();
+          }}
+        >
           {connectLabel}
         </ToastAction>
       ),
