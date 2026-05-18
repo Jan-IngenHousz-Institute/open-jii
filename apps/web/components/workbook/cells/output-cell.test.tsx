@@ -508,10 +508,12 @@ describe("OutputCellComponent", () => {
       const tab = screen.getByRole("tab", { name: "output.tabTimeseries" });
       await user.click(tab);
 
-      // Decoded series name follows "<sub_protocol> · Det <detector> [vmin-vmax]";
+      // Decoded series name follows "<sub_protocol> · <led label> [vmin-vmax]";
       // values are normalised 0..1.
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-      expect(screen.getByTestId("series-ABS · Det 3 [10-30]")).toHaveTextContent("0,0.5,1");
+      expect(screen.getByTestId("series-ABS · 530 nm (green, body) [10-30]")).toHaveTextContent(
+        "0,0.5,1",
+      );
     });
 
     it("shows a loading placeholder while the source protocol is being fetched", async () => {

@@ -44,34 +44,22 @@ function pickProtocolJson(code: unknown): ProtocolJson | null {
 
 interface SeriesGroup {
   subProtocol: string | undefined;
-  detector: number;
+  light: number;
   records: OutputRecord[];
 }
 
 function groupOutputs(outputs: OutputRecord[]): SeriesGroup[] {
   const groups = new Map<string, SeriesGroup>();
   for (const r of outputs) {
-    const key = `${r.sub_protocol ?? ""}::${r.detector}`;
+    const key = `${r.sub_protocol ?? ""}::${r.light}`;
     let group = groups.get(key);
     if (!group) {
-      group = { subProtocol: r.sub_protocol, detector: r.detector, records: [] };
+      group = { subProtocol: r.sub_protocol, light: r.light, records: [] };
       groups.set(key, group);
     }
     group.records.push(r);
   }
   return Array.from(groups.values());
-}
-
-// Stable palette so the same detector index gets a consistent colour across
-// re-renders; cycles for measurements with more detectors than entries.
-const DETECTOR_PALETTE = ["#1565c0", "#388e3c", "#e65100", "#6a1b9a", "#c62828", "#00838f"];
-
-function detectorColor(detector: number): string {
-  if (!Number.isFinite(detector)) return "#005E5E";
-  const idx =
-    (((Math.trunc(detector) - 1) % DETECTOR_PALETTE.length) + DETECTOR_PALETTE.length) %
-    DETECTOR_PALETTE.length;
-  return DETECTOR_PALETTE[idx] ?? "#005E5E";
 }
 
 function buildDetectorTraces(groups: SeriesGroup[]): Partial<PlotData>[] {
@@ -90,12 +78,12 @@ function buildDetectorTraces(groups: SeriesGroup[]): Partial<PlotData>[] {
       x.push(r.timestamp_us / 1e6);
       y.push((r.value - min) / range);
     }
-    const detectorLabel = `Det ${g.detector}`;
+    const ledLabel = LED_NAMES[g.light] ?? `LED ${g.light}`;
     const rangeText = `[${Math.round(min)}-${Math.round(max)}]`;
     const name = g.subProtocol
-      ? `${g.subProtocol} · ${detectorLabel} ${rangeText}`
-      : `${detectorLabel} ${rangeText}`;
-    const color = detectorColor(g.detector);
+      ? `${g.subProtocol} · ${ledLabel} ${rangeText}`
+      : `${ledLabel} ${rangeText}`;
+    const color = LED_COLORS[g.light] ?? "#005E5E";
     const trace = {
       type: "scatter",
       mode: "markers",
