@@ -29,6 +29,10 @@ interface UseWorkbookExecutionOptions {
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
   onPromptQuestion?: (cell: QuestionCell) => Promise<string | undefined>;
+  /** Fires when a protocol cell is run with no device connected. The host
+   * is expected to surface a user-facing prompt (toast/dialog) offering
+   * the Connect action. */
+  onRequireDevice?: () => void;
 }
 
 function resolveSensorFamily(_cells: WorkbookCell[]): SensorFamily {
@@ -106,6 +110,7 @@ export function useWorkbookExecution({
   cells,
   onCellsChange,
   onPromptQuestion,
+  onRequireDevice,
 }: UseWorkbookExecutionOptions) {
   const [executionStates, setExecutionStates] = useState<Record<string, CellExecutionState>>({});
   const [isRunningAll, setIsRunningAll] = useState(false);
@@ -121,6 +126,8 @@ export function useWorkbookExecution({
   onCellsChangeRef.current = onCellsChange;
   const onPromptQuestionRef = useRef(onPromptQuestion);
   onPromptQuestionRef.current = onPromptQuestion;
+  const onRequireDeviceRef = useRef(onRequireDevice);
+  onRequireDeviceRef.current = onRequireDevice;
 
   const setSensorFamily = useCallback((family: SensorFamily) => {
     setSensorFamilyState(family);
@@ -164,6 +171,9 @@ export function useWorkbookExecution({
       }
 
       if (!isConnectedRef.current) {
+        // Surface a UI prompt so the user can connect from the toast rather
+        // than discovering the failure only in the output cell.
+        onRequireDeviceRef.current?.();
         setCellState(cell.id, { status: "error", error: "No device connected" });
         return insertOutputAfterCell(
           currentCells,
