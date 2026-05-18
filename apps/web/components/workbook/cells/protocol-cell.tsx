@@ -120,26 +120,25 @@ export function ProtocolCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        <div className="flex items-center gap-1.5">
-          {protocolFamily && (
-            <span
-              className="rounded px-1.5 py-0.5 text-xs font-medium capitalize"
-              style={{
-                backgroundColor: "color-mix(in srgb, #2D3142 10%, transparent)",
-                border: "1px solid color-mix(in srgb, #2D3142 25%, transparent)",
-                color: "#2D3142",
-              }}
-            >
-              {getSensorFamilyLabel(protocolFamily)}
-            </span>
-          )}
-          <Link href={`/platform/protocols/${protocolId}`} target="_blank">
-            <ExternalLink className="text-muted-foreground hover:text-foreground h-3 w-3 transition-colors" />
-          </Link>
-        </div>
+        protocolFamily ? (
+          <span className="text-xs capitalize text-[#68737B]">
+            {getSensorFamilyLabel(protocolFamily)}
+          </span>
+        ) : undefined
       }
       headerActions={
         <div className="flex items-center gap-1">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground h-7 w-7 p-0 hover:text-[#005E5E]"
+            title="Open protocol in new tab"
+          >
+            <Link href={`/platform/protocols/${protocolId}`} target="_blank">
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
