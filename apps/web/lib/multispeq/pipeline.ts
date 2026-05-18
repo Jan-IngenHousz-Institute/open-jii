@@ -432,6 +432,7 @@ function explodeV2Item(
   item: Record<string, unknown>,
   measurementId: string | null,
   projectId: string | null,
+  indexOffset = 0,
 ): SubProtocolRecord[] {
   const protocolId = item.protocol_id;
   const time = item.time;
@@ -446,7 +447,7 @@ function explodeV2Item(
         measurement_id: measurementId,
         project_id: projectId,
         protocol_id: isFiniteNumber(protocolId) ? Math.trunc(protocolId) : null,
-        sub_protocol_index: idx,
+        sub_protocol_index: idx + indexOffset,
         label: typeof label === "string" ? label : "",
         data_raw: dataRaw,
         data_raw_len: dataRaw.length,
@@ -457,6 +458,10 @@ function explodeV2Item(
       },
     ];
   });
+}
+
+function isV2Item(item: unknown): item is Record<string, unknown> {
+  return item != null && typeof item === "object" && !Array.isArray(item) && "set" in item;
 }
 
 export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord[] {
@@ -474,15 +479,15 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
   const measurementId = measurement.measurement_id ?? null;
   const projectId = measurement.project_id ?? null;
 
-  const first = items[0];
-  if (
-    items.length === 1 &&
-    first != null &&
-    typeof first === "object" &&
-    !Array.isArray(first) &&
-    "set" in first
-  ) {
-    return explodeV2Item(first as Record<string, unknown>, measurementId, projectId);
+  if (items.every(isV2Item)) {
+    const out: SubProtocolRecord[] = [];
+    let offset = 0;
+    for (const item of items) {
+      const records = explodeV2Item(item, measurementId, projectId, offset);
+      out.push(...records);
+      offset += Array.isArray(item.set) ? item.set.length : 0;
+    }
+    return out;
   }
 
   const out: SubProtocolRecord[] = [];

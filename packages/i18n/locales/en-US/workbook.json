@@ -37,7 +37,7 @@
     "expandChart": "Expand chart for {{column}}",
     "loadingProtocol": "Loading protocol…",
     "timeseriesXAxis": "Time (s)",
-    "timeseriesYAxis": "Normalised signal",
+    "timeseriesYAxis": "Normalized signal",
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "No detector readings to plot",
     "timeseriesError": "Cannot decode this output against the source protocol"

@@ -380,6 +380,27 @@ describe("explodeRecords", () => {
   it("returns [] for malformed JSON", () => {
     expect(explodeRecords({ sample_raw: "not-json" })).toEqual([]);
   });
+
+  it("explodes multi-item v2 arrays (each item carries its own 'set')", () => {
+    // Each compound protocol contributes its own sets; sub_protocol_index
+    // remains globally unique by offsetting the second item's inner indices.
+    const v2Multi = JSON.stringify([
+      { protocol_id: 1, time: 1700000000, set: [{ label: "A", data_raw: [1] }] },
+      {
+        protocol_id: 2,
+        time: 1700000001,
+        set: [
+          { label: "B", data_raw: [2, 3] },
+          { label: "C", data_raw: [4] },
+        ],
+      },
+    ]);
+    const records = explodeRecords({ sample_raw: v2Multi });
+    expect(records).toHaveLength(3);
+    expect(records.map((r) => r.label)).toEqual(["A", "B", "C"]);
+    expect(records.map((r) => r.sub_protocol_index)).toEqual([0, 1, 2]);
+    expect(records[1]?.protocol_id).toBe(2);
+  });
 });
 
 describe("measurementToTimeseries", () => {
