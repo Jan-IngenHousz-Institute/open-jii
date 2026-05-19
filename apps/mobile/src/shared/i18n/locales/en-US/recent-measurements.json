@@ -4,6 +4,17 @@
     "synced": "Synced",
     "unsynced": "Unsynced"
   },
+  "sectionHeader": {
+    "today": "Today · {{date}}",
+    "yesterday": "Yesterday · {{date}}",
+    "other": "{{date}}"
+  },
+  "tag": {
+    "synced": "Synced",
+    "queued": "Queued",
+    "uploading": "Uploading",
+    "failed": "Failed"
+  },
   "toolbar": {
     "deleteAllSyncedAccessibilityLabel": "Delete all synced measurements",
     "deleteAllSyncedAccessibilityHint": "Removes measurements that have already been uploaded",

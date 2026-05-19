@@ -9,5 +9,40 @@
   "themeDark": "Donker",
   "openWebProfile": "Open webprofiel",
   "logOut": "Uitloggen",
-  "cannotOpenWebProfile": "Kan webprofiel niet openen. Controleer je internetverbinding."
+  "cannotOpenWebProfile": "Kan webprofiel niet openen. Controleer je internetverbinding.",
+  "identity": {
+    "roleResearcher": "Onderzoeker",
+    "groupNL": "NL-groep"
+  },
+  "hardware": {
+    "section": "Hardware & data",
+    "devices": "Apparaten",
+    "devicesSubConnected": "{{name}}",
+    "devicesSubDisconnected": "Niet verbonden",
+    "dataSync": "Gegevens & sync",
+    "dataSyncSubQueued_one": "{{count}} upload in wachtrij · laatst gesynchroniseerd {{lastSync}}",
+    "dataSyncSubQueued_other": "{{count}} uploads in wachtrij · laatst gesynchroniseerd {{lastSync}}",
+    "dataSyncSubAllSynced": "Helemaal bij · laatst gesynchroniseerd {{lastSync}}",
+    "dataSyncSubNever": "Nog geen uploads",
+    "calibration": "Kalibratie",
+    "calibrationSub": "Dagelijkse referentiecheck · laatst geslaagd 06:30"
+  },
+  "account": {
+    "section": "Account",
+    "appSettings": "App-instellingen",
+    "appSettingsSub": "Thema, eenheden, offlinemodus",
+    "notifications": "Meldingen",
+    "notificationsSub": "Flow-herinneringen, syncmeldingen",
+    "helpFeedback": "Help & feedback",
+    "openWebProfileSub": "Bekijk je onderzoekersprofiel online"
+  },
+  "signOut": {
+    "title": "Uitloggen",
+    "subtitle": "Verwijdert eventueel lopende flow"
+  },
+  "footer": "openJII Mobile · v{{version}} ({{build}})",
+  "appSettingsSheet": {
+    "title": "App-instellingen",
+    "themeLabel": "Thema"
+  }
 }

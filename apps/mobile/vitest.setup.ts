@@ -8,6 +8,34 @@ import { vi } from "vitest";
  * only legitimate mocking boundary in component tests.
  */
 
+// AsyncStorage wraps a native module that doesn't resolve under Node. Stub
+// with an in-memory store so persisted Zustand slices don't reject during
+// setState writes. (Stores that read on construction get an empty map.)
+vi.mock("@react-native-async-storage/async-storage", () => {
+  const store = new Map<string, string>();
+  const api = {
+    setItem: vi.fn(async (key: string, value: string) => {
+      store.set(key, value);
+    }),
+    getItem: vi.fn(async (key: string) => store.get(key) ?? null),
+    removeItem: vi.fn(async (key: string) => {
+      store.delete(key);
+    }),
+    clear: vi.fn(async () => {
+      store.clear();
+    }),
+    getAllKeys: vi.fn(async () => Array.from(store.keys())),
+    multiGet: vi.fn(async (keys: string[]) => keys.map((k) => [k, store.get(k) ?? null])),
+    multiSet: vi.fn(async (pairs: [string, string][]) => {
+      for (const [k, v] of pairs) store.set(k, v);
+    }),
+    multiRemove: vi.fn(async (keys: string[]) => {
+      for (const k of keys) store.delete(k);
+    }),
+  };
+  return { __esModule: true, default: api };
+});
+
 // expo-linear-gradient ships JSX in its build output and wraps a native view.
 vi.mock("expo-linear-gradient", () => ({
   LinearGradient: ({ children, ...props }: { children?: React.ReactNode }) =>

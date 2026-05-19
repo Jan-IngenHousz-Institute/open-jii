@@ -9,5 +9,40 @@
   "themeDark": "Dark",
   "openWebProfile": "Open Web Profile",
   "logOut": "Log Out",
-  "cannotOpenWebProfile": "Cannot open web profile. Please check your internet connection."
+  "cannotOpenWebProfile": "Cannot open web profile. Please check your internet connection.",
+  "identity": {
+    "roleResearcher": "Researcher",
+    "groupNL": "NL group"
+  },
+  "hardware": {
+    "section": "Hardware & data",
+    "devices": "Devices",
+    "devicesSubConnected": "{{name}}",
+    "devicesSubDisconnected": "Not connected",
+    "dataSync": "Data & sync",
+    "dataSyncSubQueued_one": "{{count}} queued upload · last sync {{lastSync}}",
+    "dataSyncSubQueued_other": "{{count}} queued uploads · last sync {{lastSync}}",
+    "dataSyncSubAllSynced": "All caught up · last sync {{lastSync}}",
+    "dataSyncSubNever": "No uploads yet",
+    "calibration": "Calibration",
+    "calibrationSub": "Daily reference check · last passed 06:30"
+  },
+  "account": {
+    "section": "Account",
+    "appSettings": "App settings",
+    "appSettingsSub": "Theme, units, offline mode",
+    "notifications": "Notifications",
+    "notificationsSub": "Flow reminders, sync alerts",
+    "helpFeedback": "Help & feedback",
+    "openWebProfileSub": "View your researcher profile online"
+  },
+  "signOut": {
+    "title": "Sign out",
+    "subtitle": "Clears any in-progress flow"
+  },
+  "footer": "openJII Mobile · v{{version}} ({{build}})",
+  "appSettingsSheet": {
+    "title": "App settings",
+    "themeLabel": "Theme"
+  }
 }

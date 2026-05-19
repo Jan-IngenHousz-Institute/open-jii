@@ -1,8 +1,8 @@
-import { router } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useConnectToDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
@@ -10,12 +10,11 @@ export function NoDeviceState() {
   const { lastConnectedDevice } = useDeviceConnectionStore();
   const { connectToDevice, connectingDeviceId } = useConnectToDevice();
   const { t } = useTranslation("measurementFlow");
+  const openDeviceSheet = useDeviceSheetStore((s) => s.open);
 
   const isReconnecting =
     lastConnectedDevice !== undefined && connectingDeviceId === lastConnectedDevice.id;
 
-  // If a previous device is known, offer an inline reconnect so the user
-  // doesn't have to leave the measurement flow to re-establish the connection.
   if (lastConnectedDevice) {
     return (
       <View className="flex-1 items-center justify-center gap-4 p-6">
@@ -38,7 +37,7 @@ export function NoDeviceState() {
             />
             <Button
               title={t("measurementFlow:measurementNode.noDevice.connectDifferent")}
-              onPress={() => router.push("/(tabs)/")}
+              onPress={openDeviceSheet}
               variant="tertiary"
               isDisabled={!!connectingDeviceId}
               style={{ height: 44, width: "100%" }}
@@ -53,7 +52,7 @@ export function NoDeviceState() {
     <View className="flex-1 items-center justify-center">
       <Button
         title={t("measurementFlow:measurementNode.noDevice.connectFirst")}
-        onPress={() => router.push("/(tabs)/")}
+        onPress={openDeviceSheet}
         style={{ height: 44 }}
       />
     </View>

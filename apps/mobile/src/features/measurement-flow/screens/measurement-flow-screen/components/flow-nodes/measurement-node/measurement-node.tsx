@@ -1,11 +1,11 @@
 import { clsx } from "clsx";
-import { useRouter } from "expo-router";
 import { Info } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
 import { View, Text } from "react-native";
 import { toast } from "sonner-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useScanner } from "~/features/connection/hooks/use-scan-manager";
+import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
@@ -40,7 +40,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { data: device } = useConnectedDevice();
   const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
     useMeasurementFlowStore();
-  const router = useRouter();
+  const openDeviceSheet = useDeviceSheetStore((s) => s.open);
   useEffect(() => {
     setProtocolId(content.protocolId);
   }, [setProtocolId, content.protocolId]);
@@ -115,7 +115,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
             />
             <Button
               title={t("measurementFlow:measurementNode.connectToDevice")}
-              onPress={() => router.push("/(tabs)/")}
+              onPress={openDeviceSheet}
               style={{ height: 44, flex: 1 }}
             />
           </View>

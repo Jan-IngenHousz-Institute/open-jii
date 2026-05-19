@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { ChevronsLeft, Download } from "lucide-react-native";
-import React, { useCallback, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { SectionList, Text, View } from "react-native";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
 import { MeasurementsToolbar } from "~/features/recent-measurements/components/measurements-toolbar";
@@ -14,11 +14,12 @@ import { useRecentMeasurementsActions } from "~/features/recent-measurements/hoo
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { groupMeasurementsByDay } from "~/shared/utils/group-measurements-by-day";
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
-  const { t } = useTranslation(["common", "recentMeasurements"]);
+  const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
@@ -37,6 +38,12 @@ export function RecentMeasurementsScreen() {
     handleExport,
     saveComment,
   } = useRecentMeasurementsActions(filter);
+
+  const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
+  const sections = useMemo(
+    () => groupMeasurementsByDay(measurements, undefined, locale),
+    [measurements, locale],
+  );
 
   const renderItem = ({ item }: { item: MeasurementItem }) => (
     <SwipeableMeasurementRow
@@ -85,10 +92,29 @@ export function RecentMeasurementsScreen() {
         </View>
       )}
 
-      <FlatList
-        data={measurements}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.key}
         renderItem={renderItem}
+        renderSectionHeader={({ section }) => {
+          const i18nKey =
+            section.kind === "today"
+              ? "recentMeasurements:sectionHeader.today"
+              : section.kind === "yesterday"
+                ? "recentMeasurements:sectionHeader.yesterday"
+                : "recentMeasurements:sectionHeader.other";
+          return (
+            <View className={clsx("px-4 pb-1.5 pt-3", classes.background)}>
+              <Text
+                className={clsx("text-[12px] font-bold uppercase", classes.textMuted)}
+                style={{ letterSpacing: 0.6 }}
+              >
+                {t(i18nKey, { date: section.dateLabel })}
+              </Text>
+            </View>
+          );
+        }}
+        stickySectionHeadersEnabled={false}
         contentContainerStyle={{ paddingTop: 0, paddingBottom: 16, flexGrow: 1 }}
         windowSize={10}
         maxToRenderPerBatch={10}

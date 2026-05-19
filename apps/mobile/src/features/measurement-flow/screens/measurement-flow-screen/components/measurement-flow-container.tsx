@@ -7,7 +7,6 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
 import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
-import { FlowProgressIndicator } from "./flow-progress-indicator";
 import { ActiveState } from "./flow-states/active-state";
 import { CompletedState } from "./flow-states/completed-state";
 import { EmptyState } from "./flow-states/empty-state";
@@ -26,8 +25,7 @@ export function MeasurementFlowContainer() {
   // Show experiment selection if no experiment is selected yet
   if (!experimentId) {
     return (
-      <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-        <FlowProgressIndicator />
+      <View className={clsx("flex-1", classes.card)}>
         <ExperimentSelectionStep />
       </View>
     );
@@ -40,7 +38,6 @@ export function MeasurementFlowContainer() {
   if (isQuestionsSubmitPending) {
     return (
       <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-        <FlowProgressIndicator />
         <QuestionsOnlySubmitNode />
       </View>
     );
@@ -49,7 +46,6 @@ export function MeasurementFlowContainer() {
   if (isFlowCompleted && isFlowFinished) {
     return (
       <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-        <FlowProgressIndicator />
         <CompletedState />
       </View>
     );
@@ -61,7 +57,6 @@ export function MeasurementFlowContainer() {
 
   return (
     <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-      <FlowProgressIndicator />
       <ActiveState currentNode={currentNode} />
     </View>
   );
