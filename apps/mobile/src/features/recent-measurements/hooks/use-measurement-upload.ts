@@ -104,6 +104,10 @@ export function useMeasurementUpload() {
   const { t } = useTranslation(["common", "recentMeasurements"]);
 
   const mutation = useMutation({
+    // mutationFn handles offline internally (saves locally, bails before MQTT).
+    // Default `networkMode: "online"` would pause the mutation while offline
+    // and never run mutationFn — the user would see "Uploading…" forever.
+    networkMode: "always",
     mutationFn: async ({
       rawMeasurement,
       timestamp,

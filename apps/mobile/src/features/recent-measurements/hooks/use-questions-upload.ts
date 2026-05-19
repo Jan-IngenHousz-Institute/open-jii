@@ -16,6 +16,11 @@ export function useQuestionsUpload() {
   const { t } = useTranslation(["common", "recentMeasurements"]);
 
   const mutation = useMutation({
+    // The mutationFn handles offline internally (saves locally, bails before
+    // MQTT). React Query's default `networkMode: "online"` would pause the
+    // mutation when the device is offline and never call mutationFn — leaving
+    // the UI stuck on "Uploading…" with no save and no log output.
+    networkMode: "always",
     mutationFn: async ({
       timestamp,
       timezone,

@@ -45,6 +45,10 @@ export function useMeasurements() {
   failedUploadsRef.current = failedUploads;
 
   const uploadMutation = useMutation({
+    // useAutoUpload guards offline at the call site; the mutationFn itself
+    // should always run when invoked (default "online" mode would pause it
+    // and rows would silently stay in "uploading" forever).
+    networkMode: "always",
     mutationFn: async () => {
       // 3 keeps a single phone's burst well below AWS Cognito Identity Pool
       // throttling when multiple field devices come online at the same time.
