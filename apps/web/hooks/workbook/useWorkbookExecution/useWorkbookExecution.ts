@@ -164,6 +164,9 @@ export function useWorkbookExecution({
       }
 
       if (!isConnectedRef.current) {
+        // The page-level Run handler short-circuits to connect() before this
+        // path on direct Run clicks; this branch covers Run all + scripted
+        // entry points where we still need a recorded error.
         setCellState(cell.id, { status: "error", error: "No device connected" });
         return insertOutputAfterCell(
           currentCells,
