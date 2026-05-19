@@ -5,8 +5,9 @@ import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
 import type { ThemePreference } from "~/shared/ui/context/ThemeContext";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { useThemePreference } from "~/shared/ui/hooks/use-theme-preference";
+import { cn } from "~/shared/utils/cn";
 
 const THEME_OPTIONS: {
   key: ThemePreference;
@@ -20,7 +21,7 @@ const THEME_OPTIONS: {
 
 export const AppSettingsSheet = forwardRef<BottomSheetModal>(
   function AppSettingsSheet(_props, ref) {
-    const { colors: themeColors } = useTheme();
+    const themeColors = useThemeColors();
     const { t } = useTranslation("profile");
     const { themePreference, changeTheme } = useThemePreference();
     const insets = useSafeAreaInsets();
@@ -62,19 +63,23 @@ export const AppSettingsSheet = forwardRef<BottomSheetModal>(
               {THEME_OPTIONS.map(({ key, labelKey, Icon }) => {
                 const isActive = themePreference === key;
                 return (
+                  // Force remount on every render so RN's native style cache
+                  // (Expo SDK 54) re-applies the theme's resolved colors after
+                  // a theme switch — same workaround used by Back/Next.
                   <Pressable
-                    key={key}
+                    key={`${key}-${themeColors.scheme}-${isActive ? "1" : "0"}`}
                     onPress={() => void changeTheme(key)}
-                    className="flex-1 flex-row items-center justify-center gap-2 rounded-lg border px-3 py-2.5"
-                    style={{
-                      borderColor: isActive ? themeColors.brand : themeColors.border,
-                      backgroundColor: isActive ? themeColors.brand + "15" : "transparent",
-                    }}
+                    className={cn(
+                      "flex-1 flex-row items-center justify-center gap-2 rounded-lg border px-3 py-2.5",
+                      isActive ? "border-primary bg-primary/10" : "border-border bg-transparent",
+                    )}
                   >
                     <Icon size={16} color={isActive ? themeColors.brand : themeColors.onSurface} />
                     <Text
-                      className="text-sm font-semibold"
-                      style={{ color: isActive ? themeColors.brand : themeColors.onSurface }}
+                      className={cn(
+                        "text-sm font-semibold",
+                        isActive ? "text-primary" : "text-on-surface",
+                      )}
                     >
                       {t(labelKey)}
                     </Text>
