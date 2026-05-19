@@ -9,7 +9,6 @@ import type {
   BranchPath,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,
@@ -447,9 +446,9 @@ export function BranchCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        <Badge variant="outline" className="text-xs">
+        <span className="text-xs font-normal text-[#68737B]">
           {cell.paths.length} path{cell.paths.length !== 1 ? "s" : ""}
-        </Badge>
+        </span>
       }
       onRun={() => onRun?.()}
     >

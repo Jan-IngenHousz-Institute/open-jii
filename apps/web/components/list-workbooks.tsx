@@ -42,7 +42,7 @@ export function ListWorkbooks() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-4">
         <div className="relative w-full md:w-[220px]">
           <Input
             type="text"
@@ -62,7 +62,7 @@ export function ListWorkbooks() {
             </button>
           )}
         </div>
-        <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
+        <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-4">
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-full md:w-[160px]">
               <SelectValue placeholder={t("workbooks.filterWorkbooks")} />

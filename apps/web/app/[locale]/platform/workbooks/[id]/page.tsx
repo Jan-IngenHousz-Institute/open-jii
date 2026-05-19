@@ -60,6 +60,7 @@ function WorkbookEditorWithAutosave({
   name: string;
 }) {
   const { data: session } = useSession();
+  const { t } = useTranslation(["workbook", "common"]);
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
@@ -130,6 +131,29 @@ function WorkbookEditorWithAutosave({
 
   const isCreator = session?.user.id === createdBy;
 
+  // Trigger the same `connect()` the toolbar uses when the user clicks Run on
+  // a Protocol cell with no device. Done before any await so the browser's
+  // Web Serial / Web Bluetooth picker still sees a live user gesture.
+  const handleRunCell = useCallback(
+    (cellId: string) => {
+      const cell = cells.find((c) => c.id === cellId);
+      if (cell?.type === "protocol" && !isConnected) {
+        void connect();
+        return;
+      }
+      void runCell(cellId);
+    },
+    [cells, isConnected, connect, runCell],
+  );
+
+  const handleClearOutputs = useCallback(() => {
+    const count = cells.filter((c) => c.type === "output").length;
+    clearOutputs();
+    if (count > 0) {
+      toast({ description: t("workbooks.outputsCleared", { count }) });
+    }
+  }, [cells, clearOutputs, t]);
+
   return (
     <div className="space-y-6">
       <WorkbookEditor
@@ -150,8 +174,8 @@ function WorkbookEditorWithAutosave({
         onDisconnect={disconnect}
         onRunAll={runAll}
         onStopExecution={stopExecution}
-        onClearOutputs={clearOutputs}
-        onRunCell={runCell}
+        onClearOutputs={handleClearOutputs}
+        onRunCell={handleRunCell}
         promptedQuestionId={promptedQuestionId}
         onQuestionAnswered={handleQuestionAnswered}
       />
