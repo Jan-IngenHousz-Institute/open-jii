@@ -5,6 +5,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CommentModal } from "./comment-modal";
 
+vi.mock("~/shared/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        "recentMeasurements:commentModal.title": "Add comment",
+        "recentMeasurements:commentModal.answersLabel": "Answers: ",
+        "recentMeasurements:commentModal.experimentLabel": "Experiment: ",
+        "recentMeasurements:commentModal.measurementDoneLabel": "Measurement done: ",
+        "recentMeasurements:commentModal.placeholder": "Enter your comment here...",
+        "recentMeasurements:commentModal.saveButton": "Save comment",
+        "recentMeasurements:list.noQuestionsAnswered": "No questions answered",
+        "common:cancel": "Cancel",
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
+
 const bottomSheetState = vi.hoisted(() => ({
   present: vi.fn(),
   dismiss: vi.fn(),

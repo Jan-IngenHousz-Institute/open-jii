@@ -81,6 +81,8 @@ vi.mock("~/shared/i18n", () => ({
         "recentMeasurements:toasts.measurementUploaded": "Measurement uploaded!",
         "recentMeasurements:toasts.uploadedLocalStatusRefresh":
           "Uploaded — local status will refresh on next sync",
+        "recentMeasurements:toasts.savedOffline":
+          "Saved offline — will upload when you're back online",
       };
       return map[key] ?? key;
     },
