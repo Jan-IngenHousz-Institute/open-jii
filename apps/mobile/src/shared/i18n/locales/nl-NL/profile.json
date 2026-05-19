@@ -9,10 +9,6 @@
   "openWebProfile": "Open webprofiel",
   "logOut": "Uitloggen",
   "cannotOpenWebProfile": "Kan webprofiel niet openen. Controleer je internetverbinding.",
-  "identity": {
-    "roleResearcher": "Onderzoeker",
-    "groupNL": "NL-groep"
-  },
   "hardware": {
     "section": "Hardware & data",
     "devices": "Apparaten",
@@ -22,16 +18,12 @@
     "dataSyncSubQueued_one": "{{count}} upload in wachtrij · laatst gesynchroniseerd {{lastSync}}",
     "dataSyncSubQueued_other": "{{count}} uploads in wachtrij · laatst gesynchroniseerd {{lastSync}}",
     "dataSyncSubAllSynced": "Helemaal bij · laatst gesynchroniseerd {{lastSync}}",
-    "dataSyncSubNever": "Nog geen uploads",
-    "calibration": "Kalibratie",
-    "calibrationSub": "Dagelijkse referentiecheck · laatst geslaagd 06:30"
+    "dataSyncSubNever": "Nog geen uploads"
   },
   "account": {
     "section": "Account",
     "appSettings": "App-instellingen",
     "appSettingsSub": "Thema, eenheden, offlinemodus",
-    "notifications": "Meldingen",
-    "notificationsSub": "Flow-herinneringen, syncmeldingen",
     "helpFeedback": "Help & feedback",
     "openWebProfileSub": "Bekijk je onderzoekersprofiel online"
   },

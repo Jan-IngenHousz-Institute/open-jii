@@ -1,4 +1,4 @@
-import { Bell, ExternalLink, HelpCircle, SlidersHorizontal } from "lucide-react-native";
+import { ExternalLink, HelpCircle, SlidersHorizontal } from "lucide-react-native";
 import React from "react";
 import { Linking, Text, View } from "react-native";
 import { colors } from "~/shared/constants/colors";
@@ -41,12 +41,6 @@ export function ProfileAccountCard({ onOpenAppSettings }: ProfileAccountCardProp
           title={t("profile:account.appSettings")}
           subtitle={t("profile:account.appSettingsSub")}
           onPress={onOpenAppSettings}
-        />
-        <RowItem
-          icon={<Bell size={18} color={colors.jii.darkGreen} />}
-          iconBackgroundClassName="bg-jii-mint"
-          title={t("profile:account.notifications")}
-          subtitle={t("profile:account.notificationsSub")}
         />
         <RowItem
           icon={<HelpCircle size={18} color={colors.jii.darkGreen} />}

@@ -1,4 +1,4 @@
-import { Activity, Bluetooth, Cloud } from "lucide-react-native";
+import { Bluetooth, Cloud } from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
@@ -48,12 +48,6 @@ export function ProfileHardwareCard() {
           iconBackgroundClassName="bg-jii-mint"
           title={t("hardware.dataSync")}
           subtitle={dataSyncSub}
-        />
-        <RowItem
-          icon={<Activity size={18} color={colors.jii.darkGreen} />}
-          iconBackgroundClassName="bg-jii-mint"
-          title={t("hardware.calibration")}
-          subtitle={t("hardware.calibrationSub")}
           isLast
         />
       </Card>

@@ -1,8 +1,6 @@
 import React from "react";
 import { Text, View } from "react-native";
-import { useTranslation } from "~/shared/i18n";
 import { Avatar } from "~/shared/ui/Avatar";
-import { Tag } from "~/shared/ui/Tag";
 
 interface ProfileIdentityProps {
   name?: string;
@@ -19,7 +17,6 @@ function initialsFrom(name: string | undefined): string {
 }
 
 export function ProfileIdentity({ name, email, imageUri }: ProfileIdentityProps) {
-  const { t } = useTranslation("profile");
   return (
     <View className="my-6 items-center">
       <Avatar
@@ -39,10 +36,6 @@ export function ProfileIdentity({ name, email, imageUri }: ProfileIdentityProps)
       <Text className="text-muted-body text-[13px]" numberOfLines={1}>
         {email}
       </Text>
-      <View className="mt-3 flex-row gap-2">
-        <Tag variant="sensor">{t("identity.roleResearcher")}</Tag>
-        <Tag>{t("identity.groupNL")}</Tag>
-      </View>
     </View>
   );
 }

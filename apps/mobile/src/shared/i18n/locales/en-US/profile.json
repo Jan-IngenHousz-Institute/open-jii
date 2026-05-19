@@ -9,10 +9,6 @@
   "openWebProfile": "Open Web Profile",
   "logOut": "Log Out",
   "cannotOpenWebProfile": "Cannot open web profile. Please check your internet connection.",
-  "identity": {
-    "roleResearcher": "Researcher",
-    "groupNL": "NL group"
-  },
   "hardware": {
     "section": "Hardware & data",
     "devices": "Devices",
@@ -22,16 +18,12 @@
     "dataSyncSubQueued_one": "{{count}} queued upload · last sync {{lastSync}}",
     "dataSyncSubQueued_other": "{{count}} queued uploads · last sync {{lastSync}}",
     "dataSyncSubAllSynced": "All caught up · last sync {{lastSync}}",
-    "dataSyncSubNever": "No uploads yet",
-    "calibration": "Calibration",
-    "calibrationSub": "Daily reference check · last passed 06:30"
+    "dataSyncSubNever": "No uploads yet"
   },
   "account": {
     "section": "Account",
     "appSettings": "App settings",
     "appSettingsSub": "Theme, units, offline mode",
-    "notifications": "Notifications",
-    "notificationsSub": "Flow reminders, sync alerts",
     "helpFeedback": "Help & feedback",
     "openWebProfileSub": "View your researcher profile online"
   },
