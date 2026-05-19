@@ -250,9 +250,7 @@ const ENSURE_SYNCED_TIMEOUT_MS = 10_000;
 export async function ensureSynced(): Promise<void> {
   console.log("[time-sync] ensureSynced called", {
     isSynced: state.isSynced,
-    lastSyncedAt: state.lastSyncedAt
-      ? new Date(state.lastSyncedAt).toISOString()
-      : "never",
+    lastSyncedAt: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
     waitersBefore: syncWaiters.length,
   });
   if (state.isSynced) return;
