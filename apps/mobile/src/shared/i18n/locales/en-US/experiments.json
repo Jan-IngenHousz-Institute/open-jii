@@ -1,0 +1,27 @@
+{
+  "screen": {
+    "dropdownPlaceholder": "Choose an experiment",
+    "emptySelection": "Select an experiment to view data"
+  },
+  "tables": {
+    "loading": "Loading experiment data...",
+    "empty": "No data available for this experiment",
+    "heading": "Experiment Data ({{count}} tables)"
+  },
+  "dataTable": {
+    "arrayBadge": "[Array]",
+    "objectBadge": "[Object]"
+  },
+  "tableDetail": {
+    "summary": "{{rowCount}} rows, {{columnCount}} columns",
+    "row": "Row {{index}}",
+    "emptyArray": "Empty array",
+    "arraySummary": "[{{length}} {{type}} items]",
+    "objectSummary": "{{{count}} keys}",
+    "itemTypeMixed": "mixed",
+    "itemTypeString": "string",
+    "itemTypeNumber": "number",
+    "itemTypeBoolean": "boolean",
+    "itemTypeObject": "object"
+  }
+}

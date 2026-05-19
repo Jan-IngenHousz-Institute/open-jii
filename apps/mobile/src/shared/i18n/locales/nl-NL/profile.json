@@ -1,0 +1,13 @@
+{
+  "accountInformation": "Accountinformatie",
+  "organization": "Organisatie",
+  "organizationNone": "N.v.t.",
+  "loginExpires": "Login verloopt",
+  "appearance": "Weergave",
+  "themeSystem": "Systeem",
+  "themeLight": "Licht",
+  "themeDark": "Donker",
+  "openWebProfile": "Open webprofiel",
+  "logOut": "Uitloggen",
+  "cannotOpenWebProfile": "Kan webprofiel niet openen. Controleer je internetverbinding."
+}

@@ -1,28 +1,21 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, useSegments } from "expo-router";
 import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
-import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RecentTabIcon } from "~/components/recent-tab-icon";
-import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
-import { useThemeColors } from "~/hooks/use-theme-colors";
-import { pruneExpiredMeasurements } from "~/services/measurements-storage";
-import { DevIndicator } from "~/widgets/dev-indicator";
-import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
+import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
+import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
+import { usePruneExpiredMeasurements } from "~/features/recent-measurements/hooks/use-prune-expired-measurements";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { DevIndicator } from "~/shared/ui/widgets/dev-indicator";
+import { DeviceConnectionWidget } from "~/shared/ui/widgets/device-connection-widget";
 
 export default function TabLayout() {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const segments = useSegments();
-  const queryClient = useQueryClient();
 
   useAutoReconnect();
-
-  useEffect(() => {
-    void pruneExpiredMeasurements();
-    void queryClient.invalidateQueries({ queryKey: ["measurements"] });
-  }, [queryClient]);
+  usePruneExpiredMeasurements();
 
   const inMeasureTab = segments.includes("measurement-flow");
 

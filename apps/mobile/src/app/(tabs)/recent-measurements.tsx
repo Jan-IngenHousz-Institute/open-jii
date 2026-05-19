@@ -1,1 +1,1 @@
-export { RecentMeasurementsScreen as default } from "~/components/recent-measurements-screen/recent-measurements-screen";
+export { RecentMeasurementsScreen as default } from "~/features/recent-measurements/screens/recent-measurements-screen";
