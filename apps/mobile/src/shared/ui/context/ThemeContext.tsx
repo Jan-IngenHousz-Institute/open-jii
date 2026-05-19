@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colorScheme } from "nativewind";
 import React, { createContext, useState, useEffect } from "react";
-import { useColorScheme } from "react-native";
+import { Appearance, useColorScheme } from "react-native";
 import { Theme, darkTheme, lightTheme } from "~/shared/constants/theme";
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -28,7 +28,30 @@ interface ThemeProviderProps {
 // fix is a `MainActivity.onConfigurationChanged` override (wiped by
 // `expo prebuild --clean`) or a config plugin — neither in scope right now.
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const systemColorScheme = useColorScheme();
+  // useColorScheme can return null on Android cold-start before Appearance
+  // resolves. We keep the hook subscription for live OS-theme changes, but
+  // also seed an Appearance.getColorScheme() snapshot so the first render
+  // reflects the OS preference instead of defaulting to light.
+  const hookColorScheme = useColorScheme();
+  const [systemColorScheme, setSystemColorScheme] = useState<"light" | "dark">(() =>
+    Appearance.getColorScheme() === "dark" ? "dark" : "light",
+  );
+
+  useEffect(() => {
+    if (hookColorScheme === "dark" || hookColorScheme === "light") {
+      setSystemColorScheme(hookColorScheme);
+    }
+  }, [hookColorScheme]);
+
+  // Belt-and-braces: Appearance.addChangeListener fires on Android even when
+  // useColorScheme's null-cycle would otherwise hide the change.
+  useEffect(() => {
+    const sub = Appearance.addChangeListener(({ colorScheme: next }) => {
+      if (next === "dark" || next === "light") setSystemColorScheme(next);
+    });
+    return () => sub.remove();
+  }, []);
+
   const [theme, setTheme] = useState<Theme>(lightTheme);
   const [themePreference, setThemePreference] = useState<ThemePreference>("system");
 
@@ -57,11 +80,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     // the legacy JS theme object.
     const themesByScheme = { light: lightTheme, dark: darkTheme } as const;
     const activeScheme: "light" | "dark" =
-      themePreference === "system"
-        ? systemColorScheme === "dark"
-          ? "dark"
-          : "light"
-        : themePreference;
+      themePreference === "system" ? systemColorScheme : themePreference;
     colorScheme.set(activeScheme);
     setTheme(themesByScheme[activeScheme]);
   }, [themePreference, systemColorScheme]);
