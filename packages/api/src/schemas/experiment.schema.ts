@@ -864,6 +864,41 @@ export const zUpdateExperimentMemberRoleBody = z.object({
   role: zExperimentMemberRole.describe("New role to assign to the member"),
 });
 
+// --- Experiment Join Request Schemas ---
+export const zJoinRequestStatus = z.enum(["pending", "approved", "rejected", "cancelled"]);
+
+export const zExperimentJoinRequest = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  user: z.object({
+    id: z.string().uuid(),
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string().email().nullable(),
+  }),
+  message: z.string().nullable(),
+  status: zJoinRequestStatus,
+  decidedBy: z.string().uuid().nullable(),
+  decidedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zExperimentJoinRequestList = z.array(zExperimentJoinRequest);
+
+export const zCreateJoinRequestBody = z.object({
+  message: z
+    .string()
+    .max(250, "Message must be 250 characters or less")
+    .optional()
+    .describe("Optional short message to the project admins"),
+});
+
+export const zJoinRequestPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  requestId: z.string().uuid().describe("ID of the join request"),
+});
+
 export const zExperimentFilterQuery = z.object({
   filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
@@ -1078,6 +1113,11 @@ export type ExportRecord = z.infer<typeof zExportRecord>;
 export type ListExportsResponse = z.infer<typeof zListExportsResponse>;
 export type IdPathParam = z.infer<typeof zIdPathParam>;
 export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;
+export type JoinRequestStatus = z.infer<typeof zJoinRequestStatus>;
+export type ExperimentJoinRequest = z.infer<typeof zExperimentJoinRequest>;
+export type ExperimentJoinRequestList = z.infer<typeof zExperimentJoinRequestList>;
+export type CreateJoinRequestBody = z.infer<typeof zCreateJoinRequestBody>;
+export type JoinRequestPathParam = z.infer<typeof zJoinRequestPathParam>;
 export type DataSourceType = z.infer<typeof zDataSourceType>;
 export type UploadExperimentDataBody = z.infer<typeof zUploadExperimentDataBody>;
 export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataResponse>;

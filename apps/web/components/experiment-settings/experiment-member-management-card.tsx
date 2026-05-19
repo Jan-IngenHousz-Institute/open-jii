@@ -15,6 +15,7 @@ import {
   CardDescription,
   CardContent,
 } from "@repo/ui/components/card";
+import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { useExperimentJoinRequests } from "../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
 import { useExperimentMemberAdd } from "../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
 import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -35,6 +37,7 @@ import { useUserInvitationRoleUpdate } from "../../hooks/user-invitation/useUser
 import { useUserInvitations } from "../../hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { MemberList } from "../current-members-list/current-members-list";
 import { UserSearchPopover } from "../user-search-popover";
+import { ExperimentJoinRequestsPanel } from "./experiment-join-requests-panel";
 
 type MemberSelection =
   | { type: "user"; user: UserProfile }
@@ -62,6 +65,7 @@ export function ExperimentMemberManagement({
   const currentUserId = session?.user.id;
   const currentMember = members.find((m) => m.user.id === currentUserId);
   const currentUserRole = currentMember?.role;
+  const isAdmin = currentUserRole === "admin";
 
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
@@ -78,6 +82,9 @@ export function ExperimentMemberManagement({
   const { mutate: updateInvitationRole } = useUserInvitationRoleUpdate();
   const { data: invitationsData } = useUserInvitations("experiment", experimentId);
   const invitations: Invitation[] = invitationsData?.body ?? [];
+
+  const { data: joinRequestsData } = useExperimentJoinRequests(experimentId, isAdmin);
+  const joinRequestCount = joinRequestsData?.status === 200 ? joinRequestsData.body.length : 0;
 
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
@@ -105,7 +112,6 @@ export function ExperimentMemberManagement({
     setSelectedRole("member");
   };
 
-  // Handle adding a member by userId or inviting by email
   const handleAddMember = async () => {
     if (!selection) return;
 
@@ -142,18 +148,11 @@ export function ExperimentMemberManagement({
     resetSelection();
   };
 
-  // Handle removing a member
   const handleRemoveMember = async (memberId: string) => {
     setRemovingMemberId(memberId);
-
     try {
       await removeMember(
-        {
-          params: {
-            id: experimentId,
-            memberId,
-          },
-        },
+        { params: { id: experimentId, memberId } },
         {
           onSuccess: () => {
             toast({ description: t("experimentSettings.memberRemoved") });
@@ -224,113 +223,143 @@ export function ExperimentMemberManagement({
         <CardDescription>{t("experimentSettings.collaboratorsDescription")}</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        {/* Add member section */}
-        <div className="flex w-full items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <UserSearchPopover
-              availableUsers={availableUsers}
-              searchValue={userSearch}
-              onSearchChange={setUserSearch}
-              isAddingUser={isAddingMember}
-              loading={!isDebounced || isFetchingUsers}
-              onSelectUser={(user) => setSelection({ type: "user", user })}
-              onSelectEmail={(email) => setSelection({ type: "email", email })}
-              placeholder={t("experiments.searchUsersPlaceholder")}
-              selectedUser={selectedUser}
-              selectedEmail={selectedEmail}
-              onClearSelection={() => setSelection(null)}
-              disabled={isArchived || currentUserRole !== "admin"}
-              selectedRole={selectedRole}
-              onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
-              existingEmails={[
-                ...members.map((m) => m.user.email).filter((e): e is string => e != null),
-                ...invitations.map((inv) => inv.email),
-              ]}
-            />
-          </div>
-          <Button
-            onClick={handleAddMember}
-            variant="muted"
-            disabled={isAddingMembersDisabled}
-            size="default"
-            className="ml-auto shrink-0"
-          >
-            {t("common.add")}
-          </Button>
-        </div>
+      <CardContent>
+        <NavTabs defaultValue="collaborators">
+          <NavTabsList className="mb-4">
+            <NavTabsTrigger value="collaborators">
+              {t("experimentSettings.collaboratorsTab")}
+            </NavTabsTrigger>
+            <NavTabsTrigger value="requests" className="gap-1.5" disabled={!isAdmin}>
+              {t("experimentSettings.requestsTab")}
+              {joinRequestCount > 0 && (
+                <span className="bg-quaternary rounded-full px-1.5 py-0.5 text-xs font-medium leading-none text-black">
+                  {joinRequestCount}
+                </span>
+              )}
+            </NavTabsTrigger>
+          </NavTabsList>
 
-        {/* Current members section */}
-        <div>
-          <MemberList
-            membersWithUserInfo={members.map((member) => ({
-              ...member,
-              user: {
-                userId: member.user.id,
-                firstName: member.user.firstName,
-                lastName: member.user.lastName,
-                email: member.user.email,
-                bio: null,
-                activated: null,
-                organization: undefined,
-              },
-            }))}
-            onRemoveMember={handleRemoveMember}
-            isRemovingMember={isRemovingMember}
-            removingMemberId={removingMemberId}
-            adminCount={adminCount}
-            experimentId={experimentId}
-            currentUserRole={currentUserRole}
-            currentUserId={session?.user.id ?? ""}
-            isArchived={isArchived}
-          />
-        </div>
-
-        {/* Pending invitations section */}
-        {invitations.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-foreground font-semibold">
-              {t("experimentSettings.pendingInvitations")}
-            </h4>
-            <div className="max-h-[120px] space-y-3 overflow-y-auto">
-              {invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between rounded">
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-foreground text-sm font-medium">{invitation.email}</span>
-                    <span className="flex items-center gap-x-1">
-                      <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-                      <span className="text-muted-foreground text-sm">
-                        {t("experimentSettings.pendingInvite")}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex flex-shrink-0 pl-4">
-                    <Select
-                      value={invitation.role}
-                      disabled={isArchived || currentUserRole !== "admin"}
-                      onValueChange={(value) => handleInvitationValueChange(value, invitation)}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
-                        <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
-                        <SelectSeparator />
-                        <SelectItem
-                          value="revoke"
-                          className="text-destructive focus:text-destructive"
-                        >
-                          {t("experimentSettings.revoke")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ))}
+          <NavTabsContent value="collaborators" className="space-y-6">
+            {/* Add member section */}
+            <div className="flex w-full items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <UserSearchPopover
+                  availableUsers={availableUsers}
+                  searchValue={userSearch}
+                  onSearchChange={setUserSearch}
+                  isAddingUser={isAddingMember}
+                  loading={!isDebounced || isFetchingUsers}
+                  onSelectUser={(user) => setSelection({ type: "user", user })}
+                  onSelectEmail={(email) => setSelection({ type: "email", email })}
+                  placeholder={t("experiments.searchUsersPlaceholder")}
+                  selectedUser={selectedUser}
+                  selectedEmail={selectedEmail}
+                  onClearSelection={() => setSelection(null)}
+                  disabled={isArchived || currentUserRole !== "admin"}
+                  selectedRole={selectedRole}
+                  onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
+                  existingEmails={[
+                    ...members.map((m) => m.user.email).filter((e): e is string => e != null),
+                    ...invitations.map((inv) => inv.email),
+                  ]}
+                />
+              </div>
+              <Button
+                onClick={handleAddMember}
+                variant="muted"
+                disabled={isAddingMembersDisabled}
+                size="default"
+                className="ml-auto shrink-0"
+              >
+                {t("common.add")}
+              </Button>
             </div>
-          </div>
-        )}
+
+            {/* Current members section */}
+            <div>
+              <MemberList
+                membersWithUserInfo={members.map((member) => ({
+                  ...member,
+                  user: {
+                    userId: member.user.id,
+                    firstName: member.user.firstName,
+                    lastName: member.user.lastName,
+                    email: member.user.email,
+                    bio: null,
+                    activated: null,
+                    organization: undefined,
+                  },
+                }))}
+                onRemoveMember={handleRemoveMember}
+                isRemovingMember={isRemovingMember}
+                removingMemberId={removingMemberId}
+                adminCount={adminCount}
+                experimentId={experimentId}
+                currentUserRole={currentUserRole}
+                currentUserId={session?.user.id ?? ""}
+                isArchived={isArchived}
+              />
+            </div>
+
+            {/* Pending invitations section */}
+            {invitations.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-foreground font-semibold">
+                  {t("experimentSettings.pendingInvitations")}
+                </h4>
+                <div className="max-h-[120px] space-y-3 overflow-y-auto">
+                  {invitations.map((invitation) => (
+                    <div key={invitation.id} className="flex items-center justify-between rounded">
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="text-foreground text-sm font-medium">
+                          {invitation.email}
+                        </span>
+                        <span className="flex items-center gap-x-1">
+                          <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">
+                            {t("experimentSettings.pendingInvite")}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="flex flex-shrink-0 pl-4">
+                        <Select
+                          value={invitation.role}
+                          disabled={isArchived || currentUserRole !== "admin"}
+                          onValueChange={(value) => handleInvitationValueChange(value, invitation)}
+                        >
+                          <SelectTrigger className="w-[100px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">
+                              {t("experimentSettings.roleAdmin")}
+                            </SelectItem>
+                            <SelectItem value="member">
+                              {t("experimentSettings.roleMember")}
+                            </SelectItem>
+                            <SelectSeparator />
+                            <SelectItem
+                              value="revoke"
+                              className="text-destructive focus:text-destructive"
+                            >
+                              {t("experimentSettings.revoke")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </NavTabsContent>
+
+          {isAdmin && (
+            <NavTabsContent value="requests">
+              <ExperimentJoinRequestsPanel experimentId={experimentId} />
+            </NavTabsContent>
+          )}
+        </NavTabs>
       </CardContent>
     </>
   );
