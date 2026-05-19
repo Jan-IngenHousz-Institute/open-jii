@@ -1,0 +1,25 @@
+{
+  "setup": {
+    "title": "Apparaatverbinding",
+    "scanButton": "Zoek naar apparaten",
+    "errorDisconnect": "Verbinding verbreken mislukt",
+    "errorConnect": "Verbinden mislukt"
+  },
+  "connectedDevice": {
+    "heading": "Verbonden apparaat",
+    "statusConnected": "Verbonden",
+    "disconnectButton": "Verbinding verbreken",
+    "turnOffMultispeQ": "MultispeQ uitschakelen"
+  },
+  "deviceList": {
+    "scanning": "Apparaten zoeken...",
+    "nearbyTitle": "Apparaten in de buurt",
+    "pairedTitle": "Gekoppelde apparaten",
+    "empty": "Geen apparaten gevonden. Probeer opnieuw te zoeken.",
+    "fallbackName": "N.v.t.",
+    "signal": "Signaal: {{strength}}",
+    "signalStrong": "Sterk",
+    "signalMedium": "Gemiddeld",
+    "signalWeak": "Zwak"
+  }
+}

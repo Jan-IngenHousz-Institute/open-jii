@@ -1,0 +1,155 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useIsFocused } from "@react-navigation/native";
+import clsx from "clsx";
+import { useKeepAwake } from "expo-keep-awake";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React from "react";
+import { Image, View, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useTranslation } from "~/shared/i18n";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
+
+import { EndFlowButton } from "./components/end-flow-button";
+import { MeasurementFlowContainer } from "./components/measurement-flow-container";
+import { NavigationButtons } from "./components/navigation-buttons";
+
+type StepLabelTranslator = (key: string) => string;
+
+function getStepLabel(
+  experimentId: string | undefined,
+  currentFlowStep: number,
+  flowNodes: any[],
+  isFlowFinished: boolean,
+  isQuestionsSubmitPending: boolean,
+  t: StepLabelTranslator,
+): string {
+  // No experiment selected yet
+  if (!experimentId) {
+    return t("measurementFlow:screen.stepLabel.chooseExperiment");
+  }
+
+  // Questions-only submit screen
+  if (isQuestionsSubmitPending) {
+    return t("measurementFlow:screen.stepLabel.reviewAnswers");
+  }
+
+  // Flow completed
+  const isFlowCompleted = currentFlowStep >= flowNodes.length;
+  if (isFlowCompleted && isFlowFinished) {
+    return t("measurementFlow:screen.stepLabel.checkRecent");
+  }
+
+  // Get current node and show its name/type
+  const currentNode = flowNodes[currentFlowStep];
+  if (!currentNode) {
+    return "";
+  }
+
+  // You can customize these labels based on node type
+  switch (currentNode.type) {
+    case "instruction":
+      return t("measurementFlow:screen.stepLabel.instruction");
+    case "question":
+      return t("measurementFlow:screen.stepLabel.question");
+    case "measurement":
+      return t("measurementFlow:screen.stepLabel.measurement");
+    case "analysis":
+      return t("measurementFlow:screen.stepLabel.analysis");
+    default:
+      return currentNode.name;
+  }
+}
+
+interface MeasurementFlowScreenProps {
+  /** Called after flow is ended (e.g. to navigate back to landing) */
+  onEndFlowComplete?: () => void;
+}
+
+export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScreenProps = {}) {
+  useKeepAwake();
+  const { classes } = useTheme();
+  const { t } = useTranslation("measurementFlow");
+  const {
+    resetFlow,
+    flowNodes,
+    currentFlowStep,
+    isFlowFinished,
+    experimentId,
+    isQuestionsSubmitPending,
+  } = useMeasurementFlowStore();
+  const { clearHistory } = useFlowAnswersStore();
+  const { setSelectedExperimentId } = useExperimentSelectionStore();
+  const router = useRouter();
+  const isFocused = useIsFocused();
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+
+  const handleEndFlow = () => {
+    setSelectedExperimentId(undefined);
+    resetFlow();
+    clearHistory();
+    onEndFlowComplete?.();
+    router.navigate("/(tabs)/");
+  };
+
+  // Get the dynamic step label
+  const stepLabel = getStepLabel(
+    experimentId,
+    currentFlowStep,
+    flowNodes,
+    isFlowFinished,
+    isQuestionsSubmitPending,
+    t,
+  );
+
+  return (
+    <View className={clsx("flex-1", classes.card)} style={{ paddingBottom: insets.bottom }}>
+      {isFocused && <StatusBar style="light" />}
+
+      {/* Background */}
+      <Image
+        source={require("../../../../../assets/flow-header.png")}
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "30%",
+        }}
+        resizeMode="cover"
+      />
+
+      <LinearGradient
+        colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.75)", "rgba(0,0,0,0.4)"]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 0 }}
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "30%",
+        }}
+      />
+
+      {/* Foreground */}
+      <View
+        className="flex-1"
+        style={{
+          paddingTop: headerHeight,
+        }}
+      >
+        <View className="mb-4 flex-row items-end px-4">
+          <Text className="mr-2 flex-1 text-lg text-white">{stepLabel}</Text>
+          <EndFlowButton onPress={handleEndFlow} />
+        </View>
+
+        <MeasurementFlowContainer />
+
+        <NavigationButtons />
+      </View>
+    </View>
+  );
+}

@@ -13,18 +13,19 @@ import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
-import { AlertDialog } from "~/components/AlertDialog";
-import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
-import { PythonMacroProvider } from "~/components/python-macro-provider";
-import { TimeSyncProvider } from "~/components/time-sync-provider";
-import { ThemeProvider } from "~/context/ThemeContext";
-import { useAutoUpload } from "~/hooks/use-auto-upload";
-import { useOtaUpdate } from "~/hooks/use-ota-update";
-import { useSession } from "~/hooks/use-session";
-import { useThemeColors } from "~/hooks/use-theme-colors";
-import { PostHogProvider } from "~/providers/PostHogProvider";
-import { db } from "~/services/db/client";
-import { shouldHideSplash } from "~/utils/should-hide-splash";
+import { useSession } from "~/features/auth/hooks/use-session";
+import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
+import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
+import { useAutoUpload } from "~/features/recent-measurements/hooks/use-auto-upload";
+import { db } from "~/shared/db/client";
+import { useI18nReady } from "~/shared/i18n";
+import { AlertDialog } from "~/shared/ui/AlertDialog";
+import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
+import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
+import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
+import { shouldHideSplash } from "~/shared/utils/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
 
@@ -97,6 +98,7 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   });
 
   const { success: migrationsReady, error: migrationsError } = useMigrations(db, migrations);
+  const i18nReady = useI18nReady();
 
   useOtaUpdate();
 
@@ -116,6 +118,9 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   }, [loaded, migrationsReady, migrationsError]);
 
   if (migrationsError) {
+    // Recovery fallback. i18n init runs in the same wrapper, so when the
+    // migration fails before i18n is ready, t() would return key strings.
+    // Keep this UI in English so it always renders something usable.
     return (
       <View className="bg-background flex-1 items-center justify-center p-8">
         <Text className="text-destructive mb-3 text-xl font-bold">Database Error</Text>
@@ -129,7 +134,7 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
     );
   }
 
-  if (!loaded || !migrationsReady) {
+  if (!loaded || !migrationsReady || !i18nReady) {
     return null;
   }
 

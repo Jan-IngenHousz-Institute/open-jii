@@ -566,6 +566,9 @@ importers:
       htmlparser2:
         specifier: ^10.1.0
         version: 10.1.0
+      i18next:
+        specifier: ^25.10.10
+        version: 25.10.10(typescript@5.9.3)
       lucide-react-native:
         specifier: ^0.513.0
         version: 0.513.0(react-native-svg@15.15.3(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
@@ -587,12 +590,12 @@ importers:
       react:
         specifier: 19.2.4
         version: 19.2.4
-      react-async-hook:
-        specifier: ^4.0.0
-        version: 4.0.0(react@19.2.4)
       react-hook-form:
         specifier: 'catalog:'
         version: 7.72.0(react@19.2.4)
+      react-i18next:
+        specifier: ^15.7.4
+        version: 15.7.4(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
       react-native:
         specifier: 0.83.4
         version: 0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
@@ -877,7 +880,7 @@ importers:
         version: 7.72.0(react@19.2.4)
       react-i18next:
         specifier: ^15.7.4
-        version: 15.7.4(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
+        version: 15.7.4(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -1213,7 +1216,7 @@ importers:
         version: 19.2.4
       react-i18next:
         specifier: ^15.7.4
-        version: 15.7.4(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
+        version: 15.7.4(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -16214,12 +16217,6 @@ packages:
   rc@1.2.8:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
-
-  react-async-hook@4.0.0:
-    resolution: {integrity: sha512-97lgjFkOcHCTYSrsKBpsXg3iVWM0LnzedB749iP76sb3/8Ouu4nHIkCLEOrQWHVYqrYxjF05NN6GHoXWFkB3Kw==}
-    engines: {node: '>=8', npm: '>=5'}
-    peerDependencies:
-      react: 19.2.4
 
   react-copy-to-clipboard@5.1.0:
     resolution: {integrity: sha512-k61RsNgAayIJNoy9yDsYzDe/yAZAzEbEgcz3DZMhF686LEyukcE1hzurxe85JandPUG+yTfGVFzuEw3xt8WP/A==}
@@ -37040,10 +37037,6 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  react-async-hook@4.0.0(react@19.2.4):
-    dependencies:
-      react: 19.2.4
-
   react-copy-to-clipboard@5.1.0(react@19.2.4):
     dependencies:
       copy-to-clipboard: 3.3.3
@@ -37115,7 +37108,7 @@ snapshots:
     dependencies:
       react: 19.2.4
 
-  react-i18next@15.7.4(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3):
+  react-i18next@15.7.4(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3):
     dependencies:
       '@babel/runtime': 7.29.2
       html-parse-stringify: 3.0.1
@@ -37123,6 +37116,7 @@ snapshots:
       react: 19.2.4
     optionalDependencies:
       react-dom: 19.2.4(react@19.2.4)
+      react-native: 0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
       typescript: 5.9.3
 
   react-immutable-proptypes@2.2.0(immutable@3.8.3):

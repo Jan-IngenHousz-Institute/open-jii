@@ -1,0 +1,13 @@
+{
+  "accountInformation": "Account Information",
+  "organization": "Organization",
+  "organizationNone": "N/A",
+  "loginExpires": "Login Expires",
+  "appearance": "Appearance",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "openWebProfile": "Open Web Profile",
+  "logOut": "Log Out",
+  "cannotOpenWebProfile": "Cannot open web profile. Please check your internet connection."
+}

@@ -1,0 +1,22 @@
+{
+  "appName": "openJII",
+  "appTagline": "Sensor Data Collection",
+  "cancel": "Cancel",
+  "continue": "Continue",
+  "confirm": "Confirm",
+  "dismiss": "Dismiss",
+  "save": "Save",
+  "retry": "Retry",
+  "delete": "Delete",
+  "remove": "Remove",
+  "back": "Back",
+  "close": "Close",
+  "loading": "Loading…",
+  "offline": "You are offline. Please connect to the internet to log in.",
+  "errorGeneric": "Something went wrong",
+  "errorTitle": "Error",
+  "notFoundTitle": "This screen doesn't exist.",
+  "notFoundCta": "Go to home screen!",
+  "modalTitle": "Modal",
+  "modalExample": "This is an example modal. You can edit it in app/modal.tsx."
+}
