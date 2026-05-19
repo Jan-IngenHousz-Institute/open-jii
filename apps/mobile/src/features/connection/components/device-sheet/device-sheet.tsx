@@ -85,12 +85,11 @@ export function DeviceSheet() {
 
         {/* Current device card */}
         <View
-          className="rounded-2xl p-3.5"
-          style={{
-            backgroundColor: hasConnected ? colors.jii.mintLight : themeColors.card,
-            borderWidth: 1,
-            borderColor: hasConnected ? colors.jii.mint : themeColors.border,
-          }}
+          className={
+            hasConnected
+              ? "bg-jii-mint-light border-jii-mint rounded-2xl border p-3.5"
+              : "bg-card border-border rounded-2xl border p-3.5"
+          }
         >
           <View className="flex-row items-center gap-3">
             <View

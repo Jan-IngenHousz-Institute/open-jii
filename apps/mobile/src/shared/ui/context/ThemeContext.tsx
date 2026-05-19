@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colorScheme } from "nativewind";
 import React, { createContext, useState, useEffect } from "react";
-import { Appearance, useColorScheme } from "react-native";
+import { Appearance, AppState, useColorScheme } from "react-native";
 import { Theme, darkTheme, lightTheme } from "~/shared/constants/theme";
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -48,6 +48,20 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     const sub = Appearance.addChangeListener(({ colorScheme: next }) => {
       if (next === "dark" || next === "light") setSystemColorScheme(next);
+    });
+    return () => sub.remove();
+  }, []);
+
+  // On Android the activity absorbs `uiMode` via configChanges, which means
+  // Appearance.addChangeListener never fires when the OS theme is flipped
+  // while the app is backgrounded. Re-poll Appearance.getColorScheme() each
+  // time the app returns to the foreground so users that toggle dark mode
+  // outside the app see the new theme on resume.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next !== "active") return;
+      const current = Appearance.getColorScheme();
+      if (current === "dark" || current === "light") setSystemColorScheme(current);
     });
     return () => sub.remove();
   }, []);
