@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { LinearGradient } from "expo-linear-gradient";
 import { X } from "lucide-react-native";
 import React, { useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -12,6 +13,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+
+const HERO_IMAGE = require("../../../../assets/flow-header.png");
 
 interface FlowHeroProps {
   title: string;
@@ -36,16 +39,20 @@ export function FlowHero({ title, onExitPress }: FlowHeroProps) {
   }));
 
   return (
-    <View style={{ paddingTop: insets.top, position: "relative" }}>
+    <View style={{ paddingTop: insets.top, position: "relative", overflow: "hidden" }}>
+      {/* Back layer: the photo from the old flow design. */}
+      <Image source={HERO_IMAGE} className="absolute inset-0 h-full w-full" resizeMode="cover" />
+      {/* Brand-teal overlay (translucent) so the image bleeds through but the
+          white type stays readable. Replaces the solid linear gradient the
+          previous redesign used. */}
       <LinearGradient
-        colors={[colors.jii.darkerGreen, colors.jii.darkGreen]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        colors={[colors.jii.darkerGreen + "F2", colors.jii.darkGreen + "C0"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         className="absolute inset-0"
+        style={{ pointerEvents: "none" }}
       />
-      {/* Soft top-center bright-green highlight; an SVG radial gradient would
-          be heavier than this hero needs — a faint additive linear
-          approximation reads close to the design. */}
+      {/* Soft top-center bright-green highlight for the brand accent. */}
       <LinearGradient
         colors={["rgba(73,224,109,0.18)", "rgba(73,224,109,0)"]}
         start={{ x: 0.5, y: 0 }}

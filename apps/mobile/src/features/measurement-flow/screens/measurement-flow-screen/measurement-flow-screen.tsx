@@ -1,5 +1,4 @@
 import { useIsFocused } from "@react-navigation/native";
-import clsx from "clsx";
 import { useKeepAwake } from "expo-keep-awake";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
@@ -12,7 +11,6 @@ import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-ex
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-paused-flow-store";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
 import { NavigationButtons } from "./components/navigation-buttons";
@@ -24,7 +22,6 @@ interface MeasurementFlowScreenProps {
 
 export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
-  const { classes } = useTheme();
   const {
     flowNodes,
     currentFlowStep,
@@ -93,7 +90,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const hasActiveFlow = !!experimentId;
 
   return (
-    <View className={clsx("flex-1", classes.card)} style={{ paddingBottom: insets.bottom }}>
+    <View className="bg-background flex-1" style={{ paddingBottom: insets.bottom }}>
       {isFocused && <StatusBar style={hasActiveFlow ? "light" : "dark"} />}
 
       {hasActiveFlow ? (

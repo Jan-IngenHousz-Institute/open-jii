@@ -1,4 +1,3 @@
-import { clsx } from "clsx";
 import { ChevronsLeft, Download } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
@@ -18,7 +17,7 @@ import { groupMeasurementsByDay } from "~/shared/utils/group-measurements-by-day
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
-  const { colors, classes } = useTheme();
+  const { colors } = useTheme();
   const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
@@ -71,7 +70,7 @@ export function RecentMeasurementsScreen() {
   const hasItems = measurements.length > 0;
 
   return (
-    <View className={clsx("flex-1", classes.background)}>
+    <View className="bg-background flex-1">
       <MeasurementsToolbar
         filter={filter}
         onFilterChange={setFilter}
@@ -85,8 +84,8 @@ export function RecentMeasurementsScreen() {
 
       {hasItems && (
         <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
-          <ChevronsLeft size={13} color={colors.neutral.gray500} />
-          <Text className={clsx("text-sm font-normal", classes.textMuted)}>
+          <ChevronsLeft size={13} color={colors.inactive} />
+          <Text className="text-muted-body text-sm font-normal">
             {t("recentMeasurements:list.swipeHint")}
           </Text>
         </View>
@@ -104,9 +103,9 @@ export function RecentMeasurementsScreen() {
                 ? "recentMeasurements:sectionHeader.yesterday"
                 : "recentMeasurements:sectionHeader.other";
           return (
-            <View className={clsx("px-4 pb-1.5 pt-3", classes.background)}>
+            <View className="bg-background px-4 pb-1.5 pt-3">
               <Text
-                className={clsx("text-[12px] font-bold uppercase", classes.textMuted)}
+                className="text-muted-body text-[12px] font-bold uppercase"
                 style={{ letterSpacing: 0.6 }}
               >
                 {t(i18nKey, { date: section.dateLabel })}
@@ -121,10 +120,10 @@ export function RecentMeasurementsScreen() {
         removeClippedSubviews
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center p-4">
-            <Text className={clsx("text-center text-lg", classes.textSecondary)}>
+            <Text className="text-on-surface text-center text-lg">
               {t("recentMeasurements:list.emptyTitle")}
             </Text>
-            <Text className={clsx("mt-2 text-center", classes.textMuted)}>
+            <Text className="text-muted-body mt-2 text-center">
               {filter === "all"
                 ? t("recentMeasurements:list.emptyHintAll")
                 : filter === "synced"
