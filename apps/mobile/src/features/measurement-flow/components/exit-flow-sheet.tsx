@@ -84,9 +84,10 @@ export function ExitFlowSheet() {
       backdropComponent={renderBackdrop}
       onDismiss={close}
       handleIndicatorStyle={{ backgroundColor: themeColors.inactive }}
+      backgroundStyle={{ backgroundColor: themeColors.card }}
       stackBehavior="push"
     >
-      <BottomSheetView className="gap-3 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
+      <BottomSheetView className="bg-card gap-3 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
           {t("exitSheet.title")}
         </Text>

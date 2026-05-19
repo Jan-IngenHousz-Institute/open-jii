@@ -71,9 +71,10 @@ export function DeviceSheet() {
       backdropComponent={renderBackdrop}
       onDismiss={close}
       handleIndicatorStyle={{ backgroundColor: themeColors.inactive }}
+      backgroundStyle={{ backgroundColor: themeColors.card }}
       stackBehavior="push"
     >
-      <BottomSheetView className="gap-3 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
+      <BottomSheetView className="bg-card gap-3 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <View className="flex-row items-center justify-between">
           <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
             {t("deviceSheet.title")}

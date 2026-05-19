@@ -1,5 +1,5 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
-import { Moon, Smartphone, Sun, X } from "lucide-react-native";
+import { Moon, Sun, X } from "lucide-react-native";
 import React, { forwardRef, useCallback } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,10 +11,9 @@ import { cn } from "~/shared/utils/cn";
 
 const THEME_OPTIONS: {
   key: ThemePreference;
-  labelKey: "themeSystem" | "themeLight" | "themeDark";
+  labelKey: "themeLight" | "themeDark";
   Icon: typeof Sun;
 }[] = [
-  { key: "system", labelKey: "themeSystem", Icon: Smartphone },
   { key: "light", labelKey: "themeLight", Icon: Sun },
   { key: "dark", labelKey: "themeDark", Icon: Moon },
 ];
@@ -43,9 +42,13 @@ export const AppSettingsSheet = forwardRef<BottomSheetModal>(
         enableDynamicSizing
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={{ backgroundColor: themeColors.inactive }}
+        backgroundStyle={{ backgroundColor: themeColors.card }}
         stackBehavior="push"
       >
-        <BottomSheetView className="gap-4 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
+        <BottomSheetView
+          className="bg-card gap-4 px-4"
+          style={{ paddingBottom: insets.bottom + 16 }}
+        >
           <View className="flex-row items-center justify-between">
             <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
               {t("appSettingsSheet.title")}
