@@ -1,7 +1,20 @@
 module "terraform_state_s3" {
   source      = "../../modules/s3"
   bucket_name = "open-jii-terraform-state-${var.environment}"
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 }
+
+# module "iam_oidc" {
+#   source     = "../../modules/iam-oidc"
+#   role_name  = "GithubActionsDeployAccess"
+#   repository = "Jan-IngenHousz-Institute/open-jii"
+#   branch     = "main"
+#   aws_region = var.aws_region
+# }
 
 module "terraform_state_lock" {
   source     = "../../modules/dynamodb"
@@ -45,8 +58,15 @@ module "databricks_workspace_s3_policy" {
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
   bucket_name        = "open-jii-databricks-root-bucket-${var.environment}"
-  enable_versioning  = false
+  enable_versioning  = true
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
+
+  enable_crr = true
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 }
 
 module "databricks_workspace" {
