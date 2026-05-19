@@ -35,7 +35,7 @@ export function MeasurementFlowContainer() {
   // Active flow states sit under the FlowHero with a rounded "card" lip.
   if (isQuestionsSubmitPending) {
     return (
-      <View className="bg-card flex-1 rounded-t-3xl">
+      <View className="bg-card flex-1 rounded-t-[36px]">
         <QuestionsOnlySubmitNode />
       </View>
     );
@@ -43,7 +43,7 @@ export function MeasurementFlowContainer() {
 
   if (isFlowCompleted && isFlowFinished) {
     return (
-      <View className="bg-card flex-1 rounded-t-3xl">
+      <View className="bg-card flex-1 rounded-t-[36px]">
         <CompletedState />
       </View>
     );
@@ -54,7 +54,7 @@ export function MeasurementFlowContainer() {
   }
 
   return (
-    <View className="bg-card flex-1 rounded-t-3xl">
+    <View className="bg-card flex-1 rounded-t-[36px]">
       <ActiveState currentNode={currentNode} />
     </View>
   );

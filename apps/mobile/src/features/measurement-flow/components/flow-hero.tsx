@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 import { LinearGradient } from "expo-linear-gradient";
 import { X } from "lucide-react-native";
 import React, { useEffect } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -14,13 +13,17 @@ import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 
-const HERO_IMAGE = require("../../../../assets/flow-header.png");
-
 interface FlowHeroProps {
   title: string;
   onExitPress: () => void;
 }
 
+/**
+ * Hero chrome that sits on top of the screen-level photo backdrop.
+ * Background gradients + eyebrow + X + progress strip live here; the
+ * photo itself is owned by MeasurementFlowScreen so it can extend behind
+ * the rounded card body.
+ */
 export function FlowHero({ title, onExitPress }: FlowHeroProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation("measurementFlow");
@@ -39,20 +42,10 @@ export function FlowHero({ title, onExitPress }: FlowHeroProps) {
   }));
 
   return (
-    <View style={{ paddingTop: insets.top, position: "relative", overflow: "hidden" }}>
-      {/* Back layer: the photo from the old flow design. */}
-      <Image source={HERO_IMAGE} className="absolute inset-0 h-full w-full" resizeMode="cover" />
-      {/* Brand-teal overlay (translucent) so the image bleeds through but the
-          white type stays readable. Replaces the solid linear gradient the
-          previous redesign used. */}
-      <LinearGradient
-        colors={[colors.jii.darkerGreen + "F2", colors.jii.darkGreen + "C0"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        className="absolute inset-0"
-        style={{ pointerEvents: "none" }}
-      />
-      {/* Soft top-center bright-green highlight for the brand accent. */}
+    <View style={{ paddingTop: insets.top, position: "relative" }}>
+      {/* Soft top-center bright-green highlight for the brand accent.
+          The dark-teal mask is owned by MeasurementFlowScreen so it can
+          extend the full photo area, not just this hero box. */}
       <LinearGradient
         colors={["rgba(73,224,109,0.18)", "rgba(73,224,109,0)"]}
         start={{ x: 0.5, y: 0 }}
