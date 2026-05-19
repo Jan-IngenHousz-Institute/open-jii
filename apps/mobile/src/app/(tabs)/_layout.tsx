@@ -62,7 +62,7 @@ export default function TabLayout() {
             title: tHome("tab.title"),
             tabBarLabel: "Home",
             tabBarIcon: ({ color, size }) => <House size={size} color={color} />,
-            headerTitle: () => <OpenJiiLogo height={40} />,
+            headerTitle: () => <OpenJiiLogo height={52} />,
             headerTitleAlign: "left",
           }}
         />
