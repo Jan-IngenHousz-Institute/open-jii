@@ -95,7 +95,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const hasActiveFlow = !!experimentId;
 
   return (
-    <View className="bg-background flex-1" style={{ paddingBottom: insets.bottom }}>
+    <View className="bg-background flex-1">
       {isFocused && <StatusBar style={hasActiveFlow ? "light" : "dark"} />}
 
       {hasActiveFlow ? (

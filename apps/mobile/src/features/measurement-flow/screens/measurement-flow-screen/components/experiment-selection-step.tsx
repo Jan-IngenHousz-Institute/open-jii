@@ -8,7 +8,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
@@ -31,7 +30,6 @@ import { OfflineModeIndicator } from "./offline-mode-indicator";
 export function ExperimentSelectionStep() {
   const { colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const insets = useSafeAreaInsets();
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const setExperimentId = useMeasurementFlowStore((s) => s.setExperimentId);
@@ -144,7 +142,7 @@ export function ExperimentSelectionStep() {
       <View
         style={{
           paddingHorizontal: 16,
-          paddingBottom: 16 + insets.bottom + 60,
+          paddingBottom: 16,
           paddingTop: 8,
           gap: 10,
           backgroundColor: colors.background,

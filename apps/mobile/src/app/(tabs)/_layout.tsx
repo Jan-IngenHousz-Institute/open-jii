@@ -33,6 +33,9 @@ export default function TabLayout() {
       <Tabs
         tabBar={(props) => <AnimatedTabBar {...props} hidden={inActiveFlow} />}
         screenOptions={{
+          sceneStyle: {
+            paddingBottom: inActiveFlow ? insets.bottom : 60 + insets.bottom,
+          },
           tabBarActiveTintColor: themeColors.brand,
           tabBarInactiveTintColor: themeColors.inactive,
           tabBarStyle: {

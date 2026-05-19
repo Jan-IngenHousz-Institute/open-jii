@@ -122,7 +122,7 @@ export function NavigationButtons() {
           />
         </View>
       ) : (
-        <View className="flex-row items-center justify-between py-3">
+        <View className="flex-row items-center justify-between px-4 py-3">
           <BackButton onPress={handleBackPress} />
           {(!isAutoAdvanceQuestion || (isAutoAdvanceQuestion && !currentNode.content.required)) && (
             <NextButton onPress={handleNextPress} isDisabled={isNextDisabled} />
