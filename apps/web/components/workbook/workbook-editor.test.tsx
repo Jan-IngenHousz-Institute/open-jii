@@ -243,7 +243,12 @@ describe("WorkbookEditor — sidebar minimap", () => {
     renderEditor({ cells });
 
     expect(screen.getAllByText(/Markdown/).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/soil_moisture/).length).toBeGreaterThanOrEqual(2);
+    // The sidebar shows the literal type label "Question" for question cells;
+    // the cell name (e.g. "soil_moisture") only appears in the cell header.
+    // The add-cell button row also renders a "Question" picker, so we expect
+    // at least one (sidebar) + one (picker).
+    expect(screen.getAllByText(/^Question$/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/Why\?/).length).toBeGreaterThanOrEqual(1);
   });
 });
 

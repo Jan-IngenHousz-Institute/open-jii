@@ -20,7 +20,10 @@
     "noCells": "Noch keine Zellen. Offnen Sie die Arbeitsmappe, um Ihr Notebook zu erstellen.",
     "saving": "Speichern...",
     "allChangesSaved": "Alle Änderungen gespeichert",
-    "viewWorkbook": "Arbeitsbuch anzeigen"
+    "viewWorkbook": "Arbeitsmappe anzeigen",
+    "required": "Erforderlich",
+    "outputsCleared_one": "{{count}} Ausgabe gelöscht",
+    "outputsCleared_other": "{{count}} Ausgaben gelöscht"
   },
   "output": {
     "label": "Ausgabe",
@@ -31,8 +34,15 @@
     "noData": "Keine Ausgabedaten",
     "tabTable": "Tabelle",
     "tabJson": "JSON",
+    "tabTimeseries": "Zeitreihe",
     "copyJson": "JSON kopieren",
     "closeChart": "Diagramm schließen",
-    "expandChart": "Diagramm für {{column}} öffnen"
+    "expandChart": "Diagramm für {{column}} öffnen",
+    "loadingProtocol": "Protokoll wird geladen…",
+    "timeseriesXAxis": "Zeit (s)",
+    "timeseriesYAxis": "Normalisiertes Signal",
+    "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
+    "timeseriesEmpty": "Keine Detektor-Messwerte zum Plotten",
+    "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
   }
 }
