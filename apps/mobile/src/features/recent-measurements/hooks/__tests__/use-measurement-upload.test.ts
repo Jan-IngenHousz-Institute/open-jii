@@ -121,7 +121,7 @@ describe("useMeasurementUpload", () => {
     mockUseNetworkState.mockReturnValue({ isInternetReachable: true });
     // Default: the upload hook always wins the claim — individual tests
     // override this to simulate a parallel claimant.
-    mockClaimForUpload.mockImplementation(async (keys: string[]) => keys);
+    mockClaimForUpload.mockImplementation((keys: string[]) => Promise.resolve(keys));
     useMeasurementUpload();
   });
 
