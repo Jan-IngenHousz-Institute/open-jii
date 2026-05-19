@@ -99,7 +99,7 @@ function promptMeasurementFileSave(
 }
 
 export function useMeasurementUpload() {
-  const { saveMeasurement, markUploaded, markFailed } = useMeasurements();
+  const { saveMeasurement, claimForUpload, markUploaded, markFailed } = useMeasurements();
   const networkState = useNetworkState();
   const { t } = useTranslation(["common", "recentMeasurements"]);
 
@@ -174,8 +174,19 @@ export function useMeasurementUpload() {
       // row "failed" — but the schema reserves "failed" for rows that
       // actually attempted a publish. Leaving it "pending" lets
       // useAutoUpload's network-restore listener pick it up on reconnect.
-      if (networkState.isInternetReachable === false) {
+      // `!== true` also catches the brief null/undefined window expo-network
+      // exposes around connectivity transitions — otherwise we'd fall through
+      // to MQTT and freeze the UI on the full connect timeout.
+      if (networkState.isInternetReachable !== true) {
         toast.info(t("recentMeasurements:toasts.savedOffline"));
+        return;
+      }
+
+      // Claim the row before publishing — otherwise useAutoUpload's parallel
+      // uploadAll (triggered by the saveMeasurement query invalidation) can
+      // grab the same "pending" row and double-publish.
+      const claimed = await claimForUpload([savedId]);
+      if (claimed.length === 0) {
         return;
       }
 

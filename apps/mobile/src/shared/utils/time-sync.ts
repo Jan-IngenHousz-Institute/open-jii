@@ -111,16 +111,24 @@ async function fetchServerTime(): Promise<number> {
 }
 
 async function performSync(isInitial = false): Promise<void> {
+  console.log("[time-sync] performSync: start", { isInitial });
   const networkState = await Network.getNetworkStateAsync();
+  console.log("[time-sync] performSync: network", {
+    isInternetReachable: networkState.isInternetReachable,
+  });
   if (!networkState.isInternetReachable) {
     console.log("[time-sync] Skipping sync — device is offline");
     return;
   }
 
   try {
+    console.log("[time-sync] performSync: resolveTimezone start");
     const timezone = await resolveTimezone();
+    console.log("[time-sync] performSync: resolveTimezone done", { timezone });
     const beforeFetch = Date.now();
+    console.log("[time-sync] performSync: fetchServerTime start");
     const serverUtcMs = await fetchServerTime();
+    console.log("[time-sync] performSync: fetchServerTime done");
     const afterFetch = Date.now();
 
     const roundTripMs = afterFetch - beforeFetch;
@@ -175,10 +183,18 @@ function handleAppStateChange(nextState: AppStateStatus) {
   }
 }
 
+// Tracks whether the one-shot startup chain (restore + initial sync) has
+// been kicked off this process. Survives stopTimeSync so a strict-mode
+// mount→cleanup→remount of TimeSyncProvider doesn't fire two initial syncs.
+let startupKicked = false;
+
 /** Start the time sync service. Call once at app startup. */
 export function startTimeSync() {
   if (appStateSubscription) return;
-  restoreState().then(() => performSync(true));
+  if (!startupKicked) {
+    startupKicked = true;
+    restoreState().then(() => performSync(true));
+  }
   appStateSubscription = AppState.addEventListener("change", handleAppStateChange);
 }
 
@@ -232,11 +248,19 @@ const ENSURE_SYNCED_TIMEOUT_MS = 10_000;
  * Use this to gate SigV4 signing so we never sign with an unsynced clock.
  */
 export async function ensureSynced(): Promise<void> {
+  console.log("[time-sync] ensureSynced called", {
+    isSynced: state.isSynced,
+    lastSyncedAt: state.lastSyncedAt
+      ? new Date(state.lastSyncedAt).toISOString()
+      : "never",
+    waitersBefore: syncWaiters.length,
+  });
   if (state.isSynced) return;
 
   return new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       syncWaiters = syncWaiters.filter((r) => r !== resolve);
+      console.warn("[time-sync] ensureSynced timed out");
       toast.error("Time sync unavailable. Please check your connection and try again.");
       reject(new Error("[time-sync] Timed out waiting for initial sync"));
     }, ENSURE_SYNCED_TIMEOUT_MS);
@@ -246,6 +270,7 @@ export async function ensureSynced(): Promise<void> {
       resolve();
     });
 
+    console.log("[time-sync] ensureSynced: triggering on-demand performSync");
     // Kick off a sync in case startTimeSync hasn't been called yet.
     // Must come *after* the waiter is registered so a fast resolve isn't missed.
     performSync(true);

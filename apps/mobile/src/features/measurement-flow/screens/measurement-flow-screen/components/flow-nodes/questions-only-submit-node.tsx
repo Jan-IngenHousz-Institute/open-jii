@@ -59,10 +59,16 @@ export function QuestionsOnlySubmitNode() {
   };
 
   const handleUpload = async (): Promise<boolean> => {
+    console.log("[questions-submit] handleUpload: invoked", {
+      hasComment: Boolean(trimmedComment),
+      flagType,
+    });
     if (!experimentId) {
+      console.log("[questions-submit] handleUpload: missing experimentId");
       return false;
     }
     if (!session?.data?.user?.id) {
+      console.log("[questions-submit] handleUpload: missing user id");
       return false;
     }
 
@@ -80,6 +86,7 @@ export function QuestionsOnlySubmitNode() {
       flagType,
     });
 
+    console.log("[questions-submit] handleUpload: returned");
     return true;
   };
 

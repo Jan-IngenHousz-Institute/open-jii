@@ -297,13 +297,16 @@ export interface MqttEmitterEvents {
 }
 
 export async function createMqttConnection() {
+  console.log("[mqtt-conn] getCredentials: start");
   const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
     identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
     region: getEnvVar("REGION"),
   });
+  console.log("[mqtt-conn] getCredentials: done");
 
   const clientId = getEnvVar("CLIENT_ID") + " - " + generateRandomString();
 
+  console.log("[mqtt-conn] createSignedUrl: start");
   const signedUrl = await createSignedUrl({
     clientId,
     accessKeyId,
@@ -312,8 +315,11 @@ export async function createMqttConnection() {
     region: getEnvVar("REGION"),
     endpoint: getEnvVar("IOT_ENDPOINT"),
   });
+  console.log("[mqtt-conn] createSignedUrl: done");
 
+  console.log("[mqtt-conn] connectToMqtt: start");
   const client = await connectToMqtt(signedUrl, clientId);
+  console.log("[mqtt-conn] connectToMqtt: done");
 
   const emitter = new Emitter<MqttEmitterEvents>();
 

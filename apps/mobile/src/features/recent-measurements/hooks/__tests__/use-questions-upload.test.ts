@@ -4,6 +4,7 @@ import { useQuestionsUpload } from "../use-questions-upload";
 
 const {
   mockSaveMeasurement,
+  mockClaimForUpload,
   mockMarkUploaded,
   mockMarkFailed,
   mockSendMqttEvent,
@@ -13,6 +14,7 @@ const {
   mockUseNetworkState,
 } = vi.hoisted(() => ({
   mockSaveMeasurement: vi.fn(),
+  mockClaimForUpload: vi.fn(),
   mockMarkUploaded: vi.fn(),
   mockMarkFailed: vi.fn(),
   mockSendMqttEvent: vi.fn(),
@@ -27,6 +29,7 @@ let capturedCallback: (...args: any[]) => Promise<any>;
 vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => ({
     saveMeasurement: mockSaveMeasurement,
+    claimForUpload: mockClaimForUpload,
     markUploaded: mockMarkUploaded,
     markFailed: mockMarkFailed,
   }),
@@ -87,6 +90,9 @@ describe("useQuestionsUpload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseNetworkState.mockReturnValue({ isInternetReachable: true });
+    // Default: the upload hook always wins the claim — individual tests
+    // override this to simulate a parallel claimant.
+    mockClaimForUpload.mockImplementation(async (keys: string[]) => keys);
     useQuestionsUpload();
   });
 

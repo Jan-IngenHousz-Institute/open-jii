@@ -166,6 +166,18 @@ export function useMeasurements() {
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
+  // Atomically claim a freshly-saved "pending" row as "uploading" before the
+  // direct-publish path attempts MQTT — prevents useAutoUpload's concurrent
+  // uploadAll from grabbing the same row off the failed/pending refetch and
+  // double-publishing. Returns the keys that actually transitioned.
+  const claimForUpload = async (keys: string[]) => {
+    const claimed = await markAsUploading(keys);
+    if (claimed.length > 0) {
+      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    }
+    return claimed;
+  };
+
   const removeMeasurement = async (key: string) => {
     await removeMeasurementFromStorage(key);
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
@@ -193,6 +205,7 @@ export function useMeasurements() {
     uploadAll: () => uploadMutation.mutateAsync(),
     uploadOne,
     saveMeasurement,
+    claimForUpload,
     markUploaded,
     markFailed,
     removeMeasurement,

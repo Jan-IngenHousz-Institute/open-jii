@@ -72,6 +72,7 @@ vi.mock("react-native", () => ({
 let capturedNetworkListener: ((state: { isInternetReachable: boolean | null }) => void) | null =
   null;
 const mockNetworkRemove = vi.fn();
+let mockNetworkState: { isInternetReachable: boolean | null } = { isInternetReachable: true };
 
 vi.mock("~/shared/db/measurements-storage", () => ({
   resetUploadingMeasurements: mockResetUploadingMeasurements,
@@ -82,6 +83,9 @@ vi.mock("expo-network", () => ({
     capturedNetworkListener = listener;
     return { remove: mockNetworkRemove };
   },
+  // tryUpload's offline guard reads this — default to "online" so existing
+  // tests behave as before; individual tests can mutate mockNetworkState.
+  useNetworkState: () => mockNetworkState,
 }));
 
 describe("useAutoUpload", () => {
@@ -91,6 +95,7 @@ describe("useAutoUpload", () => {
     mockIsUploading = false;
     capturedAppStateListener = null;
     capturedNetworkListener = null;
+    mockNetworkState = { isInternetReachable: true };
   });
 
   // ---------------------------------------------------------------------------

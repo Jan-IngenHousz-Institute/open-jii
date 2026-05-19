@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { addNetworkStateListener } from "expo-network";
+import { addNetworkStateListener, useNetworkState } from "expo-network";
 import { useEffect, useCallback, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
@@ -11,9 +11,10 @@ export function useAutoUpload() {
   const { failedUploads, uploadAll, isUploading } = useMeasurements();
   const queryClient = useQueryClient();
   const { t } = useTranslation(["common", "recentMeasurements"]);
+  const networkState = useNetworkState();
 
-  const stateRef = useRef({ failedUploads, uploadAll, isUploading });
-  stateRef.current = { failedUploads, uploadAll, isUploading };
+  const stateRef = useRef({ failedUploads, uploadAll, isUploading, networkState });
+  stateRef.current = { failedUploads, uploadAll, isUploading, networkState };
 
   const initialCheckDone = useRef(false);
   const autoUploadInFlight = useRef(false);
@@ -30,8 +31,17 @@ export function useAutoUpload() {
   }, [queryClient]);
 
   const tryUpload = useCallback(async () => {
-    const { failedUploads, uploadAll, isUploading } = stateRef.current;
+    const { failedUploads, uploadAll, isUploading, networkState } = stateRef.current;
     if (autoUploadInFlight.current || failedUploads.length === 0 || isUploading) return;
+    // Treat anything other than confirmed-online as offline — initial null/
+    // undefined windows shouldn't fire a publish that's certain to fail.
+    // The dedicated network-restore listener will re-trigger on reconnect.
+    if (networkState.isInternetReachable !== true) {
+      console.log("[auto-upload] skip: offline", {
+        isInternetReachable: networkState.isInternetReachable,
+      });
+      return;
+    }
 
     autoUploadInFlight.current = true;
     const count = failedUploads.length;
