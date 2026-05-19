@@ -114,7 +114,7 @@ export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScre
 
       {/* Background */}
       <Image
-        source={require("../../../assets/flow-header.png")}
+        source={require("../../../../../assets/flow-header.png")}
         style={{
           position: "absolute",
           width: "100%",

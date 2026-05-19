@@ -1,7 +1,7 @@
 import { createAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 
-import successSound from "../../assets/success.mp3";
+import successSound from "../../../assets/success.mp3";
 
 const player = createAudioPlayer(successSound);
 
