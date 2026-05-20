@@ -1,8 +1,8 @@
 import { AsyncQueuer } from "@tanstack/pacer/async-queuer";
 import { addNetworkStateListener } from "expo-network";
 import { AppState, type AppStateStatus } from "react-native";
-
 import { getMeasurements } from "~/shared/db/measurements-storage";
+
 import {
   isProcessing,
   markEnqueued,
@@ -36,8 +36,7 @@ class UploadQueueImpl implements UploadQueue {
       asyncRetryerOptions: {
         maxAttempts: UPLOAD_RETRY_BACKOFF_MS.length + 1,
         backoff: "fixed",
-        baseWait: (retryer) =>
-          UPLOAD_RETRY_BACKOFF_MS[retryer.store.state.currentAttempt - 1] ?? 0,
+        baseWait: (retryer) => UPLOAD_RETRY_BACKOFF_MS[retryer.store.state.currentAttempt - 1] ?? 0,
         throwOnError: "last",
         onRetry: (attempt, err) =>
           console.warn("[upload-queue] worker error — retrying", {

@@ -59,12 +59,12 @@ The interface is wide (`claimForUpload`, `markAsUploading`, `markUploaded`, `mar
 
 **Files**:
 
-| File | Responsibility |
-|------|----------------|
-| `mqtt-errors.ts` | Typed error kinds: `PublishError`, `Disconnected`, `Timeout`, `CredentialError`. Each carries a stable `kind` string callers map to translation keys. |
-| `mqtt-transport.ts` | `Transport` interface (`connect`, `publish`, `onDisconnect`, `onMessageDelivered`, `destroy`) + production adapter wrapping paho-mqtt + Cognito SigV4. Re-uses existing `createSignedUrl` and `getCredentials` from `create-mqtt-connection.ts`. |
-| `mqtt-publisher.ts` | Module singleton. The deep module. |
-| `__tests__/mqtt-publisher.test.ts` | Fake-transport tests. |
+| File                               | Responsibility                                                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mqtt-errors.ts`                   | Typed error kinds: `PublishError`, `Disconnected`, `Timeout`, `CredentialError`. Each carries a stable `kind` string callers map to translation keys.                                                                                            |
+| `mqtt-transport.ts`                | `Transport` interface (`connect`, `publish`, `onDisconnect`, `onMessageDelivered`, `destroy`) + production adapter wrapping paho-mqtt + Cognito SigV4. Re-uses existing `createSignedUrl` and `getCredentials` from `create-mqtt-connection.ts`. |
+| `mqtt-publisher.ts`                | Module singleton. The deep module.                                                                                                                                                                                                               |
+| `__tests__/mqtt-publisher.test.ts` | Fake-transport tests.                                                                                                                                                                                                                            |
 
 **Interface**:
 
@@ -98,13 +98,13 @@ That's it. Callers know nothing about Cognito, paho, signing, reconnect, or time
 
 **Files**:
 
-| File | Responsibility |
-|------|----------------|
-| `upload-queue-state.ts` | Dependency-free state module: `subscribe`, `getSnapshot`, `isProcessing`, internal `markEnqueued`/`markSettled`. The React UI imports only from here, keeping the MQTT chain out of component-test module graphs. |
-| `upload-queue.ts` | Module singleton wrapping `@tanstack/pacer` AsyncQueuer. Holds measurement IDs only. Calls `markEnqueued` / `markSettled` so the state module stays in sync. |
-| `upload-worker.ts` | The function the queue invokes per item. Reads payload from DB, calls publisher, updates status. Wrapped in AsyncRetryer. |
-| `use-upload-queue-state.ts` | React hook: `useUploadQueueState()` returns `{ isUploading, count }`; `useIsProcessing(id)` is a per-row reactive selector. |
-| `__tests__/upload-queue.test.ts` | Fake-publisher tests. |
+| File                             | Responsibility                                                                                                                                                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `upload-queue-state.ts`          | Dependency-free state module: `subscribe`, `getSnapshot`, `isProcessing`, internal `markEnqueued`/`markSettled`. The React UI imports only from here, keeping the MQTT chain out of component-test module graphs. |
+| `upload-queue.ts`                | Module singleton wrapping `@tanstack/pacer` AsyncQueuer. Holds measurement IDs only. Calls `markEnqueued` / `markSettled` so the state module stays in sync.                                                      |
+| `upload-worker.ts`               | The function the queue invokes per item. Reads payload from DB, calls publisher, updates status. Wrapped in AsyncRetryer.                                                                                         |
+| `use-upload-queue-state.ts`      | React hook: `useUploadQueueState()` returns `{ isUploading, count }`; `useIsProcessing(id)` is a per-row reactive selector.                                                                                       |
+| `__tests__/upload-queue.test.ts` | Fake-publisher tests.                                                                                                                                                                                             |
 
 **Interface**:
 
@@ -136,14 +136,14 @@ async function uploadWorker(id: string) {
 
   const payload = {
     ...row.measurementResult,
-    _client_id: id,                              // AWS dedup key
+    _client_id: id, // AWS dedup key
   };
 
   try {
     await getPublisher().publish(row.topic, payload);
     await markAsSuccessful(id);
   } catch (err) {
-    if (isRetryable(err)) throw err;             // AsyncRetryer catches
+    if (isRetryable(err)) throw err; // AsyncRetryer catches
     await markAsFailed(id);
   }
 }
@@ -173,36 +173,46 @@ toast.info(t("...savedQueued"));
 ## 4. Why these decisions (rationale log)
 
 ### Lazy connect over eager connect
+
 Eager would pay the handshake on every app foreground even when the user is just checking the app. Lazy with idle-die gives the best of both: fast subsequent publishes within a session, zero cost when idle.
 
 ### Bump to QoS 1
+
 Today's QoS 0 means `messageDelivered` fires on **socket write**, not broker ack. A network drop between phone and AWS silently loses the message. Field measurements can take half a day to collect and the device may be offline at upload time — silent loss is unacceptable. QoS 1 costs one round-trip per message; pipelining (concurrency 8) hides almost all of it.
 
 ### Concurrency = 8 (not 1, not 3)
+
 - `1` (serial) would underutilise the QoS 1 pipeline.
 - `3` is the legacy Cognito-throttle number — irrelevant once we have one connection.
 - `8` pipelines a typical field burst (≤50 measurements) in 6–7 round-trips. AWS IoT broker `Receive Maximum` comfortably above this.
 
 ### Transparent reconnect (publisher hides disconnects from queue)
+
 Two options were considered:
+
 - (a) Publisher rejects on disconnect → queue's AsyncRetryer reschedules.
 - (b) Publisher holds + retries → queue never sees disconnect.
 
 Chose (b). Network drops are the **expected** failure on a mobile device — every queue retry would be polluted with disconnect noise, distorting the retry backoff schedule. The publisher's reconnect loop is cleaner because it knows about creds, the broker, and the held publishes. The queue stays dumb: it retries only on **semantic** failures (auth, payload, broker reject).
 
 ### Drop `"uploading"` status
+
 The status was a soft-lock to prevent the AppState/network/initial-mount trigger fan-out from double-publishing the same row. With a single queue and a single network listener, dedup is trivial (`queue.isProcessing(id)`) and the DB stops being a poor-man's queue. Also kills `resetUploadingMeasurements()` (crash-recovery for stuck rows).
 
 ### Embed row UUID in payload for AWS dedup
+
 QoS 1 prevents in-session duplicates (paho's PUBACK retransmit logic handles it). But cross-session dups remain: if the app dies between broker-ack and `markAsSuccessful`, the row stays `pending` and gets re-published on next boot. UUID + IoT rule-side dedup is ~5 lines and guarantees exactly-once **downstream**.
 
 ### Idle-die at 30s
+
 Long-lived TCP idle is fine on AWS IoT (broker won't drop). 30s is enough to span the gap between two manual measurements but short enough to free the socket on a phone switched to background.
 
 ### `@tanstack/pacer` over hand-rolled queue
+
 Already a project dependency (used by `time-sync`). Ships AsyncQueuer + AsyncRetryer + reactive state. No new runtime weight. AsyncRetryer is used twice — UploadQueue layers it around the upload worker, and MqttPublisher uses it for transport reconnect backoff — keeping one retry vocabulary across the codebase.
 
 ### Why not Provider/Context for the publisher and queue?
+
 React Context adds a render-time dependency for what is fundamentally a singleton transport. Module singletons keep them callable from non-React code (storage migrations, background tasks) and match the pattern of `time-sync.ts`. The UI consumes their reactive state via dedicated hooks (`useUploadQueueState`).
 
 ---
@@ -213,26 +223,26 @@ Two phases, strictly sequential. Phase 1 swaps the transport without changing th
 
 ### Phase 1 — MqttPublisher
 
-| Step | Task |
-|------|------|
-| 1.1 | `mqtt-errors.ts` and `mqtt-transport.ts` (Transport interface, paho adapter, fake-transport stub used in tests). |
-| 1.2 | `mqtt-publisher.ts` singleton with lazy connect, QoS 1, message-id correlation, idle-die, creds refresh, transparent reconnect. |
-| 1.3 | Publisher tests: single-connect-N-publishes, reconnect-during-pending, creds-refresh-drain, idle disconnect after 30s, error mapping, exhausted reconnect rejects pending. |
-| 1.4 | Migrate the 4 `sendMqttEvent` callsites to `getPublisher().publish(...)`. Delete `send-mqtt-event.ts`. Leave the `CONCURRENCY=3` worker pool untouched in this phase — it's now wasteful but harmless. |
-| 1.5 | Build mobile app. Manual smoke: upload single measurement online; upload during simulated network drop+restore; upload near cred-expiry boundary. |
+| Step | Task                                                                                                                                                                                                   |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1.1  | `mqtt-errors.ts` and `mqtt-transport.ts` (Transport interface, paho adapter, fake-transport stub used in tests).                                                                                       |
+| 1.2  | `mqtt-publisher.ts` singleton with lazy connect, QoS 1, message-id correlation, idle-die, creds refresh, transparent reconnect.                                                                        |
+| 1.3  | Publisher tests: single-connect-N-publishes, reconnect-during-pending, creds-refresh-drain, idle disconnect after 30s, error mapping, exhausted reconnect rejects pending.                             |
+| 1.4  | Migrate the 4 `sendMqttEvent` callsites to `getPublisher().publish(...)`. Delete `send-mqtt-event.ts`. Leave the `CONCURRENCY=3` worker pool untouched in this phase — it's now wasteful but harmless. |
+| 1.5  | Build mobile app. Manual smoke: upload single measurement online; upload during simulated network drop+restore; upload near cred-expiry boundary.                                                      |
 
 **Definition of done for Phase 1**: every publish goes through the singleton, all existing tests pass, manual smoke clean.
 
 ### Phase 2 — UploadQueue
 
-| Step | Task |
-|------|------|
-| 2.1 | Drizzle migration: drop `"uploading"` from the status enum. Migrate any in-flight `uploading` rows back to `pending` in the migration script. |
-| 2.2 | `upload-queue.ts` (AsyncQueuer, concurrency 8) + `upload-worker.ts` (read DB, inject UUID, publish, mark) wrapped in AsyncRetryer (3 attempts, 1s/4s/15s). |
-| 2.3 | `use-upload-queue-state.ts` hook exposing `isUploading`, `count`, `isProcessing(id)`. |
-| 2.4 | Deflate `use-measurement-upload.ts` and `use-questions-upload.ts` to save+enqueue. Rewrite `uploadAll`/`uploadOne` in `use-measurements.ts` as enqueue calls. Update UI consumers (`recent-measurements-screen.tsx`, swipeable rows, completed-state) to read from the new hook. |
-| 2.5 | Delete: `use-auto-upload.ts`, `claimForUpload`, `markAsUploading`, `resetUploadingMeasurements`, the `CONCURRENCY=3` worker pool, the `uploadingKeysRef` Set, the `autoUploadInFlight` ref. |
-| 2.6 | Queue tests with fake publisher: rehydrate on boot, pause flips on network, retry exhaustion marks `failed`, no double-enqueue on rapid foreground events. Manual smoke: offline save → online drain, kill app mid-burst → restart → resumes from DB. |
+| Step | Task                                                                                                                                                                                                                                                                             |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.1  | Drizzle migration: drop `"uploading"` from the status enum. Migrate any in-flight `uploading` rows back to `pending` in the migration script.                                                                                                                                    |
+| 2.2  | `upload-queue.ts` (AsyncQueuer, concurrency 8) + `upload-worker.ts` (read DB, inject UUID, publish, mark) wrapped in AsyncRetryer (3 attempts, 1s/4s/15s).                                                                                                                       |
+| 2.3  | `use-upload-queue-state.ts` hook exposing `isUploading`, `count`, `isProcessing(id)`.                                                                                                                                                                                            |
+| 2.4  | Deflate `use-measurement-upload.ts` and `use-questions-upload.ts` to save+enqueue. Rewrite `uploadAll`/`uploadOne` in `use-measurements.ts` as enqueue calls. Update UI consumers (`recent-measurements-screen.tsx`, swipeable rows, completed-state) to read from the new hook. |
+| 2.5  | Delete: `use-auto-upload.ts`, `claimForUpload`, `markAsUploading`, `resetUploadingMeasurements`, the `CONCURRENCY=3` worker pool, the `uploadingKeysRef` Set, the `autoUploadInFlight` ref.                                                                                      |
+| 2.6  | Queue tests with fake publisher: rehydrate on boot, pause flips on network, retry exhaustion marks `failed`, no double-enqueue on rapid foreground events. Manual smoke: offline save → online drain, kill app mid-burst → restart → resumes from DB.                            |
 
 **Definition of done for Phase 2**: upload hooks ≤30 lines each, queue tests green, manual smoke clean across offline/online/burst/cred-rotation scenarios.
 
@@ -241,12 +251,14 @@ Two phases, strictly sequential. Phase 1 swaps the transport without changing th
 ## 6. Files added / changed / deleted
 
 ### Added (Phase 1)
+
 - `apps/mobile/src/features/connection/services/mqtt/mqtt-errors.ts`
 - `apps/mobile/src/features/connection/services/mqtt/mqtt-transport.ts`
 - `apps/mobile/src/features/connection/services/mqtt/mqtt-publisher.ts`
 - `apps/mobile/src/features/connection/services/mqtt/__tests__/mqtt-publisher.test.ts`
 
 ### Added (Phase 2)
+
 - `apps/mobile/src/features/recent-measurements/services/upload-queue.ts`
 - `apps/mobile/src/features/recent-measurements/services/upload-worker.ts`
 - `apps/mobile/src/features/recent-measurements/hooks/use-upload-queue-state.ts`
@@ -254,6 +266,7 @@ Two phases, strictly sequential. Phase 1 swaps the transport without changing th
 - A drizzle migration dropping `"uploading"` from the status enum.
 
 ### Changed
+
 - `apps/mobile/src/features/recent-measurements/hooks/use-measurement-upload.ts` (≈220 lines → ≈30)
 - `apps/mobile/src/features/recent-measurements/hooks/use-questions-upload.ts` (≈140 lines → ≈30)
 - `apps/mobile/src/features/recent-measurements/hooks/use-measurements.ts` (≈220 lines → ≈80; loses worker pool + uploading-keys ref)
@@ -262,6 +275,7 @@ Two phases, strictly sequential. Phase 1 swaps the transport without changing th
 - UI components that read `isUploading`/`uploadProgress` (swap to `useUploadQueueState`)
 
 ### Deleted
+
 - `apps/mobile/src/features/connection/services/mqtt/send-mqtt-event.ts`
 - `apps/mobile/src/features/recent-measurements/hooks/use-auto-upload.ts`
 - The `CONCURRENCY = 3` worker pool inside `use-measurements.uploadMutation`
@@ -273,6 +287,7 @@ Two phases, strictly sequential. Phase 1 swaps the transport without changing th
 ## 7. Tests
 
 ### Publisher (`mqtt-publisher.test.ts`)
+
 - Single connect across N publishes
 - Pending publishes survive a mid-flight disconnect (held, resent, resolve once)
 - Exhausted reconnect rejects all pending with `kind: "Disconnected"`
@@ -281,6 +296,7 @@ Two phases, strictly sequential. Phase 1 swaps the transport without changing th
 - Error mapping: each transport failure path → expected `kind`
 
 ### Queue (`upload-queue.test.ts`)
+
 - Boot rehydration: pre-seeded DB rows enqueue on init
 - Pause on offline / resume on online
 - Concurrency cap respected
@@ -305,12 +321,12 @@ If only Phase 2 misbehaves, Phase 1's publisher remains valuable on its own (one
 
 ## 9. Risks
 
-| Risk | Mitigation |
-|------|-----------|
-| paho-mqtt `messageIdentifier` semantics differ from docs at QoS 1 | Verify in Phase 1.2 with a smoke test against real AWS IoT before relying on correlation; fall back to a strict-FIFO resolver array if `messageIdentifier` is unreliable. |
-| AWS IoT rule-side dedup not configured | Phase 2 is safe without it (rare dups, accepted); rule should be added in parallel by infra team. Tracked separately. |
-| Pacer AsyncRetryer API doesn't match our retry shape | Fall back to a thin retry wrapper (~15 lines). No blocker. |
-| Mid-migration mobile build with `uploading` enum gone but old client in field | Drizzle migration handles existing on-device rows; binary release boundary controls client code. No staged rollout required. |
+| Risk                                                                          | Mitigation                                                                                                                                                                |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| paho-mqtt `messageIdentifier` semantics differ from docs at QoS 1             | Verify in Phase 1.2 with a smoke test against real AWS IoT before relying on correlation; fall back to a strict-FIFO resolver array if `messageIdentifier` is unreliable. |
+| AWS IoT rule-side dedup not configured                                        | Phase 2 is safe without it (rare dups, accepted); rule should be added in parallel by infra team. Tracked separately.                                                     |
+| Pacer AsyncRetryer API doesn't match our retry shape                          | Fall back to a thin retry wrapper (~15 lines). No blocker.                                                                                                                |
+| Mid-migration mobile build with `uploading` enum gone but old client in field | Drizzle migration handles existing on-device rows; binary release boundary controls client code. No staged rollout required.                                              |
 
 ---
 

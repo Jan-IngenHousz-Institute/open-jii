@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { MqttError } from "~/features/connection/services/mqtt/mqtt-errors";
+
+import { uploadWorker } from "../upload-worker";
 
 const { mockGetMeasurementById, mockMarkAsSuccessful, mockMarkAsFailed, mockPublish } = vi.hoisted(
   () => ({
@@ -18,9 +21,6 @@ vi.mock("~/shared/db/measurements-storage", () => ({
 vi.mock("~/features/connection/services/mqtt/mqtt-publisher", () => ({
   getPublisher: () => ({ publish: mockPublish }),
 }));
-
-import { uploadWorker } from "../upload-worker";
-import { MqttError } from "~/features/connection/services/mqtt/mqtt-errors";
 
 describe("uploadWorker", () => {
   beforeEach(() => {

@@ -372,9 +372,7 @@ export async function markAsSuccessful(key: string): Promise<void> {
     // "failed" row that finally goes through still ends at "successful".
     db.update(measurements)
       .set({ status: "successful" })
-      .where(
-        and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])),
-      )
+      .where(and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])))
       .run();
   } catch (error) {
     console.error("Failed to mark measurement as successful:", error);

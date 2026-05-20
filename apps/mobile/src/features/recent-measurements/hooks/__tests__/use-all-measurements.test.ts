@@ -324,4 +324,91 @@ describe("useAllMeasurements", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // settle invalidation — per-item bridge from upload queue to react-query
+  // ---------------------------------------------------------------------------
+
+  describe("settle invalidation", () => {
+    // Only fake setTimeout/clearTimeout — leave Date.now real (so the
+    // leading-edge check `now - lastInvalidatedAt >= 250` fires on the
+    // first settle) and microtasks unfaked (react-query needs them).
+    function useThrottleTimers() {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    }
+
+    it("invalidates the measurements key on the first settle (leading edge)", async () => {
+      const state = await import("../../services/upload-queue-state");
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+      const { result, unmount } = renderHook(() => useAllMeasurements("all"), { wrapper });
+      await waitFor(() => expect(result.current.measurements).toBeDefined());
+      invalidateSpy.mockClear();
+
+      act(() => {
+        state.markEnqueued("row-1");
+        state.markSettled("row-1");
+      });
+
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
+      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+      unmount();
+    });
+
+    it("coalesces a burst of settles inside the throttle window into a single trailing refetch", async () => {
+      const state = await import("../../services/upload-queue-state");
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+      const { result, unmount } = renderHook(() => useAllMeasurements("all"), { wrapper });
+      await waitFor(() => expect(result.current.measurements).toBeDefined());
+      invalidateSpy.mockClear();
+
+      // Leading edge — counts as the first invalidate.
+      act(() => {
+        state.markEnqueued("a");
+        state.markSettled("a");
+      });
+      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+
+      useThrottleTimers();
+
+      // Burst of three more settles inside the 250ms window — should add
+      // exactly one trailing invalidate, not three.
+      act(() => {
+        state.markEnqueued("b");
+        state.markSettled("b");
+        state.markEnqueued("c");
+        state.markSettled("c");
+        state.markEnqueued("d");
+        state.markSettled("d");
+      });
+      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+
+      expect(invalidateSpy).toHaveBeenCalledTimes(2);
+      vi.useRealTimers();
+      unmount();
+    });
+
+    it("unsubscribes on unmount — settles after unmount do not invalidate", async () => {
+      const state = await import("../../services/upload-queue-state");
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+      const { result, unmount } = renderHook(() => useAllMeasurements("all"), { wrapper });
+      await waitFor(() => expect(result.current.measurements).toBeDefined());
+
+      unmount();
+      invalidateSpy.mockClear();
+
+      act(() => {
+        state.markEnqueued("orphan");
+        state.markSettled("orphan");
+      });
+
+      expect(invalidateSpy).not.toHaveBeenCalled();
+    });
+  });
 });

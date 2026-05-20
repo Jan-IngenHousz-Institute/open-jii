@@ -119,7 +119,6 @@ vi.mock("expo-network", () => ({
   NetworkStateType: { WIFI: "WIFI", CELLULAR: "CELLULAR", NONE: "NONE", UNKNOWN: "UNKNOWN" },
 }));
 
-
 // expo-sqlite wraps a native module. Component tests that pull in the upload
 // queue (transitively via useIsProcessing) shouldn't have to spin up a real
 // DB. Mock the shared client to a no-op shape; storage-level tests that
@@ -127,14 +126,23 @@ vi.mock("expo-network", () => ({
 // test file (vi.mock is hoisted per-file and overrides this default).
 vi.mock("~/shared/db/client", () => ({
   db: {
-    select: () => ({ from: () => ({ where: () => ({ get: () => null, all: () => [] }), all: () => [] }) }),
-    insert: () => ({ values: () => ({ run: () => undefined, onConflictDoNothing: () => ({ run: () => undefined }) }) }),
-    update: () => ({ set: () => ({ where: () => ({ run: () => undefined, returning: () => ({ all: () => [] }) }) }) }),
+    select: () => ({
+      from: () => ({ where: () => ({ get: () => null, all: () => [] }), all: () => [] }),
+    }),
+    insert: () => ({
+      values: () => ({
+        run: () => undefined,
+        onConflictDoNothing: () => ({ run: () => undefined }),
+      }),
+    }),
+    update: () => ({
+      set: () => ({
+        where: () => ({ run: () => undefined, returning: () => ({ all: () => [] }) }),
+      }),
+    }),
     delete: () => ({ where: () => ({ run: () => ({ changes: 0 }) }) }),
   },
 }));
-
-
 
 // safe-area-context needs a provider at the root; zero insets work fine for
 // component tests.
