@@ -234,7 +234,7 @@ export const experimentContract = c.router({
       404: zErrorResponse,
     },
     summary: "List pending join requests for an experiment",
-    description: "Admin-only. Returns all pending join requests for the experiment.",
+    description: "Returns all pending join requests for the experiment.",
   },
 
   getMyJoinRequest: {

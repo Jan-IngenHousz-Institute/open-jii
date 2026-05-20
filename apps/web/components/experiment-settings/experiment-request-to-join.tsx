@@ -115,11 +115,15 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
 
   if (pendingRequest) {
     return (
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <Button variant="muted" disabled>
-          {t("experimentSettings.requestPending")}
-        </Button>
-        <Button variant="outline" onClick={handleCancel} disabled={isCancelling}>
+      <div className="text-muted-foreground text-sm leading-relaxed">
+        <span>{t("experimentSettings.requestPendingDescription")}</span>{" "}
+        <span>{t("experimentSettings.cancelRequestPrompt")}</span>{" "}
+        <Button
+          variant="buttonLink"
+          className="h-auto p-0 align-baseline text-sm font-medium"
+          onClick={handleCancel}
+          isLoading={isCancelling}
+        >
           {t("experimentSettings.cancelRequest")}
         </Button>
       </div>
@@ -128,9 +132,15 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="default">{t("experimentSettings.requestToJoin")}</Button>
-      </DialogTrigger>
+      <div className="text-muted-foreground text-sm leading-relaxed">
+        <span>{t("experimentSettings.requestToJoinPrompt")}</span>{" "}
+        <DialogTrigger asChild>
+          <Button variant="buttonLink" className="h-auto p-0 align-baseline text-sm font-medium">
+            {t("experimentSettings.requestToJoin")}
+          </Button>
+        </DialogTrigger>{" "}
+        <span>{t("experimentSettings.requestToJoinPromptSuffix")}</span>
+      </div>
       <DialogContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>

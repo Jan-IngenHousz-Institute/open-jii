@@ -1,13 +1,11 @@
 "use client";
 
-import { Mail } from "lucide-react";
-import { useMemo, useState } from "react";
+import React from "react";
 
-import type { ExperimentMemberRole, ExperimentMember } from "@repo/api/schemas/experiment.schema";
-import type { UserProfile, Invitation } from "@repo/api/schemas/user.schema";
+import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
+import type { Invitation } from "@repo/api/schemas/user.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 import {
   Card,
   CardHeader,
@@ -15,34 +13,18 @@ import {
   CardDescription,
   CardContent,
 } from "@repo/ui/components/card";
-import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
-import { toast } from "@repo/ui/hooks/use-toast";
+  UnderlineTabs,
+  UnderlineTabsContent,
+  UnderlineTabsList,
+  UnderlineTabsTrigger,
+} from "@repo/ui/components/underline-tabs";
 
 import { useExperimentJoinRequests } from "../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
-import { useExperimentMemberAdd } from "../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
-import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
-import { useDebounce } from "../../hooks/useDebounce";
-import { useUserSearch } from "../../hooks/useUserSearch";
-import { useUserInvitationCreate } from "../../hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate";
-import { useUserInvitationRevoke } from "../../hooks/user-invitation/useUserInvitationRevoke/useUserInvitationRevoke";
-import { useUserInvitationRoleUpdate } from "../../hooks/user-invitation/useUserInvitationRoleUpdate/useUserInvitationRoleUpdate";
 import { useUserInvitations } from "../../hooks/user-invitation/useUserInvitations/useUserInvitations";
-import { MemberList } from "../current-members-list/current-members-list";
-import { UserSearchPopover } from "../user-search-popover";
 import { ExperimentJoinRequestsPanel } from "./experiment-join-requests-panel";
-
-type MemberSelection =
-  | { type: "user"; user: UserProfile }
-  | { type: "email"; email: string }
-  | null;
+import { ExperimentMembersPanel } from "./experiment-members-panel";
+import { ExperimentPendingInvitationsPanel } from "./experiment-pending-invitations-panel";
 
 interface ExperimentMemberManagementProps {
   experimentId: string;
@@ -61,133 +43,16 @@ export function ExperimentMemberManagement({
 }: ExperimentMemberManagementProps) {
   const { t } = useTranslation();
   const { data: session } = useSession();
-  const adminCount = members.filter((m) => m.role === "admin").length;
   const currentUserId = session?.user.id;
   const currentMember = members.find((m) => m.user.id === currentUserId);
   const currentUserRole = currentMember?.role;
   const isAdmin = currentUserRole === "admin";
+  const adminCount = members.filter((m) => m.role === "admin").length;
 
-  // User search with debounced input
-  const [userSearch, setUserSearch] = useState("");
-  const [selection, setSelection] = useState<MemberSelection>(null);
-  const [selectedRole, setSelectedRole] = useState<ExperimentMemberRole>("member");
-  const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
-  const { data: userSearchData, isLoading: isFetchingUsers } = useUserSearch(debouncedSearch);
-
-  const { mutateAsync: addMember, isPending: isAddingMember } = useExperimentMemberAdd();
-  const { mutateAsync: removeMember, isPending: isRemovingMember } = useExperimentMemberRemove();
-  const { mutateAsync: createInvitation, isPending: isCreatingInvitation } =
-    useUserInvitationCreate();
-  const { mutate: revokeInvitation } = useUserInvitationRevoke();
-  const { mutate: updateInvitationRole } = useUserInvitationRoleUpdate();
   const { data: invitationsData } = useUserInvitations("experiment", experimentId);
   const invitations: Invitation[] = invitationsData?.body ?? [];
-
-  const { data: joinRequestsData } = useExperimentJoinRequests(experimentId, isAdmin);
-  const joinRequestCount = joinRequestsData?.status === 200 ? joinRequestsData.body.length : 0;
-
-  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
-
-  const selectedUser = selection?.type === "user" ? selection.user : null;
-  const selectedEmail = selection?.type === "email" ? selection.email : null;
-
-  const isAddingMembersDisabled =
-    !selection ||
-    isAddingMember ||
-    isCreatingInvitation ||
-    currentUserRole !== "admin" ||
-    isArchived;
-
-  // Safely extract available users and filter out existing members
-  const availableUsers = useMemo(() => {
-    if (userSearchData?.body && Array.isArray(userSearchData.body)) {
-      return userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.userId));
-    }
-    return [];
-  }, [userSearchData, members]);
-
-  const resetSelection = () => {
-    setUserSearch("");
-    setSelection(null);
-    setSelectedRole("member");
-  };
-
-  const handleAddMember = async () => {
-    if (!selection) return;
-
-    if (selection.type === "user") {
-      await addMember(
-        {
-          params: { id: experimentId },
-          body: { members: [{ userId: selection.user.userId, role: selectedRole }] },
-        },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.memberAdded") });
-          },
-        },
-      );
-    } else {
-      await createInvitation(
-        {
-          body: {
-            resourceType: "experiment",
-            resourceId: experimentId,
-            email: selection.email,
-            role: selectedRole,
-          },
-        },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.invitationSent") });
-          },
-        },
-      );
-    }
-
-    resetSelection();
-  };
-
-  const handleRemoveMember = async (memberId: string) => {
-    setRemovingMemberId(memberId);
-    try {
-      await removeMember(
-        { params: { id: experimentId, memberId } },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.memberRemoved") });
-          },
-        },
-      );
-    } finally {
-      setRemovingMemberId(null);
-    }
-  };
-
-  const handleInvitationValueChange = (value: string, invitation: Invitation) => {
-    if (value === "revoke") {
-      revokeInvitation(
-        { params: { invitationId: invitation.id } },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.invitationRevoked") });
-          },
-        },
-      );
-    } else {
-      updateInvitationRole(
-        {
-          params: { invitationId: invitation.id },
-          body: { role: value as ExperimentMemberRole },
-        },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.roleUpdated") });
-          },
-        },
-      );
-    }
-  };
+  const { data: joinRequestsData } = useExperimentJoinRequests(experimentId);
+  const joinRequests = joinRequestsData?.status === 200 ? joinRequestsData.body : [];
 
   if (isLoading) {
     return (
@@ -224,142 +89,43 @@ export function ExperimentMemberManagement({
       </CardHeader>
 
       <CardContent>
-        <NavTabs defaultValue="collaborators">
-          <NavTabsList className="mb-4">
-            <NavTabsTrigger value="collaborators">
-              {t("experimentSettings.collaboratorsTab")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="requests" className="gap-1.5" disabled={!isAdmin}>
+        <UnderlineTabs defaultValue="members" className="w-full">
+          <UnderlineTabsList>
+            <UnderlineTabsTrigger value="members" count={members.length}>
+              {t("experimentSettings.membersTab")}
+            </UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="invited" count={invitations.length} disabled={!isAdmin}>
+              {t("experimentSettings.invitedTab")}
+            </UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="requests" count={joinRequests.length} disabled={!isAdmin}>
               {t("experimentSettings.requestsTab")}
-              {joinRequestCount > 0 && (
-                <span className="bg-quaternary rounded-full px-1.5 py-0.5 text-xs font-medium leading-none text-black">
-                  {joinRequestCount}
-                </span>
-              )}
-            </NavTabsTrigger>
-          </NavTabsList>
+            </UnderlineTabsTrigger>
+          </UnderlineTabsList>
 
-          <NavTabsContent value="collaborators" className="space-y-6">
-            {/* Add member section */}
-            <div className="flex w-full items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <UserSearchPopover
-                  availableUsers={availableUsers}
-                  searchValue={userSearch}
-                  onSearchChange={setUserSearch}
-                  isAddingUser={isAddingMember}
-                  loading={!isDebounced || isFetchingUsers}
-                  onSelectUser={(user) => setSelection({ type: "user", user })}
-                  onSelectEmail={(email) => setSelection({ type: "email", email })}
-                  placeholder={t("experiments.searchUsersPlaceholder")}
-                  selectedUser={selectedUser}
-                  selectedEmail={selectedEmail}
-                  onClearSelection={() => setSelection(null)}
-                  disabled={isArchived || currentUserRole !== "admin"}
-                  selectedRole={selectedRole}
-                  onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
-                  existingEmails={[
-                    ...members.map((m) => m.user.email).filter((e): e is string => e != null),
-                    ...invitations.map((inv) => inv.email),
-                  ]}
-                />
-              </div>
-              <Button
-                onClick={handleAddMember}
-                variant="muted"
-                disabled={isAddingMembersDisabled}
-                size="default"
-                className="ml-auto shrink-0"
-              >
-                {t("common.add")}
-              </Button>
-            </div>
+          <UnderlineTabsContent value="members" className="mt-4">
+            <ExperimentMembersPanel
+              experimentId={experimentId}
+              members={members}
+              invitations={invitations}
+              currentUserRole={currentUserRole}
+              currentUserId={currentUserId ?? ""}
+              isArchived={isArchived}
+              adminCount={adminCount}
+            />
+          </UnderlineTabsContent>
 
-            {/* Current members section */}
-            <div>
-              <MemberList
-                membersWithUserInfo={members.map((member) => ({
-                  ...member,
-                  user: {
-                    userId: member.user.id,
-                    firstName: member.user.firstName,
-                    lastName: member.user.lastName,
-                    email: member.user.email,
-                    bio: null,
-                    activated: null,
-                    organization: undefined,
-                  },
-                }))}
-                onRemoveMember={handleRemoveMember}
-                isRemovingMember={isRemovingMember}
-                removingMemberId={removingMemberId}
-                adminCount={adminCount}
-                experimentId={experimentId}
-                currentUserRole={currentUserRole}
-                currentUserId={session?.user.id ?? ""}
-                isArchived={isArchived}
-              />
-            </div>
+          <UnderlineTabsContent value="invited" className="mt-4">
+            <ExperimentPendingInvitationsPanel
+              invitations={invitations}
+              isArchived={isArchived}
+              isAdmin={isAdmin}
+            />
+          </UnderlineTabsContent>
 
-            {/* Pending invitations section */}
-            {invitations.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-foreground font-semibold">
-                  {t("experimentSettings.pendingInvitations")}
-                </h4>
-                <div className="max-h-[120px] space-y-3 overflow-y-auto">
-                  {invitations.map((invitation) => (
-                    <div key={invitation.id} className="flex items-center justify-between rounded">
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="text-foreground text-sm font-medium">
-                          {invitation.email}
-                        </span>
-                        <span className="flex items-center gap-x-1">
-                          <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-                          <span className="text-muted-foreground text-sm">
-                            {t("experimentSettings.pendingInvite")}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex flex-shrink-0 pl-4">
-                        <Select
-                          value={invitation.role}
-                          disabled={isArchived || currentUserRole !== "admin"}
-                          onValueChange={(value) => handleInvitationValueChange(value, invitation)}
-                        >
-                          <SelectTrigger className="w-[100px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">
-                              {t("experimentSettings.roleAdmin")}
-                            </SelectItem>
-                            <SelectItem value="member">
-                              {t("experimentSettings.roleMember")}
-                            </SelectItem>
-                            <SelectSeparator />
-                            <SelectItem
-                              value="revoke"
-                              className="text-destructive focus:text-destructive"
-                            >
-                              {t("experimentSettings.revoke")}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </NavTabsContent>
-
-          {isAdmin && (
-            <NavTabsContent value="requests">
-              <ExperimentJoinRequestsPanel experimentId={experimentId} />
-            </NavTabsContent>
-          )}
-        </NavTabs>
+          <UnderlineTabsContent value="requests" className="mt-4">
+            <ExperimentJoinRequestsPanel experimentId={experimentId} joinRequests={joinRequests} />
+          </UnderlineTabsContent>
+        </UnderlineTabs>
       </CardContent>
     </>
   );

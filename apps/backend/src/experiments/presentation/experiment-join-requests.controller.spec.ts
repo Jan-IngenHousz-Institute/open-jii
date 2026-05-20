@@ -421,7 +421,7 @@ describe("ExperimentJoinRequestsController", () => {
   });
 
   describe("listJoinRequests", () => {
-    it("returns pending requests to admins only", async () => {
+    it("returns pending requests to any authenticated user", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "List exp",
         userId: adminUserId,
@@ -435,15 +435,16 @@ describe("ExperimentJoinRequestsController", () => {
       const listPath = testApp.resolvePath(contract.experiments.listJoinRequests.path, {
         id: experiment.id,
       });
+
       const listResponse: SuperTestResponse<ExperimentJoinRequestList> = await testApp
         .get(listPath)
         .withAuth(adminUserId)
         .expect(StatusCodes.OK);
       expect(listResponse.body).toHaveLength(1);
 
-      // Non-admin: 403
+      // Any user can list, regardless of membership
       const otherUserId = await testApp.createTestUser({ email: "other-list@example.com" });
-      await testApp.get(listPath).withAuth(otherUserId).expect(StatusCodes.FORBIDDEN);
+      await testApp.get(listPath).withAuth(otherUserId).expect(StatusCodes.OK);
     });
   });
 });

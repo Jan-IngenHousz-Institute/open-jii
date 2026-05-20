@@ -8,8 +8,11 @@ export const useRequestJoinExperiment = () => {
   const queryClient = tsr.useQueryClient();
 
   return tsr.experiments.createJoinRequest.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["experiment-join-request-mine"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["experiment-join-requests", variables.params.id],
+      });
     },
   });
 };

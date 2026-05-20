@@ -7,8 +7,11 @@ export const useCancelMyJoinRequest = () => {
   const queryClient = tsr.useQueryClient();
 
   return tsr.experiments.cancelJoinRequest.useMutation({
-    onSuccess: () => {
+    onSuccess: async (_data, variables) => {
       queryClient.removeQueries({ queryKey: ["experiment-join-request-mine"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["experiment-join-requests", variables.params.id],
+      });
     },
   });
 };

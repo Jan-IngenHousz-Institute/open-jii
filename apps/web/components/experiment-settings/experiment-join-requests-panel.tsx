@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Mail, UserRoundPlus, X } from "lucide-react";
 import { useState } from "react";
 
 import type { ExperimentJoinRequest } from "@repo/api/schemas/experiment.schema";
@@ -26,6 +26,7 @@ import { parseApiError } from "../../util/apiError";
 
 interface ExperimentJoinRequestsPanelProps {
   experimentId: string;
+  joinRequests?: ExperimentJoinRequest[];
 }
 
 function JoinRequestRow({
@@ -46,9 +47,7 @@ function JoinRequestRow({
   const { t } = useTranslation();
   const [isMessageOpen, setIsMessageOpen] = useState(false);
 
-  const displayName =
-    (`${request.user.firstName} ${request.user.lastName}`.trim() || request.user.email) ??
-    t("experimentSettings.unknownUser");
+  const displayName = `${request.user.firstName} ${request.user.lastName}`;
   const rejectLabel = t("experimentSettings.rejectJoinRequest");
   const approveLabel = t("experimentSettings.approveJoinRequest");
 
@@ -60,8 +59,11 @@ function JoinRequestRow({
             {displayName}
           </span>
           {request.user.email && (
-            <span className="text-muted-foreground truncate text-xs" title={request.user.email}>
-              {request.user.email}
+            <span className="flex min-w-0 items-center gap-x-1">
+              <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+              <span className="text-muted-foreground truncate text-sm" title={request.user.email}>
+                {request.user.email}
+              </span>
             </span>
           )}
         </div>
@@ -70,7 +72,7 @@ function JoinRequestRow({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="destructive"
+                  variant="secondary"
                   size="icon"
                   className="h-8 w-8 [&_svg]:size-4"
                   onClick={() => onReject(request.id)}
@@ -102,7 +104,7 @@ function JoinRequestRow({
       </div>
 
       <Collapsible open={isMessageOpen} onOpenChange={setIsMessageOpen}>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground mt-2 flex items-center gap-1 text-xs transition-colors">
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground mt-1 flex items-center gap-1 text-xs transition-colors">
           {isMessageOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           {t("experimentSettings.joinRequestMessageLabel")}
         </CollapsibleTrigger>
@@ -122,11 +124,14 @@ function JoinRequestRow({
   );
 }
 
-export function ExperimentJoinRequestsPanel({ experimentId }: ExperimentJoinRequestsPanelProps) {
+export function ExperimentJoinRequestsPanel({
+  experimentId,
+  joinRequests: providedJoinRequests,
+}: ExperimentJoinRequestsPanelProps) {
   const { t } = useTranslation();
-  const { data: joinRequestsData } = useExperimentJoinRequests(experimentId, true);
+  const { data: joinRequestsData } = useExperimentJoinRequests(experimentId);
   const joinRequests: ExperimentJoinRequest[] =
-    joinRequestsData?.status === 200 ? joinRequestsData.body : [];
+    providedJoinRequests ?? (joinRequestsData?.status === 200 ? joinRequestsData.body : []);
 
   const { mutateAsync: approveJoinRequest, isPending: isApprovingJoinRequest } =
     useApproveJoinRequest();
@@ -182,9 +187,17 @@ export function ExperimentJoinRequestsPanel({ experimentId }: ExperimentJoinRequ
 
   if (joinRequests.length === 0) {
     return (
-      <p className="text-muted-foreground py-6 text-center text-sm">
-        {t("experimentSettings.noJoinRequests")}
-      </p>
+      <div className="px-6 py-10 text-center">
+        <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
+          <UserRoundPlus className="h-5 w-5" />
+        </div>
+        <p className="text-foreground text-sm font-semibold">
+          {t("experimentSettings.noJoinRequests")}
+        </p>
+        <p className="text-muted-foreground mx-auto mt-1 max-w-[280px] text-xs leading-relaxed">
+          {t("experimentSettings.noJoinRequestsHint")}
+        </p>
+      </div>
     );
   }
 

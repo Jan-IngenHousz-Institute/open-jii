@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
 
 import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
 import { ExperimentMemberManagement } from "../../experiment-settings/experiment-member-management-card";
+import { ExperimentRequestToJoin } from "../../experiment-settings/experiment-request-to-join";
 import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-visibility-card";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
@@ -42,6 +43,8 @@ export function ExperimentDetailsCard({
   const currentUserId = session?.user.id;
   const currentMember = members.find((m) => m.user.id === currentUserId);
   const currentUserRole = currentMember?.role;
+  const canRequestToJoin =
+    currentUserId && !currentMember && !isArchived && experiment.visibility === "public";
 
   return (
     <div className="w-full md:order-2 md:w-96">
@@ -109,25 +112,20 @@ export function ExperimentDetailsCard({
           />
 
           {currentUserRole === "admin" ? (
-            <ExperimentVisibilityCard
-              experimentId={experimentId}
-              initialVisibility={experiment.visibility}
-              embargoUntil={experiment.embargoUntil}
-              isArchived={isArchived}
-            />
+            <>
+              <ExperimentVisibilityCard
+                experimentId={experimentId}
+                initialVisibility={experiment.visibility}
+                embargoUntil={experiment.embargoUntil}
+                isArchived={isArchived}
+              />
+              <div
+                role="separator"
+                aria-orientation="horizontal"
+                className="text-muted-foreground mx-4 border-t"
+              />
+            </>
           ) : null}
-
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground mx-4 border-t"
-          />
-
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground mx-4 border-t"
-          />
 
           <ExperimentMemberManagement
             experimentId={experimentId}
@@ -136,6 +134,19 @@ export function ExperimentDetailsCard({
             isError={isMembersError}
             isArchived={isArchived}
           />
+
+          {canRequestToJoin ? (
+            <>
+              <div
+                role="separator"
+                aria-orientation="horizontal"
+                className="text-muted-foreground mx-4 border-t"
+              />
+              <div className="px-6 py-4">
+                <ExperimentRequestToJoin experimentId={experimentId} />
+              </div>
+            </>
+          ) : null}
         </div>
       </Card>
       <div className={`md:block ${isSidebarCollapsed ? "hidden" : "block"}`}>

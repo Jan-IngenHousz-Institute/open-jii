@@ -1,48 +1,20 @@
-import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentMemberManagement } from "./experiment-member-management-card";
 
-// Override global auth mock with a logged-in admin
 beforeEach(() => {
   vi.mocked(useSession).mockReturnValue({
     data: { user: { id: "u-admin" } },
   } as ReturnType<typeof useSession>);
 });
 
-vi.mock("../../hooks/useDebounce", () => ({
-  useDebounce: (v: string) => [v, true],
-}));
-
-vi.mock("../current-members-list/current-members-list", () => ({
-  MemberList: ({
-    membersWithUserInfo,
-    onRemoveMember,
-  }: {
-    membersWithUserInfo: {
-      user: { firstName: string; lastName: string; userId: string };
-      role: string;
-    }[];
-    onRemoveMember: (userId: string) => void;
-  }) => (
-    <div>
-      {membersWithUserInfo.map((m) => (
-        <div key={m.user.userId}>
-          <span>
-            {m.user.firstName} {m.user.lastName}
-          </span>
-          <span>{m.role}</span>
-          <button onClick={() => onRemoveMember(m.user.userId)}>Remove</button>
-        </div>
-      ))}
-    </div>
-  ),
+vi.mock("./experiment-members-panel", () => ({
+  ExperimentMembersPanel: () => <div data-testid="members-panel" />,
 }));
 
 const experimentId = "exp-123";
@@ -60,33 +32,18 @@ const members = [
   },
 ];
 
-function mountUserSearch() {
-  return server.mount(contract.users.searchUsers, {
-    body: [
-      createUserProfile({ userId: "u-member", firstName: "Grace", lastName: "Hopper" }),
-      createUserProfile({ userId: "u-free", firstName: "Katherine", lastName: "Johnson" }),
-    ],
-  });
-}
-
-function mountAddMember() {
-  return server.mount(contract.experiments.addExperimentMembers, {
-    body: [],
-    status: 201,
-  });
-}
-
 function mountInvitations() {
   server.mount(contract.users.listInvitations, { body: [] });
 }
 
-function mountRemoveMember() {
-  return server.mount(contract.experiments.removeExperimentMember);
+function mountJoinRequests() {
+  server.mount(contract.experiments.listJoinRequests, { body: [] });
 }
 
 describe("ExperimentMemberManagement", () => {
   it("renders loading skeleton", () => {
     mountInvitations();
+    mountJoinRequests();
     render(
       <ExperimentMemberManagement
         experimentId={experimentId}
@@ -101,6 +58,7 @@ describe("ExperimentMemberManagement", () => {
 
   it("renders error card", () => {
     mountInvitations();
+    mountJoinRequests();
     render(
       <ExperimentMemberManagement
         experimentId={experimentId}
@@ -113,8 +71,9 @@ describe("ExperimentMemberManagement", () => {
     expect(screen.getByText("experimentSettings.memberManagementError")).toBeInTheDocument();
   });
 
-  it("renders title, description, and existing members", () => {
+  it("renders title, description, and tab structure", () => {
     mountInvitations();
+    mountJoinRequests();
     render(
       <ExperimentMemberManagement
         experimentId={experimentId}
@@ -126,15 +85,19 @@ describe("ExperimentMemberManagement", () => {
 
     expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument();
     expect(screen.getByText("experimentSettings.collaboratorsDescription")).toBeInTheDocument();
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
-    expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /membersTab/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /invitedTab/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /requestsTab/i })).toBeInTheDocument();
+    expect(screen.getByTestId("members-panel")).toBeInTheDocument();
   });
 
-  it("adds a member successfully", async () => {
-    mountInvitations();
-    mountUserSearch();
-    const addSpy = mountAddMember();
+  it("disables invited and requests tabs for non-admins", () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "u-member" } },
+    } as ReturnType<typeof useSession>);
 
+    mountInvitations();
+    mountJoinRequests();
     render(
       <ExperimentMemberManagement
         experimentId={experimentId}
@@ -144,41 +107,7 @@ describe("ExperimentMemberManagement", () => {
       />,
     );
 
-    const input = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
-    const user = userEvent.setup();
-    await user.type(input, "Kat");
-
-    const katherineButton = await screen.findByRole("button", { name: /Katherine Johnson/i });
-    await user.click(katherineButton);
-
-    await user.click(screen.getByRole("button", { name: "common.add" }));
-
-    await waitFor(() => {
-      expect(addSpy.callCount).toBe(1);
-      expect(toast).toHaveBeenCalled();
-    });
-  });
-
-  it("removes a member", async () => {
-    mountInvitations();
-    const removeSpy = mountRemoveMember();
-
-    render(
-      <ExperimentMemberManagement
-        experimentId={experimentId}
-        members={members}
-        isLoading={false}
-        isError={false}
-      />,
-    );
-
-    const removeButtons = screen.getAllByRole("button", { name: /remove/i });
-    const user = userEvent.setup();
-    await user.click(removeButtons[0]);
-
-    await waitFor(() => {
-      expect(removeSpy.callCount).toBe(1);
-      expect(toast).toHaveBeenCalled();
-    });
+    expect(screen.getByRole("tab", { name: /invitedTab/i })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /requestsTab/i })).toBeDisabled();
   });
 });

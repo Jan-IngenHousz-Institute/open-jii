@@ -9,7 +9,6 @@ import { useTranslation } from "@repo/i18n";
 
 import { ExperimentArchive } from "./experiment-archive";
 import { ExperimentDelete } from "./experiment-delete";
-import { ExperimentRequestToJoin } from "./experiment-request-to-join";
 
 interface ExperimentInfoCardProps {
   experimentId: string;
@@ -29,8 +28,6 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.EXPERIMENT_DELETION);
 
   const isArchived = experiment.status === "archived";
-  const canRequestToJoin =
-    !currentMember && !isArchived && currentUserId && experiment.visibility === "public";
 
   return (
     <>
@@ -47,8 +44,6 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
 
         <div className="flex flex-col gap-3 md:flex-row">
           {isAdmin && <ExperimentArchive experimentId={experimentId} isArchived={isArchived} />}
-
-          {canRequestToJoin && <ExperimentRequestToJoin experimentId={experimentId} />}
 
           <ExperimentDelete experimentId={experimentId} experimentName={experiment.name} />
         </div>
