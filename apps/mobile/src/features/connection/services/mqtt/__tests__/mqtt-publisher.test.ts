@@ -1,17 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Stub the production transport's heavy native + env imports. Tests construct
-// MqttPublisherImpl directly with a fake transport factory, so paho/Cognito/
-// env never actually run — but importing the module triggers them.
-vi.mock("paho-mqtt", () => ({ Client: vi.fn(), Message: vi.fn() }));
-vi.mock("react-native-get-random-values", () => ({}));
-vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: () => "stub" }));
-vi.mock("~/shared/utils/generate-random-string", () => ({ generateRandomString: () => "rand" }));
-vi.mock("../create-mqtt-connection", () => ({
-  createSignedUrl: vi.fn(),
-  getCredentials: vi.fn(),
-}));
-
 import { MqttError } from "../mqtt-errors";
 import {
   MqttPublisherImpl,
@@ -26,6 +14,21 @@ import type {
   TransportMessage,
   TransportPublishHandle,
 } from "../mqtt-transport";
+
+// Stub the production transport's heavy native + env imports. Tests construct
+// MqttPublisherImpl directly with a fake transport factory, so paho/Cognito/
+// env never actually run — but importing the module triggers them.
+vi.mock("paho-mqtt", () => ({ Client: vi.fn(), Message: vi.fn() }));
+vi.mock("react-native-get-random-values", () => ({}));
+vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: () => "stub" }));
+vi.mock("~/shared/utils/generate-random-string", () => ({ generateRandomString: () => "rand" }));
+vi.mock("../create-mqtt-connection", () => ({
+  createSignedUrl: vi.fn(),
+  getCredentials: vi.fn(),
+}));
+vi.mock("~/shared/utils/time-sync", () => ({
+  getSyncedUtcNow: () => Date.now(),
+}));
 
 class FakeTransport implements Transport {
   private deliveredHandler: ((id: number) => void) | null = null;
@@ -171,8 +174,13 @@ describe("MqttPublisher", () => {
     await expect(publish2).resolves.toBeUndefined();
   });
 
-  it("rejects all pending publishes when reconnect exhausts retries", async () => {
+  it("times out pending publishes when reconnect exhausts retries", async () => {
     // Script: initial connect succeeds, then every reconnect attempt fails.
+    // With the pool, a slot whose reconnects exhaust does NOT reject items —
+    // they stay held until PUBLISH_TIMEOUT_MS fires, so the upload queue's
+    // retry path can pick them up cleanly. (Other slots may still work; for
+    // this test we use pool size 1 to mirror the original single-slot case.)
+    publisher = new MqttPublisherImpl({ transportFactory: factory, poolSize: 1 });
     factory.scripts = [
       null,
       new Error("network down 1"),
@@ -189,15 +197,15 @@ describe("MqttPublisher", () => {
     factory.current()!.drop();
     await settle();
 
-    // AsyncRetryer waits RECONNECT_BACKOFF_MS[i] between each retry.
     for (const ms of RECONNECT_BACKOFF_MS) {
       await vi.advanceTimersByTimeAsync(ms);
       await settle();
     }
 
-    await expect(publish1).rejects.toBeInstanceOf(MqttError);
-    await expect(publish2).rejects.toBeInstanceOf(MqttError);
-    await expect(publish1).rejects.toMatchObject({ kind: "Disconnected" });
+    await vi.advanceTimersByTimeAsync(PUBLISH_TIMEOUT_MS + 1);
+
+    await expect(publish1).rejects.toMatchObject({ kind: "Timeout" });
+    await expect(publish2).rejects.toMatchObject({ kind: "Timeout" });
   });
 
   it("closes the transport after idle timeout", async () => {
@@ -229,7 +237,10 @@ describe("MqttPublisher", () => {
     await expect(publish2).resolves.toBeUndefined();
   });
 
-  it("maps factory failures to MqttError with kind Disconnected after exhaustion", async () => {
+  it("times out the publish when initial slot connect exhausts retries", async () => {
+    // Pool size 1 — no other slot to fall back to. Connect retries exhaust,
+    // item stays held, PUBLISH_TIMEOUT_MS fires.
+    publisher = new MqttPublisherImpl({ transportFactory: factory, poolSize: 1 });
     factory.scripts = [
       new Error("init 1"),
       new Error("init 2"),
@@ -242,10 +253,11 @@ describe("MqttPublisher", () => {
       await vi.advanceTimersByTimeAsync(ms);
       await settle();
     }
+    await vi.advanceTimersByTimeAsync(PUBLISH_TIMEOUT_MS + 1);
 
     const err = await publishPromise.catch((rejection) => rejection);
     expect(err).toBeInstanceOf(MqttError);
-    expect((err as MqttError).kind).toBe("Disconnected");
+    expect((err as MqttError).kind).toBe("Timeout");
   });
 
   it("publish rejects with Timeout when broker never acks", async () => {
@@ -278,5 +290,55 @@ describe("MqttPublisher", () => {
     const err = await publish1.catch((rejection) => rejection);
     expect(err).toBeInstanceOf(MqttError);
     expect((err as MqttError).kind).toBe("Disconnected");
+  });
+
+  it("spreads publishes across the pool when held > per-slot capacity", async () => {
+    // MAX_IN_FLIGHT_PER_SLOT is 8 in production. With 9 publishes, slot 0
+    // fills to 8 and the 9th lands on slot 1, requiring a second transport.
+    const N = 9;
+    const publishes = Array.from({ length: N }, (_, i) =>
+      publisher.publish(`topic/${i}`, { v: i }),
+    );
+    await settle();
+
+    expect(factory.transports.length).toBeGreaterThanOrEqual(2);
+    const total = factory.transports.reduce((sum, t) => sum + t.publishes.length, 0);
+    expect(total).toBe(N);
+
+    for (const transport of factory.transports) transport.ackAll();
+    await Promise.all(publishes);
+  });
+
+  it("only opens one transport for a single publish (no eager pool warmup)", async () => {
+    const publishPromise = publisher.publish("topic/a", { v: 1 });
+    await settle();
+
+    expect(factory.transports.length).toBe(1);
+    factory.current()!.ack(0);
+    await expect(publishPromise).resolves.toBeUndefined();
+  });
+
+  it("isolates slot disconnects — surviving slots keep delivering", async () => {
+    // Force two slots to come up by publishing more than one slot can hold.
+    const N = 10;
+    const publishes = Array.from({ length: N }, (_, i) =>
+      publisher.publish(`topic/${i}`, { v: i }),
+    );
+    await settle();
+
+    expect(factory.transports.length).toBeGreaterThanOrEqual(2);
+    const [first, second] = factory.transports;
+    if (!first || !second) throw new Error("expected at least two transports");
+
+    // Drop the first slot. Items it carried go back to held + redelivered on
+    // its next transport. The second slot keeps acking unaffected.
+    first.drop();
+    second.ackAll();
+    await settle();
+
+    // First slot reconnects (3rd transport overall) and gets the held items.
+    expect(factory.transports.length).toBeGreaterThanOrEqual(3);
+    for (const transport of factory.transports) transport.ackAll();
+    await Promise.all(publishes);
   });
 });
