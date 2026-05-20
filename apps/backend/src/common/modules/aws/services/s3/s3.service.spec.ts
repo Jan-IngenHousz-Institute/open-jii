@@ -31,19 +31,14 @@ describe("AwsS3Service", () => {
     });
 
     it("passes correct bucket, key prefix, and content type to PutObjectCommand", async () => {
-      let capturedCommand: PutObjectCommand | undefined;
-      vi.spyOn(service as any, "createSignedUrl").mockImplementation(
-        (command: unknown) => {
-          capturedCommand = command as PutObjectCommand;
-          return Promise.resolve("https://mock-url");
-        },
-      );
+      const spy = vi.spyOn(service as any, "createSignedUrl").mockResolvedValue("https://mock-url");
 
       await service.getIotUploadUrl("experiment-abc");
 
-      expect(capturedCommand?.input.Bucket).toBe("test-iot-archive-bucket");
-      expect(capturedCommand?.input.Key).toMatch(/^large-iot\/experiment-abc\/.+\.json$/);
-      expect(capturedCommand?.input.ContentType).toBe("application/json");
+      const [command] = spy.mock.calls[0] as [PutObjectCommand];
+      expect(command.input.Bucket).toBe("test-iot-archive-bucket");
+      expect(command.input.Key).toMatch(/^large-iot\/experiment-abc\/.+\.json$/);
+      expect(command.input.ContentType).toBe("application/json");
     });
 
     it("returns failure with AWS_S3_PRESIGN_FAILED when createSignedUrl throws", async () => {
