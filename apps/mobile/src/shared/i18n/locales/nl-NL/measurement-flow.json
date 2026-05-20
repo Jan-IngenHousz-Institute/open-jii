@@ -18,12 +18,50 @@
   },
   "experimentSelection": {
     "heading": "Selecteer experiment",
+    "heroTitle": "Kies een experiment",
+    "heroSubtitle": "Kies een experiment om te starten.",
+    "searchPlaceholder": "Zoek experimenten…",
+    "assignedToYou": "Aan jou toegewezen",
     "loadingExperiments": "Experimenten laden...",
     "loadFailed": "Kon experimenten niet laden. Probeer het opnieuw.",
     "chooseExperimentPlaceholder": "Kies een experiment",
     "description": "Beschrijving",
     "noDescription": "Geen beschrijving beschikbaar",
-    "startFlow": "Flow starten"
+    "startFlow": "Flow starten",
+    "startNamedFlow": "{{label}}-flow starten",
+    "sensorBannerTitle": "Deze flow heeft een sensor nodig",
+    "sensorBannerBody": "Verbind een MultispeQ om metingen vast te leggen.",
+    "sensorBannerAction": "Verbinden",
+    "tag": {
+      "sensorRequired": "Sensor vereist",
+      "questionsOnly": "Alleen vragen",
+      "sensorAndQuestions": "Sensor + vragen"
+    },
+    "meta": {
+      "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
+    }
+  },
+  "hero": {
+    "activeFlow": "ACTIEVE FLOW",
+    "stepOfTotal": "Stap {{step}} van {{total}}",
+    "stepTypeLabel": {
+      "instruction": "Instructie",
+      "question": "Vraag",
+      "measurement": "Meting",
+      "analysis": "Analyse",
+      "review": "Antwoorden controleren",
+      "completed": "Afgerond"
+    },
+    "exitLabel": "Flow verlaten"
+  },
+  "exitSheet": {
+    "title": "Flow verlaten?",
+    "body": "Je bent bij stap {{step}} van {{total}}. Pauzeer om je voortgang te behouden of verwijder om opnieuw te starten.",
+    "pause": "Flow pauzeren",
+    "pauseSub": "We bewaren je antwoorden en voortgang.",
+    "discard": "Flow verwijderen",
+    "discardSub": "Gooi deze poging weg en start opnieuw.",
+    "continue": "Flow voortzetten"
   },
   "offlineIndicator": {
     "ready": "Offline beschikbaar"

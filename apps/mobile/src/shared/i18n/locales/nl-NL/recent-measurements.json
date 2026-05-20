@@ -4,6 +4,17 @@
     "synced": "Gesynchroniseerd",
     "unsynced": "Niet gesynchroniseerd"
   },
+  "sectionHeader": {
+    "today": "Vandaag · {{date}}",
+    "yesterday": "Gisteren · {{date}}",
+    "other": "{{date}}"
+  },
+  "tag": {
+    "synced": "Gesynchroniseerd",
+    "queued": "In wachtrij",
+    "uploading": "Uploaden",
+    "failed": "Mislukt"
+  },
   "toolbar": {
     "deleteAllSyncedAccessibilityLabel": "Alle gesynchroniseerde metingen verwijderen",
     "deleteAllSyncedAccessibilityHint": "Verwijdert metingen die al zijn geüpload",
