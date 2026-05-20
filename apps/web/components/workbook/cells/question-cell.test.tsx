@@ -153,7 +153,7 @@ describe("QuestionCellComponent", () => {
       expect(input).toBeDisabled();
     });
 
-    it("hides the required switch (hidden via headerActions)", () => {
+    it("hides the required switch in read-only mode", () => {
       renderQuestion({}, { readOnly: true });
       expect(screen.queryByRole("switch")).not.toBeInTheDocument();
     });

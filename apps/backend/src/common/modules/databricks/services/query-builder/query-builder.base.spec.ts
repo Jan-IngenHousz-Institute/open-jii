@@ -77,14 +77,21 @@ describe("QueryBuilder Base", () => {
       expect(query).toBe("SELECT * EXCEPT (`col1`, `col2`) FROM t");
     });
 
-    it("should support except clause with specific columns", () => {
+    it("drops EXCEPT when explicit columns are projected (Databricks rejects the combo)", () => {
+      // Databricks/Spark only allows `EXCEPT (...)` after `SELECT *`; with
+      // an explicit column list the un-listed columns are already excluded
+      // and `EXCEPT` raises PARSE_SYNTAX_ERROR. The builder silently drops
+      // `EXCEPT` in that case so the SQL stays valid.
       const query = builder.select(["a", "b", "c"]).from("t").except(["secret"]).build();
-      expect(query).toBe("SELECT `a`, `b`, `c` EXCEPT (`secret`) FROM t");
+      expect(query).toBe("SELECT `a`, `b`, `c` FROM t");
     });
 
     it("should escape identifiers in except clause", () => {
+      // Dotted identifiers are split per segment so struct-field paths
+      // (e.g. `contributor.id`) escape correctly; `escapeIdentifier`
+      // splits on `.` and backticks each part independently.
       const query = builder.from("t").except(["user.id", "select"]).build();
-      expect(query).toBe("SELECT * EXCEPT (`user.id`, `select`) FROM t");
+      expect(query).toBe("SELECT * EXCEPT (`user`.`id`, `select`) FROM t");
     });
 
     it("should work with except and other clauses", () => {
@@ -180,6 +187,40 @@ describe("QueryBuilder Base", () => {
 
       expect(query).toContain("LIMIT 5");
       expect(query).toContain("OFFSET 10");
+    });
+  });
+
+  describe("VariantQueryBuilder.topLevelFieldNames", () => {
+    it("extracts simple comma-separated fields", () => {
+      expect(VariantQueryBuilder.topLevelFieldNames("OBJECT<a: INT, b: STRING>")).toEqual([
+        "a",
+        "b",
+      ]);
+    });
+
+    it("unwraps backtick-quoted names with spaces and special chars", () => {
+      expect(
+        VariantQueryBuilder.topLevelFieldNames(
+          "OBJECT<`Leaf Temperature`: DECIMAL(4,2), `Light Intensity (PAR)`: DECIMAL(23,3)>",
+        ),
+      ).toEqual(["Leaf Temperature", "Light Intensity (PAR)"]);
+    });
+
+    it("does not split inside nested STRUCTs / ARRAYs / DECIMALs", () => {
+      expect(
+        VariantQueryBuilder.topLevelFieldNames(
+          "OBJECT<a: DECIMAL(22,2), b: STRUCT<inner: INT, other: STRING>, c: ARRAY<DECIMAL(4,2)>>",
+        ),
+      ).toEqual(["a", "b", "c"]);
+    });
+
+    it("accepts STRUCT< ... > shape (post from_json transform)", () => {
+      expect(VariantQueryBuilder.topLevelFieldNames("STRUCT<x:INT,y:STRING>")).toEqual(["x", "y"]);
+    });
+
+    it("returns empty for malformed schemas", () => {
+      expect(VariantQueryBuilder.topLevelFieldNames("not a struct")).toEqual([]);
+      expect(VariantQueryBuilder.topLevelFieldNames("")).toEqual([]);
     });
   });
 });

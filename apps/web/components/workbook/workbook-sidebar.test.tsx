@@ -24,7 +24,7 @@ describe("WorkbookSidebar", () => {
     vi.clearAllMocks();
   });
 
-  it("renders cell list with type labels (and the cell's name for question cells)", () => {
+  it("renders cell list with the type label as title (question shows 'Question' + text below)", () => {
     render(
       <WorkbookSidebar
         cells={[markdownCell, questionCell, protocolCell]}
@@ -32,8 +32,10 @@ describe("WorkbookSidebar", () => {
       />,
     );
     expect(screen.getByText("Markdown")).toBeInTheDocument();
-    expect(screen.getByText("soil_moisture")).toBeInTheDocument();
-    expect(screen.queryByText("Question")).not.toBeInTheDocument();
+    // For question cells the title is now the literal type label "Question"
+    // (in pink) and the question text shows in the subtitle row.
+    expect(screen.getByText("Question")).toBeInTheDocument();
+    expect(screen.queryByText("soil_moisture")).not.toBeInTheDocument();
     expect(screen.getByText("Protocol")).toBeInTheDocument();
   });
 
@@ -60,5 +62,33 @@ describe("WorkbookSidebar", () => {
     const emptyMd: WorkbookCell = { ...markdownCell, content: "" };
     render(<WorkbookSidebar cells={[emptyMd]} onCellClick={onCellClick} />);
     expect(screen.getByText("Empty")).toBeInTheDocument();
+  });
+
+  it("shows a Required asterisk next to required question rows", () => {
+    const required = createQuestionCell({
+      id: "q-required",
+      name: "consent",
+      question: { kind: "yes_no", text: "Consent?", required: true },
+    });
+    render(<WorkbookSidebar cells={[required]} onCellClick={onCellClick} />);
+    // aria-label comes from the i18n "workbooks.required" key.
+    expect(screen.getByLabelText("workbooks.required")).toBeInTheDocument();
+  });
+
+  it("makes the whole card the drag source when onReorder is provided", () => {
+    const onReorder = vi.fn();
+    render(
+      <WorkbookSidebar
+        cells={[markdownCell, protocolCell]}
+        onCellClick={onCellClick}
+        onReorder={onReorder}
+      />,
+    );
+
+    // The outer row button carries `draggable=true` so the user can grab
+    // anywhere on the card, not just the GripVertical icon.
+    const rows = screen.getAllByRole("button").filter((el) => el.getAttribute("draggable"));
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    rows.forEach((row) => expect(row).toHaveAttribute("draggable", "true"));
   });
 });

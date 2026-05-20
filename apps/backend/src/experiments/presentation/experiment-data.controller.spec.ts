@@ -6,6 +6,7 @@ import { expect } from "vitest";
 
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
+import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
@@ -47,6 +48,7 @@ describe("ExperimentDataController", () => {
   let controller: ExperimentDataController;
   let getExperimentDataUseCase: GetExperimentDataUseCase;
   let getExperimentTablesUseCase: GetExperimentTablesUseCase;
+  let getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase;
   let uploadAmbyteDataUseCase: UploadAmbyteDataUseCase;
 
   const mockSession: UserSession = {
@@ -80,6 +82,7 @@ describe("ExperimentDataController", () => {
     controller = testApp.module.get(ExperimentDataController);
     getExperimentDataUseCase = testApp.module.get(GetExperimentDataUseCase);
     getExperimentTablesUseCase = testApp.module.get(GetExperimentTablesUseCase);
+    getDistinctColumnValuesUseCase = testApp.module.get(GetDistinctColumnValuesUseCase);
     uploadAmbyteDataUseCase = testApp.module.get(UploadAmbyteDataUseCase);
   });
 
@@ -239,6 +242,47 @@ describe("ExperimentDataController", () => {
       });
 
       expect(result.status).toBe(400);
+    });
+  });
+
+  describe("getDistinctColumnValues", () => {
+    it("returns distinct values on success", async () => {
+      const experimentId = faker.string.uuid();
+      const body = { values: ["alpha", 2], truncated: false };
+
+      vi.spyOn(getDistinctColumnValuesUseCase, "execute").mockResolvedValue(success(body));
+
+      const handler = controller.getDistinctColumnValues(mockSession);
+      const result = await handler({
+        params: { id: experimentId },
+        query: { tableName: "raw_data", column: "site", limit: 50 },
+        headers: {},
+      });
+
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual(body);
+      expect(getDistinctColumnValuesUseCase.execute).toHaveBeenCalledWith(
+        experimentId,
+        mockSession.user.id,
+        { tableName: "raw_data", column: "site", limit: 50 },
+      );
+    });
+
+    it("maps a use-case failure to its HTTP status", async () => {
+      const experimentId = faker.string.uuid();
+
+      vi.spyOn(getDistinctColumnValuesUseCase, "execute").mockResolvedValue(
+        failure(AppError.forbidden("Access denied")),
+      );
+
+      const handler = controller.getDistinctColumnValues(mockSession);
+      const result = await handler({
+        params: { id: experimentId },
+        query: { tableName: "raw_data", column: "site" },
+        headers: {},
+      });
+
+      expect(result.status).toBe(403);
     });
   });
 

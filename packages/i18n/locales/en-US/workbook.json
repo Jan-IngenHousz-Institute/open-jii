@@ -20,7 +20,10 @@
     "noCells": "No cells yet. Open the workbook to start building your notebook.",
     "saving": "Saving...",
     "allChangesSaved": "All changes saved",
-    "viewWorkbook": "View Workbook"
+    "viewWorkbook": "View Workbook",
+    "required": "Required",
+    "outputsCleared_one": "Cleared {{count}} output",
+    "outputsCleared_other": "Cleared {{count}} outputs"
   },
   "output": {
     "label": "Output",
@@ -31,8 +34,15 @@
     "noData": "No output data",
     "tabTable": "Table",
     "tabJson": "JSON",
+    "tabTimeseries": "Timeseries",
     "copyJson": "Copy JSON",
     "closeChart": "Close chart",
-    "expandChart": "Expand chart for {{column}}"
+    "expandChart": "Expand chart for {{column}}",
+    "loadingProtocol": "Loading protocol…",
+    "timeseriesXAxis": "Time (s)",
+    "timeseriesYAxis": "Normalized signal",
+    "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
+    "timeseriesEmpty": "No detector readings to plot",
+    "timeseriesError": "Cannot decode this output against the source protocol"
   }
 }

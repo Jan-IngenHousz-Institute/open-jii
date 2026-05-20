@@ -1,0 +1,98 @@
+{
+  "filters": {
+    "all": "Alle",
+    "synced": "Gesynchroniseerd",
+    "unsynced": "Niet gesynchroniseerd"
+  },
+  "sectionHeader": {
+    "today": "Vandaag · {{date}}",
+    "yesterday": "Gisteren · {{date}}",
+    "other": "{{date}}"
+  },
+  "tag": {
+    "synced": "Gesynchroniseerd",
+    "queued": "In wachtrij",
+    "uploading": "Uploaden",
+    "failed": "Mislukt"
+  },
+  "toolbar": {
+    "deleteAllSyncedAccessibilityLabel": "Alle gesynchroniseerde metingen verwijderen",
+    "deleteAllSyncedAccessibilityHint": "Verwijdert metingen die al zijn geüpload",
+    "syncAllAccessibilityLabel": "Alle metingen synchroniseren",
+    "syncAllAccessibilityHint": "Uploadt alle niet-gesynchroniseerde metingen"
+  },
+  "list": {
+    "swipeHint": "Veeg",
+    "emptyTitle": "Geen metingen gevonden",
+    "emptyHintAll": "Begin met meten om je gegevens hier te zien",
+    "emptyHintSynced": "Nog geen gesynchroniseerde metingen",
+    "emptyHintUnsynced": "Alle metingen zijn gesynchroniseerd",
+    "exportButton": "Metingen exporteren",
+    "noQuestionsAnswered": "Geen vragen beantwoord"
+  },
+  "swipe": {
+    "uploadButton": "Uploaden",
+    "commentButton": "Opmerking"
+  },
+  "commentModal": {
+    "title": "Opmerking toevoegen",
+    "answersLabel": "Antwoorden: ",
+    "experimentLabel": "Experiment: ",
+    "measurementDoneLabel": "Meting voltooid: ",
+    "placeholder": "Voer hier je opmerking in...",
+    "saveButton": "Opmerking opslaan"
+  },
+  "flagModal": {
+    "title": "Selecteer markeringstype",
+    "removeFlag": "Markering verwijderen"
+  },
+  "flagType": {
+    "outlier": "Uitschieter",
+    "needs_review": "Beoordeling nodig"
+  },
+  "questionsModal": {
+    "annotationsHeading": "Annotaties",
+    "questionsHeading": "Vragen & Antwoorden",
+    "noQuestionsAnswered": "Geen vragen beantwoord voor deze meting"
+  },
+  "alerts": {
+    "uploadMeasurementTitle": "Meting uploaden",
+    "uploadMeasurementMessage": "Weet je zeker dat je \"{{name}}\" wilt uploaden?",
+    "uploadButton": "Uploaden",
+    "uploadMeasurementError": "Kon meting niet uploaden. Probeer het opnieuw.",
+    "deleteMeasurementTitle": "Meting verwijderen",
+    "removeMeasurementTitle": "Meting verwijderen",
+    "deleteMeasurementMessage": "Weet je zeker dat je \"{{name}}\" uit lokale opslag wilt verwijderen?",
+    "removeMeasurementMessage": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Dit verwijdert het uit lokale opslag.",
+    "removeButton": "Verwijderen",
+    "deleteMeasurementError": "Kon meting niet verwijderen. Probeer het opnieuw.",
+    "uploadAllTitle": "Alle metingen uploaden",
+    "uploadAllMessage_one": "Weet je zeker dat je {{count}} niet-gesynchroniseerde meting wilt synchroniseren?",
+    "uploadAllMessage_other": "Weet je zeker dat je {{count}} niet-gesynchroniseerde metingen wilt synchroniseren?",
+    "uploadAllButton": "Alles uploaden",
+    "uploadAllError": "Synchronisatie mislukt. Probeer het opnieuw.",
+    "uploadAllSuccess": "Alle metingen succesvol gesynchroniseerd",
+    "deleteAllSyncedTitle": "Alle gesynchroniseerde metingen verwijderen",
+    "deleteAllSyncedMessage": "Weet je zeker dat je alle {{count}} gesynchroniseerde metingen uit lokale opslag wilt verwijderen?",
+    "deleteAllSyncedError": "Kon gesynchroniseerde metingen niet verwijderen",
+    "exportError": "Export mislukt. Probeer het opnieuw.",
+    "saveErrorTitle": "Er ging iets mis",
+    "saveErrorMessage": "Kon de meting niet opslaan. Wil je deze in plaats daarvan als bestand opslaan?",
+    "saveToFileButton": "Opslaan als bestand",
+    "saveToFileError": "Kon meting niet opslaan. Probeer het opnieuw."
+  },
+  "toasts": {
+    "uploadingMeasurements_one": "{{count}} niet-gesynchroniseerde meting wordt geüpload…",
+    "uploadingMeasurements_other": "{{count}} niet-gesynchroniseerde metingen worden geüpload…",
+    "measurementsSynced_one": "{{count}} meting gesynchroniseerd",
+    "measurementsSynced_other": "{{count}} metingen gesynchroniseerd",
+    "uploadFailed": "Upload mislukt. Probeer het opnieuw.",
+    "uploadOneFailed": "Uploaden mislukt, probeer later opnieuw",
+    "uploadNotAvailable": "Upload niet beschikbaar, upload later vanuit Recent",
+    "measurementUploaded": "Meting geüpload!",
+    "answersUploaded": "Antwoorden geüpload!",
+    "answersSaveFailed": "Antwoorden konden niet op dit apparaat worden opgeslagen. Exporteer je gegevens nu om verlies te voorkomen.",
+    "uploadedLocalStatusRefresh": "Geüpload — lokale status wordt bij volgende synchronisatie bijgewerkt",
+    "savedOffline": "Offline opgeslagen — wordt geüpload zodra je weer online bent"
+  }
+}

@@ -4,6 +4,7 @@ import type {
   Role,
 } from "@repo/api/schemas/experiment.schema";
 import { getColumnKind } from "@repo/api/utils/column-type-utils";
+import type { BarSeriesData } from "@repo/ui/components/charts/bar-chart";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
@@ -20,9 +21,36 @@ export interface ColorEncodingOptions {
   colorMap?: Record<string, string>;
 }
 
+/**
+ * Bar-chart-only options. Orientation, sort, and top-N are presentation
+ * concerns (the bar renderer applies them on the client). The aggregation
+ * function lives here too — the renderer aggregates rows client-side, so
+ * the function is a render hint rather than a data-shape decision, and
+ * keeping it next to the other bar options keeps the data panel's
+ * setValue calls confined to one path.
+ *
+ * `xColumnType` is captured by the data panel when the user picks the X
+ * column, so the renderer can detect CONTRIBUTOR struct cells without
+ * re-fetching column metadata. Empty string when no column is picked.
+ */
+export interface BarChartOptions {
+  orientation?: "v" | "h";
+  sortDirection?: "asc" | "desc" | null;
+  topN?: number;
+  aggregationFunction?: "count" | "sum" | "avg" | "min" | "max";
+  xColumnType?: string;
+  /**
+   * Only meaningful when `xColumnType` is the QUESTIONS well-known array;
+   * picks which entry's `question_answer` to use as the group key.
+   */
+  questionLabel?: string;
+}
+
 export type ChartFormConfig = PlotlyChartConfig &
   Partial<Omit<LineSeriesData, "x" | "y">> &
   Partial<Omit<ScatterSeriesData, "x" | "y">> &
+  Partial<Omit<BarSeriesData, "x" | "y" | "orientation">> &
+  BarChartOptions &
   ColorEncodingOptions;
 
 export type ChartFormDataConfig = CreateExperimentVisualizationBody["dataConfig"];

@@ -1,0 +1,51 @@
+{
+  "demoDisclaimer": {
+    "badge": "Demomodus",
+    "body": "Deze kalibratiestroom draait momenteel in demonstratiemodus. Alle metingen en berekeningen zijn gesimuleerd en uitsluitend bedoeld om te testen."
+  },
+  "flow": {
+    "toastStarted": "Kalibratie gestart. Volg de instructies.",
+    "toastGainComplete": "Versterkingskalibratie voltooid. Doorgaan naar metingen.",
+    "toastPanelMeasured": "Paneel #{{panel}} gemeten. Volgende: paneel #{{next}}",
+    "toastComplete": "Kalibratie succesvol voltooid!",
+    "toastProcessingError": "Fout bij het verwerken van kalibratiegegevens. Probeer het opnieuw."
+  },
+  "setup": {
+    "title": "Apparaatkalibratie instellen",
+    "intro": "Dit kalibratieproces helpt om nauwkeurige metingen te garanderen. Je hebt nodig:",
+    "bulletDevice": "• Een verbonden MultispeQ-apparaat",
+    "bulletCards": "• Chlorofyl-kalibratiekaarten (panelen #2, #3, #4, #6, #7, #8, #10, #11, #12)",
+    "bulletReferences": "• Bekende referentiewaarden voor elke kalibratiekaart",
+    "startButton": "Kalibratie starten"
+  },
+  "gain": {
+    "title": "Versterkingskalibratie (auto-blanking)",
+    "body": "Het apparaat voert nu auto-blanking uit om basislijnwaarden vast te stellen voor elk LED-kanaal.",
+    "buttonIdle": "Auto-blanking starten",
+    "buttonProcessing": "Bezig met kalibreren..."
+  },
+  "measurements": {
+    "title": "Kalibratiemetingen ({{current}}/{{total}})",
+    "panelLabel": "Waarde paneel #{{panel}}:",
+    "inputPlaceholder": "Voer waarde in",
+    "startButton": "Meting starten",
+    "cancelButton": "Meting annuleren",
+    "progress": "{{current}} van {{total}} metingen voltooid"
+  },
+  "processing": {
+    "title": "Kalibratiegegevens verwerken",
+    "subtitle": "Meetgegevens analyseren en kalibratieparameters berekenen...",
+    "cardBody": "Even geduld terwijl we je kalibratiegegevens verwerken"
+  },
+  "completion": {
+    "title": "Kalibratie voltooid!",
+    "subtitle": "Je MultispeQ-apparaat is succesvol gekalibreerd en klaar voor metingen.",
+    "resultsHeading": "Kalibratieresultaten",
+    "measurementsTaken": "Metingen verricht:",
+    "calibrationQuality": "Kalibratiekwaliteit:",
+    "qualityExcellent": "Uitstekend (R² = {{value}})",
+    "offset": "Offset:",
+    "slope": "Helling:",
+    "startNewButton": "Nieuwe kalibratie starten"
+  }
+}

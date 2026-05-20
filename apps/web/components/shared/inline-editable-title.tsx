@@ -81,6 +81,15 @@ export function InlineEditableTitle({
           <Input
             value={editedTitle}
             onChange={(e) => setEditedTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleSave();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                handleCancel();
+              }
+            }}
             className="min-w-[300px] flex-1 text-2xl font-semibold"
             disabled={isPending}
             autoFocus

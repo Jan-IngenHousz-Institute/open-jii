@@ -9,7 +9,10 @@ import { useExperimentDataUpload } from "./useExperimentDataUpload";
 describe("useExperimentDataUpload", () => {
   it("should send an upload request", async () => {
     const spy = server.mount(contract.experiments.uploadExperimentData, {
-      body: { success: true, message: "Upload complete" },
+      body: {
+        uploadId: "upload-1",
+        files: [{ fileName: "data.csv", filePath: "/uploads/data.csv" }],
+      },
       status: 201,
     });
 
@@ -28,7 +31,10 @@ describe("useExperimentDataUpload", () => {
 
   it("should return mutation state (isPending, error)", () => {
     server.mount(contract.experiments.uploadExperimentData, {
-      body: { success: true, message: "Upload complete" },
+      body: {
+        uploadId: "upload-1",
+        files: [{ fileName: "data.csv", filePath: "/uploads/data.csv" }],
+      },
       status: 201,
     });
 

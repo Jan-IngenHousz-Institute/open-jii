@@ -10,6 +10,7 @@
     "./components/charts/utils": "./src/components/charts/utils.ts",
     "./hooks/use-toast": "./src/hooks/use-toast.ts",
     "./hooks/use-mobile": "./src/hooks/use-mobile.tsx",
+    "./hooks/use-click-outside": "./src/hooks/use-click-outside.ts",
     "./lib/utils": "./src/lib/utils.ts"
   },
   "license": "MIT",

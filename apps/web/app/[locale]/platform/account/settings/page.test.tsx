@@ -1,3 +1,4 @@
+import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 import { auth } from "~/app/actions/auth";
@@ -14,7 +15,7 @@ vi.mock("~/components/account-settings/account-settings", () => ({
 
 describe("AccountSettingsPage", () => {
   it("renders with session", async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { id: "1", name: "User" } });
+    vi.mocked(auth).mockResolvedValue(createSession({ user: { id: "1", name: "User" } }));
 
     render(await AccountSettingsPage());
 

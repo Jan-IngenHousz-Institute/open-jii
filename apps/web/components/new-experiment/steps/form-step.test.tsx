@@ -1,7 +1,9 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
+import { z } from "zod";
 
 import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import type { WizardStep } from "@repo/ui/components/wizard-form";
 
 import { FormStep } from "./form-step";
 
@@ -13,10 +15,18 @@ function CardB() {
   return <div>Card B</div>;
 }
 
+const mockStep: WizardStep<CreateExperimentBody> = {
+  title: "Test",
+  component: () => null,
+  validationSchema: z.object({}),
+};
+
 describe("FormStep", () => {
   const defaultProps = {
+    step: mockStep,
     onPrevious: vi.fn(),
     onNext: vi.fn(),
+    goToStep: vi.fn(),
     stepIndex: 1,
     totalSteps: 4,
   };

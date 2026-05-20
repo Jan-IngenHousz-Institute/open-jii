@@ -60,8 +60,12 @@ export const auth = betterAuth({
       : []),
   ],
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day (update session every day)
+    // Sliding session: 30-day absolute lifetime with daily rolling renewal.
+    // While the user is active, every authenticated request inside
+    // `updateAge` extends the cookie expiry, so active users effectively
+    // never get logged out. After 30 days of inactivity the session ends.
+    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    updateAge: 60 * 60 * 24, // 1 day (slide the session forward daily)
     cookieCache: {
       enabled: true,
       maxAge: 60 * 60 * 24, // 1 day

@@ -406,31 +406,31 @@ export function WorkbookEditor({
                       />
                     ))}
                   <div className="group/row flex items-stretch gap-1">
-                    <div className="relative w-10 shrink-0">
-                      <div className="flex justify-center pt-2">
+                    <div className="w-10 shrink-0">
+                      <div className="flex flex-col items-center gap-1 pt-2">
+                        {!isOutput && !readOnly && (
+                          <div
+                            className="cursor-grab opacity-0 transition-opacity group-hover/row:opacity-100"
+                            draggable
+                            onDragStart={(e) => {
+                              const row = e.currentTarget.parentElement?.parentElement;
+                              if (row) {
+                                e.dataTransfer.setDragImage(row, 20, 20);
+                              }
+                              e.dataTransfer.effectAllowed = "move";
+                              handleDragStart(index);
+                            }}
+                            onDragEnd={handleDragEnd}
+                          >
+                            <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
+                          </div>
+                        )}
                         {cellNumber !== undefined && (
                           <span className="text-muted-foreground font-mono text-[10px] leading-none">
                             [{executionStates?.[cell.id]?.executionOrder?.at(-1) ?? cellNumber}]
                           </span>
                         )}
                       </div>
-                      {!isOutput && !readOnly && (
-                        <div
-                          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab opacity-0 transition-opacity group-hover/row:opacity-100"
-                          draggable
-                          onDragStart={(e) => {
-                            const row = e.currentTarget.parentElement?.parentElement;
-                            if (row) {
-                              e.dataTransfer.setDragImage(row, 20, 20);
-                            }
-                            e.dataTransfer.effectAllowed = "move";
-                            handleDragStart(index);
-                          }}
-                          onDragEnd={handleDragEnd}
-                        >
-                          <GripVertical className="text-muted-foreground h-4 w-4" />
-                        </div>
-                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <CellRenderer

@@ -76,9 +76,9 @@ describe("<DataLayout />", () => {
       expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
-    it("renders children when experiment status is completed", async () => {
+    it("renders children when experiment status is published", async () => {
       server.mount(contract.experiments.getExperiment, {
-        body: createExperiment({ id: "test-experiment-id", status: "completed" }),
+        body: createExperiment({ id: "test-experiment-id", status: "published" }),
       });
 
       render(
@@ -93,8 +93,13 @@ describe("<DataLayout />", () => {
     });
 
     it("renders children when experiment status is unknown", async () => {
+      // Force-cast an out-of-enum status so the defensive branch is actually
+      // exercised, not silently coerced to a known value.
       server.mount(contract.experiments.getExperiment, {
-        body: createExperiment({ id: "test-experiment-id", status: "unknown" }),
+        body: {
+          ...createExperiment({ id: "test-experiment-id" }),
+          status: "unknown",
+        } as never,
       });
 
       render(

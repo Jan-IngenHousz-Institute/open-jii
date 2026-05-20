@@ -1,10 +1,11 @@
 "use client";
 
-import { GripVertical, List, PanelRightClose } from "lucide-react";
+import { Asterisk, GripVertical, List, PanelRightClose } from "lucide-react";
 import { useCallback, useState } from "react";
 import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 /** Accent color per cell type, matching the cell components. */
@@ -12,7 +13,7 @@ const cellColors: Record<string, string> = {
   question: "#C58AAE",
   protocol: "#2D3142",
   macro: "#6C5CE7",
-  branch: "#D08A3C",
+  branch: "#F29D38",
   markdown: "#6F8596",
   output: "#94A3B8",
 };
@@ -77,6 +78,7 @@ export function WorkbookSidebar({
   collapsed,
   onToggleCollapsed,
 }: WorkbookSidebarProps) {
+  const { t } = useTranslation("workbook");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
@@ -136,12 +138,12 @@ export function WorkbookSidebar({
       <button
         type="button"
         onClick={onToggleCollapsed}
-        className="flex flex-col items-center gap-2 rounded-lg px-2 py-3 transition-colors hover:bg-gray-50"
+        className="group/collapse flex flex-col items-center gap-2 rounded-lg px-2 py-3 transition-colors"
         style={{ marginTop: 20 }}
         title="Expand sidebar"
       >
-        <List className="h-4 w-4" style={{ color: "#68737B" }} />
-        <span className="text-[11px] font-medium leading-none" style={{ color: "#68737B" }}>
+        <List className="h-4 w-4 text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]" />
+        <span className="text-[11px] font-medium leading-none text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]">
           {visibleCells.length}
         </span>
       </button>
@@ -160,10 +162,10 @@ export function WorkbookSidebar({
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="rounded p-1 transition-colors hover:bg-gray-100"
+            className="rounded p-1 text-[#005E5E] transition-colors hover:text-[#007575]"
             title="Collapse sidebar"
           >
-            <PanelRightClose className="h-4 w-4" style={{ color: "#68737B" }} />
+            <PanelRightClose className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -179,11 +181,15 @@ export function WorkbookSidebar({
           const isBeingDragged = dragIndex === index;
           const number = index + 1;
 
+          // The whole card is the drag source so the user can grab anywhere on
+          // it; the GripVertical icon is purely a visual hint.
+          const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
+
           return (
             <div key={cell.id}>
               {/* Drop indicator */}
               {dropIndex === index && dragIndex !== null && (
-                <div className="mb-1 h-0.5 rounded-full bg-blue-400" />
+                <div className="mb-1 h-0.5 rounded-full bg-[#005E5E]" />
               )}
 
               <button
@@ -191,12 +197,26 @@ export function WorkbookSidebar({
                 className={cn(
                   "flex h-[55px] w-full items-center justify-between rounded-[7px] text-left transition-colors",
                   isBeingDragged && "opacity-40",
+                  onReorder && "cursor-grab active:cursor-grabbing",
                 )}
                 style={{
                   padding: "8px 9px 8px 9px",
                   borderLeft: `3px solid ${isActive ? color : "transparent"}`,
                   backgroundColor: isActive ? cellActiveBg[cell.type] : undefined,
                 }}
+                draggable={onReorder !== undefined}
+                onDragStart={
+                  onReorder
+                    ? (e) => {
+                        const row = e.currentTarget;
+                        const rect = row.getBoundingClientRect();
+                        e.dataTransfer.setDragImage(row, rect.width / 2, rect.height / 2);
+                        e.dataTransfer.effectAllowed = "move";
+                        handleDragStart(index);
+                      }
+                    : undefined
+                }
+                onDragEnd={onReorder ? handleDragEnd : undefined}
                 onClick={() => onCellClick?.(cell.id)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDrop={handleDrop}
@@ -216,16 +236,29 @@ export function WorkbookSidebar({
 
                   {/* Type + subtitle */}
                   <div className="flex min-w-0 flex-col" style={{ gap: 2, maxWidth: 160 }}>
-                    <span
-                      className={cn(
-                        "truncate text-[13px] leading-[18px] tracking-[0.02em]",
-                        isActive ? "font-semibold" : "font-medium",
+                    <span className="flex items-center gap-0.5">
+                      <span
+                        className={cn(
+                          "truncate text-[13px] leading-[18px] tracking-[0.02em]",
+                          isActive ? "font-semibold" : "font-medium",
+                        )}
+                        style={
+                          cell.type === "question"
+                            ? { color }
+                            : isActive
+                              ? { color }
+                              : { color: "#011111" }
+                        }
+                      >
+                        {cellTypeLabels[cell.type] ?? cell.type}
+                      </span>
+                      {isRequiredQuestion && (
+                        <Asterisk
+                          className="size-3 shrink-0"
+                          style={{ color: "#005E5E" }}
+                          aria-label={t("workbooks.required")}
+                        />
                       )}
-                      style={isActive ? { color } : { color: "#011111" }}
-                    >
-                      {cell.type === "question"
-                        ? cell.name
-                        : (cellTypeLabels[cell.type] ?? cell.type)}
                     </span>
                     <span
                       className="truncate text-[13px] font-normal leading-[21px]"
@@ -236,24 +269,9 @@ export function WorkbookSidebar({
                   </div>
                 </div>
 
-                {/* Drag handle */}
+                {/* Drag handle (visual indicator only — the whole card drags) */}
                 {onReorder && (
-                  <div
-                    className="shrink-0 cursor-grab"
-                    draggable
-                    onDragStart={(e) => {
-                      e.stopPropagation();
-                      const row = e.currentTarget.closest("button");
-                      if (row) {
-                        const rect = row.getBoundingClientRect();
-                        e.dataTransfer.setDragImage(row, rect.width - 20, rect.height / 2);
-                      }
-                      e.dataTransfer.effectAllowed = "move";
-                      handleDragStart(index);
-                    }}
-                    onDragEnd={handleDragEnd}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="shrink-0">
                     <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
                   </div>
                 )}
@@ -264,7 +282,7 @@ export function WorkbookSidebar({
 
         {/* Drop indicator after last cell */}
         {dropIndex === visibleCells.length && dragIndex !== null && (
-          <div className="h-0.5 rounded-full bg-blue-400" />
+          <div className="h-0.5 rounded-full bg-[#005E5E]" />
         )}
       </div>
     </div>

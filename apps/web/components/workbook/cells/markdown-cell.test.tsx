@@ -114,4 +114,44 @@ describe("MarkdownCellComponent", () => {
     expect(screen.queryByText("Preview")).not.toBeInTheDocument();
     expect(screen.getByTestId("rich-renderer")).toBeInTheDocument();
   });
+
+  it("Cmd/Ctrl+Enter inside the editor commits to preview mode", async () => {
+    const user = userEvent.setup();
+    renderMarkdown({ content: "<p>Drafting</p>" });
+
+    // Start in preview because content exists, click Edit to enter the editor.
+    await user.click(screen.getByText("Edit"));
+    const textarea = screen.getByTestId("rich-textarea");
+    textarea.focus();
+
+    // Plain Enter must NOT commit (Quill uses it for newlines).
+    await user.keyboard("{Enter}");
+    expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
+
+    // Ctrl+Enter commits and flips back to preview.
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.queryByTestId("rich-textarea")).not.toBeInTheDocument();
+    expect(screen.getByTestId("rich-renderer")).toBeInTheDocument();
+  });
+
+  it("clicking the rendered preview re-enters the editor", async () => {
+    const user = userEvent.setup();
+    renderMarkdown({ content: "<p>Saved content</p>" });
+
+    expect(screen.getByTestId("rich-renderer")).toBeInTheDocument();
+    await user.click(screen.getByTestId("rich-renderer"));
+    expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
+  });
+
+  it("clicking the empty-state hint enters the editor", async () => {
+    const user = userEvent.setup();
+    renderMarkdown();
+    // Start in edit mode (no content); flip to preview first, then re-enter
+    // via the empty-state click affordance.
+    await user.click(screen.getByText("Preview"));
+    expect(screen.getByText("Click to add content...")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Click to add content..."));
+    expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
+  });
 });

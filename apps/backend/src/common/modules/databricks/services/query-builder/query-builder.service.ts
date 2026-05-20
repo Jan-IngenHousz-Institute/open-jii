@@ -1,79 +1,70 @@
 import { Injectable } from "@nestjs/common";
 
+import type { Result } from "../../../../utils/fp-utils";
+import { AppError, failure, success } from "../../../../utils/fp-utils";
+import { hasAggregationContent, wrapWithAggregation } from "./expressions/aggregation";
 import { SqlQueryBuilder, VariantQueryBuilder } from "./query-builder.base";
 import type { CountQueryParams, QueryParams } from "./query-builder.types";
+import { QueryBuilderInputError } from "./query-builder.types";
 
 /**
- * SQL Query Builder Service
- *
- * Provides safe, generic SQL statement building utilities for Databricks queries.
- * Uses fluent builder pattern for composing queries.
- * Domain-agnostic - does not know about specific catalogs, schemas, or business logic.
+ * Domain-agnostic SQL builder for Databricks. Composes filters, variant
+ * flattening, aggregation, and pagination via fluent builders.
  */
 @Injectable()
 export class QueryBuilderService {
-  /**
-   * Create a new SQL query builder
-   */
   query(): SqlQueryBuilder {
     return new SqlQueryBuilder();
   }
 
-  /**
-   * Create a new VARIANT query builder
-   */
   variantQuery(): VariantQueryBuilder {
     return new VariantQueryBuilder();
   }
 
-  /**
-   * Build a SQL query with optional VARIANT parsing, WHERE, ORDER BY, LIMIT, and OFFSET.
-   * Automatically handles both simple SELECT and VARIANT parsing based on variants parameter.
-   *
-   * @param params.table - Fully qualified table name
-   * @param params.columns - Columns to select (e.g., ["id", "timestamp"])
-   * @param params.variants - Optional VARIANT columns with schemas for parsing
-   * @param params.exceptColumns - Optional columns to exclude from result
-   * @param params.whereClause - Optional WHERE clause string
-   * @param params.whereConditions - Optional WHERE conditions as [column, value] tuples
-   * @param params.orderBy - Optional ORDER BY column
-   * @param params.orderDirection - Optional sort direction (ASC/DESC)
-   * @param params.limit - Optional LIMIT
-   * @param params.offset - Optional OFFSET
-   */
-  buildQuery(params: QueryParams): string {
-    if (params.variants && params.variants.length > 0) {
-      return this.buildVariantSelectQuery({
-        table: params.table,
-        columns: params.columns,
-        variants: params.variants,
-        exceptColumns: params.exceptColumns,
-        whereClause: params.whereClause,
-        whereConditions: params.whereConditions,
-        orderBy: params.orderBy,
-        orderDirection: params.orderDirection,
-        limit: params.limit,
-        offset: params.offset,
-      });
-    } else {
-      return this.buildSelectQuery({
-        table: params.table,
-        columns: params.columns,
-        exceptColumns: params.exceptColumns,
-        whereClause: params.whereClause,
-        whereConditions: params.whereConditions,
-        orderBy: params.orderBy,
-        orderDirection: params.orderDirection,
-        limit: params.limit,
-        offset: params.offset,
-      });
+  buildQuery(params: QueryParams): Result<string> {
+    try {
+      if (!hasAggregationContent(params.aggregation)) {
+        return success(
+          params.variants && params.variants.length > 0
+            ? this.buildVariantSelectQuery(params)
+            : this.buildSelectQuery(params),
+        );
+      }
+
+      // Aggregation: build the inner with filters baked in so filtering
+      // happens pre-aggregation. Drop orderBy/limit from the inner; the
+      // outer wrapper applies them on aggregated columns.
+      const innerParams: QueryParams = {
+        ...params,
+        orderBy: undefined,
+        orderDirection: undefined,
+        limit: undefined,
+        offset: undefined,
+        aggregation: undefined,
+      };
+      const innerSql =
+        params.variants && params.variants.length > 0
+          ? this.buildVariantSelectQuery(innerParams)
+          : this.buildSelectQuery(innerParams);
+
+      return success(
+        wrapWithAggregation(innerSql, {
+          aggregation: params.aggregation,
+          orderBy: params.orderBy,
+          orderDirection: params.orderDirection,
+          limit: params.limit,
+          offset: params.offset,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof QueryBuilderInputError) {
+        return failure(AppError.badRequest(error.message, "INVALID_QUERY_INPUT"));
+      }
+      throw error;
     }
   }
 
-  /**
-   * Build a COUNT query with optional WHERE clause
-   * Legacy method - prefer using query() builder
-   */
+  /** Legacy COUNT(*) builder; prefer composing query() directly. */
   buildCountQuery(params: CountQueryParams): string {
     const { table, whereClause, whereConditions } = params;
 
@@ -89,9 +80,6 @@ export class QueryBuilderService {
     return builder.build();
   }
 
-  /**
-   * Build a SELECT query with optional WHERE, ORDER BY, LIMIT, and OFFSET
-   */
   private buildSelectQuery(params: QueryParams): string {
     const {
       table,
@@ -99,6 +87,8 @@ export class QueryBuilderService {
       exceptColumns,
       whereClause,
       whereConditions,
+      filters,
+      distinct,
       orderBy,
       orderDirection,
       limit,
@@ -106,6 +96,10 @@ export class QueryBuilderService {
     } = params;
 
     const builder = this.query().from(table).select(columns);
+
+    if (distinct) {
+      builder.distinct();
+    }
 
     if (exceptColumns && exceptColumns.length > 0) {
       builder.except(exceptColumns);
@@ -116,6 +110,10 @@ export class QueryBuilderService {
     } else if (whereConditions) {
       const clause = builder.buildWhereClause(whereConditions);
       builder.where(clause);
+    }
+
+    if (filters && filters.length > 0) {
+      for (const filter of filters) builder.filter(filter);
     }
 
     if (orderBy) {
@@ -133,21 +131,6 @@ export class QueryBuilderService {
     return builder.build();
   }
 
-  /**
-   * Build a SQL query to parse VARIANT column using provided schema.
-   *
-   * Pattern:
-   * 1. Parse VARIANT using from_json(variantColumn::string, schema)
-   * 2. Expand all fields with parsed_output.*
-   *
-   * @param params.table - Fully qualified table name (catalog.schema.table)
-   * @param params.columns - Base columns to select (e.g., ["id", "timestamp"] or ["*"])
-   * @param params.variants - VARIANT columns with their schemas to parse
-   * @param params.whereClause - Optional WHERE clause
-   * @param params.orderBy - Optional ORDER BY clause
-   * @param params.limit - Optional LIMIT
-   * @param params.offset - Optional OFFSET
-   */
   private buildVariantSelectQuery(params: QueryParams): string {
     const {
       table,
@@ -156,6 +139,7 @@ export class QueryBuilderService {
       exceptColumns,
       whereClause,
       whereConditions,
+      filters,
       orderBy,
       orderDirection,
       limit,
@@ -164,7 +148,6 @@ export class QueryBuilderService {
 
     const builder = this.variantQuery().from(table).select(columns);
 
-    // Parse each VARIANT column with its schema
     variants.forEach(({ columnName, schema }) => {
       builder.parseVariant(columnName, schema, `parsed_${columnName}`);
     });
@@ -178,6 +161,13 @@ export class QueryBuilderService {
     } else if (whereConditions) {
       const clause = builder.buildWhereClause(whereConditions);
       builder.where(clause);
+    }
+
+    // Variant builder's `.filter()` knows about the parseVariant schemas
+    // it received above, so flattened-field filters land in the post-
+    // flatten WHERE while base-column filters stay at the inner level.
+    if (filters && filters.length > 0) {
+      for (const filter of filters) builder.filter(filter);
     }
 
     if (orderBy) {

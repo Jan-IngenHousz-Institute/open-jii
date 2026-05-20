@@ -28,6 +28,7 @@ import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data
 import { DownloadExportUseCase } from "./application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "./application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "./application/use-cases/experiment-data-exports/list-exports";
+import { GetDistinctColumnValuesUseCase } from "./application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
@@ -177,6 +178,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Experiment data use cases
     GetExperimentDataUseCase,
     GetExperimentTablesUseCase,
+    GetDistinctColumnValuesUseCase,
     UploadAmbyteDataUseCase,
     InitiateExportUseCase,
     ListExportsUseCase,

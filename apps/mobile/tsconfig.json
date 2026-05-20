@@ -3,11 +3,16 @@
   "compilerOptions": {
     "lib": ["es2017"],
     "module": "ESNext",
+    "declaration": false,
+    "declarationMap": false,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
+      "~/features/*": ["./src/features/*"],
+      "~/shared/*": ["./src/shared/*"],
+      "~/app/*": ["./src/app/*"],
       "@/*": ["./*"]
     },
     "jsx": "react-native",

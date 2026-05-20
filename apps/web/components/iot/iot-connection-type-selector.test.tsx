@@ -16,7 +16,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="bluetooth"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: true }}
+          browserSupport={{
+            bluetooth: true,
+            serial: true,
+            bluetoothReason: null,
+            serialReason: null,
+          }}
         />,
       );
 
@@ -28,7 +33,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="bluetooth"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: true }}
+          browserSupport={{
+            bluetooth: true,
+            serial: true,
+            bluetoothReason: null,
+            serialReason: null,
+          }}
         />,
       );
 
@@ -44,7 +54,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="serial"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: true }}
+          browserSupport={{
+            bluetooth: true,
+            serial: true,
+            bluetoothReason: null,
+            serialReason: null,
+          }}
         />,
       );
 
@@ -63,7 +78,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="bluetooth"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: true }}
+          browserSupport={{
+            bluetooth: true,
+            serial: true,
+            bluetoothReason: null,
+            serialReason: null,
+          }}
         />,
       );
 
@@ -83,7 +103,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="serial"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: false, serial: true }}
+          browserSupport={{
+            bluetooth: false,
+            serial: true,
+            bluetoothReason: "browser",
+            serialReason: null,
+          }}
         />,
       );
 
@@ -98,7 +123,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="bluetooth"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: false }}
+          browserSupport={{
+            bluetooth: true,
+            serial: false,
+            bluetoothReason: null,
+            serialReason: "browser",
+          }}
         />,
       );
 
@@ -113,7 +143,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="bluetooth"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: true }}
+          browserSupport={{
+            bluetooth: true,
+            serial: true,
+            bluetoothReason: null,
+            serialReason: null,
+          }}
         />,
       );
 
@@ -130,7 +165,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="bluetooth"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: true }}
+          browserSupport={{
+            bluetooth: true,
+            serial: true,
+            bluetoothReason: null,
+            serialReason: null,
+          }}
         />,
       );
 
@@ -145,7 +185,12 @@ describe("ConnectionTypeSelector", () => {
         <ConnectionTypeSelector
           connectionType="serial"
           onConnectionTypeChange={mockOnConnectionTypeChange}
-          browserSupport={{ bluetooth: true, serial: true }}
+          browserSupport={{
+            bluetooth: true,
+            serial: true,
+            bluetoothReason: null,
+            serialReason: null,
+          }}
         />,
       );
 

@@ -38,7 +38,11 @@ const archivedAccess = createExperimentAccess({
   experiment: { id: "test-experiment-id", name: "Test", status: "archived" },
 });
 
-function mountDefaults(accessOverride?: Parameters<typeof server.mount>[1]) {
+function mountDefaults(
+  accessOverride?: Parameters<
+    typeof server.mount<typeof contract.experiments.getExperimentAccess>
+  >[1],
+) {
   server.mount(
     contract.experiments.getExperimentAccess,
     accessOverride ?? { body: archivedAccess },
@@ -77,8 +81,10 @@ describe("<ExperimentOverviewPage />", () => {
   });
 
   it("shows notFound text when experiment data is missing", async () => {
+    // Simulate a successful response whose `experiment` is null — defended
+    // against by the page even though it's outside the typed schema shape.
     server.mount(contract.experiments.getExperimentAccess, {
-      body: { experiment: null, hasAccess: false, isAdmin: false },
+      body: { experiment: null, hasAccess: false, isAdmin: false } as never,
     });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
     server.mount(contract.experiments.listExperimentMembers, { body: [] });
@@ -92,8 +98,9 @@ describe("<ExperimentOverviewPage />", () => {
   });
 
   it("shows notFound text when experiment is missing from body", async () => {
+    // The actual response omits `experiment` entirely — same defensive path.
     server.mount(contract.experiments.getExperimentAccess, {
-      body: { experiment: undefined, hasAccess: false, isAdmin: false },
+      body: { hasAccess: false, isAdmin: false } as never,
     });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
     server.mount(contract.experiments.listExperimentMembers, { body: [] });

@@ -7,6 +7,18 @@ import { contract } from "@repo/api/contract";
 
 import { useExperimentVisualizationUpdate } from "./useExperimentVisualizationUpdate";
 
+const baseBody = {
+  chartFamily: "basic" as const,
+  chartType: "line" as const,
+  dataConfig: {
+    tableName: "test_table",
+    dataSources: [
+      { tableName: "test_table", columnName: "time", role: "x" as const },
+      { tableName: "test_table", columnName: "value", role: "y" as const },
+    ],
+  },
+};
+
 describe("useExperimentVisualizationUpdate", () => {
   it("sends PATCH request", async () => {
     const viz = createVisualization({ id: "viz-1", experimentId: "exp-1" });
@@ -19,7 +31,7 @@ describe("useExperimentVisualizationUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { name: "Updated Viz" },
+        body: { name: "Updated Viz", ...baseBody },
       });
     });
 
@@ -41,7 +53,7 @@ describe("useExperimentVisualizationUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { name: "Updated", chartType: "scatter" },
+        body: { ...baseBody, name: "Updated", chartType: "scatter" },
       });
     });
 
@@ -62,7 +74,7 @@ describe("useExperimentVisualizationUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { name: "Updated" },
+        body: { name: "Updated", ...baseBody },
       });
     });
 
@@ -81,7 +93,7 @@ describe("useExperimentVisualizationUpdate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { name: "Fail" },
+        body: { name: "Fail", ...baseBody },
       });
     });
 

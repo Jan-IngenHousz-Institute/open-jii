@@ -1,35 +1,41 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, useSegments } from "expo-router";
-import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
-import { useEffect } from "react";
+import { FlaskConical, House, Settings, Workflow } from "lucide-react-native";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RecentTabIcon } from "~/components/recent-tab-icon";
-import { useAutoReconnect } from "~/hooks/use-auto-reconnect";
-import { useThemeColors } from "~/hooks/use-theme-colors";
-import { pruneExpiredMeasurements } from "~/services/measurements-storage";
-import { DevIndicator } from "~/widgets/dev-indicator";
-import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
+import { DeviceSheet } from "~/features/connection/components/device-sheet";
+import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
+import { usePruneExpiredMeasurements } from "~/features/recent-measurements/hooks/use-prune-expired-measurements";
+import { useTranslation } from "~/shared/i18n";
+import { AnimatedTabBar } from "~/shared/ui/animated-tab-bar";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { DevIndicator } from "~/shared/ui/widgets/dev-indicator";
+import { DeviceChip } from "~/shared/ui/widgets/device-chip";
+import { OpenJiiLogo } from "~/shared/ui/widgets/openjii-logo";
 
 export default function TabLayout() {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const segments = useSegments();
-  const queryClient = useQueryClient();
+  const { t: tHome } = useTranslation("home");
+  const hasActiveExperiment = useMeasurementFlowStore((s) => !!s.experimentId);
 
   useAutoReconnect();
+  usePruneExpiredMeasurements();
 
-  useEffect(() => {
-    void pruneExpiredMeasurements();
-    void queryClient.invalidateQueries({ queryKey: ["measurements"] });
-  }, [queryClient]);
-
-  const inMeasureTab = segments.includes("measurement-flow");
+  // Hide the bar only once an experiment has been selected — keep it visible
+  // on the picker so the user can still bail out.
+  const inActiveFlow = segments.some((s) => s === "measurement-flow") && hasActiveExperiment;
 
   return (
     <View className="flex-1">
       <Tabs
+        tabBar={(props) => <AnimatedTabBar {...props} hidden={inActiveFlow} />}
         screenOptions={{
+          sceneStyle: {
+            paddingBottom: inActiveFlow ? insets.bottom : 60 + insets.bottom,
+          },
           tabBarActiveTintColor: themeColors.brand,
           tabBarInactiveTintColor: themeColors.inactive,
           tabBarStyle: {
@@ -37,7 +43,6 @@ export default function TabLayout() {
             borderTopColor: themeColors.border,
             height: 60 + insets.bottom,
             paddingBottom: insets.bottom,
-            display: inMeasureTab ? "none" : "flex",
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -51,14 +56,17 @@ export default function TabLayout() {
             fontSize: 24,
           },
           headerShadowVisible: false,
-          headerRight: () => <DeviceConnectionWidget />,
+          headerRight: () => <DeviceChip />,
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
-            title: "Connect",
-            tabBarIcon: ({ color, size }) => <Bluetooth size={size} color={color} />,
+            title: tHome("tab.title"),
+            tabBarLabel: "Home",
+            tabBarIcon: ({ color, size }) => <House size={size} color={color} />,
+            headerTitle: () => <OpenJiiLogo height={52} />,
+            headerTitleAlign: "left",
           }}
         />
         <Tabs.Screen
@@ -66,12 +74,7 @@ export default function TabLayout() {
           options={{
             title: "Flow",
             tabBarLabel: "Measure",
-            headerTransparent: true,
-            headerTintColor: "white",
-            headerStyle: {
-              backgroundColor: "transparent",
-            },
-            headerShadowVisible: false,
+            headerShown: false,
             tabBarIcon: ({ color, size }) => <Workflow size={size} color={color} />,
           }}
         />
@@ -108,6 +111,8 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
+
+      <DeviceSheet />
     </View>
   );
 }

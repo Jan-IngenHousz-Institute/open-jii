@@ -1,4 +1,4 @@
-import { render, screen } from "@/test/test-utils";
+import { assertExists, render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getContentfulClients } from "~/lib/contentful";
@@ -71,6 +71,7 @@ describe("BlogLandingPage", () => {
 
   it("renders featured hero and post grid", async () => {
     const ui = await Page(params);
+    assertExists(ui, "Page should return a UI element for this fixture");
     render(ui);
     expect(screen.getByRole("region", { name: /featured hero/i })).toHaveTextContent(
       "Featured Post",
