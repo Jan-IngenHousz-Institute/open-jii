@@ -1012,9 +1012,16 @@ locals {
     }
   }
 
+  # When enabled_services is null, fall back to all keys so the filter below is a no-op
+  enabled_service_keys = var.enabled_services != null ? var.enabled_services : keys(local.service_policies)
+
+  active_service_policies = {
+    for k, v in local.service_policies : k => v if contains(local.enabled_service_keys, k)
+  }
+
   # Combine all service permissions into comprehensive policy statements
   all_policy_statements = [
-    for service_key, service_config in local.service_policies : {
+    for service_key, service_config in local.active_service_policies : {
       Effect   = "Allow"
       Action   = service_config.actions
       Resource = service_config.resource
