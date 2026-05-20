@@ -68,12 +68,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   // status "successful" hides the comment button in the modal.
   const currentMeasurement = useMemo<StoredMeasurement>(
     () => ({
-      key: "current", // Random key, measurement not saved or uploaded yet
-      timestamp: displayTimestamp,
-      experimentName,
-      status: "successful", // To hide the comment button in modal
-      questions,
-      hasComment: false,
+      id: "current",
+      status: "successful",
       data: {
         topic: "",
         measurementResult: { ...(scanResult ?? {}), questions },

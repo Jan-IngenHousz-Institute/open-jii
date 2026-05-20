@@ -25,11 +25,13 @@ type ListRow =
   | { kind: "header"; key: string; section: MeasurementDaySection }
   | { kind: "row"; key: string; item: MeasurementItem };
 
+const FLASHLIST_CONTENT_STYLE = { paddingTop: 0, paddingBottom: 16 };
+
 export function RecentMeasurementsScreen() {
   const { colors } = useTheme();
   const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
-  const [modal, setModal] = useState<ListRow>({ kind: "none" });
+  const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const [devSeedVisible, setDevSeedVisible] = useState(false);
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
 
@@ -86,17 +88,15 @@ export function RecentMeasurementsScreen() {
 
   const onRowPress = useCallback(
     (id: string) => {
-      const item = itemsById.get(id);
-      if (item) setModal({ kind: "questions", measurement: item });
+      void openModal("questions", id);
     },
-    [itemsById],
+    [openModal],
   );
   const onRowComment = useCallback(
     (id: string) => {
-      const item = itemsById.get(id);
-      if (item) setModal({ kind: "comment", measurement: item });
+      void openModal("comment", id);
     },
-    [itemsById],
+    [openModal],
   );
   const onRowDelete = useCallback(
     (id: string) => {
@@ -134,6 +134,12 @@ export function RecentMeasurementsScreen() {
   const keyExtractor = useCallback((row: ListRow) => row.key, []);
   const getItemType = useCallback((row: ListRow) => row.kind, []);
 
+  const listEmpty = useMemo(() => <MeasurementsListEmpty filter={filter} />, [filter]);
+  const listFooter = useMemo(
+    () => <MeasurementsListFooter onExport={handleExport} isDisabled={!hasAnyMeasurements} />,
+    [handleExport, hasAnyMeasurements],
+  );
+
   const hasItems = measurements.length > 0;
 
   return (
@@ -164,13 +170,11 @@ export function RecentMeasurementsScreen() {
         keyExtractor={keyExtractor}
         getItemType={getItemType}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
-        ListEmptyComponent={<MeasurementsListEmpty filter={filter} />}
+        contentContainerStyle={FLASHLIST_CONTENT_STYLE}
+        ListEmptyComponent={listEmpty}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          <MeasurementsListFooter onExport={handleExport} isDisabled={!hasAnyMeasurements} />
-        }
+        ListFooterComponent={listFooter}
       />
 
       <MeasurementsModals state={modal} onClose={closeModal} onSaveComment={saveComment} />

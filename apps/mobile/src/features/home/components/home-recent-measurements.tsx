@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { Activity } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTopMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import type {
   MeasurementItem,
   MeasurementStatus,
@@ -37,9 +37,7 @@ function statusLabel(t: (k: string) => string, status: MeasurementStatus): strin
 export function HomeRecentMeasurements() {
   const router = useRouter();
   const { t } = useTranslation("home");
-  const { measurements } = useAllMeasurements("all");
-
-  const top = measurements.slice(0, 3);
+  const { measurements: top } = useTopMeasurements(3);
 
   return (
     <View className="mt-4">
