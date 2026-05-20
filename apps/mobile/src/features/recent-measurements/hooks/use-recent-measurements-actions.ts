@@ -5,7 +5,6 @@ import type {
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
-import { useUploadQueueState } from "~/features/recent-measurements/hooks/use-upload-queue-state";
 import { exportMeasurementsToFile } from "~/features/recent-measurements/services/export-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
@@ -39,12 +38,10 @@ function confirmAndRun(
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
-  const { count: uploadingCount } = useUploadQueueState();
   const { measurements, counts, invalidate, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useAllMeasurements(filter);
   const {
     uploadAll,
-    isUploading,
     uploadOne,
     removeMeasurement,
     clearSyncedMeasurements,
@@ -134,8 +131,6 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     hasAnyMeasurements: totalCount > 0,
     syncedCount,
     unsyncedCount,
-    uploadingCount,
-    isUploading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,

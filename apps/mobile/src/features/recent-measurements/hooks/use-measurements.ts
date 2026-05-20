@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getUploadQueue } from "~/features/recent-measurements/services/upload-queue";
+import { getOutbox } from "~/shared/composition/upload";
 import {
   clearMeasurements,
   getMeasurements,
@@ -14,13 +14,12 @@ import {
   getFlagTypeFromMeasurementResult,
 } from "~/shared/utils/measurement-annotations";
 
-export function useMeasurements() {
-  const queryClient = useQueryClient();
-
-  // Both "pending" (never tried) and "failed" (tried, errored out) rows are
-  // shown in the same "not on the cloud yet" view. Name kept for callsite
-  // stability — semantically it's "everything not yet on the cloud."
-  const { data: failedUploads = [] } = useQuery({
+// Standalone hook for callers that ONLY need the pending-or-failed list
+// (e.g. the tab-bar icon badge). Mounting `useMeasurements` from those
+// callers would also subscribe to the upload mutation and a host of
+// unused query refs, all of which churn during heavy upload.
+export function useFailedUploads() {
+  const { data = [] } = useQuery({
     queryKey: ["measurements", "pending-or-failed"],
     queryFn: async () => {
       const rows = await getMeasurements(["pending", "failed"]);
@@ -28,19 +27,24 @@ export function useMeasurements() {
     },
     networkMode: "always",
   });
+  return data;
+}
+
+export function useMeasurements() {
+  const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
     networkMode: "always",
     mutationFn: async () => {
-      const queue = getUploadQueue();
+      const outbox = getOutbox();
       const rows = await getMeasurements(["pending", "failed"]);
-      for (const row of rows) queue.enqueue(row.id);
+      for (const row of rows) outbox.enqueue(row.id);
       await queryClient.invalidateQueries({ queryKey: ["measurements"] });
     },
   });
 
   const uploadOne = async (key: string) => {
-    getUploadQueue().enqueue(key);
+    getOutbox().enqueue(key);
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
@@ -76,7 +80,6 @@ export function useMeasurements() {
   };
 
   return {
-    failedUploads,
     isUploading: uploadMutation.isPending,
     uploadAll: () => uploadMutation.mutateAsync(),
     uploadOne,

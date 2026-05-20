@@ -18,8 +18,7 @@ const mockExportMeasurementsToFile = vi.fn().mockResolvedValue(undefined);
 vi.mock("~/features/recent-measurements/hooks/use-all-measurements", () => ({
   useAllMeasurements: vi.fn(() => ({
     measurements: mockAllMeasurements,
-    counts: { pending: 0, uploading: 1, failed: 1, successful: 1 },
-    uploadingCount: 1,
+    counts: { pending: 0, failed: 1, successful: 1 },
     invalidate: mockInvalidate,
   })),
 }));
@@ -120,10 +119,6 @@ describe("useRecentMeasurementsActions", () => {
     expect(result.current.unsyncedCount).toBe(1);
     expect(result.current.syncedCount).toBe(1);
     expect(result.current.hasAnyMeasurements).toBe(true);
-    // uploadingCount now reads the live UploadQueue, not the DB counts;
-    // nothing's enqueued in this test, so the count is 0.
-    expect(result.current.uploadingCount).toBe(0);
-    expect(result.current.isUploading).toBe(false);
     expect(result.current.measurements).toBe(mockAllMeasurements);
   });
 

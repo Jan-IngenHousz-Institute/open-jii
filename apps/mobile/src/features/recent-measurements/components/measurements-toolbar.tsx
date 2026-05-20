@@ -2,6 +2,7 @@ import { FlaskConical, Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { MeasurementFilter } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useOutboxSnapshot } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { TabBar } from "~/shared/ui/TabBar";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
@@ -11,8 +12,6 @@ interface Props {
   onFilterChange: (filter: MeasurementFilter) => void;
   syncedCount: number;
   unsyncedCount: number;
-  uploadingCount: number;
-  isUploading: boolean;
   onSyncAll: () => void;
   onDeleteAllSynced: () => void;
   onDevSeed?: () => void;
@@ -23,12 +22,13 @@ export function MeasurementsToolbar({
   onFilterChange,
   syncedCount,
   unsyncedCount,
-  uploadingCount,
-  isUploading,
   onSyncAll,
   onDeleteAllSynced,
   onDevSeed,
 }: Props) {
+  // Subscribe to outbox progress inside the toolbar so settle-tick
+  // re-renders are scoped to this small subtree, not the whole screen.
+  const { count: uploadingCount, isUploading } = useOutboxSnapshot();
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
 

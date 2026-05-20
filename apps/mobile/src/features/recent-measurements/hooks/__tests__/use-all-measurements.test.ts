@@ -6,16 +6,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { useAllMeasurements } from "../use-all-measurements";
 
-const { mockGetMeasurementsList, mockCountMeasurementsByStatus } = vi.hoisted(() => ({
-  mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
-  mockCountMeasurementsByStatus: vi
-    .fn()
-    .mockResolvedValue({ pending: 0, failed: 0, successful: 0 }),
-}));
+const { mockGetMeasurementsList, mockCountMeasurementsByStatus, mockGetMeasurementById } =
+  vi.hoisted(() => ({
+    mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
+    mockCountMeasurementsByStatus: vi
+      .fn()
+      .mockResolvedValue({ pending: 0, failed: 0, successful: 0 }),
+    mockGetMeasurementById: vi.fn().mockResolvedValue(null),
+  }));
 
 vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementsList: mockGetMeasurementsList,
   countMeasurementsByStatus: mockCountMeasurementsByStatus,
+  getMeasurementById: mockGetMeasurementById,
 }));
 
 let queryClient: QueryClient;
@@ -322,93 +325,113 @@ describe("useAllMeasurements", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // settle invalidation — per-item bridge from upload queue to react-query
+  // settle bridge — surgical patch from upload queue to react-query
   // ---------------------------------------------------------------------------
 
-  describe("settle invalidation", () => {
-    // Throttle window in `use-all-measurements.ts` — mirrored here so tests
-    // stay in sync with the production value without exporting it.
-    const THROTTLE_MS = 500;
-
-    // Only fake setTimeout/clearTimeout — leave Date.now real (so the
-    // leading-edge check fires on the first settle) and microtasks unfaked
-    // (react-query needs them).
-    function useThrottleTimers() {
-      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    }
-
-    it("invalidates the measurements key on the first settle (leading edge)", async () => {
-      const state = await import("../../services/upload-queue-state");
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+  describe("settle surgical patch", () => {
+    it("flips the cached row's status to the DB value without refetching the list", async () => {
+      mockGetMeasurementsList.mockResolvedValueOnce([
+        row("row-1", "pending", "2026-01-01T10:00:00Z", "E"),
+      ]);
+      mockGetMeasurementById.mockResolvedValueOnce({
+        id: "row-1",
+        status: "successful",
+        data: {},
+      });
+      const state = await import("../../services/outbox-state");
 
       const { result, unmount } = renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(result.current.measurements).toBeDefined());
-      invalidateSpy.mockClear();
+      await waitFor(() => expect(result.current.measurements).toHaveLength(1));
+      const callsBefore = mockGetMeasurementsList.mock.calls.length;
 
       act(() => {
         state.markEnqueued("row-1");
         state.markSettled("row-1");
       });
 
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
-      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(result.current.measurements[0].status).toBe("successful"));
+      // No additional list refetch — the patch is in-cache only.
+      expect(mockGetMeasurementsList).toHaveBeenCalledTimes(callsBefore);
       unmount();
     });
 
-    it("coalesces a burst of settles inside the throttle window into a single trailing refetch", async () => {
-      const state = await import("../../services/upload-queue-state");
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-      const { result, unmount } = renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(result.current.measurements).toBeDefined());
-      invalidateSpy.mockClear();
-
-      // Leading edge — counts as the first invalidate.
-      act(() => {
-        state.markEnqueued("a");
-        state.markSettled("a");
+    it("drops the row from the 'unsynced' cache once it has succeeded", async () => {
+      mockGetMeasurementsList.mockResolvedValueOnce([
+        row("row-1", "pending", "2026-01-01T10:00:00Z", "E"),
+      ]);
+      mockGetMeasurementById.mockResolvedValueOnce({
+        id: "row-1",
+        status: "successful",
+        data: {},
       });
-      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+      const state = await import("../../services/outbox-state");
 
-      useThrottleTimers();
-
-      // Burst of three more settles inside the throttle window — should add
-      // exactly one trailing invalidate, not three.
-      act(() => {
-        state.markEnqueued("b");
-        state.markSettled("b");
-        state.markEnqueued("c");
-        state.markSettled("c");
-        state.markEnqueued("d");
-        state.markSettled("d");
-      });
-      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+      const { result, unmount } = renderHook(() => useAllMeasurements("unsynced"), { wrapper });
+      await waitFor(() => expect(result.current.measurements).toHaveLength(1));
 
       act(() => {
-        vi.advanceTimersByTime(THROTTLE_MS);
+        state.markEnqueued("row-1");
+        state.markSettled("row-1");
       });
 
-      expect(invalidateSpy).toHaveBeenCalledTimes(2);
+      await waitFor(() => expect(result.current.measurements).toHaveLength(0));
       unmount();
-      vi.useRealTimers();
     });
 
-    it("unsubscribes on unmount — settles after unmount do not invalidate", async () => {
-      const state = await import("../../services/upload-queue-state");
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    it("decrements counts by moving the row between buckets on success", async () => {
+      mockCountMeasurementsByStatus.mockResolvedValueOnce({
+        pending: 2,
+        failed: 0,
+        successful: 1,
+      });
+      mockGetMeasurementsList.mockResolvedValueOnce([
+        row("row-1", "pending", "2026-01-01T10:00:00Z", "E"),
+      ]);
+      mockGetMeasurementById.mockResolvedValueOnce({
+        id: "row-1",
+        status: "successful",
+        data: {},
+      });
+      const state = await import("../../services/outbox-state");
 
       const { result, unmount } = renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(result.current.measurements).toBeDefined());
-
-      unmount();
-      invalidateSpy.mockClear();
+      await waitFor(() => expect(result.current.counts).toEqual({
+        pending: 2,
+        failed: 0,
+        successful: 1,
+      }));
 
       act(() => {
-        state.markEnqueued("orphan");
-        state.markSettled("orphan");
+        state.markEnqueued("row-1");
+        state.markSettled("row-1");
       });
 
-      expect(invalidateSpy).not.toHaveBeenCalled();
+      await waitFor(() => expect(result.current.counts).toEqual({
+        pending: 1,
+        failed: 0,
+        successful: 2,
+      }));
+      unmount();
+    });
+
+    it("unsubscribes on unmount — settles afterwards do not touch the cache", async () => {
+      mockGetMeasurementsList.mockResolvedValueOnce([
+        row("row-1", "pending", "2026-01-01T10:00:00Z", "E"),
+      ]);
+      const state = await import("../../services/outbox-state");
+
+      const { result, unmount } = renderHook(() => useAllMeasurements("all"), { wrapper });
+      await waitFor(() => expect(result.current.measurements).toHaveLength(1));
+
+      unmount();
+      mockGetMeasurementById.mockClear();
+
+      act(() => {
+        state.markEnqueued("row-1");
+        state.markSettled("row-1");
+      });
+
+      expect(mockGetMeasurementById).not.toHaveBeenCalled();
     });
   });
 });

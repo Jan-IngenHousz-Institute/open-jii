@@ -40,8 +40,6 @@ export function RecentMeasurementsScreen() {
     hasAnyMeasurements,
     syncedCount,
     unsyncedCount,
-    uploadingCount,
-    isUploading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -149,8 +147,6 @@ export function RecentMeasurementsScreen() {
         onFilterChange={setFilter}
         syncedCount={syncedCount}
         unsyncedCount={unsyncedCount}
-        uploadingCount={uploadingCount}
-        isUploading={isUploading}
         onSyncAll={confirmSyncAll}
         onDeleteAllSynced={confirmDeleteAllSynced}
         onDevSeed={__DEV__ ? () => setDevSeedVisible(true) : undefined}

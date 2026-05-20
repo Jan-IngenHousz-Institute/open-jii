@@ -1,11 +1,11 @@
 import { Clock } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
-import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { useFailedUploads } from "~/features/recent-measurements/hooks/use-measurements";
 import { cn } from "~/shared/utils/cn";
 
 export function RecentTabIcon({ color, size }: { color: string; size: number }) {
-  const { failedUploads: uploads } = useMeasurements();
+  const uploads = useFailedUploads();
   const count = uploads?.length ?? 0;
 
   return (
