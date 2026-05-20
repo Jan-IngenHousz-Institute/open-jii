@@ -14,11 +14,11 @@ A single sample produced by a MultispeQ device for a given experiment + protocol
 
 The lifecycle of a stored Measurement on-device:
 
-- **pending** — saved locally, not yet acknowledged by the cloud. May be sitting in the UploadQueue, paused offline, or waiting for boot rehydration.
+- **pending** — saved locally, not yet acknowledged by the cloud. May be sitting in the Outbox, paused offline, or waiting for boot rehydration.
 - **successful** — broker (AWS IoT) has acknowledged receipt (QoS 1 PUBACK).
-- **failed** — UploadQueue has exhausted its retry policy. Requires user action to retry.
+- **failed** — Outbox has exhausted its retry policy. Requires user action (or next foreground rehydrate) to retry.
 
-There is no `uploading` status — in-flight state lives in the queue, not the DB. `UploadQueue.isProcessing(id)` answers "is this row currently being attempted."
+There is no `uploading` status — in-flight state lives in the Outbox's in-memory scheduler, not the DB. `Outbox.isProcessing(id)` answers "is this row currently being attempted."
 
 ### Topic
 
@@ -30,31 +30,37 @@ The MQTT destination string that routes a Measurement to the correct AWS IoT rul
 
 ### Publish
 
-The act of sending one payload to one MQTT topic via the shared MqttPublisher. Returns a promise that resolves when the broker acks the message (QoS 1) or rejects with a typed PublishError. **Publish is a transport-level concept.** It says nothing about local persistence or retry.
+The act of sending one payload to one MQTT topic via the shared Transport. Returns a promise that resolves when the broker acks the message (QoS 1) or rejects with a typed error. **Publish is a transport-level concept.** It says nothing about local persistence or retry.
 
 ### Upload
 
-The end-to-end act of getting a stored Measurement onto the cloud: save → enqueue → worker reads payload → publish → mark successful. **Upload is an orchestration-level concept.** Callers see "save + enqueue"; the rest lives behind UploadQueue.
+The end-to-end act of getting a stored Measurement onto the cloud: save → enqueue → worker reads payload → publish → mark successful. **Upload is an orchestration-level concept.** Callers see "save + enqueue"; the rest lives behind the Outbox.
 
-### MqttPublisher
+### Outbox
 
-Module-singleton transport for all outbound MQTT messages. One persistent paho-mqtt connection per session, lazily connected on first publish, idle-disconnected after 30 seconds with no traffic, transparently reconnected on connection loss (pending publishes are held and retried, callers never see the disconnect). Uses QoS 1. Refreshes Cognito credentials proactively at T−5 min before expiry.
+Module-singleton orchestrator that drives `pending` and `failed` Measurement rows to the broker. Wraps `@tanstack/pacer` AsyncQueuer at concurrency 8. Holds measurement IDs only — the DB is the source of truth for payloads.
 
-Constructor takes a `transportFactory` so tests inject a fake `Transport` instead of mocking paho-mqtt + AWS SDK.
+Responsibilities:
 
-Throws typed errors: `{ kind: "PublishError" | "Disconnected" | "Timeout" | "CredentialError" }`. The publisher never imports translation strings — callers map `kind` to user-facing messages.
+- Discover work: scan `status="pending"` / `status="failed"` on cold start and on app foreground (rehydrate).
+- Schedule: per-row retry via AsyncRetryer (3 attempts, 1s/4s/15s backoff). Exhaustion marks the row `failed`.
+- Pause on offline (single network listener), resume on reconnect.
+- Status transitions: `pending`/`failed` → `successful` on PUBACK.
+- Expose reactive `{ isUploading, count }` snapshot and `isProcessing(id)` to the React UI.
+
+Pattern reference: transactional Outbox (Chris Richardson). The `_client_id` field embedded in the wire payload is the dedup key — an AWS IoT Rule deduplicates re-publishes after a crash between PUBACK and `markAsSuccessful`.
 
 ### Transport
 
-The internal seam between MqttPublisher and the underlying MQTT client. Interface: `connect`, `publish`, `onDisconnect`, `onMessageDelivered`, `destroy`. The production adapter wraps paho-mqtt + Cognito SigV4 signing. The test adapter is a synchronous in-memory fake.
+The thin MQTT seam. One paho-mqtt client per Transport instance, lazily connected on first publish, idle-disconnected after 30 seconds, reconnected lazily on the next publish after a disconnect.
 
-### UploadQueue
+Interface: `publish(topic, payload): Promise<void>` — resolves on PUBACK, rejects on timeout / disconnect / broker-side error. Plus lifecycle: `destroy`. Owns its own connection state; callers never call `connect`.
 
-Module-singleton orchestrator wrapping `@tanstack/pacer` AsyncQueuer. Holds measurement IDs only (the DB is the source of truth for payloads). Drives the upload worker at concurrency 8. Layered with an AsyncRetryer (3 attempts, 1s/4s/15s backoff) per item — exhausted items mark the DB row as `failed`. Paused when the device is offline (single network listener) and resumed on reconnect. Rehydrates from `pending|failed` rows on cold start and on app foreground.
+Transport does NOT retry. A failed publish rejects. The Outbox decides whether to re-attempt. This makes the Outbox the single home of the retry schedule.
 
-### Upload worker
+Throws typed errors: `{ kind: "PublishError" | "Disconnected" | "Timeout" | "CredentialError" }`. Callers (the Outbox worker) map `kind` to retryable / terminal via `isRetryableMqttError`.
 
-The function the UploadQueue invokes per item. Reads the measurement by ID, builds the payload (with the row's UUID embedded for AWS IoT–side deduplication), calls `MqttPublisher.publish(topic, payload)`, marks `successful` on resolve / `failed` after retry exhaustion.
+Constructor takes a `transportFactory` so tests inject a fake instead of mocking paho-mqtt + AWS SDK.
 
 ---
 
@@ -66,7 +72,7 @@ Managed MQTT broker that ingests measurements. Reached via a Cognito-signed WebS
 
 ### Cognito Identity Pool
 
-Provides short-lived AWS credentials used to sign the MQTT WebSocket URL. Credentials are cached in `create-mqtt-connection.ts` and refreshed before expiry by MqttPublisher's scheduler.
+Provides short-lived AWS credentials used to sign the MQTT WebSocket URL. Credentials are cached in `create-mqtt-connection.ts` and refreshed before expiry.
 
 ### paho-mqtt
 
@@ -74,7 +80,7 @@ The MQTT-over-WebSocket client library wrapped by Transport. Not referenced anyw
 
 ### `@tanstack/pacer`
 
-Provides the AsyncQueuer (concurrency + reactive state) and AsyncRetryer (per-item retry with backoff) primitives. UploadQueue uses AsyncQueuer + AsyncRetryer; MqttPublisher uses AsyncRetryer to drive its transport reconnect schedule. Already a dependency; was previously used only by `time-sync` as a Debouncer.
+Provides the AsyncQueuer (concurrency + reactive state) and AsyncRetryer (per-item retry with backoff) primitives. The Outbox uses both. Transport does not — its reconnect is lazy on the next publish, not a separate retry loop.
 
 ---
 
@@ -82,5 +88,7 @@ Provides the AsyncQueuer (concurrency + reactive state) and AsyncRetryer (per-it
 
 - Don't say "MQTT connection" in product/UX copy — say "Upload connection."
 - Don't say "queue lock" or "claim" — those concepts were the previous design's DB soft-lock and no longer exist.
-- "Concurrency" refers to UploadQueue pipeline depth, not "how many MQTT connections" (there is only ever one).
+- Don't say "MqttPublisher", "publisher pool", "slot", or "held queue" — that pool layer was removed; there is one Transport, one paho client. The Outbox is the only queue.
+- Don't say "UploadQueue" — the durable concept is **Outbox**; the in-memory scheduler is an implementation detail of it.
+- "Concurrency" refers to Outbox pipeline depth, not "how many MQTT connections" (there is only ever one).
 - A "burst upload" = many Measurements enqueued at once after offline → online transition.

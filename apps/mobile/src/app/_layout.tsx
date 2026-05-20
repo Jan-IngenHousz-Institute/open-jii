@@ -16,7 +16,7 @@ import { Toaster } from "sonner-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
-import { getUploadQueue } from "~/features/recent-measurements/services/upload-queue";
+import { getOutbox } from "~/shared/composition/upload";
 import { db } from "~/shared/db/client";
 import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
 import { useI18nReady } from "~/shared/i18n";
@@ -162,11 +162,11 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function UploadQueueBootstrap() {
-  // Force the upload queue singleton to construct on app start so its
-  // network listener, AppState listener, and DB rehydration kick in even
-  // before the first user-initiated save.
-  getUploadQueue();
+function OutboxBootstrap() {
+  // Force the Outbox singleton to construct on app start so its network
+  // listener, AppState listener, and DB rehydration kick in even before
+  // the first user-initiated save.
+  getOutbox();
   return null;
 }
 
@@ -177,7 +177,7 @@ function RootLayoutContent() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TimeSyncProvider>
         <ConfiguredQueryClientProvider>
-          <UploadQueueBootstrap />
+          <OutboxBootstrap />
           <SafeAreaProvider>
             <PythonMacroProvider>
               <BottomSheetModalProvider>

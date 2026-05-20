@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
 import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
-import { getUploadQueue } from "~/features/recent-measurements/services/upload-queue";
+import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { createLogger } from "~/shared/utils/logger";
@@ -64,7 +64,7 @@ export function useQuestionsUpload() {
         return;
       }
 
-      getUploadQueue().enqueue(savedId);
+      getOutbox().enqueue(savedId);
       toast.info(t("recentMeasurements:toasts.savedQueued"));
     },
   });

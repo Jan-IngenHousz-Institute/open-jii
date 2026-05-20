@@ -43,8 +43,7 @@ const sinks = new Set<LogSink>();
 // saturates the UI thread and contributes to ANR / Fabric mount races.
 // Default to "info" in dev (kills debug spam, keeps lifecycle logs) and
 // "warn" in production. Override at startup via setMinLogLevel.
-const DEFAULT_MIN_LEVEL: LogLevel =
-  typeof __DEV__ !== "undefined" && __DEV__ ? "info" : "warn";
+const DEFAULT_MIN_LEVEL: LogLevel = typeof __DEV__ !== "undefined" && __DEV__ ? "info" : "warn";
 let minLevel: LogLevel = DEFAULT_MIN_LEVEL;
 
 export function setMinLogLevel(level: LogLevel): void {

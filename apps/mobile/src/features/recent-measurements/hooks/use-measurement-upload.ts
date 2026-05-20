@@ -3,7 +3,7 @@ import { toast } from "sonner-native";
 import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
-import { getUploadQueue } from "~/features/recent-measurements/services/upload-queue";
+import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 import { compressSample } from "~/shared/utils/compress-sample";
@@ -105,7 +105,7 @@ export function useMeasurementUpload() {
   const { t } = useTranslation(["common", "recentMeasurements"]);
 
   const mutation = useMutation({
-    // Save runs locally; the UploadQueue handles offline/online itself, so
+    // Save runs locally; the Outbox handles offline/online itself, so
     // there's no reason to pause the mutation off-network.
     networkMode: "always",
     mutationFn: async ({
@@ -161,7 +161,7 @@ export function useMeasurementUpload() {
         return;
       }
 
-      getUploadQueue().enqueue(savedId);
+      getOutbox().enqueue(savedId);
       toast.info(t("recentMeasurements:toasts.savedQueued"));
     },
   });

@@ -3,7 +3,7 @@ import { MessageCircleMore, Trash2, UploadCloud } from "lucide-react-native";
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, Pressable } from "react-native";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
-import { useIsProcessing } from "~/features/recent-measurements/hooks/use-upload-queue-state";
+import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { Tag } from "~/shared/ui/Tag";
 import type { TagVariant } from "~/shared/ui/Tag";

@@ -4,11 +4,11 @@ import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-cor
 /**
  * Measurement lifecycle:
  *   pending     — saved locally, not yet acknowledged by the broker.
- *   failed      — UploadQueue exhausted retries; requires user action.
+ *   failed      — Outbox exhausted retries; requires user action.
  *   successful  — broker acked (QoS 1 PUBACK).
  *
- * In-flight state lives in the UploadQueue (Pacer AsyncQueuer), not the DB.
- * `getUploadQueue().isProcessing(id)` answers the "is this in flight now"
+ * In-flight state lives in the Outbox (Pacer AsyncQueuer), not the DB.
+ * `getOutbox().isProcessing(id)` answers the "is this in flight now"
  * question for the UI; the DB never carries an "uploading" value.
  */
 export const MEASUREMENT_STATUSES = ["pending", "failed", "successful"] as const;

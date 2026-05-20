@@ -1,10 +1,10 @@
 import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { saveMeasurement, type Measurement } from "~/shared/db/measurements-storage";
 
-import { getUploadQueue } from "./upload-queue";
+import { getOutbox } from "~/shared/composition/upload";
 
 // __DEV__-only seeding. Generates N fake measurements straight into the DB
-// as "pending" and enqueues them, so the queue + publisher + retry paths
+// as "pending" and enqueues them, so the Outbox + Transport + retry paths
 // can be exercised against a real burst without driving a MultispeQ device.
 
 const DEV_EXPERIMENT_ID = "00000000-0000-0000-0000-000000000dev";
@@ -47,7 +47,7 @@ export async function devSeedMeasurements(count: number): Promise<number> {
   }
   if (count <= 0) return 0;
 
-  const queue = getUploadQueue();
+  const outbox = getOutbox();
   let saved = 0;
   for (let chunkStart = 0; chunkStart < count; chunkStart += SEED_CHUNK_SIZE) {
     const chunkEnd = Math.min(chunkStart + SEED_CHUNK_SIZE, count);
@@ -57,7 +57,7 @@ export async function devSeedMeasurements(count: number): Promise<number> {
       ids.push(id);
       saved++;
     }
-    queue.enqueueMany(ids);
+    outbox.enqueueMany(ids);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
   return saved;

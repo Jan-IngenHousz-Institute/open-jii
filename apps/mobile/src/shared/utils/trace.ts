@@ -92,7 +92,7 @@ class TraceImpl implements Trace {
       id: this.id,
       status,
       total_ms: totalMs,
-      attempts: this.events.length,
+      event_count: this.events.length,
       events: summary,
       ...this.fields,
     });

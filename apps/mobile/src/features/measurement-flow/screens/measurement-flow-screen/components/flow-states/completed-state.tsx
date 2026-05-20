@@ -11,7 +11,7 @@ import type {
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
-import { getUploadQueue } from "~/features/recent-measurements/services/upload-queue";
+import { getOutbox } from "~/shared/composition/upload";
 import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -72,9 +72,9 @@ export function CompletedState() {
           : undefined
       }
       onDelete={() => {
-        // Block delete while the queue is actively trying to publish — the
+        // Block delete while the Outbox is actively trying to publish — the
         // worker would race the DB delete and could double-publish.
-        if (getUploadQueue().isProcessing(item.key)) return;
+        if (getOutbox().isProcessing(item.key)) return;
         confirmDelete(item);
       }}
       onSync={

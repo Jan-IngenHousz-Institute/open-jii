@@ -14,16 +14,21 @@ export function isMqttError(err: unknown): err is MqttError {
   return err instanceof MqttError;
 }
 
-// Retryable from the upload-queue's point of view. Disconnected publishes
-// are NOT retryable here because the publisher already holds + retries them
-// internally — by the time they surface, the publisher has given up.
+// Retryable from the Outbox's point of view. The Transport does no retry
+// of its own; every retry attempt by the Outbox triggers a fresh lazy
+// reconnect via Transport.ensureConnected(). The Outbox's [1, 4, 15]s
+// backoff therefore *is* the reconnect schedule.
+//
+// CredentialError stays terminal: a Cognito misconfiguration won't be
+// fixed by retrying inside the current attempt window, and burning the
+// retry budget against AWS adds noise.
 export function isRetryableMqttError(err: unknown): boolean {
   if (!isMqttError(err)) return true;
   switch (err.kind) {
     case "PublishError":
     case "Timeout":
-      return true;
     case "Disconnected":
+      return true;
     case "CredentialError":
       return false;
   }
