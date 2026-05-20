@@ -23,6 +23,7 @@ import { useI18nReady } from "~/shared/i18n";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
 import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
 import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
+import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-boundary";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
 import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
@@ -31,6 +32,7 @@ import { shouldHideSplash } from "~/shared/utils/should-hide-splash";
 import migrations from "../../drizzle/migrations";
 
 SplashScreen.preventAutoHideAsync();
+installGlobalErrorHandlers();
 
 function DrizzleDevTools() {
   useDrizzleStudio(db.$client);
@@ -145,11 +147,13 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   }
 
   return (
-    <PostHogProvider>
-      <ThemeProvider>
-        <RootLayoutContent />
-      </ThemeProvider>
-    </PostHogProvider>
+    <ErrorBoundary>
+      <PostHogProvider>
+        <ThemeProvider>
+          <RootLayoutContent />
+        </ThemeProvider>
+      </PostHogProvider>
+    </ErrorBoundary>
   );
 }
 

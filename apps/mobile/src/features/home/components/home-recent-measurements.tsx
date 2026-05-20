@@ -29,6 +29,8 @@ function statusLabel(t: (k: string) => string, status: MeasurementStatus): strin
       return t("recent.tagQueued");
     case "failed":
       return t("recent.tagFailed");
+    default:
+      return "";
   }
 }
 
@@ -80,7 +82,7 @@ interface HomeRecentRowProps {
 
 function HomeRecentRow({ item, isLast, onPress, statusLabelText }: HomeRecentRowProps) {
   const { t } = useTranslation("home");
-  const nodeCount = item.questions.length;
+  const nodeCount = item.questions?.length ?? 0;
   const subtitle = `${formatTimeAgo(item.timestamp)} · ${t("recent.metaCountNodes", { count: nodeCount })}`;
 
   return (

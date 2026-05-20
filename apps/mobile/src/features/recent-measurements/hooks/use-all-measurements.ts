@@ -1,11 +1,13 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { countMeasurementsByStatus, getMeasurementsList } from "~/shared/db/measurements-storage";
 import type {
   MeasurementCounts,
   MeasurementListRow,
   MeasurementStatus,
 } from "~/shared/db/measurements-storage";
+
+import { subscribeSettled } from "../services/upload-queue-state";
 
 // Coalesce bursts of settled uploads (concurrency 8) into at most one
 // refetch per 250ms — fast enough to feel real-time, cheap enough that a
@@ -50,8 +52,10 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
       return rows.map((r) => ({ ...r, key: r.id }) as MeasurementItem);
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+      if (!lastPage || lastPage.length < PAGE_SIZE) return undefined;
+      return lastPageParam + PAGE_SIZE;
+    },
     networkMode: "always",
     refetchOnMount: true,
   });
@@ -91,9 +95,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         flush();
         return;
       }
-      if (trailingTimer === null) {
-        trailingTimer = setTimeout(flush, SETTLE_INVALIDATE_THROTTLE_MS - elapsed);
-      }
+      trailingTimer ??= setTimeout(flush, SETTLE_INVALIDATE_THROTTLE_MS - elapsed);
     });
 
     return () => {
@@ -105,7 +107,6 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   return {
     measurements,
     counts,
-    uploadingCount: counts.uploading,
     fetchNextPage: listQuery.fetchNextPage,
     hasNextPage: listQuery.hasNextPage,
     isFetchingNextPage: listQuery.isFetchingNextPage,

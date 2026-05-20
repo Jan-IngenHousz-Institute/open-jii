@@ -6,15 +6,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { useAllMeasurements } from "../use-all-measurements";
 
-const { mockGetMeasurements, mockCountMeasurementsByStatus, mockParseQuestions } = vi.hoisted(
-  () => ({
-    mockGetMeasurements: vi.fn().mockResolvedValue([]),
-    mockCountMeasurementsByStatus: vi
-      .fn()
-      .mockResolvedValue({ pending: 0, failed: 0, successful: 0 }),
-    mockParseQuestions: vi.fn().mockReturnValue([]),
-  }),
-);
+const { mockGetMeasurementsList, mockCountMeasurementsByStatus } = vi.hoisted(() => ({
+  mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
+  mockCountMeasurementsByStatus: vi
+    .fn()
+    .mockResolvedValue({ pending: 0, failed: 0, successful: 0 }),
+}));
 
 vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementsList: mockGetMeasurementsList,
@@ -70,7 +67,6 @@ describe("useAllMeasurements", () => {
     mockGetMeasurementsList.mockResolvedValue([]);
     mockCountMeasurementsByStatus.mockResolvedValue({
       pending: 0,
-      uploading: 0,
       failed: 0,
       successful: 0,
     });
@@ -91,10 +87,10 @@ describe("useAllMeasurements", () => {
       renderHook(() => useAllMeasurements("all"), { wrapper });
 
       await waitFor(() =>
-        expect(mockGetMeasurementsList).toHaveBeenCalledWith(
-          ["pending", "failed", "successful"],
-          { limit: 50, offset: 0 },
-        ),
+        expect(mockGetMeasurementsList).toHaveBeenCalledWith(["pending", "failed", "successful"], {
+          limit: 50,
+          offset: 0,
+        }),
       );
     });
 
@@ -300,7 +296,7 @@ describe("useAllMeasurements", () => {
 
       await waitFor(() => expect(result.current.measurements).toHaveLength(60));
       expect(mockGetMeasurementsList).toHaveBeenLastCalledWith(
-        ["pending", "failed", "uploading", "successful"],
+        ["pending", "failed", "successful"],
         { limit: 50, offset: 50 },
       );
     });

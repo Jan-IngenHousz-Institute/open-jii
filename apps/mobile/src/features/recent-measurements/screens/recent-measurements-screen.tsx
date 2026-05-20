@@ -29,7 +29,7 @@ export function RecentMeasurementsScreen() {
   const { colors } = useTheme();
   const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
-  const [modal, setModal] = useState<ModalState>({ kind: "none" });
+  const [modal, setModal] = useState<ListRow>({ kind: "none" });
   const [devSeedVisible, setDevSeedVisible] = useState(false);
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
 

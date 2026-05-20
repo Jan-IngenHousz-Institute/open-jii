@@ -40,14 +40,8 @@ function confirmAndRun(
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
   const { count: uploadingCount } = useUploadQueueState();
-  const {
-    measurements,
-    counts,
-    invalidate,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useAllMeasurements(filter);
+  const { measurements, counts, invalidate, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useAllMeasurements(filter);
   const {
     uploadAll,
     isUploading,
