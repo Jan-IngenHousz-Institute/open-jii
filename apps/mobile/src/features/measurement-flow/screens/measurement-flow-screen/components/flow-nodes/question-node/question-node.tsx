@@ -1,7 +1,6 @@
-import { Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
+import { CircleAlert, Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Keyboard } from "react-native";
-import { toast } from "sonner-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
@@ -40,6 +39,12 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   const content = node.content;
   const [searchTerm, setSearchTerm] = useState("");
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
+  const [qrMismatch, setQrMismatch] = useState<string | null>(null);
+
+  const openQrScanner = () => {
+    setQrMismatch(null);
+    setQrScannerVisible(true);
+  };
 
   const answerValue = getAnswer(iterationCount, node.id) ?? "";
 
@@ -60,20 +65,18 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           (opt) => opt.trim().toLowerCase() === data.trim().toLowerCase(),
         );
         if (!match) {
-          toast.error(t("measurementFlow:questionNode.qrNotMatch", { data }));
+          setQrMismatch(data);
           return;
         }
+        setQrMismatch(null);
         handleAnswerChangeAndAdvance(match);
-        toast.success(t("measurementFlow:questionNode.qrSelected", { match }));
         break;
       }
       case "open_ended":
         handleAnswerChange(data);
-        toast.success(t("measurementFlow:questionNode.qrApplied"));
         break;
       default:
         handleAnswerChange(data);
-        toast.success(t("measurementFlow:questionNode.qrApplied"));
     }
   };
 
@@ -116,7 +119,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
             content={content}
             value={answerValue}
             onChange={handleAnswerChange}
-            onQRPress={() => setQrScannerVisible(true)}
+            onQRPress={openQrScanner}
           />
         );
       default:
@@ -200,13 +203,30 @@ export function QuestionNode({ node }: QuestionNodeProps) {
               <X size={20} color={colors.neutral.black} />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity
-              className="bg-gray-background rounded-md p-1"
-              onPress={() => setQrScannerVisible(true)}
-            >
+            <TouchableOpacity className="bg-gray-background rounded-md p-1" onPress={openQrScanner}>
               <ScanQrCode size={20} color={colors.neutral.black} />
             </TouchableOpacity>
           )}
+        </View>
+      )}
+
+      {content.kind === "multi_choice" && qrMismatch !== null && (
+        <View
+          className="border-destructive/40 bg-destructive/10 flex-row items-start gap-2 rounded-xl border px-3 py-2"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          <CircleAlert size={16} color="hsl(0, 84%, 60%)" style={{ marginTop: 1 }} />
+          <Text className="text-destructive flex-1 text-sm">
+            {t("measurementFlow:questionNode.qrNotMatch", { data: qrMismatch })}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setQrMismatch(null)}
+            hitSlop={8}
+            accessibilityLabel={t("measurementFlow:questionNode.qrDismissLabel")}
+          >
+            <X size={16} color={themeColors.inactive} />
+          </TouchableOpacity>
         </View>
       )}
       <ScrollView

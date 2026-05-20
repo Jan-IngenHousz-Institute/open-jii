@@ -161,8 +161,7 @@
     "searchPlaceholder": "Zoek opties...",
     "unsupportedKind": "Niet-ondersteund vraagtype: {{kind}}",
     "qrNotMatch": "\"{{data}}\" bestaat niet.",
-    "qrSelected": "\"{{match}}\" succesvol geselecteerd!",
-    "qrApplied": "QR succesvol toegepast!"
+    "qrDismissLabel": "Sluiten"
   },
   "questionTypes": {
     "multipleChoice": {

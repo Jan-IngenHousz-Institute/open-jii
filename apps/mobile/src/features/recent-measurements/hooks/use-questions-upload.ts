@@ -92,7 +92,6 @@ export function useQuestionsUpload() {
         // "Uploading…" for the full connect timeout while paho fails to connect.
         // useAutoUpload's network-restore listener picks the row up on reconnect.
         if (networkState.isInternetReachable !== true) {
-          toast.info(t("recentMeasurements:toasts.savedOffline"));
           return;
         }
 
@@ -123,10 +122,8 @@ export function useQuestionsUpload() {
           console.log("[questions-upload] markUploaded: start");
           await markUploaded(savedId);
           console.log("[questions-upload] markUploaded: done");
-          toast.success(t("recentMeasurements:toasts.answersUploaded"));
         } catch (localError) {
           console.error("Local status update failed after successful publish:", localError);
-          toast.info(t("recentMeasurements:toasts.uploadedLocalStatusRefresh"));
         }
       } finally {
         console.log("[questions-upload] mutationFn: exit");

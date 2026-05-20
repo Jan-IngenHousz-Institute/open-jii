@@ -71,7 +71,6 @@
     "uploadAllMessage_other": "Weet je zeker dat je {{count}} niet-gesynchroniseerde metingen wilt synchroniseren?",
     "uploadAllButton": "Alles uploaden",
     "uploadAllError": "Synchronisatie mislukt. Probeer het opnieuw.",
-    "uploadAllSuccess": "Alle metingen succesvol gesynchroniseerd",
     "deleteAllSyncedTitle": "Alle gesynchroniseerde metingen verwijderen",
     "deleteAllSyncedMessage": "Weet je zeker dat je alle {{count}} gesynchroniseerde metingen uit lokale opslag wilt verwijderen?",
     "deleteAllSyncedError": "Kon gesynchroniseerde metingen niet verwijderen",
@@ -82,17 +81,8 @@
     "saveToFileError": "Kon meting niet opslaan. Probeer het opnieuw."
   },
   "toasts": {
-    "uploadingMeasurements_one": "{{count}} niet-gesynchroniseerde meting wordt geüpload…",
-    "uploadingMeasurements_other": "{{count}} niet-gesynchroniseerde metingen worden geüpload…",
-    "measurementsSynced_one": "{{count}} meting gesynchroniseerd",
-    "measurementsSynced_other": "{{count}} metingen gesynchroniseerd",
     "uploadFailed": "Upload mislukt. Probeer het opnieuw.",
-    "uploadOneFailed": "Uploaden mislukt, probeer later opnieuw",
     "uploadNotAvailable": "Upload niet beschikbaar, upload later vanuit Recent",
-    "measurementUploaded": "Meting geüpload!",
-    "answersUploaded": "Antwoorden geüpload!",
-    "answersSaveFailed": "Antwoorden konden niet op dit apparaat worden opgeslagen. Exporteer je gegevens nu om verlies te voorkomen.",
-    "uploadedLocalStatusRefresh": "Geüpload — lokale status wordt bij volgende synchronisatie bijgewerkt",
-    "savedOffline": "Offline opgeslagen — wordt geüpload zodra je weer online bent"
+    "answersSaveFailed": "Antwoorden konden niet op dit apparaat worden opgeslagen. Exporteer je gegevens nu om verlies te voorkomen."
   }
 }

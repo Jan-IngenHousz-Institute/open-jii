@@ -139,7 +139,7 @@ describe("useMeasurementUpload", () => {
     expect(mockSendMqttEvent).toHaveBeenCalled();
     expect(mockMarkUploaded).toHaveBeenCalledWith("row-1");
     expect(mockMarkFailed).not.toHaveBeenCalled();
-    expect(mockToastSuccess).toHaveBeenCalledWith("Measurement uploaded!");
+    expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(mockSaveMeasurement).toHaveBeenCalledTimes(1);
   });
 
@@ -160,9 +160,7 @@ describe("useMeasurementUpload", () => {
     expect(mockSendMqttEvent).not.toHaveBeenCalled();
     expect(mockMarkFailed).not.toHaveBeenCalled();
     expect(mockMarkUploaded).not.toHaveBeenCalled();
-    expect(mockToastInfo).toHaveBeenCalledWith(
-      "Saved offline — will upload when you're back online",
-    );
+    expect(mockToastInfo).not.toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
   });
 
@@ -280,9 +278,9 @@ describe("useMeasurementUpload", () => {
   });
 
   // Once the MQTT publish has succeeded the data is on the cloud, so a
-  // later local-state write failure must surface as an info toast (and
-  // leave the row's status alone) rather than the "upload failed" path.
-  it("shows an info toast and does not touch status when markUploaded errors after a successful publish", async () => {
+  // later local-state write failure must NOT flip the row to "failed".
+  // Logging is enough; the next refetch reconciles the local row to "synced".
+  it("does not touch status when markUploaded errors after a successful publish", async () => {
     mockSaveMeasurement.mockResolvedValueOnce("row-1");
     mockSendMqttEvent.mockResolvedValueOnce(undefined);
     mockMarkUploaded.mockRejectedValueOnce(new Error("disk full"));
@@ -293,7 +291,7 @@ describe("useMeasurementUpload", () => {
     expect(mockMarkFailed).not.toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
     expect(mockToastSuccess).not.toHaveBeenCalled();
-    expect(mockToastInfo).toHaveBeenCalledWith("Uploaded — local status will refresh on next sync");
+    expect(mockToastInfo).not.toHaveBeenCalled();
     expect(consoleSpy).toHaveBeenCalledWith(
       "Local status update failed after successful publish:",
       expect.any(Error),
