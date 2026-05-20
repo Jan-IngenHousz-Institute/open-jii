@@ -13,6 +13,7 @@ export interface UploadQueueState {
 
 const enqueued = new Set<string>();
 const listeners = new Set<() => void>();
+const settledListeners = new Set<(id: string) => void>();
 let cachedSnapshot: UploadQueueState = { isUploading: false, count: 0 };
 
 function notify() {
@@ -34,6 +35,17 @@ export function subscribe(listener: () => void): () => void {
   };
 }
 
+// Fires once per item that actually leaves the queue (worker reached a
+// terminal state — successful or failed). Consumers use this to refresh
+// DB-rooted views (react-query measurement lists) so each finished upload
+// shows up in (near) real time, not only when the queue fully drains.
+export function subscribeSettled(listener: (id: string) => void): () => void {
+  settledListeners.add(listener);
+  return () => {
+    settledListeners.delete(listener);
+  };
+}
+
 export function getSnapshot(): UploadQueueState {
   return cachedSnapshot;
 }
@@ -50,7 +62,22 @@ export function markEnqueued(id: string): boolean {
   return true;
 }
 
+// Bulk variant — adds all novel ids and fires a single notify. Bursts
+// (e.g. dev seeding 1000 rows) would otherwise drive N notifications and
+// N×listeners listener calls, freezing the JS thread.
+export function markEnqueuedMany(ids: readonly string[]): string[] {
+  const added: string[] = [];
+  for (const id of ids) {
+    if (enqueued.has(id)) continue;
+    enqueued.add(id);
+    added.push(id);
+  }
+  if (added.length > 0) notify();
+  return added;
+}
+
 export function markSettled(id: string): void {
   if (!enqueued.delete(id)) return;
   notify();
+  Array.from(settledListeners).forEach((listener) => listener(id));
 }

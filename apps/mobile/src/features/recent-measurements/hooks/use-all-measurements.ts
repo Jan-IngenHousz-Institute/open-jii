@@ -7,6 +7,11 @@ import type {
   MeasurementStatus,
 } from "~/shared/db/measurements-storage";
 
+// Coalesce bursts of settled uploads (concurrency 8) into at most one
+// refetch per 250ms — fast enough to feel real-time, cheap enough that a
+// 100-item drain doesn't trigger 100 SQLite reads + decompresses.
+const SETTLE_INVALIDATE_THROTTLE_MS = 250;
+
 export type { MeasurementStatus } from "~/shared/db/measurements-storage";
 
 // Re-exported under the previous name so existing call sites don't churn.
@@ -65,6 +70,37 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
+
+  // Bridge from the in-memory upload queue to react-query: every time an
+  // upload reaches a terminal state the DB row flips status, but the
+  // storage layer doesn't know about react-query. Subscribe here so the
+  // list and counts refresh as each item finishes.
+  useEffect(() => {
+    let lastInvalidatedAt = 0;
+    let trailingTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const flush = () => {
+      trailingTimer = null;
+      lastInvalidatedAt = Date.now();
+      queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    };
+
+    const unsubscribe = subscribeSettled(() => {
+      const elapsed = Date.now() - lastInvalidatedAt;
+      if (elapsed >= SETTLE_INVALIDATE_THROTTLE_MS) {
+        flush();
+        return;
+      }
+      if (trailingTimer === null) {
+        trailingTimer = setTimeout(flush, SETTLE_INVALIDATE_THROTTLE_MS - elapsed);
+      }
+    });
+
+    return () => {
+      if (trailingTimer !== null) clearTimeout(trailingTimer);
+      unsubscribe();
+    };
+  }, [queryClient]);
 
   return {
     measurements,

@@ -53,9 +53,12 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   const showSync = canFlag && !!onSync;
   const showDelete = !!onDelete;
 
+  // Reset swipe offset when status changes AND on recycle (id change) — FlashList
+  // reuses the same cell view for a different row, so leftover translateX would
+  // make the new row appear pre-opened.
   useEffect(() => {
     translateX.value = withSpring(0, SPRING_CONFIG);
-  }, [status, translateX]);
+  }, [id, status, translateX]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])

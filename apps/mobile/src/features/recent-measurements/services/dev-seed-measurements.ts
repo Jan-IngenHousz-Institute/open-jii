@@ -34,6 +34,12 @@ function buildFakeMeasurement(index: number): Measurement {
   };
 }
 
+// Save in chunks, enqueue each chunk in one shot, then yield to the event
+// loop. Two reasons: (1) keeps the JS thread responsive — without the yield
+// a 1000-row burst monopolises it and the UI freezes; (2) one notify per
+// chunk instead of per row collapses N×listeners React work into one tick.
+const SEED_CHUNK_SIZE = 50;
+
 export async function devSeedMeasurements(count: number): Promise<number> {
   if (!__DEV__) {
     throw new Error("devSeedMeasurements may only run under __DEV__");
@@ -42,10 +48,16 @@ export async function devSeedMeasurements(count: number): Promise<number> {
 
   const queue = getUploadQueue();
   let saved = 0;
-  for (let index = 0; index < count; index++) {
-    const id = await saveMeasurement(buildFakeMeasurement(index), "pending");
-    queue.enqueue(id);
-    saved++;
+  for (let chunkStart = 0; chunkStart < count; chunkStart += SEED_CHUNK_SIZE) {
+    const chunkEnd = Math.min(chunkStart + SEED_CHUNK_SIZE, count);
+    const ids: string[] = [];
+    for (let index = chunkStart; index < chunkEnd; index++) {
+      const id = await saveMeasurement(buildFakeMeasurement(index), "pending");
+      ids.push(id);
+      saved++;
+    }
+    queue.enqueueMany(ids);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
   return saved;
 }

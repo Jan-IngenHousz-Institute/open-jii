@@ -71,7 +71,7 @@ export function MeasurementsToolbar({
         )}
         <Pressable
           onPress={onDeleteAllSynced}
-          disabled={deleteDisabled}
+          // disabled={deleteDisabled}
           hitSlop={6}
           className="h-10 w-10 items-center justify-center rounded-full"
           style={{ opacity: deleteDisabled ? 0.4 : 1 }}

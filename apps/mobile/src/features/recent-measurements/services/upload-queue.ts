@@ -6,6 +6,7 @@ import { getMeasurements } from "~/shared/db/measurements-storage";
 import {
   isProcessing,
   markEnqueued,
+  markEnqueuedMany,
   markSettled,
   type UploadQueueState,
 } from "./upload-queue-state";
@@ -20,6 +21,7 @@ export const UPLOAD_RETRY_BACKOFF_MS = [1_000, 4_000, 15_000];
 
 export interface UploadQueue {
   enqueue(id: string): void;
+  enqueueMany(ids: readonly string[]): void;
   isProcessing(id: string): boolean;
 }
 
@@ -60,6 +62,16 @@ class UploadQueueImpl implements UploadQueue {
     }
     console.log("[upload-queue] enqueue", { id });
     this.queue.addItem(id);
+  }
+
+  enqueueMany(ids: readonly string[]): void {
+    const added = markEnqueuedMany(ids);
+    if (added.length === 0) return;
+    console.log("[upload-queue] enqueueMany", {
+      requested: ids.length,
+      added: added.length,
+    });
+    for (const id of added) this.queue.addItem(id);
   }
 
   isProcessing(id: string): boolean {

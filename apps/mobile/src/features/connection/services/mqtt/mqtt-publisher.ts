@@ -8,6 +8,12 @@ import type { Transport, TransportFactory } from "./mqtt-transport";
 export const IDLE_DISCONNECT_MS = 30_000;
 export const RECONNECT_BACKOFF_MS = [1_000, 4_000, 15_000];
 export const PUBLISH_TIMEOUT_MS = 30_000;
+// Backpressure cap on outstanding (sent-but-unacked) publishes. Without
+// this the drain loop hands every held item to paho at once on connect,
+// which the lib + broker can't service fast enough — PUBACKs stall and
+// publishes hit PUBLISH_TIMEOUT_MS. PUBACKs trigger a re-drain so the
+// pipe stays full but bounded.
+export const MAX_IN_FLIGHT = 16;
 
 export interface MqttPublisher {
   publish(topic: string, payload: object): Promise<void>;
@@ -95,7 +101,7 @@ export class MqttPublisherImpl implements MqttPublisher {
     const transport = await this.ensureTransport();
     if (!transport) return;
     let drained = 0;
-    while (this.held.length > 0) {
+    while (this.held.length > 0 && this.inFlight.size < MAX_IN_FLIGHT) {
       const item = this.held.shift();
       if (!item) break;
       const serialized = JSON.stringify(item.payload);
@@ -114,7 +120,11 @@ export class MqttPublisherImpl implements MqttPublisher {
       }
     }
     if (drained > 0) {
-      console.log("[mqtt-publisher] drained to transport", { count: drained, inFlight: this.inFlight.size });
+      console.log("[mqtt-publisher] drained to transport", {
+        count: drained,
+        inFlight: this.inFlight.size,
+        heldRemaining: this.held.length,
+      });
     }
   }
 
@@ -187,9 +197,16 @@ export class MqttPublisherImpl implements MqttPublisher {
         topic: item.topic,
         ms,
         inFlight: this.inFlight.size,
+        held: this.held.length,
       });
       item.resolve();
-      this.scheduleIdleTimer();
+      // Slot freed — pull the next held item in. If nothing held, fall
+      // through to idle scheduling.
+      if (this.held.length > 0) {
+        void this.drain();
+      } else {
+        this.scheduleIdleTimer();
+      }
     });
 
     transport.onDisconnect((reason) => {
