@@ -8,6 +8,8 @@ CLAUDE.md
 
 # Dependencies
 node_modules
+node-compile-cache
+vrn
 .pnp
 .pnpm-store
 .pnp.js

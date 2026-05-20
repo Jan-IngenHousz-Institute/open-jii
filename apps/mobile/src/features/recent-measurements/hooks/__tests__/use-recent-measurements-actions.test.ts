@@ -106,7 +106,7 @@ const makeItem = (
 const mockAllMeasurements: MeasurementItem[] = [
   makeItem("k1", "failed", "Exp Unsynced"),
   makeItem("k2", "successful", "Exp Synced"),
-  makeItem("k3", "uploading", "Exp Syncing"),
+  makeItem("k3", "pending", "Exp Pending"),
 ];
 
 describe("useRecentMeasurementsActions", () => {
@@ -120,7 +120,9 @@ describe("useRecentMeasurementsActions", () => {
     expect(result.current.unsyncedCount).toBe(1);
     expect(result.current.syncedCount).toBe(1);
     expect(result.current.hasAnyMeasurements).toBe(true);
-    expect(result.current.uploadingCount).toBe(1);
+    // uploadingCount now reads the live UploadQueue, not the DB counts;
+    // nothing's enqueued in this test, so the count is 0.
+    expect(result.current.uploadingCount).toBe(0);
     expect(result.current.isUploading).toBe(false);
     expect(result.current.measurements).toBe(mockAllMeasurements);
   });

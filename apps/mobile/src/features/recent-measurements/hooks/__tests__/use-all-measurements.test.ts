@@ -6,12 +6,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { useAllMeasurements } from "../use-all-measurements";
 
-const { mockGetMeasurementsList, mockCountMeasurementsByStatus } = vi.hoisted(() => ({
-  mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
-  mockCountMeasurementsByStatus: vi
-    .fn()
-    .mockResolvedValue({ pending: 0, uploading: 0, failed: 0, successful: 0 }),
-}));
+const { mockGetMeasurements, mockCountMeasurementsByStatus, mockParseQuestions } = vi.hoisted(
+  () => ({
+    mockGetMeasurements: vi.fn().mockResolvedValue([]),
+    mockCountMeasurementsByStatus: vi
+      .fn()
+      .mockResolvedValue({ pending: 0, failed: 0, successful: 0 }),
+    mockParseQuestions: vi.fn().mockReturnValue([]),
+  }),
+);
 
 vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementsList: mockGetMeasurementsList,
@@ -24,7 +27,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(QueryClientProvider, { client: queryClient }, children);
 }
 
-type StorageStatus = "pending" | "failed" | "uploading" | "successful";
+type StorageStatus = "pending" | "failed" | "successful";
 
 interface ListRow {
   id: string;
@@ -89,7 +92,7 @@ describe("useAllMeasurements", () => {
 
       await waitFor(() =>
         expect(mockGetMeasurementsList).toHaveBeenCalledWith(
-          ["pending", "failed", "uploading", "successful"],
+          ["pending", "failed", "successful"],
           { limit: 50, offset: 0 },
         ),
       );
@@ -102,11 +105,11 @@ describe("useAllMeasurements", () => {
       );
     });
 
-    it("queries pending + failed + uploading when filter is 'unsynced'", async () => {
+    it("queries pending + failed when filter is 'unsynced'", async () => {
       renderHook(() => useAllMeasurements("unsynced"), { wrapper });
       await waitFor(() =>
         expect(mockGetMeasurementsList).toHaveBeenCalledWith(
-          ["pending", "failed", "uploading"],
+          ["pending", "failed"],
           expect.any(Object),
         ),
       );
@@ -116,17 +119,15 @@ describe("useAllMeasurements", () => {
       mockGetMeasurementsList.mockResolvedValueOnce([
         row("p1", "pending", "2026-01-01T11:00:00Z", "P"),
         row("f1", "failed", "2026-01-01T10:00:00Z", "F"),
-        row("u1", "uploading", "2026-01-01T09:00:00Z", "U"),
         row("s1", "successful", "2026-01-01T12:00:00Z", "S"),
       ]);
 
       const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
 
-      await waitFor(() => expect(result.current.measurements).toHaveLength(4));
+      await waitFor(() => expect(result.current.measurements).toHaveLength(3));
       const byKey = new Map(result.current.measurements.map((m) => [m.key, m.status]));
       expect(byKey.get("p1")).toBe("pending");
       expect(byKey.get("f1")).toBe("failed");
-      expect(byKey.get("u1")).toBe("uploading");
       expect(byKey.get("s1")).toBe("successful");
     });
 
@@ -174,7 +175,6 @@ describe("useAllMeasurements", () => {
       const fixture: ListRow[] = [
         row("p1", "pending", "2026-01-01T11:00:00Z", "Pending"),
         row("f1", "failed", "2026-01-01T10:00:00Z", "Failed"),
-        row("u1", "uploading", "2026-01-01T09:00:00Z", "Uploading"),
         row("s1", "successful", "2026-01-01T12:00:00Z", "Synced 1"),
         row("s2", "successful", "2026-01-01T08:00:00Z", "Synced 2"),
       ];
@@ -185,7 +185,7 @@ describe("useAllMeasurements", () => {
 
     it("returns every row when filter is 'all'", async () => {
       const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(result.current.measurements).toHaveLength(5));
+      await waitFor(() => expect(result.current.measurements).toHaveLength(4));
     });
 
     it("returns only successful rows when filter is 'synced'", async () => {
@@ -194,11 +194,11 @@ describe("useAllMeasurements", () => {
       expect(result.current.measurements.every((m) => m.status === "successful")).toBe(true);
     });
 
-    it("returns pending/failed/uploading when filter is 'unsynced'", async () => {
+    it("returns pending/failed when filter is 'unsynced'", async () => {
       const { result } = renderHook(() => useAllMeasurements("unsynced"), { wrapper });
-      await waitFor(() => expect(result.current.measurements).toHaveLength(3));
+      await waitFor(() => expect(result.current.measurements).toHaveLength(2));
       const statuses = new Set(result.current.measurements.map((m) => m.status));
-      expect(statuses).toEqual(new Set(["pending", "failed", "uploading"]));
+      expect(statuses).toEqual(new Set(["pending", "failed"]));
     });
 
     it("re-queries SQL when the filter prop changes (no JS-side filtering)", async () => {
@@ -209,7 +209,7 @@ describe("useAllMeasurements", () => {
 
       await waitFor(() =>
         expect(mockGetMeasurementsList).toHaveBeenCalledWith(
-          ["pending", "failed", "uploading", "successful"],
+          ["pending", "failed", "successful"],
           expect.any(Object),
         ),
       );
@@ -229,7 +229,6 @@ describe("useAllMeasurements", () => {
     it("exposes raw SQL counts unchanged by the active filter", async () => {
       mockCountMeasurementsByStatus.mockResolvedValueOnce({
         pending: 3,
-        uploading: 1,
         failed: 2,
         successful: 7,
       });
@@ -237,19 +236,7 @@ describe("useAllMeasurements", () => {
       const { result } = renderHook(() => useAllMeasurements("synced"), { wrapper });
 
       await waitFor(() => expect(result.current.counts.successful).toBe(7));
-      expect(result.current.counts).toEqual({ pending: 3, uploading: 1, failed: 2, successful: 7 });
-    });
-
-    it("uploadingCount mirrors counts.uploading", async () => {
-      mockCountMeasurementsByStatus.mockResolvedValueOnce({
-        pending: 0,
-        uploading: 4,
-        failed: 0,
-        successful: 0,
-      });
-
-      const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(result.current.uploadingCount).toBe(4));
+      expect(result.current.counts).toEqual({ pending: 3, failed: 2, successful: 7 });
     });
 
     it("invokes countMeasurementsByStatus exactly once per render cycle", async () => {

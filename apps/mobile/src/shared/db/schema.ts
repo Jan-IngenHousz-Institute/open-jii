@@ -3,16 +3,15 @@ import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-cor
 
 /**
  * Measurement lifecycle:
- *   pending     — saved locally, never attempted upload yet (default for
- *                 newly-recorded measurements in the save-first flow).
- *   uploading   — MQTT publish in progress.
- *   failed      — upload was attempted and failed.
- *   successful  — uploaded to AWS IoT.
+ *   pending     — saved locally, not yet acknowledged by the broker.
+ *   failed      — UploadQueue exhausted retries; requires user action.
+ *   successful  — broker acked (QoS 1 PUBACK).
  *
- * "pending" is distinct from "failed" so field metrics don't conflate
- * never-attempted rows with rows that genuinely failed.
+ * In-flight state lives in the UploadQueue (Pacer AsyncQueuer), not the DB.
+ * `getUploadQueue().isProcessing(id)` answers the "is this in flight now"
+ * question for the UI; the DB never carries an "uploading" value.
  */
-export const MEASUREMENT_STATUSES = ["pending", "uploading", "failed", "successful"] as const;
+export const MEASUREMENT_STATUSES = ["pending", "failed", "successful"] as const;
 
 export const measurements = sqliteTable(
   "measurements",
@@ -35,7 +34,7 @@ export const measurements = sqliteTable(
   (table) => [
     check(
       "measurements_status_check",
-      sql`${table.status} IN ('pending', 'uploading', 'failed', 'successful')`,
+      sql`${table.status} IN ('pending', 'failed', 'successful')`,
     ),
     index("idx_measurements_status").on(table.status),
     index("idx_measurements_status_ts").on(table.status, table.timestamp),

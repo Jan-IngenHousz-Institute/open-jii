@@ -22,6 +22,13 @@
       "when": 1779256371189,
       "tag": "0002_dashing_lenny_balinger",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1779256500000,
+      "tag": "0003_drop_uploading_status",
+      "breakpoints": true
     }
   ]
 }

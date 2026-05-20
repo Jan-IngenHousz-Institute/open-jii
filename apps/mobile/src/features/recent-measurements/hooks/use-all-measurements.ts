@@ -20,13 +20,12 @@ const PAGE_SIZE = 50;
 
 function statusesForFilter(filter: MeasurementFilter): MeasurementStatus[] {
   if (filter === "synced") return ["successful"];
-  if (filter === "unsynced") return ["pending", "failed", "uploading"];
-  return ["pending", "failed", "uploading", "successful"];
+  if (filter === "unsynced") return ["pending", "failed"];
+  return ["pending", "failed", "successful"];
 }
 
 const EMPTY_COUNTS: MeasurementCounts = {
   pending: 0,
-  uploading: 0,
   failed: 0,
   successful: 0,
 };

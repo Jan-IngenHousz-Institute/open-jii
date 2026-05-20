@@ -110,6 +110,32 @@ vi.mock("nativewind", () => ({
   remapProps: () => undefined,
 }));
 
+// expo-network ships expo-modules-core (an EventEmitter that doesn't exist
+// outside the RN runtime). Tests that don't care about connectivity get a
+// no-op listener + always-online status.
+vi.mock("expo-network", () => ({
+  addNetworkStateListener: () => ({ remove: () => undefined }),
+  useNetworkState: () => ({ isInternetReachable: true, isConnected: true, type: "WIFI" }),
+  NetworkStateType: { WIFI: "WIFI", CELLULAR: "CELLULAR", NONE: "NONE", UNKNOWN: "UNKNOWN" },
+}));
+
+
+// expo-sqlite wraps a native module. Component tests that pull in the upload
+// queue (transitively via useIsProcessing) shouldn't have to spin up a real
+// DB. Mock the shared client to a no-op shape; storage-level tests that
+// need real SQL substitute their own `~/shared/db/client` mock inside the
+// test file (vi.mock is hoisted per-file and overrides this default).
+vi.mock("~/shared/db/client", () => ({
+  db: {
+    select: () => ({ from: () => ({ where: () => ({ get: () => null, all: () => [] }), all: () => [] }) }),
+    insert: () => ({ values: () => ({ run: () => undefined, onConflictDoNothing: () => ({ run: () => undefined }) }) }),
+    update: () => ({ set: () => ({ where: () => ({ run: () => undefined, returning: () => ({ all: () => [] }) }) }) }),
+    delete: () => ({ where: () => ({ run: () => ({ changes: 0 }) }) }),
+  },
+}));
+
+
+
 // safe-area-context needs a provider at the root; zero insets work fine for
 // component tests.
 vi.mock("react-native-safe-area-context", () => ({

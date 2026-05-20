@@ -17,7 +17,6 @@ import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 
 const STATUS_VARIANT: Record<MeasurementStatus, TagVariant> = {
   successful: "synced",
-  uploading: "default",
   pending: "queued",
   failed: "failed",
 };
@@ -26,8 +25,6 @@ function statusLabel(t: (k: string) => string, status: MeasurementStatus): strin
   switch (status) {
     case "successful":
       return t("recent.tagSynced");
-    case "uploading":
-      return t("recent.tagUploading");
     case "pending":
       return t("recent.tagQueued");
     case "failed":

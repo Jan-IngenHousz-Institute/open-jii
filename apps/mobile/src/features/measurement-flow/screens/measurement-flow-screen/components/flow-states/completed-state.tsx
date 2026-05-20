@@ -5,6 +5,7 @@ import { View, Text, FlatList } from "react-native";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
+import { getUploadQueue } from "~/features/recent-measurements/services/upload-queue";
 import { SwipeableMeasurementRow } from "~/features/recent-measurements/components/swipeable-measurement-row";
 import type {
   MeasurementFilter,
@@ -71,7 +72,9 @@ export function CompletedState() {
           : undefined
       }
       onDelete={() => {
-        if (item.status === "uploading") return;
+        // Block delete while the queue is actively trying to publish — the
+        // worker would race the DB delete and could double-publish.
+        if (getUploadQueue().isProcessing(item.key)) return;
         confirmDelete(item);
       }}
       onSync={

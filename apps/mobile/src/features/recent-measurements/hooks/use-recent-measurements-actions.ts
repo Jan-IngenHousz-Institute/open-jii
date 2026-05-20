@@ -4,6 +4,7 @@ import type {
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useUploadQueueState } from "~/features/recent-measurements/hooks/use-upload-queue-state";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { exportMeasurementsToFile } from "~/features/recent-measurements/services/export-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
@@ -38,10 +39,10 @@ function confirmAndRun(
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
+  const { count: uploadingCount } = useUploadQueueState();
   const {
     measurements,
     counts,
-    uploadingCount,
     invalidate,
     fetchNextPage,
     hasNextPage,
@@ -60,7 +61,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
   // Counts come from SQL — independent of the active filter.
   const unsyncedCount = counts.pending + counts.failed;
   const syncedCount = counts.successful;
-  const totalCount = counts.pending + counts.failed + counts.uploading + counts.successful;
+  const totalCount = counts.pending + counts.failed + counts.successful;
 
   const confirmSync = (m: MeasurementItem) =>
     confirmAndRun(t, {

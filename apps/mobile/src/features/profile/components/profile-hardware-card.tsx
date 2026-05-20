@@ -19,7 +19,7 @@ export function ProfileHardwareCard() {
   const lastSynced = allMeasurements[0]?.timestamp;
   const lastSyncLabel = lastSynced ? formatTimeAgo(lastSynced) : "—";
 
-  const queued = counts.pending + counts.failed + counts.uploading;
+  const queued = counts.pending + counts.failed;
   const dataSyncSub = lastSynced
     ? queued > 0
       ? t("hardware.dataSyncSubQueued", { count: queued, lastSync: lastSyncLabel })

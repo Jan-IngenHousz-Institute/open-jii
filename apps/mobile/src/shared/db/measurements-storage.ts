@@ -17,7 +17,7 @@ const LEGACY_PREFIXES = [
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export type MeasurementStatus = "pending" | "uploading" | "failed" | "successful";
+export type MeasurementStatus = "pending" | "failed" | "successful";
 
 export interface Measurement {
   topic: string;
@@ -163,14 +163,14 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
       .from(measurements)
       .groupBy(measurements.status)
       .all();
-    const out: MeasurementCounts = { pending: 0, uploading: 0, failed: 0, successful: 0 };
+    const out: MeasurementCounts = { pending: 0, failed: 0, successful: 0 };
     for (const r of rows) {
       out[r.status] = r.total;
     }
     return out;
   } catch (error) {
     console.error("Failed to count measurements:", error);
-    return { pending: 0, uploading: 0, failed: 0, successful: 0 };
+    return { pending: 0, failed: 0, successful: 0 };
   }
 }
 
@@ -308,6 +308,30 @@ export async function getMeasurements(
   }
 }
 
+export async function getMeasurementById(id: string): Promise<StoredMeasurement | null> {
+  await ensureMigrated();
+  try {
+    const row = db.select().from(measurements).where(eq(measurements.id, id)).get();
+    if (!row) return null;
+    return {
+      id: row.id,
+      status: row.status,
+      data: {
+        topic: row.topic,
+        measurementResult: decompressFromStorage(row.measurementResult),
+        metadata: {
+          experimentName: row.experimentName,
+          protocolName: row.protocolName,
+          timestamp: row.timestamp,
+        },
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch measurement by id:", error);
+    return null;
+  }
+}
+
 export async function updateMeasurement(key: string, data: Measurement): Promise<void> {
   await ensureMigrated();
   try {
@@ -329,69 +353,27 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
   }
 }
 
-export async function markAsUploading(keys: string[]): Promise<string[]> {
-  if (keys.length === 0) return [];
-  await ensureMigrated();
-  try {
-    // Both "pending" (never tried) and "failed" (tried before) rows are
-    // eligible for an upload attempt.
-    const rows = db
-      .update(measurements)
-      .set({ status: "uploading" })
-      .where(
-        and(inArray(measurements.id, keys), inArray(measurements.status, ["pending", "failed"])),
-      )
-      .returning({ id: measurements.id })
-      .all();
-    return rows.map((r) => r.id);
-  } catch (error) {
-    console.error("Failed to mark measurements as uploading:", error);
-    return [];
-  }
-}
-
 export async function markAsFailed(key: string): Promise<void> {
   await ensureMigrated();
   try {
-    // Accept transitions from uploading (batch flow) or pending (save-first
-    // single-measurement flow whose MQTT publish errored).
     db.update(measurements)
       .set({ status: "failed" })
-      .where(and(eq(measurements.id, key), inArray(measurements.status, ["uploading", "pending"])))
+      .where(and(eq(measurements.id, key), eq(measurements.status, "pending")))
       .run();
   } catch (error) {
     console.error("Failed to mark measurement as failed:", error);
   }
 }
 
-export async function resetUploadingMeasurements(): Promise<void> {
-  await ensureMigrated();
-  try {
-    // A row stuck in "uploading" was interrupted (app killed mid-publish);
-    // it never confirmed a failure, so return it to "pending" rather than
-    // marking it as failed.
-    db.update(measurements)
-      .set({ status: "pending" })
-      .where(eq(measurements.status, "uploading"))
-      .run();
-  } catch (error) {
-    console.error("Failed to reset uploading measurements:", error);
-  }
-}
-
 export async function markAsSuccessful(key: string): Promise<void> {
   await ensureMigrated();
   try {
-    // Accept any pre-success state. "pending" covers the save-first single
-    // flow that goes pending → successful directly, "uploading" the batch
-    // flow, "failed" a retry that finally went through.
+    // Accept transitions from any pre-success state. A retry of a previously
+    // "failed" row that finally goes through still ends at "successful".
     db.update(measurements)
       .set({ status: "successful" })
       .where(
-        and(
-          eq(measurements.id, key),
-          inArray(measurements.status, ["pending", "uploading", "failed"]),
-        ),
+        and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])),
       )
       .run();
   } catch (error) {

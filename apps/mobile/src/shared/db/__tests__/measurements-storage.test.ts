@@ -64,7 +64,7 @@ const mockMeasurement = {
 
 function insertRow(
   id: string,
-  status: "pending" | "failed" | "uploading" | "successful",
+  status: "pending" | "failed" | "successful",
   overrides: Partial<{ topic: string; timestamp: string; createdAt: number }> = {},
 ) {
   sqlite
@@ -603,7 +603,6 @@ describe("measurements-storage", () => {
       insertRow("p1", "pending");
       insertRow("p2", "pending");
       insertRow("f1", "failed");
-      insertRow("u1", "uploading");
       insertRow("s1", "successful");
       insertRow("s2", "successful");
       insertRow("s3", "successful");
@@ -611,13 +610,13 @@ describe("measurements-storage", () => {
       const mod = await import("../measurements-storage");
       const counts = await mod.countMeasurementsByStatus();
 
-      expect(counts).toEqual({ pending: 2, failed: 1, uploading: 1, successful: 3 });
+      expect(counts).toEqual({ pending: 2, failed: 1, successful: 3 });
     });
 
     it("returns zeros when the table is empty", async () => {
       const mod = await import("../measurements-storage");
       const counts = await mod.countMeasurementsByStatus();
-      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
+      expect(counts).toEqual({ pending: 0, failed: 0, successful: 0 });
     });
 
     it("returns zeros and logs when the underlying query throws", async () => {
@@ -628,7 +627,7 @@ describe("measurements-storage", () => {
 
       const counts = await mod.countMeasurementsByStatus();
 
-      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
+      expect(counts).toEqual({ pending: 0, failed: 0, successful: 0 });
       expect(consoleSpy).toHaveBeenCalledWith("Failed to count measurements:", expect.any(Error));
 
       consoleSpy.mockRestore();
@@ -640,8 +639,8 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("markAsSuccessful", () => {
-    it("transitions an uploading row to successful", async () => {
-      insertRow("m1", "uploading");
+    it("transitions a pending row to successful", async () => {
+      insertRow("m1", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("m1");
@@ -651,7 +650,7 @@ describe("measurements-storage", () => {
     });
 
     it("does not create a duplicate row", async () => {
-      insertRow("m1", "uploading");
+      insertRow("m1", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("m1");
@@ -661,15 +660,15 @@ describe("measurements-storage", () => {
     });
 
     it("does not affect other rows", async () => {
-      insertRow("target", "uploading");
-      insertRow("other", "uploading");
+      insertRow("target", "pending");
+      insertRow("other", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("target");
 
       const rows = sqlite.prepare("SELECT * FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("successful");
-      expect(rows.find((r) => r.id === "other")?.status).toBe("uploading");
+      expect(rows.find((r) => r.id === "other")?.status).toBe("pending");
     });
 
     it("is a no-op on a row that is already successful", async () => {
@@ -701,69 +700,6 @@ describe("measurements-storage", () => {
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // markAsUploading
-  // ---------------------------------------------------------------------------
-
-  describe("markAsUploading", () => {
-    it("returns an empty array for an empty key list", async () => {
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading([]);
-      expect(ids).toEqual([]);
-    });
-
-    it("returns the ids of rows transitioned from failed to uploading", async () => {
-      insertRow("m1", "failed");
-      insertRow("m2", "failed");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["m1", "m2"]);
-
-      expect([...ids].sort()).toEqual(["m1", "m2"]);
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.map((r) => r.status)).toEqual(["uploading", "uploading"]);
-    });
-
-    it("returns an empty array when the row is already uploading", async () => {
-      insertRow("m1", "uploading");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["m1"]);
-
-      expect(ids).toEqual([]);
-    });
-
-    it("returns an empty array when the row does not exist", async () => {
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["does-not-exist"]);
-      expect(ids).toEqual([]);
-    });
-
-    it("returns only pending or failed rows when given a mixed batch", async () => {
-      insertRow("m0", "pending");
-      insertRow("m1", "failed");
-      insertRow("m2", "uploading");
-      insertRow("m3", "successful");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["m0", "m1", "m2", "m3"]);
-
-      expect([...ids].sort()).toEqual(["m0", "m1"]);
-    });
-
-    it("transitions pending rows to uploading", async () => {
-      insertRow("p1", "pending");
-      insertRow("p2", "pending");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["p1", "p2"]);
-
-      expect([...ids].sort()).toEqual(["p1", "p2"]);
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.map((r) => r.status)).toEqual(["uploading", "uploading"]);
     });
   });
 
@@ -886,17 +822,7 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("markAsFailed", () => {
-    it("reverts an uploading row to failed", async () => {
-      insertRow("m1", "uploading");
-
-      const mod = await import("../measurements-storage");
-      await mod.markAsFailed("m1");
-
-      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
-      expect(row.status).toBe("failed");
-    });
-
-    it("transitions a pending row to failed (save-first MQTT errored)", async () => {
+    it("transitions a pending row to failed", async () => {
       insertRow("m1", "pending");
 
       const mod = await import("../measurements-storage");
@@ -927,49 +853,15 @@ describe("measurements-storage", () => {
     });
 
     it("does not affect other rows", async () => {
-      insertRow("target", "uploading");
-      insertRow("other", "uploading");
+      insertRow("target", "pending");
+      insertRow("other", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsFailed("target");
 
       const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("failed");
-      expect(rows.find((r) => r.id === "other")?.status).toBe("uploading");
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // resetUploadingMeasurements
-  // ---------------------------------------------------------------------------
-
-  describe("resetUploadingMeasurements", () => {
-    it("reverts all uploading rows to pending (interrupted, not actually failed)", async () => {
-      insertRow("u1", "uploading");
-      insertRow("u2", "uploading");
-      insertRow("f1", "failed");
-      insertRow("s1", "successful");
-
-      const mod = await import("../measurements-storage");
-      await mod.resetUploadingMeasurements();
-
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.find((r) => r.id === "u1")?.status).toBe("pending");
-      expect(rows.find((r) => r.id === "u2")?.status).toBe("pending");
-      expect(rows.find((r) => r.id === "f1")?.status).toBe("failed");
-      expect(rows.find((r) => r.id === "s1")?.status).toBe("successful");
-    });
-
-    it("is a no-op when no rows are uploading", async () => {
-      insertRow("f1", "failed");
-      insertRow("s1", "successful");
-
-      const mod = await import("../measurements-storage");
-      await mod.resetUploadingMeasurements();
-
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.find((r) => r.id === "f1")?.status).toBe("failed");
-      expect(rows.find((r) => r.id === "s1")?.status).toBe("successful");
+      expect(rows.find((r) => r.id === "other")?.status).toBe("pending");
     });
   });
 
