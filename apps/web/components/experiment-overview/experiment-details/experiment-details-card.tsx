@@ -10,9 +10,9 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
 
+import { ExperimentMemberManagement } from "../../experiment-settings/collaborators/experiment-member-management-card";
+import { ExperimentRequestToJoin } from "../../experiment-settings/collaborators/experiment-request-to-join";
 import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
-import { ExperimentMemberManagement } from "../../experiment-settings/experiment-member-management-card";
-import { ExperimentRequestToJoin } from "../../experiment-settings/experiment-request-to-join";
 import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-visibility-card";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 

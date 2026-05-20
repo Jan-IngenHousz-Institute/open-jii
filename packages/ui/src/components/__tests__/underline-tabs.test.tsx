@@ -118,8 +118,12 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab1" data-testid="active-tab">Tab 1</UnderlineTabsTrigger>
-            <UnderlineTabsTrigger value="tab2" data-testid="inactive-tab">Tab 2</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab1" data-testid="active-tab">
+              Tab 1
+            </UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab2" data-testid="inactive-tab">
+              Tab 2
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -132,7 +136,9 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab1" data-testid="trigger">Tab 1</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab1" data-testid="trigger">
+              Tab 1
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -147,7 +153,9 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab1" count={5}>Tab 1</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab1" count={5}>
+              Tab 1
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -159,7 +167,9 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab1" count={0}>Tab 1</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab1" count={0}>
+              Tab 1
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -171,7 +181,9 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab1" data-testid="trigger">Tab 1</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab1" data-testid="trigger">
+              Tab 1
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -185,7 +197,9 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab2" disabled>Disabled Tab</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab2" disabled>
+              Disabled Tab
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -197,7 +211,9 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab1" className="custom-trigger">Tab 1</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab1" className="custom-trigger">
+              Tab 1
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -210,7 +226,9 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="tab1" ref={ref as any}>Tab 1</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab1" ref={ref as any}>
+              Tab 1
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );
@@ -255,7 +273,9 @@ describe("UnderlineTabs", () => {
           <UnderlineTabsList>
             <UnderlineTabsTrigger value="tab1">Tab 1</UnderlineTabsTrigger>
           </UnderlineTabsList>
-          <UnderlineTabsContent value="tab1" data-testid="content">Content</UnderlineTabsContent>
+          <UnderlineTabsContent value="tab1" data-testid="content">
+            Content
+          </UnderlineTabsContent>
         </UnderlineTabs>,
       );
 
@@ -286,7 +306,9 @@ describe("UnderlineTabs", () => {
           <UnderlineTabsList>
             <UnderlineTabsTrigger value="tab1">Tab 1</UnderlineTabsTrigger>
           </UnderlineTabsList>
-          <UnderlineTabsContent value="tab1" ref={ref as any}>Content</UnderlineTabsContent>
+          <UnderlineTabsContent value="tab1" ref={ref as any}>
+            Content
+          </UnderlineTabsContent>
         </UnderlineTabs>,
       );
 
@@ -349,7 +371,9 @@ describe("UnderlineTabs", () => {
         <UnderlineTabs defaultValue="tab1">
           <UnderlineTabsList>
             <UnderlineTabsTrigger value="tab1">Tab 1</UnderlineTabsTrigger>
-            <UnderlineTabsTrigger value="tab2" disabled>Tab 2</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="tab2" disabled>
+              Tab 2
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
           <UnderlineTabsContent value="tab1">Content 1</UnderlineTabsContent>
           <UnderlineTabsContent value="tab2">Content 2</UnderlineTabsContent>
@@ -366,9 +390,15 @@ describe("UnderlineTabs", () => {
       render(
         <UnderlineTabs defaultValue="members">
           <UnderlineTabsList>
-            <UnderlineTabsTrigger value="members" count={3}>Members</UnderlineTabsTrigger>
-            <UnderlineTabsTrigger value="invited" count={1}>Invited</UnderlineTabsTrigger>
-            <UnderlineTabsTrigger value="requests" count={0}>Requests</UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="members" count={3}>
+              Members
+            </UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="invited" count={1}>
+              Invited
+            </UnderlineTabsTrigger>
+            <UnderlineTabsTrigger value="requests" count={0}>
+              Requests
+            </UnderlineTabsTrigger>
           </UnderlineTabsList>
         </UnderlineTabs>,
       );

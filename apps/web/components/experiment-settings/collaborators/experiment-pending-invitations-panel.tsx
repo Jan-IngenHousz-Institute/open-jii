@@ -15,8 +15,8 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useUserInvitationRevoke } from "../../hooks/user-invitation/useUserInvitationRevoke/useUserInvitationRevoke";
-import { useUserInvitationRoleUpdate } from "../../hooks/user-invitation/useUserInvitationRoleUpdate/useUserInvitationRoleUpdate";
+import { useUserInvitationRevoke } from "../../../hooks/user-invitation/useUserInvitationRevoke/useUserInvitationRevoke";
+import { useUserInvitationRoleUpdate } from "../../../hooks/user-invitation/useUserInvitationRoleUpdate/useUserInvitationRoleUpdate";
 
 interface ExperimentPendingInvitationsPanelProps {
   invitations: Invitation[];

@@ -8,13 +8,13 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useExperimentMemberAdd } from "../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
-import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
-import { useDebounce } from "../../hooks/useDebounce";
-import { useUserSearch } from "../../hooks/useUserSearch";
-import { useUserInvitationCreate } from "../../hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate";
-import { MemberList } from "../current-members-list/current-members-list";
-import { UserSearchPopover } from "../user-search-popover";
+import { useExperimentMemberAdd } from "../../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
+import { useExperimentMemberRemove } from "../../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
+import { useDebounce } from "../../../hooks/useDebounce";
+import { useUserSearch } from "../../../hooks/useUserSearch";
+import { useUserInvitationCreate } from "../../../hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate";
+import { MemberList } from "../../current-members-list/current-members-list";
+import { UserSearchPopover } from "../../user-search-popover";
 
 type MemberSelection =
   | { type: "user"; user: UserProfile }

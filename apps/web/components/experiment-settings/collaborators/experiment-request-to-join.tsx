@@ -22,9 +22,9 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@repo/ui/co
 import { Textarea } from "@repo/ui/components/textarea";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useCancelMyJoinRequest } from "../../hooks/experiment/join-request/useCancelMyJoinRequest/useCancelMyJoinRequest";
-import { useMyJoinRequest } from "../../hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
-import { useRequestJoinExperiment } from "../../hooks/experiment/join-request/useRequestJoinExperiment/useRequestJoinExperiment";
+import { useCancelMyJoinRequest } from "../../../hooks/experiment/join-request/useCancelMyJoinRequest/useCancelMyJoinRequest";
+import { useMyJoinRequest } from "../../../hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
+import { useRequestJoinExperiment } from "../../../hooks/experiment/join-request/useRequestJoinExperiment/useRequestJoinExperiment";
 
 interface ExperimentRequestToJoinProps {
   experimentId: string;

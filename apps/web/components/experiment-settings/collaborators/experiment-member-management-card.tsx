@@ -20,8 +20,8 @@ import {
   UnderlineTabsTrigger,
 } from "@repo/ui/components/underline-tabs";
 
-import { useExperimentJoinRequests } from "../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
-import { useUserInvitations } from "../../hooks/user-invitation/useUserInvitations/useUserInvitations";
+import { useExperimentJoinRequests } from "../../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
+import { useUserInvitations } from "../../../hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { ExperimentJoinRequestsPanel } from "./experiment-join-requests-panel";
 import { ExperimentMembersPanel } from "./experiment-members-panel";
 import { ExperimentPendingInvitationsPanel } from "./experiment-pending-invitations-panel";

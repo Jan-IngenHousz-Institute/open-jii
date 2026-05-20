@@ -19,10 +19,10 @@ import {
 } from "@repo/ui/components/tooltip";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useApproveJoinRequest } from "../../hooks/experiment/join-request/useApproveJoinRequest/useApproveJoinRequest";
-import { useExperimentJoinRequests } from "../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
-import { useRejectJoinRequest } from "../../hooks/experiment/join-request/useRejectJoinRequest/useRejectJoinRequest";
-import { parseApiError } from "../../util/apiError";
+import { useApproveJoinRequest } from "../../../hooks/experiment/join-request/useApproveJoinRequest/useApproveJoinRequest";
+import { useExperimentJoinRequests } from "../../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
+import { useRejectJoinRequest } from "../../../hooks/experiment/join-request/useRejectJoinRequest/useRejectJoinRequest";
+import { parseApiError } from "../../../util/apiError";
 
 interface ExperimentJoinRequestsPanelProps {
   experimentId: string;
