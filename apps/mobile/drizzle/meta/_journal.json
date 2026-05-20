@@ -15,6 +15,13 @@
       "when": 1778688000000,
       "tag": "0001_add_pending_status",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779256371189,
+      "tag": "0002_dashing_lenny_balinger",
+      "breakpoints": true
     }
   ]
 }

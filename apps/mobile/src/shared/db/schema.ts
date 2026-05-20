@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
  * Measurement lifecycle:
@@ -27,11 +27,18 @@ export const measurements = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
+    // Pre-extracted at save time so the list query never has to decompress
+    // measurement_result. Nullable for legacy rows pending backfill.
+    questionsText: text("questions_text"),
+    hasComment: integer("has_comment", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [
     check(
       "measurements_status_check",
       sql`${table.status} IN ('pending', 'uploading', 'failed', 'successful')`,
     ),
+    index("idx_measurements_status").on(table.status),
+    index("idx_measurements_status_ts").on(table.status, table.timestamp),
+    index("idx_measurements_created_at").on(table.createdAt),
   ],
 );
