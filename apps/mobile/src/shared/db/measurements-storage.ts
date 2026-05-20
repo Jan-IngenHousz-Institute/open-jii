@@ -4,11 +4,14 @@ import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import type { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/utils/logger";
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 import { compressForStorage, decompressFromStorage } from "~/shared/utils/storage-compression";
 
 import { db } from "./client";
 import { measurements } from "./schema";
+
+const log = createLogger("measurements");
 
 const LEGACY_PREFIXES = [
   { prefix: "FAILED_UPLOAD_", status: "failed" as const },
@@ -71,7 +74,7 @@ async function migrateLegacyEntries(): Promise<void> {
     }
 
     await AsyncStorage.multiRemove(migratedKeys);
-    console.log(`[measurements] Migrated ${legacyKeys.length} ${status} entries from AsyncStorage`);
+    log.info("migrated legacy entries", { count: legacyKeys.length, status });
   }
 }
 
@@ -85,7 +88,7 @@ async function ensureMigrated(): Promise<void> {
       await migrateLegacyEntries();
     } catch (err) {
       migrationPromise = null;
-      console.warn("[measurements] Legacy migration failed:", err);
+      log.warn("Legacy migration failed", { err: (err as Error)?.message });
       throw err;
     }
   })();
@@ -169,7 +172,7 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
     }
     return out;
   } catch (error) {
-    console.error("Failed to count measurements:", error);
+    log.error("Failed to count measurements", { err: (error as Error)?.message });
     return { pending: 0, failed: 0, successful: 0 };
   }
 }
@@ -234,7 +237,7 @@ export async function getMeasurementsList(
       hasComment: !!r.hasComment,
     }));
   } catch (error) {
-    console.error("Failed to fetch measurements list:", error);
+    log.error("Failed to fetch measurements list", { err: (error as Error)?.message });
     return [];
   }
 }
@@ -263,7 +266,7 @@ export async function getMeasurement(id: string): Promise<StoredMeasurement | nu
       },
     };
   } catch (error) {
-    console.error("Failed to fetch measurement by id:", error);
+    log.error("Failed to fetch measurement by id", { id, err: (error as Error)?.message });
     return null;
   }
 }
@@ -303,7 +306,7 @@ export async function getMeasurements(
       })
       .filter((m): m is StoredMeasurement => m !== null);
   } catch (error) {
-    console.error("Failed to fetch measurements:", error);
+    log.error("Failed to fetch measurements", { err: (error as Error)?.message });
     throw error;
   }
 }
@@ -327,7 +330,7 @@ export async function getMeasurementById(id: string): Promise<StoredMeasurement 
       },
     };
   } catch (error) {
-    console.error("Failed to fetch measurement by id:", error);
+    log.error("Failed to fetch measurement by id", { id, err: (error as Error)?.message });
     return null;
   }
 }
@@ -349,7 +352,7 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
       .where(eq(measurements.id, key))
       .run();
   } catch (error) {
-    console.error("Failed to update measurement:", error);
+    log.error("Failed to update measurement", { key, err: (error as Error)?.message });
   }
 }
 
@@ -361,7 +364,7 @@ export async function markAsFailed(key: string): Promise<void> {
       .where(and(eq(measurements.id, key), eq(measurements.status, "pending")))
       .run();
   } catch (error) {
-    console.error("Failed to mark measurement as failed:", error);
+    log.error("Failed to mark measurement as failed", { key, err: (error as Error)?.message });
   }
 }
 
@@ -375,7 +378,7 @@ export async function markAsSuccessful(key: string): Promise<void> {
       .where(and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])))
       .run();
   } catch (error) {
-    console.error("Failed to mark measurement as successful:", error);
+    log.error("Failed to mark measurement as successful", { key, err: (error as Error)?.message });
   }
 }
 
@@ -384,7 +387,7 @@ export async function removeMeasurement(key: string): Promise<void> {
   try {
     db.delete(measurements).where(eq(measurements.id, key)).run();
   } catch (error) {
-    console.error("Failed to remove measurement:", error);
+    log.error("Failed to remove measurement", { key, err: (error as Error)?.message });
   }
 }
 
@@ -393,7 +396,7 @@ export async function clearMeasurements(status: MeasurementStatus): Promise<void
   try {
     db.delete(measurements).where(eq(measurements.status, status)).run();
   } catch (error) {
-    console.error("Failed to clear measurements:", error);
+    log.error("Failed to clear measurements", { status, err: (error as Error)?.message });
   }
 }
 
@@ -405,11 +408,12 @@ export async function pruneExpiredMeasurements(): Promise<void> {
       .delete(measurements)
       .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
       .run();
-    console.log(
-      `[measurements] Pruned ${result.changes} successful uploads older than ${Duration.fromMillis(MAX_AGE_MS).as("days")} days`,
-    );
+    log.info("pruned successful uploads", {
+      count: result.changes,
+      older_than_days: Duration.fromMillis(MAX_AGE_MS).as("days"),
+    });
   } catch (error) {
-    console.warn("[measurements] Prune failed:", error);
+    log.warn("Prune failed", { err: (error as Error)?.message });
   }
 }
 

@@ -151,8 +151,7 @@ describe("getCredentials — Cognito IdentityId persistence", () => {
     const creds = await mod.getCredentials({ region: REGION, identityPoolId: POOL });
     expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
     expect(consoleSpy).toHaveBeenCalledWith(
-      "[mqtt] Failed to persist Cognito IdentityId:",
-      expect.any(Error),
+      expect.stringContaining("Failed to persist Cognito IdentityId"),
     );
 
     // Second call within the same process uses the in-memory cache — no extra GetId.
@@ -185,8 +184,7 @@ describe("getCredentials — Cognito IdentityId persistence", () => {
 
     expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
     expect(consoleSpy).toHaveBeenCalledWith(
-      "[mqtt] Failed to clear persisted Cognito IdentityId:",
-      expect.any(Error),
+      expect.stringContaining("Failed to clear persisted Cognito IdentityId"),
     );
 
     consoleSpy.mockRestore();

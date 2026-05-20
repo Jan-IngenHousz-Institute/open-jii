@@ -41,7 +41,11 @@ describe("uploadWorker", () => {
 
     await uploadWorker("row-1");
 
-    expect(mockPublish).toHaveBeenCalledWith("topic/a", { reading: 42, _client_id: "row-1" });
+    expect(mockPublish).toHaveBeenCalledWith(
+      "topic/a",
+      { reading: 42, _client_id: "row-1" },
+      { traceId: "row-1" },
+    );
     expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
     expect(mockMarkAsFailed).not.toHaveBeenCalled();
   });

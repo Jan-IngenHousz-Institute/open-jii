@@ -1,10 +1,14 @@
 import { AsyncRetryer } from "@tanstack/pacer/async-retryer";
 import { UPLOAD_CONCURRENCY } from "~/features/recent-measurements/services/upload-constants";
+import { createLogger } from "~/shared/utils/logger";
 import { getSyncedUtcNow } from "~/shared/utils/time-sync";
+import { getTrace } from "~/shared/utils/trace";
 
 import { MqttError } from "./mqtt-errors";
 import { createPahoTransportFactory } from "./mqtt-transport";
 import type { Transport, TransportFactory } from "./mqtt-transport";
+
+const log = createLogger("mqtt-publisher");
 
 export const IDLE_DISCONNECT_MS = 30_000;
 export const RECONNECT_BACKOFF_MS = [1_000, 4_000, 15_000];
@@ -13,8 +17,15 @@ export const PUBLISH_TIMEOUT_MS = 30_000;
 export const POOL_SIZE = 4;
 export const MAX_IN_FLIGHT_PER_SLOT = Math.max(1, Math.floor(UPLOAD_CONCURRENCY / POOL_SIZE));
 
+export interface PublishMeta {
+  // Correlation id used by the trace module (typically the measurement id).
+  // When provided, publisher lifecycle events (queued/slot/delivered) are
+  // attached to that trace so the canonical wide event covers DB → MQTT.
+  traceId?: string;
+}
+
 export interface MqttPublisher {
-  publish(topic: string, payload: object): Promise<void>;
+  publish(topic: string, payload: object, meta?: PublishMeta): Promise<void>;
 }
 
 type TimerHandle = ReturnType<typeof setTimeout>;
@@ -27,6 +38,7 @@ interface Pending {
   enqueuedAt: number;
   sentAt: number | null;
   timeoutHandle: TimerHandle | null;
+  traceId?: string;
 }
 
 interface PoolSlot {
@@ -62,7 +74,7 @@ export class MqttPublisherImpl implements MqttPublisher {
     }));
   }
 
-  publish(topic: string, payload: object): Promise<void> {
+  publish(topic: string, payload: object, meta?: PublishMeta): Promise<void> {
     if (this.destroyed) {
       return Promise.reject(new MqttError("Disconnected", "publisher destroyed"));
     }
@@ -78,27 +90,36 @@ export class MqttPublisherImpl implements MqttPublisher {
         enqueuedAt: getSyncedUtcNow(),
         sentAt: null,
         timeoutHandle: null,
+        traceId: meta?.traceId,
       };
       item.timeoutHandle = setTimeout(() => {
         if (this.removePending(item)) {
-          console.warn("[mqtt-publisher] publish timeout", { topic });
+          log.warn("publish timeout", { topic, traceId: item.traceId });
+          if (item.traceId) getTrace(item.traceId)?.event("publish_timeout", { topic });
           item.reject(new MqttError("Timeout", `publish to ${topic} timed out`));
         }
       }, PUBLISH_TIMEOUT_MS);
 
       this.held.push(item);
-      console.log("[mqtt-publisher] publish queued", {
+      log.debug("publish queued", {
         topic,
         held: this.held.length,
         totalInFlight: this.totalInFlight(),
+        traceId: item.traceId,
       });
+      if (item.traceId) {
+        getTrace(item.traceId)?.event("publisher_queued", {
+          held: this.held.length,
+          in_flight: this.totalInFlight(),
+        });
+      }
       this.drain();
     });
   }
 
   destroy() {
     if (this.destroyed) return;
-    console.log("[mqtt-publisher] destroy");
+    log.info("destroy");
     this.destroyed = true;
     this.cancelIdleTimer();
     for (const slot of this.slots) {
@@ -159,13 +180,25 @@ export class MqttPublisherImpl implements MqttPublisher {
         const handle = slot.transport.publish({ topic: item.topic, payload: serialized });
         slot.inFlight.set(handle.id, item);
         drained++;
+        if (item.traceId) {
+          getTrace(item.traceId)?.event("slot_send", {
+            slot: slot.index,
+            bytes: serialized.length,
+          });
+        }
       } catch (err) {
         this.clearTimeout(item);
-        console.warn("[mqtt-publisher] transport.publish threw", {
+        log.warn("transport.publish threw", {
           slot: slot.index,
           topic: item.topic,
-          err,
+          err: (err as Error)?.message,
         });
+        if (item.traceId) {
+          getTrace(item.traceId)?.event("slot_send_threw", {
+            slot: slot.index,
+            err: (err as Error)?.message,
+          });
+        }
         item.reject(
           err instanceof MqttError
             ? err
@@ -174,7 +207,7 @@ export class MqttPublisherImpl implements MqttPublisher {
       }
     }
     if (drained > 0) {
-      console.log("[mqtt-publisher] drained to slot", {
+      log.debug("drained to slot", {
         slot: slot.index,
         count: drained,
         slotInFlight: slot.inFlight.size,
@@ -188,7 +221,7 @@ export class MqttPublisherImpl implements MqttPublisher {
     if (slot.transport) return slot.transport;
     if (slot.connecting) return slot.connecting;
 
-    console.log("[mqtt-publisher] connecting", { slot: slot.index });
+    log.info("connecting", { slot: slot.index });
     slot.connecting = (async () => {
       try {
         const transport = await this.connectWithBackoff(slot);
@@ -202,14 +235,14 @@ export class MqttPublisherImpl implements MqttPublisher {
         }
         this.wireSlot(slot, transport);
         slot.transport = transport;
-        console.log("[mqtt-publisher] connected", { slot: slot.index });
+        log.info("connected", { slot: slot.index });
         return transport;
       } catch (err) {
         const mqttErr =
           err instanceof MqttError
             ? err
             : new MqttError("Disconnected", "connect failed", { cause: err });
-        console.warn("[mqtt-publisher] slot connect failed", {
+        log.warn("slot connect failed", {
           slot: slot.index,
           kind: mqttErr.kind,
         });
@@ -235,7 +268,7 @@ export class MqttPublisherImpl implements MqttPublisher {
       baseWait: (retryer) => RECONNECT_BACKOFF_MS[retryer.store.state.currentAttempt - 1] ?? 0,
       throwOnError: "last",
       onError: (err, _args, r) =>
-        console.warn("[mqtt-publisher] connect attempt failed", {
+        log.warn("connect attempt failed", {
           slot: slot.index,
           attempt: r.store.state.currentAttempt,
           err: err.message,
@@ -264,7 +297,7 @@ export class MqttPublisherImpl implements MqttPublisher {
       const wireMs = item.sentAt != null ? now - item.sentAt : null;
       const queueMs = item.sentAt != null ? item.sentAt - item.enqueuedAt : null;
       const totalMs = now - item.enqueuedAt;
-      console.log("[mqtt-publisher] delivered (PUBACK)", {
+      log.debug("delivered (PUBACK)", {
         slot: slot.index,
         topic: item.topic,
         wireMs,
@@ -273,7 +306,16 @@ export class MqttPublisherImpl implements MqttPublisher {
         slotInFlight: slot.inFlight.size,
         totalInFlight: this.totalInFlight(),
         held: this.held.length,
+        traceId: item.traceId,
       });
+      if (item.traceId) {
+        getTrace(item.traceId)?.event("puback", {
+          slot: slot.index,
+          wire_ms: wireMs,
+          queue_ms: queueMs,
+          publisher_total_ms: totalMs,
+        });
+      }
       item.resolve();
       // Slot freed — pull the next held item in. If nothing held anywhere,
       // fall through to idle scheduling.
@@ -286,7 +328,7 @@ export class MqttPublisherImpl implements MqttPublisher {
 
     transport.onDisconnect((reason) => {
       if (this.destroyed) return;
-      console.warn("[mqtt-publisher] slot disconnected — holding + reconnecting", {
+      log.warn("slot disconnected — holding + reconnecting", {
         slot: slot.index,
         reason,
         slotInFlight: slot.inFlight.size,
@@ -296,6 +338,12 @@ export class MqttPublisherImpl implements MqttPublisher {
       Array.from(slot.inFlight.values()).forEach((item) => {
         item.sentAt = null;
         this.held.push(item);
+        if (item.traceId) {
+          getTrace(item.traceId)?.event("slot_disconnected_requeue", {
+            slot: slot.index,
+            reason: reason.message,
+          });
+        }
       });
       slot.inFlight.clear();
       try {
@@ -349,9 +397,7 @@ export class MqttPublisherImpl implements MqttPublisher {
     this.idleTimer = setTimeout(() => {
       this.idleTimer = null;
       if (this.totalInFlight() > 0 || this.held.length > 0) return;
-      console.log("[mqtt-publisher] idle — closing all transports", {
-        afterMs: IDLE_DISCONNECT_MS,
-      });
+      log.info("idle — closing all transports", { afterMs: IDLE_DISCONNECT_MS });
       for (const slot of this.slots) {
         if (slot.transport) {
           try {

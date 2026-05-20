@@ -1,15 +1,18 @@
 import type { BluetoothDevice } from "react-native-bluetooth-classic";
 import { Emitter } from "~/shared/utils/emitter";
+import { createLogger } from "~/shared/utils/logger";
 import { stringifyIfObject } from "~/shared/utils/stringify-if-object";
 
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
+
+const log = createLogger("bt-classic");
 
 export function bluetoothDeviceToMultispeqStream(connectedDevice: BluetoothDevice) {
   const emitter = new Emitter<MultispeqStreamEvents>();
 
   connectedDevice.onDataReceived((event) => {
     if (typeof event.data !== "string") {
-      console.log("eventType", event.eventType, typeof event.data);
+      log.debug("non-string event", { eventType: event.eventType, dataType: typeof event.data });
       return;
     }
 
@@ -21,14 +24,14 @@ export function bluetoothDeviceToMultispeqStream(connectedDevice: BluetoothDevic
           data: JSON.parse(jsonData),
           checksum,
         })
-        .catch((e) => console.log("receivedReplyFromDevice", e));
+        .catch((e) => log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }));
     } catch {
       emitter
         .emit("receivedReplyFromDevice", {
           data: event.data,
           checksum: "",
         })
-        .catch((e) => console.log("receivedReplyFromDevice", e));
+        .catch((e) => log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }));
     }
   });
 

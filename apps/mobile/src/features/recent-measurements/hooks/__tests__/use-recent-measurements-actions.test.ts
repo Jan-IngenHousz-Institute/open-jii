@@ -101,11 +101,6 @@ const makeItem = (
   timestamp: "2026-01-01T10:00:00Z",
   questions: [],
   hasComment: false,
-  data: {
-    topic: "t/t",
-    measurementResult: {},
-    metadata: { experimentName, protocolName: "p", timestamp: "2026-01-01T10:00:00Z" },
-  },
 });
 
 const mockAllMeasurements: MeasurementItem[] = [

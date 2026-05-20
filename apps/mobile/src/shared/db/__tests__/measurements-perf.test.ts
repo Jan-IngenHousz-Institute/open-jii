@@ -628,7 +628,7 @@ describe("Scenario F — INDEXES: status filter performance", () => {
   }, HOOK_TIMEOUT);
 
   it("WHERE status IN (...) with and without index", () => {
-    const allStatuses = ["pending", "failed", "uploading", "successful"];
+    const allStatuses = ["pending", "failed", "successful"];
     const oneStatus = ["pending"];
 
     dbNoIndex.prepare("SELECT id FROM measurements WHERE status = 'pending'").all();
@@ -1058,7 +1058,7 @@ describe("Scenario L — Production path (real getMeasurementsList)", () => {
     // L1: the production list query — lean SELECT, SQL ORDER BY, paginated.
     // This number should drop dramatically vs the pre-optimisation baseline.
     const { ms: msProdList } = await timeAsync(async () =>
-      mod.getMeasurementsList(["pending", "failed", "uploading", "successful"], {
+      mod.getMeasurementsList(["pending", "failed", "successful"], {
         limit: 50,
         offset: 0,
       }),
@@ -1071,7 +1071,7 @@ describe("Scenario L — Production path (real getMeasurementsList)", () => {
 
     const { ms: msBoth } = await timeAsync(async () => {
       await Promise.all([
-        mod.getMeasurementsList(["pending", "failed", "uploading", "successful"], {
+        mod.getMeasurementsList(["pending", "failed", "successful"], {
           limit: 50,
           offset: 0,
         }),

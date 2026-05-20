@@ -10,7 +10,10 @@ import "react-native-get-random-values";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { Emitter } from "~/shared/utils/emitter";
 import { generateRandomString } from "~/shared/utils/generate-random-string";
+import { createLogger } from "~/shared/utils/logger";
 import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/utils/time-sync";
+
+const log = createLogger("mqtt-conn");
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -114,7 +117,7 @@ async function fetchAndPersistIdentityId(
   try {
     await AsyncStorage.setItem(storageKeyFor(identityPoolId), IdentityId);
   } catch (e) {
-    console.warn("[mqtt] Failed to persist Cognito IdentityId:", e);
+    log.warn("Failed to persist Cognito IdentityId", { err: (e as Error)?.message });
   }
   cachedIdentityId = IdentityId;
   return IdentityId;
@@ -148,7 +151,7 @@ async function clearCachedIdentityId(identityPoolId: string): Promise<void> {
   try {
     await AsyncStorage.removeItem(storageKeyFor(identityPoolId));
   } catch (e) {
-    console.warn("[mqtt] Failed to clear persisted Cognito IdentityId:", e);
+    log.warn("Failed to clear persisted Cognito IdentityId", { err: (e as Error)?.message });
   }
 }
 
@@ -229,7 +232,7 @@ export async function getCredentials({
       // fresh one, and try exactly once more.
       const name = (err as { name?: string })?.name;
       if (name === "ResourceNotFoundException" || name === "NotAuthorizedException") {
-        console.warn(`[mqtt] Cached IdentityId rejected (${name}); refreshing.`);
+        log.warn("Cached IdentityId rejected — refreshing", { name });
         await clearCachedIdentityId(identityPoolId);
         IdentityId = await fetchAndPersistIdentityId(identityClient, identityPoolId);
         Credentials = await fetchCredentialsFor(IdentityId);
@@ -297,16 +300,15 @@ export interface MqttEmitterEvents {
 }
 
 export async function createMqttConnection() {
-  console.log("[mqtt-conn] getCredentials: start");
+  const t0 = Date.now();
   const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
     identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
     region: getEnvVar("REGION"),
   });
-  console.log("[mqtt-conn] getCredentials: done");
+  const tCreds = Date.now();
 
   const clientId = getEnvVar("CLIENT_ID") + " - " + generateRandomString();
 
-  console.log("[mqtt-conn] createSignedUrl: start");
   const signedUrl = await createSignedUrl({
     clientId,
     accessKeyId,
@@ -315,11 +317,16 @@ export async function createMqttConnection() {
     region: getEnvVar("REGION"),
     endpoint: getEnvVar("IOT_ENDPOINT"),
   });
-  console.log("[mqtt-conn] createSignedUrl: done");
+  const tSign = Date.now();
 
-  console.log("[mqtt-conn] connectToMqtt: start");
   const client = await connectToMqtt(signedUrl, clientId);
-  console.log("[mqtt-conn] connectToMqtt: done");
+  log.info("connected", {
+    clientId,
+    creds_ms: tCreds - t0,
+    sign_ms: tSign - tCreds,
+    paho_ms: Date.now() - tSign,
+    total_ms: Date.now() - t0,
+  });
 
   const emitter = new Emitter<MqttEmitterEvents>();
 
@@ -328,11 +335,13 @@ export async function createMqttConnection() {
 
     emitter
       .emit("messageArrived", { destinationName, payload })
-      .catch((e) => console.log("messageArrived error", e));
+      .catch((e) => log.warn("messageArrived emit failed", { err: (e as Error)?.message }));
   };
 
   client.onConnectionLost = (err) => {
-    emitter.emit("connectionLost", err).catch((e) => console.log("connectionLost error", e));
+    emitter
+      .emit("connectionLost", err)
+      .catch((e) => log.warn("connectionLost emit failed", { err: (e as Error)?.message }));
   };
 
   emitter.on("sendMessage", ({ payload, topic }) => {
@@ -345,7 +354,7 @@ export async function createMqttConnection() {
     const { payloadString: payload, destinationName } = message;
     emitter
       .emit("messageDelivered", { payload, destinationName })
-      .catch((e) => console.log("messageDelivered error", e));
+      .catch((e) => log.warn("messageDelivered emit failed", { err: (e as Error)?.message }));
   };
 
   return emitter;

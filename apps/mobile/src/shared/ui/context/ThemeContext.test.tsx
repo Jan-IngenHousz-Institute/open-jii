@@ -145,7 +145,9 @@ describe("ThemeProvider", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { getTheme } = renderWithProvider();
     await waitFor(() =>
-      expect(errorSpy).toHaveBeenCalledWith("Failed to load theme preference:", expect.any(Error)),
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to load theme preference"),
+      ),
     );
     expect(getTheme().themePreference).toBe("light");
     expect(getTheme().isDark).toBe(false);
@@ -161,7 +163,9 @@ describe("ThemeProvider", () => {
       await getTheme().changeTheme("dark");
     });
 
-    expect(errorSpy).toHaveBeenCalledWith("Failed to save theme preference:", expect.any(Error));
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to save theme preference"),
+    );
     expect(getTheme().themePreference).toBe("light");
   });
 });

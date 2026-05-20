@@ -27,9 +27,12 @@ import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-bou
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
 import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
+import { createLogger } from "~/shared/utils/logger";
 import { shouldHideSplash } from "~/shared/utils/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
+
+const log = createLogger("root-layout");
 
 SplashScreen.preventAutoHideAsync();
 installGlobalErrorHandlers();
@@ -107,10 +110,10 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   useEffect(() => {
     if (error) {
-      console.error(error);
+      log.error("font load error", { err: error?.message });
     }
     if (migrationsError) {
-      console.error("[db] Migration failed:", migrationsError);
+      log.error("db migration failed", { err: migrationsError?.message });
     }
   }, [error, migrationsError]);
 
@@ -122,7 +125,9 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   useEffect(() => {
     if (!migrationsReady) return;
-    void backfillDerivedColumns().catch((e) => console.warn("[db] backfill failed:", e));
+    void backfillDerivedColumns().catch((e) =>
+      log.warn("db backfill failed", { err: (e as Error)?.message }),
+    );
   }, [migrationsReady]);
 
   if (migrationsError) {

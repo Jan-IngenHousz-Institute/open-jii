@@ -5,9 +5,12 @@ import { useMeasurements } from "~/features/recent-measurements/hooks/use-measur
 import { getUploadQueue } from "~/features/recent-measurements/services/upload-queue";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/utils/logger";
 import { buildAnnotations } from "~/shared/utils/measurement-annotations";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
+
+const log = createLogger("questions-upload");
 
 export function useQuestionsUpload() {
   const { saveMeasurement } = useMeasurements();
@@ -56,7 +59,7 @@ export function useQuestionsUpload() {
       try {
         savedId = await saveMeasurement(measurement, "pending");
       } catch (storageError) {
-        console.error("Failed to save answers to local storage:", storageError);
+        log.error("Failed to save answers to local storage", { err: (storageError as Error)?.message });
         toast.error(t("recentMeasurements:toasts.answersSaveFailed"));
         return;
       }

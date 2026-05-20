@@ -1,8 +1,11 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
+import { createLogger } from "~/shared/utils/logger";
 
 import mathLibResource from "./math.lib.js.txt";
 import { getPythonMacroRunner } from "./python-macro-runner";
+
+const log = createLogger("macro");
 
 interface MacroOutputMessages {
   messages?: {
@@ -40,7 +43,7 @@ async function executeMacro(code: string, json: object): Promise<MacroOutput> {
     // console.log("[macro] (JS) output:", JSON.stringify(output));
     return output;
   } catch (err) {
-    console.error("[macro] (JS) error:", err);
+    log.error("(JS) error", { err: (err as Error)?.message });
     throw err;
   }
 }
@@ -71,9 +74,7 @@ export async function applyMacro(
   const code = atob(macroInput.code);
   const language = (macroInput.language ?? "javascript").toLowerCase();
 
-  const codePreview = code.length > 500 ? code.slice(0, 500) + "..." : code;
-  console.log("[macro] code preview:", codePreview);
-  console.log("[macro] language:", language, "samples:", samples.length);
+  log.debug("apply", { language, samples: samples.length, code_bytes: code.length });
 
   if (language === "python") {
     const runPython = getPythonMacroRunner();
@@ -83,13 +84,12 @@ export async function applyMacro(
     const outputs: MacroOutput[] = [];
     for (let i = 0; i < samples.length; i++) {
       const sample = samples[i];
-      console.log("[macro] (Python) input sample", i, JSON.stringify(sample));
       try {
         const out = await runPython(code, structuredClone(sample));
-        console.log("[macro] (Python) output sample", i, JSON.stringify(out));
+        log.debug("(Python) sample ok", { i });
         outputs.push(out);
       } catch (err) {
-        console.error("[macro] (Python) error sample", i, err);
+        log.error("(Python) sample failed", { i, err: (err as Error)?.message });
         throw err;
       }
     }
@@ -102,7 +102,7 @@ export async function applyMacro(
       const out = await executeMacro(code, samples[i]);
       outputs.push(out);
     } catch (err) {
-      console.error("[macro] (JS) error sample", i, err);
+      log.error("(JS) sample failed", { i, err: (err as Error)?.message });
       throw err;
     }
   }

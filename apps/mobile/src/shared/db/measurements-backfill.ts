@@ -1,10 +1,13 @@
 import { eq, isNull } from "drizzle-orm";
 import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/utils/logger";
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 import { decompressFromStorage } from "~/shared/utils/storage-compression";
 
 import { db } from "./client";
 import { measurements } from "./schema";
+
+const log = createLogger("measurements");
 
 const BATCH_SIZE = 100;
 
@@ -59,6 +62,6 @@ export async function backfillDerivedColumns(): Promise<void> {
   }
 
   if (totalUpdated > 0) {
-    console.log(`[measurements] Backfilled derived columns for ${totalUpdated} legacy rows`);
+    log.info("backfilled derived columns", { count: totalUpdated });
   }
 }

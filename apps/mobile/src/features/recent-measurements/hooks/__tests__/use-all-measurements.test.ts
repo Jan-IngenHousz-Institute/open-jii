@@ -326,9 +326,13 @@ describe("useAllMeasurements", () => {
   // ---------------------------------------------------------------------------
 
   describe("settle invalidation", () => {
+    // Throttle window in `use-all-measurements.ts` — mirrored here so tests
+    // stay in sync with the production value without exporting it.
+    const THROTTLE_MS = 500;
+
     // Only fake setTimeout/clearTimeout — leave Date.now real (so the
-    // leading-edge check `now - lastInvalidatedAt >= 250` fires on the
-    // first settle) and microtasks unfaked (react-query needs them).
+    // leading-edge check fires on the first settle) and microtasks unfaked
+    // (react-query needs them).
     function useThrottleTimers() {
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     }
@@ -368,7 +372,7 @@ describe("useAllMeasurements", () => {
 
       useThrottleTimers();
 
-      // Burst of three more settles inside the 250ms window — should add
+      // Burst of three more settles inside the throttle window — should add
       // exactly one trailing invalidate, not three.
       act(() => {
         state.markEnqueued("b");
@@ -381,12 +385,12 @@ describe("useAllMeasurements", () => {
       expect(invalidateSpy).toHaveBeenCalledTimes(1);
 
       act(() => {
-        vi.advanceTimersByTime(250);
+        vi.advanceTimersByTime(THROTTLE_MS);
       });
 
       expect(invalidateSpy).toHaveBeenCalledTimes(2);
-      vi.useRealTimers();
       unmount();
+      vi.useRealTimers();
     });
 
     it("unsubscribes on unmount — settles after unmount do not invalidate", async () => {

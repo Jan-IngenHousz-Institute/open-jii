@@ -628,7 +628,9 @@ describe("measurements-storage", () => {
       const counts = await mod.countMeasurementsByStatus();
 
       expect(counts).toEqual({ pending: 0, failed: 0, successful: 0 });
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to count measurements:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to count measurements"),
+      );
 
       consoleSpy.mockRestore();
     });

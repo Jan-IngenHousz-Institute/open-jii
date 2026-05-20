@@ -5,6 +5,9 @@ import { toast } from "sonner-native";
 import { devSeedMeasurements } from "~/features/recent-measurements/services/dev-seed-measurements";
 import { Button } from "~/shared/ui/Button";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("dev-seed");
 
 interface DevSeedMeasurementsDialogProps {
   visible: boolean;
@@ -30,7 +33,7 @@ export function DevSeedMeasurementsDialog({ visible, onClose }: DevSeedMeasureme
       toast.success(`Seeded ${saved} measurement${saved === 1 ? "" : "s"}`);
       onClose();
     } catch (err) {
-      console.error("[dev-seed] failed:", err);
+      log.error("seed failed", { err: (err as Error)?.message });
       toast.error("Failed to seed — see console");
     } finally {
       setIsSeeding(false);

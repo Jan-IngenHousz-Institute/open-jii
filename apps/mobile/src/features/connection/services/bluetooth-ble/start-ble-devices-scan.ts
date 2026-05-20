@@ -1,9 +1,12 @@
 import type { BleError, Device } from "react-native-ble-plx";
 import { ScanMode } from "react-native-ble-plx";
 import { Emitter } from "~/shared/utils/emitter";
+import { createLogger } from "~/shared/utils/logger";
 
 import { requestBluetoothPermission } from "../request-bluetooth-permissions";
 import { prepareBluetooth } from "./prepare-bluetooth";
+
+const log = createLogger("bt-ble");
 
 export async function startDeviceScan() {
   const permissionsGranted = await requestBluetoothPermission();
@@ -26,7 +29,9 @@ export async function startDeviceScan() {
     { scanMode: ScanMode.LowPower, allowDuplicates: true },
     (error, device) => {
       if (error) {
-        emitter.emit("bluetoothError", error).catch((e) => console.log("bluetoothError", e));
+        emitter
+          .emit("bluetoothError", error)
+          .catch((e) => log.warn("bluetoothError emit failed", { err: (e as Error)?.message }));
         return;
       }
       if (!device) {
@@ -34,7 +39,9 @@ export async function startDeviceScan() {
       }
       emitter
         .emit("bluetoothDeviceFound", device)
-        .catch((e) => console.log("bluetoothDeviceFound", e));
+        .catch((e) =>
+          log.warn("bluetoothDeviceFound emit failed", { err: (e as Error)?.message }),
+        );
     },
   );
 

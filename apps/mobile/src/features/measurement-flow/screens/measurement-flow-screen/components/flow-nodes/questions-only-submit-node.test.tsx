@@ -215,7 +215,7 @@ describe("QuestionsOnlySubmitNode", () => {
     );
   });
 
-  it("logs upload rejections through console.error", async () => {
+  it("logs upload rejections through the logger", async () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1")],
@@ -227,7 +227,9 @@ describe("QuestionsOnlySubmitNode", () => {
     render(<QuestionsOnlySubmitNode />);
     fireEvent.press(screen.getByText("Submit & Continue"));
 
-    await waitFor(() => expect(errorSpy).toHaveBeenCalledWith(err));
+    await waitFor(() =>
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("handler failed")),
+    );
     errorSpy.mockRestore();
   });
 });

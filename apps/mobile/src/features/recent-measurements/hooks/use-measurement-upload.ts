@@ -8,7 +8,10 @@ import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 import { compressSample } from "~/shared/utils/compress-sample";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/utils/logger";
 import { buildAnnotations } from "~/shared/utils/measurement-annotations";
+
+const log = createLogger("measurement-upload");
 
 type TFn = ReturnType<typeof useTranslation>["t"];
 
@@ -87,7 +90,7 @@ function promptMeasurementFileSave(
         variant: "primary",
         onPress: () => {
           exportSingleMeasurementToFile(measurement).catch((exportError) => {
-            console.error("Failed to export measurement to file:", exportError);
+            log.error("Failed to export measurement to file", { err: (exportError as Error)?.message });
             toast.error(t("recentMeasurements:alerts.saveToFileError"));
           });
         },
@@ -153,7 +156,7 @@ export function useMeasurementUpload() {
       try {
         savedId = await saveMeasurement(measurement, "pending");
       } catch (storageError) {
-        console.error("Failed to save measurement to local storage:", storageError);
+        log.error("Failed to save measurement to local storage", { err: (storageError as Error)?.message });
         promptMeasurementFileSave(t, measurement);
         return;
       }

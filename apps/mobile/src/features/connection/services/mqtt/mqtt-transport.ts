@@ -2,9 +2,12 @@ import { Client, Message } from "paho-mqtt";
 import "react-native-get-random-values";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { generateRandomString } from "~/shared/utils/generate-random-string";
+import { createLogger } from "~/shared/utils/logger";
 
 import { createSignedUrl, getCredentials } from "./create-mqtt-connection";
 import { MqttError } from "./mqtt-errors";
+
+const log = createLogger("mqtt-transport");
 
 // One paho client per MQTT session. The publisher owns at most one Transport
 // at a time and recreates it on disconnect. Connection-lifecycle plumbing
@@ -116,21 +119,22 @@ class PahoTransport implements Transport {
 export function createPahoTransportFactory(): TransportFactory {
   return {
     async connect() {
-      console.log("[mqtt-transport] connect: getCredentials start");
+      const t0 = Date.now();
+      log.debug("connect: getCredentials start");
       const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
         identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
         region: getEnvVar("REGION"),
       }).catch((err) => {
-        console.warn("[mqtt-transport] getCredentials failed", { err: err?.message });
+        log.warn("getCredentials failed", { err: err?.message });
         throw new MqttError("CredentialError", "failed to fetch Cognito credentials", {
           cause: err,
         });
       });
-      console.log("[mqtt-transport] connect: getCredentials done");
+      const tCreds = Date.now();
 
       const clientId = `${getEnvVar("CLIENT_ID")} - ${generateRandomString()}`;
 
-      console.log("[mqtt-transport] connect: createSignedUrl start");
+      log.debug("connect: createSignedUrl start");
       const signedUrl = await createSignedUrl({
         clientId,
         accessKeyId,
@@ -139,11 +143,18 @@ export function createPahoTransportFactory(): TransportFactory {
         region: getEnvVar("REGION"),
         endpoint: getEnvVar("IOT_ENDPOINT"),
       });
-      console.log("[mqtt-transport] connect: createSignedUrl done");
+      const tSign = Date.now();
 
-      console.log("[mqtt-transport] connect: paho connect start", { clientId });
+      log.debug("connect: paho connect start", { clientId });
       const client = await connectPahoClient(signedUrl, clientId);
-      console.log("[mqtt-transport] connect: paho connect done");
+      const tPaho = Date.now();
+      log.info("connect done", {
+        clientId,
+        creds_ms: tCreds - t0,
+        sign_ms: tSign - tCreds,
+        paho_ms: tPaho - tSign,
+        total_ms: tPaho - t0,
+      });
       return new PahoTransport(client);
     },
   };

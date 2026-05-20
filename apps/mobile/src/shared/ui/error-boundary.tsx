@@ -1,5 +1,8 @@
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("error-boundary");
 
 type Props = {
   children: React.ReactNode;
@@ -18,15 +21,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error(
-      "[ErrorBoundary] render error",
-      {
-        message: error.message,
-        stack: error.stack,
-        componentStack: info.componentStack,
-      },
-      { error, info },
-    );
+    log.error("render error", {
+      message: error.message,
+      stack: error.stack,
+      componentStack: info.componentStack,
+    });
     this.setState({ info });
   }
 
@@ -82,7 +81,7 @@ export function installGlobalErrorHandlers() {
   if (errorUtils) {
     const previous = errorUtils.getGlobalHandler();
     errorUtils.setGlobalHandler((error, isFatal) => {
-      console.error("[GlobalError]", {
+      log.error("global error", {
         isFatal,
         message: error?.message,
         stack: error?.stack,
@@ -107,14 +106,14 @@ export function installGlobalErrorHandlers() {
     allRejections: true,
     onUnhandled: (id, error) => {
       const e = error as { message?: string; stack?: string } | undefined;
-      console.error("[UnhandledRejection]", {
+      log.error("unhandled rejection", {
         id,
         message: e?.message ?? String(error),
         stack: e?.stack,
       });
     },
     onHandled: (id) => {
-      console.warn("[UnhandledRejection] later handled", { id });
+      log.warn("unhandled rejection later handled", { id });
     },
   });
 }

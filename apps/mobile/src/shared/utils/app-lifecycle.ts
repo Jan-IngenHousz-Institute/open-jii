@@ -1,5 +1,9 @@
 import { AppState, type AppStateStatus } from "react-native";
 
+import { createLogger } from "./logger";
+
+const log = createLogger("app-lifecycle");
+
 // Centralizes AppState "real foreground" detection for non-React services
 // (upload queue, time sync, …). Native AppState fires "active" several
 // times during boot and around modals (active → inactive → active), and
@@ -26,16 +30,16 @@ function handleChange(next: AppStateStatus) {
   if (next !== "active" || prev !== "background") return;
   const now = Date.now();
   if (now - lastFireAt < COOLDOWN_MS) {
-    console.log("[app-lifecycle] foregrounded suppressed (cooldown)");
+    log.debug("foregrounded suppressed (cooldown)");
     return;
   }
   lastFireAt = now;
-  console.log("[app-lifecycle] foregrounded");
+  log.info("foregrounded");
   for (const listener of Array.from(listeners)) {
     try {
       listener();
     } catch (err) {
-      console.warn("[app-lifecycle] listener threw:", err);
+      log.warn("listener threw", { err: (err as Error)?.message });
     }
   }
 }
