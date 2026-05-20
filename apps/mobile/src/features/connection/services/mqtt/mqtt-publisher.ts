@@ -14,7 +14,7 @@ export const IDLE_DISCONNECT_MS = 30_000;
 export const RECONNECT_BACKOFF_MS = [1_000, 4_000, 15_000];
 export const PUBLISH_TIMEOUT_MS = 30_000;
 
-export const POOL_SIZE = 4;
+export const POOL_SIZE = 3;
 export const MAX_IN_FLIGHT_PER_SLOT = Math.max(1, Math.floor(UPLOAD_CONCURRENCY / POOL_SIZE));
 
 export interface PublishMeta {
@@ -55,6 +55,8 @@ export interface MqttPublisherOptions {
   poolSize?: number;
 }
 
+const yieldToEventLoop = (): Promise<void> => new Promise<void>((resolve) => setImmediate(resolve));
+
 export class MqttPublisherImpl implements MqttPublisher {
   private readonly transportFactory: TransportFactory;
   private readonly slots: PoolSlot[];
@@ -62,6 +64,11 @@ export class MqttPublisherImpl implements MqttPublisher {
   private held: Pending[] = [];
   private idleTimer: TimerHandle | null = null;
   private destroyed = false;
+  // Drain runs as a single async task. Reentrant callers flip
+  // `drainScheduled` so the in-flight run does another pass instead of
+  // starting in parallel.
+  private draining = false;
+  private drainScheduled = false;
 
   constructor(opts: MqttPublisherOptions) {
     this.transportFactory = opts.transportFactory;
@@ -113,6 +120,7 @@ export class MqttPublisherImpl implements MqttPublisher {
           in_flight: this.totalInFlight(),
         });
       }
+      this.ensureBootstrap();
       this.drain();
     });
   }
@@ -135,85 +143,118 @@ export class MqttPublisherImpl implements MqttPublisher {
     this.rejectAll(new MqttError("Disconnected", "publisher destroyed"));
   }
 
-  // Distribute held items across slots. First, fill any slot that already
-  // has a transport. Then, bring up additional slots — but only as many as
-  // needed to cover the remaining held items, so a single publish doesn't
-  // eagerly open POOL_SIZE sockets.
+  // Distribute held items across connected slots round-robin, least-loaded
+  // first. A single greedy fill of one slot would serialize PUBACKs behind
+  // one TCP socket. Spreading across all connected slots gives parallel
+  // PUBACK streams and a flatter wire_ms curve under burst load.
+  //
+  // Pure routing: never opens sockets. Bootstrap is handled by publish()
+  // via ensureBootstrap(). Pool never scales up on demand — held queue waits.
+  //
+  // Runs as a fire-and-forget async task that yields between sends so big
+  // bursts (e.g. UPLOAD_CONCURRENCY = 50, each with multi-MB JSON.stringify
+  // + paho-mqtt encode on the JS thread) don't freeze the UI.
   private drain(): void {
     if (this.destroyed) return;
-    if (this.held.length === 0) return;
-
-    for (const slot of this.slots) {
-      if (this.held.length === 0) return;
-      if (slot.transport) this.fillSlot(slot);
+    if (this.draining) {
+      this.drainScheduled = true;
+      return;
     }
-    if (this.held.length === 0) return;
+    void this.runDrain();
+  }
 
-    let remainingToCover = this.held.length;
-    for (const slot of this.slots) {
-      if (remainingToCover <= 0) break;
-      if (slot.transport) {
-        remainingToCover -= Math.max(0, MAX_IN_FLIGHT_PER_SLOT - slot.inFlight.size);
-        continue;
-      }
-      if (slot.connecting) {
-        // Reserve this slot's future capacity so we don't bring up more.
-        remainingToCover -= MAX_IN_FLIGHT_PER_SLOT;
-        continue;
-      }
-      void this.ensureSlotConnected(slot).then((transport) => {
-        if (transport) this.fillSlot(slot);
-      });
-      remainingToCover -= MAX_IN_FLIGHT_PER_SLOT;
+  private async runDrain(): Promise<void> {
+    this.draining = true;
+    try {
+      do {
+        this.drainScheduled = false;
+        if (this.destroyed) return;
+        if (this.held.length === 0) continue;
+
+        let sent = 0;
+        const sentBySlot = new Map<number, number>();
+        let progress = true;
+        while (this.held.length > 0 && progress && !this.destroyed) {
+          progress = false;
+          const candidates = this.slots
+            .filter((s) => s.transport && s.inFlight.size < MAX_IN_FLIGHT_PER_SLOT)
+            .sort((a, b) => a.inFlight.size - b.inFlight.size);
+          for (const slot of candidates) {
+            if (this.held.length === 0) break;
+            if (this.destroyed) return;
+            if (this.trySendOne(slot)) {
+              progress = true;
+              sent++;
+              sentBySlot.set(slot.index, (sentBySlot.get(slot.index) ?? 0) + 1);
+              // Yield after every send. JSON.stringify + paho encode are
+              // sync and CPU-heavy; without this the UI thread stalls for
+              // the entire burst.
+              await yieldToEventLoop();
+            }
+          }
+        }
+        if (sent > 0) {
+          log.debug("drained round-robin", {
+            sent,
+            bySlot: Object.fromEntries(sentBySlot),
+            heldRemaining: this.held.length,
+            totalInFlight: this.totalInFlight(),
+          });
+        }
+      } while (this.drainScheduled && !this.destroyed);
+    } finally {
+      this.draining = false;
     }
   }
 
-  private fillSlot(slot: PoolSlot): void {
-    if (!slot.transport) return;
-    let drained = 0;
-    while (this.held.length > 0 && slot.inFlight.size < MAX_IN_FLIGHT_PER_SLOT) {
-      const item = this.held.shift();
-      if (!item) break;
-      const serialized = JSON.stringify(item.payload);
-      try {
-        item.sentAt = getSyncedUtcNow();
-        const handle = slot.transport.publish({ topic: item.topic, payload: serialized });
-        slot.inFlight.set(handle.id, item);
-        drained++;
-        if (item.traceId) {
-          getTrace(item.traceId)?.event("slot_send", {
-            slot: slot.index,
-            bytes: serialized.length,
-          });
-        }
-      } catch (err) {
-        this.clearTimeout(item);
-        log.warn("transport.publish threw", {
+  // Ensure at least one transport is connected or connecting. Called from
+  // publish() so cold start / post-idle-close has a pipe to send through.
+  // Opens only slot 0; never scales beyond one socket here.
+  private ensureBootstrap(): void {
+    if (this.slots.some((s) => s.transport != null || s.connecting != null)) return;
+    const slot = this.slots[0];
+    if (!slot) return;
+    void this.ensureSlotConnected(slot).then((transport) => {
+      if (transport) this.drain();
+    });
+  }
+
+  private trySendOne(slot: PoolSlot): boolean {
+    if (!slot.transport) return false;
+    if (slot.inFlight.size >= MAX_IN_FLIGHT_PER_SLOT) return false;
+    const item = this.held.shift();
+    if (!item) return false;
+    const serialized = JSON.stringify(item.payload);
+    try {
+      item.sentAt = getSyncedUtcNow();
+      const handle = slot.transport.publish({ topic: item.topic, payload: serialized });
+      slot.inFlight.set(handle.id, item);
+      if (item.traceId) {
+        getTrace(item.traceId)?.event("slot_send", {
           slot: slot.index,
-          topic: item.topic,
+          bytes: serialized.length,
+        });
+      }
+      return true;
+    } catch (err) {
+      this.clearTimeout(item);
+      log.warn("transport.publish threw", {
+        slot: slot.index,
+        topic: item.topic,
+        err: (err as Error)?.message,
+      });
+      if (item.traceId) {
+        getTrace(item.traceId)?.event("slot_send_threw", {
+          slot: slot.index,
           err: (err as Error)?.message,
         });
-        if (item.traceId) {
-          getTrace(item.traceId)?.event("slot_send_threw", {
-            slot: slot.index,
-            err: (err as Error)?.message,
-          });
-        }
-        item.reject(
-          err instanceof MqttError
-            ? err
-            : new MqttError("PublishError", "publish failed", { cause: err }),
-        );
       }
-    }
-    if (drained > 0) {
-      log.debug("drained to slot", {
-        slot: slot.index,
-        count: drained,
-        slotInFlight: slot.inFlight.size,
-        totalInFlight: this.totalInFlight(),
-        heldRemaining: this.held.length,
-      });
+      item.reject(
+        err instanceof MqttError
+          ? err
+          : new MqttError("PublishError", "publish failed", { cause: err }),
+      );
+      return false;
     }
   }
 
@@ -317,10 +358,11 @@ export class MqttPublisherImpl implements MqttPublisher {
         });
       }
       item.resolve();
-      // Slot freed — pull the next held item in. If nothing held anywhere,
+      // Slot freed — redistribute so least-loaded slot gets the next item,
+      // not necessarily the one that just acked. If nothing held anywhere,
       // fall through to idle scheduling.
       if (this.held.length > 0) {
-        this.fillSlot(slot);
+        this.drain();
       } else if (this.totalInFlight() === 0) {
         this.scheduleIdleTimer();
       }

@@ -38,10 +38,21 @@ const LEVEL_RANK: Record<LogLevel, number> = {
 };
 
 const sinks = new Set<LogSink>();
-let minLevel: LogLevel = "debug";
+// Hot paths (MQTT publisher, upload pipeline) fire ~12+ debug events per
+// item. Each console.log crosses the RN bridge — at burst load that
+// saturates the UI thread and contributes to ANR / Fabric mount races.
+// Default to "info" in dev (kills debug spam, keeps lifecycle logs) and
+// "warn" in production. Override at startup via setMinLogLevel.
+const DEFAULT_MIN_LEVEL: LogLevel =
+  typeof __DEV__ !== "undefined" && __DEV__ ? "info" : "warn";
+let minLevel: LogLevel = DEFAULT_MIN_LEVEL;
 
 export function setMinLogLevel(level: LogLevel): void {
   minLevel = level;
+}
+
+export function getMinLogLevel(): LogLevel {
+  return minLevel;
 }
 
 export function addLogSink(sink: LogSink): () => void {
@@ -67,14 +78,21 @@ export function emit(entry: LogEntry): void {
 }
 
 export function createLogger(ns: string, baseFields: LogFields = {}): Logger {
-  const make = (level: LogLevel) => (msg: string, fields?: LogFields) => {
-    emit({
-      ts: Date.now(),
-      level,
-      ns,
-      msg,
-      fields: fields ? { ...baseFields, ...fields } : baseFields,
-    });
+  const make = (level: LogLevel) => {
+    const rank = LEVEL_RANK[level];
+    return (msg: string, fields?: LogFields) => {
+      // Short-circuit before allocating entry/fields. Without this, a
+      // hot-path `log.debug(...)` with a spread payload still pays for
+      // object construction even when the level is filtered out.
+      if (rank < LEVEL_RANK[minLevel]) return;
+      emit({
+        ts: Date.now(),
+        level,
+        ns,
+        msg,
+        fields: fields ? { ...baseFields, ...fields } : baseFields,
+      });
+    };
   };
   return {
     debug: make("debug"),
