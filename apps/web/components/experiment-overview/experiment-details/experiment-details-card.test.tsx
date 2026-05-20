@@ -15,7 +15,7 @@ vi.mock("../../experiment-settings/experiment-info-card", () => ({
   ),
 }));
 
-vi.mock("../../experiment-settings/experiment-member-management-card", () => ({
+vi.mock("../../experiment-settings/collaborators/experiment-member-management-card", () => ({
   ExperimentMemberManagement: ({
     experimentId,
     isLoading,

@@ -19,7 +19,7 @@ vi.mock("../../hooks/useDebounce", () => ({
   useDebounce: (v: string) => [v, true],
 }));
 
-vi.mock("../current-members-list/current-members-list", () => ({
+vi.mock("../../current-members-list/current-members-list", () => ({
   MemberList: ({
     membersWithUserInfo,
     onRemoveMember,
