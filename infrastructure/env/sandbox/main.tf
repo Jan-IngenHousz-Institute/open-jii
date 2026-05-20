@@ -14,6 +14,10 @@ module "iam_oidc" {
   repository = "Jan-IngenHousz-Institute/open-jii"
   branch     = "main"
   aws_region = var.aws_region
+
+  # Sandbox only manages S3, DynamoDB, VPC/EC2, IAM, KMS, and CloudWatch Logs.
+  # All other services (ECS, Lambda, RDS, ECR, etc.) are not deployed here.
+  enabled_services = ["s3", "dynamodb", "iam", "kms", "logs", "vpc", "terraform-backend", "sts"]
 }
 
 module "terraform_state_lock" {

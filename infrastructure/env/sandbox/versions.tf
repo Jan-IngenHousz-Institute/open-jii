@@ -18,8 +18,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# DR provider alias — required by the S3 module (configuration_aliases).
-# Dev has no DR features enabled; this alias is wiring only.
 provider "aws" {
   alias  = "dr"
   region = "eu-west-1"
