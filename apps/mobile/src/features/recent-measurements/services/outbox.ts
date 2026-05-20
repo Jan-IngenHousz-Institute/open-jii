@@ -12,19 +12,14 @@ import { onAppForeground } from "~/shared/utils/app-lifecycle";
 import { createLogger } from "~/shared/utils/logger";
 import { getTrace, startTrace } from "~/shared/utils/trace";
 
-import {
-  isProcessing as isProcessingState,
-  markEnqueued,
-  markEnqueuedMany,
-  markSettled,
-} from "./outbox-state";
 import { UPLOAD_CONCURRENCY, UPLOAD_RETRY_BACKOFF_MS } from "./upload-constants";
 
 const log = createLogger("outbox");
 
 // Transactional Outbox (Chris Richardson pattern). The `measurements`
 // SQLite table is the queue: rows with status="pending" or "failed" are
-// the work list. This module is the in-memory scheduler that drains them.
+// the work list. This module is the in-memory scheduler that drains them,
+// and the single source of upload-progress reactivity for the UI.
 //
 // Responsibilities (single concept, deliberately not split):
 // - Discover work: rehydrate `pending`/`failed` rows on cold start and on
@@ -33,12 +28,30 @@ const log = createLogger("outbox");
 // - Pause on offline, resume on reconnect.
 // - Status transitions: pending|failed → successful on PUBACK; pending|
 //   failed → failed on terminal error.
-// - Observability: notify outbox-state.ts so React can render progress.
+// - Reactive surface for the UI: per-id processing, snapshot, and
+//   settled-burst events carrying terminal status (no DB round-trip
+//   needed downstream).
+
+export type SettledStatus = "successful" | "failed";
+
+export interface SettledItem {
+  id: string;
+  status: SettledStatus;
+}
+
+export interface OutboxSnapshot {
+  isUploading: boolean;
+  count: number;
+}
 
 export interface Outbox {
   enqueue(id: string): void;
   enqueueMany(ids: readonly string[]): void;
   isProcessing(id: string): boolean;
+  subscribeProcessing(id: string, listener: () => void): () => void;
+  subscribeSettled(listener: (items: ReadonlyArray<SettledItem>) => void): () => void;
+  getSnapshot(): OutboxSnapshot;
+  subscribeSnapshot(listener: () => void): () => void;
 }
 
 export interface OutboxOptions {
@@ -54,7 +67,19 @@ class OutboxImpl implements Outbox {
   private readonly queue: AsyncQueuer<string>;
   private rehydrating = false;
   private lastRehydrateAt = 0;
-  private readonly sources = new Map<string, string>();
+
+  // Progress state — single source of truth for the UI.
+  private readonly enqueued = new Set<string>();
+  private readonly idListeners = new Map<string, Set<() => void>>();
+  private readonly snapshotListeners = new Set<() => void>();
+  private readonly settledListeners = new Set<
+    (items: ReadonlyArray<SettledItem>) => void
+  >();
+  private cachedSnapshot: OutboxSnapshot = { isUploading: false, count: 0 };
+  // Microtask coalescer: a burst of PUBACKs inside one JS turn produces
+  // a single listener dispatch with every {id, status} from the burst.
+  private settledPending: SettledItem[] = [];
+  private settledFlushScheduled = false;
 
   constructor(opts: OutboxOptions) {
     this.transport = opts.transport;
@@ -75,8 +100,7 @@ class OutboxImpl implements Outbox {
       },
       onSettled: (id) => {
         log.debug("settled", { id });
-        markSettled(id);
-        this.sources.delete(id);
+        this.releaseEnqueued(id);
         // If the worker bailed before calling end (e.g. row already
         // successful, or a non-MqttError bubbled out before classification),
         // close the trace here so we still get a canonical line.
@@ -91,27 +115,129 @@ class OutboxImpl implements Outbox {
   }
 
   enqueue(id: string): void {
-    if (!markEnqueued(id)) {
+    if (!this.markEnqueued(id)) {
       log.debug("enqueue skipped — already in outbox", { id });
       return;
     }
     log.info("enqueue", { id });
-    this.sources.set(id, "enqueue");
     this.queue.addItem(id);
   }
 
   enqueueMany(ids: readonly string[]): void {
-    const added = markEnqueuedMany(ids);
+    const added = this.markEnqueuedMany(ids);
     if (added.length === 0) return;
     log.info("enqueueMany", { requested: ids.length, added: added.length });
     for (const id of added) {
-      this.sources.set(id, "enqueueMany");
       this.queue.addItem(id);
     }
   }
 
   isProcessing(id: string): boolean {
-    return isProcessingState(id);
+    return this.enqueued.has(id);
+  }
+
+  subscribeProcessing(id: string, listener: () => void): () => void {
+    let set = this.idListeners.get(id);
+    if (!set) {
+      set = new Set();
+      this.idListeners.set(id, set);
+    }
+    set.add(listener);
+    return () => {
+      const s = this.idListeners.get(id);
+      if (!s) return;
+      s.delete(listener);
+      if (s.size === 0) this.idListeners.delete(id);
+    };
+  }
+
+  // Fires once per microtask with every {id, status} that settled since
+  // the previous flush. Carries terminal status so consumers can patch
+  // their views without re-reading the DB.
+  subscribeSettled(listener: (items: ReadonlyArray<SettledItem>) => void): () => void {
+    this.settledListeners.add(listener);
+    return () => {
+      this.settledListeners.delete(listener);
+    };
+  }
+
+  getSnapshot(): OutboxSnapshot {
+    return this.cachedSnapshot;
+  }
+
+  subscribeSnapshot(listener: () => void): () => void {
+    this.snapshotListeners.add(listener);
+    return () => {
+      this.snapshotListeners.delete(listener);
+    };
+  }
+
+  // --- internal progress state ---
+
+  private markEnqueued(id: string): boolean {
+    if (this.enqueued.has(id)) return false;
+    this.enqueued.add(id);
+    this.notifySnapshot();
+    this.notifyId(id);
+    return true;
+  }
+
+  private markEnqueuedMany(ids: readonly string[]): string[] {
+    const added: string[] = [];
+    for (const id of ids) {
+      if (this.enqueued.has(id)) continue;
+      this.enqueued.add(id);
+      added.push(id);
+    }
+    if (added.length > 0) {
+      this.notifySnapshot();
+      for (const id of added) this.notifyId(id);
+    }
+    return added;
+  }
+
+  // Called from AsyncQueuer's onSettled. Cleanup only — removes the id
+  // from the enqueued set, wakes per-id + snapshot listeners. The
+  // SettledItem (with terminal status) is emitted by runItem inline at
+  // the PUBACK / retry-exhaust point so the fact lives where it's known.
+  private releaseEnqueued(id: string): void {
+    if (!this.enqueued.delete(id)) return;
+    this.notifySnapshot();
+    this.notifyId(id);
+  }
+
+  private scheduleSettled(item: SettledItem): void {
+    this.settledPending.push(item);
+    if (this.settledFlushScheduled) return;
+    this.settledFlushScheduled = true;
+    queueMicrotask(() => {
+      const items = this.settledPending;
+      this.settledPending = [];
+      this.settledFlushScheduled = false;
+      if (this.settledListeners.size === 0) return;
+      Array.from(this.settledListeners).forEach((listener) => listener(items));
+    });
+  }
+
+  private notifySnapshot(): void {
+    const next: OutboxSnapshot = {
+      isUploading: this.enqueued.size > 0,
+      count: this.enqueued.size,
+    };
+    if (
+      next.isUploading === this.cachedSnapshot.isUploading &&
+      next.count === this.cachedSnapshot.count
+    ) {
+      return;
+    }
+    this.cachedSnapshot = next;
+    Array.from(this.snapshotListeners).forEach((listener) => listener());
+  }
+
+  private notifyId(id: string): void {
+    const set = this.idListeners.get(id);
+    if (!set) return;
+    Array.from(set).forEach((listener) => listener());
   }
 
   // Per-item worker. Reads the row, builds the payload, calls
@@ -126,8 +252,7 @@ class OutboxImpl implements Outbox {
   //   credential failure. The row can still be retried later via a fresh
   //   enqueue (e.g. user-driven retry on the Recent screen).
   private async runItem(id: string): Promise<void> {
-    const source = this.sources.get(id) ?? "unknown";
-    const trace = startTrace("upload", id, { source });
+    const trace = startTrace("upload", id, { source: "outbox" });
     trace.event("outbox_pickup");
     const row = await getMeasurementById(id);
     if (!row) {
@@ -155,6 +280,7 @@ class OutboxImpl implements Outbox {
     try {
       await this.transport.publish(row.data.topic, payload, { traceId: id });
       await markAsSuccessful(id);
+      this.scheduleSettled({ id, status: "successful" });
       trace?.event("marked_successful");
       trace?.end("ok");
       log.info("publish ok → marked successful", { id });
@@ -171,6 +297,7 @@ class OutboxImpl implements Outbox {
         err: (err as Error)?.message,
       });
       await markAsFailed(id);
+      this.scheduleSettled({ id, status: "failed" });
       trace?.event("marked_failed", { kind });
       trace?.end("error", { err: (err as Error)?.message, kind });
     }

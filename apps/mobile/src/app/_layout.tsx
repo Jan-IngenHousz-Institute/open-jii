@@ -13,9 +13,11 @@ import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
+import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
 import { getOutbox } from "~/shared/composition/upload";
 import { db } from "~/shared/db/client";
 import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
@@ -165,8 +167,15 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 function OutboxBootstrap() {
   // Force the Outbox singleton to construct on app start so its network
   // listener, AppState listener, and DB rehydration kick in even before
-  // the first user-initiated save.
-  getOutbox();
+  // the first user-initiated save. Also mount the bridge that drains
+  // Outbox settled events into the measurement list cache — always-on, so
+  // every consumer (Recent tab, Home preview) sees the same fresh cache.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const outbox = getOutbox();
+    const unmount = mountOutboxBridge({ outbox, queryClient });
+    return unmount;
+  }, [queryClient]);
   return null;
 }
 

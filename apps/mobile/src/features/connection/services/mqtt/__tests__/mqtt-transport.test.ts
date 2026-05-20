@@ -21,7 +21,7 @@ vi.mock("paho-mqtt", () => ({ Client: vi.fn(), Message: vi.fn() }));
 vi.mock("react-native-get-random-values", () => ({}));
 vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: () => "stub" }));
 vi.mock("~/shared/utils/generate-random-string", () => ({ generateRandomString: () => "rand" }));
-vi.mock("../create-mqtt-connection", () => ({
+vi.mock("../aws-iot-auth", () => ({
   createSignedUrl: vi.fn(),
   getCredentials: vi.fn(),
 }));

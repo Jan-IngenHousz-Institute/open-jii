@@ -1,25 +1,31 @@
 import { useSyncExternalStore, useCallback } from "react";
 
-import {
-  getSnapshot,
-  isProcessing as isProcessingState,
-  subscribe,
-  subscribeForId,
-  type OutboxSnapshot,
-} from "../services/outbox-state";
+import { getOutbox } from "~/shared/composition/upload";
 
-// Reactive view of the Outbox for React components. Imports the
-// dependency-free state module — *not* the Outbox implementation — so
-// rendering a row doesn't pull in the MQTT + Cognito + env chain.
+import type { OutboxSnapshot } from "../services/outbox";
+
+// Reactive view of the Outbox for React components. Reads directly from
+// the Outbox singleton — there is no separate state module. The Outbox
+// owns the snapshot, the per-id channel, and the settled stream.
 export function useOutboxSnapshot(): OutboxSnapshot {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const outbox = getOutbox();
+  const subscribe = useCallback(
+    (listener: () => void) => outbox.subscribeSnapshot(listener),
+    [outbox],
+  );
+  const snapshot = useCallback(() => outbox.getSnapshot(), [outbox]);
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
 // Per-row reactive view: returns true while the given id is in the
 // Outbox. Subscribes to the per-id channel so only the row whose flag
 // flipped wakes up — settles no longer wake every visible row.
 export function useIsProcessing(id: string): boolean {
-  const subscribeId = useCallback((listener: () => void) => subscribeForId(id, listener), [id]);
-  const snapshotForId = useCallback(() => isProcessingState(id), [id]);
+  const outbox = getOutbox();
+  const subscribeId = useCallback(
+    (listener: () => void) => outbox.subscribeProcessing(id, listener),
+    [outbox, id],
+  );
+  const snapshotForId = useCallback(() => outbox.isProcessing(id), [outbox, id]);
   return useSyncExternalStore(subscribeId, snapshotForId, snapshotForId);
 }

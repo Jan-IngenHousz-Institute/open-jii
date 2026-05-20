@@ -68,7 +68,7 @@ interface Mod {
 }
 
 async function freshModule(): Promise<Mod> {
-  return (await import("../create-mqtt-connection")) as unknown as Mod;
+  return (await import("../aws-iot-auth")) as unknown as Mod;
 }
 
 describe("getCredentials — Cognito IdentityId persistence", () => {

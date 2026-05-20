@@ -46,9 +46,35 @@ Responsibilities:
 - Schedule: per-row retry via AsyncRetryer (3 attempts, 1s/4s/15s backoff). Exhaustion marks the row `failed`.
 - Pause on offline (single network listener), resume on reconnect.
 - Status transitions: `pending`/`failed` → `successful` on PUBACK.
-- Expose reactive `{ isUploading, count }` snapshot and `isProcessing(id)` to the React UI.
+- Own all upload-progress reactivity. No sibling "outbox state" module — the Outbox is the single source.
+
+Reactive surface (all subscribe APIs return an unsubscribe fn):
+
+- `isProcessing(id): boolean` — snapshot read.
+- `subscribeProcessing(id, cb)` — wakes only listeners watching that id. Backed by an internal `Map<id, Set<cb>>`. Settling id X wakes X's listeners only, not all N visible rows.
+- `subscribeSettled(cb: (items: ReadonlyArray<{ id, status }>) => void)` — batched. A burst of PUBACKs inside one JS turn collapses to a single dispatch via an internal `@tanstack/pacer` `Batcher` (`wait: 0`). The event carries the terminal status, so downstream consumers don't re-read the DB.
+- `getSnapshot(): { isUploading, count }` + `subscribeSnapshot(cb)` — for toolbars / tab badges.
 
 Pattern reference: transactional Outbox (Chris Richardson). The `_client_id` field embedded in the wire payload is the dedup key — an AWS IoT Rule deduplicates re-publishes after a crash between PUBACK and `markAsSuccessful`.
+
+### Measurement list cache
+
+The react-query cache that backs the Recent Measurements list. Keyed by filter (`["measurements", "list", filter]`), plus sibling keys for status counts and the pending-or-failed lookup.
+
+`features/recent-measurements/services/measurement-list-cache.ts` is the single home of:
+
+- `queryKeys` — the canonical key builder. Every consumer (hooks, bridge, invalidations) goes through it.
+- `applySettledPatchBatch(queryClient, items)` — pure cache mutator. Given `{id, status}[]` from the Outbox, flips row status in cached pages (or drops the row when status no longer matches the page's filter), updates status counts, and patches the pending-or-failed key. **No SQLite reads.** Unchanged rows keep their object refs so memo'd list items skip re-renders.
+
+The patcher is pure (queryClient + items in, mutations out). Unit-testable without rendering hooks.
+
+### Outbox bridge
+
+The wire from Outbox settled events to the Measurement list cache. Lives in `features/recent-measurements/services/outbox-to-query-cache-bridge.ts`, mounted **once** at the app root (`app/_layout.tsx`) via `mountOutboxBridge(queryClient)`, which returns an unmount fn.
+
+Always-on. Same fresh cache for Recent + Home tab. No per-screen focus gate. Cost per burst = one `setQueryData` per affected query per microtask, no DB.
+
+Tests substitute a fake Outbox (emit settled events) and a fresh `QueryClient`.
 
 ### Transport
 
@@ -72,11 +98,11 @@ Managed MQTT broker that ingests measurements. Reached via a Cognito-signed WebS
 
 ### Cognito Identity Pool
 
-Provides short-lived AWS credentials used to sign the MQTT WebSocket URL. Credentials are cached in `create-mqtt-connection.ts` and refreshed before expiry.
+Provides short-lived AWS credentials used to sign the MQTT WebSocket URL. Credentials are cached in `aws-iot-auth.ts` (identity-id + creds + SigV4 signed URL) and refreshed before expiry. The PahoSession factory imports from there; nothing else does.
 
 ### paho-mqtt
 
-The MQTT-over-WebSocket client library wrapped by Transport. Not referenced anywhere outside `mqtt-transport.ts`.
+The MQTT-over-WebSocket client library wrapped by `mqtt-paho-session.ts`. The Transport never touches paho directly — it goes through `PahoSession`.
 
 ### `@tanstack/pacer`
 
@@ -90,5 +116,7 @@ Provides the AsyncQueuer (concurrency + reactive state) and AsyncRetryer (per-it
 - Don't say "queue lock" or "claim" — those concepts were the previous design's DB soft-lock and no longer exist.
 - Don't say "MqttPublisher", "publisher pool", "slot", or "held queue" — that pool layer was removed; there is one Transport, one paho client. The Outbox is the only queue.
 - Don't say "UploadQueue" — the durable concept is **Outbox**; the in-memory scheduler is an implementation detail of it.
+- Don't say "outbox-state" or "outbox state module" — upload-progress reactivity is part of the **Outbox** itself. There is no sibling module.
 - "Concurrency" refers to Outbox pipeline depth, not "how many MQTT connections" (there is only ever one).
 - A "burst upload" = many Measurements enqueued at once after offline → online transition.
+- Don't say "settle bridge useEffect on the Recent screen" — the **Outbox bridge** is mounted once at the app root.

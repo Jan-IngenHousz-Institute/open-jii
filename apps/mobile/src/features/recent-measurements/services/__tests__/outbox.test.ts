@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { MqttError } from "~/features/connection/services/mqtt/mqtt-errors";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 
 const {
@@ -48,41 +47,49 @@ vi.mock("~/shared/utils/trace", () => ({
   })),
 }));
 
-// Fresh module graph per test — the Outbox and outbox-state both carry
-// module-level state we don't want bleeding across cases.
+// Fresh module graph per test — the Outbox carries module-level state we
+// don't want bleeding across cases. Re-importing MqttError from the same
+// fresh realm is *load-bearing*: the Outbox uses `instanceof MqttError`
+// for retry classification, and a class from a stale realm would never
+// match — silently flipping terminal errors into retryable ones.
 async function freshOutbox(transport: Transport, opts?: { concurrency?: number; retryBackoffMs?: readonly number[] }) {
   vi.resetModules();
   const outboxMod = await import("../outbox");
-  const stateMod = await import("../outbox-state");
+  const errorsMod = await import("~/features/connection/services/mqtt/mqtt-errors");
   const outbox = outboxMod.createOutbox({
     transport,
     concurrency: opts?.concurrency ?? 1,
     retryBackoffMs: opts?.retryBackoffMs ?? [],
   });
-  return { outbox, stateMod };
+  return { outbox, MqttError: errorsMod.MqttError };
 }
 
 function makeTransport(): Transport & { calls: { topic: string; payload: any }[]; resolveNext: () => void; rejectNext: (err: Error) => void } {
   const calls: { topic: string; payload: any }[] = [];
-  let resolver: (() => void) | null = null;
-  let rejecter: ((err: Error) => void) | null = null;
+  // FIFO queues so concurrent publish() calls all keep their own
+  // resolver — the previous single-slot field silently dropped the first
+  // in-flight publish under concurrency > 1.
+  const resolvers: Array<() => void> = [];
+  const rejecters: Array<(err: Error) => void> = [];
   return {
     calls,
     publish(topic, payload) {
       calls.push({ topic, payload });
       return new Promise<void>((resolve, reject) => {
-        resolver = resolve;
-        rejecter = reject;
+        resolvers.push(resolve);
+        rejecters.push(reject);
       });
     },
     destroy() {},
     resolveNext() {
-      resolver?.();
-      resolver = null;
+      const resolve = resolvers.shift();
+      rejecters.shift();
+      resolve?.();
     },
     rejectNext(err: Error) {
-      rejecter?.(err);
-      rejecter = null;
+      const reject = rejecters.shift();
+      resolvers.shift();
+      reject?.(err);
     },
   };
 }
@@ -100,6 +107,7 @@ const row = (overrides: Partial<{ id: string; status: "pending" | "failed" | "su
 async function flushMicrotasks(n = 8) {
   for (let i = 0; i < n; i++) await Promise.resolve();
 }
+
 
 describe("Outbox", () => {
   beforeEach(() => {
@@ -121,12 +129,12 @@ describe("Outbox", () => {
       mockGetMeasurementById.mockImplementation(async (id) => row({ id, status: "pending" }));
 
       const transport = makeTransport();
-      const { stateMod } = await freshOutbox(transport);
+      const { outbox } = await freshOutbox(transport);
       await flushMicrotasks();
 
       expect(mockGetMeasurements).toHaveBeenCalledWith(["pending", "failed"]);
-      expect(stateMod.isProcessing("a")).toBe(true);
-      expect(stateMod.isProcessing("b")).toBe(true);
+      expect(outbox.isProcessing("a")).toBe(true);
+      expect(outbox.isProcessing("b")).toBe(true);
     });
 
     it("registers a network state listener and a foreground listener", async () => {
@@ -143,10 +151,10 @@ describe("Outbox", () => {
     it("publishes the row payload with _client_id and marks the row successful", async () => {
       mockGetMeasurementById.mockResolvedValueOnce(row({ id: "row-1", topic: "exp/p", result: { v: 42 } }));
       const transport = makeTransport();
-      const { outbox, stateMod } = await freshOutbox(transport);
+      const { outbox } = await freshOutbox(transport);
 
       outbox.enqueue("row-1");
-      expect(stateMod.isProcessing("row-1")).toBe(true);
+      expect(outbox.isProcessing("row-1")).toBe(true);
 
       // Wait for the worker to call transport.publish.
       for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
@@ -159,7 +167,7 @@ describe("Outbox", () => {
 
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
-      expect(stateMod.isProcessing("row-1")).toBe(false);
+      expect(outbox.isProcessing("row-1")).toBe(false);
     });
   });
 
@@ -167,7 +175,7 @@ describe("Outbox", () => {
     it("skips when the row is missing (e.g. deleted mid-flight)", async () => {
       mockGetMeasurementById.mockResolvedValueOnce(null);
       const transport = makeTransport();
-      const { outbox, stateMod } = await freshOutbox(transport);
+      const { outbox } = await freshOutbox(transport);
 
       outbox.enqueue("ghost");
       await flushMicrotasks(20);
@@ -175,7 +183,7 @@ describe("Outbox", () => {
       expect(transport.calls).toHaveLength(0);
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
-      expect(stateMod.isProcessing("ghost")).toBe(false);
+      expect(outbox.isProcessing("ghost")).toBe(false);
     });
 
     it("skips when the row is already successful (concurrent ack/rehydrate)", async () => {
@@ -195,7 +203,7 @@ describe("Outbox", () => {
     it("marks the row failed when the transport rejects with a terminal MqttError", async () => {
       mockGetMeasurementById.mockResolvedValueOnce(row({ id: "row-1" }));
       const transport = makeTransport();
-      const { outbox } = await freshOutbox(transport);
+      const { outbox, MqttError } = await freshOutbox(transport);
 
       outbox.enqueue("row-1");
       for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
@@ -212,7 +220,7 @@ describe("Outbox", () => {
       const transport = makeTransport();
       // One backoff step so AsyncRetryer will try a second time. Empty
       // baseWait would let the retryer drop the item.
-      const { outbox } = await freshOutbox(transport, { retryBackoffMs: [0] });
+      const { outbox, MqttError } = await freshOutbox(transport, { retryBackoffMs: [0] });
 
       outbox.enqueue("row-1");
       for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
@@ -236,7 +244,7 @@ describe("Outbox", () => {
         () => new Promise(() => undefined), // hang the worker
       );
       const transport = makeTransport();
-      const { outbox, stateMod } = await freshOutbox(transport);
+      const { outbox } = await freshOutbox(transport);
 
       outbox.enqueue("row-1");
       outbox.enqueue("row-1");
@@ -244,21 +252,273 @@ describe("Outbox", () => {
 
       // markEnqueued is the state source of truth — a duplicate enqueue
       // bails before adding to the underlying queue.
-      expect(stateMod.isProcessing("row-1")).toBe(true);
+      expect(outbox.isProcessing("row-1")).toBe(true);
     });
 
     it("enqueueMany adds only the novel ids", async () => {
       mockGetMeasurementById.mockImplementation(() => new Promise(() => undefined));
       const transport = makeTransport();
-      const { outbox, stateMod } = await freshOutbox(transport);
+      const { outbox } = await freshOutbox(transport);
 
       outbox.enqueue("a");
       outbox.enqueueMany(["a", "b", "c"]);
       await flushMicrotasks(10);
 
-      expect(stateMod.isProcessing("a")).toBe(true);
-      expect(stateMod.isProcessing("b")).toBe(true);
-      expect(stateMod.isProcessing("c")).toBe(true);
+      expect(outbox.isProcessing("a")).toBe(true);
+      expect(outbox.isProcessing("b")).toBe(true);
+      expect(outbox.isProcessing("c")).toBe(true);
+    });
+
+    it("isProcessing delegates to the shared state module", async () => {
+      mockGetMeasurementById.mockImplementation(() => new Promise(() => undefined));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+
+      expect(outbox.isProcessing("unknown")).toBe(false);
+      outbox.enqueue("known");
+      await flushMicrotasks(4);
+      expect(outbox.isProcessing("known")).toBe(true);
+    });
+  });
+
+  describe("rehydrate", () => {
+    it("re-enqueues every pending/failed row when the app foregrounds", async () => {
+      // Capture the foreground callback so we can trigger it.
+      let foregroundCb: (() => void) | null = null;
+      mockOnAppForeground.mockImplementation((cb: () => void) => {
+        foregroundCb = cb;
+      });
+
+      // First rehydrate (cold start): empty queue.
+      mockGetMeasurements.mockResolvedValueOnce([]);
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushMicrotasks();
+
+      // Bypass the 10 s cooldown by advancing the clock.
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 20_000);
+
+      // Second rehydrate (foreground): two rows waiting.
+      mockGetMeasurements.mockResolvedValueOnce([
+        row({ id: "fg-a", status: "pending" }),
+        row({ id: "fg-b", status: "failed" }),
+      ]);
+      mockGetMeasurementById.mockImplementation(async (id) => row({ id, status: "pending" }));
+
+      expect(foregroundCb).not.toBeNull();
+      foregroundCb!();
+      vi.useRealTimers();
+      await flushMicrotasks(40);
+
+      expect(mockGetMeasurements).toHaveBeenCalledTimes(2);
+      expect(outbox.isProcessing("fg-a")).toBe(true);
+      expect(outbox.isProcessing("fg-b")).toBe(true);
+    });
+
+    it("suppresses back-to-back rehydrates inside the cooldown window", async () => {
+      let foregroundCb: (() => void) | null = null;
+      mockOnAppForeground.mockImplementation((cb: () => void) => {
+        foregroundCb = cb;
+      });
+
+      mockGetMeasurements.mockResolvedValue([]);
+      const transport = makeTransport();
+      await freshOutbox(transport);
+      await flushMicrotasks();
+      const cold = mockGetMeasurements.mock.calls.length;
+
+      // Foregrounded immediately after cold start — well inside the
+      // REHYDRATE_COOLDOWN_MS window (10s). The second call should be
+      // skipped entirely.
+      foregroundCb!();
+      await flushMicrotasks(10);
+
+      expect(mockGetMeasurements).toHaveBeenCalledTimes(cold);
+    });
+
+    it("swallows rehydrate failures so the outbox stays usable", async () => {
+      // Cold rehydrate throws; the constructor must not crash, and the
+      // outbox must remain able to enqueue fresh work.
+      mockGetMeasurements.mockRejectedValueOnce(new Error("sqlite locked"));
+      mockGetMeasurementById.mockResolvedValueOnce(row({ id: "after-fail" }));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushMicrotasks(20);
+
+      outbox.enqueue("after-fail");
+      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      expect(transport.calls).toHaveLength(1);
+      transport.resolveNext();
+      await flushMicrotasks(20);
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("after-fail");
+    });
+  });
+
+  describe("network listener", () => {
+    it("pauses the queue when the network goes offline and resumes on reconnect", async () => {
+      // Capture the network callback for direct invocation.
+      let networkCb: ((state: { isInternetReachable: boolean | null | undefined }) => void) | null =
+        null;
+      mockAddNetworkStateListener.mockImplementation((cb: typeof networkCb) => {
+        networkCb = cb;
+        return { remove: () => undefined };
+      });
+
+      mockGetMeasurementById.mockResolvedValue(row({ id: "net-a" }));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushMicrotasks();
+      expect(networkCb).not.toBeNull();
+
+      // Go offline before enqueueing — the queue is stopped, so the
+      // worker should not pick up the item.
+      networkCb!({ isInternetReachable: false });
+      outbox.enqueue("net-a");
+      await flushMicrotasks(10);
+      expect(transport.calls).toHaveLength(0);
+
+      // Back online — queue starts draining and the worker publishes.
+      networkCb!({ isInternetReachable: true });
+      for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
+      expect(transport.calls).toHaveLength(1);
+      transport.resolveNext();
+      await flushMicrotasks(20);
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-a");
+    });
+
+    it("does not pause on undefined isInternetReachable (treat unknown as online)", async () => {
+      // expo-network briefly emits undefined around state transitions; the
+      // outbox must not treat that as offline (it'd stall the queue).
+      let networkCb: ((state: { isInternetReachable: boolean | null | undefined }) => void) | null =
+        null;
+      mockAddNetworkStateListener.mockImplementation((cb: typeof networkCb) => {
+        networkCb = cb;
+        return { remove: () => undefined };
+      });
+
+      mockGetMeasurementById.mockResolvedValue(row({ id: "net-b" }));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushMicrotasks();
+
+      networkCb!({ isInternetReachable: undefined });
+      outbox.enqueue("net-b");
+      for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
+      expect(transport.calls).toHaveLength(1);
+      transport.resolveNext();
+      await flushMicrotasks(20);
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-b");
+    });
+  });
+
+  describe("reactive surface", () => {
+    it("subscribeProcessing wakes only listeners watching the matching id", async () => {
+      mockGetMeasurementById.mockImplementation(() => new Promise(() => undefined));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+
+      const aCb = vi.fn();
+      const bCb = vi.fn();
+      outbox.subscribeProcessing("a", aCb);
+      outbox.subscribeProcessing("b", bCb);
+
+      outbox.enqueue("a");
+      await flushMicrotasks(4);
+
+      expect(aCb).toHaveBeenCalledTimes(1);
+      expect(bCb).not.toHaveBeenCalled();
+    });
+
+    it("subscribeProcessing returns an unsubscribe fn", async () => {
+      mockGetMeasurementById.mockImplementation(() => new Promise(() => undefined));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+
+      const cb = vi.fn();
+      const unsubscribe = outbox.subscribeProcessing("x", cb);
+      unsubscribe();
+      outbox.enqueue("x");
+      await flushMicrotasks(4);
+
+      expect(cb).not.toHaveBeenCalled();
+    });
+
+    it("subscribeSnapshot fires with isUploading/count flips", async () => {
+      mockGetMeasurementById.mockImplementation(() => new Promise(() => undefined));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+
+      const cb = vi.fn();
+      outbox.subscribeSnapshot(cb);
+
+      expect(outbox.getSnapshot()).toEqual({ isUploading: false, count: 0 });
+      outbox.enqueue("s1");
+      await flushMicrotasks(4);
+      expect(outbox.getSnapshot()).toEqual({ isUploading: true, count: 1 });
+      expect(cb).toHaveBeenCalled();
+    });
+
+    it("subscribeSettled emits one batch carrying terminal status per microtask burst", async () => {
+      // Two rows publish concurrently and both resolve in the same JS turn.
+      // The Outbox batcher must collapse both PUBACKs into a single dispatch.
+      const rows = new Map([
+        ["b1", row({ id: "b1" })],
+        ["b2", row({ id: "b2" })],
+      ]);
+      mockGetMeasurementById.mockImplementation(async (id) => rows.get(id));
+
+      const transport = makeTransport();
+      // concurrency 2 so both items publish in parallel.
+      const { outbox } = await freshOutbox(transport, { concurrency: 2 });
+
+      const settled = vi.fn();
+      outbox.subscribeSettled(settled);
+
+      outbox.enqueueMany(["b1", "b2"]);
+      for (let i = 0; i < 30 && transport.calls.length < 2; i++) await Promise.resolve();
+      expect(transport.calls).toHaveLength(2);
+
+      // Resolve both publishes in the same turn.
+      transport.resolveNext();
+      transport.resolveNext();
+      await flushMicrotasks(40);
+
+      expect(settled).toHaveBeenCalledTimes(1);
+      const items = settled.mock.calls[0][0] as ReadonlyArray<{ id: string; status: string }>;
+      expect(items.map((i) => i.id).sort()).toEqual(["b1", "b2"]);
+      for (const item of items) expect(item.status).toBe("successful");
+    });
+
+    it("subscribeSettled carries 'failed' for terminal errors", async () => {
+      mockGetMeasurementById.mockResolvedValueOnce(row({ id: "f1" }));
+      const transport = makeTransport();
+      const { outbox, MqttError } = await freshOutbox(transport);
+
+      const settled = vi.fn();
+      outbox.subscribeSettled(settled);
+
+      outbox.enqueue("f1");
+      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      transport.rejectNext(new MqttError("CredentialError", "no creds"));
+      await flushMicrotasks(40);
+
+      expect(settled).toHaveBeenCalledTimes(1);
+      expect(settled.mock.calls[0][0]).toEqual([{ id: "f1", status: "failed" }]);
+    });
+
+    it("subscribeSettled emits nothing for skip paths (row gone / already successful)", async () => {
+      mockGetMeasurementById.mockResolvedValueOnce(null);
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+
+      const settled = vi.fn();
+      outbox.subscribeSettled(settled);
+
+      outbox.enqueue("ghost");
+      await flushMicrotasks(40);
+
+      expect(settled).not.toHaveBeenCalled();
     });
   });
 });

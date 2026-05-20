@@ -5,11 +5,7 @@ import {
 } from "@aws-sdk/client-cognito-identity";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
-import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
-import { getEnvVar } from "~/shared/stores/environment-store";
-import { Emitter } from "~/shared/utils/emitter";
-import { generateRandomString } from "~/shared/utils/generate-random-string";
 import { createLogger } from "~/shared/utils/logger";
 import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/utils/time-sync";
 
@@ -273,89 +269,3 @@ export async function getCredentials({
   }
 }
 
-function connectToMqtt(url: string, clientId: string) {
-  const client = new Client(url, clientId);
-
-  return new Promise<Client>((resolve, reject) => {
-    client.connect({
-      onSuccess: () => resolve(client),
-      onFailure: reject,
-      useSSL: true,
-      timeout: 3,
-    });
-  });
-}
-
-export interface ReceivedMessage {
-  payload: string;
-  destinationName: string;
-}
-
-export interface MqttEmitterEvents {
-  messageArrived: ReceivedMessage;
-  connectionLost: MQTTError;
-  sendMessage: { payload: string; topic: string };
-  destroy: void;
-  messageDelivered: ReceivedMessage;
-}
-
-export async function createMqttConnection() {
-  const t0 = Date.now();
-  const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
-    identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
-    region: getEnvVar("REGION"),
-  });
-  const tCreds = Date.now();
-
-  const clientId = getEnvVar("CLIENT_ID") + " - " + generateRandomString();
-
-  const signedUrl = await createSignedUrl({
-    clientId,
-    accessKeyId,
-    secretAccessKey,
-    sessionToken,
-    region: getEnvVar("REGION"),
-    endpoint: getEnvVar("IOT_ENDPOINT"),
-  });
-  const tSign = Date.now();
-
-  const client = await connectToMqtt(signedUrl, clientId);
-  log.info("connected", {
-    clientId,
-    creds_ms: tCreds - t0,
-    sign_ms: tSign - tCreds,
-    paho_ms: Date.now() - tSign,
-    total_ms: Date.now() - t0,
-  });
-
-  const emitter = new Emitter<MqttEmitterEvents>();
-
-  client.onMessageArrived = (message: Message) => {
-    const { payloadString: payload, destinationName } = message;
-
-    emitter
-      .emit("messageArrived", { destinationName, payload })
-      .catch((e) => log.warn("messageArrived emit failed", { err: (e as Error)?.message }));
-  };
-
-  client.onConnectionLost = (err) => {
-    emitter
-      .emit("connectionLost", err)
-      .catch((e) => log.warn("connectionLost emit failed", { err: (e as Error)?.message }));
-  };
-
-  emitter.on("sendMessage", ({ payload, topic }) => {
-    client.send(topic, payload);
-  });
-
-  emitter.on("destroy", () => client.disconnect());
-
-  client.onMessageDelivered = (message) => {
-    const { payloadString: payload, destinationName } = message;
-    emitter
-      .emit("messageDelivered", { payload, destinationName })
-      .catch((e) => log.warn("messageDelivered emit failed", { err: (e as Error)?.message }));
-  };
-
-  return emitter;
-}

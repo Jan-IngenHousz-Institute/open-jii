@@ -4,7 +4,7 @@ import { getEnvVar } from "~/shared/stores/environment-store";
 import { generateRandomString } from "~/shared/utils/generate-random-string";
 import { createLogger } from "~/shared/utils/logger";
 
-import { createSignedUrl, getCredentials } from "./create-mqtt-connection";
+import { createSignedUrl, getCredentials } from "./aws-iot-auth";
 import { MqttError } from "./mqtt-errors";
 
 const log = createLogger("mqtt-paho-session");
