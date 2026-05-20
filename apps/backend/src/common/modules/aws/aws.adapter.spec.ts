@@ -6,6 +6,8 @@ import { CognitoService } from "./services/cognito/cognito.service";
 import { AwsConfigService } from "./services/config/config.service";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import { AwsLocationService } from "./services/location/location.service";
+import { AwsS3Service } from "./services/s3/s3.service";
+import type { IotUploadUrl } from "./services/s3/s3.types";
 
 describe("AwsAdapter", () => {
   const testApp = TestHarness.App;
@@ -14,6 +16,7 @@ describe("AwsAdapter", () => {
   let cognitoService: CognitoService;
   let awsLambdaService: AwsLambdaService;
   let awsConfigService: AwsConfigService;
+  let awsS3Service: AwsS3Service;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -26,6 +29,7 @@ describe("AwsAdapter", () => {
     cognitoService = testApp.module.get(CognitoService);
     awsLambdaService = testApp.module.get(AwsLambdaService);
     awsConfigService = testApp.module.get(AwsConfigService);
+    awsS3Service = testApp.module.get(AwsS3Service);
   });
 
   afterEach(() => {
@@ -225,6 +229,37 @@ describe("AwsAdapter", () => {
       const result = await awsAdapter.invokeLambda("my-function", {});
 
       expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("getIotUploadUrl", () => {
+    it("delegates to AwsS3Service and returns the upload URL on success", async () => {
+      const mockUploadUrl: IotUploadUrl = {
+        uploadUrl: "https://s3.amazonaws.com/bucket/large-iot/exp-123/uuid.json?signed=1",
+        key: "large-iot/exp-123/uuid.json",
+        expiresAt: new Date("2026-05-21T00:00:00Z"),
+      };
+
+      vi.spyOn(awsS3Service, "getIotUploadUrl").mockResolvedValue(success(mockUploadUrl));
+
+      const result = await awsAdapter.getIotUploadUrl("exp-123");
+
+      assertSuccess(result);
+      expect(result.value).toEqual(mockUploadUrl);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsS3Service.getIotUploadUrl).toHaveBeenCalledWith("exp-123");
+    });
+
+    it("propagates failure from AwsS3Service", async () => {
+      const error = AppError.internal("S3 presign failed", ErrorCodes.AWS_S3_PRESIGN_FAILED);
+
+      vi.spyOn(awsS3Service, "getIotUploadUrl").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.getIotUploadUrl("exp-123");
+
+      assertFailure(result);
+      expect(result.error.message).toBe("S3 presign failed");
+      expect(result.error.code).toBe(ErrorCodes.AWS_S3_PRESIGN_FAILED);
     });
   });
 
