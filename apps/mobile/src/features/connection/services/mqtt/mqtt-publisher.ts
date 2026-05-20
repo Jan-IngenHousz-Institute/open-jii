@@ -1,22 +1,17 @@
 import { AsyncRetryer } from "@tanstack/pacer/async-retryer";
+import { UPLOAD_CONCURRENCY } from "~/features/recent-measurements/services/upload-constants";
 import { getSyncedUtcNow } from "~/shared/utils/time-sync";
 
 import { MqttError } from "./mqtt-errors";
 import { createPahoTransportFactory } from "./mqtt-transport";
 import type { Transport, TransportFactory } from "./mqtt-transport";
 
-// Time constants. Exported so tests can reference them.
 export const IDLE_DISCONNECT_MS = 30_000;
 export const RECONNECT_BACKOFF_MS = [1_000, 4_000, 15_000];
 export const PUBLISH_TIMEOUT_MS = 30_000;
-// Number of parallel MQTT transports (each its own TCP socket, paho client,
-// and client id). One socket serializes bytes on the wire; multiple sockets
-// give true parallel throughput when the broker's per-connection bandwidth
-// is the bottleneck.
+
 export const POOL_SIZE = 4;
-// Backpressure cap per slot. Total outstanding cap = POOL_SIZE * this.
-// Beyond this, items wait in `held` and the next PUBACK kicks the next send.
-export const MAX_IN_FLIGHT_PER_SLOT = 8;
+export const MAX_IN_FLIGHT_PER_SLOT = Math.max(1, Math.floor(UPLOAD_CONCURRENCY / POOL_SIZE));
 
 export interface MqttPublisher {
   publish(topic: string, payload: object): Promise<void>;
@@ -101,8 +96,6 @@ export class MqttPublisherImpl implements MqttPublisher {
     });
   }
 
-  // Called by tests + lifecycle hooks. Destroys every slot's transport and
-  // rejects every pending publish with kind: Disconnected.
   destroy() {
     if (this.destroyed) return;
     console.log("[mqtt-publisher] destroy");

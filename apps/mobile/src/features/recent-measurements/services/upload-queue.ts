@@ -1,23 +1,14 @@
 import { AsyncQueuer } from "@tanstack/pacer/async-queuer";
 import { addNetworkStateListener } from "expo-network";
-import { AppState, type AppStateStatus } from "react-native";
 import { getMeasurements } from "~/shared/db/measurements-storage";
+import { onAppForeground } from "~/shared/utils/app-lifecycle";
 
-import {
-  isProcessing,
-  markEnqueued,
-  markEnqueuedMany,
-  markSettled,
-  type UploadQueueState,
-} from "./upload-queue-state";
+import { UPLOAD_CONCURRENCY, UPLOAD_RETRY_BACKOFF_MS } from "./upload-constants";
+import { isProcessing, markEnqueued, markEnqueuedMany, markSettled } from "./upload-queue-state";
+import type { UploadQueueState } from "./upload-queue-state";
 import { uploadWorker } from "./upload-worker";
 
-// Orchestrates uploads with concurrency 8, per-item retry (1s/4s/15s), and
-// pause-on-offline. IDs only — the DB is the source of truth for payloads,
-// keeping bursts out of memory and making boot rehydration trivial.
-
-export const UPLOAD_CONCURRENCY = 8;
-export const UPLOAD_RETRY_BACKOFF_MS = [1_000, 4_000, 15_000];
+export { UPLOAD_CONCURRENCY, UPLOAD_RETRY_BACKOFF_MS };
 
 export interface UploadQueue {
   enqueue(id: string): void;
@@ -25,9 +16,12 @@ export interface UploadQueue {
   isProcessing(id: string): boolean;
 }
 
+const REHYDRATE_COOLDOWN_MS = 10_000;
+
 class UploadQueueImpl implements UploadQueue {
   private readonly queue: AsyncQueuer<string>;
   private rehydrating = false;
+  private lastRehydrateAt = 0;
 
   constructor() {
     console.log("[upload-queue] init", { concurrency: UPLOAD_CONCURRENCY });
@@ -50,7 +44,7 @@ class UploadQueueImpl implements UploadQueue {
       },
     });
     this.wireNetworkListener();
-    this.wireAppStateListener();
+    this.wireForegroundListener();
     void this.rehydrate();
   }
 
@@ -96,25 +90,25 @@ class UploadQueueImpl implements UploadQueue {
     });
   }
 
-  private wireAppStateListener() {
-    AppState.addEventListener("change", (state: AppStateStatus) => {
-      if (state === "active") {
-        console.log("[upload-queue] app foregrounded — rehydrating");
-        void this.rehydrate();
-      }
+  private wireForegroundListener() {
+    onAppForeground(() => {
+      console.log("[upload-queue] app foregrounded — rehydrating");
+      void this.rehydrate();
     });
   }
 
-  // Reads pending + failed rows from the DB and enqueues any IDs not
-  // currently being processed. Used on construction (cold start) and on
-  // every AppState foreground.
   private async rehydrate(): Promise<void> {
     if (this.rehydrating) return;
+    if (Date.now() - this.lastRehydrateAt < REHYDRATE_COOLDOWN_MS) {
+      console.log("[upload-queue] rehydrate skipped — recent");
+      return;
+    }
     this.rehydrating = true;
+    this.lastRehydrateAt = Date.now();
     try {
       const rows = await getMeasurements(["pending", "failed"]);
       console.log("[upload-queue] rehydrate", { found: rows.length });
-      for (const row of rows) this.enqueue(row.id);
+      this.enqueueMany(rows.map((row) => row.id));
     } catch (err) {
       console.warn("[upload-queue] rehydrate failed:", err);
     } finally {

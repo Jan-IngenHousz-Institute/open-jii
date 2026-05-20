@@ -4,10 +4,9 @@ import { Debouncer } from "@tanstack/pacer";
 import * as Location from "expo-location";
 import * as Network from "expo-network";
 import { DateTime } from "luxon";
-import { AppState } from "react-native";
-import type { AppStateStatus } from "react-native";
 import { toast } from "sonner-native";
 import { getApiClient } from "~/shared/api/client";
+import { onAppForeground } from "~/shared/utils/app-lifecycle";
 
 export interface TimeSyncState {
   /** Offset in ms: serverUtc - localDeviceTime at moment of sync */
@@ -32,7 +31,7 @@ let state: TimeSyncState = {
   lastSyncedAt: 0,
 };
 
-let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+let unsubscribeAppForeground: (() => void) | null = null;
 
 /** Resolvers waiting for the first successful sync. */
 let syncWaiters: (() => void)[] = [];
@@ -98,6 +97,24 @@ async function resolveTimezone(): Promise<string> {
   }
 }
 
+// Reuse the cached timezone until it is stale. GPS calls on Android briefly
+// background the app (permission/location dialogs), which fires
+// AppState.background→active and re-enters performSync — a cascade that
+// hammers upload rehydrate and re-syncs. The timezone almost never changes
+// per session, so reuse it.
+const TIMEZONE_REFRESH_MS = 24 * 60 * 60 * 1000;
+
+async function maybeResolveTimezone(): Promise<string> {
+  const haveTz = state.timezone && state.timezone !== "UTC";
+  const fresh =
+    state.lastSyncedAt > 0 && Date.now() - state.lastSyncedAt < TIMEZONE_REFRESH_MS;
+  if (haveTz && fresh) {
+    console.log("[time-sync] reusing cached timezone", { timezone: state.timezone });
+    return state.timezone;
+  }
+  return resolveTimezone();
+}
+
 async function fetchServerTime(): Promise<number> {
   const client = getApiClient();
   const result = await client.health.getTime();
@@ -122,7 +139,7 @@ async function performSync(isInitial = false): Promise<void> {
 
   try {
     console.log("[time-sync] performSync: resolveTimezone start");
-    const timezone = await resolveTimezone();
+    const timezone = await maybeResolveTimezone();
     console.log("[time-sync] performSync: resolveTimezone done", { timezone });
     const beforeFetch = Date.now();
     console.log("[time-sync] performSync: fetchServerTime start");
@@ -169,13 +186,6 @@ async function performSync(isInitial = false): Promise<void> {
   }
 }
 
-function handleAppStateChange(nextState: AppStateStatus) {
-  if (nextState === "active") {
-    console.log("[time-sync] App foregrounded, requesting sync");
-    debouncedSync.maybeExecute();
-  }
-}
-
 // Tracks whether the one-shot startup chain (restore + initial sync) has
 // been kicked off this process. Survives stopTimeSync so a strict-mode
 // mount→cleanup→remount of TimeSyncProvider doesn't fire two initial syncs.
@@ -183,19 +193,22 @@ let startupKicked = false;
 
 /** Start the time sync service. Call once at app startup. */
 export function startTimeSync() {
-  if (appStateSubscription) return;
+  if (unsubscribeAppForeground) return;
   if (!startupKicked) {
     startupKicked = true;
     restoreState().then(() => performSync(true));
   }
-  appStateSubscription = AppState.addEventListener("change", handleAppStateChange);
+  unsubscribeAppForeground = onAppForeground(() => {
+    console.log("[time-sync] App foregrounded, requesting sync");
+    debouncedSync.maybeExecute();
+  });
 }
 
 /** Stop the time sync service. */
 export function stopTimeSync() {
-  if (appStateSubscription) {
-    appStateSubscription.remove();
-    appStateSubscription = null;
+  if (unsubscribeAppForeground) {
+    unsubscribeAppForeground();
+    unsubscribeAppForeground = null;
   }
   debouncedSync.cancel();
 }
