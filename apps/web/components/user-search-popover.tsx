@@ -191,7 +191,7 @@ const SearchInput = React.forwardRef<
             type="button"
             variant="ghost"
             onClick={handleClear}
-            disabled={disabled}
+            disabled={isAddingUser || disabled}
             className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2 p-0 hover:bg-transparent disabled:pointer-events-none disabled:opacity-50"
           >
             <X className="h-4 w-4" />
@@ -201,7 +201,11 @@ const SearchInput = React.forwardRef<
       {hasSelection && (
         <>
           <div className="bg-border h-6 w-px" />
-          <Select value={selectedRole} onValueChange={onRoleChange} disabled={disabled}>
+          <Select
+            value={selectedRole}
+            onValueChange={onRoleChange}
+            disabled={isAddingUser || disabled}
+          >
             <SelectTrigger className="h-auto w-[100px] border-0 px-3 shadow-none focus:ring-0">
               <SelectValue />
             </SelectTrigger>

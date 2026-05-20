@@ -180,6 +180,7 @@ export function ExperimentMembersPanel({
           },
         }))}
         onRemoveMember={handleRemoveMember}
+        isAddingMember={isAddingMember}
         isRemovingMember={isRemovingMember}
         removingMemberId={removingMemberId}
         adminCount={adminCount}

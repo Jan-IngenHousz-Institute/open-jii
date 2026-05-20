@@ -6,6 +6,7 @@ import { parseApiError } from "~/util/apiError";
 import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import type { UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentMemberRoleUpdate } from "../../hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
@@ -38,6 +39,7 @@ interface MemberListProps {
   newExperiment?: boolean;
   onUpdateMemberRole?: (userId: string, role: ExperimentMemberRole) => Promise<void> | void;
   isArchived?: boolean;
+  isAddingMember?: boolean;
 }
 
 export function MemberList({
@@ -54,6 +56,7 @@ export function MemberList({
   newExperiment = false,
   onUpdateMemberRole,
   isArchived = false,
+  isAddingMember = false,
 }: MemberListProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -217,6 +220,20 @@ export function MemberList({
         {membersWithUserInfo.map((member) => {
           const isLastAdmin = member.role === "admin" && adminCount === 1;
           const isCurrentUser = member.user.userId === currentUserId;
+          const isOptimistic =
+            isAddingMember && member.user.firstName === "" && member.user.lastName === "";
+
+          if (isOptimistic) {
+            return (
+              <div key={member.user.userId} className="flex items-center justify-between rounded">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-9 w-[100px]" />
+              </div>
+            );
+          }
 
           return (
             <MemberItem

@@ -65,6 +65,7 @@ export function MemberItem({
           value={member.role}
           disabled={
             isArchived ||
+            updatingMemberId === member.user.userId ||
             (!newExperiment && !isCurrentUserAdmin && member.user.userId !== currentUserId)
           }
           onValueChange={onValueChange}
