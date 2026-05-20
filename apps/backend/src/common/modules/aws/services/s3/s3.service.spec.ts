@@ -1,44 +1,25 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { mockClient } from "aws-sdk-client-mock";
+import type { PutObjectCommand } from "@aws-sdk/client-s3";
 
-import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
+import type { AwsConfigService } from "../config/config.service";
 import { AwsS3Service } from "./s3.service";
 
-vi.mock("@aws-sdk/s3-request-presigner", () => ({
-  getSignedUrl: vi.fn(),
-}));
-
-const s3Mock = mockClient(S3Client);
-
 describe("AwsS3Service", () => {
-  const testApp = TestHarness.App;
   let service: AwsS3Service;
 
-  beforeAll(async () => {
-    await testApp.setup();
-  });
+  const mockAwsConfig = {
+    region: "eu-central-1",
+    s3Config: { iotArchiveBucketName: "test-iot-archive-bucket" },
+  } as unknown as AwsConfigService;
 
-  beforeEach(async () => {
-    s3Mock.reset();
-    vi.mocked(getSignedUrl).mockReset();
-    await testApp.beforeEach();
-    service = testApp.module.get(AwsS3Service);
-  });
-
-  afterEach(() => {
-    testApp.afterEach();
-  });
-
-  afterAll(async () => {
-    await testApp.teardown();
+  beforeEach(() => {
+    service = new AwsS3Service(mockAwsConfig);
   });
 
   describe("getIotUploadUrl", () => {
     it("returns a presigned upload URL with key and expiry", async () => {
-      const mockUrl = "https://s3.amazonaws.com/test-bucket/large-iot/exp-123/uuid.json?signed=1";
-      vi.mocked(getSignedUrl).mockResolvedValue(mockUrl);
+      const mockUrl = "https://s3.amazonaws.com/bucket/large-iot/exp-123/uuid.json?signed=1";
+      vi.spyOn(service as any, "createSignedUrl").mockResolvedValue(mockUrl);
 
       const result = await service.getIotUploadUrl("exp-123");
 
@@ -50,20 +31,25 @@ describe("AwsS3Service", () => {
     });
 
     it("passes correct bucket, key prefix, and content type to PutObjectCommand", async () => {
-      vi.mocked(getSignedUrl).mockResolvedValue("https://mock-url");
+      let capturedCommand: PutObjectCommand | undefined;
+      vi.spyOn(service as any, "createSignedUrl").mockImplementation(
+        (command: unknown) => {
+          capturedCommand = command as PutObjectCommand;
+          return Promise.resolve("https://mock-url");
+        },
+      );
 
       await service.getIotUploadUrl("experiment-abc");
 
-      const [, command] = vi.mocked(getSignedUrl).mock.calls[0]!;
-      expect((command as PutObjectCommand).input.Bucket).toBe("test-iot-archive-bucket");
-      expect((command as PutObjectCommand).input.Key).toMatch(
-        /^large-iot\/experiment-abc\/.+\.json$/,
-      );
-      expect((command as PutObjectCommand).input.ContentType).toBe("application/json");
+      expect(capturedCommand?.input.Bucket).toBe("test-iot-archive-bucket");
+      expect(capturedCommand?.input.Key).toMatch(/^large-iot\/experiment-abc\/.+\.json$/);
+      expect(capturedCommand?.input.ContentType).toBe("application/json");
     });
 
-    it("returns failure with AWS_S3_PRESIGN_FAILED when getSignedUrl throws", async () => {
-      vi.mocked(getSignedUrl).mockRejectedValue(new Error("Credentials expired"));
+    it("returns failure with AWS_S3_PRESIGN_FAILED when createSignedUrl throws", async () => {
+      vi.spyOn(service as any, "createSignedUrl").mockRejectedValue(
+        new Error("Credentials expired"),
+      );
 
       const result = await service.getIotUploadUrl("exp-123");
 
@@ -73,7 +59,7 @@ describe("AwsS3Service", () => {
     });
 
     it("wraps non-Error throws into a failure with AWS_S3_PRESIGN_FAILED", async () => {
-      vi.mocked(getSignedUrl).mockRejectedValue("something unexpected");
+      vi.spyOn(service as any, "createSignedUrl").mockRejectedValue("something unexpected");
 
       const result = await service.getIotUploadUrl("exp-123");
 

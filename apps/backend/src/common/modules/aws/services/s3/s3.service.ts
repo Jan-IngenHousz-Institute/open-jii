@@ -17,6 +17,11 @@ export class AwsS3Service {
     this.s3Client = new S3Client({ region: this.awsConfig.region });
   }
 
+  // Separated from getIotUploadUrl so tests can spy on this method (ESM exports are not configurable).
+  protected createSignedUrl(command: PutObjectCommand): Promise<string> {
+    return getSignedUrl(this.s3Client, command, { expiresIn: PRESIGNED_URL_EXPIRY_SECONDS });
+  }
+
   async getIotUploadUrl(experimentId: string): Promise<Result<IotUploadUrl>> {
     return tryCatch(
       async () => {
@@ -27,9 +32,7 @@ export class AwsS3Service {
           ContentType: "application/json",
         });
 
-        const uploadUrl = await getSignedUrl(this.s3Client, command, {
-          expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
-        });
+        const uploadUrl = await this.createSignedUrl(command);
 
         return {
           uploadUrl,
