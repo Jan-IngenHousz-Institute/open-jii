@@ -116,17 +116,21 @@ class PahoTransport implements Transport {
 export function createPahoTransportFactory(): TransportFactory {
   return {
     async connect() {
+      console.log("[mqtt-transport] connect: getCredentials start");
       const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
         identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
         region: getEnvVar("REGION"),
       }).catch((err) => {
+        console.warn("[mqtt-transport] getCredentials failed", { err: err?.message });
         throw new MqttError("CredentialError", "failed to fetch Cognito credentials", {
           cause: err,
         });
       });
+      console.log("[mqtt-transport] connect: getCredentials done");
 
       const clientId = `${getEnvVar("CLIENT_ID")} - ${generateRandomString()}`;
 
+      console.log("[mqtt-transport] connect: createSignedUrl start");
       const signedUrl = await createSignedUrl({
         clientId,
         accessKeyId,
@@ -135,8 +139,11 @@ export function createPahoTransportFactory(): TransportFactory {
         region: getEnvVar("REGION"),
         endpoint: getEnvVar("IOT_ENDPOINT"),
       });
+      console.log("[mqtt-transport] connect: createSignedUrl done");
 
+      console.log("[mqtt-transport] connect: paho connect start", { clientId });
       const client = await connectPahoClient(signedUrl, clientId);
+      console.log("[mqtt-transport] connect: paho connect done");
       return new PahoTransport(client);
     },
   };

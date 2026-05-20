@@ -28,6 +28,7 @@ class UploadQueueImpl implements UploadQueue {
   private rehydrating = false;
 
   constructor() {
+    console.log("[upload-queue] init", { concurrency: UPLOAD_CONCURRENCY });
     this.queue = new AsyncQueuer<string>(this.runItem, {
       concurrency: UPLOAD_CONCURRENCY,
       asyncRetryerOptions: {
@@ -36,8 +37,16 @@ class UploadQueueImpl implements UploadQueue {
         baseWait: (retryer) =>
           UPLOAD_RETRY_BACKOFF_MS[retryer.store.state.currentAttempt - 1] ?? 0,
         throwOnError: "last",
+        onRetry: (attempt, err) =>
+          console.warn("[upload-queue] worker error — retrying", {
+            attempt,
+            err: err.message,
+          }),
       },
-      onSettled: (id) => markSettled(id),
+      onSettled: (id) => {
+        console.log("[upload-queue] settled", { id });
+        markSettled(id);
+      },
     });
     this.wireNetworkListener();
     this.wireAppStateListener();
@@ -45,7 +54,11 @@ class UploadQueueImpl implements UploadQueue {
   }
 
   enqueue(id: string): void {
-    if (!markEnqueued(id)) return;
+    if (!markEnqueued(id)) {
+      console.log("[upload-queue] enqueue skipped — already in queue", { id });
+      return;
+    }
+    console.log("[upload-queue] enqueue", { id });
     this.queue.addItem(id);
   }
 
@@ -63,8 +76,10 @@ class UploadQueueImpl implements UploadQueue {
       // transitions; treat anything not explicitly false as "connected" so
       // the queue doesn't pause on flaps.
       if (isInternetReachable === false) {
+        console.log("[upload-queue] network offline — pausing");
         this.queue.stop();
       } else {
+        console.log("[upload-queue] network online — resuming", { isInternetReachable });
         this.queue.start();
       }
     });
@@ -72,7 +87,10 @@ class UploadQueueImpl implements UploadQueue {
 
   private wireAppStateListener() {
     AppState.addEventListener("change", (state: AppStateStatus) => {
-      if (state === "active") void this.rehydrate();
+      if (state === "active") {
+        console.log("[upload-queue] app foregrounded — rehydrating");
+        void this.rehydrate();
+      }
     });
   }
 
@@ -84,6 +102,7 @@ class UploadQueueImpl implements UploadQueue {
     this.rehydrating = true;
     try {
       const rows = await getMeasurements(["pending", "failed"]);
+      console.log("[upload-queue] rehydrate", { found: rows.length });
       for (const row of rows) this.enqueue(row.id);
     } catch (err) {
       console.warn("[upload-queue] rehydrate failed:", err);

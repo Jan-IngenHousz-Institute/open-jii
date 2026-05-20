@@ -84,7 +84,7 @@ describe("UploadQueue", () => {
       { id: "b", status: "failed", data: { topic: "", measurementResult: {}, metadata: {} } },
     ]);
     // Make the worker hang so the rows stay enqueued for the assertion.
-    let resolveWorker: (() => void) | null = null;
+    let resolveWorker: ((value: void) => void) | undefined;
     mockUploadWorker.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
@@ -101,7 +101,7 @@ describe("UploadQueue", () => {
     expect(stateMod.isProcessing("a")).toBe(true);
     expect(stateMod.isProcessing("b")).toBe(true);
 
-    resolveWorker?.();
+    resolveWorker?.(undefined);
   });
 
   it("registers a network state listener at construction", async () => {

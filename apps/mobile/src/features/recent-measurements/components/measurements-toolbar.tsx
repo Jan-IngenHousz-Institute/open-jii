@@ -1,4 +1,4 @@
-import { Trash2, UploadCloud } from "lucide-react-native";
+import { FlaskConical, Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { MeasurementFilter } from "~/features/recent-measurements/hooks/use-all-measurements";
@@ -15,6 +15,7 @@ interface Props {
   isUploading: boolean;
   onSyncAll: () => void;
   onDeleteAllSynced: () => void;
+  onDevSeed?: () => void;
 }
 
 export function MeasurementsToolbar({
@@ -26,6 +27,7 @@ export function MeasurementsToolbar({
   isUploading,
   onSyncAll,
   onDeleteAllSynced,
+  onDevSeed,
 }: Props) {
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
@@ -56,6 +58,17 @@ export function MeasurementsToolbar({
       {/* Action row: icons sit above the tabs so the tab labels never collide
           with the right-hand controls on narrow screens. */}
       <View className="flex-row items-center justify-end gap-1 px-2 pb-1 pt-2">
+        {__DEV__ && onDevSeed && (
+          <Pressable
+            onPress={onDevSeed}
+            hitSlop={6}
+            className="h-10 w-10 items-center justify-center rounded-full"
+            accessibilityRole="button"
+            accessibilityLabel="Seed measurements (DEV)"
+          >
+            <FlaskConical size={20} color={colors.brand} strokeWidth={1.6} />
+          </Pressable>
+        )}
         <Pressable
           onPress={onDeleteAllSynced}
           disabled={deleteDisabled}

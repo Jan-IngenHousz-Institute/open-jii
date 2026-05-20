@@ -1,6 +1,7 @@
 import { ChevronsLeft, Download } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
+import { DevSeedMeasurementsDialog } from "~/features/recent-measurements/components/dev-seed-measurements-dialog";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
 import { MeasurementsToolbar } from "~/features/recent-measurements/components/measurements-toolbar";
@@ -21,6 +22,7 @@ export function RecentMeasurementsScreen() {
   const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
+  const [devSeedVisible, setDevSeedVisible] = useState(false);
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
 
   const {
@@ -94,6 +96,7 @@ export function RecentMeasurementsScreen() {
         isUploading={isUploading}
         onSyncAll={confirmSyncAll}
         onDeleteAllSynced={confirmDeleteAllSynced}
+        onDevSeed={__DEV__ ? () => setDevSeedVisible(true) : undefined}
       />
 
       {hasItems && (
@@ -162,6 +165,12 @@ export function RecentMeasurementsScreen() {
       />
 
       <MeasurementsModals state={modal} onClose={closeModal} onSaveComment={saveComment} />
+      {__DEV__ && (
+        <DevSeedMeasurementsDialog
+          visible={devSeedVisible}
+          onClose={() => setDevSeedVisible(false)}
+        />
+      )}
     </View>
   );
 }

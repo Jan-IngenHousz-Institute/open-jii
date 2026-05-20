@@ -61,11 +61,17 @@ export class MqttPublisherImpl implements MqttPublisher {
       };
       item.timeoutHandle = setTimeout(() => {
         if (this.removePending(item)) {
+          console.warn("[mqtt-publisher] publish timeout", { topic });
           item.reject(new MqttError("Timeout", `publish to ${topic} timed out`));
         }
       }, PUBLISH_TIMEOUT_MS);
 
       this.held.push(item);
+      console.log("[mqtt-publisher] publish queued", {
+        topic,
+        held: this.held.length,
+        inFlight: this.inFlight.size,
+      });
       void this.drain();
     });
   }
@@ -74,6 +80,7 @@ export class MqttPublisherImpl implements MqttPublisher {
   // rejects every pending publish with kind: Disconnected.
   destroy() {
     if (this.destroyed) return;
+    console.log("[mqtt-publisher] destroy");
     this.destroyed = true;
     this.cancelIdleTimer();
     if (this.transport) {
@@ -87,6 +94,7 @@ export class MqttPublisherImpl implements MqttPublisher {
     if (this.held.length === 0) return;
     const transport = await this.ensureTransport();
     if (!transport) return;
+    let drained = 0;
     while (this.held.length > 0) {
       const item = this.held.shift();
       if (!item) break;
@@ -94,8 +102,10 @@ export class MqttPublisherImpl implements MqttPublisher {
       try {
         const handle = transport.publish({ topic: item.topic, payload: serialized });
         this.inFlight.set(handle.id, item);
+        drained++;
       } catch (err) {
         this.clearTimeout(item);
+        console.warn("[mqtt-publisher] transport.publish threw", { topic: item.topic, err });
         item.reject(
           err instanceof MqttError
             ? err
@@ -103,23 +113,31 @@ export class MqttPublisherImpl implements MqttPublisher {
         );
       }
     }
+    if (drained > 0) {
+      console.log("[mqtt-publisher] drained to transport", { count: drained, inFlight: this.inFlight.size });
+    }
   }
 
   private async ensureTransport(): Promise<Transport | null> {
     if (this.transport) return this.transport;
     if (this.connecting) return this.connecting;
 
+    console.log("[mqtt-publisher] connecting");
     this.connecting = (async () => {
       try {
         const transport = await this.connectWithBackoff();
         this.wireTransport(transport);
         this.transport = transport;
+        console.log("[mqtt-publisher] connected");
         return transport;
       } catch (err) {
         const mqttErr =
           err instanceof MqttError
             ? err
             : new MqttError("Disconnected", "connect failed", { cause: err });
+        console.warn("[mqtt-publisher] connect failed — rejecting all pending", {
+          kind: mqttErr.kind,
+        });
         this.rejectAll(mqttErr);
         return null;
       } finally {
@@ -139,6 +157,11 @@ export class MqttPublisherImpl implements MqttPublisher {
       backoff: "fixed",
       baseWait: (retryer) => RECONNECT_BACKOFF_MS[retryer.store.state.currentAttempt - 1] ?? 0,
       throwOnError: "last",
+      onError: (err, _args, r) =>
+        console.warn("[mqtt-publisher] connect attempt failed", {
+          attempt: r.store.state.currentAttempt,
+          err: err.message,
+        }),
     });
     try {
       const transport = await retryer.execute();
@@ -159,12 +182,22 @@ export class MqttPublisherImpl implements MqttPublisher {
       if (!item) return;
       this.inFlight.delete(id);
       this.clearTimeout(item);
+      const ms = Date.now() - item.enqueuedAt;
+      console.log("[mqtt-publisher] delivered (PUBACK)", {
+        topic: item.topic,
+        ms,
+        inFlight: this.inFlight.size,
+      });
       item.resolve();
       this.scheduleIdleTimer();
     });
 
-    transport.onDisconnect(() => {
+    transport.onDisconnect((reason) => {
       if (this.destroyed) return;
+      console.warn("[mqtt-publisher] transport disconnected — holding + reconnecting", {
+        reason,
+        inFlight: this.inFlight.size,
+      });
       // Surface unfinished publishes back to held for retransmit on the next
       // transport. inFlight publishes were not acked, so they're not safely
       // delivered — re-send. This is the "hold + retry" guarantee.
@@ -210,6 +243,7 @@ export class MqttPublisherImpl implements MqttPublisher {
     this.idleTimer = setTimeout(() => {
       this.idleTimer = null;
       if (this.inFlight.size === 0 && this.held.length === 0 && this.transport) {
+        console.log("[mqtt-publisher] idle — closing transport", { afterMs: IDLE_DISCONNECT_MS });
         this.transport.destroy();
         this.transport = null;
       }
