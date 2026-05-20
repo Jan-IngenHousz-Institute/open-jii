@@ -36,10 +36,16 @@ describe("coerceCell", () => {
     expect(coerceCell("Infinity")).toBe("Infinity");
   });
 
-  it("stringifies non-string, non-number values (booleans, null, objects)", () => {
+  it("returns null for null and undefined so axis detection isn't poisoned", () => {
+    // `String(null)` is `"null"` — a non-numeric string that flips
+    // detectAxisType to "category" and breaks an otherwise-numeric column.
+    expect(coerceCell(null)).toBeNull();
+    expect(coerceCell(undefined)).toBeNull();
+  });
+
+  it("stringifies other non-string, non-number values (booleans, objects)", () => {
     expect(coerceCell(true)).toBe("true");
     expect(coerceCell(false)).toBe("false");
-    expect(coerceCell(null)).toBe("null");
     expect(coerceCell({ a: 1 })).toBe("[object Object]");
   });
 });

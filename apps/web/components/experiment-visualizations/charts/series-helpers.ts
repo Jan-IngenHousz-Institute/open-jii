@@ -13,8 +13,14 @@ import type { IndexedDataSource } from "./form-values";
  * some genuine labels) end up with a mix of numbers and strings, which
  * Plotly treats as categorical — the right call when a column isn't
  * uniformly numeric.
+ *
+ * null/undefined return as `null` (Plotly renders gaps; detectAxisType
+ * skips them) — stringifying them to `"null"` / `"undefined"` would inject
+ * a non-numeric string and poison axis detection for an otherwise-numeric
+ * column, flipping the axis to category.
  */
-export function coerceCell(value: unknown): string | number {
+export function coerceCell(value: unknown): string | number | null {
+  if (value == null) return null;
   if (typeof value === "number") return value;
   if (typeof value === "string") {
     const trimmed = value.trim();
@@ -53,7 +59,7 @@ export function buildXValues(
   rows: Record<string, unknown>[],
   xColumn: string | undefined,
   useIndexForX: boolean,
-): (string | number)[] {
+): (string | number | null)[] {
   if (useIndexForX || !xColumn) return rows.map((_row, i) => i);
   return rows.map((row) => coerceCell(row[xColumn]));
 }

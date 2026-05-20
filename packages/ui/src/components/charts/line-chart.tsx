@@ -15,8 +15,8 @@ import {
 } from "./utils";
 
 export interface LineSeriesData extends BaseSeries {
-  x: (string | number | Date)[];
-  y: (string | number)[];
+  x: (string | number | Date | null)[];
+  y: (string | number | null)[];
   mode?: "lines" | "markers" | "lines+markers" | "text" | "none";
   line?: LineConfig;
   marker?: MarkerConfig;
