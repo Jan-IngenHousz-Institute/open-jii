@@ -15,8 +15,8 @@ import {
 } from "./utils";
 
 export interface ScatterSeriesData extends BaseSeries {
-  x: (string | number | Date)[];
-  y: (string | number)[];
+  x: (string | number | Date | null)[];
+  y: (string | number | null)[];
   mode?:
     | "markers"
     | "lines"
