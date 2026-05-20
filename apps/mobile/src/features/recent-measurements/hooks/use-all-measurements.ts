@@ -1,5 +1,5 @@
 import type { InfiniteData } from "@tanstack/react-query";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { notifyManager, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import {
   countMeasurementsByStatus,
@@ -12,7 +12,7 @@ import type {
   MeasurementStatus,
 } from "~/shared/db/measurements-storage";
 
-import { subscribeSettled } from "../services/outbox-state";
+import { subscribeSettledBatched } from "../services/outbox-state";
 
 export type { MeasurementStatus } from "~/shared/db/measurements-storage";
 
@@ -37,7 +37,10 @@ const EMPTY_COUNTS: MeasurementCounts = {
   successful: 0,
 };
 
-export function useAllMeasurements(filter: MeasurementFilter = "all") {
+export function useAllMeasurements(
+  filter: MeasurementFilter = "all",
+  enableSettleBridge: boolean = true,
+) {
   const queryClient = useQueryClient();
 
   // Paginated lean fetch — first page (~1 ms locally) renders immediately.
@@ -75,19 +78,21 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
     queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
-  // Bridge from the Outbox to react-query: every time an upload reaches a
-  // terminal state surgically patch the cached row instead of invalidating
-  // the whole `["measurements"]` key. Invalidate refetched every loaded
-  // page + counts + pending-or-failed on a 500 ms throttle — under a
-  // 100-item burst that's dozens of SQL round-trips and N×row re-renders.
-  // Surgical patch is one row + counts decrement, refs stay stable for
-  // unaffected rows so memo'd list items skip re-render.
+  // Bridge from the Outbox to react-query: every microtask of settles
+  // collapses to one batched patch — single SQLite fan-out + single
+  // setQueryData per query, so a burst of N PUBACKs costs ~1 re-render
+  // instead of N. The bridge is gated by `enableSettleBridge`: the Recent
+  // Measurements screen drops it when unfocused so background PUBACK
+  // traffic doesn't drag the JS thread (OJD-1470 — Recent tab kept the
+  // listener live after navigating away, growing wire_ms from ~110 ms to
+  // multiple seconds).
   useEffect(() => {
-    const unsubscribe = subscribeSettled((id) => {
-      void applySettledPatch(queryClient, id);
+    if (!enableSettleBridge) return;
+    const unsubscribe = subscribeSettledBatched((ids) => {
+      void applySettledPatchBatch(queryClient, ids);
     });
     return unsubscribe;
-  }, [queryClient]);
+  }, [queryClient, enableSettleBridge]);
 
   return {
     measurements,
@@ -99,131 +104,123 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   };
 }
 
-// Read the just-settled row's terminal status from SQLite and patch the
-// cached infinite-list pages, counts, and pending-or-failed list. One
-// SELECT per settle replaces a full multi-page refetch.
-async function applySettledPatch(
+// Read the terminal status of every just-settled row and apply one
+// surgical patch per query cache entry. A burst of N settles fans out N
+// parallel SELECTs (cheap on JSI SQLite) then performs one setQueryData
+// per query — collapsing N×re-renders into one.
+async function applySettledPatchBatch(
   queryClient: ReturnType<typeof useQueryClient>,
-  id: string,
+  ids: readonly string[],
 ): Promise<void> {
-  const row = await getMeasurementById(id);
-  // If the row vanished (e.g. user deleted it during upload), drop it
-  // everywhere.
-  if (!row) {
-    for (const query of queryClient.getQueryCache().findAll({ queryKey: ["measurements", "list"] })) {
+  if (ids.length === 0) return;
+  // null = row vanished (deleted mid-upload)
+  const updates = new Map<string, MeasurementStatus | null>();
+  const rows = await Promise.all(
+    ids.map(async (id) => ({ id, row: await getMeasurementById(id) })),
+  );
+  for (const { id, row } of rows) updates.set(id, row?.status ?? null);
+
+  // notifyManager.batch coalesces every cache mutation below into a
+  // single subscriber notification so a burst of N settles costs one
+  // re-render instead of N — even on top of our outbox-side batching,
+  // this guards consumers that subscribe to several keys at once.
+  notifyManager.batch(() => {
+    for (const query of queryClient
+      .getQueryCache()
+      .findAll({ queryKey: ["measurements", "list"] })) {
       queryClient.setQueryData<InfiniteData<MeasurementItem[]>>(query.queryKey, (old) =>
-        removeRowFromPages(old, id),
+        patchPagesBulk(old, query.queryKey, updates),
       );
     }
+
+    // pending-or-failed: drop rows that left the unsynced set (success or
+    // removed).
     queryClient.setQueryData<{ key: string; data: unknown }[]>(
       ["measurements", "pending-or-failed"],
-      (old) => (old ? old.filter((r) => r.key !== id) : old),
+      (old) => {
+        if (!old) return old;
+        let touched = false;
+        const next = old.filter((r) => {
+          const status = updates.get(r.key);
+          if (status === undefined) return true;
+          if (status === null || status === "successful") {
+            touched = true;
+            return false;
+          }
+          return true;
+        });
+        return touched ? next : old;
+      },
     );
-    queryClient.setQueryData<MeasurementCounts>(["measurements", "counts"], (old) =>
-      old ? recomputeCountsAfterRemove(old) : old,
-    );
-    return;
-  }
 
-  const nextStatus = row.status;
-
-  for (const query of queryClient.getQueryCache().findAll({ queryKey: ["measurements", "list"] })) {
-    queryClient.setQueryData<InfiniteData<MeasurementItem[]>>(query.queryKey, (old) =>
-      patchRowInPages(old, query.queryKey, id, nextStatus),
-    );
-  }
-
-  // pending-or-failed: drop the row when it leaves the unsynced set.
-  queryClient.setQueryData<{ key: string; data: unknown }[]>(
-    ["measurements", "pending-or-failed"],
-    (old) => {
+    // Counts: apply the net delta of all settles in one update. When the
+    // previous status is unknowable (the cached row is gone or never was)
+    // prefer decrementing pending — it's the common case and the next
+    // refetchOnMount will resync anyway.
+    queryClient.setQueryData<MeasurementCounts>(["measurements", "counts"], (old) => {
       if (!old) return old;
-      if (nextStatus === "successful") return old.filter((r) => r.key !== id);
-      return old;
-    },
-  );
-
-  // Counts: shift by one between buckets. The previous status is best
-  // inferred from the cache (the row was either pending or failed before
-  // settle). When in doubt, leave counts alone — they'll resync on the
-  // next refetchOnMount.
-  queryClient.setQueryData<MeasurementCounts>(["measurements", "counts"], (old) => {
-    if (!old) return old;
-    if (nextStatus === "successful") {
-      // We don't know whether the row was pending or failed before; the
-      // total is pending + failed and we just moved one across to
-      // successful. Prefer decrementing pending if positive, else failed.
-      if (old.pending > 0) return { ...old, pending: old.pending - 1, successful: old.successful + 1 };
-      if (old.failed > 0) return { ...old, failed: old.failed - 1, successful: old.successful + 1 };
-      return old;
-    }
-    if (nextStatus === "failed") {
-      if (old.pending > 0) return { ...old, pending: old.pending - 1, failed: old.failed + 1 };
-      return old;
-    }
-    return old;
+      let pending = old.pending;
+      let failed = old.failed;
+      let successful = old.successful;
+      for (const status of Array.from(updates.values())) {
+        if (status === null) {
+          if (pending > 0) pending--;
+          else if (failed > 0) failed--;
+          else if (successful > 0) successful--;
+        } else if (status === "successful") {
+          if (pending > 0) {
+            pending--;
+            successful++;
+          } else if (failed > 0) {
+            failed--;
+            successful++;
+          }
+        } else if (status === "failed") {
+          if (pending > 0) {
+            pending--;
+            failed++;
+          }
+        }
+      }
+      if (pending === old.pending && failed === old.failed && successful === old.successful) {
+        return old;
+      }
+      return { pending, failed, successful };
+    });
   });
 }
 
-function patchRowInPages(
+function patchPagesBulk(
   old: InfiniteData<MeasurementItem[]> | undefined,
   queryKey: readonly unknown[],
-  id: string,
-  nextStatus: MeasurementStatus,
+  updates: Map<string, MeasurementStatus | null>,
 ): InfiniteData<MeasurementItem[]> | undefined {
   if (!old) return old;
   const filter = (queryKey[2] as MeasurementFilter) ?? "all";
   const allowed = statusesForFilter(filter);
-  const shouldRemain = allowed.includes(nextStatus);
   let touched = false;
   const pages = old.pages.map((page) => {
-    let pageTouched = false;
     let next: MeasurementItem[] | null = null;
     for (let i = 0; i < page.length; i++) {
       const row = page[i];
-      if (row.key !== id) continue;
-      if (!shouldRemain) {
-        next = page.slice(0, i).concat(page.slice(i + 1));
-        pageTouched = true;
-      } else if (row.status !== nextStatus) {
-        next = page.slice();
-        next[i] = { ...row, status: nextStatus };
-        pageTouched = true;
+      const status = updates.get(row.key);
+      if (status === undefined) continue;
+      if (status === null || !allowed.includes(status)) {
+        next = next ?? page.slice();
+        const idx = next.findIndex((r) => r.key === row.key);
+        if (idx >= 0) next.splice(idx, 1);
+      } else if (row.status !== status) {
+        next = next ?? page.slice();
+        const idx = next.findIndex((r) => r.key === row.key);
+        if (idx >= 0) next[idx] = { ...next[idx], status };
       }
-      break;
     }
-    if (!pageTouched) return page;
+    if (next === null) return page;
     touched = true;
-    return next ?? page;
+    return next;
   });
   if (!touched) return old;
   return { ...old, pages };
-}
-
-function removeRowFromPages(
-  old: InfiniteData<MeasurementItem[]> | undefined,
-  id: string,
-): InfiniteData<MeasurementItem[]> | undefined {
-  if (!old) return old;
-  let touched = false;
-  const pages = old.pages.map((page) => {
-    const idx = page.findIndex((r) => r.key === id);
-    if (idx < 0) return page;
-    touched = true;
-    return page.slice(0, idx).concat(page.slice(idx + 1));
-  });
-  if (!touched) return old;
-  return { ...old, pages };
-}
-
-function recomputeCountsAfterRemove(old: MeasurementCounts): MeasurementCounts {
-  // We don't know which bucket the removed row belonged to. The next
-  // refetchOnMount will resync; for now decrement whichever bucket has
-  // headroom so the total doesn't drift positive.
-  if (old.pending > 0) return { ...old, pending: old.pending - 1 };
-  if (old.failed > 0) return { ...old, failed: old.failed - 1 };
-  if (old.successful > 0) return { ...old, successful: old.successful - 1 };
-  return old;
 }
 
 // One-shot lean fetch for callers that only need the first N rows (e.g. the

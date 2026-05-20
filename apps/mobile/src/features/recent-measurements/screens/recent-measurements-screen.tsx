@@ -1,4 +1,5 @@
 import { FlashList } from "@shopify/flash-list";
+import { useFocusEffect } from "expo-router";
 import { ChevronsLeft } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { Text, View } from "react-native";
@@ -35,6 +36,21 @@ export function RecentMeasurementsScreen() {
   const [devSeedVisible, setDevSeedVisible] = useState(false);
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
 
+  // Run the outbox→react-query settle bridge only while this tab is
+  // focused. Expo Router keeps the tab mounted in the background, so
+  // without this the bridge would keep applying patches (and triggering
+  // list re-renders) on every PUBACK long after the user routed away —
+  // dragging the JS thread enough to stall MQTT PUBACK processing
+  // (OJD-1470). `refetchOnMount: true` repopulates the cache when the tab
+  // regains focus.
+  const [isFocused, setIsFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => setIsFocused(false);
+    }, []),
+  );
+
   const {
     measurements,
     hasAnyMeasurements,
@@ -49,7 +65,7 @@ export function RecentMeasurementsScreen() {
     confirmDeleteAllSynced,
     handleExport,
     saveComment,
-  } = useRecentMeasurementsActions(filter);
+  } = useRecentMeasurementsActions(filter, isFocused);
 
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.

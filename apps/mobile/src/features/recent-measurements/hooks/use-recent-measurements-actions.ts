@@ -37,9 +37,12 @@ function confirmAndRun(
   ]);
 }
 
-export function useRecentMeasurementsActions(filter: MeasurementFilter) {
+export function useRecentMeasurementsActions(
+  filter: MeasurementFilter,
+  enableSettleBridge: boolean = true,
+) {
   const { measurements, counts, invalidate, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useAllMeasurements(filter);
+    useAllMeasurements(filter, enableSettleBridge);
   const {
     uploadAll,
     uploadOne,

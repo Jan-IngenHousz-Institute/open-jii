@@ -5,6 +5,7 @@
 // The Outbox in outbox.ts calls `markEnqueued` / `markSettled` as items
 // move through it; this module fans those changes out to subscribers via
 // a useSyncExternalStore-compatible API.
+import { Batcher } from "@tanstack/pacer/batcher";
 
 export interface OutboxSnapshot {
   isUploading: boolean;
@@ -14,6 +15,24 @@ export interface OutboxSnapshot {
 const enqueued = new Set<string>();
 const listeners = new Set<() => void>();
 const settledListeners = new Set<(id: string) => void>();
+// Batched settle subscribers. A TanStack Pacer `Batcher` coalesces a
+// burst of settles into a single dispatch so consumers can patch
+// react-query once per burst instead of once per id. Under heavy upload
+// load (concurrency 8, sub-150 ms PUBACK) the per-id path was driving N
+// SQLite reads + N react-query mutations on the JS thread, which then
+// delayed the next PUBACK callbacks and grew wire latency from ~110 ms
+// to several seconds.
+const settledBatchListeners = new Set<(ids: readonly string[]) => void>();
+const settledBatcher = new Batcher<string>(
+  (ids) => {
+    if (settledBatchListeners.size === 0) return;
+    Array.from(settledBatchListeners).forEach((listener) => listener(ids));
+  },
+  // wait:0 flushes on the next tick — collapses every settle inside a
+  // single JS turn (the typical PUBACK fan-out) into one batch without
+  // adding perceivable latency to the UI.
+  { wait: 0 },
+);
 // Per-id listeners. Rows on the Recent list subscribe by id so a settle
 // wakes only the one row whose flag actually flipped, not all N rows.
 const idListeners = new Map<string, Set<() => void>>();
@@ -70,6 +89,19 @@ export function subscribeSettled(listener: (id: string) => void): () => void {
   };
 }
 
+// Batched variant — fires once per microtask with every id that settled
+// since the previous flush. Bursts (concurrency-8 outbox draining a
+// 100-item queue) collapse to one listener invocation, which lets
+// consumers do a single react-query mutation per burst instead of N.
+export function subscribeSettledBatched(
+  listener: (ids: readonly string[]) => void,
+): () => void {
+  settledBatchListeners.add(listener);
+  return () => {
+    settledBatchListeners.delete(listener);
+  };
+}
+
 export function getSnapshot(): OutboxSnapshot {
   return cachedSnapshot;
 }
@@ -109,4 +141,7 @@ export function markSettled(id: string): void {
   notify();
   notifyId(id);
   Array.from(settledListeners).forEach((listener) => listener(id));
+  if (settledBatchListeners.size > 0) {
+    settledBatcher.addItem(id);
+  }
 }
