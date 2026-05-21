@@ -211,25 +211,13 @@ describe("useAutoUpload", () => {
   // ---------------------------------------------------------------------------
 
   describe("toast messages", () => {
-    it("shows info toast and success toast for 1 measurement", async () => {
+    it("does not show start/success toasts for the happy path", async () => {
       mockFailedUploads = [{ key: "k1", data: {} }];
       renderHook(() => useAutoUpload());
 
-      await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
-      expect(mockToastInfo).toHaveBeenCalledWith("Uploading 1 unsynced measurement…");
-      expect(mockToastSuccess).toHaveBeenCalledWith("1 measurement synced");
-    });
-
-    it("uses plural form for multiple measurements", async () => {
-      mockFailedUploads = [
-        { key: "k1", data: {} },
-        { key: "k2", data: {} },
-      ];
-      renderHook(() => useAutoUpload());
-
-      await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
-      expect(mockToastInfo).toHaveBeenCalledWith("Uploading 2 unsynced measurements…");
-      expect(mockToastSuccess).toHaveBeenCalledWith("2 measurements synced");
+      await waitFor(() => expect(mockUploadAll).toHaveBeenCalled());
+      expect(mockToastInfo).not.toHaveBeenCalled();
+      expect(mockToastSuccess).not.toHaveBeenCalled();
     });
 
     it("shows error toast when upload fails", async () => {
@@ -240,6 +228,7 @@ describe("useAutoUpload", () => {
       await waitFor(() => expect(mockToastError).toHaveBeenCalled());
       expect(mockToastError).toHaveBeenCalledWith("Upload failed. Please try again.");
       expect(mockToastSuccess).not.toHaveBeenCalled();
+      expect(mockToastInfo).not.toHaveBeenCalled();
     });
   });
 
@@ -421,7 +410,7 @@ describe("useAutoUpload", () => {
       expect(mockUploadAll).toHaveBeenCalledOnce();
 
       resolveUpload();
-      await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+      await act(() => Promise.resolve());
     });
 
     it("resets inFlight ref after success so next call can proceed", async () => {

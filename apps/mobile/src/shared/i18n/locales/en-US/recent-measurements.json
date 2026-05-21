@@ -71,7 +71,6 @@
     "uploadAllMessage_other": "Are you sure you want to sync {{count}} unsynced measurements?",
     "uploadAllButton": "Upload All",
     "uploadAllError": "Sync failed. Please try again.",
-    "uploadAllSuccess": "All measurements synced successfully",
     "deleteAllSyncedTitle": "Delete all synced measurements",
     "deleteAllSyncedMessage": "Are you sure you want to delete all {{count}} synced measurements from local storage?",
     "deleteAllSyncedError": "Failed to delete synced measurements",
@@ -82,17 +81,8 @@
     "saveToFileError": "Could not save measurement. Please try again."
   },
   "toasts": {
-    "uploadingMeasurements_one": "Uploading {{count}} unsynced measurement…",
-    "uploadingMeasurements_other": "Uploading {{count}} unsynced measurements…",
-    "measurementsSynced_one": "{{count}} measurement synced",
-    "measurementsSynced_other": "{{count}} measurements synced",
     "uploadFailed": "Upload failed. Please try again.",
-    "uploadOneFailed": "Failed to upload, try again later",
     "uploadNotAvailable": "Upload not available, upload it later from Recent",
-    "measurementUploaded": "Measurement uploaded!",
-    "answersUploaded": "Answers uploaded!",
-    "answersSaveFailed": "Answers could not be saved on this device. Please export your data now to avoid losing it.",
-    "uploadedLocalStatusRefresh": "Uploaded — local status will refresh on next sync",
-    "savedOffline": "Saved offline — will upload when you're back online"
+    "answersSaveFailed": "Answers could not be saved on this device. Please export your data now to avoid losing it."
   }
 }

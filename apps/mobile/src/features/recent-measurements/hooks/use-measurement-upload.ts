@@ -182,7 +182,6 @@ export function useMeasurementUpload() {
       // exposes around connectivity transitions — otherwise we'd fall through
       // to MQTT and freeze the UI on the full connect timeout.
       if (networkState.isInternetReachable !== true) {
-        toast.info(t("recentMeasurements:toasts.savedOffline"));
         return;
       }
 
@@ -209,10 +208,8 @@ export function useMeasurementUpload() {
 
       try {
         await markUploaded(savedId);
-        toast.success(t("recentMeasurements:toasts.measurementUploaded"));
       } catch (localError) {
         console.error("Local status update failed after successful publish:", localError);
-        toast.info(t("recentMeasurements:toasts.uploadedLocalStatusRefresh"));
       }
     },
   });

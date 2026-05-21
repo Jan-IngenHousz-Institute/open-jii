@@ -42,7 +42,6 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
     setMeasurements([]);
     setCurrentMeasurementIndex(0);
     setProcessedOutput(null);
-    toast.info(t("calibration:flow.toastStarted"));
   };
 
   const handleGainCalibration = async () => {
@@ -62,7 +61,6 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
     console.log("Gain calibration completed");
     setCurrentStep("measurements");
-    toast.success(t("calibration:flow.toastGainComplete"));
   };
 
   const handleMeasurement = async (panelNumber: number) => {
@@ -103,14 +101,6 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
     if (currentMeasurementIndex < measurementSteps.length - 1) {
       setCurrentMeasurementIndex((prev) => prev + 1);
-      const nextPanelNumber =
-        measurementSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
-      toast.info(
-        t("calibration:flow.toastPanelMeasured", {
-          panel: panelNumber,
-          next: nextPanelNumber,
-        }),
-      );
     } else {
       setCurrentStep("processing");
       handleDataProcessing();

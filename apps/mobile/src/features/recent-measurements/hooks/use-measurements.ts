@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { toast } from "sonner-native";
 import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
 import {
   clearMeasurements,
@@ -14,7 +13,6 @@ import {
   pruneExpiredMeasurements,
 } from "~/shared/db/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/shared/db/measurements-storage";
-import { useTranslation } from "~/shared/i18n";
 import {
   buildAnnotations,
   getFlagTypeFromMeasurementResult,
@@ -22,7 +20,6 @@ import {
 
 export function useMeasurements() {
   const queryClient = useQueryClient();
-  const { t } = useTranslation(["common", "recentMeasurements"]);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
@@ -133,7 +130,6 @@ export function useMeasurements() {
         } catch (error) {
           console.warn(`Failed to upload item with key ${key}:`, error);
           await markAsFailed(key);
-          toast.info(t("recentMeasurements:toasts.uploadOneFailed"));
           return;
         }
 

@@ -22,7 +22,6 @@ export interface TimeSyncState {
   lastSyncedAt: number;
 }
 
-const MISSED_PING_WARN_THRESHOLD = 3;
 const STORAGE_KEY = "TIME_SYNC_STATE";
 
 let state: TimeSyncState = {
@@ -167,12 +166,6 @@ async function performSync(isInitial = false): Promise<void> {
       missedPings: state.missedPings,
       lastSyncedAt: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
     });
-
-    if (isInitial) {
-      toast.warning("Unable to synchronize time.");
-    } else if (state.missedPings >= MISSED_PING_WARN_THRESHOLD) {
-      toast.warning("Time sync lost. Please check your phone's date and time settings.");
-    }
   }
 }
 

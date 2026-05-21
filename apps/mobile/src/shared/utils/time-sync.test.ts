@@ -290,16 +290,14 @@ describe("time-sync", () => {
       spy.mockRestore();
     });
 
-    it("should show toast.warning when missedPings reaches threshold (3)", async () => {
+    it("does not toast on repeated sync failures (warnings were too noisy in the field)", async () => {
       const { startTimeSync, getTimeSyncState } = await import("./time-sync");
       const { toast } = await import("sonner-native");
 
-      // Successful initial sync
       mockServerUtcMs = Date.now();
       startTimeSync();
       await vi.advanceTimersByTimeAsync(50);
 
-      // Make server fail
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
@@ -309,7 +307,6 @@ describe("time-sync", () => {
 
       (toast.warning as ReturnType<typeof vi.fn>).mockClear();
 
-      // Trigger 3 failed syncs via foreground events (each needs debounce window to pass)
       for (let i = 0; i < 3; i++) {
         await advancePastDebounce();
         capturedAppStateHandler?.("active");
@@ -317,15 +314,12 @@ describe("time-sync", () => {
       }
 
       expect(getTimeSyncState().missedPings).toBe(3);
-      expect(toast.warning).toHaveBeenCalledWith(
-        "Time sync lost. Please check your phone's date and time settings.",
-      );
+      expect(toast.warning).not.toHaveBeenCalled();
 
       spy.mockRestore();
     });
 
-    it("should show toast.warning on initial sync failure", async () => {
-      // Make server fail from the start
+    it("does not toast on initial sync failure", async () => {
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
@@ -340,7 +334,7 @@ describe("time-sync", () => {
       startTimeSync();
       await vi.advanceTimersByTimeAsync(50);
 
-      expect(toast.warning).toHaveBeenCalledWith("Unable to synchronize time.");
+      expect(toast.warning).not.toHaveBeenCalled();
 
       spy.mockRestore();
     });

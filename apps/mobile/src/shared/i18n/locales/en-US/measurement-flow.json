@@ -161,8 +161,7 @@
     "searchPlaceholder": "Search options...",
     "unsupportedKind": "Unsupported question kind: {{kind}}",
     "qrNotMatch": "\"{{data}}\" does not exist.",
-    "qrSelected": "\"{{match}}\" selected successfully!",
-    "qrApplied": "QR applied successfully!"
+    "qrDismissLabel": "Dismiss"
   },
   "questionTypes": {
     "multipleChoice": {
