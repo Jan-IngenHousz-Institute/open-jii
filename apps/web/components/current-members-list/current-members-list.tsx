@@ -1,4 +1,5 @@
 import { useLocale } from "@/hooks/useLocale";
+import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -203,11 +204,14 @@ export function MemberList({
 
   if (membersWithUserInfo.length === 0) {
     return (
-      <div className="border-muted flex flex-col items-center justify-center py-4">
-        <p className="text-muted-foreground text-base font-medium">
+      <div className="px-6 py-10 text-center">
+        <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
+          <Users className="h-5 w-5" />
+        </div>
+        <p className="text-foreground text-sm font-semibold">
           {t("experimentSettings.noMembersYet")}
         </p>
-        <p className="text-muted-foreground mt-1 text-xs">
+        <p className="text-muted-foreground mx-auto mt-1 max-w-[280px] text-xs leading-relaxed">
           {t("experimentSettings.addCollaborators")}
         </p>
       </div>
