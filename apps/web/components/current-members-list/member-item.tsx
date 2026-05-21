@@ -51,7 +51,7 @@ export function MemberItem({
   const { t } = useTranslation();
 
   return (
-    <div className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5">
+    <div className="flex items-center gap-3 px-3 py-2.5">
       <UserAvatar
         avatarUrl={member.user.avatarUrl}
         firstName={member.user.firstName}

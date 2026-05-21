@@ -56,7 +56,7 @@ function JoinRequestRow({
   const approveLabel = t("experimentSettings.approveJoinRequest");
 
   return (
-    <div className="border-border bg-card rounded-lg border p-3">
+    <div className="p-3">
       <div className="flex items-center gap-3">
         <UserAvatar
           avatarUrl={request.user.avatarUrl}
@@ -215,7 +215,7 @@ export function ExperimentJoinRequestsPanel({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="border-border divide-border divide-y overflow-hidden rounded-lg border">
       {joinRequests.map((request) => (
         <JoinRequestRow
           key={request.id}

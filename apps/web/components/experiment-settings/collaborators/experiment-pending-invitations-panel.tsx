@@ -75,12 +75,9 @@ export function ExperimentPendingInvitationsPanel({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="border-border divide-border divide-y overflow-hidden rounded-lg border">
       {invitations.map((invitation) => (
-        <div
-          key={invitation.id}
-          className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5"
-        >
+        <div key={invitation.id} className="flex items-center gap-3 px-3 py-2.5">
           <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
             <Mail className="text-muted-foreground h-4 w-4" />
           </div>
