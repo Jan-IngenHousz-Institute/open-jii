@@ -23,14 +23,11 @@ import { useApproveJoinRequest } from "../../../hooks/experiment/join-request/us
 import { useExperimentJoinRequests } from "../../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
 import { useRejectJoinRequest } from "../../../hooks/experiment/join-request/useRejectJoinRequest/useRejectJoinRequest";
 import { parseApiError } from "../../../util/apiError";
+import { UserAvatar } from "../../user-avatar";
 
 interface ExperimentJoinRequestsPanelProps {
   experimentId: string;
   joinRequests?: ExperimentJoinRequest[];
-}
-
-function getInitials(firstName?: string, lastName?: string): string {
-  return `${(firstName?.[0] ?? "").toUpperCase()}${(lastName?.[0] ?? "").toUpperCase()}`;
 }
 
 function JoinRequestRow({
@@ -58,9 +55,12 @@ function JoinRequestRow({
   return (
     <div className="border-border bg-card rounded-lg border p-3">
       <div className="flex items-center gap-3">
-        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-          {getInitials(request.user.firstName, request.user.lastName)}
-        </div>
+        <UserAvatar
+          avatarUrl={request.user.avatarUrl}
+          firstName={request.user.firstName}
+          lastName={request.user.lastName}
+          className="h-9 w-9"
+        />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="text-foreground truncate text-sm font-medium" title={displayName}>
             {displayName}

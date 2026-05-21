@@ -177,6 +177,7 @@ export function ExperimentMembersPanel({
             bio: null,
             activated: null,
             organization: undefined,
+            avatarUrl: member.user.avatarUrl,
           },
         }))}
         onRemoveMember={handleRemoveMember}

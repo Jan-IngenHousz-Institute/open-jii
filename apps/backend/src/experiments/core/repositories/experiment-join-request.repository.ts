@@ -16,6 +16,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
   getAnonymizedEmail,
+  getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
 import type {
   ExperimentJoinRequestDto,
@@ -36,6 +37,7 @@ const joinRequestSelectFields = {
     firstName: getAnonymizedFirstName(),
     lastName: getAnonymizedLastName(),
     email: getAnonymizedEmail(),
+    avatarUrl: getAnonymizedAvatarUrl(),
   },
 };
 

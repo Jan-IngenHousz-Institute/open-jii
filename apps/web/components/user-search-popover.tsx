@@ -17,14 +17,12 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { UserAvatar } from "./user-avatar";
+
 const emailSchema = z.string().email();
 
 function isValidEmail(value: string): boolean {
   return emailSchema.safeParse(value).success;
-}
-
-function getInitials(firstName?: string, lastName?: string): string {
-  return `${(firstName?.[0] ?? "").toUpperCase()}${(lastName?.[0] ?? "").toUpperCase()}`;
 }
 
 export interface UserSearchPopoverProps {
@@ -291,9 +289,12 @@ function PopoverResults({
             onMouseDown={(e) => e.preventDefault()}
             className="hover:bg-surface flex w-full items-center gap-3 px-3 py-2.5 text-left"
           >
-            <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-              {getInitials(user.firstName, user.lastName)}
-            </div>
+            <UserAvatar
+              avatarUrl={user.avatarUrl}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              className="h-8 w-8"
+            />
             <div className="flex-1 overflow-hidden">
               <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
                 {user.firstName} {user.lastName}

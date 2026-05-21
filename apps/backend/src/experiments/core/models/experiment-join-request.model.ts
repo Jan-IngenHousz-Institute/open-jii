@@ -16,6 +16,7 @@ export const experimentJoinRequestSchema = createSelectSchema(experimentJoinRequ
       firstName: z.string(),
       lastName: z.string(),
       email: z.string().nullable(),
+      avatarUrl: z.string().nullable(),
     }),
   });
 

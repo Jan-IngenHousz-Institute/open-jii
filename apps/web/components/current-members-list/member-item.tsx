@@ -10,11 +10,18 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { UserAvatar } from "../user-avatar";
+
 interface MemberItemProps {
   member: {
     role: string;
     joinedAt: string;
-    user: Partial<UserProfile> & { userId: string; firstName: string; lastName: string };
+    user: Partial<UserProfile> & {
+      userId: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl?: string | null;
+    };
   };
   isLastAdmin: boolean;
   currentUserId?: string;
@@ -26,10 +33,6 @@ interface MemberItemProps {
   removingMemberId: string | null;
   onValueChange: (value: string) => void;
   isArchived?: boolean;
-}
-
-function getInitials(firstName?: string, lastName?: string): string {
-  return `${(firstName?.[0] ?? "").toUpperCase()}${(lastName?.[0] ?? "").toUpperCase()}`;
 }
 
 export function MemberItem({
@@ -49,9 +52,12 @@ export function MemberItem({
 
   return (
     <div className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5">
-      <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-        {getInitials(member.user.firstName, member.user.lastName)}
-      </div>
+      <UserAvatar
+        avatarUrl={member.user.avatarUrl}
+        firstName={member.user.firstName}
+        lastName={member.user.lastName}
+        className="h-9 w-9"
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <h4
           className="text-foreground truncate text-sm font-medium"
