@@ -19,7 +19,7 @@ const NavTabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex max-w-full flex-wrap items-end gap-6 self-start border-b border-border",
+      "border-border inline-flex max-w-full flex-wrap items-end gap-6 self-start border-b",
       className,
     )}
     {...props}
@@ -43,7 +43,7 @@ const NavTabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "group relative -mb-px inline-flex shrink-0 select-none items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-1 pb-3 pt-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "focus-visible:ring-ring group relative -mb-px inline-flex shrink-0 select-none items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-1 pb-3 pt-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2",
       "data-[state=active]:border-primary data-[state=active]:text-primary",
       "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:border-muted-foreground/40 data-[state=inactive]:hover:text-foreground",
       "disabled:pointer-events-none disabled:opacity-50",
