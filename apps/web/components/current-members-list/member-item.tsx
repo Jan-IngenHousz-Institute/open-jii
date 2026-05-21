@@ -28,6 +28,10 @@ interface MemberItemProps {
   isArchived?: boolean;
 }
 
+function getInitials(firstName?: string, lastName?: string): string {
+  return `${(firstName?.[0] ?? "").toUpperCase()}${(lastName?.[0] ?? "").toUpperCase()}`;
+}
+
 export function MemberItem({
   member,
   isLastAdmin,
@@ -44,23 +48,29 @@ export function MemberItem({
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center justify-between rounded">
+    <div className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5">
+      <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+        {getInitials(member.user.firstName, member.user.lastName)}
+      </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <h4 className="text-foreground truncate text-sm font-medium">
+        <h4
+          className="text-foreground truncate text-sm font-medium"
+          title={`${member.user.firstName} ${member.user.lastName}`}
+        >
           {`${member.user.firstName} ${member.user.lastName}`}
         </h4>
-        <span
-          className="flex min-w-0 items-center gap-x-1"
-          title={member.user.email ?? t("experimentSettings.noEmail")}
-        >
+        <span className="flex min-w-0 items-center gap-x-1">
           <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-          <span className="text-muted-foreground truncate text-sm">
+          <span
+            className="text-muted-foreground truncate text-xs"
+            title={member.user.email ?? t("experimentSettings.noEmail")}
+          >
             {member.user.email ?? t("experimentSettings.noEmail")}
           </span>
         </span>
       </div>
 
-      <div className="flex flex-shrink-0 flex-col-reverse items-end space-x-3 pl-4 md:flex-row md:items-center">
+      <div className="flex flex-shrink-0">
         <Select
           value={member.role}
           disabled={

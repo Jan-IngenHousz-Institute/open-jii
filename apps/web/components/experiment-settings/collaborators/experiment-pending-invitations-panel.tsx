@@ -75,19 +75,24 @@ export function ExperimentPendingInvitationsPanel({
   }
 
   return (
-    <div className="max-h-[200px] space-y-3 overflow-y-auto">
+    <div className="max-h-[200px] space-y-2 overflow-y-auto">
       {invitations.map((invitation) => (
-        <div key={invitation.id} className="flex items-center justify-between rounded">
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-foreground text-sm font-medium">{invitation.email}</span>
-            <span className="flex items-center gap-x-1">
-              <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-              <span className="text-muted-foreground text-sm">
-                {t("experimentSettings.pendingInvite")}
-              </span>
+        <div
+          key={invitation.id}
+          className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5"
+        >
+          <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+            <Mail className="text-muted-foreground h-4 w-4" />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="text-foreground truncate text-sm font-medium" title={invitation.email}>
+              {invitation.email}
+            </span>
+            <span className="bg-badge-published text-primary inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium">
+              {t("experimentSettings.pendingInvite")}
             </span>
           </div>
-          <div className="flex flex-shrink-0 pl-4">
+          <div className="flex flex-shrink-0">
             <Select
               value={invitation.role}
               disabled={isArchived || !isAdmin}

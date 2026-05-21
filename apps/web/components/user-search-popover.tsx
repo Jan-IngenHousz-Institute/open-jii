@@ -23,6 +23,10 @@ function isValidEmail(value: string): boolean {
   return emailSchema.safeParse(value).success;
 }
 
+function getInitials(firstName?: string, lastName?: string): string {
+  return `${(firstName?.[0] ?? "").toUpperCase()}${(lastName?.[0] ?? "").toUpperCase()}`;
+}
+
 export interface UserSearchPopoverProps {
   availableUsers: UserProfile[];
   searchValue: string;
@@ -235,11 +239,13 @@ function InviteByEmailButton({
       type="button"
       onClick={onClick}
       onMouseDown={(e) => e.preventDefault()}
-      className="hover:bg-surface flex h-auto w-full items-center gap-2 px-3 py-2 text-left"
+      className="hover:bg-surface flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
     >
-      <Mail className="text-muted-foreground h-4 w-4 shrink-0" />
+      <div className="bg-surface flex h-8 w-8 shrink-0 items-center justify-center rounded-full border">
+        <Mail className="text-muted-foreground h-4 w-4" />
+      </div>
       <div className="flex-1">
-        <div className="text-sm">{email}</div>
+        <div className="text-sm font-medium">{email}</div>
         <div className="text-muted-foreground text-xs">{t("experiments.sendInviteByEmail")}</div>
       </div>
     </Button>
@@ -275,7 +281,7 @@ function PopoverResults({
 
   if (availableUsers.length > 0) {
     return (
-      <div className="space-y-3 py-1">
+      <div className="py-1">
         {availableUsers.map((user) => (
           <Button
             key={user.userId}
@@ -283,10 +289,13 @@ function PopoverResults({
             type="button"
             onClick={() => handleSelectUser(user)}
             onMouseDown={(e) => e.preventDefault()}
-            className="hover:bg-surface flex w-full items-center px-3 text-left"
+            className="hover:bg-surface flex w-full items-center gap-3 px-3 py-2.5 text-left"
           >
+            <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+              {getInitials(user.firstName, user.lastName)}
+            </div>
             <div className="flex-1 overflow-hidden">
-              <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm">
+              <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
                 {user.firstName} {user.lastName}
               </div>
               <div className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
@@ -296,7 +305,9 @@ function PopoverResults({
           </Button>
         ))}
         {canInviteByEmail && (
-          <InviteByEmailButton onClick={handleSelectEmail} email={email} t={t} />
+          <div className="border-border border-t">
+            <InviteByEmailButton onClick={handleSelectEmail} email={email} t={t} />
+          </div>
         )}
       </div>
     );

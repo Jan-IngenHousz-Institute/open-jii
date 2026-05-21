@@ -29,6 +29,10 @@ interface ExperimentJoinRequestsPanelProps {
   joinRequests?: ExperimentJoinRequest[];
 }
 
+function getInitials(firstName?: string, lastName?: string): string {
+  return `${(firstName?.[0] ?? "").toUpperCase()}${(lastName?.[0] ?? "").toUpperCase()}`;
+}
+
 function JoinRequestRow({
   request,
   onApprove,
@@ -52,8 +56,11 @@ function JoinRequestRow({
   const approveLabel = t("experimentSettings.approveJoinRequest");
 
   return (
-    <div className="border-border rounded-md border p-3">
-      <div className="flex items-center justify-between gap-3">
+    <div className="border-border bg-card rounded-lg border p-3">
+      <div className="flex items-center gap-3">
+        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+          {getInitials(request.user.firstName, request.user.lastName)}
+        </div>
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="text-foreground truncate text-sm font-medium" title={displayName}>
             {displayName}
@@ -61,7 +68,7 @@ function JoinRequestRow({
           {request.user.email && (
             <span className="flex min-w-0 items-center gap-x-1">
               <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-              <span className="text-muted-foreground truncate text-sm" title={request.user.email}>
+              <span className="text-muted-foreground truncate text-xs" title={request.user.email}>
                 {request.user.email}
               </span>
             </span>
@@ -104,12 +111,12 @@ function JoinRequestRow({
       </div>
 
       <Collapsible open={isMessageOpen} onOpenChange={setIsMessageOpen}>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground mt-1 flex items-center gap-1 text-xs transition-colors">
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground mt-2 flex items-center gap-1 pl-12 text-xs transition-colors">
           {isMessageOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           {t("experimentSettings.joinRequestMessageLabel")}
         </CollapsibleTrigger>
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden [--radix-accordion-content-height:var(--radix-collapsible-content-height)]">
-          <div className="mt-2 w-full">
+          <div className="mt-2 w-full pl-12">
             {request.message ? (
               <p className="text-muted-foreground whitespace-pre-line text-sm">{request.message}</p>
             ) : (

@@ -216,7 +216,7 @@ export function MemberList({
 
   return (
     <>
-      <div className="max-h-[200px] space-y-3 overflow-y-auto">
+      <div className="max-h-[200px] space-y-2 overflow-y-auto">
         {membersWithUserInfo.map((member) => {
           const isLastAdmin = member.role === "admin" && adminCount === 1;
           const isCurrentUser = member.user.userId === currentUserId;
@@ -225,7 +225,11 @@ export function MemberList({
 
           if (isOptimistic) {
             return (
-              <div key={member.user.userId} className="flex items-center justify-between rounded">
+              <div
+                key={member.user.userId}
+                className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5"
+              >
+                <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-3 w-48" />

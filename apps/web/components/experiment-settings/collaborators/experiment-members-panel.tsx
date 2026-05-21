@@ -138,7 +138,7 @@ export function ExperimentMembersPanel({
             availableUsers={availableUsers}
             searchValue={userSearch}
             onSearchChange={setUserSearch}
-            isAddingUser={isAddingMember}
+            isAddingUser={isAddingMember || isCreatingInvitation}
             loading={!isDebounced || isFetchingUsers}
             onSelectUser={(user) => setSelection({ type: "user", user })}
             onSelectEmail={(email) => setSelection({ type: "email", email })}
