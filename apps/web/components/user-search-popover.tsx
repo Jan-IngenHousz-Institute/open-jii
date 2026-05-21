@@ -279,7 +279,7 @@ function PopoverResults({
 
   if (availableUsers.length > 0) {
     return (
-      <div className="py-1">
+      <div className="py-2">
         {availableUsers.map((user) => (
           <Button
             key={user.userId}
@@ -287,13 +287,13 @@ function PopoverResults({
             type="button"
             onClick={() => handleSelectUser(user)}
             onMouseDown={(e) => e.preventDefault()}
-            className="hover:bg-surface flex w-full items-center gap-3 px-3 py-2.5 text-left"
+            className="hover:bg-surface flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
           >
             <UserAvatar
               avatarUrl={user.avatarUrl}
               firstName={user.firstName}
               lastName={user.lastName}
-              className="h-8 w-8"
+              className="h-9 w-9 shrink-0"
             />
             <div className="flex-1 overflow-hidden">
               <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
