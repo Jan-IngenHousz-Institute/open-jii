@@ -34,11 +34,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const locations = locationsData?.body ?? [];
 
   // Members
-  const {
-    data: membersData,
-    isLoading: isMembersLoading,
-    isError: isMembersError,
-  } = useExperimentMembers(id);
+  const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
   const members = membersData?.body ?? [];
 
   // Visualizations
@@ -70,7 +66,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         locations={locations}
         members={members}
         isMembersLoading={isMembersLoading}
-        isMembersError={isMembersError}
         hasAccess={hasAccess}
       />
 

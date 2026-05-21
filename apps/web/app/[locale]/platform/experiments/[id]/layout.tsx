@@ -19,6 +19,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation("experiments");
   const { t: tCommon } = useTranslation("common");
+  const { t: tSettings } = useTranslation();
   const locale = useLocale();
 
   // Access check
@@ -87,6 +88,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   // Determine active tab from URL
   const getActiveTab = () => {
     if (pathname.endsWith("/flow")) return "flow";
+    if (pathname.includes("/collaborators")) return "collaborators";
     if (pathname.startsWith(`/${locale}/platform/experiments/${id}/data`)) return "data";
     if (pathname.includes("/analysis")) return "analysis";
     if (pathname.endsWith(`/experiments/${id}`)) return "overview";
@@ -123,6 +125,11 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
             </NavTabsTrigger>
             <NavTabsTrigger value="flow" asChild>
               <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
+            </NavTabsTrigger>
+            <NavTabsTrigger value="collaborators" asChild>
+              <Link href={`/${locale}/platform/experiments/${id}/collaborators`}>
+                {tSettings("experimentSettings.collaborators")}
+              </Link>
             </NavTabsTrigger>
           </NavTabsList>
         </div>

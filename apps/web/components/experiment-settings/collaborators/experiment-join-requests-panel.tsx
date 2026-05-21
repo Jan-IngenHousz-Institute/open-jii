@@ -28,6 +28,7 @@ import { UserAvatar } from "../../user-avatar";
 interface ExperimentJoinRequestsPanelProps {
   experimentId: string;
   joinRequests?: ExperimentJoinRequest[];
+  isAdmin?: boolean;
 }
 
 function JoinRequestRow({
@@ -37,6 +38,7 @@ function JoinRequestRow({
   isApprovingJoinRequest,
   isRejectingJoinRequest,
   isPending,
+  isAdmin,
 }: {
   request: ExperimentJoinRequest;
   onApprove: (id: string) => void;
@@ -44,6 +46,7 @@ function JoinRequestRow({
   isApprovingJoinRequest: boolean;
   isRejectingJoinRequest: boolean;
   isPending: boolean;
+  isAdmin: boolean;
 }) {
   const { t } = useTranslation();
   const [isMessageOpen, setIsMessageOpen] = useState(false);
@@ -74,40 +77,42 @@ function JoinRequestRow({
             </span>
           )}
         </div>
-        <TooltipProvider delayDuration={200}>
-          <div className="flex shrink-0 gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-8 w-8 [&_svg]:size-4"
-                  onClick={() => onReject(request.id)}
-                  disabled={isRejectingJoinRequest || isApprovingJoinRequest || isPending}
-                  aria-label={rejectLabel}
-                >
-                  <X aria-hidden="true" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{rejectLabel}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="default"
-                  size="icon"
-                  className="h-8 w-8 [&_svg]:size-4"
-                  onClick={() => onApprove(request.id)}
-                  disabled={isApprovingJoinRequest || isRejectingJoinRequest || isPending}
-                  aria-label={approveLabel}
-                >
-                  <Check aria-hidden="true" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{approveLabel}</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
+        {isAdmin && (
+          <TooltipProvider delayDuration={200}>
+            <div className="flex shrink-0 gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8 [&_svg]:size-4"
+                    onClick={() => onReject(request.id)}
+                    disabled={isRejectingJoinRequest || isApprovingJoinRequest || isPending}
+                    aria-label={rejectLabel}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{rejectLabel}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="icon"
+                    className="h-8 w-8 [&_svg]:size-4"
+                    onClick={() => onApprove(request.id)}
+                    disabled={isApprovingJoinRequest || isRejectingJoinRequest || isPending}
+                    aria-label={approveLabel}
+                  >
+                    <Check aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{approveLabel}</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        )}
       </div>
 
       <Collapsible open={isMessageOpen} onOpenChange={setIsMessageOpen}>
@@ -134,6 +139,7 @@ function JoinRequestRow({
 export function ExperimentJoinRequestsPanel({
   experimentId,
   joinRequests: providedJoinRequests,
+  isAdmin = false,
 }: ExperimentJoinRequestsPanelProps) {
   const { t } = useTranslation();
   const { data: joinRequestsData } = useExperimentJoinRequests(experimentId);
@@ -209,7 +215,7 @@ export function ExperimentJoinRequestsPanel({
   }
 
   return (
-    <div className="max-h-[200px] space-y-3 overflow-y-auto">
+    <div className="space-y-3">
       {joinRequests.map((request) => (
         <JoinRequestRow
           key={request.id}
@@ -219,6 +225,7 @@ export function ExperimentJoinRequestsPanel({
           isApprovingJoinRequest={isApprovingJoinRequest}
           isRejectingJoinRequest={isRejectingJoinRequest}
           isPending={pendingJoinRequestId === request.id}
+          isAdmin={isAdmin}
         />
       ))}
     </div>

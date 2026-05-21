@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
@@ -10,10 +11,10 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
 
-import { ExperimentMemberManagement } from "../../experiment-settings/collaborators/experiment-member-management-card";
 import { ExperimentRequestToJoin } from "../../experiment-settings/collaborators/experiment-request-to-join";
 import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
 import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-visibility-card";
+import { ExperimentMembersTrail } from "../experiment-members-trail";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
 interface ExperimentDetailsCardProps {
@@ -22,7 +23,6 @@ interface ExperimentDetailsCardProps {
   locations: Location[];
   members: ExperimentMember[];
   isMembersLoading: boolean;
-  isMembersError: boolean;
   hasAccess?: boolean;
   isArchived?: boolean;
 }
@@ -33,11 +33,12 @@ export function ExperimentDetailsCard({
   locations,
   members,
   isMembersLoading,
-  isMembersError,
   hasAccess = false,
   isArchived = false,
 }: ExperimentDetailsCardProps) {
   const { t } = useTranslation("experiments");
+  const { t: tSettings } = useTranslation();
+  const locale = useLocale();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const { data: session } = useSession();
   const currentUserId = session?.user.id;
@@ -88,6 +89,15 @@ export function ExperimentDetailsCard({
             />
 
             <div className="space-y-1">
+              <h4 className="text-sm font-medium">{tSettings("experimentSettings.membersTab")}</h4>
+              <ExperimentMembersTrail
+                members={members}
+                isLoading={isMembersLoading}
+                href={`/${locale}/platform/experiments/${experimentId}/collaborators`}
+              />
+            </div>
+
+            <div className="space-y-1">
               <h4 className="text-sm font-medium">{t("updated")}</h4>
               <p className="text-muted-foreground text-sm">{formatDate(experiment.updatedAt)}</p>
             </div>
@@ -112,40 +122,18 @@ export function ExperimentDetailsCard({
           />
 
           {currentUserRole === "admin" ? (
-            <>
-              <ExperimentVisibilityCard
-                experimentId={experimentId}
-                initialVisibility={experiment.visibility}
-                embargoUntil={experiment.embargoUntil}
-                isArchived={isArchived}
-              />
-              <div
-                role="separator"
-                aria-orientation="horizontal"
-                className="text-muted-foreground mx-4 border-t"
-              />
-            </>
+            <ExperimentVisibilityCard
+              experimentId={experimentId}
+              initialVisibility={experiment.visibility}
+              embargoUntil={experiment.embargoUntil}
+              isArchived={isArchived}
+            />
           ) : null}
 
-          <ExperimentMemberManagement
-            experimentId={experimentId}
-            members={members}
-            isLoading={isMembersLoading}
-            isError={isMembersError}
-            isArchived={isArchived}
-          />
-
           {canRequestToJoin ? (
-            <>
-              <div
-                role="separator"
-                aria-orientation="horizontal"
-                className="text-muted-foreground mx-4 border-t"
-              />
-              <div className="px-6 py-4">
-                <ExperimentRequestToJoin experimentId={experimentId} />
-              </div>
-            </>
+            <div className="px-6 py-4">
+              <ExperimentRequestToJoin experimentId={experimentId} />
+            </div>
           ) : null}
         </div>
       </Card>

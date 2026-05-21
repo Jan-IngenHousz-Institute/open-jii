@@ -75,7 +75,7 @@ export function ExperimentPendingInvitationsPanel({
   }
 
   return (
-    <div className="max-h-[200px] space-y-2 overflow-y-auto">
+    <div className="space-y-2">
       {invitations.map((invitation) => (
         <div
           key={invitation.id}

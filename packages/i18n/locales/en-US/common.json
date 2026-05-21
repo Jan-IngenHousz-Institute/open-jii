@@ -345,7 +345,12 @@
     "noInvitations": "No pending invitations",
     "noInvitationsHint": "People you invite by email will appear here until they accept.",
     "noJoinRequests": "No join requests",
-    "noJoinRequestsHint": "When the experiment is public, requests from researchers will land here for review."
+    "noJoinRequestsHint": "When the experiment is public, requests from researchers will land here for review.",
+    "invite": "Invite",
+    "inviteCollaborators": "Invite collaborators",
+    "inviteCollaboratorsDescription": "Add an existing user or invite someone by email. Members get immediate access; invitees are emailed and join after accepting.",
+    "filterCollaboratorsPlaceholder": "Filter by name or email…",
+    "noMembers": "No members"
   },
   "experimentVisibility": {
     "visibilityCardTitle": "Actions",
