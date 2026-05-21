@@ -93,7 +93,7 @@ export function ExperimentDetailsCard({
               <ExperimentMembersTrail
                 members={members}
                 isLoading={isMembersLoading}
-                href={`/${locale}/platform/experiments/${experimentId}/collaborators`}
+                href={`/${locale}/platform/experiments${isArchived ? "-archive" : ""}/${experimentId}/collaborators`}
               />
             </div>
 
