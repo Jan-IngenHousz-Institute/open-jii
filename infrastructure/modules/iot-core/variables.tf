@@ -59,3 +59,9 @@ variable "iot_s3_policy_name" {
   description = "Name for the IAM policy that allows IoT Core to write to S3"
   type        = string
 }
+
+variable "enable_large_iot_sqs" {
+  description = "Whether to create the SQS queue and S3 event notifications for large-iot/ prefix ingestion into Databricks"
+  type        = bool
+  default     = false
+}

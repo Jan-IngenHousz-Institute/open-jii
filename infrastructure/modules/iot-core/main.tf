@@ -165,6 +165,146 @@ resource "aws_iam_policy" "backend_s3_presign" {
   })
 }
 
+# ---------------------------------------------------------------
+# SQS queue + S3 event notifications for large-iot/ ingestion
+# Only created when enable_large_iot_sqs = true (dev / prod).
+# DR env skips this because it has no Databricks workspace.
+# ---------------------------------------------------------------
+
+resource "aws_sqs_queue" "large_iot_dlq" {
+  count                     = var.enable_large_iot_sqs ? 1 : 0
+  name                      = "open-jii-${var.environment}-large-iot-dlq"
+  message_retention_seconds = 1209600 # 14 days
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+}
+
+resource "aws_sqs_queue" "large_iot_notifications" {
+  count                      = var.enable_large_iot_sqs ? 1 : 0
+  name                       = "open-jii-${var.environment}-large-iot-notifications"
+  visibility_timeout_seconds = 300
+  message_retention_seconds  = 86400 # 1 day
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.large_iot_dlq[0].arn
+    maxReceiveCount     = 3
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+}
+
+resource "aws_sqs_queue_policy" "large_iot_notifications" {
+  count     = var.enable_large_iot_sqs ? 1 : 0
+  queue_url = aws_sqs_queue.large_iot_notifications[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowS3SendMessage"
+      Effect    = "Allow"
+      Principal = { Service = "s3.amazonaws.com" }
+      Action    = "sqs:SendMessage"
+      Resource  = aws_sqs_queue.large_iot_notifications[0].arn
+      Condition = {
+        ArnLike = {
+          "aws:SourceArn" = var.s3_archive_bucket_arn
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_s3_bucket_notification" "large_iot" {
+  count  = var.enable_large_iot_sqs ? 1 : 0
+  bucket = var.s3_archive_bucket_name
+
+  queue {
+    queue_arn     = aws_sqs_queue.large_iot_notifications[0].arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_prefix = "large-iot/"
+  }
+
+  depends_on = [aws_sqs_queue_policy.large_iot_notifications]
+}
+
+# IAM policy allowing the Databricks storage-credential role to read large-iot
+# objects from S3 and consume the SQS notification queue via Auto Loader.
+resource "aws_iam_policy" "databricks_large_iot_read" {
+  count = var.enable_large_iot_sqs ? 1 : 0
+  name  = "open_jii_${var.environment}_databricks_large_iot_read"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "S3Read"
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:ListBucket"]
+        Resource = [
+          "${var.s3_archive_bucket_arn}",
+          "${var.s3_archive_bucket_arn}/large-iot/*"
+        ]
+      },
+      {
+        Sid    = "SQSConsume"
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl"
+        ]
+        Resource = aws_sqs_queue.large_iot_notifications[0].arn
+      }
+    ]
+  })
+}
+
+# CloudWatch alarms for queue health monitoring.
+resource "aws_cloudwatch_metric_alarm" "large_iot_queue_depth" {
+  count               = var.enable_large_iot_sqs ? 1 : 0
+  alarm_name          = "open-jii-${var.environment}-large-iot-queue-depth"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 300
+  statistic           = "Maximum"
+  threshold           = 1000
+  alarm_description   = "Large IoT SQS queue depth is high — Auto Loader may be lagging"
+
+  dimensions = {
+    QueueName = aws_sqs_queue.large_iot_notifications[0].name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "large_iot_dlq_depth" {
+  count               = var.enable_large_iot_sqs ? 1 : 0
+  alarm_name          = "open-jii-${var.environment}-large-iot-dlq-depth"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 60
+  statistic           = "Maximum"
+  threshold           = 0
+  alarm_description   = "Large IoT DLQ has messages — S3 notifications are failing to process"
+
+  dimensions = {
+    QueueName = aws_sqs_queue.large_iot_dlq[0].name
+  }
+}
+
 # ----------------
 # IoT Topic Rules
 # ----------------

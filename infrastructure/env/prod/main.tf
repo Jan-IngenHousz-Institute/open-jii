@@ -119,6 +119,7 @@ module "iot_core" {
   s3_archive_bucket_arn  = module.iot_raw_archive_s3.bucket_arn
   iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
+  enable_large_iot_sqs   = true
 }
 
 module "cognito" {
@@ -352,6 +353,40 @@ module "storage_credential" {
   depends_on = [module.databricks_workspace]
 }
 
+# Attach the Databricks S3+SQS read policy to the storage-credential IAM role
+# so Auto Loader can read large-iot/ objects and consume the notification queue.
+resource "aws_iam_role_policy_attachment" "databricks_large_iot_read" {
+  role       = module.storage_credential.iam_role_name
+  policy_arn = module.iot_core.databricks_large_iot_read_policy_arn
+}
+
+# UC external location for the large-iot/ S3 prefix so the DLT pipeline
+# can access it under Unity Catalog governance.
+module "large_iot_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "large-iot-${var.environment}"
+  bucket_name             = module.iot_raw_archive_s3.bucket_id
+  external_location_path  = "large-iot"
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for large IoT payloads in ${var.environment}"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential, aws_iam_role_policy_attachment.databricks_large_iot_read]
+}
+
 # Create external location for this environment
 module "external_location" {
   source = "../../modules/databricks/external-location"
@@ -475,6 +510,9 @@ module "centrum_pipeline" {
     "ENVIRONMENT"                = upper(var.environment)
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
+    "LARGE_IOT_S3_PATH"          = "s3://${module.iot_raw_archive_s3.bucket_id}/large-iot/"
+    "LARGE_IOT_SQS_QUEUE_URL"    = module.iot_core.large_iot_sqs_queue_url
+    "LARGE_IOT_INGEST_ENABLED"   = "true"
   }
 
   continuous_mode  = true
