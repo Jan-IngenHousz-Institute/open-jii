@@ -5,18 +5,21 @@ import * as React from "react";
 
 import { cn } from "../lib/utils";
 
-// Root
 const NavTabs = TabsPrimitive.Root;
 
-// List
+// List — shrinks to fit its tabs (the 1px bottom border only spans the actual
+// tab row, not the full content area). `self-start` opts out of stretch-align
+// inside flex-col parents. No `overflow-x-auto` because CSS coerces the other
+// axis to auto, which clips the active trigger's `-mb-px` underline and turns
+// the row into a 1-pixel vertical scroll trap.
 const NavTabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "bg-surface scrollbar-thin inline-flex max-w-full gap-1 overflow-x-auto rounded-md p-1",
+      "inline-flex max-w-full flex-wrap items-end gap-6 self-start border-b border-border",
       className,
     )}
     {...props}
@@ -24,39 +27,46 @@ const NavTabsList = React.forwardRef<
 ));
 NavTabsList.displayName = "NavTabsList";
 
-// Trigger
+// Trigger — underline style. `-mb-px` lifts the 2px active border so it sits on
+// top of the list's 1px bottom border (single continuous line, no gap).
+// `count` is optional: when provided the badge renders inside the button. When
+// `asChild` is used (e.g. wrapping a Next.js Link) `count` should be omitted so
+// children pass through unwrapped and asChild composition works correctly.
+interface NavTabsTriggerProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> {
+  count?: number;
+}
+
 const NavTabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
+  React.ComponentRef<typeof TabsPrimitive.Trigger>,
+  NavTabsTriggerProps
+>(({ className, children, count, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      // pill-style buttons
-      "relative flex select-none items-center gap-2 rounded-sm px-4 py-2 text-sm font-medium transition-colors",
-
-      // active — gradient top to bottom
-      "data-[state=active]:bg-gradient-to-b",
-      "data-[state=active]:from-sidebar-background",
-      "data-[state=active]:to-jii-dark-green",
-      "data-[state=active]:text-white",
-
-      // inactive
-      "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground",
-
-      // disabled
+      "group relative -mb-px inline-flex shrink-0 select-none items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-1 pb-3 pt-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "data-[state=active]:border-primary data-[state=active]:text-primary",
+      "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:border-muted-foreground/40 data-[state=inactive]:hover:text-foreground",
       "disabled:pointer-events-none disabled:opacity-50",
-
       className,
     )}
     {...props}
-  />
+  >
+    {typeof count === "number" ? (
+      <>
+        <span>{children}</span>
+        <span className="bg-muted text-muted-foreground group-data-[state=active]:bg-primary/20 group-data-[state=active]:text-primary inline-flex min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold tabular-nums">
+          {count}
+        </span>
+      </>
+    ) : (
+      children
+    )}
+  </TabsPrimitive.Trigger>
 ));
 NavTabsTrigger.displayName = "NavTabsTrigger";
 
-// Content
 const NavTabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
+  React.ComponentRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content ref={ref} className={cn("mt-3", className)} {...props} />

@@ -17,12 +17,7 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
-import {
-  UnderlineTabs,
-  UnderlineTabsContent,
-  UnderlineTabsList,
-  UnderlineTabsTrigger,
-} from "@repo/ui/components/underline-tabs";
+import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
 interface ExperimentCollaboratorsPageProps {
   params: Promise<{ id: string }>;
@@ -140,20 +135,20 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
         </Button>
       </div>
 
-      <UnderlineTabs defaultValue="members" className="w-full">
-        <UnderlineTabsList>
-          <UnderlineTabsTrigger value="members" count={filteredMembers.length}>
+      <NavTabs defaultValue="members" className="w-full">
+        <NavTabsList>
+          <NavTabsTrigger value="members" count={filteredMembers.length}>
             {t("experimentSettings.membersTab")}
-          </UnderlineTabsTrigger>
-          <UnderlineTabsTrigger value="invited" count={filteredInvitations.length}>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="invited" count={filteredInvitations.length}>
             {t("experimentSettings.invitedTab")}
-          </UnderlineTabsTrigger>
-          <UnderlineTabsTrigger value="requests" count={filteredJoinRequests.length}>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="requests" count={filteredJoinRequests.length}>
             {t("experimentSettings.requestsTab")}
-          </UnderlineTabsTrigger>
-        </UnderlineTabsList>
+          </NavTabsTrigger>
+        </NavTabsList>
 
-        <UnderlineTabsContent value="members">
+        <NavTabsContent value="members">
           {isMembersError ? (
             <p className="text-destructive text-sm">
               {t("experimentSettings.memberManagementError")}
@@ -169,24 +164,24 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
               isAddingMember={isAddingMember}
             />
           )}
-        </UnderlineTabsContent>
+        </NavTabsContent>
 
-        <UnderlineTabsContent value="invited">
+        <NavTabsContent value="invited">
           <ExperimentPendingInvitationsPanel
             invitations={filteredInvitations}
             isArchived={isArchived}
             isAdmin={isAdmin}
           />
-        </UnderlineTabsContent>
+        </NavTabsContent>
 
-        <UnderlineTabsContent value="requests">
+        <NavTabsContent value="requests">
           <ExperimentJoinRequestsPanel
             experimentId={id}
             joinRequests={filteredJoinRequests}
             isAdmin={isAdmin}
           />
-        </UnderlineTabsContent>
-      </UnderlineTabs>
+        </NavTabsContent>
+      </NavTabs>
 
       <ExperimentInviteModal
         experimentId={id}
