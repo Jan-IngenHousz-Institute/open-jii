@@ -19,29 +19,31 @@ export function InstructionNode({ content }: InstructionNodeProps) {
   const isEmpty = !content || content.text === "<p><br></p>";
 
   return (
-    <View className={clsx("flex-1 gap-2 rounded-xl px-4 pt-4")}>
+    <View className="flex-1 gap-2 px-4 pt-4">
       <Text className={clsx("text-lg font-bold", classes.text)}>
         {t("measurementFlow:instructionNode.heading")}
       </Text>
 
-      {isEmpty ? (
-        <View className="flex-1 items-center justify-center">
-          <View
-            className={clsx(
-              "mb-4 h-14 w-14 items-center justify-center rounded-full",
-              classes.surface,
-            )}
-          >
-            <FileText size={26} color={colors.onSurface} />
-          </View>
+      <View className="border-border bg-card flex-1 rounded-lg border p-4">
+        {isEmpty ? (
+          <View className="flex-1 items-center justify-center">
+            <View
+              className={clsx(
+                "mb-4 h-14 w-14 items-center justify-center rounded-full",
+                classes.surface,
+              )}
+            >
+              <FileText size={26} color={colors.onSurface} />
+            </View>
 
-          <Text className={clsx("text-center text-base font-medium", classes.textSecondary)}>
-            {t("measurementFlow:instructionNode.empty")}
-          </Text>
-        </View>
-      ) : (
-        <HtmlViewer htmlContent={content.text} />
-      )}
+            <Text className={clsx("text-center text-base font-medium", classes.textSecondary)}>
+              {t("measurementFlow:instructionNode.empty")}
+            </Text>
+          </View>
+        ) : (
+          <HtmlViewer htmlContent={content.text} />
+        )}
+      </View>
     </View>
   );
 }

@@ -1,123 +1,174 @@
-import { clsx } from "clsx";
-import { FileText } from "lucide-react-native";
-import React from "react";
-import { View, Text, ActivityIndicator } from "react-native";
+import { Search } from "lucide-react-native";
+import React, { useMemo } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  View,
+} from "react-native";
+import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
+import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-precached-experiment-data";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { useExperimentsFlowMeta } from "~/features/measurement-flow/hooks/use-experiments-flow-meta";
 import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-load-experiment-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
+import { Banner } from "~/shared/ui/Banner";
 import { Button } from "~/shared/ui/Button";
-import { Dropdown } from "~/shared/ui/Dropdown";
-import { HtmlViewer } from "~/shared/ui/HtmlViewer";
+import { Input } from "~/shared/ui/Input";
+import { Tag } from "~/shared/ui/Tag";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
+import { ExperimentCard } from "./experiment-card";
 import { OfflineModeIndicator } from "./offline-mode-indicator";
 
 export function ExperimentSelectionStep() {
-  const { classes, colors } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const setExperimentId = useMeasurementFlowStore((s) => s.setExperimentId);
   const { isReady: experimentFlowReady } = useLoadExperimentFlow(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
-
-  const selectedExperiment = experiments.find((exp) => exp.value === selectedExperimentId);
-
   const { data: precachedData } = usePrecachedExperimentData(selectedExperimentId);
+  const { data: connectedDevice } = useConnectedDevice();
 
-  const handleStartFlow = () => {
-    if (!selectedExperimentId || !experimentFlowReady) {
-      return;
-    }
+  const [search, setSearch] = React.useState("");
+  const ids = useMemo(() => experiments.map((e) => e.value), [experiments]);
+  const flowMeta = useExperimentsFlowMeta(ids);
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return experiments;
+    return experiments.filter(
+      (e) => e.label.toLowerCase().includes(q) || (e.description ?? "").toLowerCase().includes(q),
+    );
+  }, [experiments, search]);
+
+  const selectedExperiment = experiments.find((e) => e.value === selectedExperimentId);
+  const selectedMeta = selectedExperimentId ? flowMeta[selectedExperimentId] : undefined;
+  const requiresSensor = !!selectedMeta?.requiresSensor;
+  const isConnected = !!connectedDevice;
+  const showSensorBanner = !!selectedExperimentId && requiresSensor && !isConnected;
+
+  const handleStart = () => {
+    if (!selectedExperimentId || !experimentFlowReady) return;
     clearHistory();
     setExperimentId(selectedExperimentId);
   };
 
   return (
-    <View className={clsx("flex-1")}>
-      <View className="flex-1 px-4 pt-4">
-        <View className="mb-2 flex-row items-center justify-between">
-          <Text className={clsx("text-lg font-bold", classes.text)}>
-            {t("measurementFlow:experimentSelection.heading")}
-          </Text>
-          <OfflineModeIndicator isVisible={!!precachedData} />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View className="flex-1">
+        <View className="px-4 pb-2 pt-4">
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1 pr-3">
+              <Text
+                className="text-on-surface"
+                style={{ fontFamily: "Poppins-Bold", fontSize: 22, lineHeight: 26 }}
+              >
+                {t("experimentSelection.heroTitle")}
+              </Text>
+              <Text className="text-muted-body mt-1 text-[13px]">
+                {t("experimentSelection.heroSubtitle")}
+              </Text>
+            </View>
+            <OfflineModeIndicator isVisible={!!precachedData} />
+          </View>
+
+          <View className="mt-3">
+            <Input
+              value={search}
+              onChangeText={setSearch}
+              placeholder={t("experimentSelection.searchPlaceholder")}
+              leftIcon={<Search size={18} color={colors.inactive} />}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View className="mt-4 flex-row items-center justify-between">
+            <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 14 }}>
+              {t("experimentSelection.assignedToYou")}
+            </Text>
+            {experiments.length > 0 ? <Tag>{`${experiments.length}`}</Tag> : null}
+          </View>
         </View>
 
-        {isLoading && (
-          <View className="items-center py-8">
+        {isLoading ? (
+          <View className="items-center py-10">
             <ActivityIndicator size="large" color={colors.brand} />
-            <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
-              {t("measurementFlow:experimentSelection.loadingExperiments")}
+            <Text className="text-muted-body mt-3 text-center">
+              {t("experimentSelection.loadingExperiments")}
             </Text>
           </View>
-        )}
-
-        {!isLoading && error && (
-          <View className="items-center py-8">
-            <Text className="text-destructive text-center">
-              {t("measurementFlow:experimentSelection.loadFailed")}
-            </Text>
+        ) : error ? (
+          <View className="items-center py-10">
+            <Text className="text-error text-center">{t("experimentSelection.loadFailed")}</Text>
           </View>
-        )}
-
-        {!isLoading && !error && (
-          <>
-            <Dropdown
-              options={experiments}
-              selectedValue={selectedExperimentId}
-              onSelect={(value) => setSelectedExperimentId(value)}
-              placeholder={t("measurementFlow:experimentSelection.chooseExperimentPlaceholder")}
-            />
-
-            {selectedExperimentId && (
-              <View className="flex-1 gap-2">
-                <Text className={clsx("font-bold", classes.text)}>
-                  {t("measurementFlow:experimentSelection.description")}
-                </Text>
-
-                {selectedExperiment?.fullDescription ? (
-                  <View className="flex-1">
-                    <HtmlViewer htmlContent={selectedExperiment.fullDescription} />
-                  </View>
-                ) : (
-                  <View className="flex-1 items-center justify-center">
-                    <>
-                      <View
-                        className={clsx(
-                          "mb-4 h-14 w-14 items-center justify-center rounded-full",
-                          classes.surface,
-                        )}
-                      >
-                        <FileText size={26} color={colors.onSurface} />
-                      </View>
-
-                      <Text
-                        className={clsx("text-center text-base font-medium", classes.textSecondary)}
-                      >
-                        {t("measurementFlow:experimentSelection.noDescription")}
-                      </Text>
-                    </>
-                  </View>
-                )}
-              </View>
-            )}
-          </>
+        ) : (
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.value}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 200, gap: 10 }}
+            renderItem={({ item }) => {
+              const meta = flowMeta[item.value];
+              return (
+                <ExperimentCard
+                  id={item.value}
+                  title={item.label}
+                  description={item.description}
+                  selected={selectedExperimentId === item.value}
+                  onPress={setSelectedExperimentId}
+                  requiresSensor={!!meta?.requiresSensor}
+                  questionsOnly={!!meta?.questionsOnly}
+                  nodeCount={meta?.nodeCount ?? 0}
+                  durationMin={meta?.durationMin ?? 0}
+                />
+              );
+            }}
+          />
         )}
       </View>
 
-      <View className="px-4 py-3">
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingBottom: 16,
+          paddingTop: 8,
+          gap: 10,
+          backgroundColor: colors.background,
+        }}
+      >
+        {showSensorBanner ? (
+          <Banner
+            title={t("experimentSelection.sensorBannerTitle")}
+            body={t("experimentSelection.sensorBannerBody")}
+            actionLabel={t("experimentSelection.sensorBannerAction")}
+            onAction={() => useDeviceSheetStore.getState().open()}
+          />
+        ) : null}
         <Button
-          title={t("measurementFlow:experimentSelection.startFlow")}
-          onPress={handleStartFlow}
+          title={
+            selectedExperiment
+              ? t("experimentSelection.startNamedFlow", {
+                  label: selectedExperiment.label.split(" ")[0].toLowerCase(),
+                })
+              : t("experimentSelection.startFlow")
+          }
+          onPress={handleStart}
           isDisabled={!selectedExperimentId || !experimentFlowReady}
-          style={{ height: 44 }}
+          size="lg"
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

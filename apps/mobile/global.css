@@ -48,7 +48,19 @@
   --jii-secondary-blue: 207 78% 82%; /* #afd7f4 */
   --jii-secondary-yellow: 55 100% 75%; /* #fff381 */
 
-  --success: 160 84% 39%; /* #10B981 */
+  --jii-darker-green: 180 100% 9%; /* #002f2f */
+  --jii-yellow: 55 100% 75%; /* #fff481 */
+  --jii-yellow-light: 56 80% 87%; /* #fbf8c1 */
+  --jii-mint: 180 76% 94%; /* #e2fcfc */
+  --jii-mint-light: 180 100% 96%; /* #edffff */
+  --muted-body: 207 8% 44%; /* #68737b */
+
+  --badge-active: 142 86% 90%; /* #ccfcd8 */
+  --badge-stale: 35 100% 85%; /* #ffe0b2 */
+  --badge-published: 200 79% 92%; /* #d8f2fc */
+  --badge-featured: 180 76% 94%; /* #e2fcfc */
+
+  --success: 140 89% 38%; /* #09b732 — design system success */
   --warning: 43 96% 56%; /* #FBBF24 */
   --error: 0 84% 60%; /* #EF4444 */
   --info: 217 91% 60%; /* #3B82F6 */
@@ -81,4 +93,21 @@
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   --gray-background: 213 18% 14%; /* #1C2128 */
+
+  --jii-darker-green: 180 100% 9%;
+  --jii-yellow: 55 80% 60%;
+  --jii-yellow-light: 56 25% 22%;
+  --jii-mint: 180 14% 16%;
+  --jii-mint-light: 180 14% 18%;
+  --muted-body: 210 7% 70%;
+
+  --badge-active: 142 30% 22%;
+  --badge-stale: 35 50% 28%;
+  --badge-published: 200 30% 25%;
+  --badge-featured: 180 14% 20%;
+
+  --success: 140 70% 50%;
+  --warning: 43 96% 56%;
+  --error: 0 84% 60%;
+  --info: 217 91% 60%;
 }

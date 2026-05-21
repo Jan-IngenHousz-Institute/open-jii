@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, render, waitFor } from "@testing-library/react-native";
 import React, { useContext } from "react";
-import { Text, useColorScheme } from "react-native";
+import { Appearance, Text } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { darkTheme, lightTheme } from "~/shared/constants/theme";
 
@@ -46,8 +46,8 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 type EnhancedTheme = typeof lightTheme & {
-  changeTheme: (pref: "system" | "light" | "dark") => Promise<void>;
-  themePreference: "system" | "light" | "dark";
+  changeTheme: (pref: "light" | "dark") => Promise<void>;
+  themePreference: "light" | "dark";
 };
 
 const Probe: React.FC<{ onRender: (theme: EnhancedTheme) => void }> = ({ onRender }) => {
@@ -77,7 +77,7 @@ beforeEach(() => {
   asyncStorageStore.value = null;
   asyncStorageStore.getError = null;
   asyncStorageStore.setError = null;
-  vi.mocked(useColorScheme).mockReturnValue("light");
+  vi.spyOn(Appearance, "getColorScheme").mockReturnValue("light");
   colorSchemeSetMock.mockClear();
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();
@@ -88,35 +88,38 @@ afterEach(() => {
 });
 
 describe("ThemeProvider", () => {
-  it("defaults to light theme when no preference is saved and system is light", async () => {
+  it("seeds from OS when no preference is saved and OS reports light", async () => {
     const { getTheme } = renderWithProvider();
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith("themePreference"));
-    await waitFor(() => expect(getTheme().themePreference).toBe("system"));
+    await waitFor(() => expect(getTheme().themePreference).toBe("light"));
     expect(getTheme().isDark).toBe(false);
     expect(getTheme().classes).toEqual(lightTheme.classes);
     expect(colorSchemeSetMock).toHaveBeenLastCalledWith("light");
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith("themePreference", "light");
   });
 
-  it("resolves system preference to dark when OS reports dark", async () => {
-    vi.mocked(useColorScheme).mockReturnValue("dark");
+  it("seeds from OS when no preference is saved and OS reports dark", async () => {
+    vi.spyOn(Appearance, "getColorScheme").mockReturnValue("dark");
     const { getTheme } = renderWithProvider();
-    await waitFor(() => expect(getTheme().isDark).toBe(true));
+    await waitFor(() => expect(getTheme().themePreference).toBe("dark"));
+    expect(getTheme().isDark).toBe(true);
     expect(getTheme().classes).toEqual(darkTheme.classes);
     expect(colorSchemeSetMock).toHaveBeenLastCalledWith("dark");
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith("themePreference", "dark");
   });
 
-  it("loads saved 'dark' preference from AsyncStorage and ignores OS scheme", async () => {
+  it("loads saved 'dark' preference from AsyncStorage and ignores OS", async () => {
     asyncStorageStore.value = "dark";
-    vi.mocked(useColorScheme).mockReturnValue("light");
+    vi.spyOn(Appearance, "getColorScheme").mockReturnValue("light");
     const { getTheme } = renderWithProvider();
     await waitFor(() => expect(getTheme().themePreference).toBe("dark"));
     expect(getTheme().isDark).toBe(true);
     expect(colorSchemeSetMock).toHaveBeenLastCalledWith("dark");
   });
 
-  it("loads saved 'light' preference from AsyncStorage and ignores OS scheme", async () => {
+  it("loads saved 'light' preference from AsyncStorage and ignores OS", async () => {
     asyncStorageStore.value = "light";
-    vi.mocked(useColorScheme).mockReturnValue("dark");
+    vi.spyOn(Appearance, "getColorScheme").mockReturnValue("dark");
     const { getTheme } = renderWithProvider();
     await waitFor(() => expect(getTheme().themePreference).toBe("light"));
     expect(getTheme().isDark).toBe(false);
@@ -125,7 +128,7 @@ describe("ThemeProvider", () => {
 
   it("persists changeTheme to AsyncStorage and updates theme", async () => {
     const { getTheme } = renderWithProvider();
-    await waitFor(() => expect(getTheme().themePreference).toBe("system"));
+    await waitFor(() => expect(getTheme().themePreference).toBe("light"));
 
     await act(async () => {
       await getTheme().changeTheme("dark");
@@ -137,20 +140,20 @@ describe("ThemeProvider", () => {
     expect(colorSchemeSetMock).toHaveBeenLastCalledWith("dark");
   });
 
-  it("logs and stays on default theme when AsyncStorage.getItem rejects", async () => {
+  it("logs and stays on initial seed when AsyncStorage.getItem rejects", async () => {
     asyncStorageStore.getError = new Error("read fail");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { getTheme } = renderWithProvider();
     await waitFor(() =>
       expect(errorSpy).toHaveBeenCalledWith("Failed to load theme preference:", expect.any(Error)),
     );
-    expect(getTheme().themePreference).toBe("system");
+    expect(getTheme().themePreference).toBe("light");
     expect(getTheme().isDark).toBe(false);
   });
 
-  it("logs and does not change preference when AsyncStorage.setItem rejects", async () => {
+  it("logs and does not change preference when AsyncStorage.setItem rejects on changeTheme", async () => {
     const { getTheme } = renderWithProvider();
-    await waitFor(() => expect(getTheme().themePreference).toBe("system"));
+    await waitFor(() => expect(getTheme().themePreference).toBe("light"));
     asyncStorageStore.setError = new Error("write fail");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
@@ -159,19 +162,6 @@ describe("ThemeProvider", () => {
     });
 
     expect(errorSpy).toHaveBeenCalledWith("Failed to save theme preference:", expect.any(Error));
-    expect(getTheme().themePreference).toBe("system");
-  });
-
-  it("reacts to system color scheme changes while preference is 'system'", async () => {
-    const { getTheme, rerender } = renderWithProvider();
-    await waitFor(() => expect(getTheme().isDark).toBe(false));
-
-    vi.mocked(useColorScheme).mockReturnValue("dark");
-    rerender(
-      <ThemeProvider>
-        <Probe onRender={() => undefined} />
-      </ThemeProvider>,
-    );
-    await waitFor(() => expect(colorSchemeSetMock).toHaveBeenLastCalledWith("dark"));
+    expect(getTheme().themePreference).toBe("light");
   });
 });

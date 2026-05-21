@@ -18,12 +18,50 @@
   },
   "experimentSelection": {
     "heading": "Select experiment",
+    "heroTitle": "Choose an experiment",
+    "heroSubtitle": "Choose an experiment to begin.",
+    "searchPlaceholder": "Search experiments…",
+    "assignedToYou": "Assigned to you",
     "loadingExperiments": "Loading experiments...",
     "loadFailed": "Failed to load experiments. Please try again.",
     "chooseExperimentPlaceholder": "Choose an experiment",
     "description": "Description",
     "noDescription": "No description available",
-    "startFlow": "Start flow"
+    "startFlow": "Start flow",
+    "startNamedFlow": "Start {{label}} flow",
+    "sensorBannerTitle": "This flow needs a sensor",
+    "sensorBannerBody": "Connect a MultispeQ to capture readings.",
+    "sensorBannerAction": "Connect",
+    "tag": {
+      "sensorRequired": "Sensor required",
+      "questionsOnly": "Questions only",
+      "sensorAndQuestions": "Sensor + questions"
+    },
+    "meta": {
+      "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
+    }
+  },
+  "hero": {
+    "activeFlow": "ACTIVE FLOW",
+    "stepOfTotal": "Step {{step}} of {{total}}",
+    "stepTypeLabel": {
+      "instruction": "Instruction",
+      "question": "Question",
+      "measurement": "Measurement",
+      "analysis": "Analysis",
+      "review": "Review answers",
+      "completed": "Completed"
+    },
+    "exitLabel": "Exit flow"
+  },
+  "exitSheet": {
+    "title": "Exit flow?",
+    "body": "You're on step {{step}} of {{total}}. Pause to keep your progress, or discard to start over later.",
+    "pause": "Pause flow",
+    "pauseSub": "We'll save your answers and progress.",
+    "discard": "Discard flow",
+    "discardSub": "Throw away this attempt and start over.",
+    "continue": "Continue flow"
   },
   "offlineIndicator": {
     "ready": "Offline ready"

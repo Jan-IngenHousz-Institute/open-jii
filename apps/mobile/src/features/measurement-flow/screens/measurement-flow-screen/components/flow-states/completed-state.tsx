@@ -70,8 +70,8 @@ export function CompletedState() {
 
   return (
     <View className="flex-1">
-      <View className="py-4">
-        <TabBar tabs={tabs} activeTab={filter} onTabChange={setFilter} />
+      <View className="px-4 pt-2">
+        <TabBar variant="underline" tabs={tabs} activeTab={filter} onTabChange={setFilter} />
       </View>
 
       {hasItems && (
