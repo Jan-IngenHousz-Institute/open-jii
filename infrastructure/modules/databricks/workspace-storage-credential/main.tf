@@ -73,3 +73,11 @@ resource "aws_iam_role_policy_attachment" "storage_access" {
   role       = aws_iam_role.storage_access.name
   policy_arn = aws_iam_policy.storage_access.arn
 }
+
+# Attach any additional policies (e.g. IoT archive S3 read for Databricks Auto Loader)
+resource "aws_iam_role_policy_attachment" "additional" {
+  count = length(var.additional_policy_arns)
+
+  role       = aws_iam_role.storage_access.name
+  policy_arn = var.additional_policy_arns[count.index]
+}

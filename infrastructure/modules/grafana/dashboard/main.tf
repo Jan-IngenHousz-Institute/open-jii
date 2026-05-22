@@ -1009,6 +1009,158 @@ EOT
   }
 }
 
+resource "grafana_rule_group" "large_iot_alerts" {
+  provider           = grafana.amg
+  name               = "Large IoT Ingestion Alerts"
+  folder_uid         = grafana_folder.folder.uid
+  interval_seconds   = 60
+  disable_provenance = true
+
+  rule {
+    name      = "Large IoT Queue Depth High"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SQS"
+        metricName = "ApproximateNumberOfMessagesVisible"
+        statistic  = "Maximum"
+        dimensions = {
+          QueueName = "open-jii-${var.environment}-large-iot-notifications"
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 1000"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "NoData"
+    exec_err_state = "OK"
+    for            = "10m"
+
+    annotations = {
+      description = "Large IoT SQS queue has more than 1000 unprocessed messages — Auto Loader may be lagging or the pipeline is down"
+      summary     = "Large IoT ingestion queue depth is high"
+    }
+    labels = {
+      severity = "warning"
+      service  = "iot-ingestion"
+    }
+  }
+
+  rule {
+    name      = "Large IoT DLQ Has Messages"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SQS"
+        metricName = "ApproximateNumberOfMessagesVisible"
+        statistic  = "Maximum"
+        dimensions = {
+          QueueName = "open-jii-${var.environment}-large-iot-dlq"
+        }
+      })
+
+      relative_time_range {
+        from = 60
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "NoData"
+    exec_err_state = "OK"
+    for            = "0s"
+
+    annotations = {
+      description = "Messages have landed in the large IoT DLQ — S3 event notifications are failing to be processed after 3 retries"
+      summary     = "Large IoT DLQ is not empty"
+    }
+    labels = {
+      severity = "critical"
+      service  = "iot-ingestion"
+    }
+  }
+}
+
 resource "grafana_notification_policy" "policy" {
   provider = grafana.amg
 

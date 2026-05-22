@@ -340,24 +340,18 @@ module "event_hooks_secret_scope" {
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
 
-  credential_name = "open-jii-${var.environment}-metastore-access"
-  role_name       = "open-jii-${var.environment}-uc-access"
-  environment     = var.environment
-  bucket_name     = var.centralized_metastore_bucket_name
-  isolation_mode  = "ISOLATION_MODE_OPEN"
+  credential_name        = "open-jii-${var.environment}-metastore-access"
+  role_name              = "open-jii-${var.environment}-uc-access"
+  environment            = var.environment
+  bucket_name            = var.centralized_metastore_bucket_name
+  isolation_mode         = "ISOLATION_MODE_OPEN"
+  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
 
   providers = {
     databricks.workspace = databricks.workspace
   }
 
   depends_on = [module.databricks_workspace]
-}
-
-# Attach the Databricks S3+SQS read policy to the storage-credential IAM role
-# so Auto Loader can read large-iot/ objects and consume the notification queue.
-resource "aws_iam_role_policy_attachment" "databricks_large_iot_read" {
-  role       = module.storage_credential.iam_role_name
-  policy_arn = module.iot_core.databricks_large_iot_read_policy_arn
 }
 
 # UC external location for the large-iot/ S3 prefix so the DLT pipeline
@@ -384,7 +378,7 @@ module "large_iot_external_location" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.storage_credential, aws_iam_role_policy_attachment.databricks_large_iot_read]
+  depends_on = [module.storage_credential]
 }
 
 # Create external location for this environment
