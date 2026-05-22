@@ -106,7 +106,13 @@ MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 LARGE_IOT_S3_PATH = spark.conf.get("LARGE_IOT_S3_PATH", "")
 LARGE_IOT_SQS_QUEUE_URL = spark.conf.get("LARGE_IOT_SQS_QUEUE_URL", "")
-LARGE_IOT_INGEST_ENABLED = spark.conf.get("LARGE_IOT_INGEST_ENABLED", "false")
+LARGE_IOT_INGEST_ENABLED = spark.conf.get("LARGE_IOT_INGEST_ENABLED", "false").strip().lower() == "true"
+
+if LARGE_IOT_INGEST_ENABLED:
+    if not LARGE_IOT_S3_PATH:
+        raise ValueError("LARGE_IOT_S3_PATH must be set when LARGE_IOT_INGEST_ENABLED is true")
+    if not LARGE_IOT_SQS_QUEUE_URL:
+        raise ValueError("LARGE_IOT_SQS_QUEUE_URL must be set when LARGE_IOT_INGEST_ENABLED is true")
 
 RAW_LARGE_IOT_TABLE = "raw_large_iot_data"
 
@@ -424,7 +430,7 @@ def clean_data():
         )
     )
 
-    if LARGE_IOT_INGEST_ENABLED == "true":
+    if LARGE_IOT_INGEST_ENABLED:
         large_iot_df = dlt.read_stream(RAW_LARGE_IOT_TABLE)
 
         large_iot_clean = (
@@ -460,7 +466,7 @@ def clean_data():
             .withColumn("hour", F.hour("timestamp"))
             .withColumn(
                 "ingest_latency_ms",
-                F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
+                (F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")) * 1000
             )
             .withColumn(
                 "id",
@@ -1372,7 +1378,7 @@ def raw_ambyte_data():
 # COMMAND ----------
 
 # DBTITLE 1,Bronze Layer - Large IoT S3 Data
-if LARGE_IOT_INGEST_ENABLED == "true":
+if LARGE_IOT_INGEST_ENABLED:
     @dlt.table(
         name=RAW_LARGE_IOT_TABLE,
         comment="Streaming table: Large IoT payloads uploaded directly to S3 via pre-signed URL, partitioned by experiment_id",

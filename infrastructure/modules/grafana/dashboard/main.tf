@@ -1032,7 +1032,7 @@ resource "grafana_rule_group" "large_iot_alerts" {
         metricName = "ApproximateNumberOfMessagesVisible"
         statistic  = "Maximum"
         dimensions = {
-          QueueName = "open-jii-${var.environment}-large-iot-notifications"
+          QueueName = var.large_iot_notification_queue_name
         }
       })
 
@@ -1104,7 +1104,7 @@ EOT
         metricName = "ApproximateNumberOfMessagesVisible"
         statistic  = "Maximum"
         dimensions = {
-          QueueName = "open-jii-${var.environment}-large-iot-dlq"
+          QueueName = var.large_iot_dlq_name
         }
       })
 
@@ -1156,6 +1156,78 @@ EOT
     }
     labels = {
       severity = "critical"
+      service  = "iot-ingestion"
+    }
+  }
+
+  rule {
+    name      = "Large IoT Ingestion Lag High"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SQS"
+        metricName = "ApproximateAgeOfOldestMessage"
+        statistic  = "Maximum"
+        dimensions = {
+          QueueName = var.large_iot_notification_queue_name
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"last"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"last","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 900"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "NoData"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "The oldest unprocessed large IoT message is more than 15 minutes old — Auto Loader may be stuck or the pipeline has stopped consuming"
+      summary     = "Large IoT ingestion lag is high"
+    }
+    labels = {
+      severity = "warning"
       service  = "iot-ingestion"
     }
   }

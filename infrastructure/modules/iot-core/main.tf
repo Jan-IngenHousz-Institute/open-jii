@@ -172,7 +172,8 @@ resource "aws_iam_policy" "backend_s3_presign" {
 resource "aws_sqs_queue" "large_iot_dlq" {
   count                     = var.enable_large_iot_sqs ? 1 : 0
   name                      = "open-jii-${var.environment}-large-iot-dlq"
-  message_retention_seconds = 1209600 # 14 days
+  message_retention_seconds = 1209600
+  sqs_managed_sse_enabled   = true
 
   tags = {
     Environment = var.environment
@@ -185,7 +186,8 @@ resource "aws_sqs_queue" "large_iot_notifications" {
   count                      = var.enable_large_iot_sqs ? 1 : 0
   name                       = "open-jii-${var.environment}-large-iot-notifications"
   visibility_timeout_seconds = 300
-  message_retention_seconds  = 86400 # 1 day
+  message_retention_seconds  = 86400
+  sqs_managed_sse_enabled    = true
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.large_iot_dlq[0].arn
