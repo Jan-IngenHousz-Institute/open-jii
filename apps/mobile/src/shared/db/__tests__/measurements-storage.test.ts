@@ -8,7 +8,11 @@ import { compressForStorage } from "~/shared/utils/storage-compression";
 
 import * as schema from "../schema";
 
-const migrationFiles = ["0000_outgoing_firebird.sql", "0001_add_pending_status.sql"];
+const migrationFiles = [
+  "0000_outgoing_firebird.sql",
+  "0001_add_pending_status.sql",
+  "0002_dashing_lenny_balinger.sql",
+];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../../drizzle", f), "utf-8"),
 );
@@ -133,6 +137,357 @@ describe("measurements-storage", () => {
           )
           .run(),
       ).toThrow(/CHECK constraint/i);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // saveMeasurement: derived columns
+  // ---------------------------------------------------------------------------
+
+  describe("saveMeasurement — derived columns", () => {
+    it("populates questions_text from the measurement payload at save time", async () => {
+      const mod = await import("../measurements-storage");
+      const payload = {
+        topic: "t/t",
+        measurementResult: {
+          questions: [{ question_label: "lbl", question_text: "ask?", question_answer: "yes" }],
+        },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      };
+      await mod.saveMeasurement(payload, "pending");
+
+      const row = sqlite.prepare("SELECT questions_text FROM measurements").get() as {
+        questions_text: string;
+      };
+      expect(JSON.parse(row.questions_text)).toEqual(payload.measurementResult.questions);
+    });
+
+    it("flags has_comment when the payload has an annotation with type 'comment'", async () => {
+      const mod = await import("../measurements-storage");
+      await mod.saveMeasurement(
+        {
+          topic: "t/t",
+          measurementResult: {
+            annotations: [{ type: "comment", content: { text: "looks good", flagType: null } }],
+          },
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "proto-1",
+            timestamp: "2026-03-02T10:00:00.000Z",
+          },
+        },
+        "pending",
+      );
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(1);
+    });
+
+    it("keeps has_comment=0 when no comment annotation is present", async () => {
+      const mod = await import("../measurements-storage");
+      await mod.saveMeasurement(
+        {
+          topic: "t/t",
+          measurementResult: { questions: [] },
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "proto-1",
+            timestamp: "2026-03-02T10:00:00.000Z",
+          },
+        },
+        "pending",
+      );
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // updateMeasurement — derived columns (parity with saveMeasurement)
+  // ---------------------------------------------------------------------------
+
+  describe("updateMeasurement — derived columns", () => {
+    it("refreshes questions_text from the updated measurement payload", async () => {
+      insertRow("u1", "failed");
+      const mod = await import("../measurements-storage");
+      const newQuestions = [
+        { question_label: "plot", question_text: "Plot?", question_answer: "B12" },
+      ];
+      await mod.updateMeasurement("u1", {
+        topic: "t/t",
+        measurementResult: { questions: newQuestions },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      });
+
+      const row = sqlite
+        .prepare("SELECT questions_text FROM measurements WHERE id = 'u1'")
+        .get() as { questions_text: string };
+      expect(JSON.parse(row.questions_text)).toEqual(newQuestions);
+    });
+
+    it("flips has_comment to 1 when an update adds a comment annotation", async () => {
+      insertRow("u1", "failed");
+      const mod = await import("../measurements-storage");
+      await mod.updateMeasurement("u1", {
+        topic: "t/t",
+        measurementResult: {
+          annotations: [{ type: "comment", content: { text: "needs reshoot", flagType: null } }],
+        },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      });
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements WHERE id = 'u1'").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(1);
+    });
+
+    it("keeps has_comment at 0 when the updated payload has no comment annotation", async () => {
+      insertRow("u1", "failed");
+      const mod = await import("../measurements-storage");
+      await mod.updateMeasurement("u1", {
+        topic: "t/t",
+        measurementResult: { questions: [] },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      });
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements WHERE id = 'u1'").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getMeasurementsList
+  // ---------------------------------------------------------------------------
+
+  describe("getMeasurementsList", () => {
+    function insertListRow(
+      id: string,
+      status: "pending" | "failed" | "uploading" | "successful",
+      timestamp: string,
+      questionsText: string | null = null,
+      hasComment = 0,
+    ) {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements
+           (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          id,
+          status,
+          "test/topic",
+          compressForStorage({ value: 42 }),
+          "Test Experiment",
+          "protocol-1",
+          timestamp,
+          Date.now(),
+          questionsText,
+          hasComment,
+        );
+    }
+
+    it("returns rows ordered DESC by timestamp", async () => {
+      insertListRow("a", "successful", "2026-01-01T08:00:00Z");
+      insertListRow("b", "successful", "2026-01-01T12:00:00Z");
+      insertListRow("c", "successful", "2026-01-01T10:00:00Z");
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["successful"], { limit: 50, offset: 0 });
+
+      expect(rows.map((r) => r.id)).toEqual(["b", "c", "a"]);
+    });
+
+    it("honours limit and offset (offset pagination)", async () => {
+      for (let i = 0; i < 5; i++) {
+        insertListRow(`id-${i}`, "successful", `2026-01-0${i + 1}T10:00:00Z`);
+      }
+
+      const mod = await import("../measurements-storage");
+      const page1 = await mod.getMeasurementsList(["successful"], { limit: 2, offset: 0 });
+      const page2 = await mod.getMeasurementsList(["successful"], { limit: 2, offset: 2 });
+
+      expect(page1).toHaveLength(2);
+      expect(page2).toHaveLength(2);
+      expect(page1[0].id).not.toBe(page2[0].id);
+    });
+
+    it("parses questions_text from the plain column (no Zod, no decompression)", async () => {
+      const questions = [{ question_label: "lbl", question_text: "ask?", question_answer: "yes" }];
+      insertListRow("k1", "failed", "2026-01-01T10:00:00Z", JSON.stringify(questions), 0);
+
+      const mod = await import("../measurements-storage");
+      const [row] = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(row.questions).toEqual(questions);
+    });
+
+    it("returns empty questions array for legacy rows whose questions_text is NULL", async () => {
+      insertListRow("legacy", "failed", "2026-01-01T10:00:00Z", null, 0);
+
+      const mod = await import("../measurements-storage");
+      const [row] = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(row.questions).toEqual([]);
+    });
+
+    it("falls back to [] for a single malformed questions_text row without failing the rest", async () => {
+      insertListRow("bad", "failed", "2026-01-01T11:00:00Z", "not-json", 0);
+      insertListRow(
+        "good",
+        "failed",
+        "2026-01-01T10:00:00Z",
+        '[{"question_label":"x","question_text":"x","question_answer":"y"}]',
+        0,
+      );
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      const byId = new Map(rows.map((r) => [r.id, r.questions]));
+      expect(byId.get("bad")).toEqual([]);
+      expect(byId.get("good")).toEqual([
+        { question_label: "x", question_text: "x", question_answer: "y" },
+      ]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("questions_text malformed for bad"),
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("falls back to [] when questions_text parses to a non-array (e.g. '{}', null)", async () => {
+      insertListRow("obj", "failed", "2026-01-01T11:00:00Z", "{}", 0);
+      insertListRow("nul", "failed", "2026-01-01T10:00:00Z", "null", 0);
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(rows.find((r) => r.id === "obj")?.questions).toEqual([]);
+      expect(rows.find((r) => r.id === "nul")?.questions).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("questions_text not an array for obj"),
+        "object",
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("returns hasComment as boolean from the has_comment column", async () => {
+      insertListRow("with", "failed", "2026-01-01T11:00:00Z", "[]", 1);
+      insertListRow("without", "failed", "2026-01-01T10:00:00Z", "[]", 0);
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      const byId = new Map(rows.map((r) => [r.id, r.hasComment]));
+      expect(byId.get("with")).toBe(true);
+      expect(byId.get("without")).toBe(false);
+    });
+
+    it("filters by status (returns only rows matching the given statuses)", async () => {
+      insertListRow("p1", "pending", "2026-01-01T10:00:00Z");
+      insertListRow("f1", "failed", "2026-01-01T10:00:00Z");
+      insertListRow("s1", "successful", "2026-01-01T10:00:00Z");
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["pending", "failed"], { limit: 50, offset: 0 });
+
+      expect(rows).toHaveLength(2);
+      expect(rows.every((r) => ["pending", "failed"].includes(r.status))).toBe(true);
+    });
+
+    it("returns an empty array when called with no statuses", async () => {
+      insertListRow("p1", "pending", "2026-01-01T10:00:00Z");
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList([], { limit: 50, offset: 0 });
+
+      expect(rows).toEqual([]);
+    });
+
+    it("returns empty array and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(rows).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to fetch measurements list:",
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getMeasurement (fetch-one)
+  // ---------------------------------------------------------------------------
+
+  describe("getMeasurement", () => {
+    it("returns the full decompressed payload for the given id", async () => {
+      insertRow("k1", "pending");
+
+      const mod = await import("../measurements-storage");
+      const row = await mod.getMeasurement("k1");
+
+      expect(row).toMatchObject({
+        id: "k1",
+        status: "pending",
+        data: { measurementResult: { value: 42 } },
+      });
+    });
+
+    it("returns null when no row matches the id", async () => {
+      const mod = await import("../measurements-storage");
+      const row = await mod.getMeasurement("does-not-exist");
+      expect(row).toBeNull();
+    });
+
+    it("returns null and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const row = await mod.getMeasurement("anything");
+
+      expect(row).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to fetch measurement by id:",
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 

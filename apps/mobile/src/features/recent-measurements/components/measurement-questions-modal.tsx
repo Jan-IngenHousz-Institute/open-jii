@@ -5,8 +5,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
-import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
@@ -17,7 +17,7 @@ import {
 
 interface MeasurementQuestionsModalProps {
   visible: boolean;
-  measurement: MeasurementItem;
+  measurement: StoredMeasurement;
   onClose: () => void;
 }
 
@@ -57,9 +57,9 @@ export function MeasurementQuestionsModal({
 
   const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
   const questions = parseQuestions(measurement.data.measurementResult);
-  const experimentName = measurement.experimentName;
+  const experimentName = measurement.data.metadata.experimentName;
   const protocolName = measurement.data.metadata.protocolName;
-  const timestamp = new Date(measurement.timestamp).toLocaleString();
+  const timestamp = new Date(measurement.data.metadata.timestamp).toLocaleString();
   const isUnsynced = measurement.status === "pending" || measurement.status === "failed";
 
   const [currentComment, setCurrentComment] = useState(() =>
@@ -68,7 +68,7 @@ export function MeasurementQuestionsModal({
   const currentFlagType = getFlagTypeFromMeasurementResult(measurementResult);
 
   const handleSaveComment = async (text: string) => {
-    await updateMeasurementComment(measurement.key, measurement.data, text);
+    await updateMeasurementComment(measurement.id, measurement.data, text);
     setCurrentComment(text);
     setCommentModalVisible(false);
   };
@@ -278,7 +278,7 @@ export function MeasurementQuestionsModal({
         initialText={currentComment}
         experimentName={experimentName}
         questions={questions}
-        timestamp={measurement.timestamp}
+        timestamp={measurement.data.metadata.timestamp}
         onSave={handleSaveComment}
         onCancel={() => setCommentModalVisible(false)}
       />

@@ -11,11 +11,11 @@ import type {
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
+import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { TabBar } from "~/shared/ui/TabBar";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 type TabKey = "all" | "synced" | "unsynced";
 
@@ -27,9 +27,26 @@ export function CompletedState() {
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
   const { startNewIteration } = useMeasurementFlowStore();
 
-  const { measurements, confirmSync, confirmDelete, saveComment } = useRecentMeasurementsActions(
-    filter as MeasurementFilter,
-  );
+  const {
+    measurements,
+    confirmSync,
+    confirmDelete,
+    saveComment,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useRecentMeasurementsActions(filter as MeasurementFilter);
+
+  const openModal = useCallback(async (kind: "questions" | "comment", id: string) => {
+    const full = await getMeasurement(id);
+    if (full) setModal({ kind, measurement: full });
+  }, []);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const tabs = useMemo<{ key: TabKey; label: string }[]>(
     () => [
@@ -47,10 +64,10 @@ export function CompletedState() {
       experimentName={item.experimentName}
       status={item.status}
       questions={item.questions}
-      onPress={() => setModal({ kind: "questions", measurement: item })}
+      onPress={() => void openModal("questions", item.key)}
       onComment={
         item.status === "pending" || item.status === "failed"
-          ? () => setModal({ kind: "comment", measurement: item })
+          ? () => void openModal("comment", item.key)
           : undefined
       }
       onDelete={() => {
@@ -60,9 +77,7 @@ export function CompletedState() {
       onSync={
         item.status === "pending" || item.status === "failed" ? () => confirmSync(item) : undefined
       }
-      hasComment={
-        !!getCommentFromMeasurementResult(item.data.measurementResult as Record<string, unknown>)
-      }
+      hasComment={item.hasComment}
     />
   );
 
@@ -91,6 +106,8 @@ export function CompletedState() {
         windowSize={10}
         maxToRenderPerBatch={10}
         removeClippedSubviews
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center p-4">
             <Text className={clsx("text-center text-lg", classes.textSecondary)}>

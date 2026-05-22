@@ -93,16 +93,14 @@ const makeItem = (
   status: MeasurementItem["status"],
   experimentName = "Exp",
 ): MeasurementItem => ({
+  id: key,
   key,
   status,
   experimentName,
+  protocolName: "p",
   timestamp: "2026-01-01T10:00:00Z",
   questions: [],
-  data: {
-    topic: "t/t",
-    measurementResult: {},
-    metadata: { experimentName, protocolName: "p", timestamp: "2026-01-01T10:00:00Z" },
-  },
+  hasComment: false,
 });
 
 const mockAllMeasurements: MeasurementItem[] = [
@@ -284,11 +282,23 @@ describe("useRecentMeasurementsActions", () => {
   describe("saveComment", () => {
     it("calls updateMeasurementComment and invalidates", async () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
-      const m = makeItem("k1", "failed");
+      const stored = {
+        id: "k1",
+        status: "failed" as const,
+        data: {
+          topic: "t/t",
+          measurementResult: {},
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "p",
+            timestamp: "2026-01-01T10:00:00Z",
+          },
+        },
+      };
 
-      await act(() => result.current.saveComment(m, "great result"));
+      await act(() => result.current.saveComment(stored, "great result"));
 
-      expect(mockUpdateMeasurementComment).toHaveBeenCalledWith("k1", m.data, "great result");
+      expect(mockUpdateMeasurementComment).toHaveBeenCalledWith("k1", stored.data, "great result");
       expect(mockInvalidate).toHaveBeenCalled();
     });
   });

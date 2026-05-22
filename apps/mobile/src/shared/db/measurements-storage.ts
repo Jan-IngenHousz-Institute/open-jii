@@ -1,7 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, lt, inArray, count } from "drizzle-orm";
+import { eq, and, lt, inArray, count, desc } from "drizzle-orm";
 import { Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
+import type { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
+import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
+import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 import { compressForStorage, decompressFromStorage } from "~/shared/utils/storage-compression";
 
 import { db } from "./client";
@@ -43,6 +46,7 @@ async function migrateLegacyEntries(): Promise<void> {
         const id = key.replace(prefix, "");
         const createdAtDate = new Date(parsed.metadata.timestamp);
         const createdAt = isFinite(createdAtDate.getTime()) ? { createdAt: createdAtDate } : {};
+        const derived = deriveListColumns(parsed.measurementResult);
 
         db.insert(measurements)
           .values({
@@ -53,6 +57,8 @@ async function migrateLegacyEntries(): Promise<void> {
             experimentName: parsed.metadata.experimentName,
             protocolName: parsed.metadata.protocolName,
             timestamp: parsed.metadata.timestamp,
+            questionsText: derived.questionsText,
+            hasComment: derived.hasComment,
             ...createdAt,
           })
           .onConflictDoNothing()
@@ -92,6 +98,7 @@ export async function saveMeasurement(
 ): Promise<string> {
   await ensureMigrated();
   const id = uuidv4();
+  const derived = deriveListColumns(upload.measurementResult);
   db.insert(measurements)
     .values({
       id,
@@ -101,9 +108,43 @@ export async function saveMeasurement(
       experimentName: upload.metadata.experimentName,
       protocolName: upload.metadata.protocolName,
       timestamp: upload.metadata.timestamp,
+      questionsText: derived.questionsText,
+      hasComment: derived.hasComment,
     })
     .run();
   return id;
+}
+
+// Computed at save/update time so the list query never decompresses
+// measurement_result. Keep this in sync with the schema columns.
+function deriveListColumns(measurementResult: object): {
+  questionsText: string;
+  hasComment: boolean;
+} {
+  return {
+    questionsText: JSON.stringify(parseQuestions(measurementResult)),
+    hasComment: !!getCommentFromMeasurementResult(measurementResult as Record<string, unknown>),
+  };
+}
+
+// `questions_text` is plain JSON written by `deriveListColumns`. A malformed
+// row (legacy data, manual edit, partial migration) shouldn't break the whole
+// list — fall back to an empty array for just that row. We also reject
+// non-array shapes so a stray `null`, `{}`, or string can't masquerade as
+// `AnswerData[]` and crash downstream.
+function safeParseQuestionsText(text: string | null, id: string): AnswerData[] {
+  if (!text) return [];
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!Array.isArray(parsed)) {
+      console.warn(`[measurements] questions_text not an array for ${id}:`, typeof parsed);
+      return [];
+    }
+    return parsed as AnswerData[];
+  } catch (err) {
+    console.warn(`[measurements] questions_text malformed for ${id}:`, err);
+    return [];
+  }
 }
 
 export interface StoredMeasurement {
@@ -130,6 +171,100 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
   } catch (error) {
     console.error("Failed to count measurements:", error);
     return { pending: 0, uploading: 0, failed: 0, successful: 0 };
+  }
+}
+
+/**
+ * Row shape returned by `getMeasurementsList` — exactly what the list UI
+ * needs to render a row, with no compressed blob. `questions` is already
+ * parsed from the `questions_text` plain-text column populated at save time.
+ * `hasComment` powers the row badge without touching `measurement_result`.
+ */
+export interface MeasurementListRow {
+  id: string;
+  status: MeasurementStatus;
+  experimentName: string;
+  protocolName: string;
+  timestamp: string;
+  questions: AnswerData[];
+  hasComment: boolean;
+}
+
+/**
+ * Lean fetch for the list screen. Never reads `measurement_result`, never
+ * decompresses, never runs Zod. Driven by SQL `ORDER BY timestamp DESC` with
+ * a covering index from migration 0002. Use `getMeasurement(id)` to load the
+ * full payload when the detail modal opens.
+ */
+export async function getMeasurementsList(
+  status: MeasurementStatus[],
+  opts: { limit: number; offset: number },
+): Promise<MeasurementListRow[]> {
+  await ensureMigrated();
+  if (status.length === 0) return [];
+  try {
+    const rows = db
+      .select({
+        id: measurements.id,
+        status: measurements.status,
+        experimentName: measurements.experimentName,
+        protocolName: measurements.protocolName,
+        timestamp: measurements.timestamp,
+        questionsText: measurements.questionsText,
+        hasComment: measurements.hasComment,
+      })
+      .from(measurements)
+      .where(inArray(measurements.status, status))
+      // `id` tiebreaker keeps pages stable when several rows share a timestamp;
+      // otherwise OFFSET pagination can duplicate or skip rows between pages.
+      .orderBy(desc(measurements.timestamp), desc(measurements.id))
+      .limit(opts.limit)
+      .offset(opts.offset)
+      .all();
+    return rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      experimentName: r.experimentName,
+      protocolName: r.protocolName,
+      timestamp: r.timestamp,
+      // Legacy rows pending backfill have questionsText === null; treat as
+      // empty. One malformed questions_text falls back per-row so the rest
+      // of the list still renders.
+      questions: safeParseQuestionsText(r.questionsText, r.id),
+      hasComment: !!r.hasComment,
+    }));
+  } catch (error) {
+    console.error("Failed to fetch measurements list:", error);
+    return [];
+  }
+}
+
+/**
+ * Fetch a single full row by id, including the decompressed
+ * `measurementResult`. Used by the detail modal on open and by paths that
+ * need the full payload (comment editing, MQTT publish).
+ */
+export async function getMeasurement(id: string): Promise<StoredMeasurement | null> {
+  await ensureMigrated();
+  try {
+    const row = db.select().from(measurements).where(eq(measurements.id, id)).get();
+    if (!row) return null;
+    return {
+      id: row.id,
+      status: row.status,
+      data: {
+        topic: row.topic,
+        measurementResult: decompressFromStorage(row.measurementResult),
+        metadata: {
+          experimentName: row.experimentName,
+          protocolName: row.protocolName,
+          timestamp: row.timestamp,
+        },
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch measurement by id:", error);
+    return null;
   }
 }
 
@@ -176,6 +311,7 @@ export async function getMeasurements(
 export async function updateMeasurement(key: string, data: Measurement): Promise<void> {
   await ensureMigrated();
   try {
+    const derived = deriveListColumns(data.measurementResult);
     db.update(measurements)
       .set({
         topic: data.topic,
@@ -183,6 +319,8 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
         experimentName: data.metadata.experimentName,
         protocolName: data.metadata.protocolName,
         timestamp: data.metadata.timestamp,
+        questionsText: derived.questionsText,
+        hasComment: derived.hasComment,
       })
       .where(eq(measurements.id, key))
       .run();

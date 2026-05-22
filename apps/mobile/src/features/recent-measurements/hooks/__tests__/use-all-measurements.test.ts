@@ -6,23 +6,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { useAllMeasurements } from "../use-all-measurements";
 
-const { mockGetMeasurements, mockCountMeasurementsByStatus, mockParseQuestions } = vi.hoisted(
-  () => ({
-    mockGetMeasurements: vi.fn().mockResolvedValue([]),
-    mockCountMeasurementsByStatus: vi
-      .fn()
-      .mockResolvedValue({ pending: 0, uploading: 0, failed: 0, successful: 0 }),
-    mockParseQuestions: vi.fn().mockReturnValue([]),
-  }),
-);
-
-vi.mock("~/shared/db/measurements-storage", () => ({
-  getMeasurements: mockGetMeasurements,
-  countMeasurementsByStatus: mockCountMeasurementsByStatus,
+const { mockGetMeasurementsList, mockCountMeasurementsByStatus } = vi.hoisted(() => ({
+  mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
+  mockCountMeasurementsByStatus: vi
+    .fn()
+    .mockResolvedValue({ pending: 0, uploading: 0, failed: 0, successful: 0 }),
 }));
 
-vi.mock("~/shared/utils/convert-cycle-answers-to-array", () => ({
-  parseQuestions: mockParseQuestions,
+vi.mock("~/shared/db/measurements-storage", () => ({
+  getMeasurementsList: mockGetMeasurementsList,
+  countMeasurementsByStatus: mockCountMeasurementsByStatus,
 }));
 
 let queryClient: QueryClient;
@@ -33,14 +26,14 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 type StorageStatus = "pending" | "failed" | "uploading" | "successful";
 
-interface StoredMeasurement {
+interface ListRow {
   id: string;
   status: StorageStatus;
-  data: {
-    topic: string;
-    measurementResult: object;
-    metadata: { timestamp: string; experimentName: string; protocolName: string };
-  };
+  experimentName: string;
+  protocolName: string;
+  timestamp: string;
+  questions: { question_label: string; question_text: string; question_answer: string }[];
+  hasComment: boolean;
 }
 
 function row(
@@ -48,36 +41,36 @@ function row(
   status: StorageStatus,
   timestamp: string,
   experimentName: string,
-  measurementResult: object = { value: 1 },
-): StoredMeasurement {
+  overrides: Partial<ListRow> = {},
+): ListRow {
   return {
     id,
     status,
-    data: {
-      topic: "test/topic",
-      measurementResult,
-      metadata: { timestamp, experimentName, protocolName: "proto-1" },
-    },
+    experimentName,
+    protocolName: "proto-1",
+    timestamp,
+    questions: [],
+    hasComment: false,
+    ...overrides,
   };
 }
 
 // SQL-side filter: returns only the rows the storage call asked for.
-function rowsFor(rows: StoredMeasurement[], requested: StorageStatus | StorageStatus[]) {
-  const wanted = new Set(Array.isArray(requested) ? requested : [requested]);
+function rowsFor(rows: ListRow[], requested: StorageStatus[]) {
+  const wanted = new Set(requested);
   return rows.filter((r) => wanted.has(r.status));
 }
 
 describe("useAllMeasurements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetMeasurements.mockResolvedValue([]);
+    mockGetMeasurementsList.mockResolvedValue([]);
     mockCountMeasurementsByStatus.mockResolvedValue({
       pending: 0,
       uploading: 0,
       failed: 0,
       successful: 0,
     });
-    mockParseQuestions.mockReturnValue([]);
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 
@@ -86,38 +79,41 @@ describe("useAllMeasurements", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // data fetching
+  // SQL-side filter — useAllMeasurements asks the storage layer for the exact
+  // status set the active filter implies. No JS-side filtering.
   // ---------------------------------------------------------------------------
 
   describe("data fetching", () => {
-    it("fetches all four statuses in a single SQL call when filter is 'all'", async () => {
+    it("fetches all four statuses when filter is 'all'", async () => {
       renderHook(() => useAllMeasurements("all"), { wrapper });
 
       await waitFor(() =>
-        expect(mockGetMeasurements).toHaveBeenCalledWith([
-          "pending",
-          "failed",
-          "uploading",
-          "successful",
-        ]),
+        expect(mockGetMeasurementsList).toHaveBeenCalledWith(
+          ["pending", "failed", "uploading", "successful"],
+          { limit: 50, offset: 0 },
+        ),
       );
-      expect(mockGetMeasurements).toHaveBeenCalledTimes(1);
     });
 
     it("queries only 'successful' when filter is 'synced'", async () => {
       renderHook(() => useAllMeasurements("synced"), { wrapper });
-      await waitFor(() => expect(mockGetMeasurements).toHaveBeenCalledWith(["successful"]));
+      await waitFor(() =>
+        expect(mockGetMeasurementsList).toHaveBeenCalledWith(["successful"], expect.any(Object)),
+      );
     });
 
     it("queries pending + failed + uploading when filter is 'unsynced'", async () => {
       renderHook(() => useAllMeasurements("unsynced"), { wrapper });
       await waitFor(() =>
-        expect(mockGetMeasurements).toHaveBeenCalledWith(["pending", "failed", "uploading"]),
+        expect(mockGetMeasurementsList).toHaveBeenCalledWith(
+          ["pending", "failed", "uploading"],
+          expect.any(Object),
+        ),
       );
     });
 
     it("hands the raw storage status through to MeasurementItem (no lossy mapping)", async () => {
-      mockGetMeasurements.mockResolvedValueOnce([
+      mockGetMeasurementsList.mockResolvedValueOnce([
         row("p1", "pending", "2026-01-01T11:00:00Z", "P"),
         row("f1", "failed", "2026-01-01T10:00:00Z", "F"),
         row("u1", "uploading", "2026-01-01T09:00:00Z", "U"),
@@ -134,10 +130,12 @@ describe("useAllMeasurements", () => {
       expect(byKey.get("s1")).toBe("successful");
     });
 
-    it("sorts results newest-first by timestamp", async () => {
-      mockGetMeasurements.mockResolvedValueOnce([
-        row("old", "failed", "2026-01-01T08:00:00Z", "Old"),
+    it("preserves the SQL row order (already sorted DESC by timestamp)", async () => {
+      // The hook does NOT re-sort; SQL ORDER BY does it. Provide rows already
+      // sorted newest-first and verify they come out the same way.
+      mockGetMeasurementsList.mockResolvedValueOnce([
         row("new", "successful", "2026-01-01T12:00:00Z", "New"),
+        row("old", "failed", "2026-01-01T08:00:00Z", "Old"),
       ]);
 
       const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
@@ -147,16 +145,17 @@ describe("useAllMeasurements", () => {
       expect(result.current.measurements[1].key).toBe("old");
     });
 
-    it("calls parseQuestions for each measurement result", async () => {
-      const measurementResult = { value: 99 };
-      mockGetMeasurements.mockResolvedValueOnce([
-        row("k1", "failed", "2026-01-01T10:00:00Z", "E", measurementResult),
+    it("passes through hasComment and questions from the lean SELECT (no Zod)", async () => {
+      const questions = [{ question_label: "q", question_text: "Q?", question_answer: "A" }];
+      mockGetMeasurementsList.mockResolvedValueOnce([
+        row("k1", "failed", "2026-01-01T10:00:00Z", "E", { questions, hasComment: true }),
       ]);
 
-      renderHook(() => useAllMeasurements("all"), { wrapper });
+      const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
 
-      await waitFor(() => expect(mockParseQuestions).toHaveBeenCalled());
-      expect(mockParseQuestions).toHaveBeenCalledWith(measurementResult);
+      await waitFor(() => expect(result.current.measurements).toHaveLength(1));
+      expect(result.current.measurements[0].questions).toEqual(questions);
+      expect(result.current.measurements[0].hasComment).toBe(true);
     });
 
     it("returns an empty array when no measurements match the filter", async () => {
@@ -172,14 +171,16 @@ describe("useAllMeasurements", () => {
 
   describe("filter at SQL level", () => {
     beforeEach(() => {
-      const fixture: StoredMeasurement[] = [
+      const fixture: ListRow[] = [
         row("p1", "pending", "2026-01-01T11:00:00Z", "Pending"),
         row("f1", "failed", "2026-01-01T10:00:00Z", "Failed"),
         row("u1", "uploading", "2026-01-01T09:00:00Z", "Uploading"),
         row("s1", "successful", "2026-01-01T12:00:00Z", "Synced 1"),
         row("s2", "successful", "2026-01-01T08:00:00Z", "Synced 2"),
       ];
-      mockGetMeasurements.mockImplementation((status) => Promise.resolve(rowsFor(fixture, status)));
+      mockGetMeasurementsList.mockImplementation((statuses: StorageStatus[]) =>
+        Promise.resolve(rowsFor(fixture, statuses)),
+      );
     });
 
     it("returns every row when filter is 'all'", async () => {
@@ -207,16 +208,16 @@ describe("useAllMeasurements", () => {
       );
 
       await waitFor(() =>
-        expect(mockGetMeasurements).toHaveBeenCalledWith([
-          "pending",
-          "failed",
-          "uploading",
-          "successful",
-        ]),
+        expect(mockGetMeasurementsList).toHaveBeenCalledWith(
+          ["pending", "failed", "uploading", "successful"],
+          expect.any(Object),
+        ),
       );
 
       rerender({ filter: "synced" });
-      await waitFor(() => expect(mockGetMeasurements).toHaveBeenCalledWith(["successful"]));
+      await waitFor(() =>
+        expect(mockGetMeasurementsList).toHaveBeenCalledWith(["successful"], expect.any(Object)),
+      );
     });
   });
 
@@ -255,6 +256,66 @@ describe("useAllMeasurements", () => {
       renderHook(() => useAllMeasurements("all"), { wrapper });
       await waitFor(() => expect(mockCountMeasurementsByStatus).toHaveBeenCalled());
       expect(mockCountMeasurementsByStatus).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // pagination (useInfiniteQuery)
+  // ---------------------------------------------------------------------------
+
+  describe("pagination", () => {
+    it("reports hasNextPage=true when the first page is full", async () => {
+      mockGetMeasurementsList.mockResolvedValueOnce(
+        Array.from({ length: 50 }, (_, i) =>
+          row(`k${i}`, "successful", `2026-01-01T10:00:${String(i).padStart(2, "0")}Z`, "E"),
+        ),
+      );
+
+      const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
+
+      await waitFor(() => expect(result.current.measurements).toHaveLength(50));
+      expect(result.current.hasNextPage).toBe(true);
+    });
+
+    it("reports hasNextPage=false when a partial page comes back", async () => {
+      mockGetMeasurementsList.mockResolvedValueOnce(
+        Array.from({ length: 17 }, (_, i) =>
+          row(`k${i}`, "successful", `2026-01-01T10:00:${String(i).padStart(2, "0")}Z`, "E"),
+        ),
+      );
+
+      const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
+
+      await waitFor(() => expect(result.current.measurements).toHaveLength(17));
+      expect(result.current.hasNextPage).toBe(false);
+    });
+
+    it("fetchNextPage requests offset=50 after a full first page", async () => {
+      mockGetMeasurementsList
+        .mockResolvedValueOnce(
+          Array.from({ length: 50 }, (_, i) =>
+            row(`a${i}`, "successful", `2026-01-01T10:00:${String(i).padStart(2, "0")}Z`, "E"),
+          ),
+        )
+        .mockResolvedValueOnce(
+          Array.from({ length: 10 }, (_, i) =>
+            row(`b${i}`, "successful", `2026-01-01T09:00:${String(i).padStart(2, "0")}Z`, "E"),
+          ),
+        );
+
+      const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
+
+      await waitFor(() => expect(result.current.measurements).toHaveLength(50));
+
+      await act(async () => {
+        await result.current.fetchNextPage();
+      });
+
+      await waitFor(() => expect(result.current.measurements).toHaveLength(60));
+      expect(mockGetMeasurementsList).toHaveBeenLastCalledWith(
+        ["pending", "failed", "uploading", "successful"],
+        { limit: 50, offset: 50 },
+      );
     });
   });
 
