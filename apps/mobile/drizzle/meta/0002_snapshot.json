@@ -1,0 +1,127 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "b377d5fe-6414-4374-8d71-69f11e20ffad",
+  "prevId": "b8e2a3d4-1f5a-4c7b-9d6e-2a3b4c5d6e7f",
+  "tables": {
+    "measurements": {
+      "name": "measurements",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "topic": {
+          "name": "topic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "measurement_result": {
+          "name": "measurement_result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "experiment_name": {
+          "name": "experiment_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "protocol_name": {
+          "name": "protocol_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "questions_text": {
+          "name": "questions_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "has_comment": {
+          "name": "has_comment",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "idx_measurements_status": {
+          "name": "idx_measurements_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "idx_measurements_status_ts": {
+          "name": "idx_measurements_status_ts",
+          "columns": [
+            "status",
+            "timestamp"
+          ],
+          "isUnique": false
+        },
+        "idx_measurements_created_at": {
+          "name": "idx_measurements_created_at",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "measurements_status_check": {
+          "name": "measurements_status_check",
+          "value": "\"measurements\".\"status\" IN ('pending', 'uploading', 'failed', 'successful')"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

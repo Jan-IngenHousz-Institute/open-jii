@@ -18,6 +18,7 @@ import { PythonMacroProvider } from "~/features/measurement-flow/components/pyth
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
 import { useAutoUpload } from "~/features/recent-measurements/hooks/use-auto-upload";
 import { db } from "~/shared/db/client";
+import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
 import { useI18nReady } from "~/shared/i18n";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
 import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
@@ -116,6 +117,11 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
       void SplashScreen.hideAsync();
     }
   }, [loaded, migrationsReady, migrationsError]);
+
+  useEffect(() => {
+    if (!migrationsReady) return;
+    void backfillDerivedColumns().catch((e) => console.warn("[db] backfill failed:", e));
+  }, [migrationsReady]);
 
   if (migrationsError) {
     // Recovery fallback. i18n init runs in the same wrapper, so when the

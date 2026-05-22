@@ -10,8 +10,8 @@ import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
 import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
-import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
+import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
@@ -64,13 +64,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
   const displayTimestamp = useMemo(() => getSyncedLocalISO(), [scanResult]);
 
-  const currentMeasurement = useMemo<MeasurementItem>(
+  // Synthetic StoredMeasurement for the live scan preview — not saved yet.
+  // status "successful" hides the comment button in the modal.
+  const currentMeasurement = useMemo<StoredMeasurement>(
     () => ({
-      key: "current", // Random key, measurement not saved or uploaded yet
-      timestamp: displayTimestamp,
-      experimentName,
-      status: "successful", // To hide the comment button in modal
-      questions,
+      id: "current",
+      status: "successful",
       data: {
         topic: "",
         measurementResult: { ...(scanResult ?? {}), questions },

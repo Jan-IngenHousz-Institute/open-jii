@@ -6,6 +6,7 @@ import type {
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { exportMeasurementsToFile } from "~/features/recent-measurements/services/export-measurements";
+import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
@@ -37,7 +38,15 @@ function confirmAndRun(
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
-  const { measurements, counts, uploadingCount, invalidate } = useAllMeasurements(filter);
+  const {
+    measurements,
+    counts,
+    uploadingCount,
+    invalidate,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useAllMeasurements(filter);
   const {
     uploadAll,
     isUploading,
@@ -120,8 +129,8 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     });
   };
 
-  const saveComment = async (m: MeasurementItem, text: string) => {
-    await updateMeasurementComment(m.key, m.data, text);
+  const saveComment = async (m: StoredMeasurement, text: string) => {
+    await updateMeasurementComment(m.id, m.data, text);
     invalidate();
   };
 
@@ -132,6 +141,9 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     unsyncedCount,
     uploadingCount,
     isUploading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     confirmSync,
     confirmDelete,
     confirmSyncAll,

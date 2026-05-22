@@ -10,11 +10,11 @@ import type {
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
+import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { groupMeasurementsByDay } from "~/shared/utils/group-measurements-by-day";
-import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 export function RecentMeasurementsScreen() {
   const { colors } = useTheme();
@@ -30,6 +30,9 @@ export function RecentMeasurementsScreen() {
     unsyncedCount,
     uploadingCount,
     isUploading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     confirmSync,
     confirmDelete,
     confirmSyncAll,
@@ -37,6 +40,19 @@ export function RecentMeasurementsScreen() {
     handleExport,
     saveComment,
   } = useRecentMeasurementsActions(filter);
+
+  // The list row is lean (no `measurement_result`). Loading the full payload
+  // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
+  const openModal = useCallback(async (kind: "questions" | "comment", id: string) => {
+    const full = await getMeasurement(id);
+    if (full) setModal({ kind, measurement: full });
+  }, []);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
   const sections = useMemo(
@@ -51,19 +67,17 @@ export function RecentMeasurementsScreen() {
       experimentName={item.experimentName}
       status={item.status}
       questions={item.questions}
-      onPress={() => setModal({ kind: "questions", measurement: item })}
+      onPress={() => void openModal("questions", item.key)}
       onComment={
         item.status === "pending" || item.status === "failed"
-          ? () => setModal({ kind: "comment", measurement: item })
+          ? () => void openModal("comment", item.key)
           : undefined
       }
       onDelete={() => confirmDelete(item)}
       onSync={
         item.status === "pending" || item.status === "failed" ? () => confirmSync(item) : undefined
       }
-      hasComment={
-        !!getCommentFromMeasurementResult(item.data.measurementResult as Record<string, unknown>)
-      }
+      hasComment={item.hasComment}
     />
   );
 
@@ -118,6 +132,8 @@ export function RecentMeasurementsScreen() {
         windowSize={10}
         maxToRenderPerBatch={10}
         removeClippedSubviews
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center p-4">
             <Text className="text-on-surface text-center text-lg">
