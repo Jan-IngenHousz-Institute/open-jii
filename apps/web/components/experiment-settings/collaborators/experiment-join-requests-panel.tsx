@@ -17,12 +17,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useApproveJoinRequest } from "../../../hooks/experiment/join-request/useApproveJoinRequest/useApproveJoinRequest";
 import { useExperimentJoinRequests } from "../../../hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
 import { useRejectJoinRequest } from "../../../hooks/experiment/join-request/useRejectJoinRequest/useRejectJoinRequest";
-import { parseApiError } from "../../../util/apiError";
 import { UserAvatar } from "../../user-avatar";
 
 interface ExperimentJoinRequestsPanelProps {
@@ -150,56 +148,23 @@ export function ExperimentJoinRequestsPanel({
   const joinRequests: ExperimentJoinRequest[] =
     providedJoinRequests ?? (joinRequestsData?.status === 200 ? joinRequestsData.body : []);
 
-  const { mutateAsync: approveJoinRequest, isPending: isApprovingJoinRequest } =
-    useApproveJoinRequest();
-  const { mutateAsync: rejectJoinRequest, isPending: isRejectingJoinRequest } =
-    useRejectJoinRequest();
   const [pendingJoinRequestId, setPendingJoinRequestId] = useState<string | null>(null);
 
-  const handleApprove = async (requestId: string) => {
+  const { mutate: approveJoinRequest, isPending: isApprovingJoinRequest } = useApproveJoinRequest({
+    onSettled: () => setPendingJoinRequestId(null),
+  });
+  const { mutate: rejectJoinRequest, isPending: isRejectingJoinRequest } = useRejectJoinRequest({
+    onSettled: () => setPendingJoinRequestId(null),
+  });
+
+  const handleApprove = (requestId: string) => {
     setPendingJoinRequestId(requestId);
-    try {
-      await approveJoinRequest(
-        { params: { id: experimentId, requestId }, body: {} },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.joinRequestApproved") });
-          },
-          onError: (err) => {
-            toast({
-              description:
-                parseApiError(err)?.message ?? t("experimentSettings.joinRequestApprovedError"),
-              variant: "destructive",
-            });
-          },
-        },
-      );
-    } finally {
-      setPendingJoinRequestId(null);
-    }
+    approveJoinRequest({ params: { id: experimentId, requestId }, body: {} });
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleReject = (requestId: string) => {
     setPendingJoinRequestId(requestId);
-    try {
-      await rejectJoinRequest(
-        { params: { id: experimentId, requestId }, body: {} },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.joinRequestRejected") });
-          },
-          onError: (err) => {
-            toast({
-              description:
-                parseApiError(err)?.message ?? t("experimentSettings.joinRequestRejectedError"),
-              variant: "destructive",
-            });
-          },
-        },
-      );
-    } finally {
-      setPendingJoinRequestId(null);
-    }
+    rejectJoinRequest({ params: { id: experimentId, requestId }, body: {} });
   };
 
   if (joinRequests.length === 0) {

@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { parseApiError } from "~/util/apiError";
 
 import type { CreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
 import { zCreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
@@ -20,7 +19,6 @@ import {
 } from "@repo/ui/components/dialog";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@repo/ui/components/form";
 import { Textarea } from "@repo/ui/components/textarea";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useCancelMyJoinRequest } from "../../../hooks/experiment/join-request/useCancelMyJoinRequest/useCancelMyJoinRequest";
 import { useMyJoinRequest } from "../../../hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
@@ -41,8 +39,13 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
   });
 
   const { data: myRequestData, isLoading: isLoadingMyRequest } = useMyJoinRequest(experimentId);
-  const { mutateAsync: requestJoin, isPending: isRequesting } = useRequestJoinExperiment();
-  const { mutateAsync: cancelRequest, isPending: isCancelling } = useCancelMyJoinRequest();
+  const { mutate: requestJoin, isPending: isRequesting } = useRequestJoinExperiment({
+    onSuccess: () => {
+      setIsDialogOpen(false);
+      form.reset();
+    },
+  });
+  const { mutate: cancelRequest, isPending: isCancelling } = useCancelMyJoinRequest();
 
   if (isLoadingMyRequest) {
     return null;
@@ -58,59 +61,15 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
     }
   };
 
-  const handleSubmit = async (data: CreateJoinRequestBody) => {
+  const handleSubmit = (data: CreateJoinRequestBody) => {
     const trimmedMessage = data.message?.trim();
     const message = trimmedMessage === "" ? undefined : trimmedMessage;
-
-    try {
-      await requestJoin(
-        {
-          params: { id: experimentId },
-          body: { message: message ?? undefined },
-        },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.requestSubmitted") });
-            setIsDialogOpen(false);
-            form.reset();
-          },
-          onError: (err) => {
-            toast({
-              description:
-                parseApiError(err)?.message ?? t("experimentSettings.requestSubmittedError"),
-              variant: "destructive",
-            });
-          },
-        },
-      );
-    } catch {
-      // handled in onError
-    }
+    requestJoin({ params: { id: experimentId }, body: { message: message ?? undefined } });
   };
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!pendingRequest) return;
-    try {
-      await cancelRequest(
-        {
-          params: { id: experimentId, requestId: pendingRequest.id },
-        },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.requestCancelled") });
-          },
-          onError: (err) => {
-            toast({
-              description:
-                parseApiError(err)?.message ?? t("experimentSettings.requestCancelledError"),
-              variant: "destructive",
-            });
-          },
-        },
-      );
-    } catch {
-      // handled in onError
-    }
+    cancelRequest({ params: { id: experimentId, requestId: pendingRequest.id } });
   };
 
   if (pendingRequest) {
