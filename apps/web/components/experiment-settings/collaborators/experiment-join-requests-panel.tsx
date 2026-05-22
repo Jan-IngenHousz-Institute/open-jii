@@ -29,6 +29,7 @@ interface ExperimentJoinRequestsPanelProps {
   experimentId: string;
   joinRequests?: ExperimentJoinRequest[];
   isAdmin?: boolean;
+  isArchived?: boolean;
 }
 
 function JoinRequestRow({
@@ -39,6 +40,7 @@ function JoinRequestRow({
   isRejectingJoinRequest,
   isPending,
   isAdmin,
+  isArchived,
 }: {
   request: ExperimentJoinRequest;
   onApprove: (id: string) => void;
@@ -47,6 +49,7 @@ function JoinRequestRow({
   isRejectingJoinRequest: boolean;
   isPending: boolean;
   isAdmin: boolean;
+  isArchived: boolean;
 }) {
   const { t } = useTranslation();
   const [isMessageOpen, setIsMessageOpen] = useState(false);
@@ -77,7 +80,7 @@ function JoinRequestRow({
             </span>
           )}
         </div>
-        {isAdmin && (
+        {isAdmin && !isArchived && (
           <TooltipProvider delayDuration={200}>
             <div className="flex shrink-0 gap-2">
               <Tooltip>
@@ -140,6 +143,7 @@ export function ExperimentJoinRequestsPanel({
   experimentId,
   joinRequests: providedJoinRequests,
   isAdmin = false,
+  isArchived = false,
 }: ExperimentJoinRequestsPanelProps) {
   const { t } = useTranslation();
   const { data: joinRequestsData } = useExperimentJoinRequests(experimentId);
@@ -226,6 +230,7 @@ export function ExperimentJoinRequestsPanel({
           isRejectingJoinRequest={isRejectingJoinRequest}
           isPending={pendingJoinRequestId === request.id}
           isAdmin={isAdmin}
+          isArchived={isArchived}
         />
       ))}
     </div>

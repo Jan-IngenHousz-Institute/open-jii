@@ -180,6 +180,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
             experimentId={id}
             joinRequests={filteredJoinRequests}
             isAdmin={isAdmin}
+            isArchived
           />
         </NavTabsContent>
       </NavTabs>

@@ -40,12 +40,18 @@ export class RejectJoinRequestUseCase {
     );
 
     return accessCheckResult.chain(
-      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
+      async ({
+        experiment,
+        hasArchiveAccess,
+      }: {
+        experiment: ExperimentDto | null;
+        hasArchiveAccess: boolean;
+      }) => {
         if (!experiment) {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
-        if (!isAdmin) {
-          return failure(AppError.forbidden("Only admins can reject join requests"));
+        if (!hasArchiveAccess) {
+          return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         const requestResult = await this.joinRequestRepository.findById(requestId);
