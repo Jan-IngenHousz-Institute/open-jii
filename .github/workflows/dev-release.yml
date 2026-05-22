@@ -44,7 +44,7 @@ jobs:
     uses: ./.github/workflows/deploy.yml
     with:
       environment: dev
-      deploy_infrastructure: ${{ inputs.deploy_infrastructure == null && true || inputs.deploy_infrastructure }}
+      deploy_infrastructure: ${{ inputs.deploy_infrastructure || false }}
       deploy_all: ${{ inputs.deploy_all || false }}
       deploy_app: ${{ inputs.deploy_app || '' }}
     secrets: inherit
