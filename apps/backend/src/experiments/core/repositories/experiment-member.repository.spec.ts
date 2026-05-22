@@ -857,6 +857,7 @@ describe("ExperimentMemberRepository", () => {
         firstName: "Complete",
         lastName: "User",
         email: "complete@example.com",
+        avatarUrl: null,
       });
     });
   });

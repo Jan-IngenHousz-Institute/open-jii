@@ -187,6 +187,7 @@ describe("Experiment Schema", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john@example.com",
+        avatarUrl: null,
       },
       role: "member",
       joinedAt: isoTime,
