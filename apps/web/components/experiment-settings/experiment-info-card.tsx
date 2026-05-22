@@ -29,9 +29,16 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
 
   const isArchived = experiment.status === "archived";
 
+  if (!isAdmin && !isDeletionEnabled) return null;
+
   return (
     <>
-      <div className="mt-8">
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        className="text-muted-foreground mx-4 border-t"
+      />
+      <div className="px-6 py-4">
         {isAdmin && (
           <p className="text-muted-foreground mb-2 text-sm">
             {t(
