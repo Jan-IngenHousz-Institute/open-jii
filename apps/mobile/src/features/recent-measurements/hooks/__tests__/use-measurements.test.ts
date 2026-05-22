@@ -353,7 +353,7 @@ describe("useMeasurements", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["measurements"] });
     });
 
-    it("shows toast, calls markAsFailed, and still prunes when MQTT send fails", async () => {
+    it("calls markAsFailed and still prunes when MQTT send fails", async () => {
       const { result } = renderMeasurements([{ key: "upload-key-1", data: mockMeasurement }]);
       await waitFor(() => expect(result.current.failedUploads).toHaveLength(1));
       mockSendMqttEvent.mockRejectedValueOnce(new Error("timeout"));
@@ -363,7 +363,7 @@ describe("useMeasurements", () => {
 
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
       expect(mockMarkAsFailed).toHaveBeenCalledWith("upload-key-1");
-      expect(mockToastInfo).toHaveBeenCalledWith("Failed to upload, try again later");
+      expect(mockToastInfo).not.toHaveBeenCalled();
       expect(mockPruneExpiredMeasurements).toHaveBeenCalledOnce();
 
       consoleSpy.mockRestore();

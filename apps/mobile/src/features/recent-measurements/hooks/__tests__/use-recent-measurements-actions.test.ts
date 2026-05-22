@@ -222,7 +222,7 @@ describe("useRecentMeasurementsActions", () => {
       );
     });
 
-    it("calls uploadAll, toasts success, and invalidates on confirm", async () => {
+    it("calls uploadAll and invalidates on confirm (no success toast)", async () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
       act(() => result.current.confirmSyncAll());
@@ -230,7 +230,7 @@ describe("useRecentMeasurementsActions", () => {
       await act(() => confirmBtn.onPress());
 
       expect(mockUploadAll).toHaveBeenCalled();
-      expect(mockToastSuccess).toHaveBeenCalledWith("All measurements synced successfully");
+      expect(mockToastSuccess).not.toHaveBeenCalled();
       expect(mockInvalidate).toHaveBeenCalled();
     });
   });

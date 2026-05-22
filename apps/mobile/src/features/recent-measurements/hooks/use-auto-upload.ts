@@ -44,12 +44,8 @@ export function useAutoUpload() {
     }
 
     autoUploadInFlight.current = true;
-    const count = failedUploads.length;
-
-    toast.info(t("recentMeasurements:toasts.uploadingMeasurements", { count }));
     try {
       await uploadAll();
-      toast.success(t("recentMeasurements:toasts.measurementsSynced", { count }));
     } catch {
       toast.error(t("recentMeasurements:toasts.uploadFailed"));
     } finally {

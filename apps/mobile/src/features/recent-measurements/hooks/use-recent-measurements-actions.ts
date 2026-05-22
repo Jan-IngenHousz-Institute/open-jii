@@ -97,7 +97,6 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       errorMessage: t("recentMeasurements:alerts.uploadAllError"),
       run: async () => {
         await uploadAll();
-        toast.success(t("recentMeasurements:alerts.uploadAllSuccess"));
         invalidate();
       },
     });
