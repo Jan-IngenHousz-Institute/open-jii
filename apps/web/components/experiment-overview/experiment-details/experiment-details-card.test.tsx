@@ -158,15 +158,15 @@ describe("ExperimentDetailsCard", () => {
 
   it("shows collapsed state by default on mobile", () => {
     renderComponent();
-    // Button is present for toggling details sidebar
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    // Mobile collapse button starts in "expand" state
+    expect(screen.getByRole("button", { name: "Expand details" })).toBeInTheDocument();
   });
 
   it("toggles collapse state when button is clicked", async () => {
     const user = userEvent.setup();
     renderComponent();
 
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("button", { name: "Expand details" });
 
     // Clicking the button toggles collapse — verified by the button remaining interactive
     await user.click(button);
