@@ -156,13 +156,18 @@ describe("Transport", () => {
     const first = assertDefined(factory.current(), "current session");
     expect(first.publishes.length).toBe(2);
 
+    // Attach the rejection expectations BEFORE the drop so the rejections
+    // never float unhandled while settle() advances timers/microtasks.
+    // Both pending publishes reject — the Outbox's retry policy is the
+    // single tier that re-enqueues; the Transport does not hold them.
+    const e1 = expect(p1).rejects.toMatchObject({ kind: "Disconnected" });
+    const e2 = expect(p2).rejects.toMatchObject({ kind: "Disconnected" });
+
     first.drop({ message: "kicked" });
     await settle();
 
-    // Both pending publishes reject — the Outbox's retry policy is the
-    // single tier that re-enqueues; the Transport does not hold them.
-    await expect(p1).rejects.toMatchObject({ kind: "Disconnected" });
-    await expect(p2).rejects.toMatchObject({ kind: "Disconnected" });
+    await e1;
+    await e2;
     // No background reconnect; the dropped session is the only one so far.
     expect(factory.sessions.length).toBe(1);
   });
@@ -170,9 +175,11 @@ describe("Transport", () => {
   it("lazily reconnects on the next publish after a disconnect", async () => {
     const p1 = transport.publish("topic/a", { v: 1 });
     await settle();
+    // Attach the rejection expectation before the drop so it never floats.
+    const e1 = expect(p1).rejects.toMatchObject({ kind: "Disconnected" });
     assertDefined(factory.current(), "current session").drop();
     await settle();
-    await expect(p1).rejects.toMatchObject({ kind: "Disconnected" });
+    await e1;
 
     // A fresh publish after the drop triggers a new session.
     const p2 = transport.publish("topic/b", { v: 2 });
@@ -187,9 +194,12 @@ describe("Transport", () => {
     factory.scripts = [new Error("network down")];
 
     const p = transport.publish("topic/a", { v: 1 });
+    // Attach the rejection expectation before settle() drives the failed
+    // connect so the rejection never floats unhandled.
+    const e = expect(p).rejects.toMatchObject({ kind: "Disconnected" });
     await settle();
 
-    await expect(p).rejects.toMatchObject({ kind: "Disconnected" });
+    await e;
     expect(factory.sessions.length).toBe(0);
   });
 
@@ -198,8 +208,11 @@ describe("Transport", () => {
     await settle();
     expect(assertDefined(factory.current(), "current session").publishes.length).toBe(1);
 
+    // Attach the rejection expectation before advancing the timer so the
+    // timeout rejection never floats unhandled.
+    const e = expect(p).rejects.toMatchObject({ kind: "Timeout" });
     await vi.advanceTimersByTimeAsync(PUBLISH_TIMEOUT_MS + 1);
-    await expect(p).rejects.toMatchObject({ kind: "Timeout" });
+    await e;
   });
 
   it("destroy() rejects pending publishes with Disconnected", async () => {
