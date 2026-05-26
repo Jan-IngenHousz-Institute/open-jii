@@ -197,6 +197,8 @@ const MIGRATION_SQLS = [
   "0000_outgoing_firebird.sql",
   "0001_add_pending_status.sql",
   "0002_dashing_lenny_balinger.sql",
+  "0003_drop_uploading_status.sql",
+  "0004_add_day_key.sql",
 ].map((f) => readFileSync(resolve(__dirname, "../../../../drizzle", f), "utf-8"));
 
 function createDb() {
@@ -289,8 +291,8 @@ type SeedRow = [
 function seedCompressed(db: ReturnType<typeof Database>, n: number) {
   const blobs = getCompressedPayloads(n);
   const stmt = db.prepare(`
-    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)
   `);
   const insertMany = db.transaction((rows: SeedRow[]) => {
     for (const row of rows) stmt.run(...row);
@@ -312,8 +314,8 @@ function seedCompressed(db: ReturnType<typeof Database>, n: number) {
 function seedPlain(db: ReturnType<typeof Database>, n: number) {
   const blobs = getPlainPayloads(n);
   const stmt = db.prepare(`
-    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)
   `);
   const insertMany = db.transaction((rows: SeedRow[]) => {
     for (const row of rows) stmt.run(...row);
@@ -942,8 +944,8 @@ describe("Scenario J — Single-row save+read", () => {
     const { ms: msInsertC } = time(() => {
       dbC
         .prepare(
-          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)`,
         )
         .run(
           "solo-c",
@@ -961,8 +963,8 @@ describe("Scenario J — Single-row save+read", () => {
     const { ms: msInsertP } = time(() => {
       dbP
         .prepare(
-          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)`,
         )
         .run(
           "solo-p",

@@ -30,6 +30,9 @@ export const measurements = sqliteTable(
     // measurement_result. Nullable for legacy rows pending backfill.
     questionsText: text("questions_text"),
     hasComment: integer("has_comment", { mode: "boolean" }).notNull().default(false),
+    // Local calendar date "YYYY-MM-DD" computed at save time from timestamp + resolved timezone.
+    // Used to group the Recent list by day. Nullable for legacy rows pending backfill.
+    dayKey: text("day_key"),
   },
   (table) => [
     check(

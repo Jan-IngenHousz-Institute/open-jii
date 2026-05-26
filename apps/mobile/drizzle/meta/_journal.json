@@ -29,6 +29,13 @@
       "when": 1779256500000,
       "tag": "0003_drop_uploading_status",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1779787467000,
+      "tag": "0004_add_day_key",
+      "breakpoints": true
     }
   ]
 }

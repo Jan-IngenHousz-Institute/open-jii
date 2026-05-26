@@ -12,6 +12,8 @@ const migrationFiles = [
   "0000_outgoing_firebird.sql",
   "0001_add_pending_status.sql",
   "0002_dashing_lenny_balinger.sql",
+  "0003_drop_uploading_status.sql",
+  "0004_add_day_key.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../../drizzle", f), "utf-8"),
@@ -69,8 +71,8 @@ function insertRow(
 ) {
   sqlite
     .prepare(
-      `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)`,
     )
     .run(
       id,
