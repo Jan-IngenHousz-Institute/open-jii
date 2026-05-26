@@ -225,6 +225,12 @@ describe("Transport", () => {
   });
 
   it("does not close the session while a publish is still in flight", async () => {
+    // Use a long publish timeout so the publish stays in flight past the idle
+    // window — this test asserts idle behavior, not the publish-timeout path.
+    transport = createTransport({
+      pahoSessionFactory: factory,
+      publishTimeoutMs: IDLE_DISCONNECT_MS * 10,
+    });
     const p = transport.publish("topic/a", { v: 1 });
     await settle();
     const session = factory.current()!;

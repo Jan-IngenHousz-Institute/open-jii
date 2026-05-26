@@ -442,8 +442,7 @@ describe("measurements-storage", () => {
 
       expect(rows).toEqual([]);
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to fetch measurements list:",
-        expect.any(Error),
+        expect.stringContaining("Failed to fetch measurements list"),
       );
 
       consoleSpy.mockRestore();
@@ -483,8 +482,7 @@ describe("measurements-storage", () => {
 
       expect(row).toBeNull();
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to fetch measurement by id:",
-        expect.any(Error),
+        expect.stringContaining("Failed to fetch measurement by id"),
       );
 
       consoleSpy.mockRestore();
