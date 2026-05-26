@@ -36,6 +36,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
     isQuestionsSubmitPending,
     iterationCount,
     isFromOverview,
+    scanResult,
   } = useMeasurementFlowStore();
   const { experiments } = useExperiments();
   const isFocused = useIsFocused();
@@ -66,6 +67,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
       isFromOverview,
       flowNodes,
       answersHistory: JSON.parse(JSON.stringify(answersHistory)),
+      scanResult,
       pausedAt: new Date().toISOString(),
     });
   }, [
@@ -79,6 +81,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
     isQuestionsSubmitPending,
     isFromOverview,
     isFlowFinished,
+    scanResult,
   ]);
 
   // Android hardware back routes through the Exit sheet when a flow is active.
