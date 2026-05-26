@@ -1,13 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { eq, and, lt, inArray, count, desc } from "drizzle-orm";
-import { Duration, DateTime } from "luxon";
+import { DateTime, Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import type { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
 import { createLogger } from "~/shared/utils/logger";
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 import { compressForStorage, decompressFromStorage } from "~/shared/utils/storage-compression";
-import { getTimeSyncState } from "~/shared/utils/time-sync";
 
 import { db } from "./client";
 import { measurements } from "./schema";
@@ -131,24 +130,28 @@ function deriveListColumns(
   hasComment: boolean;
   dayKey: string;
 } {
-  // Compute day_key: convert ISO timestamp to local calendar date "YYYY-MM-DD"
-  // using the resolved timezone from time-sync.
-  const timeSyncState = getTimeSyncState();
-  let dayKey = "";
-  try {
-    const dt = DateTime.fromISO(timestamp, { zone: "utc" }).setZone(timeSyncState.timezone);
-    const formatted = dt.toFormat("yyyy-MM-dd");
-    dayKey = formatted && formatted !== "Invalid DateTime" ? formatted : "";
-  } catch {
-    // Fallback: if Luxon parsing fails, use date parts manually
-    dayKey = "";
-  }
-
   return {
     questionsText: JSON.stringify(parseQuestions(measurementResult)),
     hasComment: !!getCommentFromMeasurementResult(measurementResult as Record<string, unknown>),
-    dayKey,
+    dayKey: computeDayKey(timestamp),
   };
+}
+
+// Local calendar date "YYYY-MM-DD" for `timestamp`, resolved in the device's
+// timezone, so the Recent list buckets by day without parsing the timestamp
+// per row at render time. Defaults to today when the timestamp is unparseable.
+// Uses the device tz (Intl) rather than the synced tz so the DB layer stays
+// free of the time-sync service's native deps; for day-bucketing the two are
+// equivalent in practice. See OJD-1470.
+export function computeDayKey(timestamp: string): string {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  try {
+    const dt = DateTime.fromISO(timestamp, { zone: "utc" }).setZone(zone);
+    if (dt.isValid) return dt.toFormat("yyyy-MM-dd");
+  } catch {
+    // fall through to today
+  }
+  return DateTime.now().setZone(zone).toFormat("yyyy-MM-dd");
 }
 
 // `questions_text` is plain JSON written by `deriveListColumns`. A malformed
@@ -203,7 +206,6 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
  * needs to render a row, with no compressed blob. `questions` is already
  * parsed from the `questions_text` plain-text column populated at save time.
  * `hasComment` powers the row badge without touching `measurement_result`.
- * `dayKey` (local calendar date "YYYY-MM-DD") groups rows by day.
  */
 export interface MeasurementListRow {
   id: string;
@@ -275,9 +277,7 @@ export async function getMeasurementsList(
 export async function getMeasurement(id: string): Promise<StoredMeasurement | null> {
   await ensureMigrated();
   try {
-    const row = db.query.measurements.findFirst({
-      where: eq(measurements.id, id),
-    });
+    const row = db.select().from(measurements).where(eq(measurements.id, id)).get();
     if (!row) return null;
     return {
       id: row.id,
@@ -293,37 +293,163 @@ export async function getMeasurement(id: string): Promise<StoredMeasurement | nu
       },
     };
   } catch (error) {
-    log.error("Failed to fetch measurement", { err: (error as Error)?.message, id });
+    log.error("Failed to fetch measurement by id", { id, err: (error as Error)?.message });
     return null;
   }
 }
 
-function isValidMeasurement(parsed: unknown): boolean {
-  const m = parsed as Partial<Measurement>;
-  return !!(
-    m &&
-    typeof m.topic === "string" &&
-    typeof m.measurementResult === "object" &&
-    m.measurementResult &&
-    m.metadata &&
-    typeof m.metadata.experimentName === "string" &&
-    typeof m.metadata.protocolName === "string" &&
-    typeof m.metadata.timestamp === "string"
-  );
+export async function getMeasurements(
+  status: MeasurementStatus | MeasurementStatus[],
+): Promise<StoredMeasurement[]> {
+  try {
+    await ensureMigrated();
+    const statusList = Array.isArray(status) ? status : [status];
+    if (statusList.length === 0) return [];
+    const whereClause =
+      statusList.length === 1
+        ? eq(measurements.status, statusList[0])
+        : inArray(measurements.status, statusList);
+    const rows = db.select().from(measurements).where(whereClause).all();
+
+    return rows
+      .map((row): StoredMeasurement | null => {
+        try {
+          return {
+            id: row.id,
+            status: row.status,
+            data: {
+              topic: row.topic,
+              measurementResult: decompressFromStorage(row.measurementResult),
+              metadata: {
+                experimentName: row.experimentName,
+                protocolName: row.protocolName,
+                timestamp: row.timestamp,
+              },
+            },
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter((m): m is StoredMeasurement => m !== null);
+  } catch (error) {
+    log.error("Failed to fetch measurements", { err: (error as Error)?.message });
+    throw error;
+  }
 }
 
-/**
- * Prune successful uploads older than MAX_AGE_MS.
- * Called at app startup and when a measurement moves to "successful".
- * We keep pending/failed indefinitely; the user handles them manually.
- */
-export function pruneSuccessfulUploads(): void {
-  const cutoff = new Date(Date.now() - MAX_AGE_MS);
-  const deleted = db
-    .delete(measurements)
-    .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
-    .run();
-  if (deleted.changes > 0) {
-    log.info("pruned successful uploads", { count: deleted.changes });
+export async function getMeasurementById(id: string): Promise<StoredMeasurement | null> {
+  await ensureMigrated();
+  try {
+    const row = db.select().from(measurements).where(eq(measurements.id, id)).get();
+    if (!row) return null;
+    return {
+      id: row.id,
+      status: row.status,
+      data: {
+        topic: row.topic,
+        measurementResult: decompressFromStorage(row.measurementResult),
+        metadata: {
+          experimentName: row.experimentName,
+          protocolName: row.protocolName,
+          timestamp: row.timestamp,
+        },
+      },
+    };
+  } catch (error) {
+    log.error("Failed to fetch measurement by id", { id, err: (error as Error)?.message });
+    return null;
   }
+}
+
+export async function updateMeasurement(key: string, data: Measurement): Promise<void> {
+  await ensureMigrated();
+  try {
+    const derived = deriveListColumns(data.measurementResult, data.metadata.timestamp);
+    db.update(measurements)
+      .set({
+        topic: data.topic,
+        measurementResult: compressForStorage(data.measurementResult),
+        experimentName: data.metadata.experimentName,
+        protocolName: data.metadata.protocolName,
+        timestamp: data.metadata.timestamp,
+        questionsText: derived.questionsText,
+        hasComment: derived.hasComment,
+        dayKey: derived.dayKey,
+      })
+      .where(eq(measurements.id, key))
+      .run();
+  } catch (error) {
+    log.error("Failed to update measurement", { key, err: (error as Error)?.message });
+  }
+}
+
+export async function markAsFailed(key: string): Promise<void> {
+  await ensureMigrated();
+  try {
+    db.update(measurements)
+      .set({ status: "failed" })
+      .where(and(eq(measurements.id, key), eq(measurements.status, "pending")))
+      .run();
+  } catch (error) {
+    log.error("Failed to mark measurement as failed", { key, err: (error as Error)?.message });
+  }
+}
+
+export async function markAsSuccessful(key: string): Promise<void> {
+  await ensureMigrated();
+  try {
+    // Accept transitions from any pre-success state. A retry of a previously
+    // "failed" row that finally goes through still ends at "successful".
+    db.update(measurements)
+      .set({ status: "successful" })
+      .where(and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])))
+      .run();
+  } catch (error) {
+    log.error("Failed to mark measurement as successful", { key, err: (error as Error)?.message });
+  }
+}
+
+export async function removeMeasurement(key: string): Promise<void> {
+  await ensureMigrated();
+  try {
+    db.delete(measurements).where(eq(measurements.id, key)).run();
+  } catch (error) {
+    log.error("Failed to remove measurement", { key, err: (error as Error)?.message });
+  }
+}
+
+export async function clearMeasurements(status: MeasurementStatus): Promise<void> {
+  await ensureMigrated();
+  try {
+    db.delete(measurements).where(eq(measurements.status, status)).run();
+  } catch (error) {
+    log.error("Failed to clear measurements", { status, err: (error as Error)?.message });
+  }
+}
+
+export async function pruneExpiredMeasurements(): Promise<void> {
+  await ensureMigrated();
+  try {
+    const cutoff = new Date(Date.now() - MAX_AGE_MS);
+    const result = db
+      .delete(measurements)
+      .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
+      .run();
+    log.info("pruned successful uploads", {
+      count: result.changes,
+      older_than_days: Duration.fromMillis(MAX_AGE_MS).as("days"),
+    });
+  } catch (error) {
+    log.warn("Prune failed", { err: (error as Error)?.message });
+  }
+}
+
+function isValidMeasurement(obj: any): obj is Measurement {
+  return (
+    typeof obj === "object" &&
+    typeof obj.topic === "string" &&
+    typeof obj.measurementResult === "object" &&
+    typeof obj.metadata === "object"
+  );
 }

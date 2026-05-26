@@ -1,14 +1,10 @@
 import type { InfiniteData } from "@tanstack/react-query";
 import { QueryClient } from "@tanstack/react-query";
-import type { MeasurementCounts } from "~/shared/db/measurements-storage";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { MeasurementCounts } from "~/shared/db/measurements-storage";
 
-import {
-  applySettledPatchBatch,
-  queryKeys,
-  type MeasurementFilter,
-  type MeasurementItem,
-} from "../measurement-list-cache";
+import { applySettledPatchBatch, queryKeys } from "../measurement-list-cache";
+import type { MeasurementFilter, MeasurementItem } from "../measurement-list-cache";
 import type { SettledItem } from "../outbox";
 
 // Pure-patcher unit tests. No hooks, no Outbox, no DB — just a fresh
@@ -27,6 +23,7 @@ function item(id: string, status: Status): MeasurementItem {
     timestamp: "2026-01-01T10:00:00Z",
     questions: [],
     hasComment: false,
+    dayKey: "2026-01-01",
   } as MeasurementItem;
 }
 

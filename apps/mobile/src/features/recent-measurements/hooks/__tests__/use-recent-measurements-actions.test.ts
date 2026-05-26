@@ -100,6 +100,7 @@ const makeItem = (
   timestamp: "2026-01-01T10:00:00Z",
   questions: [],
   hasComment: false,
+  dayKey: "2026-01-01",
 });
 
 const mockAllMeasurements: MeasurementItem[] = [

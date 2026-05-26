@@ -89,7 +89,9 @@ const EXPERIMENTS = [
 ];
 const PROTOCOLS = ["multispeq-v2.0", "leaf-temp", "full-protocol", "photosynthesis-v3"];
 
-const STATUSES = ["successful", "pending", "failed", "uploading"] as const;
+// "uploading" was dropped in migration 0003; the seed must only use statuses
+// the current CHECK constraint allows.
+const STATUSES = ["successful", "pending", "failed"] as const;
 function statusFor(i: number) {
   return STATUSES[i % STATUSES.length];
 }

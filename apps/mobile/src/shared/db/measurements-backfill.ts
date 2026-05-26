@@ -1,12 +1,11 @@
-import { eq, isNull } from "drizzle-orm";
-import { DateTime } from "luxon";
+import { eq, isNull, or } from "drizzle-orm";
 import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
 import { createLogger } from "~/shared/utils/logger";
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 import { decompressFromStorage } from "~/shared/utils/storage-compression";
-import { getTimeSyncState } from "~/shared/utils/time-sync";
 
 import { db } from "./client";
+import { computeDayKey } from "./measurements-storage";
 import { measurements } from "./schema";
 
 const log = createLogger("measurements");
@@ -20,19 +19,25 @@ const BATCH_SIZE = 100;
  *
  * Done in batches with `setTimeout(0)` yields between batches so the UI stays
  * responsive while a large library decompresses ~150 KB payloads one at a time.
- * Failed rows are marked with `questions_text = "[]"` and `day_key = ""` so we
- * don't retry them forever — they'll still open correctly via getMeasurement(id)
- * since that decompresses on demand.
+ * Rows whose payload fails to decompress are marked with `questions_text = "[]"`
+ * (day_key still derives from the timestamp) so we don't retry them forever —
+ * they'll still open correctly via getMeasurement(id) since that decompresses
+ * on demand.
  */
 export async function backfillDerivedColumns(): Promise<void> {
   let totalUpdated = 0;
-  const timeSyncState = getTimeSyncState();
 
   while (true) {
     const rows = db
-      .select({ id: measurements.id, measurementResult: measurements.measurementResult, timestamp: measurements.timestamp })
+      .select({
+        id: measurements.id,
+        measurementResult: measurements.measurementResult,
+        timestamp: measurements.timestamp,
+      })
       .from(measurements)
-      .where(isNull(measurements.questionsText))
+      // Catch both pre-0003 rows (no questions_text) and pre-0004 rows that
+      // were questions-backfilled earlier but still have a null day_key.
+      .where(or(isNull(measurements.questionsText), isNull(measurements.dayKey)))
       .limit(BATCH_SIZE)
       .all();
     if (rows.length === 0) break;
@@ -42,26 +47,19 @@ export async function backfillDerivedColumns(): Promise<void> {
     const updates = rows.map((row) => {
       try {
         const result = decompressFromStorage<Record<string, unknown>>(row.measurementResult);
-        
-        // Compute day_key from timestamp + resolved timezone
-        let dayKey = "";
-        try {
-          const dt = DateTime.fromISO(row.timestamp, { zone: "utc" }).setZone(timeSyncState.timezone);
-          const formatted = dt.toFormat("yyyy-MM-dd");
-          dayKey = formatted && formatted !== "Invalid DateTime" ? formatted : "";
-        } catch {
-          // Fallback: empty dayKey
-          dayKey = "";
-        }
-
         return {
           id: row.id,
           questionsText: JSON.stringify(parseQuestions(result)),
           hasComment: !!getCommentFromMeasurementResult(result),
-          dayKey,
+          dayKey: computeDayKey(row.timestamp),
         };
       } catch {
-        return { id: row.id, questionsText: "[]", hasComment: false, dayKey: "" };
+        return {
+          id: row.id,
+          questionsText: "[]",
+          hasComment: false,
+          dayKey: computeDayKey(row.timestamp),
+        };
       }
     });
 

@@ -2,17 +2,15 @@ import type { InfiniteData } from "@tanstack/react-query";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
-import {
-  queryKeys,
-  type MeasurementItem,
-} from "../measurement-list-cache";
+import { queryKeys } from "../measurement-list-cache";
+import type { MeasurementItem } from "../measurement-list-cache";
 import type { Outbox, SettledItem } from "../outbox";
 import { mountOutboxBridge } from "../outbox-to-query-cache-bridge";
 
 // Hand-rolled fake Outbox that only implements subscribeSettled. The
 // bridge ignores the rest of the surface, so we don't need a full impl.
 function makeFakeOutbox(): { outbox: Outbox; emit(items: SettledItem[]): void } {
-  const listeners = new Set<(items: ReadonlyArray<SettledItem>) => void>();
+  const listeners = new Set<(items: readonly SettledItem[]) => void>();
   const outbox: Partial<Outbox> = {
     subscribeSettled(listener) {
       listeners.add(listener);
@@ -37,6 +35,7 @@ function item(id: string, status: "pending" | "failed" | "successful"): Measurem
     timestamp: "2026-01-01T10:00:00Z",
     questions: [],
     hasComment: false,
+    dayKey: "2026-01-01",
   } as MeasurementItem;
 }
 
