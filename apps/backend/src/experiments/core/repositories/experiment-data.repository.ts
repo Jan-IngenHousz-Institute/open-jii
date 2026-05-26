@@ -2,6 +2,10 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import { isDecimalType, isNumericType } from "@repo/api/utils/column-type-utils";
 
+import type {
+  AggregationSpec,
+  FilterCondition,
+} from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
 import { STATIC_TABLE_CONFIG, MACRO_TABLE_CONFIG } from "../models/experiment-data.model";

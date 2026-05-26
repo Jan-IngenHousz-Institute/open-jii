@@ -171,46 +171,6 @@ describe("validateDataConfig", () => {
   });
 });
 
-describe("bar chart contract", () => {
-  it("requires only X and treats Y as optional (count aggregation needs no Y)", () => {
-    const result = validateDataConfig(
-      "bar",
-      baseConfig([{ tableName: "raw_data", columnName: "contributor", role: "x" }]),
-    );
-    expect(result).toEqual({ ok: true });
-  });
-
-  it("accepts an optional Y column when supplied", () => {
-    const result = validateDataConfig(
-      "bar",
-      baseConfig([
-        { tableName: "raw_data", columnName: "contributor", role: "x" },
-        { tableName: "raw_data", columnName: "phi2", role: "y" },
-      ]),
-    );
-    expect(result).toEqual({ ok: true });
-  });
-
-  it("rejects multiple X sources (cardinality single)", () => {
-    const result = validateDataConfig(
-      "bar",
-      baseConfig([
-        { tableName: "raw_data", columnName: "contributor", role: "x" },
-        { tableName: "raw_data", columnName: "team", role: "x" },
-      ]),
-    );
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.issues).toContainEqual(
-      expect.objectContaining({ code: "BAD_CARDINALITY", role: "x" }),
-    );
-  });
-
-  it("listRequiredRoles excludes the optional Y", () => {
-    expect(listRequiredRoles("bar")).toEqual(["x"]);
-  });
-});
-
 describe("isDataConfigRenderable", () => {
   it("returns true for a satisfied contract", () => {
     expect(

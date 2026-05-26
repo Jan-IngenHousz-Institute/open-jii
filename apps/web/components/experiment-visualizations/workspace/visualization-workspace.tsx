@@ -78,9 +78,7 @@ export function VisualizationWorkspace({
     () =>
       (tableMetadata?.rawColumns ?? []).filter(
         (col) =>
-          isPlottableColumn(col.type_text) ||
-          col.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
-          col.type_text === WellKnownColumnTypes.QUESTIONS,
+          isPlottableColumn(col.type_text) || col.type_text === WellKnownColumnTypes.CONTRIBUTOR,
       ),
     [tableMetadata],
   );
