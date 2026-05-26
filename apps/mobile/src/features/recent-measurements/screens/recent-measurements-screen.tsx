@@ -2,7 +2,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect } from "expo-router";
 import { ChevronsLeft } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, View } from "react-native";
+import { ActivityIndicator, InteractionManager, Text, View } from "react-native";
 import { DevSeedMeasurementsDialog } from "~/features/recent-measurements/components/dev-seed-measurements-dialog";
 import { MeasurementsDayHeader } from "~/features/recent-measurements/components/measurements-day-header";
 import { MeasurementsListEmpty } from "~/features/recent-measurements/components/measurements-list-empty";
@@ -56,6 +56,25 @@ export function RecentMeasurementsScreen() {
   // every settle tick (counts now live in the toolbar). See OJD-1470.
   const hasAnyMeasurements = useHasAnyMeasurements();
 
+  // [perf] Defer the first heavy list commit (50 rows × a gesture-handler +
+  // reanimated swipeable each ≈ 200 ms on the shared JS thread) until the
+  // tab-transition interaction settles. paho parses PUBACKs on that same JS
+  // thread, so committing the list synchronously on focus stalls the in-flight
+  // acks ~1 s and inflates upload times. Yielding first lets paho drain the
+  // queued acks, then the list mounts. Stays true after the first paint so
+  // returning to the tab is instant. See OJD-1470.
+  const [listReady, setListReady] = useState(false);
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => setListReady(true));
+    // Fallback so a never-cleared interaction handle can't strand the list
+    // behind the spinner; 500 ms still clears most tab transitions first.
+    const fallback = setTimeout(() => setListReady(true), 500);
+    return () => {
+      task.cancel();
+      clearTimeout(fallback);
+    };
+  }, []);
+
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
   const openModal = useCallback(async (kind: "questions" | "comment", id: string) => {
@@ -71,21 +90,6 @@ export function RecentMeasurementsScreen() {
 
   const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
 
-  // [perf] Mark every focus/blur of this tab so a JS-thread freeze in the
-  // logs can be tied to the exact moment of the tab switch.
-  useFocusEffect(
-    useCallback(() => {
-      log.info("focus");
-      return () => log.info("blur");
-    }, []),
-  );
-
-  // [perf] One line per data update that re-renders this screen — shows the
-  // per-settle re-render cadence while the Outbox drains.
-  useEffect(() => {
-    log.info("data-changed", { measurements: measurements.length });
-  }, [measurements]);
-
   const data = useMemo<ListRow[]>(() => {
     const t0 = Date.now();
     const sections = groupMeasurementsByDay(measurements, undefined, locale);
@@ -97,7 +101,7 @@ export function RecentMeasurementsScreen() {
       }
     }
     const build_ms = Date.now() - t0;
-    if (build_ms > 8) {
+    if (build_ms > 12) {
       log.info("build-rows-slow", {
         build_ms,
         measurements: measurements.length,
@@ -188,17 +192,24 @@ export function RecentMeasurementsScreen() {
         </View>
       )}
 
-      <FlashList
-        data={data}
-        keyExtractor={keyExtractor}
-        getItemType={getItemType}
-        renderItem={renderItem}
-        contentContainerStyle={FLASHLIST_CONTENT_STYLE}
-        ListEmptyComponent={listEmpty}
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={listFooter}
-      />
+      {listReady ? (
+        <FlashList
+          data={data}
+          keyExtractor={keyExtractor}
+          getItemType={getItemType}
+          renderItem={renderItem}
+          contentContainerStyle={FLASHLIST_CONTENT_STYLE}
+          ListEmptyComponent={listEmpty}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={listFooter}
+          drawDistance={150}
+        />
+      ) : (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={colors.inactive} />
+        </View>
+      )}
 
       <MeasurementsModals state={modal} onClose={closeModal} onSaveComment={saveComment} />
       {__DEV__ && (
