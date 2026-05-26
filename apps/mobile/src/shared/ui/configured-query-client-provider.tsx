@@ -86,7 +86,7 @@ export function ConfiguredQueryClientProvider({ children }) {
         // Bump when a query's stored shape changes (e.g. useQuery →
         // useInfiniteQuery). On mismatch the persisted cache is dropped, so
         // hydrating code doesn't see an old shape and crash.
-        buster: "v2-measurements-infinite-query",
+        buster: "v3-workbook-version-cache",
       }}
     >
       {children}

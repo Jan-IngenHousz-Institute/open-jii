@@ -53,7 +53,8 @@
       "review": "Review answers",
       "completed": "Completed"
     },
-    "exitLabel": "Exit"
+    "exitLabel": "Exit",
+    "branchPathA11y": "Active branch path: {{label}}"
   },
   "exitSheet": {
     "title": "Exit measurement?",

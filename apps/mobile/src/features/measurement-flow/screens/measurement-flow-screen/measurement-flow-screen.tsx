@@ -47,6 +47,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const hasAlerts = useActiveAlerts().length > 0;
   const isLightMode = themeColors.scheme !== "dark";
   const experimentLabel = experiment?.name ?? "";
+
   const hasActiveFlow = !!experimentId;
   const statusBarStyle = hasAlerts && isLightMode ? "dark" : hasActiveFlow ? "light" : "auto";
 

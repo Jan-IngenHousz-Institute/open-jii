@@ -31,6 +31,10 @@ function resetStore() {
     isQuestionsSubmitPending: false,
     scanResult: undefined,
     isFromOverview: false,
+    cells: [],
+    edges: [],
+    lastMatchedPath: undefined,
+    branchVisitCounts: {},
   });
 }
 
@@ -376,6 +380,102 @@ describe("useMeasurementFlowStore", () => {
       });
       useMeasurementFlowStore.getState().returnToOverview();
       expect(useMeasurementFlowStore.getState().isQuestionsSubmitPending).toBe(true);
+    });
+  });
+
+  describe("branch state", () => {
+    it("setFlowGraph sets nodes/edges/cells and resets branch + step state", () => {
+      useMeasurementFlowStore.setState({
+        currentFlowStep: 5,
+        branchVisitCounts: { b1: 3 },
+        lastMatchedPath: { label: "old", color: "#000" },
+      });
+      const nodes = [makeQuestion("q1")];
+      const edges = [{ id: "e1", source: "q1", target: "q2" }];
+      const cells = [
+        {
+          id: "q1",
+          type: "question",
+          isCollapsed: false,
+          name: "q1",
+          question: { kind: "number", text: "q1", required: false },
+          isAnswered: false,
+        },
+      ] as never;
+
+      useMeasurementFlowStore.getState().setFlowGraph(nodes, edges, cells);
+
+      const state = useMeasurementFlowStore.getState();
+      expect(state.flowNodes).toEqual(nodes);
+      expect(state.edges).toEqual(edges);
+      expect(state.cells).toEqual(cells);
+      expect(state.currentFlowStep).toBe(0);
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
+    });
+
+    it("incrementBranchVisit accumulates per node id", () => {
+      const { incrementBranchVisit } = useMeasurementFlowStore.getState();
+      incrementBranchVisit("b1");
+      incrementBranchVisit("b1");
+      incrementBranchVisit("b2");
+      expect(useMeasurementFlowStore.getState().branchVisitCounts).toEqual({ b1: 2, b2: 1 });
+    });
+
+    it("setLastMatchedPath sets and clears the chip", () => {
+      useMeasurementFlowStore.getState().setLastMatchedPath({ label: "A", color: "#f00" });
+      expect(useMeasurementFlowStore.getState().lastMatchedPath).toEqual({
+        label: "A",
+        color: "#f00",
+      });
+      useMeasurementFlowStore.getState().setLastMatchedPath(undefined);
+      expect(useMeasurementFlowStore.getState().lastMatchedPath).toBeUndefined();
+    });
+
+    it("setFlowNodes clears branch state (legacy path)", () => {
+      useMeasurementFlowStore.setState({
+        cells: [{ id: "x" }] as never,
+        branchVisitCounts: { b1: 1 },
+        lastMatchedPath: { label: "x", color: "#000" },
+      });
+      useMeasurementFlowStore.getState().setFlowNodes([makeQuestion("q1")]);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.cells).toEqual([]);
+      expect(state.edges).toEqual([]);
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
+    });
+
+    it.each([
+      "startNewIteration",
+      "retryCurrentIteration",
+      "resetFlow",
+      "dismissQuestionsSubmit",
+    ] as const)("%s clears branch visit counts and matched path", (action) => {
+      useMeasurementFlowStore.setState({
+        branchVisitCounts: { b1: 4 },
+        lastMatchedPath: { label: "x", color: "#000" },
+      });
+      useMeasurementFlowStore.getState()[action]();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
+    });
+
+    it("nextStep clears branch state when an iteration wraps", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeQuestion("q1"), makeMeasurement("m1")],
+        currentFlowStep: 1,
+        branchVisitCounts: { b1: 2 },
+        lastMatchedPath: { label: "x", color: "#000" },
+      });
+      useMeasurementFlowStore.getState().nextStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.currentFlowStep).toBe(0);
+      expect(state.iterationCount).toBe(1);
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
     });
   });
 });

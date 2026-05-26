@@ -2,9 +2,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
+  FlowEdge,
   FlowNode,
   isQuestionsOnlyFlow,
 } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+
+/** The branch path the flow last routed through, surfaced inline in the hero. */
+export interface MatchedPath {
+  label: string;
+  color: string;
+}
 
 interface MeasurementFlowStore {
   experimentId?: string;
@@ -19,6 +28,15 @@ interface MeasurementFlowStore {
   scanResult?: any;
   isFromOverview: boolean;
 
+  // Workbook-derived data, used to evaluate branch cells on-device. Empty for
+  // legacy flow-only experiments (no workbook attached).
+  cells: WorkbookCell[];
+  edges: FlowEdge[];
+  // Which branch path was last taken (for the inline hero chip).
+  lastMatchedPath?: MatchedPath;
+  // Per-node visit counter that caps branch goto-loops (mirrors web's MAX_VISITS_PER_CELL).
+  branchVisitCounts: Record<string, number>;
+
   setExperimentId: (experimentId: string, experimentLabel?: string) => void;
   setProtocolId: (protocolId: string) => void;
   setCurrentStep: (step: number) => void;
@@ -28,7 +46,11 @@ interface MeasurementFlowStore {
   reset: () => void;
 
   setFlowNodes: (nodes: FlowNode[]) => void;
+  setFlowGraph: (nodes: FlowNode[], edges: FlowEdge[], cells: WorkbookCell[]) => void;
+  setLastMatchedPath: (path: MatchedPath | undefined) => void;
+  incrementBranchVisit: (nodeId: string) => void;
   resetFlow: () => void;
+  startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
   setScanResult: (result: any) => void;
@@ -40,7 +62,9 @@ interface MeasurementFlowStore {
 // The store is persisted so a mid-flow blur (background, kill, tab switch)
 // is itself the "pause": the next launch rehydrates the same active flow
 // and the home screen renders the resume card based on whether experimentId
-// is set. No separate snapshot store needed.
+// is set. No separate snapshot store needed. The workbook cells/edges and
+// branch state are persisted too so a resumed branching flow keeps evaluating
+// offline.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
@@ -55,6 +79,10 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       isQuestionsSubmitPending: false,
       scanResult: undefined,
       isFromOverview: false,
+      cells: [],
+      edges: [],
+      lastMatchedPath: undefined,
+      branchVisitCounts: {},
 
       setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
       setProtocolId: (protocolId) => set({ protocolId }),
@@ -83,6 +111,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
               return {
                 currentFlowStep: 0,
                 iterationCount: state.iterationCount + 1,
+                branchVisitCounts: {},
+                lastMatchedPath: undefined,
               };
             }
             return { currentFlowStep: nextFlowStep };
@@ -119,6 +149,10 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                 isQuestionsSubmitPending: false,
                 scanResult: undefined,
                 protocolId: undefined,
+                cells: [],
+                edges: [],
+                branchVisitCounts: {},
+                lastMatchedPath: undefined,
               };
             }
           }
@@ -129,7 +163,35 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       // currentFlowStep, iterationCount, scanResult, …) is cleared too.
       reset: () => get().resetFlow(),
 
-      setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0 }),
+      setFlowNodes: (nodes) =>
+        set({
+          flowNodes: nodes,
+          currentFlowStep: 0,
+          cells: [],
+          edges: [],
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
+        }),
+
+      setFlowGraph: (nodes, edges, cells) =>
+        set({
+          flowNodes: nodes,
+          edges,
+          cells,
+          currentFlowStep: 0,
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
+        }),
+
+      setLastMatchedPath: (path) => set({ lastMatchedPath: path }),
+
+      incrementBranchVisit: (nodeId) =>
+        set((state) => ({
+          branchVisitCounts: {
+            ...state.branchVisitCounts,
+            [nodeId]: (state.branchVisitCounts[nodeId] ?? 0) + 1,
+          },
+        })),
 
       resetFlow: () =>
         set({
@@ -144,7 +206,22 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           scanResult: undefined,
           protocolId: undefined,
           isFromOverview: false,
+          cells: [],
+          edges: [],
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
         }),
+
+      startNewIteration: () =>
+        set((state) => ({
+          currentFlowStep: 0,
+          iterationCount: state.iterationCount + 1,
+          isQuestionsSubmitPending: false,
+          scanResult: undefined,
+          isFromOverview: false,
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
+        })),
 
       retryCurrentIteration: () =>
         set(() => ({
@@ -152,6 +229,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isQuestionsSubmitPending: false,
           scanResult: undefined,
           isFromOverview: false,
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
         })),
 
       finishFlow: () =>
@@ -170,6 +249,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           currentFlowStep: 0,
           iterationCount: state.iterationCount + 1,
           scanResult: undefined,
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
         })),
 
       navigateToQuestionFromOverview: (questionIndex) =>
@@ -208,6 +289,10 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
         isFromOverview: state.isFromOverview,
+        cells: state.cells,
+        edges: state.edges,
+        branchVisitCounts: state.branchVisitCounts,
+        lastMatchedPath: state.lastMatchedPath,
       }),
     },
   ),
