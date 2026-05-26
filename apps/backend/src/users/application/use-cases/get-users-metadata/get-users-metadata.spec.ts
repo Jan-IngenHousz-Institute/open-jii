@@ -75,7 +75,7 @@ describe("GetUsersMetadataUseCase", () => {
       userId: testUser1Id,
       firstName: "John",
       lastName: "Doe",
-      image: null, // No image set in test
+      avatarUrl: null,
     });
 
     // Check second user
@@ -85,7 +85,7 @@ describe("GetUsersMetadataUseCase", () => {
       userId: testUser2Id,
       firstName: "Jane",
       lastName: "Smith",
-      image: null, // No image set in test
+      avatarUrl: null,
     });
   });
 

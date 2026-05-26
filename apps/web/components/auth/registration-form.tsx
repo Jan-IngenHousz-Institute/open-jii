@@ -11,6 +11,7 @@ import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Form } from "@repo/ui/components/form";
@@ -44,6 +45,7 @@ export function RegistrationForm({
   const [isPending, setIsPending] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const { data: session } = useSession();
   const updateUser = useUpdateUser();
   const sendOtpRegistration = useSignInEmail();
   const verifyOtpRegistration = useVerifyEmail();
@@ -173,6 +175,7 @@ export function RegistrationForm({
           firstName: data.firstName ?? "",
           lastName: data.lastName ?? "",
           organization: data.organization,
+          avatarUrl: session?.user.image ?? null,
         },
       });
     } catch {
