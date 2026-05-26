@@ -3,6 +3,9 @@ import { colorScheme } from "nativewind";
 import React, { createContext, useState, useEffect } from "react";
 import { Appearance } from "react-native";
 import { Theme, darkTheme, lightTheme } from "~/shared/constants/theme";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("theme");
 
 export type ThemePreference = "light" | "dark";
 
@@ -43,7 +46,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         setThemePreference(seed);
         await AsyncStorage.setItem("themePreference", seed);
       } catch (error) {
-        console.error("Failed to load theme preference:", error);
+        log.error("Failed to load theme preference", {
+          err: error instanceof Error ? error.message : String(error),
+        });
       }
     };
     loadThemePreference();
@@ -58,7 +63,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       await AsyncStorage.setItem("themePreference", newPreference);
       setThemePreference(newPreference);
     } catch (error) {
-      console.error("Failed to save theme preference:", error);
+      log.error("Failed to save theme preference", {
+        err: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 

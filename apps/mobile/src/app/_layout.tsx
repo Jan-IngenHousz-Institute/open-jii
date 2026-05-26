@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { useFonts } from "expo-font";
@@ -16,21 +17,27 @@ import { Toaster } from "sonner-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
-import { useAutoUpload } from "~/features/recent-measurements/hooks/use-auto-upload";
+import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
+import { getOutbox } from "~/shared/composition/upload";
 import { db } from "~/shared/db/client";
 import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
 import { useI18nReady } from "~/shared/i18n";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
 import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
 import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
+import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-boundary";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
 import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
+import { createLogger } from "~/shared/utils/logger";
 import { shouldHideSplash } from "~/shared/utils/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
 
+const log = createLogger("root-layout");
+
 SplashScreen.preventAutoHideAsync();
+installGlobalErrorHandlers();
 
 function DrizzleDevTools() {
   useDrizzleStudio(db.$client);
@@ -105,10 +112,10 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   useEffect(() => {
     if (error) {
-      console.error(error);
+      log.error("font load error", { err: error?.message });
     }
     if (migrationsError) {
-      console.error("[db] Migration failed:", migrationsError);
+      log.error("db migration failed", { err: migrationsError?.message });
     }
   }, [error, migrationsError]);
 
@@ -120,7 +127,9 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   useEffect(() => {
     if (!migrationsReady) return;
-    void backfillDerivedColumns().catch((e) => console.warn("[db] backfill failed:", e));
+    void backfillDerivedColumns().catch((e) =>
+      log.warn("db backfill failed", { err: (e as Error)?.message }),
+    );
   }, [migrationsReady]);
 
   if (migrationsError) {
@@ -145,16 +154,48 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   }
 
   return (
-    <PostHogProvider>
-      <ThemeProvider>
-        <RootLayoutContent />
-      </ThemeProvider>
-    </PostHogProvider>
+    <ErrorBoundary>
+      <PostHogProvider>
+        <ThemeProvider>
+          <RootLayoutContent />
+        </ThemeProvider>
+      </PostHogProvider>
+    </ErrorBoundary>
   );
 }
 
-function AutoUploadEffect() {
-  useAutoUpload();
+function OutboxBootstrap() {
+  // Force the Outbox singleton to construct on app start so its network
+  // listener, AppState listener, and DB rehydration kick in even before
+  // the first user-initiated save. Also mount the bridge that drains
+  // Outbox settled events into the measurement list cache — always-on, so
+  // every consumer (Recent tab, Home preview) sees the same fresh cache.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const outbox = getOutbox();
+    const unmount = mountOutboxBridge({ outbox, queryClient });
+    return unmount;
+  }, [queryClient]);
+  return null;
+}
+
+// [perf] App-wide event-loop lag probe. A frozen JS thread (e.g. a heavy
+// screen mount) delays this interval; the measured drift is the freeze
+// length.
+function EventLoopLagMonitor() {
+  useEffect(() => {
+    const lagLog = createLogger("event-loop");
+    const PERIOD_MS = 500;
+    const THRESHOLD_MS = 100;
+    let last = Date.now();
+    const id = setInterval(() => {
+      const now = Date.now();
+      const lag_ms = now - last - PERIOD_MS;
+      last = now;
+      if (lag_ms > THRESHOLD_MS) lagLog.info("stall", { lag_ms });
+    }, PERIOD_MS);
+    return () => clearInterval(id);
+  }, []);
   return null;
 }
 
@@ -165,7 +206,8 @@ function RootLayoutContent() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TimeSyncProvider>
         <ConfiguredQueryClientProvider>
-          <AutoUploadEffect />
+          <OutboxBootstrap />
+          {__DEV__ && <EventLoopLagMonitor />}
           <SafeAreaProvider>
             <PythonMacroProvider>
               <BottomSheetModalProvider>

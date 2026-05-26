@@ -18,8 +18,7 @@ const mockExportMeasurementsToFile = vi.fn().mockResolvedValue(undefined);
 vi.mock("~/features/recent-measurements/hooks/use-all-measurements", () => ({
   useAllMeasurements: vi.fn(() => ({
     measurements: mockAllMeasurements,
-    counts: { pending: 0, uploading: 1, failed: 1, successful: 1 },
-    uploadingCount: 1,
+    counts: { pending: 0, failed: 1, successful: 1 },
     invalidate: mockInvalidate,
   })),
 }));
@@ -101,12 +100,13 @@ const makeItem = (
   timestamp: "2026-01-01T10:00:00Z",
   questions: [],
   hasComment: false,
+  dayKey: "2026-01-01",
 });
 
 const mockAllMeasurements: MeasurementItem[] = [
   makeItem("k1", "failed", "Exp Unsynced"),
   makeItem("k2", "successful", "Exp Synced"),
-  makeItem("k3", "uploading", "Exp Syncing"),
+  makeItem("k3", "pending", "Exp Pending"),
 ];
 
 describe("useRecentMeasurementsActions", () => {
@@ -114,14 +114,12 @@ describe("useRecentMeasurementsActions", () => {
     vi.clearAllMocks();
   });
 
-  it("returns derived counts and passthrough values", () => {
+  it("passes the measurement list through", () => {
     const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
-    expect(result.current.unsyncedCount).toBe(1);
-    expect(result.current.syncedCount).toBe(1);
-    expect(result.current.hasAnyMeasurements).toBe(true);
-    expect(result.current.uploadingCount).toBe(1);
-    expect(result.current.isUploading).toBe(false);
+    // Counts moved to useMeasurementCounts (toolbar-owned); the actions hook
+    // no longer subscribes to them, keeping the screen off the settle-tick
+    // re-render path. See OJD-1470.
     expect(result.current.measurements).toBe(mockAllMeasurements);
   });
 
