@@ -212,7 +212,8 @@
       "removeAlertTitle": "Remove from phone",
       "removeAlertMessage": "\"{{experimentName}}\" is already uploaded to the cloud. Remove it from this phone? The cloud copy stays intact.",
       "deleteAlertTitle": "Delete unsynced measurement",
-      "deleteAlertMessage": "\"{{experimentName}}\" has not been uploaded yet. Deleting it now means the measurement will be lost permanently."
+      "deleteAlertMessage": "\"{{experimentName}}\" has not been uploaded yet. Deleting it now means the measurement will be lost permanently.",
+      "deleteBlockedUploading": "Can't delete while uploading — try again in a moment."
     },
     "empty": "No flow steps available.",
     "error": "Failed to load experiment flow. Please try again.",

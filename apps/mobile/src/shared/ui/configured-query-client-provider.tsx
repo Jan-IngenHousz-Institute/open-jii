@@ -5,6 +5,9 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
 import { isOnline } from "~/shared/utils/is-online";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("query-client");
 
 const CHECK_INTERVAL = 10 * 1000;
 
@@ -59,8 +62,8 @@ export function ConfiguredQueryClientProvider({ children }) {
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
       onError: (error: any) => {
-        console.log("error", error);
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
+        log.warn("query error", { message, status: error?.status });
         toast.error(message);
       },
     });

@@ -83,6 +83,7 @@
   "toasts": {
     "uploadFailed": "Upload failed. Please try again.",
     "uploadNotAvailable": "Upload not available, upload it later from Recent",
-    "answersSaveFailed": "Answers could not be saved on this device. Please export your data now to avoid losing it."
+    "answersSaveFailed": "Answers could not be saved on this device. Please export your data now to avoid losing it.",
+    "savedQueued": "Saved. Uploading in the background."
   }
 }

@@ -83,6 +83,7 @@
   "toasts": {
     "uploadFailed": "Upload mislukt. Probeer het opnieuw.",
     "uploadNotAvailable": "Upload niet beschikbaar, upload later vanuit Recent",
-    "answersSaveFailed": "Antwoorden konden niet op dit apparaat worden opgeslagen. Exporteer je gegevens nu om verlies te voorkomen."
+    "answersSaveFailed": "Antwoorden konden niet op dit apparaat worden opgeslagen. Exporteer je gegevens nu om verlies te voorkomen.",
+    "savedQueued": "Opgeslagen. Wordt op de achtergrond geüpload."
   }
 }

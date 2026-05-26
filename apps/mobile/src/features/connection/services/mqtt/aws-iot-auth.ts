@@ -5,12 +5,11 @@ import {
 } from "@aws-sdk/client-cognito-identity";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
-import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
-import { getEnvVar } from "~/shared/stores/environment-store";
-import { Emitter } from "~/shared/utils/emitter";
-import { generateRandomString } from "~/shared/utils/generate-random-string";
+import { createLogger } from "~/shared/utils/logger";
 import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/utils/time-sync";
+
+const log = createLogger("mqtt-conn");
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -114,7 +113,7 @@ async function fetchAndPersistIdentityId(
   try {
     await AsyncStorage.setItem(storageKeyFor(identityPoolId), IdentityId);
   } catch (e) {
-    console.warn("[mqtt] Failed to persist Cognito IdentityId:", e);
+    log.warn("Failed to persist Cognito IdentityId", { err: (e as Error)?.message });
   }
   cachedIdentityId = IdentityId;
   return IdentityId;
@@ -148,7 +147,7 @@ async function clearCachedIdentityId(identityPoolId: string): Promise<void> {
   try {
     await AsyncStorage.removeItem(storageKeyFor(identityPoolId));
   } catch (e) {
-    console.warn("[mqtt] Failed to clear persisted Cognito IdentityId:", e);
+    log.warn("Failed to clear persisted Cognito IdentityId", { err: (e as Error)?.message });
   }
 }
 
@@ -229,7 +228,7 @@ export async function getCredentials({
       // fresh one, and try exactly once more.
       const name = (err as { name?: string })?.name;
       if (name === "ResourceNotFoundException" || name === "NotAuthorizedException") {
-        console.warn(`[mqtt] Cached IdentityId rejected (${name}); refreshing.`);
+        log.warn("Cached IdentityId rejected — refreshing", { name });
         await clearCachedIdentityId(identityPoolId);
         IdentityId = await fetchAndPersistIdentityId(identityClient, identityPoolId);
         Credentials = await fetchCredentialsFor(IdentityId);
@@ -268,85 +267,4 @@ export async function getCredentials({
   } finally {
     inflightCredentialsPromise = null;
   }
-}
-
-function connectToMqtt(url: string, clientId: string) {
-  const client = new Client(url, clientId);
-
-  return new Promise<Client>((resolve, reject) => {
-    client.connect({
-      onSuccess: () => resolve(client),
-      onFailure: reject,
-      useSSL: true,
-      timeout: 3,
-    });
-  });
-}
-
-export interface ReceivedMessage {
-  payload: string;
-  destinationName: string;
-}
-
-export interface MqttEmitterEvents {
-  messageArrived: ReceivedMessage;
-  connectionLost: MQTTError;
-  sendMessage: { payload: string; topic: string };
-  destroy: void;
-  messageDelivered: ReceivedMessage;
-}
-
-export async function createMqttConnection() {
-  console.log("[mqtt-conn] getCredentials: start");
-  const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
-    identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
-    region: getEnvVar("REGION"),
-  });
-  console.log("[mqtt-conn] getCredentials: done");
-
-  const clientId = getEnvVar("CLIENT_ID") + " - " + generateRandomString();
-
-  console.log("[mqtt-conn] createSignedUrl: start");
-  const signedUrl = await createSignedUrl({
-    clientId,
-    accessKeyId,
-    secretAccessKey,
-    sessionToken,
-    region: getEnvVar("REGION"),
-    endpoint: getEnvVar("IOT_ENDPOINT"),
-  });
-  console.log("[mqtt-conn] createSignedUrl: done");
-
-  console.log("[mqtt-conn] connectToMqtt: start");
-  const client = await connectToMqtt(signedUrl, clientId);
-  console.log("[mqtt-conn] connectToMqtt: done");
-
-  const emitter = new Emitter<MqttEmitterEvents>();
-
-  client.onMessageArrived = (message: Message) => {
-    const { payloadString: payload, destinationName } = message;
-
-    emitter
-      .emit("messageArrived", { destinationName, payload })
-      .catch((e) => console.log("messageArrived error", e));
-  };
-
-  client.onConnectionLost = (err) => {
-    emitter.emit("connectionLost", err).catch((e) => console.log("connectionLost error", e));
-  };
-
-  emitter.on("sendMessage", ({ payload, topic }) => {
-    client.send(topic, payload);
-  });
-
-  emitter.on("destroy", () => client.disconnect());
-
-  client.onMessageDelivered = (message) => {
-    const { payloadString: payload, destinationName } = message;
-    emitter
-      .emit("messageDelivered", { payload, destinationName })
-      .catch((e) => console.log("messageDelivered error", e));
-  };
-
-  return emitter;
 }

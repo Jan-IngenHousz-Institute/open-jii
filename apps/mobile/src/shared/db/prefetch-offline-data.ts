@@ -1,7 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { tsr } from "~/shared/api/tsr";
+import { createLogger } from "~/shared/utils/logger";
 import { uniq } from "~/shared/utils/uniq";
+
+const log = createLogger("prefetch");
 
 /**
  * Prefetches all experiment data needed for offline use.
@@ -11,10 +14,9 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
   try {
     await _prefetchOfflineData(queryClient);
   } catch (err) {
-    console.error(
-      "[prefetch] Failed to prefetch offline data:",
-      err instanceof Error ? err.message : String(err),
-    );
+    log.error("Failed to prefetch offline data", {
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -75,10 +77,11 @@ async function _prefetchOfflineData(queryClient: QueryClient): Promise<void> {
     (r): r is PromiseRejectedResult => r.status === "rejected",
   );
   if (flowFailures.length > 0) {
-    console.warn(
-      `[prefetch] ${flowFailures.length}/${experiments.length} experiment flow(s) failed:`,
-      flowFailures.map((r) => r.reason?.message ?? String(r.reason)),
-    );
+    log.warn("experiment flow(s) failed", {
+      failures: flowFailures.length,
+      total: experiments.length,
+      reasons: flowFailures.map((r) => r.reason?.message ?? String(r.reason)),
+    });
   }
 
   // 3. Fetch all unique protocols and macros
@@ -114,15 +117,19 @@ async function _prefetchOfflineData(queryClient: QueryClient): Promise<void> {
 
   const assetFailures = assetResults.filter((r) => r.status === "rejected");
   if (assetFailures.length > 0) {
-    console.warn(
-      `[prefetch] ${assetFailures.length}/${uniqueProtocolIds.length + uniqueMacroIds.length} protocol/macro(s) failed to prefetch`,
-    );
+    log.warn("protocol/macro prefetch failures", {
+      failures: assetFailures.length,
+      total: uniqueProtocolIds.length + uniqueMacroIds.length,
+    });
   }
 
   const flowsCached = experiments.length - flowFailures.length;
   const assetsCached = uniqueProtocolIds.length + uniqueMacroIds.length - assetFailures.length;
 
-  console.log(
-    `[prefetch] Cached ${flowsCached}/${experiments.length} experiments, ${assetsCached}/${uniqueProtocolIds.length + uniqueMacroIds.length} protocols+macros`,
-  );
+  log.info("cached", {
+    experiments_cached: flowsCached,
+    experiments_total: experiments.length,
+    assets_cached: assetsCached,
+    assets_total: uniqueProtocolIds.length + uniqueMacroIds.length,
+  });
 }

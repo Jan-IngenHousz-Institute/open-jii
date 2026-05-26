@@ -3,6 +3,7 @@ import { MessageCircleMore, Trash2, UploadCloud } from "lucide-react-native";
 import React, { memo } from "react";
 import { View, Text, TouchableOpacity, Pressable } from "react-native";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { Tag } from "~/shared/ui/Tag";
 import type { TagVariant } from "~/shared/ui/Tag";
@@ -13,7 +14,6 @@ import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 
 const STATUS_TAG: Record<MeasurementStatus, { variant: TagVariant; key: string }> = {
   successful: { variant: "synced", key: "tag.synced" },
-  uploading: { variant: "default", key: "tag.uploading" },
   pending: { variant: "queued", key: "tag.queued" },
   failed: { variant: "failed", key: "tag.failed" },
 };
@@ -57,7 +57,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const isSynced = status === "successful";
-  const isSyncing = status === "uploading";
+  const isSyncing = useIsProcessing(id);
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
 

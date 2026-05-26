@@ -16,6 +16,7 @@ function item(iso: string, key = iso): MeasurementItem {
     status: "successful",
     questions: [],
     hasComment: false,
+    dayKey: iso.split("T")[0],
   };
 }
 

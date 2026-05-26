@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { ChevronsLeft } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, FlatList } from "react-native";
+import { toast } from "sonner-native";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
@@ -11,6 +12,7 @@ import type {
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
+import { getOutbox } from "~/shared/composition/upload";
 import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -71,7 +73,13 @@ export function CompletedState() {
           : undefined
       }
       onDelete={() => {
-        if (item.status === "uploading") return;
+        // Block delete while the Outbox is actively trying to publish — the
+        // worker would race the DB delete and could double-publish. Surface
+        // it instead of silently swallowing the swipe.
+        if (getOutbox().isProcessing(item.key)) {
+          toast.info(t("measurementFlow:flowStates.completed.deleteBlockedUploading"));
+          return;
+        }
         confirmDelete(item);
       }}
       onSync={
