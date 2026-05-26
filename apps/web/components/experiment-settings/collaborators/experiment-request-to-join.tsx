@@ -128,7 +128,7 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
               )}
             />
             <DialogFooter className="mt-4">
-              <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" type="button" onClick={() => handleDialogOpenChange(false)}>
                 {t("experimentSettings.cancel")}
               </Button>
               <Button variant="default" type="submit" disabled={isRequesting}>

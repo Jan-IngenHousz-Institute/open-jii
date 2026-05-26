@@ -97,7 +97,7 @@ export function ExperimentDetailsCard({
         variant="ghost"
         size="icon"
         className="absolute right-2 top-[10px] z-20 hidden h-8 w-8 md:flex"
-        aria-label={isCollapsed ? "Open details panel" : "Close details panel"}
+        aria-label={isCollapsed ? t("openDetailsPanel") : t("closeDetailsPanel")}
       >
         {isCollapsed ? (
           <PanelRightOpen className="!h-5 !w-5" />
@@ -115,7 +115,7 @@ export function ExperimentDetailsCard({
             variant="ghost"
             size="icon"
             className="absolute right-2 top-[10px] z-20 h-8 w-8 md:hidden"
-            aria-label={isMobileCollapsed ? "Expand details" : "Collapse details"}
+            aria-label={isMobileCollapsed ? t("expandDetails") : t("collapseDetails")}
           >
             {isMobileCollapsed ? (
               <ChevronDown className="!h-5 !w-5" />

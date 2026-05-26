@@ -200,7 +200,7 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Returns email addresses (lowercased) of all admins of the experiment.
+   * Returns email addresses of all admins of the experiment.
    */
   async listAdminEmails(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
