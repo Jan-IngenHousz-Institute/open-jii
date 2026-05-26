@@ -50,7 +50,9 @@ export function evaluateAndRoute(node: FlowNode): void {
 
   const branchCell = hydrated.find((c): c is BranchCell => c.id === node.id && c.type === "branch");
   if (!branchCell) {
-    // No workbook cell backs this node (legacy flow / missing data): fall through.
+    // No workbook cell backs this node (legacy flow / missing data): clear any
+    // stale chip and fall through.
+    flow.setLastMatchedPath(undefined);
     advanceSequential();
     return;
   }

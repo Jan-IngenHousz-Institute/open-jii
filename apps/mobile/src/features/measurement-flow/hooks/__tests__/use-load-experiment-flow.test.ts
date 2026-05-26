@@ -100,4 +100,17 @@ describe("useLoadExperimentFlow", () => {
     expect(setFlowGraph).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);
   });
+
+  it("surfaces a listExperiments error instead of hanging in loading", () => {
+    const err = new Error("list failed");
+    listUseQuery.mockReturnValue({ data: undefined, isLoading: false, error: err });
+
+    const { result } = renderHook(() => useLoadExperimentFlow("e1"));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe(err);
+    expect(result.current.isReady).toBe(false);
+    expect(setFlowGraph).not.toHaveBeenCalled();
+    expect(setFlowNodes).not.toHaveBeenCalled();
+  });
 });

@@ -452,6 +452,7 @@ describe("useMeasurementFlowStore", () => {
     it("setFlowNodes clears branch state (legacy path)", () => {
       useMeasurementFlowStore.setState({
         cells: [{ id: "x" }] as never,
+        edges: [{ id: "e1", source: "x", target: "y" }],
         branchVisitCounts: { b1: 1 },
         lastMatchedPath: { label: "x", color: "#000" },
       });

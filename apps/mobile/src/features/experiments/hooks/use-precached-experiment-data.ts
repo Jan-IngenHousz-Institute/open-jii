@@ -35,13 +35,17 @@ async function resolveAssetIds(
   if (ref?.workbookId && ref.workbookVersionId) {
     const workbookId = ref.workbookId;
     const versionId = ref.workbookVersionId;
-    const versionResponse = await queryClient.fetchQuery({
-      queryKey: ["workbook-version", workbookId, versionId],
-      queryFn: async () =>
-        tsr.workbooks.getWorkbookVersion.query({ params: { id: workbookId, versionId } }),
-    });
-    const cells = (versionResponse as { body?: { cells?: WorkbookCell[] } })?.body?.cells ?? [];
-    return extractAssetIdsFromCells(cells);
+    try {
+      const versionResponse = await queryClient.fetchQuery({
+        queryKey: ["workbook-version", workbookId, versionId],
+        queryFn: async () =>
+          tsr.workbooks.getWorkbookVersion.query({ params: { id: workbookId, versionId } }),
+      });
+      const cells = (versionResponse as { body?: { cells?: WorkbookCell[] } })?.body?.cells ?? [];
+      return extractAssetIdsFromCells(cells);
+    } catch {
+      // Fall through to legacy flow-graph resolution below.
+    }
   }
 
   const flowResponse: any = await tsr.experiments.getFlow.query({ params: { id: experimentId } });

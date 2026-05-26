@@ -23,12 +23,15 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
 
   // Shares the ["experiments"] cache key with useExperiments(), so this reads
   // from cache (no extra fetch) in the normal flow.
-  const { data: experimentsData, isLoading: isExperimentsLoading } =
-    tsr.experiments.listExperiments.useQuery({
-      queryKey: ["experiments"],
-      queryData: { query: { filter: "member" } },
-      enabled: !!experimentId,
-    });
+  const {
+    data: experimentsData,
+    isLoading: isExperimentsLoading,
+    error: experimentsError,
+  } = tsr.experiments.listExperiments.useQuery({
+    queryKey: ["experiments"],
+    queryData: { query: { filter: "member" } },
+    enabled: !!experimentId,
+  });
 
   const selected = experimentsData?.body?.find((e) => e.id === experimentId);
   const workbookId = selected?.workbookId ?? undefined;
@@ -69,10 +72,14 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
   }, [hasWorkbook, flowData, setFlowNodes]);
 
   const isReady = hasWorkbook ? !!versionData?.body?.cells : !!flowData?.body?.graph;
+  // A list error leaves experimentsData null; don't treat that as "still loading",
+  // and surface it so the screen can show an error instead of hanging.
   const isLoading = hasWorkbook
     ? isVersionLoading
-    : isExperimentsLoading || isFlowLoading || (!!experimentId && experimentsData == null);
-  const error = hasWorkbook ? versionError : flowError;
+    : isExperimentsLoading ||
+      isFlowLoading ||
+      (!!experimentId && experimentsData == null && !experimentsError);
+  const error = hasWorkbook ? versionError : (experimentsError ?? flowError);
 
   return { isLoading, error, isReady };
 }

@@ -15,5 +15,10 @@ export function extractAssetIdsFromCells(cells: WorkbookCell[]): {
       macroIds.push(cell.payload.macroId);
     }
   }
-  return { protocolIds, macroIds };
+  // Dedupe: a protocol/macro can appear in multiple cells, and duplicates would
+  // trigger redundant prefetch calls downstream.
+  return {
+    protocolIds: Array.from(new Set(protocolIds)),
+    macroIds: Array.from(new Set(macroIds)),
+  };
 }
