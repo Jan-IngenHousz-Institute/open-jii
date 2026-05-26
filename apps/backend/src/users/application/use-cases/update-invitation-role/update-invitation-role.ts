@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import type { InvitationDto } from "../../../core/models/user-invitation.model";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
 
@@ -8,7 +9,10 @@ import { InvitationRepository } from "../../../core/repositories/user-invitation
 export class UpdateInvitationRoleUseCase {
   private readonly logger = new Logger(UpdateInvitationRoleUseCase.name);
 
-  constructor(private readonly invitationRepository: InvitationRepository) {}
+  constructor(
+    private readonly invitationRepository: InvitationRepository,
+    private readonly experimentRepository: ExperimentRepository,
+  ) {}
 
   /**
    * Updates the role on a pending invitation.
@@ -42,6 +46,15 @@ export class UpdateInvitationRoleUseCase {
       return failure(
         AppError.badRequest(`Invitation is already ${invitation.status}, cannot update`),
       );
+    }
+
+    const accessResult = await this.experimentRepository.checkAccess(invitation.resourceId, userId);
+    if (accessResult.isFailure()) {
+      return failure(AppError.internal("Failed to check experiment access"));
+    }
+    const { hasArchiveAccess } = accessResult.value;
+    if (!hasArchiveAccess) {
+      return failure(AppError.forbidden("You do not have access to this experiment"));
     }
 
     const updateResult = await this.invitationRepository.updateRole(invitationId, role);

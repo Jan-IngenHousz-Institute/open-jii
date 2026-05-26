@@ -26,6 +26,8 @@ describe("NotificationsService", () => {
   let mockRenderAddedUserNotification: MockInstance;
   let mockRenderTransferRequestConfirmation: MockInstance;
   let mockRenderProjectTransferComplete: MockInstance;
+  let mockRenderJoinRequestSubmittedEmail: MockInstance;
+  let mockRenderJoinRequestRejectedEmail: MockInstance;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -54,6 +56,20 @@ describe("NotificationsService", () => {
     mockRenderProjectTransferComplete = spyOnProtected(
       service,
       "renderProjectTransferCompleteEmail",
+    ).mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
+    mockRenderJoinRequestSubmittedEmail = spyOnProtected(
+      service,
+      "renderJoinRequestSubmittedEmail",
+    ).mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
+    mockRenderJoinRequestRejectedEmail = spyOnProtected(
+      service,
+      "renderJoinRequestRejectedEmail",
     ).mockResolvedValue({
       html: MOCK_HTML_CONTENT,
       text: MOCK_TEXT_CONTENT,
@@ -830,6 +846,297 @@ describe("NotificationsService", () => {
       );
 
       // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+    });
+  });
+
+  describe("sendJoinRequestSubmittedNotification", () => {
+    const MOCK_ADMIN_EMAIL = "admin@example.com";
+    const MOCK_REQUESTER_NAME = "Jane Doe";
+    const MOCK_MESSAGE = "I would like to join this experiment.";
+
+    it("should successfully send notification with message", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_ADMIN_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestSubmittedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_NAME,
+        MOCK_ADMIN_EMAIL,
+        MOCK_MESSAGE,
+      );
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
+      expect(mockRenderJoinRequestSubmittedEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: MOCK_EXPERIMENT_NAME,
+        experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
+        requesterName: MOCK_REQUESTER_NAME,
+        message: MOCK_MESSAGE,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_ADMIN_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `New request to join ${MOCK_EXPERIMENT_NAME} on openJII`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("should successfully send notification without message", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_ADMIN_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestSubmittedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_NAME,
+        MOCK_ADMIN_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(mockRenderJoinRequestSubmittedEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ message: undefined }),
+      );
+    });
+
+    it("should handle email with rejected addresses", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [MOCK_ADMIN_EMAIL],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestSubmittedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_NAME,
+        MOCK_ADMIN_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_ADMIN_EMAIL}) could not be sent`);
+    });
+
+    it("should handle email with pending addresses", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [],
+        pending: [MOCK_ADMIN_EMAIL],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestSubmittedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_NAME,
+        MOCK_ADMIN_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_ADMIN_EMAIL}) could not be sent`);
+    });
+
+    it("should handle transport creation errors", async () => {
+      mockCreateTransport.mockImplementation(() => {
+        throw new Error("Failed to create transport");
+      });
+
+      const result = await service.sendJoinRequestSubmittedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_NAME,
+        MOCK_ADMIN_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: Failed to create transport");
+    });
+
+    it("should handle email rendering errors", async () => {
+      mockRenderJoinRequestSubmittedEmail.mockRejectedValue(
+        new Error("Failed to render email template"),
+      );
+      mockCreateTransport.mockReturnValue({ sendMail: vi.fn() });
+
+      const result = await service.sendJoinRequestSubmittedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_NAME,
+        MOCK_ADMIN_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(
+        "Failed to send email: Failed to render email template",
+      );
+    });
+
+    it("should handle sendMail errors", async () => {
+      const mockSendMail = vi.fn().mockImplementation(() => {
+        throw new Error("SMTP connection failed");
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestSubmittedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_NAME,
+        MOCK_ADMIN_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+    });
+  });
+
+  describe("sendJoinRequestRejectedNotification", () => {
+    const MOCK_REQUESTER_EMAIL = "requester@example.com";
+
+    it("should successfully send notification", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_REQUESTER_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestRejectedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
+      expect(mockRenderJoinRequestRejectedEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: MOCK_EXPERIMENT_NAME,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_REQUESTER_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `Update on your request to join ${MOCK_EXPERIMENT_NAME}`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("should handle email with rejected addresses", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [MOCK_REQUESTER_EMAIL],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestRejectedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_REQUESTER_EMAIL}) could not be sent`);
+    });
+
+    it("should handle email with pending addresses", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [],
+        rejected: [],
+        pending: [MOCK_REQUESTER_EMAIL],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestRejectedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(`Email (${MOCK_REQUESTER_EMAIL}) could not be sent`);
+    });
+
+    it("should handle transport creation errors", async () => {
+      mockCreateTransport.mockImplementation(() => {
+        throw new Error("Failed to create transport");
+      });
+
+      const result = await service.sendJoinRequestRejectedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: Failed to create transport");
+    });
+
+    it("should handle email rendering errors", async () => {
+      mockRenderJoinRequestRejectedEmail.mockRejectedValue(
+        new Error("Failed to render email template"),
+      );
+      mockCreateTransport.mockReturnValue({ sendMail: vi.fn() });
+
+      const result = await service.sendJoinRequestRejectedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_EMAIL,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain(
+        "Failed to send email: Failed to render email template",
+      );
+    });
+
+    it("should handle sendMail errors", async () => {
+      const mockSendMail = vi.fn().mockImplementation(() => {
+        throw new Error("SMTP connection failed");
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendJoinRequestRejectedNotification(
+        MOCK_EXPERIMENT_ID,
+        MOCK_EXPERIMENT_NAME,
+        MOCK_REQUESTER_EMAIL,
+      );
+
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: SMTP connection failed");

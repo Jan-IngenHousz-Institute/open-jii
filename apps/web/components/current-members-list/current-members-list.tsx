@@ -1,4 +1,5 @@
 import { useLocale } from "@/hooks/useLocale";
+import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -6,6 +7,7 @@ import { parseApiError } from "~/util/apiError";
 import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import type { UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentMemberRoleUpdate } from "../../hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
@@ -38,6 +40,7 @@ interface MemberListProps {
   newExperiment?: boolean;
   onUpdateMemberRole?: (userId: string, role: ExperimentMemberRole) => Promise<void> | void;
   isArchived?: boolean;
+  isAddingMember?: boolean;
 }
 
 export function MemberList({
@@ -54,6 +57,7 @@ export function MemberList({
   newExperiment = false,
   onUpdateMemberRole,
   isArchived = false,
+  isAddingMember = false,
 }: MemberListProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -200,11 +204,14 @@ export function MemberList({
 
   if (membersWithUserInfo.length === 0) {
     return (
-      <div className="border-muted flex flex-col items-center justify-center py-4">
-        <p className="text-muted-foreground text-base font-medium">
+      <div className="px-6 py-10 text-center">
+        <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
+          <Users className="h-5 w-5" />
+        </div>
+        <p className="text-foreground text-sm font-semibold">
           {t("experimentSettings.noMembersYet")}
         </p>
-        <p className="text-muted-foreground mt-1 text-xs">
+        <p className="text-muted-foreground mx-auto mt-1 max-w-[280px] text-xs leading-relaxed">
           {t("experimentSettings.addCollaborators")}
         </p>
       </div>
@@ -213,10 +220,25 @@ export function MemberList({
 
   return (
     <>
-      <div className="max-h-[200px] space-y-3 overflow-y-auto">
+      <div className="border-border divide-border divide-y overflow-hidden rounded-lg border">
         {membersWithUserInfo.map((member) => {
           const isLastAdmin = member.role === "admin" && adminCount === 1;
           const isCurrentUser = member.user.userId === currentUserId;
+          const isOptimistic =
+            isAddingMember && member.user.firstName === "" && member.user.lastName === "";
+
+          if (isOptimistic) {
+            return (
+              <div key={member.user.userId} className="flex items-center gap-3 px-3 py-2.5">
+                <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-9 w-[100px]" />
+              </div>
+            );
+          }
 
           return (
             <MemberItem

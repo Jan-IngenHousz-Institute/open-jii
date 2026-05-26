@@ -3,6 +3,8 @@ import { createTransport } from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 
 import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
+import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
+import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
 import { renderProjectTransferComplete } from "@repo/transactional/render/project-transfer-complete";
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
@@ -40,6 +42,18 @@ export class NotificationsService {
     ...args: Parameters<typeof renderProjectTransferComplete>
   ) {
     return renderProjectTransferComplete(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderJoinRequestSubmittedEmail(
+    ...args: Parameters<typeof renderJoinRequestSubmitted>
+  ) {
+    return renderJoinRequestSubmitted(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderJoinRequestRejectedEmail(...args: Parameters<typeof renderJoinRequestRejected>) {
+    return renderJoinRequestRejected(...args);
   }
 
   async sendAddedUserNotification(
@@ -265,6 +279,160 @@ export class NotificationsService {
           errorCode: ErrorCodes.EMAIL_SEND_FAILED,
           operation: "sendProjectTransferComplete",
           email,
+          experimentId,
+          error,
+        });
+        return apiErrorMapper(
+          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      },
+    );
+  }
+
+  async sendJoinRequestSubmittedNotification(
+    experimentId: string,
+    experimentName: string,
+    requesterName: string,
+    adminEmail: string,
+    message?: string,
+  ) {
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending join request submitted notification",
+          operation: "sendJoinRequestSubmittedNotification",
+          email: adminEmail,
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
+        const transport = this.createMailTransport(this.emailConfigService.getServer());
+
+        const { html, text } = await this.renderJoinRequestSubmittedEmail({
+          host,
+          experimentName,
+          experimentUrl,
+          requesterName,
+          message,
+          baseUrl,
+        });
+
+        const result = await transport.sendMail({
+          to: adminEmail,
+          from: {
+            name: "openJII",
+            address: this.emailConfigService.getFrom(),
+          },
+          subject: `New request to join ${experimentName} on openJII`,
+          html,
+          text,
+        });
+
+        const rejected: (string | Mail.Address)[] = result.rejected;
+        const pending: (string | Mail.Address)[] = result.pending;
+        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
+
+        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
+          return typeof addr === "object" && "address" in addr;
+        };
+
+        if (failed.length > 0) {
+          const failedAddresses = failed.map((failedAddress) =>
+            isAddress(failedAddress) ? failedAddress.address : failedAddress,
+          );
+          throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+        }
+
+        this.logger.log({
+          msg: "Join request submitted notification sent",
+          operation: "sendJoinRequestSubmittedNotification",
+          email: adminEmail,
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to send join request submitted notification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendJoinRequestSubmittedNotification",
+          email: adminEmail,
+          experimentId,
+          error,
+        });
+        return apiErrorMapper(
+          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      },
+    );
+  }
+
+  async sendJoinRequestRejectedNotification(
+    experimentId: string,
+    experimentName: string,
+    requesterEmail: string,
+  ) {
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending join request rejected notification",
+          operation: "sendJoinRequestRejectedNotification",
+          email: requesterEmail,
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const transport = this.createMailTransport(this.emailConfigService.getServer());
+
+        const { html, text } = await this.renderJoinRequestRejectedEmail({
+          host,
+          experimentName,
+          baseUrl,
+        });
+
+        const result = await transport.sendMail({
+          to: requesterEmail,
+          from: {
+            name: "openJII",
+            address: this.emailConfigService.getFrom(),
+          },
+          subject: `Update on your request to join ${experimentName}`,
+          html,
+          text,
+        });
+
+        const rejected: (string | Mail.Address)[] = result.rejected;
+        const pending: (string | Mail.Address)[] = result.pending;
+        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
+
+        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
+          return typeof addr === "object" && "address" in addr;
+        };
+
+        if (failed.length > 0) {
+          const failedAddresses = failed.map((failedAddress) =>
+            isAddress(failedAddress) ? failedAddress.address : failedAddress,
+          );
+          throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+        }
+
+        this.logger.log({
+          msg: "Join request rejected notification sent",
+          operation: "sendJoinRequestRejectedNotification",
+          email: requesterEmail,
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to send join request rejected notification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendJoinRequestRejectedNotification",
+          email: requesterEmail,
           experimentId,
           error,
         });

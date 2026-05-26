@@ -34,17 +34,37 @@ An experiment member is appointed by an admin of an experiment. A member is some
 `**` unless you are the last admin  
 `***` title, description, visibility, location
 
-### Inviting users
+### Adding collaborators to an experiment
+
+There are two ways users can join an experiment:
+
+1. **Admin-initiated invitations** – Admins invite collaborators by email.
+2. **User-initiated join requests** – Users request to join public experiments.
+
+#### Inviting users to an experiment
 
 Experiment admins can invite new collaborators by email:
 
-1. Go to your experiment's member management.
+1. Go to your experiment's Collaborators tab.
 2. Search for an existing user or enter an email address.
 3. If the email matches a registered user, they are added immediately with the chosen role.
 4. If the email does not match a registered user, an **invitation** is sent. The invitee receives a notification email.
 5. When the invitee creates an openJII account, all pending invitations are **automatically accepted** — they are added to the experiment(s) with the role specified in the invitation.
 
 Admins can change the role of a pending invitation or revoke it before it is accepted.
+
+#### Requesting to join a public experiment
+
+Users can request to join public experiments without needing an invitation from an admin:
+
+1. When viewing a public experiment they don't belong to, users can submit a join request with an optional message.
+2. The join request has a status: **pending**, **approved**, **rejected**, or **cancelled**.
+3. Users can cancel their own pending requests at any time.
+4. All experiment admins receive an email notification when a new join request is submitted.
+5. Admins can view all pending join requests in the **Collaborators** tab of the experiment (under the "Requests" sub-tab).
+6. Admins can approve or reject join requests from the Collaborators tab.
+7. Users receive email notifications when their requests are approved or rejected.
+8. Upon approval, users are added as members with the **Viewer** role by default.
 
 ### Protocols and macros
 

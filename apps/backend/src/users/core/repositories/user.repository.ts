@@ -79,7 +79,7 @@ export class UserRepository {
           userId: users.id,
           firstName: profiles.firstName,
           lastName: profiles.lastName,
-          image: users.image,
+          avatarUrl: profiles.avatarUrl,
         })
         .from(users)
         .innerJoin(profiles, eq(users.id, profiles.userId))
@@ -291,6 +291,7 @@ export class UserRepository {
           bio: getAnonymizedBio(),
           organization: getAnonymizedOrganizationName(),
           activated: profiles.activated,
+          avatarUrl: getAnonymizedAvatarUrl(),
         })
         .from(profiles)
         .leftJoin(organizations, eq(profiles.organizationId, organizations.id))
@@ -307,6 +308,7 @@ export class UserRepository {
         bio: result[0].bio,
         organization: result[0].organization,
         activated: result[0].activated,
+        avatarUrl: result[0].avatarUrl,
       } as UserProfileDto;
     });
   }

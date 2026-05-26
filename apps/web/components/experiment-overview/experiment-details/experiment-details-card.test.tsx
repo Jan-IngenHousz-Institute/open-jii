@@ -15,18 +15,18 @@ vi.mock("../../experiment-settings/experiment-info-card", () => ({
   ),
 }));
 
-vi.mock("../../experiment-settings/experiment-member-management-card", () => ({
-  ExperimentMemberManagement: ({
-    experimentId,
+vi.mock("../experiment-members-trail", () => ({
+  ExperimentMembersTrail: ({
+    members,
+    href,
     isLoading,
-    isError,
   }: {
-    experimentId: string;
-    isLoading: boolean;
-    isError: boolean;
+    members: { user: { id: string } }[];
+    href: string;
+    isLoading?: boolean;
   }) => (
-    <div data-testid="experiment-member-management">
-      {isLoading ? "loading" : isError ? "error" : experimentId}
+    <div data-testid="experiment-members-trail" data-href={href}>
+      {isLoading ? "loading" : `${members.length} members`}
     </div>
   ),
 }));
@@ -82,7 +82,13 @@ const mockLocations = [
 const mockMembers: ExperimentMember[] = [
   {
     role: "admin",
-    user: { id: "user-1", firstName: "John", lastName: "Doe", email: "john@example.com" },
+    user: {
+      id: "user-1",
+      firstName: "John",
+      lastName: "Doe",
+      email: "john@example.com",
+      avatarUrl: null,
+    },
     joinedAt: "2024-01-01T00:00:00.000Z",
   },
 ];
@@ -94,7 +100,6 @@ function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsC
     locations: mockLocations,
     members: mockMembers,
     isMembersLoading: false,
-    isMembersError: false,
     hasAccess: false,
     isArchived: false,
     ...props,
@@ -141,7 +146,7 @@ describe("ExperimentDetailsCard", () => {
     renderComponent();
     expect(screen.getByTestId("experiment-locations-section")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-visibility-card")).toBeInTheDocument();
-    expect(screen.getByTestId("experiment-member-management")).toBeInTheDocument();
+    expect(screen.getByTestId("experiment-members-trail")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-info-card")).toBeInTheDocument();
   });
 
@@ -153,15 +158,15 @@ describe("ExperimentDetailsCard", () => {
 
   it("shows collapsed state by default on mobile", () => {
     renderComponent();
-    // Button is present for toggling details sidebar
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    // Mobile collapse button starts in "expand" state
+    expect(screen.getByRole("button", { name: "expandDetails" })).toBeInTheDocument();
   });
 
   it("toggles collapse state when button is clicked", async () => {
     const user = userEvent.setup();
     renderComponent();
 
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("button", { name: "expandDetails" });
 
     // Clicking the button toggles collapse — verified by the button remaining interactive
     await user.click(button);
@@ -174,8 +179,11 @@ describe("ExperimentDetailsCard", () => {
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
-  it("shows error state for members", () => {
-    renderComponent({ isMembersError: true });
-    expect(screen.getByText("error")).toBeInTheDocument();
+  it("passes correct href to the members trail", () => {
+    renderComponent({ experimentId: "exp-789" });
+    const trail = screen.getByTestId("experiment-members-trail");
+    expect(trail.getAttribute("data-href")).toContain(
+      "/platform/experiments/exp-789/collaborators",
+    );
   });
 });
