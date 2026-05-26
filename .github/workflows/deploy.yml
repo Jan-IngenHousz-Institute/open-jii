@@ -76,9 +76,34 @@ jobs:
         id: apps
         uses: ./.github/actions/detect-affected-packages
 
+  # Required manual approval before anything is applied or deployed. Runs on
+  # every deploy that would change something, even when no infrastructure
+  # changed (tofu plan/apply skipped), so app-only deploys are gated too.
+  approval-gate:
+    name: Approval Gate
+    needs: [detect]
+    if: >-
+      inputs.deploy_all ||
+      inputs.deploy_app != '' ||
+      inputs.deploy_infrastructure ||
+      needs.detect.outputs.infra_changed == 'true' ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'web') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'backend') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), '@repo/database') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'docs') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'data') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox')
+    runs-on: ubuntu-latest
+    environment: approval-gate
+    permissions:
+      contents: read
+    steps:
+      - name: Await Approval for Deployment
+        run: echo "Approved deployment for ${{ inputs.environment }} environment."
+
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [detect]
+    needs: [detect, approval-gate]
     if: inputs.deploy_infrastructure || needs.detect.outputs.infra_changed == 'true'
     permissions:
       id-token: write
@@ -88,14 +113,16 @@ jobs:
       environment: ${{ inputs.environment }}
       ref: ${{ inputs.ref || github.sha }}
       tofu_version: "1.9.0"
+      skip_approval_gate: true
     secrets: inherit
 
   database-migrations:
     name: Database Migrations
-    needs: [deploy-infrastructure, detect]
+    needs: [deploy-infrastructure, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'migration') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), '@repo/database')))
     permissions:
@@ -110,10 +137,11 @@ jobs:
 
   deploy-backend:
     name: Deploy Backend
-    needs: [deploy-infrastructure, database-migrations, detect]
+    needs: [deploy-infrastructure, database-migrations, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.database-migrations.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'backend') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'backend')))
@@ -128,10 +156,11 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend
-    needs: [deploy-infrastructure, deploy-backend, detect]
+    needs: [deploy-infrastructure, deploy-backend, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.deploy-backend.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'web') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'web')))
@@ -146,10 +175,11 @@ jobs:
 
   deploy-docs:
     name: Deploy Documentation
-    needs: [deploy-infrastructure, detect]
+    needs: [deploy-infrastructure, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'docs') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'docs')))
     permissions:
@@ -163,10 +193,11 @@ jobs:
 
   deploy-databricks:
     name: Deploy Databricks
-    needs: [deploy-infrastructure, detect]
+    needs: [deploy-infrastructure, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'databricks') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'data')))
     permissions:
@@ -179,10 +210,11 @@ jobs:
 
   deploy-macro-sandbox:
     name: Deploy Macro Sandbox
-    needs: [deploy-infrastructure, detect]
+    needs: [deploy-infrastructure, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox') && needs.detect.outputs.macro_sandbox_languages != '[]'))
     permissions:
