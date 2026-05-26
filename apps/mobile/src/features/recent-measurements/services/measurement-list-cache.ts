@@ -26,6 +26,7 @@ export const queryKeys = {
   counts: ["measurements", "counts"] as const,
   pendingOrFailed: ["measurements", "pending-or-failed"] as const,
   top: (n: number) => ["measurements", "top", n] as const,
+  topAll: ["measurements", "top"] as const,
 } as const;
 
 export function statusesForFilter(filter: MeasurementFilter): MeasurementStatus[] {
@@ -50,6 +51,17 @@ export function applySettledPatchBatch(
     for (const query of queryClient.getQueryCache().findAll({ queryKey: queryKeys.listAll })) {
       queryClient.setQueryData<InfiniteData<MeasurementItem[]>>(query.queryKey, (old) =>
         patchPagesBulk(old, query.queryKey, updates),
+      );
+    }
+
+    // Home preview ("top N") — a flat, all-statuses, capped list (not an
+    // infinite query). A settle only flips a row's status in place;
+    // recency-based membership/order don't change here, so no row is added
+    // or removed. Without this patch the home card keeps showing "queued"
+    // until a refetch (navigating to Recent / reloading the app). See OJD-1470.
+    for (const query of queryClient.getQueryCache().findAll({ queryKey: queryKeys.topAll })) {
+      queryClient.setQueryData<MeasurementItem[]>(query.queryKey, (old) =>
+        patchFlatBulk(old, updates),
       );
     }
 
@@ -99,6 +111,26 @@ export function applySettledPatchBatch(
       return { pending, failed, successful };
     });
   });
+}
+
+// Flat-list variant for the home "top N" cache: update each row's status in
+// place. The top list uses the "all" filter (every status is allowed), so a
+// settle never removes a row — only flips its status. Returns the same array
+// reference when nothing changed so subscribers don't re-render needlessly.
+function patchFlatBulk(
+  old: MeasurementItem[] | undefined,
+  updates: Map<string, MeasurementStatus>,
+): MeasurementItem[] | undefined {
+  if (!old) return old;
+  let next: MeasurementItem[] | null = null;
+  for (let i = 0; i < old.length; i++) {
+    const row = old[i];
+    const status = updates.get(row.key);
+    if (status === undefined || row.status === status) continue;
+    next = next ?? old.slice();
+    next[i] = { ...next[i], status };
+  }
+  return next ?? old;
 }
 
 function patchPagesBulk(

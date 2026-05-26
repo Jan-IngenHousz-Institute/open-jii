@@ -92,6 +92,51 @@ describe("applySettledPatchBatch — list pages", () => {
   });
 });
 
+describe("applySettledPatchBatch — top (home preview)", () => {
+  it("flips a row's status in the flat top cache", () => {
+    qc.setQueryData<MeasurementItem[]>(queryKeys.top(3), [
+      item("r1", "pending"),
+      item("r2", "successful"),
+    ]);
+
+    applySettledPatchBatch(qc, [{ id: "r1", status: "successful" }]);
+
+    const data = qc.getQueryData<MeasurementItem[]>(queryKeys.top(3));
+    expect(data?.map((r) => [r.key, r.status])).toEqual([
+      ["r1", "successful"],
+      ["r2", "successful"],
+    ]);
+  });
+
+  it("keeps the row in the top list when status flips to failed (all-statuses list)", () => {
+    qc.setQueryData<MeasurementItem[]>(queryKeys.top(3), [item("r1", "pending")]);
+
+    applySettledPatchBatch(qc, [{ id: "r1", status: "failed" }]);
+
+    const data = qc.getQueryData<MeasurementItem[]>(queryKeys.top(3));
+    expect(data).toMatchObject([{ key: "r1", status: "failed" }]);
+  });
+
+  it("patches top caches of any size in one call", () => {
+    qc.setQueryData<MeasurementItem[]>(queryKeys.top(3), [item("r1", "pending")]);
+    qc.setQueryData<MeasurementItem[]>(queryKeys.top(5), [item("r1", "pending")]);
+
+    applySettledPatchBatch(qc, [{ id: "r1", status: "successful" }]);
+
+    expect(qc.getQueryData<MeasurementItem[]>(queryKeys.top(3))?.[0].status).toBe("successful");
+    expect(qc.getQueryData<MeasurementItem[]>(queryKeys.top(5))?.[0].status).toBe("successful");
+  });
+
+  it("returns the same array reference when nothing changed", () => {
+    const seed = [item("r1", "successful")];
+    qc.setQueryData<MeasurementItem[]>(queryKeys.top(3), seed);
+
+    applySettledPatchBatch(qc, [{ id: "x", status: "successful" }]);
+
+    expect(qc.getQueryData<MeasurementItem[]>(queryKeys.top(3))).toBe(seed);
+  });
+});
+
 describe("applySettledPatchBatch — counts", () => {
   it("moves a success from pending to successful", () => {
     qc.setQueryData<MeasurementCounts>(queryKeys.counts, { pending: 2, failed: 0, successful: 1 });
