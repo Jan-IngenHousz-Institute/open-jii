@@ -521,4 +521,53 @@ describe("Outbox", () => {
       expect(settled).not.toHaveBeenCalled();
     });
   });
+
+  describe("destroy", () => {
+    it("detaches the network + foreground listeners", async () => {
+      const removeNetwork = vi.fn();
+      const removeForeground = vi.fn();
+      mockAddNetworkStateListener.mockReturnValue({ remove: removeNetwork });
+      mockOnAppForeground.mockReturnValue(removeForeground);
+
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushMicrotasks();
+
+      outbox.destroy();
+
+      expect(removeNetwork).toHaveBeenCalledTimes(1);
+      expect(removeForeground).toHaveBeenCalledTimes(1);
+    });
+
+    it("goes inert: enqueue after destroy never publishes", async () => {
+      mockOnAppForeground.mockReturnValue(() => undefined);
+      mockGetMeasurementById.mockResolvedValue(row({ id: "late" }));
+
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushMicrotasks();
+
+      outbox.destroy();
+      outbox.enqueue("late");
+      await flushMicrotasks(20);
+
+      expect(outbox.isProcessing("late")).toBe(false);
+      expect(transport.calls).toHaveLength(0);
+    });
+
+    it("is idempotent", async () => {
+      const removeNetwork = vi.fn();
+      mockAddNetworkStateListener.mockReturnValue({ remove: removeNetwork });
+      mockOnAppForeground.mockReturnValue(() => undefined);
+
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushMicrotasks();
+
+      outbox.destroy();
+      outbox.destroy();
+
+      expect(removeNetwork).toHaveBeenCalledTimes(1);
+    });
+  });
 });

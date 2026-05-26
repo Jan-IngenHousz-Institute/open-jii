@@ -31,6 +31,7 @@ function makeFakeOutbox(): Outbox & {
   return {
     enqueue() {},
     enqueueMany() {},
+    destroy() {},
     isProcessing: (id: string) => enqueued.has(id),
     subscribeProcessing(id, listener) {
       let set = idListeners.get(id);

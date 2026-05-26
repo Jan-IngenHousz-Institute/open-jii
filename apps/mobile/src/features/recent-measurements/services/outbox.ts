@@ -49,9 +49,13 @@ export interface Outbox {
   enqueueMany(ids: readonly string[]): void;
   isProcessing(id: string): boolean;
   subscribeProcessing(id: string, listener: () => void): () => void;
-  subscribeSettled(listener: (items: ReadonlyArray<SettledItem>) => void): () => void;
+  subscribeSettled(listener: (items: readonly SettledItem[]) => void): () => void;
   getSnapshot(): OutboxSnapshot;
   subscribeSnapshot(listener: () => void): () => void;
+  // Detach external wiring (network + foreground listeners) and halt the
+  // queue so a discarded instance goes inert. Called by the composition
+  // root on hot-reload dispose — see shared/composition/upload.ts.
+  destroy(): void;
 }
 
 export interface OutboxOptions {
@@ -67,14 +71,17 @@ class OutboxImpl implements Outbox {
   private readonly queue: AsyncQueuer<string>;
   private rehydrating = false;
   private lastRehydrateAt = 0;
+  private destroyed = false;
+  // Unsubscribers for external event sources (network + app foreground).
+  // Held so destroy() can detach them; a leaked instance that keeps
+  // listening would re-rehydrate and re-publish every pending row forever.
+  private readonly subscriptions: (() => void)[] = [];
 
   // Progress state — single source of truth for the UI.
   private readonly enqueued = new Set<string>();
   private readonly idListeners = new Map<string, Set<() => void>>();
   private readonly snapshotListeners = new Set<() => void>();
-  private readonly settledListeners = new Set<
-    (items: ReadonlyArray<SettledItem>) => void
-  >();
+  private readonly settledListeners = new Set<(items: readonly SettledItem[]) => void>();
   private cachedSnapshot: OutboxSnapshot = { isUploading: false, count: 0 };
   // Microtask coalescer: a burst of PUBACKs inside one JS turn produces
   // a single listener dispatch with every {id, status} from the burst.
@@ -115,6 +122,7 @@ class OutboxImpl implements Outbox {
   }
 
   enqueue(id: string): void {
+    if (this.destroyed) return;
     if (!this.markEnqueued(id)) {
       log.debug("enqueue skipped — already in outbox", { id });
       return;
@@ -124,6 +132,7 @@ class OutboxImpl implements Outbox {
   }
 
   enqueueMany(ids: readonly string[]): void {
+    if (this.destroyed) return;
     const added = this.markEnqueuedMany(ids);
     if (added.length === 0) return;
     log.info("enqueueMany", { requested: ids.length, added: added.length });
@@ -154,7 +163,7 @@ class OutboxImpl implements Outbox {
   // Fires once per microtask with every {id, status} that settled since
   // the previous flush. Carries terminal status so consumers can patch
   // their views without re-reading the DB.
-  subscribeSettled(listener: (items: ReadonlyArray<SettledItem>) => void): () => void {
+  subscribeSettled(listener: (items: readonly SettledItem[]) => void): () => void {
     this.settledListeners.add(listener);
     return () => {
       this.settledListeners.delete(listener);
@@ -170,6 +179,29 @@ class OutboxImpl implements Outbox {
     return () => {
       this.snapshotListeners.delete(listener);
     };
+  }
+
+  // Detach every external event source and halt the queue. Idempotent. The
+  // transport is injected (owned by the composition root), so it is NOT
+  // destroyed here — the root disposes it alongside this Outbox.
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    log.info("destroy");
+    for (const unsubscribe of this.subscriptions.splice(0)) {
+      try {
+        unsubscribe();
+      } catch {
+        // ignore
+      }
+    }
+    this.queue.stop();
+    this.queue.clear();
+    this.enqueued.clear();
+    this.idListeners.clear();
+    this.snapshotListeners.clear();
+    this.settledListeners.clear();
+    this.settledPending = [];
   }
 
   // --- internal progress state ---
@@ -252,16 +284,17 @@ class OutboxImpl implements Outbox {
   //   credential failure. The row can still be retried later via a fresh
   //   enqueue (e.g. user-driven retry on the Recent screen).
   private async runItem(id: string): Promise<void> {
+    if (this.destroyed) return;
     const trace = startTrace("upload", id, { source: "outbox" });
     trace.event("outbox_pickup");
     const row = await getMeasurementById(id);
     if (!row) {
-      log.info("skip — row gone", { id });
+      log.debug("skip — row gone", { id });
       trace?.end("ok", { skipped: "row_gone" });
       return;
     }
     if (row.status === "successful") {
-      log.info("skip — already successful", { id });
+      log.debug("skip — already successful", { id });
       trace?.end("ok", { skipped: "already_successful" });
       return;
     }
@@ -282,9 +315,12 @@ class OutboxImpl implements Outbox {
       await markAsSuccessful(id);
       this.scheduleSettled({ id, status: "successful" });
       trace?.event("marked_successful");
+      log.debug("publish ok → marked successful", { id });
       trace?.end("ok");
-      log.info("publish ok → marked successful", { id });
     } catch (err) {
+      // A teardown in flight rejects pending publishes; don't reschedule them
+      // onto a queue we're about to discard.
+      if (this.destroyed) return;
       const kind = (err as { kind?: string })?.kind;
       if (isRetryableMqttError(err)) {
         log.warn("publish failed (retryable) — rethrowing for retry", { id, kind });
@@ -304,7 +340,8 @@ class OutboxImpl implements Outbox {
   }
 
   private wireNetworkListener() {
-    addNetworkStateListener(({ isInternetReachable }) => {
+    const subscription = addNetworkStateListener(({ isInternetReachable }) => {
+      if (this.destroyed) return;
       // expo-network can transiently report null/undefined around state
       // transitions; treat anything not explicitly false as "connected" so
       // the queue doesn't pause on flaps.
@@ -316,16 +353,20 @@ class OutboxImpl implements Outbox {
         this.queue.start();
       }
     });
+    this.subscriptions.push(() => subscription.remove());
   }
 
   private wireForegroundListener() {
-    onAppForeground(() => {
+    const unsubscribe = onAppForeground(() => {
+      if (this.destroyed) return;
       log.info("app foregrounded — rehydrating");
       void this.rehydrate();
     });
+    this.subscriptions.push(unsubscribe);
   }
 
   private async rehydrate(): Promise<void> {
+    if (this.destroyed) return;
     if (this.rehydrating) return;
     if (Date.now() - this.lastRehydrateAt < REHYDRATE_COOLDOWN_MS) {
       log.debug("rehydrate skipped — recent");

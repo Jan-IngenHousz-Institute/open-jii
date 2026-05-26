@@ -5,6 +5,7 @@
 .claude/rules/openwolf.md
 .claude/settings.json
 CLAUDE.md
+**/ssr
 
 # Dependencies
 node_modules
