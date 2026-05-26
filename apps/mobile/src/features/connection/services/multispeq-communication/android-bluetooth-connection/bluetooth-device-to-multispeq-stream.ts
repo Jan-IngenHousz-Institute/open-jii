@@ -24,14 +24,18 @@ export function bluetoothDeviceToMultispeqStream(connectedDevice: BluetoothDevic
           data: JSON.parse(jsonData),
           checksum,
         })
-        .catch((e) => log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }));
+        .catch((e) =>
+          log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }),
+        );
     } catch {
       emitter
         .emit("receivedReplyFromDevice", {
           data: event.data,
           checksum: "",
         })
-        .catch((e) => log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }));
+        .catch((e) =>
+          log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }),
+        );
     }
   });
 

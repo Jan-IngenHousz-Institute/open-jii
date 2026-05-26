@@ -14,12 +14,12 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { createLogger } from "~/shared/utils/logger";
 import { playSound } from "~/shared/utils/play-sound";
 
-const log = createLogger("measurement-node");
-
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
 import { ReadyState } from "./components/ready-state";
 import { ScanningState } from "./components/scanning-state";
+
+const log = createLogger("measurement-node");
 
 interface MeasurementNodeProps {
   content: {

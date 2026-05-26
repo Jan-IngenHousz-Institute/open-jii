@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  addLogSink,
-  clearLogSinks,
-  setMinLogLevel,
-  type LogEntry,
-} from "./logger";
+import { addLogSink, clearLogSinks, setMinLogLevel, type LogEntry } from "./logger";
 import { clearTraceRegistry, getTrace, startTrace } from "./trace";
 
 function captureSink() {
@@ -65,10 +60,7 @@ describe("trace", () => {
       bytes: 18472,
     });
     const events = entry.fields.events as string[];
-    expect(events).toEqual([
-      "pickup+3(row_age_ms=12)",
-      "publisher_enqueued+8(held=2)",
-    ]);
+    expect(events).toEqual(["pickup+3(row_age_ms=12)", "publisher_enqueued+8(held=2)"]);
   });
 
   it("getTrace lets a remote module attach events to the same trace", () => {

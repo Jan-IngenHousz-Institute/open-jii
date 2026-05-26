@@ -35,10 +35,7 @@ export const measurements = sqliteTable(
     dayKey: text("day_key"),
   },
   (table) => [
-    check(
-      "measurements_status_check",
-      sql`${table.status} IN ('pending', 'failed', 'successful')`,
-    ),
+    check("measurements_status_check", sql`${table.status} IN ('pending', 'failed', 'successful')`),
     index("idx_measurements_status").on(table.status),
     index("idx_measurements_status_ts").on(table.status, table.timestamp),
     index("idx_measurements_created_at").on(table.createdAt),

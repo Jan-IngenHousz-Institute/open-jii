@@ -72,11 +72,11 @@ sequenceDiagram
 Every measurement row carries a `status`, checked at the DB level and indexed
 for the queries the Outbox and UI run:
 
-| status       | meaning                                              |
-| ------------ | ---------------------------------------------------- |
-| `pending`    | saved locally, not yet acknowledged by the broker    |
-| `failed`     | Outbox exhausted retries; requires user action       |
-| `successful` | broker acked (QoS 1 PUBACK)                          |
+| status       | meaning                                           |
+| ------------ | ------------------------------------------------- |
+| `pending`    | saved locally, not yet acknowledged by the broker |
+| `failed`     | Outbox exhausted retries; requires user action    |
+| `successful` | broker acked (QoS 1 PUBACK)                       |
 
 `pending` and `failed` rows are the work list. On cold start and on app
 foreground the Outbox **rehydrates** them and re-enqueues. The table has
@@ -104,12 +104,12 @@ export const UPLOAD_RETRY_BACKOFF_MS = [1_000, 4_000, 15_000];
 `isRetryableMqttError` (in `mqtt/mqtt-errors.ts`) decides whether an attempt
 counts against the budget or is terminal:
 
-| `MqttError.kind` | retryable | why                                                       |
-| ---------------- | --------- | --------------------------------------------------------- |
-| `PublishError`   | ✅        | transient wire failure                                    |
-| `Timeout`        | ✅        | no PUBACK within `PUBLISH_TIMEOUT_MS` (30s)               |
-| `Disconnected`   | ✅        | session dropped; next attempt reconnects                  |
-| `CredentialError`| ❌        | Cognito misconfig won't fix itself — fail fast, no noise  |
+| `MqttError.kind`  | retryable | why                                                      |
+| ----------------- | --------- | -------------------------------------------------------- |
+| `PublishError`    | ✅        | transient wire failure                                   |
+| `Timeout`         | ✅        | no PUBACK within `PUBLISH_TIMEOUT_MS` (30s)              |
+| `Disconnected`    | ✅        | session dropped; next attempt reconnects                 |
+| `CredentialError` | ❌        | Cognito misconfig won't fix itself — fail fast, no noise |
 
 Non-`MqttError` throwables are treated as retryable by default.
 
@@ -137,10 +137,63 @@ channels, consumed via hooks in `hooks/use-outbox-state.ts`:
 - **settled burst** — batched stream of `{ id, status }` after each settle.
 
 `outbox-to-query-cache-bridge.ts` is mounted **once** at the app root
-(`app/_layout.tsx`) and applies each settled burst to the react-query cache via
-`measurement-list-cache.ts`. `notifyManager.batch` collapses the writes so N
-settles cost ~1 re-render, and the patch carries the terminal status directly —
-**no DB round-trip** downstream.
+(`app/_layout.tsx`) and feeds settled bursts to the react-query cache via
+`measurement-list-cache.ts`. Settles are **coalesced** before they touch the
+cache: a [TanStack Pacer](https://tanstack.com/pacer) `Throttler`
+(`leading + trailing`, 2s window) buffers them by id (last status wins), so a
+lone settle patches instantly while a burst collapses into **one**
+`applySettledPatchBatch`. Inside that, `notifyManager.batch` collapses the
+list/counts writes into ~1 re-render, the patcher rewrites only the changed rows
+(returning the _same_ reference when a query is unchanged, so memoized rows skip
+re-render), and the patch carries the terminal status directly — **no DB
+round-trip** downstream. See [Performance](#performance-ojd-1470) for why the
+coalescing matters.
+
+## Performance (OJD-1470)
+
+paho-mqtt is **pure JavaScript**, so it parses every PUBACK on the same single
+JS thread that React renders on. While a batch uploads with the Recent tab
+mounted, anything that hogs that thread — a re-render per ack, per-item date
+parsing, a heavy first list commit — **starves PUBACK parsing**: the broker has
+already replied, but paho can't read the frame until the thread frees up, so the
+measured `wire_ms` balloons. Symptoms were upload times climbing from ~1.5s
+toward ~5s after visiting Recent, plus a ~1.5s spike on each tab switch. Every
+change below exists to keep that thread free for paho.
+
+- **Coalesced settle bursts.** The cache bridge throttles settles through a
+  Pacer `Throttler` (2s, leading + trailing) and buffers by id, so a draining
+  Outbox produces ~1 cache write per window instead of one re-render per ack.
+  See [Reactive surface](#reactive-surface).
+- **Reference-stable, surgical patches.** `applySettledPatchBatch` wraps its
+  writes in `notifyManager.batch` and returns the _same_ array/object reference
+  when a query is unchanged, so memoized rows and unaffected lists bail out of
+  re-render entirely.
+- **Counts off the list render.** Aggregate counts live in their own
+  toolbar-local subscription (`useMeasurementCounts`); the list screen
+  subscribes via `useHasAnyMeasurements`, whose `select` returns a boolean so it
+  re-renders only when the library flips empty↔non-empty — not on every ack.
+  Previously the counts changed on every settle and dragged the whole list
+  render with them.
+- **Derived columns — never decompress on the list path.** `questions_text`,
+  `has_comment`, and `day_key` are computed once at write time
+  (`deriveListColumns`) and read straight from SQLite by `getMeasurementsList`,
+  so the list query never decompresses `measurement_result` or runs Zod. A
+  one-time `backfillDerivedColumns` populates legacy rows in batches with
+  `setTimeout(0)` yields (migrations `0003`/`0004`).
+- **`day_key` removes per-item Luxon from grouping.** `groupMeasurementsByDay`
+  buckets on the precomputed `day_key` (regex-validated `YYYY-MM-DD`), parsing
+  the ISO timestamp only as a fallback for not-yet-backfilled rows. Grouping
+  ~50 rows dropped from ~140ms to ~20ms.
+- **Deferred first list commit.** The Recent screen holds its first FlashList
+  commit behind `InteractionManager.runAfterInteractions` (with a 500ms
+  fallback) and bounds `drawDistance`, so the PUBACKs queued during the tab
+  transition drain _before_ the ~200ms commit of 50 gesture-handler/reanimated
+  swipeable rows. The screen stays mounted afterward, so return visits are
+  instant.
+
+Net effect: the per-ack render storm and per-item date parsing are gone, and the
+one-time tab-switch commit no longer blocks in-flight acks — upload latency stays
+near the broker round-trip (~250ms locally) instead of climbing.
 
 ## Composition root & the HMR gotcha
 
@@ -169,20 +222,23 @@ wide event covers DB → MQTT for one measurement.
 
 ## Module map
 
-| Concern                         | File                                                        |
-| ------------------------------- | ----------------------------------------------------------- |
-| Source of truth / queue         | `shared/db/schema.ts`, `shared/db/measurements-storage.ts`  |
-| Scheduler                       | `recent-measurements/services/outbox.ts`                    |
-| Tuning constants                | `recent-measurements/services/upload-constants.ts`          |
-| Cache patcher                   | `recent-measurements/services/measurement-list-cache.ts`    |
-| Cache bridge                    | `recent-measurements/services/outbox-to-query-cache-bridge.ts` |
-| Reactive hooks                  | `recent-measurements/hooks/use-outbox-state.ts`             |
-| MQTT transport (session mgmt)   | `connection/services/mqtt/mqtt-transport.ts`                |
-| Paho client wrapper             | `connection/services/mqtt/mqtt-paho-session.ts`             |
-| AWS IoT auth (signed URL)       | `connection/services/mqtt/aws-iot-auth.ts`                  |
-| Error kinds / retry policy      | `connection/services/mqtt/mqtt-errors.ts`                   |
-| Composition root (wiring)       | `shared/composition/upload.ts`                              |
-| Wide-event tracing              | `shared/utils/trace.ts`                                     |
+| Concern                             | File                                                           |
+| ----------------------------------- | -------------------------------------------------------------- |
+| Source of truth / queue             | `shared/db/schema.ts`, `shared/db/measurements-storage.ts`     |
+| Scheduler                           | `recent-measurements/services/outbox.ts`                       |
+| Tuning constants                    | `recent-measurements/services/upload-constants.ts`             |
+| Cache patcher                       | `recent-measurements/services/measurement-list-cache.ts`       |
+| Cache bridge                        | `recent-measurements/services/outbox-to-query-cache-bridge.ts` |
+| Reactive hooks                      | `recent-measurements/hooks/use-outbox-state.ts`                |
+| Recent list screen (deferred mount) | `recent-measurements/screens/recent-measurements-screen.tsx`   |
+| Day grouping (local-date buckets)   | `shared/utils/group-measurements-by-day.ts`                    |
+| Derived-column backfill             | `shared/db/measurements-backfill.ts`                           |
+| MQTT transport (session mgmt)       | `connection/services/mqtt/mqtt-transport.ts`                   |
+| Paho client wrapper                 | `connection/services/mqtt/mqtt-paho-session.ts`                |
+| AWS IoT auth (signed URL)           | `connection/services/mqtt/aws-iot-auth.ts`                     |
+| Error kinds / retry policy          | `connection/services/mqtt/mqtt-errors.ts`                      |
+| Composition root (wiring)           | `shared/composition/upload.ts`                                 |
+| Wide-event tracing                  | `shared/utils/trace.ts`                                        |
 
 ## Debugging tips
 

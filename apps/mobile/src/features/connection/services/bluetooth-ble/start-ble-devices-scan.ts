@@ -39,9 +39,7 @@ export async function startDeviceScan() {
       }
       emitter
         .emit("bluetoothDeviceFound", device)
-        .catch((e) =>
-          log.warn("bluetoothDeviceFound emit failed", { err: (e as Error)?.message }),
-        );
+        .catch((e) => log.warn("bluetoothDeviceFound emit failed", { err: (e as Error)?.message }));
     },
   );
 

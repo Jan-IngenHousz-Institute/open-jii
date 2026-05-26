@@ -3,6 +3,8 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Outbox, OutboxSnapshot } from "../../services/outbox";
+// Static import — vi.hoisted lifts the mock above this import.
+import { useIsProcessing, useOutboxSnapshot } from "../use-outbox-state";
 
 // Drive the hook with a hand-rolled fake Outbox so we can flip its
 // snapshot / per-id state synchronously and observe React updates. This
@@ -75,9 +77,6 @@ const { fake, getOutboxMock } = vi.hoisted(() => {
 vi.mock("~/shared/composition/upload", () => ({
   getOutbox: getOutboxMock,
 }));
-
-// Static import — vi.hoisted lifts the mock above this import.
-import { useIsProcessing, useOutboxSnapshot } from "../use-outbox-state";
 
 beforeEach(() => {
   fake.current = makeFakeOutbox();

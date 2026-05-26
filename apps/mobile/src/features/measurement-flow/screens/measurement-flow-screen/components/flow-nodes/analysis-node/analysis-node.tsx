@@ -18,11 +18,11 @@ import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers
 import { createLogger } from "~/shared/utils/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/utils/time-sync";
 
-const log = createLogger("analysis-node");
-
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
 import { AnalysisSummaryCard } from "./analysis-summary-card";
+
+const log = createLogger("analysis-node");
 
 interface AnalysisNodeProps {
   content: {

@@ -11,14 +11,14 @@ import {
   generateDeviceCommand,
   simulateDataProcessing,
 } from "../utils/load-protocol";
-
-const log = createLogger("calibration");
 import { CompletionStep } from "./CompletionStep";
 import { DemoDisclaimer } from "./DemoDisclaimer";
 import { GainCalibrationStep } from "./GainCalibrationStep";
 import { MeasurementsStep } from "./MeasurementsStep";
 import { ProcessingStep } from "./ProcessingStep";
 import { SetupStep } from "./SetupStep";
+
+const log = createLogger("calibration");
 
 export type CalibrationStep = "setup" | "gain" | "measurements" | "processing" | "complete";
 

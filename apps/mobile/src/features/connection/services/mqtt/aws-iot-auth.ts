@@ -268,4 +268,3 @@ export async function getCredentials({
     inflightCredentialsPromise = null;
   }
 }
-

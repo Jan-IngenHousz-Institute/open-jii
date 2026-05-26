@@ -8,11 +8,7 @@ import type {
   PahoSessionMessage,
   PahoPublishHandle,
 } from "../mqtt-paho-session";
-import {
-  IDLE_DISCONNECT_MS,
-  PUBLISH_TIMEOUT_MS,
-  createTransport,
-} from "../mqtt-transport";
+import { IDLE_DISCONNECT_MS, PUBLISH_TIMEOUT_MS, createTransport } from "../mqtt-transport";
 
 // Stub the production paho-session's native + env imports. Tests construct
 // the Transport directly with a fake session factory, so paho/Cognito/env

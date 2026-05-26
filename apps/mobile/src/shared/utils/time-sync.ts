@@ -109,8 +109,7 @@ const TIMEZONE_REFRESH_MS = 24 * 60 * 60 * 1000;
 
 async function maybeResolveTimezone(): Promise<string> {
   const haveTz = state.timezone && state.timezone !== "UTC";
-  const fresh =
-    state.lastSyncedAt > 0 && Date.now() - state.lastSyncedAt < TIMEZONE_REFRESH_MS;
+  const fresh = state.lastSyncedAt > 0 && Date.now() - state.lastSyncedAt < TIMEZONE_REFRESH_MS;
   if (haveTz && fresh) {
     log.debug("reusing cached timezone", { timezone: state.timezone });
     return state.timezone;

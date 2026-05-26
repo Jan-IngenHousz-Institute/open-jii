@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  addLogSink,
-  clearLogSinks,
-  createLogger,
-  setMinLogLevel,
-  type LogEntry,
-} from "./logger";
+import { addLogSink, clearLogSinks, createLogger, setMinLogLevel, type LogEntry } from "./logger";
 
 function captureSink() {
   const entries: LogEntry[] = [];

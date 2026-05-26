@@ -54,23 +54,20 @@ export function applySettledPatchBatch(
     }
 
     // pending-or-failed: drop rows that left the unsynced set.
-    queryClient.setQueryData<{ key: string; data: unknown }[]>(
-      queryKeys.pendingOrFailed,
-      (old) => {
-        if (!old) return old;
-        let touched = false;
-        const next = old.filter((r) => {
-          const status = updates.get(r.key);
-          if (status === undefined) return true;
-          if (status === "successful") {
-            touched = true;
-            return false;
-          }
-          return true;
-        });
-        return touched ? next : old;
-      },
-    );
+    queryClient.setQueryData<{ key: string; data: unknown }[]>(queryKeys.pendingOrFailed, (old) => {
+      if (!old) return old;
+      let touched = false;
+      const next = old.filter((r) => {
+        const status = updates.get(r.key);
+        if (status === undefined) return true;
+        if (status === "successful") {
+          touched = true;
+          return false;
+        }
+        return true;
+      });
+      return touched ? next : old;
+    });
 
     // Counts: apply the net delta of all settles in one update. When the
     // previous status isn't recorded in cache (cold start), the next

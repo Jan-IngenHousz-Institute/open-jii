@@ -141,7 +141,9 @@ export function QuestionsOnlySubmitNode() {
       <View className="flex-row gap-4 px-4 py-3">
         <Button
           title={t("measurementFlow:questionsSubmit.finish")}
-          onPress={() => handleFinish().catch((e) => log.error("handler failed", { err: (e as Error)?.message }))}
+          onPress={() =>
+            handleFinish().catch((e) => log.error("handler failed", { err: (e as Error)?.message }))
+          }
           disabled={isUploading || !canUpload}
           variant="tertiary"
           style={{ flex: 1, height: 44, borderColor: "transparent" }}
@@ -152,7 +154,11 @@ export function QuestionsOnlySubmitNode() {
               ? t("measurementFlow:questionsSubmit.uploading")
               : t("measurementFlow:questionsSubmit.submitContinue")
           }
-          onPress={() => handleSubmitAndContinue().catch((e) => log.error("handler failed", { err: (e as Error)?.message }))}
+          onPress={() =>
+            handleSubmitAndContinue().catch((e) =>
+              log.error("handler failed", { err: (e as Error)?.message }),
+            )
+          }
           disabled={isUploading || !canUpload}
           style={{ flex: 1, height: 44 }}
         />

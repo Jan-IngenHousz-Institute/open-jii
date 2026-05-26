@@ -1,5 +1,4 @@
 import { useSyncExternalStore, useCallback } from "react";
-
 import { getOutbox } from "~/shared/composition/upload";
 
 import type { OutboxSnapshot } from "../services/outbox";
