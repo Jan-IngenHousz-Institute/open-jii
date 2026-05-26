@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
     ca-certificates \
+    # Upgrade libgnutls30 to patch CVE-2026-33845/42010 (CRITICAL) and
+    # CVE-2026-33846/3833/42009 (HIGH); fixed in 3.7.9-2+deb12u7.
+    && apt-get install -y --only-upgrade libgnutls30 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LAMBDA_TASK_ROOT=/var/task
