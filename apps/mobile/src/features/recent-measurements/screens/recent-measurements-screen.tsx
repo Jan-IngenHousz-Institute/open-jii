@@ -1,5 +1,4 @@
 import { FlashList } from "@shopify/flash-list";
-import { useFocusEffect } from "expo-router";
 import { ChevronsLeft } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, InteractionManager, Text, View } from "react-native";

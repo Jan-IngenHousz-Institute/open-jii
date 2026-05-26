@@ -41,8 +41,8 @@ function fire(state: AppStateStatus) {
 
 describe("app-lifecycle", () => {
   beforeEach(() => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(vi.fn());
+    vi.spyOn(console, "warn").mockImplementation(vi.fn());
   });
 
   afterEach(() => {

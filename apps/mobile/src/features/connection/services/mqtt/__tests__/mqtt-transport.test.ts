@@ -72,21 +72,30 @@ class FakeSessionFactory implements PahoSessionFactory {
   scripts: (Error | null)[] = [];
   private failures = 0;
 
-  async connect(): Promise<PahoSession> {
+  connect(): Promise<PahoSession> {
     const idx = this.sessions.length + this.failures;
     const scripted = this.scripts[idx];
     if (scripted instanceof Error) {
       this.failures++;
-      throw scripted;
+      return Promise.reject(scripted);
     }
     const session = new FakeSession();
     this.sessions.push(session);
-    return session;
+    return Promise.resolve(session);
   }
 
   current(): FakeSession | undefined {
     return this.sessions[this.sessions.length - 1];
   }
+}
+
+// Narrowing helper: asserts a possibly-undefined value is present and returns
+// it typed as non-nullable, avoiding non-null assertions in test bodies.
+function assertDefined<T>(value: T | undefined, label: string): T {
+  if (value === undefined) {
+    throw new Error(`Expected ${label} to be defined`);
+  }
+  return value;
 }
 
 // Drain microtasks between fake-timer advances. `advanceTimersByTimeAsync(0)`
@@ -119,7 +128,7 @@ describe("Transport", () => {
     await settle();
 
     expect(factory.sessions.length).toBe(1);
-    const session = factory.current()!;
+    const session = assertDefined(factory.current(), "current session");
     expect(session.publishes.map((p) => p.message.topic)).toEqual(["topic/a", "topic/b"]);
 
     session.ackAll();
@@ -132,10 +141,10 @@ describe("Transport", () => {
     const p = transport.publish("topic/x", { v: 1 }).then(onResolved);
     await settle();
 
-    expect(factory.current()!.publishes.length).toBe(1);
+    expect(assertDefined(factory.current(), "current session").publishes.length).toBe(1);
     expect(onResolved).not.toHaveBeenCalled();
 
-    factory.current()!.ack(0);
+    assertDefined(factory.current(), "current session").ack(0);
     await p;
     expect(onResolved).toHaveBeenCalledTimes(1);
   });
@@ -144,7 +153,7 @@ describe("Transport", () => {
     const p1 = transport.publish("topic/a", { v: 1 });
     const p2 = transport.publish("topic/b", { v: 2 });
     await settle();
-    const first = factory.current()!;
+    const first = assertDefined(factory.current(), "current session");
     expect(first.publishes.length).toBe(2);
 
     first.drop({ message: "kicked" });
@@ -161,7 +170,7 @@ describe("Transport", () => {
   it("lazily reconnects on the next publish after a disconnect", async () => {
     const p1 = transport.publish("topic/a", { v: 1 });
     await settle();
-    factory.current()!.drop();
+    assertDefined(factory.current(), "current session").drop();
     await settle();
     await expect(p1).rejects.toMatchObject({ kind: "Disconnected" });
 
@@ -170,7 +179,7 @@ describe("Transport", () => {
     await settle();
     expect(factory.sessions.length).toBe(2);
 
-    factory.current()!.ackAll();
+    assertDefined(factory.current(), "current session").ackAll();
     await expect(p2).resolves.toBeUndefined();
   });
 
@@ -187,7 +196,7 @@ describe("Transport", () => {
   it("rejects with Timeout when the broker never acks", async () => {
     const p = transport.publish("topic/a", { v: 1 });
     await settle();
-    expect(factory.current()!.publishes.length).toBe(1);
+    expect(assertDefined(factory.current(), "current session").publishes.length).toBe(1);
 
     await vi.advanceTimersByTimeAsync(PUBLISH_TIMEOUT_MS + 1);
     await expect(p).rejects.toMatchObject({ kind: "Timeout" });
@@ -211,7 +220,7 @@ describe("Transport", () => {
   it("closes the session after IDLE_DISCONNECT_MS with no in-flight publishes", async () => {
     const p = transport.publish("topic/a", { v: 1 });
     await settle();
-    const session = factory.current()!;
+    const session = assertDefined(factory.current(), "current session");
     session.ack(0);
     await p;
 
@@ -229,7 +238,7 @@ describe("Transport", () => {
     });
     const p = transport.publish("topic/a", { v: 1 });
     await settle();
-    const session = factory.current()!;
+    const session = assertDefined(factory.current(), "current session");
 
     // Advance well past idle timeout — but the publish is still awaiting ack.
     await vi.advanceTimersByTimeAsync(IDLE_DISCONNECT_MS + 1000);
@@ -242,16 +251,16 @@ describe("Transport", () => {
   it("a new publish after idle close opens a fresh session", async () => {
     const p1 = transport.publish("topic/a", { v: 1 });
     await settle();
-    factory.current()!.ack(0);
+    assertDefined(factory.current(), "current session").ack(0);
     await p1;
 
     await vi.advanceTimersByTimeAsync(IDLE_DISCONNECT_MS + 1);
-    expect(factory.sessions[0]!.destroyed).toBe(true);
+    expect(assertDefined(factory.sessions[0], "first session").destroyed).toBe(true);
 
     const p2 = transport.publish("topic/b", { v: 2 });
     await settle();
     expect(factory.sessions.length).toBe(2);
-    factory.current()!.ackAll();
+    assertDefined(factory.current(), "current session").ackAll();
     await expect(p2).resolves.toBeUndefined();
   });
 });

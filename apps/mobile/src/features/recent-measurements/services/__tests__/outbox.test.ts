@@ -76,8 +76,8 @@ function makeTransport(): Transport & {
   // FIFO queues so concurrent publish() calls all keep their own
   // resolver — the previous single-slot field silently dropped the first
   // in-flight publish under concurrency > 1.
-  const resolvers: Array<() => void> = [];
-  const rejecters: Array<(err: Error) => void> = [];
+  const resolvers: (() => void)[] = [];
+  const rejecters: ((err: Error) => void)[] = [];
   return {
     calls,
     publish(topic, payload) {
@@ -87,7 +87,7 @@ function makeTransport(): Transport & {
         rejecters.push(reject);
       });
     },
-    destroy() {},
+    destroy: vi.fn(),
     resolveNext() {
       const resolve = resolvers.shift();
       rejecters.shift();
@@ -122,6 +122,15 @@ async function flushMicrotasks(n = 8) {
   for (let i = 0; i < n; i++) await Promise.resolve();
 }
 
+// Narrowing helper: asserts a captured callback is present and returns it
+// typed as non-nullable, avoiding non-null assertions in test bodies.
+function assertDefined<T>(value: T | null | undefined, label: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${label} to be defined`);
+  }
+  return value;
+}
+
 describe("Outbox", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -139,7 +148,9 @@ describe("Outbox", () => {
         row({ id: "a", status: "pending" }),
         row({ id: "b", status: "failed" }),
       ]);
-      mockGetMeasurementById.mockImplementation(async (id) => row({ id, status: "pending" }));
+      mockGetMeasurementById.mockImplementation((id) =>
+        Promise.resolve(row({ id, status: "pending" })),
+      );
 
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
@@ -371,10 +382,12 @@ describe("Outbox", () => {
         row({ id: "fg-a", status: "pending" }),
         row({ id: "fg-b", status: "failed" }),
       ]);
-      mockGetMeasurementById.mockImplementation(async (id) => row({ id, status: "pending" }));
+      mockGetMeasurementById.mockImplementation((id) =>
+        Promise.resolve(row({ id, status: "pending" })),
+      );
 
       expect(foregroundCb).not.toBeNull();
-      foregroundCb!();
+      assertDefined(foregroundCb, "foreground callback")();
       vi.useRealTimers();
       await flushMicrotasks(40);
 
@@ -398,7 +411,7 @@ describe("Outbox", () => {
       // Foregrounded immediately after cold start — well inside the
       // REHYDRATE_COOLDOWN_MS window (10s). The second call should be
       // skipped entirely.
-      foregroundCb!();
+      assertDefined(foregroundCb, "foreground callback")();
       await flushMicrotasks(10);
 
       expect(mockGetMeasurements).toHaveBeenCalledTimes(cold);
@@ -440,13 +453,13 @@ describe("Outbox", () => {
 
       // Go offline before enqueueing — the queue is stopped, so the
       // worker should not pick up the item.
-      networkCb!({ isInternetReachable: false });
+      assertDefined(networkCb, "network callback")({ isInternetReachable: false });
       outbox.enqueue("net-a");
       await flushMicrotasks(10);
       expect(transport.calls).toHaveLength(0);
 
       // Back online — queue starts draining and the worker publishes.
-      networkCb!({ isInternetReachable: true });
+      assertDefined(networkCb, "network callback")({ isInternetReachable: true });
       for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
@@ -469,7 +482,7 @@ describe("Outbox", () => {
       const { outbox } = await freshOutbox(transport);
       await flushMicrotasks();
 
-      networkCb!({ isInternetReachable: undefined });
+      assertDefined(networkCb, "network callback")({ isInternetReachable: undefined });
       outbox.enqueue("net-b");
       for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
       expect(transport.calls).toHaveLength(1);
@@ -533,7 +546,7 @@ describe("Outbox", () => {
         ["b1", row({ id: "b1" })],
         ["b2", row({ id: "b2" })],
       ]);
-      mockGetMeasurementById.mockImplementation(async (id) => rows.get(id));
+      mockGetMeasurementById.mockImplementation((id) => Promise.resolve(rows.get(id)));
 
       const transport = makeTransport();
       // concurrency 2 so both items publish in parallel.
@@ -552,7 +565,7 @@ describe("Outbox", () => {
       await flushMicrotasks(40);
 
       expect(settled).toHaveBeenCalledTimes(1);
-      const items = settled.mock.calls[0][0] as ReadonlyArray<{ id: string; status: string }>;
+      const items = settled.mock.calls[0][0] as readonly { id: string; status: string }[];
       expect(items.map((i) => i.id).sort()).toEqual(["b1", "b2"]);
       for (const item of items) expect(item.status).toBe("successful");
     });

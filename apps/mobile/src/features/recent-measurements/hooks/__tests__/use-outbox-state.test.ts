@@ -31,18 +31,16 @@ function makeFakeOutbox(): Outbox & {
   }
 
   return {
-    enqueue() {},
-    enqueueMany() {},
-    destroy() {},
+    enqueue: vi.fn(),
+    enqueueMany: vi.fn(),
+    destroy: vi.fn(),
     isProcessing: (id: string) => enqueued.has(id),
     subscribeProcessing(id, listener) {
-      let set = idListeners.get(id);
-      if (!set) {
-        set = new Set();
-        idListeners.set(id, set);
-      }
+      const existing = idListeners.get(id);
+      const set = existing ?? new Set<() => void>();
+      if (!existing) idListeners.set(id, set);
       set.add(listener);
-      return () => set!.delete(listener);
+      return () => set.delete(listener);
     },
     subscribeSettled() {
       return () => undefined;
@@ -70,13 +68,23 @@ const { fake, getOutboxMock } = vi.hoisted(() => {
   const fake = { current: null as null | ReturnType<typeof makeFakeOutbox> };
   return {
     fake,
-    getOutboxMock: vi.fn(() => fake.current!),
+    getOutboxMock: vi.fn(() => {
+      if (!fake.current) throw new Error("fake outbox not initialised");
+      return fake.current;
+    }),
   };
 });
 
 vi.mock("~/shared/composition/upload", () => ({
   getOutbox: getOutboxMock,
 }));
+
+// Returns the current fake outbox, asserting it has been initialised so tests
+// can drive it without non-null assertions.
+function currentFake() {
+  if (!fake.current) throw new Error("fake outbox not initialised");
+  return fake.current;
+}
 
 beforeEach(() => {
   fake.current = makeFakeOutbox();
@@ -91,7 +99,7 @@ describe("useOutboxSnapshot", () => {
 
   it("flips to isUploading=true and count>=1 while an id is enqueued", () => {
     const { result } = renderHook(() => useOutboxSnapshot());
-    act(() => fake.current!.__enqueue("snap-a"));
+    act(() => currentFake().__enqueue("snap-a"));
     expect(result.current.isUploading).toBe(true);
     expect(result.current.count).toBe(1);
   });
@@ -99,22 +107,22 @@ describe("useOutboxSnapshot", () => {
   it("returns to isUploading=false once every id is settled", () => {
     const { result } = renderHook(() => useOutboxSnapshot());
     act(() => {
-      fake.current!.__enqueue("snap-b");
-      fake.current!.__enqueue("snap-c");
+      currentFake().__enqueue("snap-b");
+      currentFake().__enqueue("snap-c");
     });
     expect(result.current.count).toBe(2);
 
-    act(() => fake.current!.__settle("snap-b"));
+    act(() => currentFake().__settle("snap-b"));
     expect(result.current.count).toBe(1);
 
-    act(() => fake.current!.__settle("snap-c"));
+    act(() => currentFake().__settle("snap-c"));
     expect(result.current.isUploading).toBe(false);
     expect(result.current.count).toBe(0);
   });
 
   it("returns a stable snapshot reference between equivalent updates", () => {
     const { result, rerender } = renderHook(() => useOutboxSnapshot());
-    act(() => fake.current!.__enqueue("snap-d"));
+    act(() => currentFake().__enqueue("snap-d"));
     const a = result.current;
     rerender();
     const b = result.current;
@@ -127,20 +135,20 @@ describe("useIsProcessing", () => {
     const { result: forX } = renderHook(() => useIsProcessing("ip-x"));
     const { result: forY } = renderHook(() => useIsProcessing("ip-y"));
 
-    act(() => fake.current!.__enqueue("ip-x"));
+    act(() => currentFake().__enqueue("ip-x"));
     expect(forX.current).toBe(true);
     expect(forY.current).toBe(false);
 
-    act(() => fake.current!.__enqueue("ip-y"));
+    act(() => currentFake().__enqueue("ip-y"));
     expect(forX.current).toBe(true);
     expect(forY.current).toBe(true);
   });
 
   it("flips back to false when the subscribed id settles", () => {
     const { result } = renderHook(() => useIsProcessing("ip-z"));
-    act(() => fake.current!.__enqueue("ip-z"));
+    act(() => currentFake().__enqueue("ip-z"));
     expect(result.current).toBe(true);
-    act(() => fake.current!.__settle("ip-z"));
+    act(() => currentFake().__settle("ip-z"));
     expect(result.current).toBe(false);
   });
 
@@ -148,13 +156,13 @@ describe("useIsProcessing", () => {
     const { result, rerender } = renderHook(({ id }: { id: string }) => useIsProcessing(id), {
       initialProps: { id: "ip-a" },
     });
-    act(() => fake.current!.__enqueue("ip-a"));
+    act(() => currentFake().__enqueue("ip-a"));
     expect(result.current).toBe(true);
 
     rerender({ id: "ip-b" });
     expect(result.current).toBe(false);
 
-    act(() => fake.current!.__enqueue("ip-b"));
+    act(() => currentFake().__enqueue("ip-b"));
     expect(result.current).toBe(true);
   });
 });

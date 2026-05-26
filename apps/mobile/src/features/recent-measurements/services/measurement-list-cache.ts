@@ -41,7 +41,7 @@ export function statusesForFilter(filter: MeasurementFilter): MeasurementStatus[
 // re-render.
 export function applySettledPatchBatch(
   queryClient: QueryClient,
-  items: ReadonlyArray<SettledItem>,
+  items: readonly SettledItem[],
 ): void {
   if (items.length === 0) return;
   const updates = new Map<string, MeasurementStatus>();
@@ -144,8 +144,7 @@ function patchPagesBulk(
   let touched = false;
   const pages = old.pages.map((page) => {
     let next: MeasurementItem[] | null = null;
-    for (let i = 0; i < page.length; i++) {
-      const row = page[i];
+    for (const row of page) {
       const status = updates.get(row.key);
       if (status === undefined) continue;
       if (!allowed.includes(status)) {

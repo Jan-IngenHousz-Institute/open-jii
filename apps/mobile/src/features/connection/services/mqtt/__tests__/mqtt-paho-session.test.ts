@@ -16,12 +16,12 @@ const { mockGetCredentials, mockCreateSignedUrl, mockGetEnvVar, mockGenerateRand
 
 // Track every paho Client constructed by the module under test so tests
 // can drive its onSuccess / onFailure / onMessageDelivered / onConnectionLost.
-type ConnectArgs = {
+interface ConnectArgs {
   onSuccess?: () => void;
   onFailure?: (err: { errorMessage?: string; errorCode?: number }) => void;
   useSSL?: boolean;
   timeout?: number;
-};
+}
 class FakePahoClient {
   static instances: FakePahoClient[] = [];
   url: string;
@@ -88,6 +88,16 @@ async function loadModule() {
   return await import("../mqtt-paho-session");
 }
 
+// Narrowing helper: asserts a possibly-undefined/null value is present and
+// returns it typed as non-nullable, so tests can drive paho callbacks without
+// non-null assertions.
+function assertDefined<T>(value: T | null | undefined, label: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${label} to be defined`);
+  }
+  return value;
+}
+
 beforeEach(() => {
   FakePahoClient.instances = [];
   vi.clearAllMocks();
@@ -130,7 +140,7 @@ describe("createPahoSessionFactory", () => {
       expect(client.url).toBe("wss://broker.example/mqtt");
       expect(client.connectArgs?.useSSL).toBe(true);
 
-      client.connectArgs!.onSuccess!();
+      assertDefined(assertDefined(client.connectArgs, "connectArgs").onSuccess, "onSuccess")();
       const session = await connecting;
       expect(session).toBeDefined();
     });
@@ -156,7 +166,12 @@ describe("createPahoSessionFactory", () => {
         await Promise.resolve();
       }
       const client = FakePahoClient.instances[0];
-      client.connectArgs!.onFailure!({ errorMessage: "handshake refused" });
+      assertDefined(
+        assertDefined(client.connectArgs, "connectArgs").onFailure,
+        "onFailure",
+      )({
+        errorMessage: "handshake refused",
+      });
 
       await expect(connecting).rejects.toMatchObject({
         kind: "Disconnected",
@@ -171,7 +186,10 @@ describe("createPahoSessionFactory", () => {
       for (let i = 0; i < 20 && FakePahoClient.instances.length === 0; i++) {
         await Promise.resolve();
       }
-      FakePahoClient.instances[0].connectArgs!.onFailure!({});
+      assertDefined(
+        assertDefined(FakePahoClient.instances[0].connectArgs, "connectArgs").onFailure,
+        "onFailure",
+      )({});
 
       await expect(connecting).rejects.toMatchObject({
         kind: "Disconnected",
@@ -189,7 +207,7 @@ describe("createPahoSessionFactory", () => {
       await Promise.resolve();
     }
     const client = FakePahoClient.instances[0];
-    client.connectArgs!.onSuccess!();
+    assertDefined(assertDefined(client.connectArgs, "connectArgs").onSuccess, "onSuccess")();
     const session = await connecting;
     return { session, client };
   }
@@ -244,7 +262,7 @@ describe("createPahoSessionFactory", () => {
 
       const handle = session.publish({ topic: "t", payload: "x" });
       // Simulate paho delivering the stamped message back via callback.
-      client.onMessageDelivered!(client.sent[0]);
+      assertDefined(client.onMessageDelivered, "onMessageDelivered")(client.sent[0]);
 
       expect(delivered).toHaveBeenCalledTimes(1);
       expect(delivered).toHaveBeenCalledWith(handle.id);
@@ -258,7 +276,7 @@ describe("createPahoSessionFactory", () => {
       // A bare paho message (no correlation stamp) — e.g. from a subscribe
       // that the session doesn't own.
       const stranger = new FakePahoMessage("noise");
-      client.onMessageDelivered!(stranger);
+      assertDefined(client.onMessageDelivered, "onMessageDelivered")(stranger);
 
       expect(delivered).not.toHaveBeenCalled();
     });
@@ -268,7 +286,9 @@ describe("createPahoSessionFactory", () => {
       // Publish so we have a stamped message in flight.
       session.publish({ topic: "t", payload: "x" });
       // No handler registered — the callback should not throw.
-      expect(() => client.onMessageDelivered!(client.sent[0])).not.toThrow();
+      expect(() =>
+        assertDefined(client.onMessageDelivered, "onMessageDelivered")(client.sent[0]),
+      ).not.toThrow();
     });
   });
 
@@ -278,7 +298,13 @@ describe("createPahoSessionFactory", () => {
       const onDisconnect = vi.fn();
       session.onDisconnect(onDisconnect);
 
-      client.onConnectionLost!({ errorCode: 7, errorMessage: "kicked" });
+      assertDefined(
+        client.onConnectionLost,
+        "onConnectionLost",
+      )({
+        errorCode: 7,
+        errorMessage: "kicked",
+      });
 
       expect(onDisconnect).toHaveBeenCalledWith({
         code: 7,
@@ -291,7 +317,7 @@ describe("createPahoSessionFactory", () => {
       const onDisconnect = vi.fn();
       session.onDisconnect(onDisconnect);
 
-      client.onConnectionLost!(undefined);
+      assertDefined(client.onConnectionLost, "onConnectionLost")(undefined);
 
       expect(onDisconnect).toHaveBeenCalledWith({
         code: undefined,
@@ -305,7 +331,7 @@ describe("createPahoSessionFactory", () => {
       session.onDisconnect(onDisconnect);
 
       session.destroy();
-      client.onConnectionLost!({ errorMessage: "post-destroy" });
+      assertDefined(client.onConnectionLost, "onConnectionLost")({ errorMessage: "post-destroy" });
 
       expect(onDisconnect).not.toHaveBeenCalled();
     });
