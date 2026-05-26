@@ -15,6 +15,9 @@ const makeMeasurement = (id: string): FlowNode =>
 const makeAnalysis = (id: string): FlowNode =>
   ({ id, type: "analysis", name: id, content: {} }) as FlowNode;
 
+const makeBranch = (id: string): FlowNode =>
+  ({ id, type: "branch", name: id, content: {} }) as FlowNode;
+
 /**
  * Reset the store to its initial state before each test.
  * Zustand stores persist across tests, so we must re-initialize.
@@ -139,6 +142,20 @@ describe("useMeasurementFlowStore", () => {
         experimentId: "exp-1",
         flowNodes,
         currentFlowStep: 1,
+        iterationCount: 0,
+      });
+      useMeasurementFlowStore.getState().nextStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.isQuestionsSubmitPending).toBe(true);
+      expect(state.currentFlowStep).toBe(flowNodes.length);
+    });
+
+    it("pauses for review when a questions+branch flow completes (no data to upload)", () => {
+      const flowNodes = [makeQuestion("q1"), makeBranch("b1"), makeQuestion("q2")];
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes,
+        currentFlowStep: 2,
         iterationCount: 0,
       });
       useMeasurementFlowStore.getState().nextStep();

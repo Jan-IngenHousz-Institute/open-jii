@@ -9,9 +9,12 @@ export type QuestionKind =
   | "open_ended";
 
 export function isQuestionsOnlyFlow(flowNodes: FlowNode[]): boolean {
+  // Branches produce no uploadable data and auto-advance, so they're transparent
+  // here: a flow of questions/instructions/branches still ends at the submit
+  // screen rather than wrapping to a new iteration.
   return (
     flowNodes.length > 0 &&
-    flowNodes.every((n) => n.type === "question" || n.type === "instruction")
+    flowNodes.every((n) => n.type === "question" || n.type === "instruction" || n.type === "branch")
   );
 }
 
