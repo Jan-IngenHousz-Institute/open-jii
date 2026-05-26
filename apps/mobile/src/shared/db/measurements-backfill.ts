@@ -33,6 +33,8 @@ export async function backfillDerivedColumns(): Promise<void> {
         id: measurements.id,
         measurementResult: measurements.measurementResult,
         timestamp: measurements.timestamp,
+        questionsText: measurements.questionsText,
+        hasComment: measurements.hasComment,
       })
       .from(measurements)
       // Catch both pre-0003 rows (no questions_text) and pre-0004 rows that
@@ -54,10 +56,13 @@ export async function backfillDerivedColumns(): Promise<void> {
           dayKey: computeDayKey(row.timestamp),
         };
       } catch {
+        // Decompress/parse failed: only backfill what's actually missing so we
+        // don't clobber values already populated by an earlier backfill pass
+        // (e.g. a row that just needs its day_key derived).
         return {
           id: row.id,
-          questionsText: "[]",
-          hasComment: false,
+          questionsText: row.questionsText ?? "[]",
+          hasComment: row.hasComment ?? false,
           dayKey: computeDayKey(row.timestamp),
         };
       }

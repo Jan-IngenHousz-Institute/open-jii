@@ -170,7 +170,10 @@ export function useMeasurementUpload() {
           err: (storageError as Error)?.message,
         });
         promptMeasurementFileSave(t, measurement);
-        return;
+        // Rethrow so callers awaiting uploadMeasurement(...) can distinguish a
+        // failed local save from success and avoid advancing the flow with
+        // nothing persisted.
+        throw storageError;
       }
 
       getOutbox().enqueue(savedId);

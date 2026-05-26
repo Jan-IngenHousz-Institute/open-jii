@@ -29,17 +29,21 @@ export async function startDeviceScan() {
     { scanMode: ScanMode.LowPower, allowDuplicates: true },
     (error, device) => {
       if (error) {
-        emitter
-          .emit("bluetoothError", error)
-          .catch((e) => log.warn("bluetoothError emit failed", { err: (e as Error)?.message }));
+        emitter.emit("bluetoothError", error).catch((e) =>
+          log.warn("bluetoothError emit failed", {
+            err: e instanceof Error ? e.message : String(e),
+          }),
+        );
         return;
       }
       if (!device) {
         return;
       }
-      emitter
-        .emit("bluetoothDeviceFound", device)
-        .catch((e) => log.warn("bluetoothDeviceFound emit failed", { err: (e as Error)?.message }));
+      emitter.emit("bluetoothDeviceFound", device).catch((e) =>
+        log.warn("bluetoothDeviceFound emit failed", {
+          err: e instanceof Error ? e.message : String(e),
+        }),
+      );
     },
   );
 
