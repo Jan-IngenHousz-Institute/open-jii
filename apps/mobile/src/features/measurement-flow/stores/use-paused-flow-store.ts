@@ -14,6 +14,7 @@ export interface PausedFlowSnapshot {
   isFromOverview: boolean;
   flowNodes: FlowNode[];
   answersHistory: Record<string, string>[];
+  scanResult?: unknown;
   pausedAt: string;
   plotLabel?: string;
 }
