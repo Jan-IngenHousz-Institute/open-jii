@@ -208,8 +208,7 @@ export function createBaseLayout(
   // Otherwise respect the user's pick; compact tiers shrink fonts and
   // ticks but leave legend placement alone.
   const forceBottomLegend =
-    !isInsideLegend &&
-    (ultraCompact || (compact && hasColorbar && legendPosition === "right"));
+    !isInsideLegend && (ultraCompact || (compact && hasColorbar && legendPosition === "right"));
   const effectiveLegendPosition = forceBottomLegend ? "bottom" : legendPosition;
   // Anchor presets:
   //  - "right"/"left": paper coords, vertical legend in the side margin.
@@ -334,7 +333,11 @@ export function createBaseLayout(
     title: title
       ? {
           text: title,
-          font: { size: titleFontSize, family: "var(--font-inter), Inter, sans-serif", color: textColor },
+          font: {
+            size: titleFontSize,
+            family: "var(--font-inter), Inter, sans-serif",
+            color: textColor,
+          },
         }
       : undefined,
 
@@ -879,9 +882,7 @@ export function applyReferenceLines(
 ): void {
   if (!referenceLines || referenceLines.length === 0) return;
   const cells =
-    options.cells && options.cells.length > 0
-      ? options.cells
-      : [{ xaxisId: "x", yaxisId: "y" }];
+    options.cells && options.cells.length > 0 ? options.cells : [{ xaxisId: "x", yaxisId: "y" }];
 
   const newShapes: Array<Record<string, unknown>> = [];
   const newAnnotations: Array<Record<string, unknown>> = [];

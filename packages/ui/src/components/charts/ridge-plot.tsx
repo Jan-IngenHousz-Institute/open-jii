@@ -94,7 +94,13 @@ export function RidgePlot({
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
-      <PlotlyChart data={plotData} layout={layout} config={plotConfig} loading={loading} error={error} />
+      <PlotlyChart
+        data={plotData}
+        layout={layout}
+        config={plotConfig}
+        loading={loading}
+        error={error}
+      />
     </div>
   );
 }

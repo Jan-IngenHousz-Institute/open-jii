@@ -100,9 +100,7 @@ export function DensityPlot2D({
             // silently dropped, which is why the user-supplied title
             // never appeared. The same shape is what the continuous-
             // color scatter / bubble paths already use.
-            colorbar: colorbarTitle
-              ? { title: { text: colorbarTitle, side: "right" } }
-              : undefined,
+            colorbar: colorbarTitle ? { title: { text: colorbarTitle, side: "right" } } : undefined,
             reversescale: reverseScale,
             // Slight transparency so the points beneath stay visible
             // through the contour fill.
@@ -118,7 +116,13 @@ export function DensityPlot2D({
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
-      <PlotlyChart data={plotData} layout={layout} config={plotConfig} loading={loading} error={error} />
+      <PlotlyChart
+        data={plotData}
+        layout={layout}
+        config={plotConfig}
+        loading={loading}
+        error={error}
+      />
     </div>
   );
 }

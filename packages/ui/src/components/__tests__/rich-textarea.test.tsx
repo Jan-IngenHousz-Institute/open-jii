@@ -294,9 +294,7 @@ describe("RichTextarea", () => {
     render(<RichTextarea value="" onChange={mockOnChange} releaseTabKey />);
 
     expect(root.addEventListener).toHaveBeenCalledWith("keydown", expect.any(Function), true);
-    const handler = root.addEventListener.mock.calls.find(
-      (call) => call[0] === "keydown",
-    )?.[1];
+    const handler = root.addEventListener.mock.calls.find((call) => call[0] === "keydown")?.[1];
     const stopImmediatePropagation = vi.fn();
     handler?.({ key: "Tab", stopImmediatePropagation });
     expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
@@ -327,12 +325,8 @@ describe("RichTextarea", () => {
     const original = mockQuillInstance.root;
     mockQuillInstance.root = Object.assign(root, { innerHTML: "" });
 
-    const { unmount } = render(
-      <RichTextarea value="" onChange={mockOnChange} releaseTabKey />,
-    );
-    const handler = root.addEventListener.mock.calls.find(
-      (call) => call[0] === "keydown",
-    )?.[1];
+    const { unmount } = render(<RichTextarea value="" onChange={mockOnChange} releaseTabKey />);
+    const handler = root.addEventListener.mock.calls.find((call) => call[0] === "keydown")?.[1];
 
     unmount();
 

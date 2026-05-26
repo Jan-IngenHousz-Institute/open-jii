@@ -4,9 +4,9 @@ import type { PlotData } from "plotly.js";
 import React from "react";
 
 import { cn } from "../../lib/utils";
+import type { FacetGridConfig } from "./cartesian-chart";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import type { FacetGridConfig } from "./cartesian-chart";
 import { facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
   applyReferenceLines,
@@ -76,9 +76,7 @@ export function BoxPlot({
   subplots,
 }: BoxPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
-    subplots
-      ? { grid: { rows: subplots.rows, columns: subplots.columns } }
-      : {},
+    subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("box", renderer);

@@ -83,9 +83,7 @@ export function ViolinPlot({
   subplots,
 }: ViolinPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
-    subplots
-      ? { grid: { rows: subplots.rows, columns: subplots.columns } }
-      : {},
+    subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("violin", renderer);

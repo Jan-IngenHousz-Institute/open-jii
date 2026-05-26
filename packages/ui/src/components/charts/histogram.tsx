@@ -4,6 +4,7 @@ import type { PlotData } from "plotly.js";
 import React from "react";
 
 import { cn } from "../../lib/utils";
+import type { FacetGridConfig } from "./cartesian-chart";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing, facetTierStyles } from "./use-is-compact";
@@ -15,7 +16,6 @@ import {
   getRenderer,
   getPlotType,
 } from "./utils";
-import type { FacetGridConfig } from "./cartesian-chart";
 
 export interface HistogramSeriesData extends BaseSeries {
   x?: (string | number | Date)[];
@@ -149,9 +149,7 @@ export function Histogram({
   // Facet-aware sizing: when subplots is set, the tier compares per-cell
   // area so axis fonts / margins shrink per cell.
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
-    subplots
-      ? { grid: { rows: subplots.rows, columns: subplots.columns } }
-      : {},
+    subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("histogram", renderer);

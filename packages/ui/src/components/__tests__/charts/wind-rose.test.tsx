@@ -93,27 +93,14 @@ describe("WindRose", () => {
     render(<WindRose data={sampleData} />);
     const layout = getLayout();
     expect(layout.polar.angularaxis.tickmode).toBe("array");
-    expect(layout.polar.angularaxis.tickvals).toEqual([
-      0, 45, 90, 135, 180, 225, 270, 315,
-    ]);
-    expect(layout.polar.angularaxis.ticktext).toEqual([
-      "N",
-      "NE",
-      "E",
-      "SE",
-      "S",
-      "SW",
-      "W",
-      "NW",
-    ]);
+    expect(layout.polar.angularaxis.tickvals).toEqual([0, 45, 90, 135, 180, 225, 270, 315]);
+    expect(layout.polar.angularaxis.ticktext).toEqual(["N", "NE", "E", "SE", "S", "SW", "W", "NW"]);
   });
 
   it("accepts custom direction labels + ticks (e.g. 16-point compass)", () => {
     const ticks = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5];
     const labels = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE"];
-    render(
-      <WindRose data={sampleData} directionTicks={ticks} directionLabels={labels} />,
-    );
+    render(<WindRose data={sampleData} directionTicks={ticks} directionLabels={labels} />);
     const layout = getLayout();
     expect(layout.polar.angularaxis.tickvals).toEqual(ticks);
     expect(layout.polar.angularaxis.ticktext).toEqual(labels);
@@ -123,9 +110,7 @@ describe("WindRose", () => {
     render(<WindRose data={sampleData} directionLabels={[]} />);
     const layout = getLayout();
     expect(layout.polar.angularaxis.tickmode).toBe("array");
-    expect(layout.polar.angularaxis.tickvals).toEqual([
-      0, 45, 90, 135, 180, 225, 270, 315,
-    ]);
+    expect(layout.polar.angularaxis.tickvals).toEqual([0, 45, 90, 135, 180, 225, 270, 315]);
     expect(layout.polar.angularaxis.ticktext).toEqual([
       "0°",
       "45°",
@@ -160,10 +145,7 @@ describe("WindRose", () => {
 
   it("respects config.title and backgroundColor", () => {
     render(
-      <WindRose
-        data={sampleData}
-        config={{ title: "March 2026", backgroundColor: "#f0f0f0" }}
-      />,
+      <WindRose data={sampleData} config={{ title: "March 2026", backgroundColor: "#f0f0f0" }} />,
     );
     const layout = getLayout();
     expect(layout.title).toEqual({ text: "March 2026" });
@@ -181,9 +163,7 @@ describe("WindRose", () => {
   });
 
   it("applies custom className", () => {
-    const { container } = render(
-      <WindRose data={sampleData} className="custom-rose" />,
-    );
+    const { container } = render(<WindRose data={sampleData} className="custom-rose" />);
     expect(container.firstChild).toHaveClass("custom-rose");
   });
 });

@@ -845,9 +845,7 @@ describe("Histogram", () => {
     });
 
     it("ties the fit trace to its parent's legend group", () => {
-      const data = [
-        { x: [1, 2, 3, 4, 5], name: "G", legendgroup: "lg-1", showlegend: false },
-      ];
+      const data = [{ x: [1, 2, 3, 4, 5], name: "G", legendgroup: "lg-1", showlegend: false }];
 
       render(<Histogram data={data} fitOverlay="normal" />);
 

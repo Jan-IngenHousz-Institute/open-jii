@@ -23,9 +23,7 @@ describe("RidgePlot", () => {
   });
 
   it("renders the loading slot when loading is set", () => {
-    const { getByText } = render(
-      <RidgePlot data={[]} categoryTicks={[]} loading />,
-    );
+    const { getByText } = render(<RidgePlot data={[]} categoryTicks={[]} loading />);
     expect(getByText("Loading chart...")).toBeTruthy();
   });
 });

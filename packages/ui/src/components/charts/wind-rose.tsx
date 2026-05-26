@@ -102,9 +102,7 @@ export function WindRose({
   // which on a 360-period axis renders as a solid black ring of stacked
   // numbers. Snapping to the user-supplied tick set avoids that.
   const tickText =
-    directionLabels.length > 0
-      ? directionLabels
-      : directionTicks.map((deg) => `${deg}°`);
+    directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`);
 
   const layout = {
     title: config.title ? { text: config.title } : undefined,

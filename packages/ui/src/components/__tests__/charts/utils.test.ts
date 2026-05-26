@@ -736,10 +736,7 @@ describe("utils", () => {
     });
 
     it("keeps modebar off when showModeBar is false even under snug", () => {
-      const config = createPlotlyConfig(
-        { ...baseConfig, showModeBar: false },
-        { snug: true },
-      );
+      const config = createPlotlyConfig({ ...baseConfig, showModeBar: false }, { snug: true });
       expect(config.displayModeBar).toBe(false);
     });
   });
@@ -855,10 +852,7 @@ describe("utils", () => {
     };
     const baseLayout = createBaseLayout(baseConfig);
 
-    function getKey(
-      layout: Partial<Plotly.Layout>,
-      key: string,
-    ): Record<string, unknown> {
+    function getKey(layout: Partial<Plotly.Layout>, key: string): Record<string, unknown> {
       const value = (layout as Record<string, unknown>)[key];
       if (!value || typeof value !== "object") {
         throw new Error(`expected layout key '${key}' to be an object`);
@@ -1023,9 +1017,7 @@ describe("utils", () => {
       if (!Array.isArray(value)) throw new Error("expected layout.shapes to be an array");
       return value;
     }
-    function readAnnotations(layout: {
-      annotations?: unknown;
-    }): Array<Record<string, unknown>> {
+    function readAnnotations(layout: { annotations?: unknown }): Array<Record<string, unknown>> {
       const value = layout.annotations;
       if (value === undefined) return [];
       if (!Array.isArray(value)) throw new Error("expected layout.annotations to be an array");
@@ -1118,11 +1110,7 @@ describe("utils", () => {
         { xaxisId: "x", yaxisId: "y" },
         { xaxisId: "x2", yaxisId: "y2" },
       ];
-      applyReferenceLines(
-        layout,
-        [{ axis: "x", value: 1, label: "Threshold" }],
-        { cells },
-      );
+      applyReferenceLines(layout, [{ axis: "x", value: 1, label: "Threshold" }], { cells });
       const annotations = readAnnotations(layout);
       expect(annotations).toHaveLength(1);
       expect(nth(annotations, 0)).toMatchObject({

@@ -1,5 +1,5 @@
-import { server } from "@/test/msw/server";
 import { createVisualization } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render } from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";

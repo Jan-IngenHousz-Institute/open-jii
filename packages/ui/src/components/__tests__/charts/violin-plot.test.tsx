@@ -5,9 +5,7 @@ import { ViolinPlot } from "../../charts/violin-plot";
 
 describe("ViolinPlot", () => {
   it("renders without crashing for a single series", () => {
-    const { container } = render(
-      <ViolinPlot data={[{ name: "A", y: [1, 2, 3, 4, 5, 6, 7] }]} />,
-    );
+    const { container } = render(<ViolinPlot data={[{ name: "A", y: [1, 2, 3, 4, 5, 6, 7] }]} />);
     expect(container.querySelector("div")).toBeTruthy();
   });
 

@@ -162,9 +162,7 @@ export function CartesianChart({
   // Faceted charts pass their grid so the sizing tier compares against
   // per-cell area (a 4x2 grid in an 800x500 box has ~200x250 cells).
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
-    subplots
-      ? { grid: { rows: subplots.rows, columns: subplots.columns } }
-      : {},
+    subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);

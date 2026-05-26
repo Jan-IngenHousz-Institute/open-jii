@@ -83,7 +83,12 @@ describe("CartesianChart", () => {
       { traceType: "area", x: [1, 2], y: [9, 10], name: "A" },
     ];
     render(<CartesianChart data={data} />);
-    const traces = readData() as Array<{ type: string; mode?: string; fill?: string; name: string }>;
+    const traces = readData() as Array<{
+      type: string;
+      mode?: string;
+      fill?: string;
+      name: string;
+    }>;
     expect(traces).toHaveLength(4);
     expect(traces[0]).toMatchObject({ name: "L", type: "scatter", mode: "lines" });
     expect(traces[1]).toMatchObject({ name: "B", type: "bar" });
@@ -183,9 +188,7 @@ describe("CartesianChart", () => {
   });
 
   it("propagates barmode/barnorm/bargap/bargroupgap onto the layout", () => {
-    const data: CartesianSeries[] = [
-      { traceType: "bar", x: [1], y: [2], name: "B" },
-    ];
+    const data: CartesianSeries[] = [{ traceType: "bar", x: [1], y: [2], name: "B" }];
     render(
       <CartesianChart
         data={data}

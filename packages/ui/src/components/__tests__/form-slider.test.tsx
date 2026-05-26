@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FormSlider } from "../form-slider";
 
-function Harness(props: Omit<React.ComponentProps<typeof FormSlider>, "label"> & { label?: string }) {
+function Harness(
+  props: Omit<React.ComponentProps<typeof FormSlider>, "label"> & { label?: string },
+) {
   const form = useForm();
   return (
     <FormProvider {...form}>

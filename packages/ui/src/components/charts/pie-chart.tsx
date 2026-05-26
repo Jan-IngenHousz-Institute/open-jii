@@ -143,9 +143,7 @@ export function PieChart({ data, config = {}, className, loading, error }: PieCh
         // In `veryCompact`, force inside-only labels; leader-line outside
         // variant always overflows a 240px-wide widget.
         textposition: veryCompact ? "inside" : series.textposition || "auto",
-        textfont: compact
-          ? { ...series.textfont, size: veryCompact ? 9 : 10 }
-          : series.textfont,
+        textfont: compact ? { ...series.textfont, size: veryCompact ? 9 : 10 } : series.textfont,
         insidetextfont: series.insidetextfont,
         outsidetextfont: series.outsidetextfont,
         // In compact mode, blank out labels for slices below the threshold
