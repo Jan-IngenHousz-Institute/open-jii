@@ -3,17 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
+import type { ReferenceLine } from "../../charts/chart-options";
 import { ReferenceLinesSection } from "./reference-lines-section";
 
-interface RefLine {
-  axis: "x" | "y";
-  value: number;
-  label: string;
-  color: string;
-  dash: string;
-}
-
-function defaults(refs: RefLine[] = []): ChartFormValues {
+function defaults(refs: ReferenceLine[] = []): ChartFormValues {
   return {
     name: "Untitled",
     description: "",
@@ -56,7 +49,7 @@ describe("ReferenceLinesSection", () => {
       await screen.findByRole("button", { name: /workspace\.style\.referenceLineAdd/ }),
     );
 
-    const refs = form.getValues("config.referenceLines") as RefLine[];
+    const refs = form.getValues("config.referenceLines") ?? [];
     expect(refs).toHaveLength(1);
     expect(refs[0].axis).toBe("y");
   });
@@ -98,7 +91,7 @@ describe("ReferenceLinesSection", () => {
     });
     await user.click(removes[0]);
 
-    const refs = form.getValues("config.referenceLines") as RefLine[];
+    const refs = form.getValues("config.referenceLines") ?? [];
     expect(refs).toHaveLength(1);
     expect(refs[0].value).toBe(2);
   });

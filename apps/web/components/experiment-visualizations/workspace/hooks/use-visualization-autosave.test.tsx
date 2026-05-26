@@ -1,5 +1,6 @@
 import { server } from "@/test/msw/server";
-import { renderHook } from "@/test/test-utils";
+import { createVisualization } from "@/test/factories";
+import { render } from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,10 +58,14 @@ describe("useVisualizationAutosave", () => {
   it("mounts without firing a save on the initial form value", () => {
     const spy = server.mount(contract.experiments.updateExperimentVisualization, {
       status: 200,
-      body: { id: "viz-1" },
+      body: createVisualization({ id: "viz-1" }),
     });
 
-    renderHook(() => null, { wrapper: Wrapper });
+    render(
+      <Wrapper>
+        <div />
+      </Wrapper>,
+    );
     expect(spy.called).toBe(false);
   });
 });

@@ -120,19 +120,19 @@ describe("sanitizeDataConfigForSave", () => {
       tableName: "t",
       dataSources: [],
       filters: [
-        { column: "", operator: "eq", value: "v" },
-        { column: "a", operator: "eq", value: "" },
-        { column: "b", operator: "eq", value: "x" },
+        { column: "", operator: "equals", value: "v" },
+        { column: "a", operator: "equals", value: "" },
+        { column: "b", operator: "equals", value: "x" },
       ],
     });
-    expect(result.filters).toEqual([{ column: "b", operator: "eq", value: "x" }]);
+    expect(result.filters).toEqual([{ column: "b", operator: "equals", value: "x" }]);
   });
 
   it("collapses filters to undefined when none survive", () => {
     const result = sanitizeDataConfigForSave({
       tableName: "t",
       dataSources: [],
-      filters: [{ column: "", operator: "eq", value: "" }],
+      filters: [{ column: "", operator: "equals", value: "" }],
     });
     expect(result.filters).toBeUndefined();
   });

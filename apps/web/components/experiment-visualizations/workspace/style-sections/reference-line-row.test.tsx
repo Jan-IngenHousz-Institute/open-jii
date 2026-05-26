@@ -3,13 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
+import type { ReferenceLine } from "../../charts/chart-options";
 import { ReferenceLineRow } from "./reference-line-row";
 
-interface ConfigWithRefLines {
-  referenceLines: { axis: "x" | "y"; value: number; label: string; color: string; dash: string }[];
-}
-
-function defaults(overrides: Partial<ConfigWithRefLines> = {}): ChartFormValues {
+function defaults(overrides: { referenceLines?: ReferenceLine[] } = {}): ChartFormValues {
   return {
     name: "Untitled",
     description: "",

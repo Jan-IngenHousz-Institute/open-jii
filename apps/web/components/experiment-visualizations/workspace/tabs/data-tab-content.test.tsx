@@ -54,7 +54,6 @@ function Harness({
       <DataSourcesFieldArrayProvider form={form}>
         <DataTabContent
           form={form}
-          experimentId="exp-1"
           tables={tables}
           isTablesLoading={isTablesLoading}
           tablesError={tablesError}

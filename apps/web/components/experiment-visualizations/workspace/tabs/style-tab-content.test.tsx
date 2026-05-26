@@ -34,9 +34,7 @@ describe("StyleTabContent", () => {
   it("renders the unsupported placeholder for an unregistered chart type", () => {
     renderWithForm<ChartFormValues>((form) => <StyleTabContent form={form} columns={columns} />, {
       useFormProps: {
-        defaultValues: defaults({
-          chartType: "not-a-real-chart-type",
-        }),
+        defaultValues: defaults({ chartType: "alluvial" }),
       },
     });
 
