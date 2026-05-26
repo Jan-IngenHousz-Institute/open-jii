@@ -4,7 +4,11 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { useAllMeasurements } from "../use-all-measurements";
+import {
+  useAllMeasurements,
+  useHasAnyMeasurements,
+  useMeasurementCounts,
+} from "../use-all-measurements";
 
 const { mockGetMeasurementsList, mockCountMeasurementsByStatus, mockGetMeasurementById } =
   vi.hoisted(() => ({
@@ -221,27 +225,34 @@ describe("useAllMeasurements", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // counts (SQL COUNT … GROUP BY)
+  // counts now live in their own hooks so the heavy list screen doesn't
+  // re-render on every settle tick. useAllMeasurements no longer exposes them.
   // ---------------------------------------------------------------------------
 
-  describe("counts", () => {
-    it("exposes raw SQL counts unchanged by the active filter", async () => {
-      mockCountMeasurementsByStatus.mockResolvedValueOnce({
-        pending: 3,
-        failed: 2,
-        successful: 7,
-      });
+  describe("useMeasurementCounts", () => {
+    it("derives synced/unsynced/total from the SQL counts query", async () => {
+      mockCountMeasurementsByStatus.mockResolvedValueOnce({ pending: 3, failed: 2, successful: 7 });
 
-      const { result } = renderHook(() => useAllMeasurements("synced"), { wrapper });
+      const { result } = renderHook(() => useMeasurementCounts(), { wrapper });
 
-      await waitFor(() => expect(result.current.counts.successful).toBe(7));
-      expect(result.current.counts).toEqual({ pending: 3, failed: 2, successful: 7 });
+      await waitFor(() => expect(result.current.totalCount).toBe(12));
+      expect(result.current.syncedCount).toBe(7);
+      expect(result.current.unsyncedCount).toBe(5);
+    });
+  });
+
+  describe("useHasAnyMeasurements", () => {
+    it("is false when there are no measurements", async () => {
+      const { result } = renderHook(() => useHasAnyMeasurements(), { wrapper });
+      await waitFor(() => expect(result.current).toBe(false));
     });
 
-    it("invokes countMeasurementsByStatus exactly once per render cycle", async () => {
-      renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(mockCountMeasurementsByStatus).toHaveBeenCalled());
-      expect(mockCountMeasurementsByStatus).toHaveBeenCalledTimes(1);
+    it("is true when any measurement exists", async () => {
+      mockCountMeasurementsByStatus.mockResolvedValueOnce({ pending: 1, failed: 0, successful: 0 });
+
+      const { result } = renderHook(() => useHasAnyMeasurements(), { wrapper });
+
+      await waitFor(() => expect(result.current).toBe(true));
     });
   });
 

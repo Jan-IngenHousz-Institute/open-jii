@@ -3,7 +3,10 @@ import React from "react";
 import { Text, View } from "react-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
-import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
+import {
+  useAllMeasurements,
+  useMeasurementCounts,
+} from "~/features/recent-measurements/hooks/use-all-measurements";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Card } from "~/shared/ui/Card";
@@ -13,13 +16,11 @@ import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 export function ProfileHardwareCard() {
   const { t } = useTranslation("profile");
   const { data: connectedDevice } = useConnectedDevice();
-  const { counts } = useAllMeasurements("all");
+  const { unsyncedCount: queued } = useMeasurementCounts();
   const { measurements: allMeasurements } = useAllMeasurements("synced");
 
   const lastSynced = allMeasurements[0]?.timestamp;
   const lastSyncLabel = lastSynced ? formatTimeAgo(lastSynced) : "—";
-
-  const queued = counts.pending + counts.failed;
   const dataSyncSub = lastSynced
     ? queued > 0
       ? t("hardware.dataSyncSubQueued", { count: queued, lastSync: lastSyncLabel })

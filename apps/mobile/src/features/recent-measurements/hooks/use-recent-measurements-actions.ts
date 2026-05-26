@@ -38,7 +38,7 @@ function confirmAndRun(
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
-  const { measurements, counts, invalidate, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { measurements, invalidate, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useAllMeasurements(filter);
   const {
     uploadAll,
@@ -48,11 +48,6 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     updateMeasurementComment,
   } = useMeasurements();
   const { t } = useTranslation(["common", "recentMeasurements"]);
-
-  // Counts come from SQL — independent of the active filter.
-  const unsyncedCount = counts.pending + counts.failed;
-  const syncedCount = counts.successful;
-  const totalCount = counts.pending + counts.failed + counts.successful;
 
   const confirmSync = (m: MeasurementItem) =>
     confirmAndRun(t, {
@@ -89,7 +84,9 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     });
   };
 
-  const confirmSyncAll = () =>
+  // Count is supplied by the caller (the toolbar owns the counts subscription
+  // now) so this hook stays off the per-settle re-render path.
+  const confirmSyncAll = (unsyncedCount = 0) =>
     confirmAndRun(t, {
       title: t("recentMeasurements:alerts.uploadAllTitle"),
       message: t("recentMeasurements:alerts.uploadAllMessage", { count: unsyncedCount }),
@@ -102,7 +99,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       },
     });
 
-  const confirmDeleteAllSynced = () =>
+  const confirmDeleteAllSynced = (syncedCount = 0) =>
     confirmAndRun(t, {
       title: t("recentMeasurements:alerts.deleteAllSyncedTitle"),
       message: t("recentMeasurements:alerts.deleteAllSyncedMessage", { count: syncedCount }),
@@ -128,9 +125,6 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
 
   return {
     measurements,
-    hasAnyMeasurements: totalCount > 0,
-    syncedCount,
-    unsyncedCount,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,

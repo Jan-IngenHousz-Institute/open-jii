@@ -113,12 +113,12 @@ describe("useRecentMeasurementsActions", () => {
     vi.clearAllMocks();
   });
 
-  it("returns derived counts and passthrough values", () => {
+  it("passes the measurement list through", () => {
     const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
-    expect(result.current.unsyncedCount).toBe(1);
-    expect(result.current.syncedCount).toBe(1);
-    expect(result.current.hasAnyMeasurements).toBe(true);
+    // Counts moved to useMeasurementCounts (toolbar-owned); the actions hook
+    // no longer subscribes to them, keeping the screen off the settle-tick
+    // re-render path. See OJD-1470.
     expect(result.current.measurements).toBe(mockAllMeasurements);
   });
 

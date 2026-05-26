@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { useFonts } from "expo-font";
@@ -13,7 +14,6 @@ import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
-import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
@@ -179,6 +179,26 @@ function OutboxBootstrap() {
   return null;
 }
 
+// [perf] App-wide event-loop lag probe. A frozen JS thread (e.g. a heavy
+// screen mount) delays this interval; the measured drift is the freeze
+// length.
+function EventLoopLagMonitor() {
+  useEffect(() => {
+    const lagLog = createLogger("event-loop");
+    const PERIOD_MS = 500;
+    const THRESHOLD_MS = 100;
+    let last = Date.now();
+    const id = setInterval(() => {
+      const now = Date.now();
+      const lag_ms = now - last - PERIOD_MS;
+      last = now;
+      if (lag_ms > THRESHOLD_MS) lagLog.info("stall", { lag_ms });
+    }, PERIOD_MS);
+    return () => clearInterval(id);
+  }, []);
+  return null;
+}
+
 function RootLayoutContent() {
   const { colorScheme } = useColorScheme();
 
@@ -187,6 +207,7 @@ function RootLayoutContent() {
       <TimeSyncProvider>
         <ConfiguredQueryClientProvider>
           <OutboxBootstrap />
+          {__DEV__ && <EventLoopLagMonitor />}
           <SafeAreaProvider>
             <PythonMacroProvider>
               <BottomSheetModalProvider>

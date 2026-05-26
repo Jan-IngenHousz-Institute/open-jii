@@ -1,6 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
+import { useFocusEffect } from "expo-router";
 import { ChevronsLeft } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { DevSeedMeasurementsDialog } from "~/features/recent-measurements/components/dev-seed-measurements-dialog";
 import { MeasurementsDayHeader } from "~/features/recent-measurements/components/measurements-day-header";
@@ -14,12 +15,16 @@ import type {
   MeasurementFilter,
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useHasAnyMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
 import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import type { MeasurementDaySection } from "~/shared/utils/group-measurements-by-day";
 import { groupMeasurementsByDay } from "~/shared/utils/group-measurements-by-day";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("recent-measurements");
 
 type ListRow =
   | { kind: "header"; key: string; section: MeasurementDaySection }
@@ -37,9 +42,6 @@ export function RecentMeasurementsScreen() {
 
   const {
     measurements,
-    hasAnyMeasurements,
-    syncedCount,
-    unsyncedCount,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -50,6 +52,9 @@ export function RecentMeasurementsScreen() {
     handleExport,
     saveComment,
   } = useRecentMeasurementsActions(filter);
+  // Boolean-selected so the screen only re-renders when it flips 0↔n — not on
+  // every settle tick (counts now live in the toolbar). See OJD-1470.
+  const hasAnyMeasurements = useHasAnyMeasurements();
 
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
@@ -66,7 +71,23 @@ export function RecentMeasurementsScreen() {
 
   const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
 
+  // [perf] Mark every focus/blur of this tab so a JS-thread freeze in the
+  // logs can be tied to the exact moment of the tab switch.
+  useFocusEffect(
+    useCallback(() => {
+      log.info("focus");
+      return () => log.info("blur");
+    }, []),
+  );
+
+  // [perf] One line per data update that re-renders this screen — shows the
+  // per-settle re-render cadence while the Outbox drains.
+  useEffect(() => {
+    log.info("data-changed", { measurements: measurements.length });
+  }, [measurements]);
+
   const data = useMemo<ListRow[]>(() => {
+    const t0 = Date.now();
     const sections = groupMeasurementsByDay(measurements, undefined, locale);
     const out: ListRow[] = [];
     for (const section of sections) {
@@ -74,6 +95,14 @@ export function RecentMeasurementsScreen() {
       for (const item of section.data) {
         out.push({ kind: "row", key: item.key, item });
       }
+    }
+    const build_ms = Date.now() - t0;
+    if (build_ms > 8) {
+      log.info("build-rows-slow", {
+        build_ms,
+        measurements: measurements.length,
+        rows: out.length,
+      });
     }
     return out;
   }, [measurements, locale]);
@@ -145,8 +174,6 @@ export function RecentMeasurementsScreen() {
       <MeasurementsToolbar
         filter={filter}
         onFilterChange={setFilter}
-        syncedCount={syncedCount}
-        unsyncedCount={unsyncedCount}
         onSyncAll={confirmSyncAll}
         onDeleteAllSynced={confirmDeleteAllSynced}
         onDevSeed={__DEV__ ? () => setDevSeedVisible(true) : undefined}

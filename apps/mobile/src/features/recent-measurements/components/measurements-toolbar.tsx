@@ -2,6 +2,7 @@ import { FlaskConical, Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { MeasurementFilter } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useMeasurementCounts } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useOutboxSnapshot } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { TabBar } from "~/shared/ui/TabBar";
@@ -10,25 +11,23 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 interface Props {
   filter: MeasurementFilter;
   onFilterChange: (filter: MeasurementFilter) => void;
-  syncedCount: number;
-  unsyncedCount: number;
-  onSyncAll: () => void;
-  onDeleteAllSynced: () => void;
+  onSyncAll: (unsyncedCount: number) => void;
+  onDeleteAllSynced: (syncedCount: number) => void;
   onDevSeed?: () => void;
 }
 
 export function MeasurementsToolbar({
   filter,
   onFilterChange,
-  syncedCount,
-  unsyncedCount,
   onSyncAll,
   onDeleteAllSynced,
   onDevSeed,
 }: Props) {
-  // Subscribe to outbox progress inside the toolbar so settle-tick
-  // re-renders are scoped to this small subtree, not the whole screen.
+  // Subscribe to outbox progress AND counts inside the toolbar so settle-tick
+  // re-renders are scoped to this small subtree, not the whole screen +
+  // FlashList. See OJD-1470.
   const { count: uploadingCount, isUploading } = useOutboxSnapshot();
+  const { syncedCount, unsyncedCount } = useMeasurementCounts();
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
 
@@ -70,7 +69,7 @@ export function MeasurementsToolbar({
           </Pressable>
         )}
         <Pressable
-          onPress={onDeleteAllSynced}
+          onPress={() => onDeleteAllSynced(syncedCount)}
           disabled={deleteDisabled}
           hitSlop={6}
           className="h-10 w-10 items-center justify-center rounded-full"
@@ -83,7 +82,7 @@ export function MeasurementsToolbar({
         </Pressable>
         <View className="relative">
           <Pressable
-            onPress={onSyncAll}
+            onPress={() => onSyncAll(unsyncedCount)}
             disabled={syncDisabled}
             hitSlop={6}
             className="h-10 w-10 items-center justify-center rounded-full"
