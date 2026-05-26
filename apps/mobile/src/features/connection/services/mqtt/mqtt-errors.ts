@@ -1,10 +1,18 @@
 export type MqttErrorKind = "PublishError" | "Disconnected" | "Timeout" | "CredentialError";
 
+export interface MqttErrorOptions {
+  cause?: unknown;
+}
+
 export class MqttError extends Error {
   readonly kind: MqttErrorKind;
 
-  constructor(kind: MqttErrorKind, message: string, options?: ErrorOptions) {
-    super(message, options);
+  constructor(kind: MqttErrorKind, message: string, options?: MqttErrorOptions) {
+    super(message);
+    // lib target (es2017) lacks the Error `cause` option, so set it manually.
+    if (options && "cause" in options) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
     this.kind = kind;
     this.name = `MqttError(${kind})`;
   }

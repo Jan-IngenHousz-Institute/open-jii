@@ -387,7 +387,7 @@ describe("Outbox", () => {
       );
 
       expect(foregroundCb).not.toBeNull();
-      assertDefined(foregroundCb, "foreground callback")();
+      assertDefined<() => void>(foregroundCb, "foreground callback")();
       vi.useRealTimers();
       await flushMicrotasks(40);
 
@@ -411,7 +411,7 @@ describe("Outbox", () => {
       // Foregrounded immediately after cold start — well inside the
       // REHYDRATE_COOLDOWN_MS window (10s). The second call should be
       // skipped entirely.
-      assertDefined(foregroundCb, "foreground callback")();
+      assertDefined<() => void>(foregroundCb, "foreground callback")();
       await flushMicrotasks(10);
 
       expect(mockGetMeasurements).toHaveBeenCalledTimes(cold);
@@ -453,13 +453,19 @@ describe("Outbox", () => {
 
       // Go offline before enqueueing — the queue is stopped, so the
       // worker should not pick up the item.
-      assertDefined(networkCb, "network callback")({ isInternetReachable: false });
+      assertDefined<(state: { isInternetReachable: boolean | null | undefined }) => void>(
+        networkCb,
+        "network callback",
+      )({ isInternetReachable: false });
       outbox.enqueue("net-a");
       await flushMicrotasks(10);
       expect(transport.calls).toHaveLength(0);
 
       // Back online — queue starts draining and the worker publishes.
-      assertDefined(networkCb, "network callback")({ isInternetReachable: true });
+      assertDefined<(state: { isInternetReachable: boolean | null | undefined }) => void>(
+        networkCb,
+        "network callback",
+      )({ isInternetReachable: true });
       for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
@@ -482,7 +488,10 @@ describe("Outbox", () => {
       const { outbox } = await freshOutbox(transport);
       await flushMicrotasks();
 
-      assertDefined(networkCb, "network callback")({ isInternetReachable: undefined });
+      assertDefined<(state: { isInternetReachable: boolean | null | undefined }) => void>(
+        networkCb,
+        "network callback",
+      )({ isInternetReachable: undefined });
       outbox.enqueue("net-b");
       for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
       expect(transport.calls).toHaveLength(1);
