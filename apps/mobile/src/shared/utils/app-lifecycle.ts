@@ -53,6 +53,13 @@ function handleChange(next: AppStateStatus) {
 export function onAppForeground(listener: Listener): () => void {
   listeners.add(listener);
   if (!subscription) {
+    // Re-sync before re-attaching: after every subscriber left, the native
+    // listener was removed, so `lastState`/`lastFireAt` are frozen at the
+    // values from the previous session. A stale `lastState === "active"`
+    // would make the next genuine background → active look like active →
+    // active and get filtered out. Reset from the live AppState instead.
+    lastState = AppState.currentState;
+    lastFireAt = 0;
     subscription = AppState.addEventListener("change", handleChange);
   }
   return () => {

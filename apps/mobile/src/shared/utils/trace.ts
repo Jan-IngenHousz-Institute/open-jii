@@ -5,7 +5,6 @@
 // fat entry on `end()` with timings + every event. Callers across modules
 // can attach events to the same trace via `getTrace(id)` — no need to
 // thread a trace object through every function signature.
-
 import type { LogFields, Logger } from "./logger";
 import { createLogger } from "./logger";
 
@@ -40,6 +39,10 @@ class TraceImpl implements Trace {
   readonly events: TraceEvent[] = [];
   fields: LogFields;
   ended = false;
+  // The finalized result from the first end() call. Returned verbatim on
+  // any subsequent end() so a double-end can't fabricate a divergent
+  // payload (totalMs: 0, empty events, a different status).
+  private result: TraceResult | null = null;
 
   constructor(
     readonly kind: string,
@@ -61,16 +64,11 @@ class TraceImpl implements Trace {
   }
 
   end(status: "ok" | "error", fields?: LogFields): TraceResult {
-    if (this.ended) {
-      return {
-        id: this.id,
-        kind: this.kind,
-        status,
-        totalMs: 0,
-        events: [],
-        fields: this.fields,
-      };
-    }
+    // Idempotent: once finalized, return the cached result verbatim so a
+    // double-end can't fabricate a divergent payload (totalMs: 0, empty
+    // events, a different status). `this.result` doubles as the narrowing
+    // guard — truthy only after a real end — so no assertion is needed.
+    if (this.result) return this.result;
     this.ended = true;
     registry.delete(this.id);
     const totalMs = Date.now() - this.t0;
@@ -84,6 +82,7 @@ class TraceImpl implements Trace {
       events: this.events,
       fields: this.fields,
     };
+    this.result = result;
     const summary = this.events.map((e) =>
       e.fields ? `${e.name}+${e.tMs}(${formatInline(e.fields)})` : `${e.name}+${e.tMs}`,
     );

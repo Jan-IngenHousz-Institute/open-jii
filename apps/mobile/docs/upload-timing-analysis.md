@@ -1,5 +1,10 @@
 # Upload Timing Analysis
 
+> **Historical — snapshot at capture time.** This analysis describes the
+> 4-transport parallel pool (≈20 in-flight slots) that has since been replaced
+> by a single session draining at `UPLOAD_CONCURRENCY` (8). The "20 slots" /
+> "20 cap" figures below reflect that older configuration, not the shipped one.
+
 Source: log capture 16:20:54 – 16:23:17. Two batches of 50 measurements each, 244 bytes payload, QoS 1, MQTT publish to AWS IoT.
 
 ## Batch 1 — cold start, 50 msgs
@@ -29,6 +34,7 @@ Source: log capture 16:20:54 – 16:23:17. Two batches of 50 measurements each, 
 ## Why batch 2 wire_ms exploded
 
 Connects still warm (no reconnect log between batches). Symptoms point to:
+
 - Server-side ingest backpressure (AWS IoT Rule/Lambda/Timestream throttling)
 - OR cellular RTT degraded mid-test
 - Wire growth pattern (linear ramp from 1.5s → 21s) = queue building somewhere downstream, not random jitter
@@ -46,10 +52,10 @@ Connects still warm (no reconnect log between batches). Symptoms point to:
 
 ## Numbers at a glance
 
-| Metric | Batch 1 | Batch 2 |
-|--------|---------|---------|
-| 50 msgs total time | 3.5s | 93s |
-| First msg total_ms | 1730 | 1730 |
-| Last msg total_ms | 3956 | 91423 |
-| Median wire_ms | ~500 | ~18500 |
-| Throughput | 14 msg/s | 0.5 msg/s |
+| Metric             | Batch 1  | Batch 2   |
+| ------------------ | -------- | --------- |
+| 50 msgs total time | 3.5s     | 93s       |
+| First msg total_ms | 1730     | 1730      |
+| Last msg total_ms  | 3956     | 91423     |
+| Median wire_ms     | ~500     | ~18500    |
+| Throughput         | 14 msg/s | 0.5 msg/s |

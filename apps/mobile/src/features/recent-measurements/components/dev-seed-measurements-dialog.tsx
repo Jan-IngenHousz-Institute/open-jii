@@ -21,11 +21,14 @@ export function DevSeedMeasurementsDialog({ visible, onClose }: DevSeedMeasureme
   const [isSeeding, setIsSeeding] = useState(false);
 
   const handleGenerate = async () => {
-    const count = Number.parseInt(countText, 10);
-    if (!Number.isFinite(count) || count <= 0) {
+    // Strict: parseInt would accept "12abc" as 12. number-pad doesn't stop a
+    // paste, so validate the whole string is digits with no leading zero.
+    const trimmed = countText.trim();
+    if (!/^[1-9]\d*$/.test(trimmed)) {
       toast.error("Enter a positive integer");
       return;
     }
+    const count = Number(trimmed);
     setIsSeeding(true);
     try {
       const saved = await devSeedMeasurements(count);

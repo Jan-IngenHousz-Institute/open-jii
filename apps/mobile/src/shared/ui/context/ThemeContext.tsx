@@ -46,7 +46,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         setThemePreference(seed);
         await AsyncStorage.setItem("themePreference", seed);
       } catch (error) {
-        log.error("Failed to load theme preference", { err: (error as Error)?.message });
+        log.error("Failed to load theme preference", {
+          err: error instanceof Error ? error.message : String(error),
+        });
       }
     };
     loadThemePreference();
@@ -61,7 +63,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       await AsyncStorage.setItem("themePreference", newPreference);
       setThemePreference(newPreference);
     } catch (error) {
-      log.error("Failed to save theme preference", { err: (error as Error)?.message });
+      log.error("Failed to save theme preference", {
+        err: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 

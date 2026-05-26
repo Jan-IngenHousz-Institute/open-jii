@@ -59,9 +59,14 @@ export function useQuestionsUpload() {
       try {
         savedId = await saveMeasurement(measurement, "pending");
       } catch (storageError) {
-        log.error("Failed to save answers to local storage", { err: (storageError as Error)?.message });
+        log.error("Failed to save answers to local storage", {
+          err: (storageError as Error)?.message,
+        });
         toast.error(t("recentMeasurements:toasts.answersSaveFailed"));
-        return;
+        // Re-throw so the mutation rejects: a swallowed failure here would
+        // resolve "successfully" and let the caller advance the flow as if
+        // the answers were saved/enqueued when nothing was.
+        throw storageError;
       }
 
       getOutbox().enqueue(savedId);

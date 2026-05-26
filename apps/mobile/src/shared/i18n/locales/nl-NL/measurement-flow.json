@@ -212,7 +212,8 @@
       "removeAlertTitle": "Verwijderen van telefoon",
       "removeAlertMessage": "\"{{experimentName}}\" is al naar de cloud geüpload. Verwijderen van deze telefoon? De cloudkopie blijft intact.",
       "deleteAlertTitle": "Niet-gesynchroniseerde meting verwijderen",
-      "deleteAlertMessage": "\"{{experimentName}}\" is nog niet geüpload. Als je dit nu verwijdert, gaat de meting definitief verloren."
+      "deleteAlertMessage": "\"{{experimentName}}\" is nog niet geüpload. Als je dit nu verwijdert, gaat de meting definitief verloren.",
+      "deleteBlockedUploading": "Kan niet verwijderen tijdens uploaden — probeer het zo opnieuw."
     },
     "empty": "Geen flow-stappen beschikbaar.",
     "error": "Kon experimentflow niet laden. Probeer het opnieuw.",

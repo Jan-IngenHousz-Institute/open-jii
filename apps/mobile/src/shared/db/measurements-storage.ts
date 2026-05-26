@@ -338,28 +338,11 @@ export async function getMeasurements(
   }
 }
 
+// Alias kept for call sites that read by id (e.g. the Outbox worker). The
+// query/decompress/error-handling lives once in getMeasurement; this wraps
+// it so the two can't drift.
 export async function getMeasurementById(id: string): Promise<StoredMeasurement | null> {
-  await ensureMigrated();
-  try {
-    const row = db.select().from(measurements).where(eq(measurements.id, id)).get();
-    if (!row) return null;
-    return {
-      id: row.id,
-      status: row.status,
-      data: {
-        topic: row.topic,
-        measurementResult: decompressFromStorage(row.measurementResult),
-        metadata: {
-          experimentName: row.experimentName,
-          protocolName: row.protocolName,
-          timestamp: row.timestamp,
-        },
-      },
-    };
-  } catch (error) {
-    log.error("Failed to fetch measurement by id", { id, err: (error as Error)?.message });
-    return null;
-  }
+  return getMeasurement(id);
 }
 
 export async function updateMeasurement(key: string, data: Measurement): Promise<void> {

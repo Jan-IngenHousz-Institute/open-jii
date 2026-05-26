@@ -52,7 +52,10 @@ vi.mock("~/shared/utils/trace", () => ({
 // fresh realm is *load-bearing*: the Outbox uses `instanceof MqttError`
 // for retry classification, and a class from a stale realm would never
 // match — silently flipping terminal errors into retryable ones.
-async function freshOutbox(transport: Transport, opts?: { concurrency?: number; retryBackoffMs?: readonly number[] }) {
+async function freshOutbox(
+  transport: Transport,
+  opts?: { concurrency?: number; retryBackoffMs?: readonly number[] },
+) {
   vi.resetModules();
   const outboxMod = await import("../outbox");
   const errorsMod = await import("~/features/connection/services/mqtt/mqtt-errors");
@@ -64,7 +67,11 @@ async function freshOutbox(transport: Transport, opts?: { concurrency?: number; 
   return { outbox, MqttError: errorsMod.MqttError };
 }
 
-function makeTransport(): Transport & { calls: { topic: string; payload: any }[]; resolveNext: () => void; rejectNext: (err: Error) => void } {
+function makeTransport(): Transport & {
+  calls: { topic: string; payload: any }[];
+  resolveNext: () => void;
+  rejectNext: (err: Error) => void;
+} {
   const calls: { topic: string; payload: any }[] = [];
   // FIFO queues so concurrent publish() calls all keep their own
   // resolver — the previous single-slot field silently dropped the first
@@ -94,7 +101,14 @@ function makeTransport(): Transport & { calls: { topic: string; payload: any }[]
   };
 }
 
-const row = (overrides: Partial<{ id: string; status: "pending" | "failed" | "successful"; topic: string; result: object }> = {}) => ({
+const row = (
+  overrides: Partial<{
+    id: string;
+    status: "pending" | "failed" | "successful";
+    topic: string;
+    result: object;
+  }> = {},
+) => ({
   id: overrides.id ?? "row-1",
   status: overrides.status ?? "pending",
   data: {
@@ -107,7 +121,6 @@ const row = (overrides: Partial<{ id: string; status: "pending" | "failed" | "su
 async function flushMicrotasks(n = 8) {
   for (let i = 0; i < n; i++) await Promise.resolve();
 }
-
 
 describe("Outbox", () => {
   beforeEach(() => {
@@ -149,7 +162,9 @@ describe("Outbox", () => {
 
   describe("worker — happy path", () => {
     it("publishes the row payload with _client_id and marks the row successful", async () => {
-      mockGetMeasurementById.mockResolvedValueOnce(row({ id: "row-1", topic: "exp/p", result: { v: 42 } }));
+      mockGetMeasurementById.mockResolvedValueOnce(
+        row({ id: "row-1", topic: "exp/p", result: { v: 42 } }),
+      );
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
 
@@ -168,6 +183,29 @@ describe("Outbox", () => {
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
       expect(outbox.isProcessing("row-1")).toBe(false);
+    });
+
+    it("keeps a delivered upload 'successful' even if the DB status write throws", async () => {
+      // PUBACK arrives, then markAsSuccessful throws (e.g. SQLite busy). The
+      // worker must NOT mark the row failed — the message was delivered — and
+      // must still emit a 'successful' settle.
+      mockGetMeasurementById.mockResolvedValueOnce(row({ id: "db-1" }));
+      mockMarkAsSuccessful.mockRejectedValueOnce(new Error("sqlite busy"));
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+
+      const settled = vi.fn();
+      outbox.subscribeSettled(settled);
+
+      outbox.enqueue("db-1");
+      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      transport.resolveNext();
+      await flushMicrotasks(40);
+
+      expect(mockMarkAsFailed).not.toHaveBeenCalled();
+      expect(settled).toHaveBeenCalledTimes(1);
+      expect(settled.mock.calls[0][0]).toEqual([{ id: "db-1", status: "successful" }]);
+      expect(outbox.isProcessing("db-1")).toBe(false);
     });
   });
 
@@ -235,6 +273,35 @@ describe("Outbox", () => {
 
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
+    });
+
+    it("marks failed + emits a 'failed' settle when retryable errors exhaust", async () => {
+      // One backoff step → maxAttempts = 2. Both attempts reject with a
+      // retryable kind, so the AsyncRetryer exhausts and the error escapes to
+      // the queue's onError, which must terminalize the otherwise-stuck row.
+      mockGetMeasurementById.mockResolvedValue(row({ id: "ex-1" }));
+      const transport = makeTransport();
+      const { outbox, MqttError } = await freshOutbox(transport, { retryBackoffMs: [0] });
+
+      const settled = vi.fn();
+      outbox.subscribeSettled(settled);
+
+      outbox.enqueue("ex-1");
+      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      transport.rejectNext(new MqttError("Disconnected", "kicked-1"));
+      await flushMicrotasks(40);
+
+      // Retry fired — second (final) attempt publishes, then also rejects.
+      for (let i = 0; i < 30 && transport.calls.length < 2; i++) await Promise.resolve();
+      expect(transport.calls.length).toBe(2);
+      transport.rejectNext(new MqttError("Disconnected", "kicked-2"));
+      await flushMicrotasks(40);
+
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("ex-1");
+      expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
+      expect(settled).toHaveBeenCalledTimes(1);
+      expect(settled.mock.calls[0][0]).toEqual([{ id: "ex-1", status: "failed" }]);
+      expect(outbox.isProcessing("ex-1")).toBe(false);
     });
   });
 

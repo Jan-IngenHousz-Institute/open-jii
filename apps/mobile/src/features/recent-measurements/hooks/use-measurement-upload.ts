@@ -90,7 +90,9 @@ function promptMeasurementFileSave(
         variant: "primary",
         onPress: () => {
           exportSingleMeasurementToFile(measurement).catch((exportError) => {
-            log.error("Failed to export measurement to file", { err: (exportError as Error)?.message });
+            log.error("Failed to export measurement to file", {
+              err: (exportError as Error)?.message,
+            });
             toast.error(t("recentMeasurements:alerts.saveToFileError"));
           });
         },
@@ -133,7 +135,15 @@ export function useMeasurementUpload() {
       questions: AnswerData[];
       commentText?: string;
     }) => {
-      if (typeof rawMeasurement !== "object") return;
+      // Reject malformed input instead of resolving as a no-op. `typeof
+      // null === "object"` would otherwise slip a null through to
+      // prepareMeasurementForUpload() and crash on `"sample" in null`, and a
+      // silent success would let the flow advance with nothing saved.
+      if (rawMeasurement === null || typeof rawMeasurement !== "object") {
+        throw new Error(
+          `Invalid rawMeasurement: expected object, got ${rawMeasurement === null ? "null" : typeof rawMeasurement}`,
+        );
+      }
 
       const measurementData = prepareMeasurementForUpload({
         rawMeasurement,
@@ -156,7 +166,9 @@ export function useMeasurementUpload() {
       try {
         savedId = await saveMeasurement(measurement, "pending");
       } catch (storageError) {
-        log.error("Failed to save measurement to local storage", { err: (storageError as Error)?.message });
+        log.error("Failed to save measurement to local storage", {
+          err: (storageError as Error)?.message,
+        });
         promptMeasurementFileSave(t, measurement);
         return;
       }

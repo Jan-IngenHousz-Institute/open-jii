@@ -148,18 +148,31 @@ class TransportImpl implements Transport {
       return;
     }
 
-    if (this.destroyed || item.settled) return;
+    if (item.settled) return;
+    if (this.destroyed) {
+      // destroy() only rejects items already tracked in `inFlight`; this one
+      // isn't there yet, so reject it here or the caller hangs until the
+      // PUBLISH_TIMEOUT_MS fires.
+      this.settleReject(item, new MqttError("Disconnected", "transport destroyed"));
+      return;
+    }
 
     // Yield once before the CPU-heavy stringify so concurrent workers don't
     // all stall the JS thread back-to-back. JSON.stringify of a multi-MB
     // measurement payload is sync; the await lets paho's ack callbacks /
     // RN UI work interleave.
     await yieldToEventLoop();
-    if (this.destroyed || item.settled) return;
-
-    const serialized = JSON.stringify(payload);
+    if (item.settled) return;
+    if (this.destroyed) {
+      this.settleReject(item, new MqttError("Disconnected", "transport destroyed"));
+      return;
+    }
 
     try {
+      // stringify inside the try: a circular / non-serializable payload throws
+      // here. Without the catch that rejection would be dropped (sendItem is
+      // fire-and-forget from publish()) and the caller would hang to timeout.
+      const serialized = JSON.stringify(payload);
       item.sentAt = getSyncedUtcNow();
       const handle = session.publish({ topic: item.topic, payload: serialized });
       if (item.settled) {

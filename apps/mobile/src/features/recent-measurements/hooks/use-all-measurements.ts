@@ -99,7 +99,7 @@ export function useTopMeasurements(n: number) {
   const query = useQuery({
     queryKey: queryKeys.top(n),
     queryFn: async () => {
-      const rows = await getMeasurementsList(["pending", "failed", "successful"], {
+      const rows = await getMeasurementsList(statusesForFilter("all"), {
         limit: n,
         offset: 0,
       });

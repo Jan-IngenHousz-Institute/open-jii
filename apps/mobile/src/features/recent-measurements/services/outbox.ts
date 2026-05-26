@@ -105,6 +105,18 @@ class OutboxImpl implements Outbox {
           log.warn("worker error — retrying", { attempt, err: err.message });
         },
       },
+      onError: (err, id) => {
+        // Reached only when retryable errors exhaust every attempt — terminal
+        // errors are handled inline in runItem and never rethrow. The row is
+        // still "pending" with no terminal settle emitted, so terminalize it
+        // here. End the trace synchronously: onError fires before onSettled,
+        // which would otherwise close the trace as "ok".
+        if (this.destroyed) return;
+        log.error("worker exhausted retries — marking failed", { id, err: err.message });
+        getTrace(id)?.end("error", { err: err.message, closed_by: "retry_exhausted" });
+        this.scheduleSettled({ id, status: "failed" });
+        void this.markFailedAfterExhaustion(id);
+      },
       onSettled: (id) => {
         log.debug("settled", { id });
         this.releaseEnqueued(id);
@@ -310,19 +322,20 @@ class OutboxImpl implements Outbox {
     trace?.setFields({ topic: row.data.topic, row_status_before: row.status });
     trace?.event("publish_start");
     log.info("publish start", { id, topic: row.data.topic });
+
+    // Phase 1 — deliver. Only transport errors are classified here, so a
+    // later DB-write failure can't be mistaken for a publish failure.
     try {
       await this.transport.publish(row.data.topic, payload, { traceId: id });
-      await markAsSuccessful(id);
-      this.scheduleSettled({ id, status: "successful" });
-      trace?.event("marked_successful");
-      log.debug("publish ok → marked successful", { id });
-      trace?.end("ok");
     } catch (err) {
       // A teardown in flight rejects pending publishes; don't reschedule them
       // onto a queue we're about to discard.
       if (this.destroyed) return;
       const kind = (err as { kind?: string })?.kind;
       if (isRetryableMqttError(err)) {
+        // Rethrow so the AsyncRetryer schedules the next attempt. When every
+        // attempt is exhausted the error escapes to the queue's onError,
+        // which marks the row failed + emits the terminal settle.
         log.warn("publish failed (retryable) — rethrowing for retry", { id, kind });
         trace?.event("publish_failed_retryable", { kind });
         throw err;
@@ -336,6 +349,40 @@ class OutboxImpl implements Outbox {
       this.scheduleSettled({ id, status: "failed" });
       trace?.event("marked_failed", { kind });
       trace?.end("error", { err: (err as Error)?.message, kind });
+      return;
+    }
+
+    // Phase 2 — record. PUBACK is in: the message is delivered. A failure
+    // here must NOT mark the row failed (that would misclassify a delivered
+    // upload and trigger a needless re-publish). Emit the successful settle
+    // regardless; if the DB write throws the row stays "pending" and is
+    // re-published on the next drain, deduped downstream via _client_id.
+    try {
+      await markAsSuccessful(id);
+      trace?.event("marked_successful");
+    } catch (dbErr) {
+      log.error("publish ok but markAsSuccessful failed — leaving row for re-publish", {
+        id,
+        err: (dbErr as Error)?.message,
+      });
+      trace?.event("mark_successful_failed", { err: (dbErr as Error)?.message });
+    }
+    this.scheduleSettled({ id, status: "successful" });
+    log.debug("publish ok", { id });
+    trace?.end("ok");
+  }
+
+  // Mark a row failed after the retryer exhausted every attempt. Invoked
+  // fire-and-forget from onError (a void callback that can't await); the
+  // terminal settle and trace close already happened synchronously there.
+  private async markFailedAfterExhaustion(id: string): Promise<void> {
+    try {
+      await markAsFailed(id);
+    } catch (err) {
+      log.warn("markAsFailed threw after retry exhaustion", {
+        id,
+        err: (err as Error)?.message,
+      });
     }
   }
 

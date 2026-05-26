@@ -39,16 +39,22 @@ export class ErrorBoundary extends React.Component<Props, State> {
       <View className="bg-background flex-1 p-6">
         <Text className="text-destructive mb-2 text-xl font-bold">Something broke</Text>
         <Text className="text-muted-foreground mb-4 text-sm">{error.message}</Text>
-        <ScrollView className="bg-surface mb-4 max-h-96 rounded-lg p-3">
-          <Text className="text-onSurface text-xs" selectable>
-            {error.stack}
-          </Text>
-          {info?.componentStack ? (
-            <Text className="text-onSurface mt-3 text-xs" selectable>
-              {info.componentStack}
+        {/* Raw JS / component stacks are a privacy leak in production builds
+            (they can expose source paths and internals to end users). Show
+            them only in development; the full stack is always logged via
+            componentDidCatch regardless. */}
+        {__DEV__ ? (
+          <ScrollView className="bg-surface mb-4 max-h-96 rounded-lg p-3">
+            <Text className="text-onSurface text-xs" selectable>
+              {error.stack}
             </Text>
-          ) : null}
-        </ScrollView>
+            {info?.componentStack ? (
+              <Text className="text-onSurface mt-3 text-xs" selectable>
+                {info.componentStack}
+              </Text>
+            ) : null}
+          </ScrollView>
+        ) : null}
         <Pressable className="bg-primary rounded-lg px-6 py-3" onPress={this.reset}>
           <Text className="text-onPrimary text-center font-semibold">Try again</Text>
         </Pressable>

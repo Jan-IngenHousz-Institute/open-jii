@@ -168,4 +168,47 @@ describe("app-lifecycle", () => {
     expect(bad).toHaveBeenCalledTimes(1);
     expect(good).toHaveBeenCalledTimes(1);
   });
+
+  it("collapses rapid background → active flaps within the cooldown window", async () => {
+    const { onAppForeground } = await loadModule("background");
+    let now = 100_000;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+    const listener = vi.fn();
+    onAppForeground(listener);
+
+    fire("active"); // genuine foreground — fires
+    fire("background");
+    fire("active"); // within 2s of the last fire — suppressed
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    now += 2_001; // past COOLDOWN_MS
+    fire("background");
+    fire("active"); // cooldown elapsed — fires again
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    nowSpy.mockRestore();
+  });
+
+  it("re-syncs transition state when the native listener is re-attached", async () => {
+    // After the last subscriber leaves, the native listener detaches and
+    // `lastState` freezes at "active". Without a re-sync on re-attach, the
+    // next genuine background → active looks like active → active and is
+    // wrongly filtered out.
+    const { onAppForeground } = await loadModule("background");
+
+    const first = vi.fn();
+    const unsub = onAppForeground(first);
+    fire("active"); // background → active fires
+    expect(first).toHaveBeenCalledTimes(1);
+    unsub(); // last subscriber gone → native listener removed
+
+    // App drifts to the background while nothing is listening.
+    appState.currentState = "background";
+
+    const second = vi.fn();
+    onAppForeground(second); // re-attach must re-sync lastState to "background"
+    fire("active"); // must be seen as a real background → active
+
+    expect(second).toHaveBeenCalledTimes(1);
+  });
 });

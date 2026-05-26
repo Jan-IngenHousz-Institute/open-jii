@@ -1,19 +1,27 @@
 # Post-rebase perf audit — OJD-1470 vs OJD-1537 base
 
+> **Historical — snapshot at audit time.** Some sections below reference the
+> 4×8 = 32 parallel-socket MQTT pool that has since been removed. The shipped
+> transport uses a single lazily-connected session draining at
+> `UPLOAD_CONCURRENCY` (8); see `services/upload-constants.ts` and
+> `services/mqtt/mqtt-transport.ts`. Figures such as "Concurrency is now 32"
+> and the 250 ms throttle tuning are kept verbatim as the audit record, not as
+> a description of current behaviour.
+
 Branch rebased onto `84bf51c6b perf(mobile,measurements): drop blob decompress from list render` (OJD-1537). This is a check that the rebase didn't undo the base's perf wins.
 
 ## Base wins — all preserved ✅
 
-| Optimization | File | Status |
-|---|---|---|
-| `getMeasurementsList` lean SELECT (no decompress, no Zod, SQL ORDER BY + LIMIT/OFFSET) | `shared/db/measurements-storage.ts` | intact |
-| `useInfiniteQuery` paginated fetch (page size 50) | `hooks/use-all-measurements.ts` | intact |
-| Modal opens via async `getMeasurement(id)` on tap | `screens/recent-measurements-screen.tsx`, `completed-state.tsx` | intact |
-| `deriveListColumns` at save/update time (`questionsText`, `hasComment`) | `measurements-storage.ts` | intact |
-| Migration 0002 + indexes (`status`, `status_ts`, `created_at`) | `drizzle/0002_*.sql` | intact |
-| Backfill on app launch | `_layout.tsx` | intact |
-| `home-recent-measurements` uses lean `MeasurementItem` | `home-recent-measurements.tsx` | intact |
-| `countMeasurementsByStatus` uses status index | `measurements-storage.ts` | intact |
+| Optimization                                                                           | File                                                            | Status |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------ |
+| `getMeasurementsList` lean SELECT (no decompress, no Zod, SQL ORDER BY + LIMIT/OFFSET) | `shared/db/measurements-storage.ts`                             | intact |
+| `useInfiniteQuery` paginated fetch (page size 50)                                      | `hooks/use-all-measurements.ts`                                 | intact |
+| Modal opens via async `getMeasurement(id)` on tap                                      | `screens/recent-measurements-screen.tsx`, `completed-state.tsx` | intact |
+| `deriveListColumns` at save/update time (`questionsText`, `hasComment`)                | `measurements-storage.ts`                                       | intact |
+| Migration 0002 + indexes (`status`, `status_ts`, `created_at`)                         | `drizzle/0002_*.sql`                                            | intact |
+| Backfill on app launch                                                                 | `_layout.tsx`                                                   | intact |
+| `home-recent-measurements` uses lean `MeasurementItem`                                 | `home-recent-measurements.tsx`                                  | intact |
+| `countMeasurementsByStatus` uses status index                                          | `measurements-storage.ts`                                       | intact |
 
 ## Additions on top (not regressions)
 
@@ -35,10 +43,7 @@ const measurements = listQuery.data?.pages.flat() ?? [];
 Re-flattens N pages on every render of any consumer (screen, completed-state, home-recent). With 5 pages × 50 = 250 items, that's a 250-elem array realloc per render. Fix:
 
 ```ts
-const measurements = useMemo(
-  () => listQuery.data?.pages.flat() ?? [],
-  [listQuery.data],
-);
+const measurements = useMemo(() => listQuery.data?.pages.flat() ?? [], [listQuery.data]);
 ```
 
 ### 2. `home-recent-measurements` over-fetches (medium)
@@ -61,6 +66,7 @@ Fix: add a `useRecentMeasurementsTop(n)` hook with a single non-infinite `useQue
 `subscribeSettled` → `queryClient.invalidateQueries({ queryKey: ["measurements"] })` re-runs the lean SELECT once per loaded page (1, 2, … N). 250 ms throttle helps but the multiplier still hurts during a burst drain of 100+ items.
 
 Options:
+
 - Refetch only the first page: `queryClient.invalidateQueries({ queryKey: ["measurements", "list", filter], refetchType: 'active' })` then pass `pages: 1` (TanStack v5: `setQueryData` to truncate to first page before refetch).
 - Or `setQueryData` directly: for each settled id, patch row.status in the cached pages — zero SQL.
 
