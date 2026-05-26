@@ -142,8 +142,7 @@ vi.mock("nativewind", () => ({
 // surface our code uses. Tests that need richer behavior override per-file.
 vi.mock("expo-location", () => ({
   requestForegroundPermissionsAsync: () => Promise.resolve({ status: "granted" }),
-  getCurrentPositionAsync: () =>
-    Promise.resolve({ coords: { latitude: 0, longitude: 0 } }),
+  getCurrentPositionAsync: () => Promise.resolve({ coords: { latitude: 0, longitude: 0 } }),
   Accuracy: { Lowest: 1, Low: 2, Balanced: 3, High: 4, Highest: 5 },
 }));
 
