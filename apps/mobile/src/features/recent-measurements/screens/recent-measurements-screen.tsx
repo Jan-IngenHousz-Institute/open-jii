@@ -1,6 +1,8 @@
-import { ChevronsLeft, Download } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
+import { useNavigation } from "expo-router";
+import { Download } from "lucide-react-native";
+import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
+import { MeasurementsHeaderActions } from "~/features/recent-measurements/components/measurements-header-actions";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
 import { MeasurementsToolbar } from "~/features/recent-measurements/components/measurements-toolbar";
@@ -18,6 +20,7 @@ import { groupMeasurementsByDay } from "~/shared/utils/group-measurements-by-day
 
 export function RecentMeasurementsScreen() {
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
@@ -40,6 +43,29 @@ export function RecentMeasurementsScreen() {
     handleExport,
     saveComment,
   } = useRecentMeasurementsActions(filter);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <MeasurementsHeaderActions
+          syncedCount={syncedCount}
+          unsyncedCount={unsyncedCount}
+          uploadingCount={uploadingCount}
+          isUploading={isUploading}
+          onSyncAll={confirmSyncAll}
+          onDeleteAllSynced={confirmDeleteAllSynced}
+        />
+      ),
+    });
+  }, [
+    navigation,
+    syncedCount,
+    unsyncedCount,
+    uploadingCount,
+    isUploading,
+    confirmSyncAll,
+    confirmDeleteAllSynced,
+  ]);
 
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
@@ -90,20 +116,8 @@ export function RecentMeasurementsScreen() {
         onFilterChange={setFilter}
         syncedCount={syncedCount}
         unsyncedCount={unsyncedCount}
-        uploadingCount={uploadingCount}
-        isUploading={isUploading}
-        onSyncAll={confirmSyncAll}
-        onDeleteAllSynced={confirmDeleteAllSynced}
+        showSwipeHint={hasItems}
       />
-
-      {hasItems && (
-        <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
-          <ChevronsLeft size={13} color={colors.inactive} />
-          <Text className="text-muted-body text-sm font-normal">
-            {t("recentMeasurements:list.swipeHint")}
-          </Text>
-        </View>
-      )}
 
       <SectionList
         sections={sections}
@@ -117,7 +131,7 @@ export function RecentMeasurementsScreen() {
                 ? "recentMeasurements:sectionHeader.yesterday"
                 : "recentMeasurements:sectionHeader.other";
           return (
-            <View className="bg-background px-4 pb-1.5 pt-3">
+            <View className="bg-background px-4 pb-2 pt-6">
               <Text
                 className="text-muted-body text-[12px] font-bold uppercase"
                 style={{ letterSpacing: 0.6 }}

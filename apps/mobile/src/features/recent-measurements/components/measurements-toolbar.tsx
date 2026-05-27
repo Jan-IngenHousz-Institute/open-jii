@@ -1,6 +1,6 @@
-import { Trash2, UploadCloud } from "lucide-react-native";
+import { ChevronsLeft } from "lucide-react-native";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { MeasurementFilter } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useTranslation } from "~/shared/i18n";
 import { TabBar } from "~/shared/ui/TabBar";
@@ -11,10 +11,7 @@ interface Props {
   onFilterChange: (filter: MeasurementFilter) => void;
   syncedCount: number;
   unsyncedCount: number;
-  uploadingCount: number;
-  isUploading: boolean;
-  onSyncAll: () => void;
-  onDeleteAllSynced: () => void;
+  showSwipeHint?: boolean;
 }
 
 export function MeasurementsToolbar({
@@ -22,10 +19,7 @@ export function MeasurementsToolbar({
   onFilterChange,
   syncedCount,
   unsyncedCount,
-  uploadingCount,
-  isUploading,
-  onSyncAll,
-  onDeleteAllSynced,
+  showSwipeHint,
 }: Props) {
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
@@ -48,54 +42,24 @@ export function MeasurementsToolbar({
     },
   ];
 
-  const deleteDisabled = syncedCount === 0;
-  const syncDisabled = unsyncedCount === 0 || isUploading;
-
   return (
-    <View>
-      {/* Action row: icons sit above the tabs so the tab labels never collide
-          with the right-hand controls on narrow screens. */}
-      <View className="flex-row items-center justify-end gap-1 px-2 pb-1 pt-2">
-        <Pressable
-          onPress={onDeleteAllSynced}
-          disabled={deleteDisabled}
-          hitSlop={6}
-          className="h-10 w-10 items-center justify-center rounded-full"
-          style={{ opacity: deleteDisabled ? 0.4 : 1 }}
-          accessibilityRole="button"
-          accessibilityLabel={t("recentMeasurements:toolbar.deleteAllSyncedAccessibilityLabel")}
-          accessibilityHint={t("recentMeasurements:toolbar.deleteAllSyncedAccessibilityHint")}
-        >
-          <Trash2 size={20} color={colors.brand} strokeWidth={1.6} />
-        </Pressable>
-        <View className="relative">
-          <Pressable
-            onPress={onSyncAll}
-            disabled={syncDisabled}
-            hitSlop={6}
-            className="h-10 w-10 items-center justify-center rounded-full"
-            style={{ opacity: syncDisabled ? 0.4 : 1 }}
-            accessibilityRole="button"
-            accessibilityLabel={t("recentMeasurements:toolbar.syncAllAccessibilityLabel")}
-            accessibilityHint={t("recentMeasurements:toolbar.syncAllAccessibilityHint")}
-          >
-            <UploadCloud size={20} color={colors.brand} strokeWidth={1.6} />
-          </Pressable>
-          {uploadingCount > 0 && (
-            <View
-              className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center justify-center rounded-full px-1"
-              style={{ backgroundColor: colors.semantic.info, height: 18 }}
-            >
-              <Text className="text-center text-[10px] font-bold text-white">{uploadingCount}</Text>
+    <View className="px-4 pt-2">
+      <TabBar
+        variant="underline"
+        tabs={tabs}
+        activeTab={filter}
+        onTabChange={onFilterChange}
+        trailing={
+          showSwipeHint ? (
+            <View className="flex-row items-center gap-1">
+              <ChevronsLeft size={13} color={colors.inactive} />
+              <Text className="text-muted-body text-xs font-normal">
+                {t("recentMeasurements:list.swipeHint")}
+              </Text>
             </View>
-          )}
-        </View>
-      </View>
-
-      {/* Tabs row: full width, no contention with the action icons. */}
-      <View className="px-4">
-        <TabBar variant="underline" tabs={tabs} activeTab={filter} onTabChange={onFilterChange} />
-      </View>
+          ) : null
+        }
+      />
     </View>
   );
 }

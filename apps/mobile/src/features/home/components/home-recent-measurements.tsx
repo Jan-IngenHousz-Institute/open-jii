@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
-import { Activity } from "lucide-react-native";
+import { Activity, CloudAlert, CloudCheck, CloudUpload } from "lucide-react-native";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import type {
   MeasurementItem,
@@ -11,27 +11,18 @@ import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Card } from "~/shared/ui/Card";
 import { RowItem } from "~/shared/ui/RowItem";
-import { Tag } from "~/shared/ui/Tag";
-import type { TagVariant } from "~/shared/ui/Tag";
 import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 
-const STATUS_VARIANT: Record<MeasurementStatus, TagVariant> = {
-  successful: "synced",
-  uploading: "default",
-  pending: "queued",
-  failed: "failed",
-};
-
-function statusLabel(t: (k: string) => string, status: MeasurementStatus): string {
+function StatusIcon({ status }: { status: MeasurementStatus }) {
   switch (status) {
     case "successful":
-      return t("recent.tagSynced");
+      return <CloudCheck size={18} color={colors.semantic.success} />;
     case "uploading":
-      return t("recent.tagUploading");
+      return <ActivityIndicator size={16} color={colors.semantic.info} />;
     case "pending":
-      return t("recent.tagQueued");
+      return <CloudUpload size={18} color={colors.semantic.info} />;
     case "failed":
-      return t("recent.tagFailed");
+      return <CloudAlert size={18} color={colors.semantic.error} />;
   }
 }
 
@@ -44,7 +35,7 @@ export function HomeRecentMeasurements() {
 
   return (
     <View className="mt-4">
-      <View className="mb-2 flex-row items-baseline justify-between px-1">
+      <View className="mb-2 flex-row items-baseline justify-between px-4">
         <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 16 }}>
           {t("recent.sectionTitle")}
         </Text>
@@ -65,7 +56,6 @@ export function HomeRecentMeasurements() {
               item={item}
               isLast={index === top.length - 1}
               onPress={() => router.push("/(tabs)/recent-measurements")}
-              statusLabelText={statusLabel(t, item.status)}
             />
           ))}
         </Card>
@@ -78,10 +68,9 @@ interface HomeRecentRowProps {
   item: MeasurementItem;
   isLast: boolean;
   onPress: () => void;
-  statusLabelText: string;
 }
 
-function HomeRecentRow({ item, isLast, onPress, statusLabelText }: HomeRecentRowProps) {
+function HomeRecentRow({ item, isLast, onPress }: HomeRecentRowProps) {
   const { t } = useTranslation("home");
   const nodeCount = item.questions.length;
   const subtitle = `${formatTimeAgo(item.timestamp)} · ${t("recent.metaCountNodes", { count: nodeCount })}`;
@@ -93,7 +82,7 @@ function HomeRecentRow({ item, isLast, onPress, statusLabelText }: HomeRecentRow
       title={item.experimentName}
       subtitle={subtitle}
       onPress={onPress}
-      right={<Tag variant={STATUS_VARIANT[item.status]}>{statusLabelText}</Tag>}
+      right={<StatusIcon status={item.status} />}
       isLast={isLast}
     />
   );

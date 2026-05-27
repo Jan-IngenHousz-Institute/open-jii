@@ -86,17 +86,23 @@ export function CompletedState() {
   return (
     <View className="flex-1">
       <View className="px-4 pt-2">
-        <TabBar variant="underline" tabs={tabs} activeTab={filter} onTabChange={setFilter} />
+        <TabBar
+          variant="underline"
+          tabs={tabs}
+          activeTab={filter}
+          onTabChange={setFilter}
+          trailing={
+            hasItems ? (
+              <View className="flex-row items-center gap-1">
+                <ChevronsLeft size={13} color={colors.neutral.gray500} />
+                <Text className={clsx("text-xs font-normal", classes.textMuted)}>
+                  {t("measurementFlow:flowStates.completed.swipeHint")}
+                </Text>
+              </View>
+            ) : null
+          }
+        />
       </View>
-
-      {hasItems && (
-        <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
-          <ChevronsLeft size={13} color={colors.neutral.gray500} />
-          <Text className={clsx("text-sm font-normal", classes.textMuted)}>
-            {t("measurementFlow:flowStates.completed.swipeHint")}
-          </Text>
-        </View>
-      )}
 
       <FlatList
         data={measurements}

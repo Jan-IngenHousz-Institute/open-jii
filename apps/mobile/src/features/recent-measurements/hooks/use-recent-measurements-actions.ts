@@ -88,7 +88,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
         ? t("recentMeasurements:alerts.removeMeasurementMessage", { name: m.experimentName })
         : t("recentMeasurements:alerts.deleteMeasurementMessage", { name: m.experimentName }),
       confirmText: isSynced ? t("recentMeasurements:alerts.removeButton") : t("common:delete"),
-      variant: "danger",
+      variant: "primary",
       errorMessage: t("recentMeasurements:alerts.deleteMeasurementError"),
       run: async () => {
         await removeMeasurement(m.key);
@@ -115,7 +115,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       title: t("recentMeasurements:alerts.deleteAllSyncedTitle"),
       message: t("recentMeasurements:alerts.deleteAllSyncedMessage", { count: syncedCount }),
       confirmText: t("common:delete"),
-      variant: "danger",
+      variant: "primary",
       errorMessage: t("recentMeasurements:alerts.deleteAllSyncedError"),
       run: async () => {
         await clearSyncedMeasurements();
