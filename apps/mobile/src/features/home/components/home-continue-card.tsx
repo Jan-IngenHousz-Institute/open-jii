@@ -9,12 +9,14 @@ import {
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function HomeContinueCard() {
   const hasPausedFlow = useHasPausedFlow();
   const snapshot = usePausedFlowSnapshot();
   const continueAction = useHomeContinueAction();
   const { t } = useTranslation("home");
+  const colors = useThemeColors();
 
   if (!hasPausedFlow || !snapshot) return null;
 
@@ -61,7 +63,7 @@ export function HomeContinueCard() {
         variant="primary"
         size="md"
         style={{ marginTop: 14, alignSelf: "flex-start" }}
-        icon={<ChevronRight size={18} color="#FFFFFF" />}
+        icon={<ChevronRight size={18} color={colors.onPrimary} />}
         iconPosition="right"
       />
     </Card>
