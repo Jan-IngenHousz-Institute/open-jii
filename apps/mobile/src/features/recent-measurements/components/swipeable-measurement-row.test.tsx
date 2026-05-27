@@ -16,10 +16,13 @@ vi.mock("~/shared/i18n", () => ({
   }),
 }));
 
-// The row reads connectivity to hide the upload action when offline; default to
-// online so the action stays visible. Avoids needing a QueryClientProvider.
+// The row reads connectivity to hide the upload action when offline. Controllable
+// per-test via mockUseIsOnline; defaults to online. Avoids a QueryClientProvider.
+const { mockUseIsOnline } = vi.hoisted(() => ({
+  mockUseIsOnline: vi.fn((): { data: boolean | undefined } => ({ data: true })),
+}));
 vi.mock("~/shared/ui/hooks/use-is-online", () => ({
-  useIsOnline: () => ({ data: true }),
+  useIsOnline: () => mockUseIsOnline(),
 }));
 
 // react-native-gesture-handler uses native code; stub the gesture surface.
@@ -48,6 +51,7 @@ const defaultProps = {
 describe("SwipeableMeasurementRow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseIsOnline.mockReturnValue({ data: true });
   });
 
   it("renders the experiment name", () => {
@@ -62,6 +66,12 @@ describe("SwipeableMeasurementRow", () => {
 
   it("does not show the Upload button for synced rows", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="successful" onSync={vi.fn()} />);
+    expect(screen.queryByLabelText("Upload")).toBeNull();
+  });
+
+  it("hides the Upload button when offline, even for an unsynced row", () => {
+    mockUseIsOnline.mockReturnValue({ data: false });
+    render(<SwipeableMeasurementRow {...defaultProps} status="pending" onSync={vi.fn()} />);
     expect(screen.queryByLabelText("Upload")).toBeNull();
   });
 
@@ -115,5 +125,10 @@ describe("SwipeableMeasurementRow", () => {
     );
     expect(screen.getByText(/Yes/)).toBeTruthy();
     expect(screen.getByText(/Fast/)).toBeTruthy();
+  });
+
+  it("runs the peek hint without error when peekToken is set", () => {
+    render(<SwipeableMeasurementRow {...defaultProps} peekToken={1} />);
+    expect(screen.getByText("Photosynthesis")).toBeTruthy();
   });
 });
