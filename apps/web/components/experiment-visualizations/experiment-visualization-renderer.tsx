@@ -4,7 +4,7 @@ import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schem
 import { useTranslation } from "@repo/i18n";
 
 import "../../styles/plotly-chart.css";
-import { getChartTypeDef } from "./charts/registry";
+import { getChartTypeDef } from "./charts/chart-registry";
 
 interface ExperimentVisualizationRendererProps {
   visualization: ExperimentVisualization;

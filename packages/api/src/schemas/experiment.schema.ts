@@ -408,7 +408,7 @@ export const zFlowEdge = z.object({
  * Canonicalize a flow node label to the column key the data pipeline emits
  * for `questions_data`. Allowlist: lowercase ASCII letters, digits, underscore;
  * everything else collapses to `_`. Mirrors `sanitize_label` in
- * apps/data/src/pipelines/centrum_pipeline.py — keep them in sync.
+ * apps/data/src/pipelines/centrum_pipeline.py. Keep them in sync.
  */
 export function sanitizeQuestionLabel(label: string): string {
   if (!label) return "question_empty";
@@ -536,11 +536,10 @@ export const zChartType = z.enum([
   "box-plot",
   "histogram",
   "violin-plot",
-  "error-bar",
   "density-plot",
   "ridge-plot",
   "histogram-2d",
-  "scatter2density",
+  "density-plot-2d",
   "spc-control-chart",
   // Scientific charts (for future expansion)
   "heatmap",
@@ -548,7 +547,6 @@ export const zChartType = z.enum([
   "carpet",
   "ternary",
   "parallel-coordinates",
-  "log-plot",
   "wind-rose",
   "radar",
   "polar",
@@ -556,10 +554,9 @@ export const zChartType = z.enum([
   "alluvial",
 ]);
 
-// Roles a data source can play in a chart. Add a new entry only when a chart
-// type genuinely needs it — the role contract per chart type lives in
-// `@repo/api/utils/visualization-contracts` and decides which of these are
-// required, optional, single, or many.
+// Roles a data source can play in a chart. The role contract per chart type
+// lives in `@repo/api/utils/visualization-contracts` and decides which of
+// these are required, optional, single, or many.
 export const zRole = z.enum([
   // Cartesian axes
   "x",
@@ -580,7 +577,54 @@ export const zRole = z.enum([
   "lon",
   // Statistical grouping
   "groupBy",
+  // Small-multiples / faceting. The picked column splits rows into one
+  // subplot per unique value. Distinct from `groupBy` (SQL grouping) and
+  // `color` (per-trace visual encoding); `facet` only affects layout.
+  "facet",
 ]);
+
+// Visual encoding override for a single series. Independent of the chart
+// type's default trace shape, so a "line" chart can host a bar series and
+// vice versa. Limited to the four cartesian shapes that compose cleanly on
+// shared axes; lollipop/dot-plot/pie remain whole-chart types.
+export const zSeriesTraceType = z.enum(["line", "bar", "scatter", "area"]);
+
+// Which Y axis a series is plotted against. `secondary` activates a twin Y
+// (Plotly's `yaxis2`) overlaying the primary x-axis on the right side.
+export const zSeriesAxis = z.enum(["primary", "secondary"]);
+
+// `cumsum` is a window function (`SUM(...) OVER (...)`), distinct from
+// the row-aggregating peers in this enum. The SQL builder branches on it
+// so callers don't have to model the OVER clause separately.
+//
+// Declared above `zDataSourceConfig` because the data source's per-series
+// `aggregate` field references it; `zAggregationItem` also uses this enum.
+export const zAggregationFunction = z.enum([
+  "sum",
+  "avg",
+  "count",
+  "min",
+  "max",
+  "std",
+  "var",
+  "cumsum",
+  // Bivariate. `corr(a, b)` produces the Pearson correlation between
+  // the source's primary `column` and `secondColumn`. Spearman is built
+  // on top of `corr` over `RANK() OVER` window outputs in the SQL builder.
+  "corr",
+]);
+
+/**
+ * Per-series aggregates that take two columns. The SQL builder needs
+ * to know the second column to emit `corr(a, b)`; everything else only
+ * needs the primary `column`. Listing them centrally so that schema
+ * refinements and SQL builder branches stay in sync.
+ */
+export const BIVARIATE_AGGREGATES = ["corr"] as const;
+export type BivariateAggregate = (typeof BIVARIATE_AGGREGATES)[number];
+export function isBivariateAggregate(fn: unknown): fn is BivariateAggregate {
+  return typeof fn === "string" && (BIVARIATE_AGGREGATES as readonly string[]).includes(fn);
+}
 
 // Data source configuration schema. tableName and columnName allow empty
 // strings so a freshly-created visualization can persist in a draft state
@@ -593,6 +637,24 @@ export const zDataSourceConfig = z.object({
   seriesName: z.string().optional(),
   // Optional alias for display
   alias: z.string().optional(),
+  // Per-series visual override. Unset = use the chart type's default trace
+  // shape. Only meaningful on Y-role entries today; the field is kept on
+  // the base schema so downstream tooling doesn't have to special-case
+  // role to read it.
+  traceType: zSeriesTraceType.optional(),
+  // Per-series axis assignment. Unset = primary. Only meaningful on Y-role
+  // entries; X/color/size/etc. ignore it.
+  axis: zSeriesAxis.optional(),
+  // Per-series aggregate function. The wire format keeps
+  // `dataConfig.aggregation.functions[]` as the SQL-builder input, but the
+  // form treats this field as the source of truth: at save time `functions[]`
+  // is rebuilt from the per-source values with unique aliases, so two series
+  // on the same column can carry different aggregates.
+  aggregate: zAggregationFunction.optional(),
+  // Per-series error-bar column. When set, the renderer reads this column's
+  // value alongside `columnName` and emits error bars on each point. Only
+  // consumed by the error-bar chart today; other chart types ignore it.
+  errorColumn: z.string().optional(),
 });
 
 // Axis configuration schema
@@ -623,36 +685,169 @@ export const zChartDisplayOptions = z
 // Generic chart config - allows any props to be passed to chart components
 export const zChartConfig = z.record(z.string(), z.unknown()).optional();
 
+// Generic data query primitives (filters, time bucketing, aggregation),
+// reused by the visualization `dataConfig`, the ad-hoc data query endpoint,
+// and dashboard filter widgets / table view.
+
+export const zDataFilterOperator = z.enum([
+  "equals",
+  "not_equals",
+  "greater_than",
+  "less_than",
+  "greater_than_or_equal",
+  "less_than_or_equal",
+  "between",
+  "contains",
+  "in",
+]);
+
+// Non-empty scalar / non-empty array enforced natively so the schema is
+// also the FE "this filter is applicable" gate.
+export const zDataFilterValue = z.union([
+  z.string().min(1),
+  z.number(),
+  z.boolean(),
+  z.array(z.union([z.string().min(1), z.number()])).min(1),
+]);
+
+// superRefine enforces operator-specific value shape that the value union
+// can't express natively (between needs a 2-tuple, contains needs a string).
+export const zDataFilter = z
+  .object({
+    column: z.string().min(1, "Filter column is required"),
+    operator: zDataFilterOperator,
+    value: zDataFilterValue,
+  })
+  .superRefine((filter, ctx) => {
+    const { operator, value } = filter;
+    const isArray = Array.isArray(value);
+    const issue = (message: string) =>
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message });
+
+    if (operator === "in") {
+      if (!isArray) {
+        issue("'in' operator requires a non-empty array of values");
+      }
+      return;
+    }
+    if (operator === "between") {
+      if (!isArray || value.length !== 2) {
+        issue("'between' operator requires a [start, end] array");
+        return;
+      }
+      const [start, end] = value;
+      if (typeof start !== typeof end) {
+        issue("'between' bounds must be the same type");
+      }
+      return;
+    }
+    if (isArray) {
+      issue(`Operator '${operator}' does not accept array values`);
+      return;
+    }
+    if (
+      operator === "greater_than" ||
+      operator === "less_than" ||
+      operator === "greater_than_or_equal" ||
+      operator === "less_than_or_equal"
+    ) {
+      const isComparable =
+        typeof value === "number" ||
+        (typeof value === "string" && !Number.isNaN(Date.parse(value)));
+      if (!isComparable) {
+        issue(`Operator '${operator}' requires a number or ISO date string`);
+      }
+    }
+    if (operator === "contains" && typeof value !== "string") {
+      issue("'contains' operator requires a string value");
+    }
+  });
+
+// date_trunc units we expose. Kept to whole units that Databricks supports
+// natively; sub-second buckets aren't useful for sensor data.
+export const zTimeBucketUnit = z.enum([
+  "minute",
+  "hour",
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "year",
+]);
+
+// A grouping key. When `timeBucket` is set, the column is bucketed via
+// `date_trunc(unit, column)`; the resulting alias is `${column}_${unit}`.
+export const zGroupByItem = z.object({
+  column: z.string().min(1, "Group-by column is required"),
+  timeBucket: zTimeBucketUnit.optional(),
+});
+
+// `column: "*"` is allowed only with `count` and `cumsum`: `count(*)` is
+// the row-count form, and `cumsum(*)` is cumulative row count (running
+// total of `count(*)` per group). Aliases default to `${column}_${function}`
+// if omitted; the SQL builder applies that.
+export const zAggregationItem = z
+  .object({
+    column: z.string().min(1, "Aggregation column is required"),
+    function: zAggregationFunction,
+    alias: z.string().optional(),
+    /**
+     * Required when `function` is bivariate (currently `corr`). The SQL
+     * builder emits `corr(column, secondColumn) AS alias`. Optional in
+     * the schema so non-bivariate items don't have to set it; the
+     * `superRefine` below requires it for bivariate functions and
+     * forbids it otherwise so unrelated entries can't carry stale
+     * `secondColumn` state.
+     */
+    secondColumn: z.string().optional(),
+  })
+  .superRefine((item, ctx) => {
+    if (item.column === "*" && item.function !== "count" && item.function !== "cumsum") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["column"],
+        message: "'*' column is only allowed with the 'count' or 'cumsum' functions",
+      });
+    }
+    if (isBivariateAggregate(item.function)) {
+      if (!item.secondColumn || item.secondColumn.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["secondColumn"],
+          message: `Function '${item.function}' requires a second column`,
+        });
+      }
+    } else if (item.secondColumn !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["secondColumn"],
+        message: `Function '${item.function}' does not accept a second column`,
+      });
+    }
+  });
+
+// Aggregation must contribute at least one column to the projection. An
+// empty object would generate an invalid SELECT with no projection and is
+// almost certainly a UI bug.
+export const zDataAggregation = z
+  .object({
+    groupBy: z.array(zGroupByItem).optional(),
+    functions: z.array(zAggregationItem).optional(),
+  })
+  .refine(
+    (agg) => (agg.groupBy?.length ?? 0) > 0 || (agg.functions?.length ?? 0) > 0,
+    "Aggregation must include at least one groupBy or function",
+  );
+
 // Data configuration schema for visualization data sources. tableName allows
 // empty strings to match the draft state of zDataSourceConfig.
 export const zChartDataConfig = z.object({
   tableName: z.string(),
   dataSources: z.array(zDataSourceConfig).min(1),
-  // Optional filtering/aggregation settings
-  filters: z
-    .array(
-      z.object({
-        column: z.string(),
-        operator: z.enum(["equals", "not_equals", "greater_than", "less_than", "contains", "in"]),
-        value: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
-      }),
-    )
-    .optional(),
-  // Optional aggregation settings
-  aggregation: z
-    .object({
-      groupBy: z.array(z.string()).optional(),
-      functions: z
-        .array(
-          z.object({
-            column: z.string(),
-            function: z.enum(["sum", "avg", "count", "min", "max", "std", "var"]),
-            alias: z.string().optional(),
-          }),
-        )
-        .optional(),
-    })
-    .optional(),
+  // Optional filtering: applied as a WHERE clause when the chart is rendered.
+  filters: z.array(zDataFilter).optional(),
+  // Optional aggregation: when present the rendered rows are aggregated.
+  aggregation: zDataAggregation.optional(),
 });
 
 // Base visualization schema
@@ -907,6 +1102,28 @@ export const zExperimentFilterQuery = z.object({
   search: z.string().optional().describe("Search term for experiment name"),
 });
 
+// Hard ceiling on rows returned when filtering/aggregating. The page-based
+// pagination path uses pageSize instead; this only kicks in for the
+// "non-paginated" branches (specific columns, filtered, or aggregated).
+export const DATA_QUERY_MAX_LIMIT = 100_000;
+
+// Helper: parse a JSON-encoded query string and validate against the inner
+// schema. Used to ferry `filters` / `aggregation` through GET query params
+// without giving up the structured shape on the server.
+function jsonQuerySchema<S extends z.ZodTypeAny>(inner: S) {
+  return z
+    .string()
+    .transform((raw, ctx) => {
+      try {
+        return JSON.parse(raw) as unknown;
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid JSON" });
+        return z.NEVER;
+      }
+    })
+    .pipe(inner);
+}
+
 export const zExperimentDataQuery = z.object({
   page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
   pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
@@ -921,6 +1138,59 @@ export const zExperimentDataQuery = z.object({
     ),
   orderBy: z.string().optional().describe("Column name to order results by"),
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
+  // Filters and aggregation are JSON-encoded so the endpoint stays a real
+  // HTTP GET (cache-friendly under TanStack Query) while still supporting
+  // the structured `zDataFilter` / `zDataAggregation` shapes. Same primitives
+  // drive the persisted visualization `dataConfig`, so a saved viz can pass
+  // its config straight through.
+  filters: jsonQuerySchema(z.array(zDataFilter))
+    .optional()
+    .describe("JSON-encoded array of filter conditions applied as a WHERE clause"),
+  aggregation: jsonQuerySchema(zDataAggregation)
+    .optional()
+    .describe("JSON-encoded GROUP BY + aggregate functions"),
+  // `limit` only takes effect when filters or aggregation switch the
+  // response off the page-based path. Page/pageSize keep their existing
+  // semantics in the legacy paginated read.
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(DATA_QUERY_MAX_LIMIT)
+    .optional()
+    .describe(
+      "Hard cap on returned rows for filtered/aggregated reads. Ignored when page/pageSize are used.",
+    ),
+});
+
+// --- Distinct values for filter dropdowns ---
+// Powers the searchable categorical filter UI: GET this endpoint with a
+// table + column and you get back the distinct (non-null) values, capped
+// at `limit`. Used by the data-filters Combobox so users pick from the
+// real values in their data instead of typing free-form strings.
+
+export const DISTINCT_VALUES_DEFAULT_LIMIT = 200;
+export const DISTINCT_VALUES_MAX_LIMIT = 1_000;
+
+export const zDistinctValuesQuery = z.object({
+  tableName: zTableNameInput.describe("Table to scan"),
+  column: z.string().min(1).describe("Column whose distinct values to return"),
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(DISTINCT_VALUES_MAX_LIMIT)
+    .optional()
+    .describe(
+      `Hard cap on returned values (default ${DISTINCT_VALUES_DEFAULT_LIMIT}, max ${DISTINCT_VALUES_MAX_LIMIT}).`,
+    ),
+});
+
+export const zDistinctValuesResponse = z.object({
+  values: z
+    .array(z.union([z.string(), z.number()]))
+    .describe("Distinct non-null values, sorted ascending"),
+  truncated: z.boolean().describe("True when the column has more values than `limit` returned"),
 });
 
 export const zExperimentDataTable = z.object({
@@ -997,20 +1267,13 @@ export const zAnnotationsColumnType = z.literal(
   "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
 );
 
-export const zQuestionsColumnType = z.literal(
-  "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
-);
-
 export const zContributorColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
 
 export type AnnotationsColumnType = z.infer<typeof zAnnotationsColumnType>;
-export type QuestionsColumnType = z.infer<typeof zQuestionsColumnType>;
 export type ContributorColumnType = z.infer<typeof zContributorColumnType>;
 
-// Export constants object for convenient access (backwards compatible)
 export const WellKnownColumnTypes = {
   ANNOTATIONS: zAnnotationsColumnType.value,
-  QUESTIONS: zQuestionsColumnType.value,
   CONTRIBUTOR: zContributorColumnType.value,
 } as const;
 
@@ -1104,7 +1367,17 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
+export type DistinctValuesQuery = z.infer<typeof zDistinctValuesQuery>;
+export type DistinctValuesResponse = z.infer<typeof zDistinctValuesResponse>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
+export type DataFilterOperator = z.infer<typeof zDataFilterOperator>;
+export type DataFilter = z.infer<typeof zDataFilter>;
+export type DataFilterValue = z.infer<typeof zDataFilterValue>;
+export type TimeBucketUnit = z.infer<typeof zTimeBucketUnit>;
+export type GroupByItem = z.infer<typeof zGroupByItem>;
+export type AggregationFunction = z.infer<typeof zAggregationFunction>;
+export type AggregationItem = z.infer<typeof zAggregationItem>;
+export type DataAggregation = z.infer<typeof zDataAggregation>;
 export type ColumnInfo = z.infer<typeof zColumnInfo>;
 export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
 export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
@@ -1128,6 +1401,8 @@ export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataR
 export type ChartFamily = z.infer<typeof zChartFamily>;
 export type ChartType = z.infer<typeof zChartType>;
 export type Role = z.infer<typeof zRole>;
+export type SeriesTraceType = z.infer<typeof zSeriesTraceType>;
+export type SeriesAxis = z.infer<typeof zSeriesAxis>;
 export type DataSourceConfig = z.infer<typeof zDataSourceConfig>;
 export type AxisConfig = z.infer<typeof zAxisConfig>;
 export type ChartConfig = z.infer<typeof zChartConfig>;
@@ -1351,118 +1626,3 @@ export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
 export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetadataBody>;
 export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;
 export type CustomMetadataPayload = z.infer<typeof zCustomMetadataPayload>;
-
-// --- Generic filter primitives ---
-// Operator-aware filter shape consumed by the data-filters UI and the
-// SQL builder. Same shape powers both the ad-hoc data query endpoint and
-// (later) persisted visualization configs.
-
-export const zDataFilterOperator = z.enum([
-  "equals",
-  "not_equals",
-  "greater_than",
-  "less_than",
-  "greater_than_or_equal",
-  "less_than_or_equal",
-  "between",
-  "contains",
-  "in",
-]);
-
-// Non-empty scalar / non-empty array enforced natively so the schema is
-// also the FE "this filter is applicable" gate.
-export const zDataFilterValue = z.union([
-  z.string().min(1),
-  z.number(),
-  z.boolean(),
-  z.array(z.union([z.string().min(1), z.number()])).min(1),
-]);
-
-// superRefine enforces operator-specific value shape that the value union
-// can't express natively (between needs a 2-tuple, contains needs a string).
-export const zDataFilter = z
-  .object({
-    column: z.string().min(1, "Filter column is required"),
-    operator: zDataFilterOperator,
-    value: zDataFilterValue,
-  })
-  .superRefine((filter, ctx) => {
-    const { operator, value } = filter;
-    const isArray = Array.isArray(value);
-    const issue = (message: string) =>
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message });
-
-    if (operator === "in") {
-      if (!isArray) {
-        issue("'in' operator requires a non-empty array of values");
-      }
-      return;
-    }
-    if (operator === "between") {
-      if (!isArray || value.length !== 2) {
-        issue("'between' operator requires a [start, end] array");
-        return;
-      }
-      const [start, end] = value;
-      if (typeof start !== typeof end) {
-        issue("'between' bounds must be the same type");
-      }
-      return;
-    }
-    if (isArray) {
-      issue(`Operator '${operator}' does not accept array values`);
-      return;
-    }
-    if (
-      operator === "greater_than" ||
-      operator === "less_than" ||
-      operator === "greater_than_or_equal" ||
-      operator === "less_than_or_equal"
-    ) {
-      const isComparable =
-        typeof value === "number" ||
-        (typeof value === "string" && !Number.isNaN(Date.parse(value)));
-      if (!isComparable) {
-        issue(`Operator '${operator}' requires a number or ISO date string`);
-      }
-    }
-    if (operator === "contains" && typeof value !== "string") {
-      issue("'contains' operator requires a string value");
-    }
-  });
-
-// --- Distinct values for filter dropdowns ---
-// Powers the searchable categorical filter UI: GET this endpoint with a
-// table + column and you get back the distinct (non-null) values, capped
-// at `limit`. Used by the data-filters Combobox so users pick from the
-// real values in their data instead of typing free-form strings.
-
-export const DISTINCT_VALUES_DEFAULT_LIMIT = 200;
-export const DISTINCT_VALUES_MAX_LIMIT = 1_000;
-
-export const zDistinctValuesQuery = z.object({
-  tableName: zTableNameInput.describe("Table to scan"),
-  column: z.string().min(1).describe("Column whose distinct values to return"),
-  limit: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(DISTINCT_VALUES_MAX_LIMIT)
-    .optional()
-    .describe(
-      `Hard cap on returned values (default ${DISTINCT_VALUES_DEFAULT_LIMIT}, max ${DISTINCT_VALUES_MAX_LIMIT}).`,
-    ),
-});
-
-export const zDistinctValuesResponse = z.object({
-  values: z
-    .array(z.union([z.string(), z.number()]))
-    .describe("Distinct non-null values, sorted ascending"),
-  truncated: z.boolean().describe("True when the column has more values than `limit` returned"),
-});
-
-export type DataFilterOperator = z.infer<typeof zDataFilterOperator>;
-export type DataFilter = z.infer<typeof zDataFilter>;
-export type DataFilterValue = z.infer<typeof zDataFilterValue>;
-export type DistinctValuesQuery = z.infer<typeof zDistinctValuesQuery>;
-export type DistinctValuesResponse = z.infer<typeof zDistinctValuesResponse>;

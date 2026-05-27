@@ -42,6 +42,25 @@ vi.mock("../../charts/utils", () => ({
   // inference (covered separately in utils.test.ts).
   detectAxisType: vi.fn(() => "linear"),
   refineAxisType: vi.fn((axis) => axis ?? {}),
+  extendLayoutForFacets: vi.fn((layout) => layout),
+  applyReferenceLines: vi.fn(),
+}));
+
+vi.mock("../../charts/use-is-compact", () => ({
+  useChartSizing: vi.fn(() => [
+    { current: null },
+    {
+      snug: false,
+      compact: false,
+      veryCompact: false,
+      ultraCompact: false,
+      cellSnug: false,
+      cellCompact: false,
+      cellVeryCompact: false,
+      cellUltraCompact: false,
+    },
+  ]),
+  facetTierStyles: vi.fn(() => ({ cellTitleFontSize: 12 })),
 }));
 
 describe("LineChart", () => {
@@ -703,6 +722,49 @@ describe("LineChart", () => {
 
       const chart = screen.getByTestId("plotly-chart");
       expect(chart).toHaveAttribute("data-series-count", "1");
+    });
+  });
+
+  describe("Subplot facets", () => {
+    const facetData: LineSeriesData[] = [
+      { x: [1, 2, 3], y: [4, 5, 6], name: "A", xaxisId: "x", yaxisId: "y" },
+      { x: [7, 8, 9], y: [1, 2, 3], name: "B", xaxisId: "x2", yaxisId: "y2" },
+    ];
+
+    const subplots = {
+      rows: 1,
+      columns: 2,
+      cells: [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ],
+      sharedX: true,
+      sharedY: false,
+      sharedXTitle: false,
+      sharedYTitle: true,
+      roworder: "bottom to top" as const,
+    };
+
+    it("invokes extendLayoutForFacets with the grid spec when subplots is set", async () => {
+      const utils = await import("../../charts/utils");
+      const extendSpy = vi.mocked(utils.extendLayoutForFacets);
+      extendSpy.mockClear();
+
+      render(<LineChart data={facetData} subplots={subplots} />);
+
+      expect(extendSpy).toHaveBeenCalledTimes(1);
+      expect(extendSpy).toHaveBeenLastCalledWith(
+        expect.anything(),
+        subplots.cells,
+        expect.objectContaining({
+          rows: 1,
+          columns: 2,
+          sharedX: true,
+          sharedY: false,
+          sharedYTitle: true,
+          roworder: "bottom to top",
+        }),
+      );
     });
   });
 });

@@ -22,8 +22,8 @@ import { Button } from "@repo/ui/components/button";
 
 import { useExperimentData } from "../../../hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "../../../hooks/experiment/useExperimentTables/useExperimentTables";
-import type { ChartFormValues } from "../charts/form-values";
-import { getChartTypeDef } from "../charts/registry";
+import type { ChartFormValues } from "../charts/chart-config";
+import { getChartTypeDef } from "../charts/chart-registry";
 import { ChartTypePicker } from "./chart-type-picker";
 import { WorkspaceCanvas } from "./workspace-canvas";
 import { WorkspaceInspector } from "./workspace-inspector";
@@ -78,35 +78,33 @@ export function VisualizationWorkspace({
     () =>
       (tableMetadata?.rawColumns ?? []).filter(
         (col) =>
-          isPlottableColumn(col.type_text) ||
-          col.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
-          col.type_text === WellKnownColumnTypes.QUESTIONS,
+          isPlottableColumn(col.type_text) || col.type_text === WellKnownColumnTypes.CONTRIBUTOR,
       ),
     [tableMetadata],
   );
 
   const handleTableChange = (newTable: string) => {
     const currentDataSources = form.getValues("dataConfig.dataSources");
+    // Reset column-bound state; traceType/axis/role survive.
     const reset = currentDataSources.map((ds) => ({
       ...ds,
       tableName: newTable,
       columnName: "",
       alias: "",
+      aggregate: undefined,
     }));
     form.setValue("dataConfig.dataSources", reset, { shouldDirty: true });
+    form.setValue("dataConfig.aggregation", undefined, { shouldDirty: true });
+    form.setValue("dataConfig.filters", undefined, { shouldDirty: true });
     form.setValue("config.xAxisTitle", "", { shouldDirty: true });
     form.setValue("config.yAxisTitle", "", { shouldDirty: true });
   };
 
   const applyChartType = (type: ChartType) => {
     const def = getChartTypeDef(type);
-    if (!def) return;
-    // Drive each field through `setValue` so the autosave watch sees a
-    // `change` event for every modified slice; the trailing chartType update
-    // ensures the debounce ends with a snapshot containing all four values.
-    // The previous `reset` + trailing `setValue` combo only emitted a single
-    // change event for `chartType`, leaving autosave's snapshot internally
-    // consistent only by accident of RHF's synchronous read semantics.
+    if (!def) {
+      return;
+    }
     const tableName = form.getValues("dataConfig.tableName");
     form.setValue("chartFamily", def.family, { shouldDirty: true });
     form.setValue("config", def.defaultConfig(), { shouldDirty: true });
@@ -120,7 +118,9 @@ export function VisualizationWorkspace({
   };
 
   const handleChartTypeChange = (type: ChartType) => {
-    if (type === form.getValues("chartType")) return;
+    if (type === form.getValues("chartType")) {
+      return;
+    }
     if (hasMeaningfulConfig()) {
       setPendingChartType(type);
     } else {
@@ -193,7 +193,9 @@ export function VisualizationWorkspace({
       <AlertDialog
         open={pendingChartType !== null}
         onOpenChange={(open) => {
-          if (!open) setPendingChartType(null);
+          if (!open) {
+            setPendingChartType(null);
+          }
         }}
       >
         <AlertDialogContent>
@@ -204,7 +206,7 @@ export function VisualizationWorkspace({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("ui.actions.back", "Cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>{t("ui.actions.back")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmChartTypeChange}>
               {t("workspace.charts.switchConfirm")}
             </AlertDialogAction>

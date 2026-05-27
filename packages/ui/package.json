@@ -10,7 +10,9 @@
     "./components/charts/utils": "./src/components/charts/utils.ts",
     "./hooks/use-toast": "./src/hooks/use-toast.ts",
     "./hooks/use-mobile": "./src/hooks/use-mobile.tsx",
+    "./hooks/use-in-view": "./src/hooks/use-in-view.ts",
     "./hooks/use-click-outside": "./src/hooks/use-click-outside.ts",
+    "./hooks/use-element-size": "./src/hooks/use-element-size.ts",
     "./lib/utils": "./src/lib/utils.ts"
   },
   "license": "MIT",
@@ -35,7 +37,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.507.0",
     "next-themes": "^0.4.6",
-    "plotly.js": "^3.4.0",
+    "plotly.js": "^3.5.1",
     "quill": "^2.0.3",
     "radix-ui": "^1.4.3",
     "react-day-picker": "8.10.1",

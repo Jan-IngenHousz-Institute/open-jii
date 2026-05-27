@@ -50,4 +50,21 @@ describe("ChartTypePicker", () => {
 
     expect(onChange).toHaveBeenCalledWith("scatter");
   });
+
+  it("hides families that have no registered chart types", async () => {
+    // Currently only the basic family registers types (line + scatter); the
+    // statistical/scientific/3D tabs land with their respective family PRs.
+    const user = userEvent.setup();
+    render(<ChartTypePicker value="line" onChange={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
+
+    expect(screen.getByRole("tab", { name: "workspace.families.basic" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "workspace.families.3d" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "workspace.families.statistical" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "workspace.families.scientific" }),
+    ).not.toBeInTheDocument();
+  });
 });

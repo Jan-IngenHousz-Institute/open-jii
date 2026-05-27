@@ -433,6 +433,14 @@
     "preview": "Voorvertoning",
     "previewNote": "Dit is een voorvertoning. Uw annotatie wordt verwerkt en zal binnenkort permanent verschijnen. Verversen zal deze voorvertoning verbergen."
   },
+  "columnPicker": {
+    "dragHandle": "{{name}} slepen",
+    "remove": "{{name}} verwijderen",
+    "emptyState": "Geen kolommen geselecteerd.",
+    "addColumn": "Kolom toevoegen",
+    "searchPlaceholder": "Kolommen zoeken…",
+    "noColumnsLeft": "Geen kolommen meer om toe te voegen."
+  },
   "dataFilters": {
     "placeholderSubstring": "Tekenreeks",
     "placeholderValue": "Waarde",
