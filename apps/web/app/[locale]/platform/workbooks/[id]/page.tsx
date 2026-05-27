@@ -2,6 +2,7 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { useReportAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
+import { EditableWorkbookTitle } from "@/components/workbook/editable-workbook-title";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
@@ -64,6 +65,22 @@ function WorkbookEditorWithAutosave({
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
+  const [title, setTitle] = useState(name);
+
+  const handleRename = useCallback(
+    async (next: string) => {
+      const previous = title;
+      setTitle(next);
+      try {
+        await updateWorkbook({ params: { id }, body: { name: next } });
+      } catch (err) {
+        setTitle(previous);
+        const message = parseApiError(err)?.message;
+        toast({ description: message ?? t("workbooks.renameError"), variant: "destructive" });
+      }
+    },
+    [id, title, updateWorkbook, t],
+  );
 
   const [promptedQuestionId, setPromptedQuestionId] = useState<string | undefined>();
   const questionResolverRef = useRef<((answer: string | undefined) => void) | null>(null);
@@ -156,11 +173,12 @@ function WorkbookEditorWithAutosave({
 
   return (
     <div className="space-y-6">
+      <EditableWorkbookTitle name={title} onRename={handleRename} readOnly={!isCreator} />
       <WorkbookEditor
         cells={cells}
         onCellsChange={handleCellsChange}
         readOnly={!isCreator}
-        title={name}
+        title={title}
         executionStates={executionStates}
         isConnected={isConnected}
         isConnecting={isConnecting}

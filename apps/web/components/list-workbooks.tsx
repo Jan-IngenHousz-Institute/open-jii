@@ -4,12 +4,20 @@ import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 import { WorkbookList } from "~/components/workbook-list";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import {
   Select,
@@ -24,6 +32,8 @@ export function ListWorkbooks() {
   const { t } = useTranslation("workbook");
   const router = useRouter();
   const locale = useLocale();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
   const { mutate: createWorkbook, isPending: isCreating } = useWorkbookCreate({
     onSuccess: (data) => {
       router.push(`/${locale}/platform/workbooks/${data.body.id}`);
@@ -31,12 +41,8 @@ export function ListWorkbooks() {
   });
 
   const handleCreate = () => {
-    const now = new Date();
-    const name = `Untitled Workbook - ${now.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })}`;
+    const name = newName.trim();
+    if (!name) return;
     createWorkbook({ body: { name } });
   };
 
@@ -72,13 +78,47 @@ export function ListWorkbooks() {
               <SelectItem value="all">{t("workbooks.filterAll")}</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleCreate} disabled={isCreating}>
-            {t("workbooks.create")}
-          </Button>
+          <Button onClick={() => setCreateOpen(true)}>{t("workbooks.create")}</Button>
         </div>
       </div>
 
       <WorkbookList workbooks={workbooks} isLoading={isLoading} />
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setNewName("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("workbooks.create")}</DialogTitle>
+            <DialogDescription>{t("workbooks.createDescription")}</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder={t("workbooks.namePlaceholder")}
+            maxLength={255}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleCreate();
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={isCreating}>
+              {t("workbooks.cancel")}
+            </Button>
+            <Button onClick={handleCreate} disabled={!newName.trim() || isCreating}>
+              {t("workbooks.create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

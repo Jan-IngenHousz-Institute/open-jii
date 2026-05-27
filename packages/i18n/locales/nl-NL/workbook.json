@@ -23,7 +23,34 @@
     "viewWorkbook": "Werkboek bekijken",
     "required": "Verplicht",
     "outputsCleared_one": "{{count}} uitvoer gewist",
-    "outputsCleared_other": "{{count}} uitvoeren gewist"
+    "outputsCleared_other": "{{count}} uitvoeren gewist",
+    "createDescription": "Geef uw werkboek een naam. U kunt deze later wijzigen.",
+    "namePlaceholder": "Naam van werkboek",
+    "cancel": "Annuleren",
+    "renameLabel": "Werkboek hernoemen",
+    "renameError": "Kan werkboek niet hernoemen",
+    "notUsed": "Niet gebruikt",
+    "usedByCount_one": "{{count}} experiment",
+    "usedByCount_other": "{{count}} experimenten",
+    "duplicateName": "Kopie van {{name}}",
+    "columns": {
+      "name": "Naam",
+      "usedBy": "Gebruikt door",
+      "user": "Gebruiker",
+      "updated": "Bijgewerkt"
+    },
+    "actions": {
+      "open": "Openen",
+      "duplicate": "Dupliceren",
+      "delete": "Verwijderen",
+      "more": "Meer acties"
+    },
+    "messages": {
+      "deleteSuccess": "Werkboek verwijderd",
+      "deleteConfirm": "'{{name}}' definitief verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "deleteInUseConfirm_one": "'{{name}}' is gekoppeld aan {{count}} experiment. Bij verwijderen wordt de koppeling verbroken en verliest dat experiment zijn meetstroom. Dit kan niet ongedaan worden gemaakt.",
+      "deleteInUseConfirm_other": "'{{name}}' is gekoppeld aan {{count}} experimenten. Bij verwijderen wordt de koppeling verbroken en verliezen die experimenten hun meetstroom. Dit kan niet ongedaan worden gemaakt."
+    }
   },
   "output": {
     "label": "Uitvoer",
