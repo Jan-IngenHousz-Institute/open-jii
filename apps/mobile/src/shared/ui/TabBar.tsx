@@ -96,7 +96,7 @@ function UnderlineTabBar<K extends string = string>({
   trailing,
 }: TabBarProps<K>) {
   return (
-    <View className="border-divider flex-row items-end border-b">
+    <View className="flex-row items-end">
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexShrink: 1 }}>
         <View className="flex-row">
           {tabs.map((tab) => {

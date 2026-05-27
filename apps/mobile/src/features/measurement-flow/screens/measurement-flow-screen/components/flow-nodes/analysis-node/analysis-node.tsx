@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
+import { useFinishFlow } from "~/features/measurement-flow/hooks/use-finish-flow";
 import { useMacro } from "~/features/measurement-flow/hooks/use-macro";
 import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
@@ -35,15 +36,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { macro, isLoading } = useMacro(content.macroId);
-  const {
-    scanResult,
-    previousStep,
-    experimentId,
-    protocolId,
-    finishFlow,
-    iterationCount,
-    flowNodes,
-  } = useMeasurementFlowStore();
+  const { scanResult, previousStep, experimentId, protocolId, iterationCount, flowNodes } =
+    useMeasurementFlowStore();
+  const finishAndExit = useFinishFlow();
   const { experiments } = useExperiments();
   const { session } = useSession();
 
@@ -129,7 +124,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       commentText: measurementComment.trim() || undefined,
       protocolName: protocol?.name ?? protocolId,
     });
-    finishFlow();
+    finishAndExit();
   };
 
   const handleRetry = () => {

@@ -70,7 +70,6 @@ export function useQuestionsUpload() {
       }
 
       getOutbox().enqueue(savedId);
-      toast.info(t("recentMeasurements:toasts.savedQueued"));
     },
   });
 

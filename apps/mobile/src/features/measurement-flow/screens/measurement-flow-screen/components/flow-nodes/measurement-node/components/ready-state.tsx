@@ -1,6 +1,5 @@
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
-import { LinearGradient } from "expo-linear-gradient";
 import { Bookmark, HelpCircle, Repeat2 } from "lucide-react-native";
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
@@ -62,7 +61,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
       >
-        {questionEntries.map(({ node, index }, position) => {
+        {questionEntries.map(({ node, index }) => {
           const label =
             node.content?.text ??
             node.name ??
@@ -71,7 +70,6 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
           const hasAnswer = !!answer?.trim();
           const isAutoincrement = isAutoincrementEnabled(node.id);
           const isRemember = isRememberAnswerEnabled(node.id);
-          const BADGE_SIZE = 32;
 
           return (
             <TouchableOpacity
@@ -80,23 +78,6 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
               activeOpacity={0.7}
               className="bg-gray-background mb-2 flex-row items-stretch gap-4 rounded-xl p-4"
             >
-              <View className="items-center justify-center">
-                <LinearGradient
-                  colors={["#002F2F", "#005E5E"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={{
-                    width: BADGE_SIZE,
-                    height: BADGE_SIZE,
-                    borderRadius: BADGE_SIZE / 2,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text className="text-lg font-bold text-white">{position + 1}</Text>
-                </LinearGradient>
-              </View>
-
               <View className="flex-1 gap-1">
                 <Text className="text-muted-foreground text-xs font-medium" numberOfLines={1}>
                   {label}

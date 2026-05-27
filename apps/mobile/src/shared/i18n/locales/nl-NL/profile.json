@@ -29,7 +29,7 @@
   },
   "signOut": {
     "title": "Uitloggen",
-    "subtitle": "Verwijdert eventueel lopende flow"
+    "subtitle": "Verwijdert een eventuele lopende meting"
   },
   "footer": "openJII Mobile · v{{version}} ({{build}})",
   "appSettingsSheet": {

@@ -28,7 +28,7 @@ export function NavigationButtons() {
   const insets = useSafeAreaInsets();
 
   const navStyle = useAnimatedStyle(() => ({
-    paddingBottom: Math.max(0, keyboard.height.value - insets.bottom),
+    paddingBottom: Math.max(insets.bottom, keyboard.height.value),
   }));
   // Get current node to check type
   const currentNode = flowNodes[currentFlowStep];

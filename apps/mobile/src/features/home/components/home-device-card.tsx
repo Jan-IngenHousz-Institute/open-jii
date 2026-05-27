@@ -40,7 +40,7 @@ export function HomeDeviceCard() {
 
   return (
     <Pressable onPress={onPress} className="mb-1 mt-3">
-      <View className="border-divider bg-card rounded-2xl border p-3.5 shadow-sm shadow-black/10">
+      <View className="bg-card rounded-2xl p-3.5 shadow-sm shadow-black/10">
         <View className="flex-row items-center">
           <View
             className="mr-3 items-center justify-center"

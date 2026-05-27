@@ -1,10 +1,12 @@
 import { Search, X } from "lucide-react-native";
 import React, { useMemo } from "react";
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-precached-experiment-data";
+import { useRecentExperimentActivity } from "~/features/experiments/hooks/use-recent-experiment-activity";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
 import { useExperimentsFlowMeta } from "~/features/measurement-flow/hooks/use-experiments-flow-meta";
 import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-load-experiment-flow";
@@ -22,6 +24,7 @@ import { OfflineModeIndicator } from "./offline-mode-indicator";
 
 export function ExperimentSelectionStep() {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation("measurementFlow");
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
@@ -30,18 +33,30 @@ export function ExperimentSelectionStep() {
   const { clearHistory } = useFlowAnswersStore();
   const { data: precachedData } = usePrecachedExperimentData(selectedExperimentId);
   const { data: connectedDevice } = useConnectedDevice();
+  const recentActivity = useRecentExperimentActivity();
 
   const [search, setSearch] = React.useState("");
   const ids = useMemo(() => experiments.map((e) => e.value), [experiments]);
   const flowMeta = useExperimentsFlowMeta(ids);
 
+  // Surface experiments with measurements in the last 7 days first. Array sort
+  // is stable, so experiments with no recent activity keep their original order
+  // beneath the active ones.
+  const sorted = useMemo(
+    () =>
+      [...experiments].sort(
+        (a, b) => (recentActivity[b.label] ?? 0) - (recentActivity[a.label] ?? 0),
+      ),
+    [experiments, recentActivity],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return experiments;
-    return experiments.filter(
+    if (!q) return sorted;
+    return sorted.filter(
       (e) => e.label.toLowerCase().includes(q) || (e.description ?? "").toLowerCase().includes(q),
     );
-  }, [experiments, search]);
+  }, [sorted, search]);
 
   const selectedExperiment = experiments.find((e) => e.value === selectedExperimentId);
   const selectedMeta = selectedExperimentId ? flowMeta[selectedExperimentId] : undefined;
@@ -78,6 +93,7 @@ export function ExperimentSelectionStep() {
             <Input
               value={search}
               onChangeText={setSearch}
+              transparent
               placeholder={t("experimentSelection.searchPlaceholder")}
               leftIcon={<Search size={18} color={colors.inactive} />}
               rightElement={
@@ -132,6 +148,7 @@ export function ExperimentSelectionStep() {
                   questionsOnly={!!meta?.questionsOnly}
                   nodeCount={meta?.nodeCount ?? 0}
                   durationMin={meta?.durationMin ?? 0}
+                  recentCount={recentActivity[item.label] ?? 0}
                 />
               );
             }}
@@ -142,7 +159,7 @@ export function ExperimentSelectionStep() {
       <View
         style={{
           paddingHorizontal: 16,
-          paddingBottom: 16,
+          paddingBottom: insets.bottom + 16,
           paddingTop: 8,
           gap: 10,
           backgroundColor: colors.background,

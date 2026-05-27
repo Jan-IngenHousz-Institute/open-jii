@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
-import { TouchableOpacity } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SwipeableMeasurementRow } from "./swipeable-measurement-row";
@@ -15,6 +14,12 @@ vi.mock("~/shared/i18n", () => ({
       return map[key] ?? key;
     },
   }),
+}));
+
+// The row reads connectivity to hide the upload action when offline; default to
+// online so the action stays visible. Avoids needing a QueryClientProvider.
+vi.mock("~/shared/ui/hooks/use-is-online", () => ({
+  useIsOnline: () => ({ data: true }),
 }));
 
 // react-native-gesture-handler uses native code; stub the gesture surface.
@@ -52,29 +57,28 @@ describe("SwipeableMeasurementRow", () => {
 
   it("shows the Upload button for unsynced rows when onSync is provided", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="pending" onSync={vi.fn()} />);
-    expect(screen.getByText("Upload")).toBeTruthy();
+    expect(screen.getByLabelText("Upload")).toBeTruthy();
   });
 
   it("does not show the Upload button for synced rows", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="successful" onSync={vi.fn()} />);
-    expect(screen.queryByText("Upload")).toBeNull();
+    expect(screen.queryByLabelText("Upload")).toBeNull();
   });
 
   it("shows the Comment button for unsynced rows when onComment is provided", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="pending" onComment={vi.fn()} />);
-    expect(screen.getByText("Comment")).toBeTruthy();
+    expect(screen.getByLabelText("Comment")).toBeTruthy();
   });
 
   it("does not show the Comment button for synced rows", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="successful" onComment={vi.fn()} />);
-    expect(screen.queryByText("Comment")).toBeNull();
+    expect(screen.queryByLabelText("Comment")).toBeNull();
   });
 
   it("calls onDelete with the row id when the delete button is pressed", () => {
     const onDelete = vi.fn();
     render(<SwipeableMeasurementRow {...defaultProps} status="successful" onDelete={onDelete} />);
-    const touchables = screen.UNSAFE_getAllByType(TouchableOpacity);
-    fireEvent.press(touchables[0]);
+    fireEvent.press(screen.getByLabelText("Delete"));
     expect(onDelete).toHaveBeenCalledWith("m1");
   });
 
@@ -88,14 +92,14 @@ describe("SwipeableMeasurementRow", () => {
   it("calls onSync with the row id when Upload is pressed", () => {
     const onSync = vi.fn();
     render(<SwipeableMeasurementRow {...defaultProps} onSync={onSync} />);
-    fireEvent.press(screen.getByText("Upload"));
+    fireEvent.press(screen.getByLabelText("Upload"));
     expect(onSync).toHaveBeenCalledWith("m1");
   });
 
   it("calls onComment with the row id when Comment is pressed", () => {
     const onComment = vi.fn();
     render(<SwipeableMeasurementRow {...defaultProps} onComment={onComment} />);
-    fireEvent.press(screen.getByText("Comment"));
+    fireEvent.press(screen.getByLabelText("Comment"));
     expect(onComment).toHaveBeenCalledWith("m1");
   });
 

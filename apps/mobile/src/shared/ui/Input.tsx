@@ -19,6 +19,9 @@ interface InputProps extends TextInputProps {
   /** When true, renders BottomSheetTextInput instead of TextInput so the
    *  keyboard interacts correctly inside a bottom sheet. */
   asBottomSheet?: boolean;
+  /** Drop the gray surface fill, leaving just the border (e.g. a search field
+   *  that should sit flat on the page background). */
+  transparent?: boolean;
 }
 
 export function Input({
@@ -31,6 +34,7 @@ export function Input({
   overlay,
   helper,
   asBottomSheet = false,
+  transparent = false,
   ...props
 }: InputProps) {
   const themeColors = useThemeColors();
@@ -44,7 +48,7 @@ export function Input({
     <View className="mb-4" style={containerStyle}>
       {label && <Text className="text-on-surface mb-1.5 text-sm">{label}</Text>}
       <View
-        className={`bg-surface flex-row items-center rounded-lg border ${borderClass}`}
+        className={`flex-row items-center rounded-lg border ${borderClass} ${transparent ? "" : "bg-surface"}`}
         style={overlay ? { position: "relative" } : undefined}
       >
         {leftIcon && <View className="pl-3">{leftIcon}</View>}
