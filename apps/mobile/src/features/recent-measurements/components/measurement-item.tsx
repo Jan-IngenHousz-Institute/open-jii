@@ -2,7 +2,6 @@ import { cva } from "class-variance-authority";
 import {
   CloudAlert,
   CloudCheck,
-  CloudUpload,
   MessageCircleMore,
   Trash2,
   UploadCloud,
@@ -59,7 +58,6 @@ export const MeasurementItem = memo(function MeasurementItem({
   const isSyncing = useIsProcessing(id);
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
-
   return (
     <Pressable className="border-divider bg-card border-t px-4 py-3" onPress={() => onPress?.(id)}>
       {/* Top: answers */}
