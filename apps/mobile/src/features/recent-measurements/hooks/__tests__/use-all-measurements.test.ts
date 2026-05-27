@@ -4,18 +4,25 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { useAllMeasurements } from "../use-all-measurements";
+import {
+  useAllMeasurements,
+  useHasAnyMeasurements,
+  useMeasurementCounts,
+} from "../use-all-measurements";
 
-const { mockGetMeasurementsList, mockCountMeasurementsByStatus } = vi.hoisted(() => ({
-  mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
-  mockCountMeasurementsByStatus: vi
-    .fn()
-    .mockResolvedValue({ pending: 0, uploading: 0, failed: 0, successful: 0 }),
-}));
+const { mockGetMeasurementsList, mockCountMeasurementsByStatus, mockGetMeasurementById } =
+  vi.hoisted(() => ({
+    mockGetMeasurementsList: vi.fn().mockResolvedValue([]),
+    mockCountMeasurementsByStatus: vi
+      .fn()
+      .mockResolvedValue({ pending: 0, failed: 0, successful: 0 }),
+    mockGetMeasurementById: vi.fn().mockResolvedValue(null),
+  }));
 
 vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementsList: mockGetMeasurementsList,
   countMeasurementsByStatus: mockCountMeasurementsByStatus,
+  getMeasurementById: mockGetMeasurementById,
 }));
 
 let queryClient: QueryClient;
@@ -24,7 +31,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(QueryClientProvider, { client: queryClient }, children);
 }
 
-type StorageStatus = "pending" | "failed" | "uploading" | "successful";
+type StorageStatus = "pending" | "failed" | "successful";
 
 interface ListRow {
   id: string;
@@ -67,7 +74,6 @@ describe("useAllMeasurements", () => {
     mockGetMeasurementsList.mockResolvedValue([]);
     mockCountMeasurementsByStatus.mockResolvedValue({
       pending: 0,
-      uploading: 0,
       failed: 0,
       successful: 0,
     });
@@ -88,10 +94,10 @@ describe("useAllMeasurements", () => {
       renderHook(() => useAllMeasurements("all"), { wrapper });
 
       await waitFor(() =>
-        expect(mockGetMeasurementsList).toHaveBeenCalledWith(
-          ["pending", "failed", "uploading", "successful"],
-          { limit: 50, offset: 0 },
-        ),
+        expect(mockGetMeasurementsList).toHaveBeenCalledWith(["pending", "failed", "successful"], {
+          limit: 50,
+          offset: 0,
+        }),
       );
     });
 
@@ -102,11 +108,11 @@ describe("useAllMeasurements", () => {
       );
     });
 
-    it("queries pending + failed + uploading when filter is 'unsynced'", async () => {
+    it("queries pending + failed when filter is 'unsynced'", async () => {
       renderHook(() => useAllMeasurements("unsynced"), { wrapper });
       await waitFor(() =>
         expect(mockGetMeasurementsList).toHaveBeenCalledWith(
-          ["pending", "failed", "uploading"],
+          ["pending", "failed"],
           expect.any(Object),
         ),
       );
@@ -116,17 +122,15 @@ describe("useAllMeasurements", () => {
       mockGetMeasurementsList.mockResolvedValueOnce([
         row("p1", "pending", "2026-01-01T11:00:00Z", "P"),
         row("f1", "failed", "2026-01-01T10:00:00Z", "F"),
-        row("u1", "uploading", "2026-01-01T09:00:00Z", "U"),
         row("s1", "successful", "2026-01-01T12:00:00Z", "S"),
       ]);
 
       const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
 
-      await waitFor(() => expect(result.current.measurements).toHaveLength(4));
+      await waitFor(() => expect(result.current.measurements).toHaveLength(3));
       const byKey = new Map(result.current.measurements.map((m) => [m.key, m.status]));
       expect(byKey.get("p1")).toBe("pending");
       expect(byKey.get("f1")).toBe("failed");
-      expect(byKey.get("u1")).toBe("uploading");
       expect(byKey.get("s1")).toBe("successful");
     });
 
@@ -174,7 +178,6 @@ describe("useAllMeasurements", () => {
       const fixture: ListRow[] = [
         row("p1", "pending", "2026-01-01T11:00:00Z", "Pending"),
         row("f1", "failed", "2026-01-01T10:00:00Z", "Failed"),
-        row("u1", "uploading", "2026-01-01T09:00:00Z", "Uploading"),
         row("s1", "successful", "2026-01-01T12:00:00Z", "Synced 1"),
         row("s2", "successful", "2026-01-01T08:00:00Z", "Synced 2"),
       ];
@@ -185,7 +188,7 @@ describe("useAllMeasurements", () => {
 
     it("returns every row when filter is 'all'", async () => {
       const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(result.current.measurements).toHaveLength(5));
+      await waitFor(() => expect(result.current.measurements).toHaveLength(4));
     });
 
     it("returns only successful rows when filter is 'synced'", async () => {
@@ -194,11 +197,11 @@ describe("useAllMeasurements", () => {
       expect(result.current.measurements.every((m) => m.status === "successful")).toBe(true);
     });
 
-    it("returns pending/failed/uploading when filter is 'unsynced'", async () => {
+    it("returns pending/failed when filter is 'unsynced'", async () => {
       const { result } = renderHook(() => useAllMeasurements("unsynced"), { wrapper });
-      await waitFor(() => expect(result.current.measurements).toHaveLength(3));
+      await waitFor(() => expect(result.current.measurements).toHaveLength(2));
       const statuses = new Set(result.current.measurements.map((m) => m.status));
-      expect(statuses).toEqual(new Set(["pending", "failed", "uploading"]));
+      expect(statuses).toEqual(new Set(["pending", "failed"]));
     });
 
     it("re-queries SQL when the filter prop changes (no JS-side filtering)", async () => {
@@ -209,7 +212,7 @@ describe("useAllMeasurements", () => {
 
       await waitFor(() =>
         expect(mockGetMeasurementsList).toHaveBeenCalledWith(
-          ["pending", "failed", "uploading", "successful"],
+          ["pending", "failed", "successful"],
           expect.any(Object),
         ),
       );
@@ -222,40 +225,34 @@ describe("useAllMeasurements", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // counts (SQL COUNT … GROUP BY)
+  // counts now live in their own hooks so the heavy list screen doesn't
+  // re-render on every settle tick. useAllMeasurements no longer exposes them.
   // ---------------------------------------------------------------------------
 
-  describe("counts", () => {
-    it("exposes raw SQL counts unchanged by the active filter", async () => {
-      mockCountMeasurementsByStatus.mockResolvedValueOnce({
-        pending: 3,
-        uploading: 1,
-        failed: 2,
-        successful: 7,
-      });
+  describe("useMeasurementCounts", () => {
+    it("derives synced/unsynced/total from the SQL counts query", async () => {
+      mockCountMeasurementsByStatus.mockResolvedValueOnce({ pending: 3, failed: 2, successful: 7 });
 
-      const { result } = renderHook(() => useAllMeasurements("synced"), { wrapper });
+      const { result } = renderHook(() => useMeasurementCounts(), { wrapper });
 
-      await waitFor(() => expect(result.current.counts.successful).toBe(7));
-      expect(result.current.counts).toEqual({ pending: 3, uploading: 1, failed: 2, successful: 7 });
+      await waitFor(() => expect(result.current.totalCount).toBe(12));
+      expect(result.current.syncedCount).toBe(7);
+      expect(result.current.unsyncedCount).toBe(5);
+    });
+  });
+
+  describe("useHasAnyMeasurements", () => {
+    it("is false when there are no measurements", async () => {
+      const { result } = renderHook(() => useHasAnyMeasurements(), { wrapper });
+      await waitFor(() => expect(result.current).toBe(false));
     });
 
-    it("uploadingCount mirrors counts.uploading", async () => {
-      mockCountMeasurementsByStatus.mockResolvedValueOnce({
-        pending: 0,
-        uploading: 4,
-        failed: 0,
-        successful: 0,
-      });
+    it("is true when any measurement exists", async () => {
+      mockCountMeasurementsByStatus.mockResolvedValueOnce({ pending: 1, failed: 0, successful: 0 });
 
-      const { result } = renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(result.current.uploadingCount).toBe(4));
-    });
+      const { result } = renderHook(() => useHasAnyMeasurements(), { wrapper });
 
-    it("invokes countMeasurementsByStatus exactly once per render cycle", async () => {
-      renderHook(() => useAllMeasurements("all"), { wrapper });
-      await waitFor(() => expect(mockCountMeasurementsByStatus).toHaveBeenCalled());
-      expect(mockCountMeasurementsByStatus).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(result.current).toBe(true));
     });
   });
 
@@ -313,7 +310,7 @@ describe("useAllMeasurements", () => {
 
       await waitFor(() => expect(result.current.measurements).toHaveLength(60));
       expect(mockGetMeasurementsList).toHaveBeenLastCalledWith(
-        ["pending", "failed", "uploading", "successful"],
+        ["pending", "failed", "successful"],
         { limit: 50, offset: 50 },
       );
     });

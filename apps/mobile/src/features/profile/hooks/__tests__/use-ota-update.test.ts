@@ -118,7 +118,7 @@ describe("useOtaUpdate", () => {
     mocks.checkForUpdateAsync.mockRejectedValue(new Error("network error"));
     const { unmount } = renderHook(() => useOtaUpdate());
     await vi.runAllTimersAsync();
-    expect(warnSpy).toHaveBeenCalledWith("[ota] update check failed", expect.any(Error));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("update check failed"));
     warnSpy.mockRestore();
     unmount();
   });

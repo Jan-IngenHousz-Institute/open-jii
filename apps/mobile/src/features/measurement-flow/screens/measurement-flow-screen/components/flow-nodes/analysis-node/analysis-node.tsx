@@ -15,11 +15,14 @@ import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/utils/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/utils/time-sync";
 
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
 import { AnalysisSummaryCard } from "./analysis-summary-card";
+
+const log = createLogger("analysis-node");
 
 interface AnalysisNodeProps {
   content: {
@@ -172,7 +175,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         isUploading={isUploading}
         onScrollToTop={scrollToTop}
         onRetry={handleRetry}
-        onUpload={() => handleUploadMeasurement().catch(console.log)}
+        onUpload={() =>
+          handleUploadMeasurement().catch((e) =>
+            log.warn("handleUploadMeasurement failed", { err: (e as Error)?.message }),
+          )
+        }
       />
 
       <MeasurementQuestionsModal

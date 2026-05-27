@@ -4,10 +4,12 @@ import { Debouncer } from "@tanstack/pacer";
 import * as Location from "expo-location";
 import * as Network from "expo-network";
 import { DateTime } from "luxon";
-import { AppState } from "react-native";
-import type { AppStateStatus } from "react-native";
 import { toast } from "sonner-native";
 import { getApiClient } from "~/shared/api/client";
+import { onAppForeground } from "~/shared/utils/app-lifecycle";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("time-sync");
 
 export interface TimeSyncState {
   /** Offset in ms: serverUtc - localDeviceTime at moment of sync */
@@ -32,7 +34,7 @@ let state: TimeSyncState = {
   lastSyncedAt: 0,
 };
 
-let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+let unsubscribeAppForeground: (() => void) | null = null;
 
 /** Resolvers waiting for the first successful sync. */
 let syncWaiters: (() => void)[] = [];
@@ -56,7 +58,7 @@ async function persistState(): Promise<void> {
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
-    console.warn("[time-sync] Failed to persist state:", err);
+    log.warn("Failed to persist state", { err: (err as Error)?.message });
   }
 }
 
@@ -68,14 +70,14 @@ async function restoreState(): Promise<void> {
     const restored: TimeSyncState = JSON.parse(raw);
     state = { ...restored, missedPings: 0 };
 
-    console.log("[time-sync] Restored state from storage", {
-      offsetMs: state.offsetMs,
+    log.info("restored state from storage", {
+      offset_ms: state.offsetMs,
       timezone: state.timezone,
-      isSynced: state.isSynced,
-      lastSyncedAt: new Date(state.lastSyncedAt).toISOString(),
+      is_synced: state.isSynced,
+      last_synced_at: new Date(state.lastSyncedAt).toISOString(),
     });
   } catch (err) {
-    console.warn("[time-sync] Failed to restore state:", err);
+    log.warn("Failed to restore state", { err: (err as Error)?.message });
   }
 }
 
@@ -83,7 +85,7 @@ async function resolveTimezone(): Promise<string> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
-      console.warn("[time-sync] Location permission not granted, falling back to UTC");
+      log.warn("Location permission not granted, falling back to UTC");
       return "UTC";
     }
 
@@ -93,9 +95,26 @@ async function resolveTimezone(): Promise<string> {
 
     return tzLookup(location.coords.latitude, location.coords.longitude);
   } catch (err) {
-    console.warn("[time-sync] Could not resolve timezone from GPS:", err);
+    log.warn("Could not resolve timezone from GPS", { err: (err as Error)?.message });
     return "UTC";
   }
+}
+
+// Reuse the cached timezone until it is stale. GPS calls on Android briefly
+// background the app (permission/location dialogs), which fires
+// AppState.background→active and re-enters performSync — a cascade that
+// hammers upload rehydrate and re-syncs. The timezone almost never changes
+// per session, so reuse it.
+const TIMEZONE_REFRESH_MS = 24 * 60 * 60 * 1000;
+
+async function maybeResolveTimezone(): Promise<string> {
+  const haveTz = state.timezone && state.timezone !== "UTC";
+  const fresh = state.lastSyncedAt > 0 && Date.now() - state.lastSyncedAt < TIMEZONE_REFRESH_MS;
+  if (haveTz && fresh) {
+    log.debug("reusing cached timezone", { timezone: state.timezone });
+    return state.timezone;
+  }
+  return resolveTimezone();
 }
 
 async function fetchServerTime(): Promise<number> {
@@ -110,24 +129,17 @@ async function fetchServerTime(): Promise<number> {
 }
 
 async function performSync(isInitial = false): Promise<void> {
-  console.log("[time-sync] performSync: start", { isInitial });
+  const t0 = Date.now();
   const networkState = await Network.getNetworkStateAsync();
-  console.log("[time-sync] performSync: network", {
-    isInternetReachable: networkState.isInternetReachable,
-  });
   if (!networkState.isInternetReachable) {
-    console.log("[time-sync] Skipping sync — device is offline");
+    log.info("skipping sync — device is offline", { is_initial: isInitial });
     return;
   }
 
   try {
-    console.log("[time-sync] performSync: resolveTimezone start");
-    const timezone = await resolveTimezone();
-    console.log("[time-sync] performSync: resolveTimezone done", { timezone });
+    const timezone = await maybeResolveTimezone();
     const beforeFetch = Date.now();
-    console.log("[time-sync] performSync: fetchServerTime start");
     const serverUtcMs = await fetchServerTime();
-    console.log("[time-sync] performSync: fetchServerTime done");
     const afterFetch = Date.now();
 
     const roundTripMs = afterFetch - beforeFetch;
@@ -142,13 +154,13 @@ async function performSync(isInitial = false): Promise<void> {
       lastSyncedAt: Date.now(),
     };
 
-    console.log("[time-sync] Sync successful", {
-      localDeviceTime: new Date().toISOString(),
-      syncedUtc: new Date(Date.now() + offsetMs).toISOString(),
-      offsetMs,
-      roundTripMs,
+    log.info("sync successful", {
+      is_initial: isInitial,
+      offset_ms: offsetMs,
+      round_trip_ms: roundTripMs,
+      tz_resolve_ms: beforeFetch - t0,
+      total_ms: Date.now() - t0,
       timezone,
-      lastSyncedAt: new Date(state.lastSyncedAt).toISOString(),
     });
 
     await persistState();
@@ -157,22 +169,14 @@ async function performSync(isInitial = false): Promise<void> {
     for (const resolve of syncWaiters) resolve();
     syncWaiters = [];
   } catch (err) {
-    console.warn("[time-sync] Sync failed:", err);
     state = { ...state, missedPings: state.missedPings + 1 };
 
-    console.log("[time-sync] State after failure", {
-      ...state,
-      localDeviceTime: new Date().toISOString(),
-      missedPings: state.missedPings,
-      lastSyncedAt: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
+    log.warn("sync failed", {
+      is_initial: isInitial,
+      missed_pings: state.missedPings,
+      last_synced_at: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
+      err: (err as Error)?.message,
     });
-  }
-}
-
-function handleAppStateChange(nextState: AppStateStatus) {
-  if (nextState === "active") {
-    console.log("[time-sync] App foregrounded, requesting sync");
-    debouncedSync.maybeExecute();
   }
 }
 
@@ -183,19 +187,22 @@ let startupKicked = false;
 
 /** Start the time sync service. Call once at app startup. */
 export function startTimeSync() {
-  if (appStateSubscription) return;
+  if (unsubscribeAppForeground) return;
   if (!startupKicked) {
     startupKicked = true;
     restoreState().then(() => performSync(true));
   }
-  appStateSubscription = AppState.addEventListener("change", handleAppStateChange);
+  unsubscribeAppForeground = onAppForeground(() => {
+    log.debug("app foregrounded, requesting sync");
+    debouncedSync.maybeExecute();
+  });
 }
 
 /** Stop the time sync service. */
 export function stopTimeSync() {
-  if (appStateSubscription) {
-    appStateSubscription.remove();
-    appStateSubscription = null;
+  if (unsubscribeAppForeground) {
+    unsubscribeAppForeground();
+    unsubscribeAppForeground = null;
   }
   debouncedSync.cancel();
 }
@@ -241,17 +248,17 @@ const ENSURE_SYNCED_TIMEOUT_MS = 10_000;
  * Use this to gate SigV4 signing so we never sign with an unsynced clock.
  */
 export async function ensureSynced(): Promise<void> {
-  console.log("[time-sync] ensureSynced called", {
-    isSynced: state.isSynced,
-    lastSyncedAt: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
-    waitersBefore: syncWaiters.length,
+  log.debug("ensureSynced called", {
+    is_synced: state.isSynced,
+    last_synced_at: state.lastSyncedAt ? new Date(state.lastSyncedAt).toISOString() : "never",
+    waiters_before: syncWaiters.length,
   });
   if (state.isSynced) return;
 
   return new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       syncWaiters = syncWaiters.filter((r) => r !== resolve);
-      console.warn("[time-sync] ensureSynced timed out");
+      log.warn("ensureSynced timed out");
       toast.error("Time sync unavailable. Please check your connection and try again.");
       reject(new Error("[time-sync] Timed out waiting for initial sync"));
     }, ENSURE_SYNCED_TIMEOUT_MS);
@@ -261,7 +268,6 @@ export async function ensureSynced(): Promise<void> {
       resolve();
     });
 
-    console.log("[time-sync] ensureSynced: triggering on-demand performSync");
     // Kick off a sync in case startTimeSync hasn't been called yet.
     // Must come *after* the waiter is registered so a fast resolve isn't missed.
     performSync(true);
