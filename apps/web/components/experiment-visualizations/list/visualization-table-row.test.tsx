@@ -68,6 +68,16 @@ describe("VisualizationTableRow", () => {
     expect(pill).toHaveClass("bg-badge-published");
   });
 
+  it.each(["bar", "area", "dot-plot", "lollipop", "bubble", "pie"] as const)(
+    "renders the basic-family badge for chartType=%s",
+    (chartType) => {
+      renderRow({ visualization: viz({ chartType }) });
+      // Labels use camelCased keys for hyphenated types (workspace.charts.types.dot-plot).
+      const key = `workspace.charts.types.${chartType}`;
+      expect(screen.getByText(key)).toHaveClass("bg-badge-published");
+    },
+  );
+
   it("opens the confirm dialog when the delete menu item is selected", async () => {
     const user = userEvent.setup();
     renderRow();

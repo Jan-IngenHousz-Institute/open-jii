@@ -52,7 +52,7 @@ describe("ChartTypePicker", () => {
   });
 
   it("hides families that have no registered chart types", async () => {
-    // Currently only the basic family registers types (line + scatter); the
+    // Only the basic family registers chart types in this branch; the
     // statistical/scientific/3D tabs land with their respective family PRs.
     const user = userEvent.setup();
     render(<ChartTypePicker value="line" onChange={vi.fn()} />);
@@ -66,5 +66,26 @@ describe("ChartTypePicker", () => {
     expect(
       screen.queryByRole("tab", { name: "workspace.families.scientific" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders a tile for every registered basic chart type", async () => {
+    const user = userEvent.setup();
+    render(<ChartTypePicker value="line" onChange={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
+
+    for (const type of [
+      "line",
+      "scatter",
+      "bar",
+      "area",
+      "dot-plot",
+      "lollipop",
+      "bubble",
+      "pie",
+    ]) {
+      expect(
+        screen.getByRole("button", { name: new RegExp(`workspace\\.charts\\.types\\.${type}`) }),
+      ).toBeInTheDocument();
+    }
   });
 });

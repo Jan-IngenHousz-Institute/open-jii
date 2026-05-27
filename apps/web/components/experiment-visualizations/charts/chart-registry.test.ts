@@ -22,21 +22,52 @@ describe("chart-type registry", () => {
     expect(def?.family).toBe("basic");
   });
 
-  it("returns undefined for an unregistered chart type", () => {
-    expect(getChartTypeDef("alluvial")).toBeUndefined();
+  it.each([
+    ["bar", "basic"],
+    ["area", "basic"],
+    ["dot-plot", "basic"],
+    ["lollipop", "basic"],
+    ["bubble", "basic"],
+    ["pie", "basic"],
+  ] as const)("returns the %s definition under the %s family", (type, family) => {
+    const def = getChartTypeDef(type);
+    expect(def?.type).toBe(type);
+    expect(def?.family).toBe(family);
+  });
+
+  it("returns true from isSupportedChartType for registered types", () => {
     expect(isSupportedChartType("line")).toBe(true);
-    expect(isSupportedChartType("alluvial")).toBe(false);
+    expect(isSupportedChartType("bar")).toBe(true);
   });
 
   it("listChartTypes returns only registered types", () => {
     const all = listChartTypes();
     const types = all.map((d) => d.type).sort();
-    expect(types).toEqual(["line", "scatter"]);
+    expect(types).toEqual([
+      "area",
+      "bar",
+      "bubble",
+      "dot-plot",
+      "line",
+      "lollipop",
+      "pie",
+      "scatter",
+    ]);
   });
 
   it("listChartTypesByFamily groups registered types under their family", () => {
     const grouped = listChartTypesByFamily();
-    expect(grouped.basic.map((d) => d.type).sort()).toEqual(["line", "scatter"]);
+    expect(grouped.basic.map((d) => d.type).sort()).toEqual([
+      "area",
+      "bar",
+      "bubble",
+      "dot-plot",
+      "line",
+      "lollipop",
+      "pie",
+      "scatter",
+    ]);
+    expect(grouped.statistical).toEqual([]);
     expect(grouped.scientific).toEqual([]);
     expect(grouped["3d"]).toEqual([]);
   });
