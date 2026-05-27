@@ -8,6 +8,10 @@ import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
+import type { AreaChartOptions } from "./basic/area/options";
+import type { BubbleChartOptions } from "./basic/bubble/options";
+import type { LollipopChartOptions } from "./basic/lollipop/options";
+import type { PieChartOptions } from "./basic/pie/options";
 import type {
   BarChartOptions,
   ColorEncodingOptions,
@@ -17,27 +21,15 @@ import type {
   SecondaryAxisOptions,
 } from "./chart-options";
 
-// Options for chart families not yet packaged as their own modules; kept
-// inline so the shared cartesian renderer/transform can reference them
-// without forcing the chart-family barrels to land first.
-interface BubbleChartOptions {
-  sizemode?: "diameter" | "area";
-  bubbleMaxSize?: number;
-  bubbleMinSize?: number;
-}
-
-interface AreaChartOptions {
-  stackMode?: "none" | "stacked" | "percent";
-  fillOpacity?: number;
-}
-
 export type ChartFormConfig = PlotlyChartConfig &
   Partial<Omit<LineSeriesData, "x" | "y">> &
   Partial<Omit<ScatterSeriesData, "x" | "y">> &
   ColorEncodingOptions &
   BarChartOptions &
   AreaChartOptions &
+  LollipopChartOptions &
   BubbleChartOptions &
+  PieChartOptions &
   FacetOptions &
   ReferenceLinesOptions &
   ErrorBarChartOptions &
