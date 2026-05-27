@@ -1,12 +1,16 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
-import { useFieldArray, useWatch } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type {
+  AggregationFunction,
+  DataColumn,
+  SeriesTraceType,
+} from "@repo/api/schemas/experiment.schema";
+import { getColumnKind } from "@repo/api/utils/column-type-utils";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
@@ -18,51 +22,141 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { defaultAxisTypeFor } from "../../charts/chart-config";
+import type { ChartFormValues } from "../../charts/chart-config";
+import { getDefaultSeriesColor } from "../../charts/colors/palettes";
+import { getDataSourceAggregate, setDataSourceAggregate } from "../../charts/data/aggregation";
 import {
   dataSourcesByRole,
-  defaultAxisTypeFor,
-  getDefaultSeriesColor,
+  firstDataSourceByRole,
   makeDataSource,
-} from "../../charts/form-values";
-import type { ChartFormValues } from "../../charts/form-values";
+} from "../../charts/data/data-sources";
+import { useDataSourcesFieldArray } from "../context/data-sources-field-array-context";
+import { AGG_NONE, YSeriesItem } from "./y-series-item";
 
-interface YAxisShelfProps {
-  form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
-  /** When true, a per-series Color picker is shown. Disabled if a Color dimension column is selected. */
-  showSeriesColor?: boolean;
+interface AggregateOption {
+  value: AggregationFunction;
+  label: string;
+  requiresXColumn?: boolean;
 }
 
-export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelfProps) {
+// `cumsum` produces a running total across the X-axis ordering;
+// disabled without an X column to define the order.
+const AGG_FUNCTIONS: AggregateOption[] = [
+  { value: "sum", label: "Sum" },
+  { value: "avg", label: "Average" },
+  { value: "count", label: "Count" },
+  { value: "min", label: "Min" },
+  { value: "max", label: "Max" },
+  { value: "std", label: "Std dev" },
+  { value: "var", label: "Variance" },
+  { value: "cumsum", label: "Cumulative sum", requiresXColumn: true },
+];
+
+export interface YAxisShelfProps {
+  form: UseFormReturn<ChartFormValues>;
+  columns: DataColumn[];
+  showSeriesColor?: boolean;
+  maxSeries?: number;
+  hideAxisType?: boolean;
+  showCartesianControls?: boolean;
+  defaultTraceType?: SeriesTraceType;
+  hideAggregate?: boolean;
+  showErrorColumn?: boolean;
+  errorColumns?: DataColumn[];
+}
+
+export function YAxisShelf({
+  form,
+  columns,
+  showSeriesColor = true,
+  maxSeries,
+  hideAxisType = false,
+  showCartesianControls = false,
+  defaultTraceType,
+  hideAggregate = false,
+  showErrorColumn = false,
+  errorColumns,
+}: YAxisShelfProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const { append, remove } = useFieldArray({
-    control: form.control,
-    name: "dataConfig.dataSources",
-  });
+  // Error columns default to numeric subset; callers can override.
+  const effectiveErrorColumns =
+    errorColumns ?? columns.filter((c) => getColumnKind(c.type_text) === "numeric");
+
+  const { append, remove } = useDataSourcesFieldArray();
 
   const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
+  const aggregation = useWatch({ control: form.control, name: "dataConfig.aggregation" });
+
   const ySources = dataSourcesByRole(sources, "y");
   const colorSources = dataSourcesByRole(sources, "color");
   const isColorMapped = colorSources.length > 0 && Boolean(colorSources[0].source.columnName);
+  const xColumnName = firstDataSourceByRole(sources, "x")?.source.columnName ?? "";
+  const hasSecondaryAxisSeries = ySources.some((s) => s.source.axis === "secondary");
+  const canAddSeries = maxSeries === undefined || ySources.length < maxSeries;
+
+  // GROUP BY activates when X is bucketed or any sibling has a row aggregate
+  // (window-only `cumsum` doesn't impose GROUP BY).
+  const xIsBucketed = Boolean(
+    aggregation?.groupBy?.find((g) => g.column === xColumnName)?.timeBucket,
+  );
+  const anySiblingHasRowAggregate = sources.some((ds) => ds.aggregate && ds.aggregate !== "cumsum");
+  const groupByActive = xIsBucketed || anySiblingHasRowAggregate;
 
   const handleColumnChange = (value: string, seriesIndex: number) => {
     if (seriesIndex === 0) {
       form.setValue("config.yAxisTitle", value);
-      // Auto-pick the Y axis scale based on the picked column's data type.
-      // Only do this for the first Y series since that's what defines the
-      // axis; subsequent series just add traces against the same axis.
+      // Only the first Y series defines the axis; others just add traces.
       const picked = columns.find((c) => c.name === value);
       form.setValue("config.yAxisType", defaultAxisTypeFor(picked?.type_text), {
         shouldDirty: true,
       });
     }
-    // Refresh the series alias whenever the column changes. Previous guard
-    // ("only set if empty") let a series with a populated alias keep that
-    // stale label after a column switch. Users can rename freely afterwards.
     const yEntry = ySources[seriesIndex];
-    const aliasKey = `dataConfig.dataSources.${yEntry.index}.alias` as const;
-    form.setValue(aliasKey, value);
+    form.setValue(`dataConfig.dataSources.${yEntry.index}.alias` as const, value);
+
+    // If aggregation is active elsewhere, a new Y without an aggregate would
+    // silently drop from SQL projection — default to AVG to keep it visible.
+    const yEntryDsIndex = yEntry.index;
+    const existingAggregate = form.getValues("dataConfig.dataSources")[yEntryDsIndex]?.aggregate;
+    if (value && existingAggregate === undefined) {
+      const currentAggregation = form.getValues("dataConfig.aggregation");
+      const xBucket = currentAggregation?.groupBy?.find(
+        (g) => g.column === xColumnName,
+      )?.timeBucket;
+      const otherSourcesAggregating = form
+        .getValues("dataConfig.dataSources")
+        .some((ds, i) => i !== yEntryDsIndex && Boolean(ds.aggregate));
+      const aggregationActive = Boolean(xBucket) || otherSourcesAggregating;
+      if (aggregationActive) {
+        setDataSourceAggregate(form, yEntryDsIndex, "avg", xColumnName);
+      }
+    }
+  };
+
+  const handleAggregateChange = (raw: string, dsIndex: number) => {
+    const fn = raw === AGG_NONE ? undefined : pickAggregate(raw);
+    setDataSourceAggregate(form, dsIndex, fn, xColumnName);
+  };
+
+  // Shelf hides per-series overrides on the first Y; clear lingering
+  // traceType/axis from a former 2nd+ ordinal so saved data tracks UI.
+  const handleRemoveSeries = (dsIndex: number) => {
+    remove(dsIndex);
+    const newFirstY = dataSourcesByRole(form.getValues("dataConfig.dataSources"), "y").at(0);
+    if (newFirstY) {
+      if (newFirstY.source.traceType !== undefined) {
+        form.setValue(`dataConfig.dataSources.${newFirstY.index}.traceType` as const, undefined, {
+          shouldDirty: true,
+        });
+      }
+      if (newFirstY.source.axis !== undefined) {
+        form.setValue(`dataConfig.dataSources.${newFirstY.index}.axis` as const, undefined, {
+          shouldDirty: true,
+        });
+      }
+    }
   };
 
   const handleAddSeries = () => {
@@ -82,144 +176,58 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
     <section className="space-y-3">
       <header className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{t("workspace.shelves.yAxis")}</h3>
-        <Button type="button" variant="ghost" size="sm" onClick={handleAddSeries}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          {t("workspace.shelves.addSeries")}
-        </Button>
+        {canAddSeries && (
+          <Button type="button" variant="ghost" size="sm" onClick={handleAddSeries}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            {t("workspace.shelves.addSeries")}
+          </Button>
+        )}
       </header>
 
       <div className="space-y-3">
         {ySources.map((entry, seriesIndex) => {
           const dsIndex = entry.index;
-          const canRemove = ySources.length > 1;
+          const seriesColumn = entry.source.columnName;
+          const aggregateValue = getDataSourceAggregate(sources, dsIndex) ?? AGG_NONE;
+          // Skip the silent-drop warning when the series's own column is itself
+          // a `groupBy` key (heatmap/contour treat Y as a positional axis).
+          const seriesColumnIsGroupKey = Boolean(
+            seriesColumn && aggregation?.groupBy?.some((g) => g.column === seriesColumn),
+          );
+          const willBeSilentlyDropped =
+            groupByActive &&
+            !entry.source.aggregate &&
+            Boolean(seriesColumn) &&
+            !seriesColumnIsGroupKey;
           return (
-            <div
+            <YSeriesItem
               key={entry.source.role + dsIndex}
-              className="bg-muted/30 space-y-3 rounded-md border p-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-xs font-medium">
-                  {t("workspace.shelves.series", { index: seriesIndex + 1 })}
-                </span>
-                {canRemove && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
-                    onClick={() => remove(dsIndex)}
-                    aria-label={t("workspace.shelves.removeSeries")}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-
-              <FormField
-                control={form.control}
-                name={`dataConfig.dataSources.${dsIndex}.columnName` as const}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium">
-                      {t("workspace.shelves.column")}
-                    </FormLabel>
-                    <Select
-                      value={String(field.value)}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handleColumnChange(value, seriesIndex);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("workspace.shelves.selectColumn")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {columns.map((column) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span>{column.name}</span>
-                              <Badge
-                                variant="outline"
-                                className="text-muted-foreground h-4 px-1.5 py-0 font-mono text-[10px] font-normal leading-none"
-                              >
-                                {column.type_name}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className={showSeriesColor ? "grid grid-cols-2 gap-3" : ""}>
-                <FormField
-                  control={form.control}
-                  name={`dataConfig.dataSources.${dsIndex}.alias` as const}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-medium">
-                        {t("workspace.shelves.seriesName")}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("workspace.shelves.seriesNamePlaceholder")}
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {showSeriesColor && (
-                  <FormField
-                    control={form.control}
-                    name={`config.color.${seriesIndex}` as const}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-medium">
-                          {t("workspace.shelves.color")}
-                        </FormLabel>
-                        <FormControl>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="color"
-                              className="h-9 w-12 shrink-0 p-1"
-                              value={field.value ?? "#3b82f6"}
-                              onChange={field.onChange}
-                              disabled={isColorMapped}
-                            />
-                            <Input
-                              type="text"
-                              className="min-w-0 font-mono text-sm"
-                              placeholder="#000000"
-                              value={field.value ?? ""}
-                              onChange={field.onChange}
-                              disabled={isColorMapped}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-            </div>
+              form={form}
+              dsIndex={dsIndex}
+              seriesIndex={seriesIndex}
+              seriesColumn={seriesColumn}
+              canRemove={ySources.length > 1}
+              willBeSilentlyDropped={willBeSilentlyDropped}
+              aggregateValue={aggregateValue}
+              columns={columns}
+              effectiveErrorColumns={effectiveErrorColumns}
+              xColumnName={xColumnName}
+              aggregateOptions={AGG_FUNCTIONS}
+              showCartesianControls={showCartesianControls}
+              showErrorColumn={showErrorColumn}
+              showSeriesColor={showSeriesColor}
+              hideAggregate={hideAggregate}
+              isColorMapped={isColorMapped}
+              defaultTraceType={defaultTraceType}
+              onColumnChange={handleColumnChange}
+              onAggregateChange={handleAggregateChange}
+              onRemove={handleRemoveSeries}
+            />
           );
         })}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={hideAxisType ? "" : "grid grid-cols-2 gap-3"}>
         <FormField
           control={form.control}
           name="config.yAxisTitle"
@@ -243,34 +251,91 @@ export function YAxisShelf({ form, columns, showSeriesColor = true }: YAxisShelf
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="config.yAxisType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs font-medium">
-                {t("workspace.shelves.axisType")}
-              </FormLabel>
-              <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="linear">{t("workspace.axisTypes.linear")}</SelectItem>
-                  <SelectItem value="log">{t("workspace.axisTypes.log")}</SelectItem>
-                  <SelectItem value="date">{t("workspace.axisTypes.date")}</SelectItem>
-                  <SelectItem value="category">
-                    {t("workspace.axisTypes.category", "Category")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {!hideAxisType && (
+          <FormField
+            control={form.control}
+            name="config.yAxisType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.shelves.axisType")}
+                </FormLabel>
+                <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="linear">{t("workspace.axisTypes.linear")}</SelectItem>
+                    <SelectItem value="log">{t("workspace.axisTypes.log")}</SelectItem>
+                    <SelectItem value="date">{t("workspace.axisTypes.date")}</SelectItem>
+                    <SelectItem value="category">{t("workspace.axisTypes.category")}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
       </div>
+
+      {showCartesianControls && hasSecondaryAxisSeries && (
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="config.y2AxisTitle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.shelves.secondaryAxisTitle")}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t("workspace.shelves.secondaryAxisTitlePlaceholder")}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="config.y2AxisType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.shelves.secondaryAxisType")}
+                </FormLabel>
+                <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="linear">{t("workspace.axisTypes.linear")}</SelectItem>
+                    <SelectItem value="log">{t("workspace.axisTypes.log")}</SelectItem>
+                    <SelectItem value="date">{t("workspace.axisTypes.date")}</SelectItem>
+                    <SelectItem value="category">{t("workspace.axisTypes.category")}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
     </section>
   );
+}
+
+function pickAggregate(raw: string): AggregationFunction | undefined {
+  return AGG_FUNCTIONS.find((agg) => agg.value === raw)?.value;
 }

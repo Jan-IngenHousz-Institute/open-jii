@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
 import { Activity, CloudAlert, CloudCheck, CloudUpload } from "lucide-react-native";
 import React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { Pressable, Text, View } from "react-native";
+import { useTopMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import type {
   MeasurementItem,
   MeasurementStatus,
@@ -17,21 +17,19 @@ function StatusIcon({ status }: { status: MeasurementStatus }) {
   switch (status) {
     case "successful":
       return <CloudCheck size={18} color={colors.semantic.success} />;
-    case "uploading":
-      return <ActivityIndicator size={16} color={colors.semantic.info} />;
     case "pending":
       return <CloudUpload size={18} color={colors.semantic.info} />;
     case "failed":
       return <CloudAlert size={18} color={colors.semantic.error} />;
+    default:
+      return "";
   }
 }
 
 export function HomeRecentMeasurements() {
   const router = useRouter();
   const { t } = useTranslation("home");
-  const { measurements } = useAllMeasurements("all");
-
-  const top = measurements.slice(0, 3);
+  const { measurements: top } = useTopMeasurements(3);
 
   return (
     <View className="mt-4">
@@ -72,7 +70,7 @@ interface HomeRecentRowProps {
 
 function HomeRecentRow({ item, isLast, onPress }: HomeRecentRowProps) {
   const { t } = useTranslation("home");
-  const nodeCount = item.questions.length;
+  const nodeCount = item.questions?.length ?? 0;
   const subtitle = `${formatTimeAgo(item.timestamp)} · ${t("recent.metaCountNodes", { count: nodeCount })}`;
 
   return (

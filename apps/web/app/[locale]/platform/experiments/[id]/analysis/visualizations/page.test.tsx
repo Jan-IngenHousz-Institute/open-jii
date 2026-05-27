@@ -9,7 +9,7 @@ import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schem
 
 import VisualizationsPage from "./page";
 
-vi.mock("~/components/experiment-visualizations/experiment-visualizations-list", () => ({
+vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-list", () => ({
   default: ({
     experimentId,
     visualizations,

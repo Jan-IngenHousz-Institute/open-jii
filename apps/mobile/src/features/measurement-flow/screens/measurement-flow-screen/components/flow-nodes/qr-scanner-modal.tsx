@@ -5,8 +5,11 @@ import React, { useRef } from "react";
 import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { createLogger } from "~/shared/utils/logger";
 
 import { CameraPermissionState, useCameraPermission } from "./camera-permission-state";
+
+const log = createLogger("qr-scanner");
 
 const closeButtonVariants = cva("absolute right-5 top-14 z-10 rounded-full p-2", {
   variants: {
@@ -51,7 +54,7 @@ export function QRScannerModal({
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     if (scannedRef.current) return;
     scannedRef.current = true;
-    console.log("[qr-scanner] Scan successful:", data);
+    log.info("scan successful", { bytes: data.length });
     onScanned(data);
     onClose();
   };

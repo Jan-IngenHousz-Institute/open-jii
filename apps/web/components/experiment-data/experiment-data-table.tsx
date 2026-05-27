@@ -20,6 +20,7 @@ import {
   formatValue,
   LoadingRows,
 } from "~/components/experiment-data/experiment-data-utils";
+import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -44,12 +45,11 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { Table, TableBody } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
+import { FilterChipBar } from "../data-filters/filter-chip-bar";
 import { DataExportModal } from "./data-export-modal/data-export-modal";
 import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
-// Helper function to map column names for sorting
 function getSortColumnName(columnName: string, columnType?: string): string {
-  // For USER columns, sort by user_name instead of the column name
   if (columnType === "USER") {
     return "user_name";
   }
@@ -82,7 +82,8 @@ export function ExperimentDataTable({
   const [sortColumn, setSortColumn] = useState<string | undefined>(defaultSortColumn);
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
-  // Annotation dialog states
+  const { filters, setFilters, completeFilters: activeFilters } = useUrlDataFilters(tableName);
+
   const [addAnnotationDialogOpen, setAddAnnotationDialogOpen] = useState(false);
   const [addAnnotationRowIds, setAddAnnotationRowIds] = useState<string[]>([]);
   const [addAnnotationType, setAddAnnotationType] = useState<AnnotationType>("comment");
@@ -90,49 +91,38 @@ export function ExperimentDataTable({
   const [deleteAnnotationRowIds, setDeleteAnnotationRowIds] = useState<string[]>([]);
   const [deleteAnnotationType, setDeleteAnnotationType] = useState<AnnotationType>("comment");
 
-  // Row selection state (TanStack Table)
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
-  // Form to track selection for bulk actions
   const selectionForm = useForm<BulkSelectionFormType>({
     resolver: zodResolver(bulkSelectionFormSchema),
     defaultValues: { selectedRowIds: [] },
   });
 
-  // Chart state
   const [chartDisplay, setChartDisplay] = useState<{
     data: number[];
     columnName: string;
     isPinned: boolean;
   } | null>(null);
 
-  // Expandable cell state - only one cell can be expanded at a time
   const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
     null,
   );
 
   const { t } = useTranslation();
 
-  // Remove hover functionality - chart only shows on click
-
-  // Toggle chart pinning on click
   const toggleChartPin = useCallback((data: number[], columnName: string) => {
     setChartDisplay((prev) => {
-      // If clicking the same pinned chart, unpin it
       if (prev?.isPinned && prev.columnName === columnName) {
         return null;
       }
-      // Otherwise, pin this chart
       return { data, columnName, isPinned: true };
     });
   }, []);
 
-  // Close pinned chart
   const closePinnedChart = useCallback(() => {
     setChartDisplay(null);
   }, []);
 
-  // Expandable cell handlers
   const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
     setExpandedCell((prev) =>
       prev?.rowId === rowId && prev.columnName === columnName ? null : { rowId, columnName },
@@ -146,7 +136,6 @@ export function ExperimentDataTable({
     [expandedCell],
   );
 
-  // Annotation dialog handlers
   const openAddAnnotationDialog = useCallback(
     (rowIds: string[], type: AnnotationType = "comment") => {
       setAddAnnotationRowIds(rowIds);
@@ -165,15 +154,12 @@ export function ExperimentDataTable({
     [],
   );
 
-  // Toggle sorting for a column
   const handleSort = useCallback(
     (columnName: string, columnType?: string) => {
       const actualSortColumn = getSortColumnName(columnName, columnType);
       if (sortColumn === actualSortColumn) {
-        // Toggle direction if same column
         setSortDirection((prev) => (prev === "ASC" ? "DESC" : "ASC"));
       } else {
-        // New column, default to ASC
         setSortColumn(actualSortColumn);
         setSortDirection("ASC");
       }
@@ -181,7 +167,6 @@ export function ExperimentDataTable({
     [sortColumn],
   );
 
-  // Use traditional pagination with improved column persistence
   const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
     page: pagination.pageIndex + 1,
@@ -189,6 +174,7 @@ export function ExperimentDataTable({
     tableName,
     orderBy: sortColumn,
     orderDirection: sortDirection,
+    filters: activeFilters,
     formatFunction: formatValue,
     onChartClick: toggleChartPin,
     onAddAnnotation: openAddAnnotationDialog,
@@ -198,6 +184,14 @@ export function ExperimentDataTable({
     errorColumn,
   });
 
+  // Filters drop totalPages to 1; snap pageIndex back so the UI doesn't show "page 5 of 1".
+  // Selection is keyed by row id and would point at rows that no longer exist after a filter change.
+  const filtersKey = JSON.stringify(activeFilters);
+  useEffect(() => {
+    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    setRowSelection({});
+  }, [filtersKey]);
+
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
       if (typeof updaterOrValue === "function") {
@@ -206,7 +200,6 @@ export function ExperimentDataTable({
       } else {
         setPagination(updaterOrValue);
       }
-      // Clear selection on page change
       setRowSelection({});
     },
     [pagination],
@@ -217,7 +210,6 @@ export function ExperimentDataTable({
     setPagination(newPagination);
   }
 
-  // Update persisted metadata when we get new data
   useEffect(() => {
     if (tableMetadata) {
       setPersistedMetaData(tableMetadata);
@@ -228,9 +220,10 @@ export function ExperimentDataTable({
   const totalPages = persistedMetaData?.totalPages ?? 0;
   const totalRows = persistedMetaData?.totalRows ?? 0;
 
-  // Create columns with checkbox column
   const columns = React.useMemo(() => {
-    if (!persistedMetaData?.columns) return [];
+    if (!persistedMetaData?.columns) {
+      return [];
+    }
 
     return [
       {
@@ -295,7 +288,6 @@ export function ExperimentDataTable({
     },
   });
 
-  // Derive selected row IDs from table state
   const selectedRowIds = Object.keys(rowSelection);
 
   useEffect(() => {
@@ -339,7 +331,6 @@ export function ExperimentDataTable({
     return <div>{t("experimentDataTable.noData")}</div>;
   }
 
-  // Calculate column count for empty state
   const loadingRowCount =
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
@@ -347,6 +338,17 @@ export function ExperimentDataTable({
     <Form {...selectionForm}>
       <form className="grid max-w-full">
         <h5 className="mb-3 text-base font-medium">{displayName}</h5>
+        {persistedMetaData?.rawColumns && persistedMetaData.rawColumns.length > 0 && (
+          <div className="mb-4">
+            <FilterChipBar
+              experimentId={experimentId}
+              tableName={tableName}
+              columns={persistedMetaData.rawColumns}
+              value={filters}
+              onChange={setFilters}
+            />
+          </div>
+        )}
         <BulkActionsBar
           rowIds={selectedRowIds}
           tableRows={tableRows}
@@ -379,7 +381,6 @@ export function ExperimentDataTable({
             </TableBody>
           </Table>
         </div>
-        {/* Traditional pagination controls */}
         <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
           <div className="flex-1 whitespace-nowrap">
             {t("experimentDataTable.totalRows")}: {totalRows}

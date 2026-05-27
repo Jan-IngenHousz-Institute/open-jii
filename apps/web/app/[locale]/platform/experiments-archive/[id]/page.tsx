@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
+import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/list/experiment-visualizations-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";

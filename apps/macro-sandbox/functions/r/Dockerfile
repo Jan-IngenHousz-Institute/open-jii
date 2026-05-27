@@ -3,13 +3,16 @@
 
 FROM debian:bookworm-slim
 
-# Install R, jsonlite, and curl (for Lambda Runtime API polling)
+# Install R, jsonlite, and curl (for Lambda Runtime API polling).
+# The --only-upgrade libgnutls30 step patches CVE-2026-33845/42010 (CRITICAL)
+# and CVE-2026-33846/3833/42009 (HIGH); fixed in 3.7.9-2+deb12u7.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     r-base \
     r-cran-jsonlite \
     curl \
     jq \
     ca-certificates \
+    && apt-get install -y --only-upgrade libgnutls30 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LAMBDA_TASK_ROOT=/var/task

@@ -306,7 +306,8 @@ export const experimentContract = c.router({
       400: zErrorResponse,
     },
     summary: "Get experiment data",
-    description: "Retrieves data tables from the experiment with pagination support",
+    description:
+      "Retrieves rows from an experiment table. Supports plain page-based reads, column projection, and structured filters/aggregation (JSON-encoded) using the same primitives as the persisted visualization config. When `aggregation` is set, page/pageSize are ignored and `limit` caps the result.",
   },
 
   getDistinctColumnValues: {

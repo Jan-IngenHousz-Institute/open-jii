@@ -25,7 +25,7 @@ export class ExperimentDataExportsController {
   initiateExport(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.initiateExport, async ({ params, body }) => {
       const { id: experimentId } = params;
-      const { tableName, format } = body;
+      const { tableName, format, anonymizeContributors } = body;
 
       this.logger.log({
         msg: "Processing initiate export request",
@@ -34,11 +34,13 @@ export class ExperimentDataExportsController {
         userId: session.user.id,
         tableName,
         format,
+        anonymizeContributors,
       });
 
       const result = await this.initiateExportUseCase.execute(experimentId, session.user.id, {
         tableName,
         format,
+        anonymizeContributors,
       });
 
       if (result.isSuccess()) {

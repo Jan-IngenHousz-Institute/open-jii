@@ -62,6 +62,7 @@ export function ExitFlowSheet() {
         // Deep-clone so later writes to useFlowAnswersStore don't mutate the
         // persisted snapshot (Zustand state is reference-shared).
         answersHistory: JSON.parse(JSON.stringify(answersHistory)),
+        scanResult: flow.scanResult,
         pausedAt: new Date().toISOString(),
       });
     }

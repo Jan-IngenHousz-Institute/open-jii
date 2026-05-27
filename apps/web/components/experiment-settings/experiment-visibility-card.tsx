@@ -21,12 +21,14 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { localCalendarDateToIsoEndOfDay } from "../new-experiment/embargo-utils";
+import { ExperimentAnonymizeToggle } from "./experiment-anonymize-toggle";
 import { ExperimentVisibilityForm } from "./experiment-visibility-form";
 
 interface ExperimentVisibilityCardProps {
   experimentId: string;
   initialVisibility: ExperimentVisibility;
   embargoUntil: string;
+  initialAnonymize: boolean;
   isArchived?: boolean;
 }
 
@@ -34,6 +36,7 @@ export function ExperimentVisibilityCard({
   experimentId,
   initialVisibility,
   embargoUntil,
+  initialAnonymize,
   isArchived = false,
 }: ExperimentVisibilityCardProps) {
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
@@ -117,13 +120,19 @@ export function ExperimentVisibilityCard({
         <CardTitle>{t("experimentVisibility.visibilityCardTitle")}</CardTitle>
         <CardDescription>{t("experimentVisibility.visibilityCardDescription")}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
         <ExperimentVisibilityForm
           form={form}
           currentVisibility={currentVisibility}
           isArchived={isArchived}
           onVisibilityChange={handleVisibilityChange}
           onEmbargoDateSelect={handleEmbargoDateSelect}
+        />
+
+        <ExperimentAnonymizeToggle
+          experimentId={experimentId}
+          initialAnonymize={initialAnonymize}
+          isArchived={isArchived}
         />
 
         {/* Visibility Change Confirmation Dialog */}

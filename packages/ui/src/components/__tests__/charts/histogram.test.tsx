@@ -36,6 +36,25 @@ vi.mock("../../charts/utils", () => ({
   })),
   getRenderer: vi.fn((useWebGL) => (useWebGL ? "webgl" : "svg")),
   getPlotType: vi.fn((type, renderer) => (renderer === "webgl" ? `${type}gl` : type)),
+  extendLayoutForFacets: vi.fn((layout) => layout),
+  applyReferenceLines: vi.fn(),
+}));
+
+vi.mock("../../charts/use-is-compact", () => ({
+  useChartSizing: vi.fn(() => [
+    { current: null },
+    {
+      snug: false,
+      compact: false,
+      veryCompact: false,
+      ultraCompact: false,
+      cellSnug: false,
+      cellCompact: false,
+      cellVeryCompact: false,
+      cellUltraCompact: false,
+    },
+  ]),
+  facetTierStyles: vi.fn(() => ({ cellTitleFontSize: 12 })),
 }));
 
 describe("Histogram", () => {
@@ -750,6 +769,154 @@ describe("Histogram", () => {
       expect(screen.getByText("Failed to load histogram")).toBeInTheDocument();
     });
   });
+
+  describe("Normal-fit overlay", () => {
+    it("appends one fit trace per series when fitOverlay='normal'", () => {
+      const data = [
+        { x: [1, 2, 3, 4, 5, 6, 7, 8], name: "A", color: "blue" },
+        { x: [10, 20, 30, 40, 50, 60], name: "B", color: "red" },
+      ];
+
+      render(<Histogram data={data} fitOverlay="normal" />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      expect(chartData).toHaveLength(4);
+      expect(chartData[2].type).toBe("scatter");
+      expect(chartData[2].mode).toBe("lines");
+      expect(chartData[2].name).toBe("A (normal fit)");
+      expect(chartData[2].line).toEqual({ color: "blue", width: 2 });
+      expect(chartData[2].hovertemplate).toMatch(/μ=.*σ=/);
+      expect(chartData[3].name).toBe("B (normal fit)");
+    });
+
+    it("falls back to a positional name when series has no name", () => {
+      const data = [{ x: [1, 2, 3, 4, 5], color: "green" }];
+
+      render(<Histogram data={data} fitOverlay="normal" />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      expect(chartData).toHaveLength(2);
+      expect(chartData[1].name).toBe("series 1 (normal fit)");
+    });
+
+    it("swaps fit xs/ys for horizontal series", () => {
+      const data = [{ y: [1, 2, 3, 4, 5], name: "H", orientation: "h" as const }];
+
+      render(<Histogram data={data} fitOverlay="normal" />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      expect(chartData).toHaveLength(2);
+      // Fit ys live on x, fit xs on y when horizontal.
+      expect(Array.isArray(chartData[1].x)).toBe(true);
+      expect(Array.isArray(chartData[1].y)).toBe(true);
+    });
+
+    it("skips series that have no values to fit", () => {
+      const data = [
+        { x: [], name: "Empty" },
+        { x: [1, 2, 3, 4, 5], name: "Good" },
+      ];
+
+      render(<Histogram data={data} fitOverlay="normal" />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      // 2 histogram traces + 1 fit trace for "Good" only.
+      expect(chartData).toHaveLength(3);
+      expect(chartData[2].name).toBe("Good (normal fit)");
+    });
+
+    it("skips series whose values are constant (std=0)", () => {
+      const data = [{ x: [5, 5, 5, 5, 5], name: "Flat" }];
+
+      render(<Histogram data={data} fitOverlay="normal" />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      // No fit when std collapses to 0.
+      expect(chartData).toHaveLength(1);
+    });
+
+    it("skips series with fewer than two finite values", () => {
+      const data = [{ x: [42], name: "Single" }];
+
+      render(<Histogram data={data} fitOverlay="normal" />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      expect(chartData).toHaveLength(1);
+    });
+
+    it("ties the fit trace to its parent's legend group", () => {
+      const data = [{ x: [1, 2, 3, 4, 5], name: "G", legendgroup: "lg-1", showlegend: false }];
+
+      render(<Histogram data={data} fitOverlay="normal" />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      expect(chartData[1].legendgroup).toBe("lg-1");
+      expect(chartData[1].showlegend).toBe(false);
+    });
+  });
+
+  describe("Subplot facets", () => {
+    const facetData = [
+      {
+        x: [1, 2, 3],
+        name: "Cell A",
+        xaxisId: "x",
+        yaxisId: "y",
+      },
+      {
+        x: [4, 5, 6],
+        name: "Cell B",
+        xaxisId: "x2",
+        yaxisId: "y2",
+      },
+    ];
+
+    const subplots = {
+      rows: 1,
+      columns: 2,
+      cells: [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ],
+      sharedX: true,
+      sharedY: true,
+      sharedXTitle: true,
+      sharedYTitle: false,
+      roworder: "top to bottom" as const,
+    };
+
+    it("routes traces to their per-cell axis IDs", () => {
+      render(<Histogram data={facetData} subplots={subplots} />);
+
+      const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
+      expect(chartData[0].xaxis).toBe("x");
+      expect(chartData[0].yaxis).toBe("y");
+      expect(chartData[1].xaxis).toBe("x2");
+      expect(chartData[1].yaxis).toBe("y2");
+    });
+
+    it("invokes extendLayoutForFacets with the grid spec", async () => {
+      const utils = await import("../../charts/utils");
+      const extendSpy = vi.mocked(utils.extendLayoutForFacets);
+      extendSpy.mockClear();
+
+      render(<Histogram data={facetData} subplots={subplots} />);
+
+      expect(extendSpy).toHaveBeenCalledTimes(1);
+      expect(extendSpy).toHaveBeenLastCalledWith(
+        expect.anything(),
+        subplots.cells,
+        expect.objectContaining({
+          rows: 1,
+          columns: 2,
+          sharedX: true,
+          sharedY: true,
+          sharedXTitle: true,
+          roworder: "top to bottom",
+        }),
+      );
+    });
+  });
 });
 
 describe("Histogram2D", () => {
@@ -1043,8 +1210,7 @@ describe("Histogram2D", () => {
       const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
 
       expect(chartData[0].colorbar).toEqual({
-        title: "Count",
-        titleside: "right",
+        title: { text: "Count", side: "right" },
       });
     });
   });

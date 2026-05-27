@@ -4,6 +4,9 @@ import WebView from "react-native-webview";
 import { pythonMacroSandboxHtml } from "~/features/measurement-flow/services/python/python-macro-sandbox";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { registerPythonMacroRunner } from "~/features/measurement-flow/utils/process-scan/python-macro-runner";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("macro-py");
 
 interface Pending {
   resolve: (value: MacroOutput) => void;
@@ -38,17 +41,17 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === "ready") {
-        console.log("[macro] (Python) sandbox ready");
+        log.info("sandbox ready");
         return;
       }
       if (data.requestId != null && pendingRef.current.has(data.requestId)) {
         const pending = pendingRef.current.get(data.requestId);
         pendingRef.current.delete(data.requestId);
         if (data.error) {
-          console.error("[macro] (Python) sandbox error:", data.error);
+          log.error("sandbox error", { requestId: data.requestId, err: data.error });
           pending?.reject(new Error(data.error));
         } else {
-          console.log("[macro] (Python) sandbox result:", JSON.stringify(data.result));
+          log.debug("sandbox result", { requestId: data.requestId });
           pending?.resolve((data.result ?? {}) as MacroOutput);
         }
       }

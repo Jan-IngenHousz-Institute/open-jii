@@ -89,7 +89,9 @@ const EXPERIMENTS = [
 ];
 const PROTOCOLS = ["multispeq-v2.0", "leaf-temp", "full-protocol", "photosynthesis-v3"];
 
-const STATUSES = ["successful", "pending", "failed", "uploading"] as const;
+// "uploading" was dropped in migration 0003; the seed must only use statuses
+// the current CHECK constraint allows.
+const STATUSES = ["successful", "pending", "failed"] as const;
 function statusFor(i: number) {
   return STATUSES[i % STATUSES.length];
 }
@@ -197,6 +199,8 @@ const MIGRATION_SQLS = [
   "0000_outgoing_firebird.sql",
   "0001_add_pending_status.sql",
   "0002_dashing_lenny_balinger.sql",
+  "0003_drop_uploading_status.sql",
+  "0004_add_day_key.sql",
 ].map((f) => readFileSync(resolve(__dirname, "../../../../drizzle", f), "utf-8"));
 
 function createDb() {
@@ -289,8 +293,8 @@ type SeedRow = [
 function seedCompressed(db: ReturnType<typeof Database>, n: number) {
   const blobs = getCompressedPayloads(n);
   const stmt = db.prepare(`
-    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)
   `);
   const insertMany = db.transaction((rows: SeedRow[]) => {
     for (const row of rows) stmt.run(...row);
@@ -312,8 +316,8 @@ function seedCompressed(db: ReturnType<typeof Database>, n: number) {
 function seedPlain(db: ReturnType<typeof Database>, n: number) {
   const blobs = getPlainPayloads(n);
   const stmt = db.prepare(`
-    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)
   `);
   const insertMany = db.transaction((rows: SeedRow[]) => {
     for (const row of rows) stmt.run(...row);
@@ -628,7 +632,7 @@ describe("Scenario F — INDEXES: status filter performance", () => {
   }, HOOK_TIMEOUT);
 
   it("WHERE status IN (...) with and without index", () => {
-    const allStatuses = ["pending", "failed", "uploading", "successful"];
+    const allStatuses = ["pending", "failed", "successful"];
     const oneStatus = ["pending"];
 
     dbNoIndex.prepare("SELECT id FROM measurements WHERE status = 'pending'").all();
@@ -942,8 +946,8 @@ describe("Scenario J — Single-row save+read", () => {
     const { ms: msInsertC } = time(() => {
       dbC
         .prepare(
-          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)`,
         )
         .run(
           "solo-c",
@@ -961,8 +965,8 @@ describe("Scenario J — Single-row save+read", () => {
     const { ms: msInsertP } = time(() => {
       dbP
         .prepare(
-          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)`,
         )
         .run(
           "solo-p",
@@ -1058,7 +1062,7 @@ describe("Scenario L — Production path (real getMeasurementsList)", () => {
     // L1: the production list query — lean SELECT, SQL ORDER BY, paginated.
     // This number should drop dramatically vs the pre-optimisation baseline.
     const { ms: msProdList } = await timeAsync(async () =>
-      mod.getMeasurementsList(["pending", "failed", "uploading", "successful"], {
+      mod.getMeasurementsList(["pending", "failed", "successful"], {
         limit: 50,
         offset: 0,
       }),
@@ -1071,7 +1075,7 @@ describe("Scenario L — Production path (real getMeasurementsList)", () => {
 
     const { ms: msBoth } = await timeAsync(async () => {
       await Promise.all([
-        mod.getMeasurementsList(["pending", "failed", "uploading", "successful"], {
+        mod.getMeasurementsList(["pending", "failed", "successful"], {
           limit: 50,
           offset: 0,
         }),

@@ -10,6 +10,7 @@ import {
 import React, { memo } from "react";
 import { ActivityIndicator, Pressable, Text, TouchableOpacity, View } from "react-native";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { cn } from "~/shared/utils/cn";
@@ -55,8 +56,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const isSynced = status === "successful";
-  const isSyncing = status === "uploading";
-  const isPending = status === "pending";
+  const isSyncing = useIsProcessing(id);
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
 
@@ -120,8 +120,6 @@ export const MeasurementItem = memo(function MeasurementItem({
             <ActivityIndicator size={16} color={colors.semantic.info} />
           ) : isSynced ? (
             <CloudCheck size={16} color={colors.semantic.success} />
-          ) : isPending ? (
-            <CloudUpload size={16} color={colors.semantic.info} />
           ) : (
             <CloudAlert size={16} color={colors.semantic.error} />
           )}

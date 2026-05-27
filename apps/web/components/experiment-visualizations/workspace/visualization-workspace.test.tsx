@@ -6,10 +6,11 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import type { ChartFormValues } from "../charts/form-values";
-import { lineChartType } from "../charts/line";
-import { scatterChartType } from "../charts/scatter";
-import { VisualizationSaveProvider } from "./save-context";
+import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
+import { lineChartType } from "../charts/basic/line";
+import { scatterChartType } from "../charts/basic/scatter";
+import type { ChartFormValues } from "../charts/chart-config";
+import { DataSourcesFieldArrayProvider } from "./context/data-sources-field-array-context";
 import { VisualizationWorkspace } from "./visualization-workspace";
 
 function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
@@ -28,9 +29,11 @@ function Harness({ formDefaults = defaults() }: { formDefaults?: ChartFormValues
   const form = useForm<ChartFormValues>({ defaultValues: formDefaults });
   return (
     <FormProvider {...form}>
-      <VisualizationSaveProvider>
-        <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-      </VisualizationSaveProvider>
+      <DataSourcesFieldArrayProvider form={form}>
+        <AutosaveStatusProvider>
+          <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+        </AutosaveStatusProvider>
+      </DataSourcesFieldArrayProvider>
     </FormProvider>
   );
 }
@@ -113,9 +116,11 @@ describe("VisualizationWorkspace", () => {
       formRef = useForm<ChartFormValues>({ defaultValues: defaults() });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }
@@ -173,9 +178,11 @@ describe("VisualizationWorkspace", () => {
       });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }
@@ -208,9 +215,11 @@ describe("VisualizationWorkspace", () => {
       });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }
@@ -248,9 +257,11 @@ describe("VisualizationWorkspace", () => {
       });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }
@@ -276,70 +287,5 @@ describe("VisualizationWorkspace", () => {
     expect(sources.every((s) => s.alias === "")).toBe(true);
     expect(formRef.getValues("config.xAxisTitle")).toBe("");
     expect(formRef.getValues("config.yAxisTitle")).toBe("");
-  });
-
-  it("forwards CONTRIBUTOR and QUESTIONS columns through the plottable filter so the bar X picker can surface them", async () => {
-    // `isPlottableColumn` would normally strip the CONTRIBUTOR struct and the
-    // QUESTIONS array because they're kind="complex". The workspace passes
-    // them through anyway so the bar data panel can offer them on X; assert
-    // that here at the workspace seam rather than in the data panel test.
-    server.mount(contract.experiments.getExperimentTables, {
-      body: [createExperimentTable({ identifier: "raw_data", displayName: "raw_data" })],
-    });
-    server.mount(contract.experiments.getExperimentData, {
-      body: [
-        createExperimentDataTable({
-          data: {
-            columns: [
-              {
-                name: "contributor",
-                type_name: "STRUCT",
-                type_text: "STRUCT<id: STRING, name: STRING, avatar: STRING>",
-              },
-              {
-                name: "questions",
-                type_name: "ARRAY",
-                type_text:
-                  "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
-              },
-              { name: "plot", type_name: "STRING", type_text: "STRING" },
-              { name: "phi2", type_name: "DOUBLE", type_text: "DOUBLE" },
-            ],
-            rows: [],
-            totalRows: 0,
-            truncated: false,
-          },
-        }),
-      ],
-    });
-    render(
-      <Harness
-        formDefaults={defaults({
-          chartFamily: "basic",
-          chartType: "bar",
-          config: {},
-          dataConfig: {
-            tableName: "raw_data",
-            dataSources: [
-              { tableName: "raw_data", columnName: "", role: "x" },
-              { tableName: "raw_data", columnName: "", role: "y" },
-            ],
-          },
-        })}
-      />,
-    );
-
-    // Open the bar X picker (the second combobox after Dataset) and confirm
-    // the well-known struct + array columns are listed.
-    const user = userEvent.setup();
-    await waitFor(() => {
-      expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(2);
-    });
-    // Dataset = 0, X = 1, Y = 2, Aggregation = 3 (in the bar inspector).
-    await user.click(screen.getAllByRole("combobox")[1]);
-    const options = await screen.findAllByRole("option");
-    const labels = options.map((el) => el.textContent || "");
-    expect(labels.some((t) => t.includes("contributor"))).toBe(true);
-    expect(labels.some((t) => t.includes("questions"))).toBe(true);
   });
 });

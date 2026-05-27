@@ -21,6 +21,7 @@ export function NavigationButtons() {
     isFromOverview,
     isQuestionsSubmitPending,
     returnToOverview,
+    iterationCount,
   } = useMeasurementFlowStore();
 
   const keyboard = useAnimatedKeyboard();
@@ -31,6 +32,9 @@ export function NavigationButtons() {
   }));
   // Get current node to check type
   const currentNode = flowNodes[currentFlowStep];
+  const currentAnswer = useFlowAnswersStore((s) =>
+    currentNode?.type === "question" ? s.getAnswer(iterationCount, currentNode.id) : undefined,
+  );
   const isInstructionOrQuestion =
     currentNode?.type === "instruction" || currentNode?.type === "question";
 
@@ -62,10 +66,7 @@ export function NavigationButtons() {
     Keyboard.dismiss();
     // For questions, use shared utility to handle answer logic and advance
     if (currentNode?.type === "question") {
-      const { getAnswer } = useFlowAnswersStore.getState();
-      const answerValue =
-        getAnswer(useMeasurementFlowStore.getState().iterationCount, currentNode.id) ?? "";
-      advanceWithAnswer(currentNode, answerValue);
+      advanceWithAnswer(currentNode, currentAnswer ?? "");
     } else {
       // For non-question nodes, just advance
       useMeasurementFlowStore.getState().nextStep();
@@ -74,11 +75,7 @@ export function NavigationButtons() {
 
   // For questions, check if answer is valid
   const isNextDisabled =
-    currentNode?.type === "question" &&
-    currentNode.content.required &&
-    !useFlowAnswersStore
-      .getState()
-      .getAnswer(useMeasurementFlowStore.getState().iterationCount, currentNode.id);
+    currentNode?.type === "question" && currentNode.content.required && !currentAnswer;
 
   return (
     <Animated.View className="bg-card w-full" style={navStyle}>
