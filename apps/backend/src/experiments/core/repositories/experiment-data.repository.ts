@@ -8,6 +8,7 @@ import type {
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
+import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import { STATIC_TABLE_CONFIG, MACRO_TABLE_CONFIG } from "../models/experiment-data.model";
 import type {
   ExperimentTableMetadata,
@@ -22,7 +23,10 @@ import type { DatabricksPort } from "../ports/databricks.port";
 export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
 
-  constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
+  constructor(
+    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly contributorAnonymizer: ContributorAnonymizerService,
+  ) {}
 
   /**
    * Get table data via one of three paths: paginated read (cached row count),
@@ -309,7 +313,7 @@ export class ExperimentDataRepository {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value),
+        data: this.transformSchemaData(dataResult.value, experiment),
         page: 1,
         pageSize: totalRows,
         totalRows,
@@ -340,7 +344,7 @@ export class ExperimentDataRepository {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value),
+        data: this.transformSchemaData(dataResult.value, experiment),
         page,
         pageSize,
         totalRows: rowCount,
@@ -350,9 +354,10 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Convert schema data to DTO.
+   * Convert schema data to DTO and route every row through the
+   * contributor anonymiser; the single seat for that policy.
    */
-  private transformSchemaData(schemaData: SchemaData): SchemaDataDto {
+  private transformSchemaData(schemaData: SchemaData, experiment: ExperimentDto): SchemaDataDto {
     const rows = schemaData.rows.map((row) => {
       const dataRow: Record<string, string | null> = {};
       row.forEach((value, index) => {
@@ -362,7 +367,7 @@ export class ExperimentDataRepository {
     });
     return {
       columns: schemaData.columns,
-      rows,
+      rows: this.contributorAnonymizer.anonymizeRows(rows, schemaData.columns, experiment),
       totalRows: schemaData.totalRows,
       truncated: schemaData.truncated,
     };

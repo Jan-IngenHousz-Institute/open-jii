@@ -250,6 +250,7 @@ export const zExperiment = z.object({
   status: zExperimentStatus,
   visibility: zExperimentVisibility,
   embargoUntil: z.string().datetime(),
+  anonymizeContributors: z.boolean(),
   workbookId: z.string().uuid().nullable(),
   workbookVersionId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
@@ -1029,6 +1030,12 @@ export const zUpdateExperimentBody = z.object({
     .describe(
       "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database)",
     ),
+  anonymizeContributors: z
+    .boolean()
+    .optional()
+    .describe(
+      "When true, the API rewrites contributor name/avatar/id to deterministic pseudonyms before responding",
+    ),
   locations: z
     .array(zLocationInput)
     .optional()
@@ -1325,6 +1332,12 @@ export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 export const zInitiateExportBody = z.object({
   tableName: z.string().describe("Name of the table to export"),
   format: z.enum(["csv", "ndjson", "json-array", "parquet"]).describe("Export format"),
+  anonymizeContributors: z
+    .boolean()
+    .optional()
+    .describe(
+      "Per-export override of the experiment's anonymise-contributors setting. Falls back to the experiment's stored value when omitted.",
+    ),
 });
 
 export const zInitiateExportResponse = z.object({

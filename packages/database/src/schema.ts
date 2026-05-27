@@ -153,6 +153,7 @@ export const experiments = pgTable("experiments", {
   embargoUntil: timestamp("embargo_until")
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
     .notNull(),
+  anonymizeContributors: boolean("anonymize_contributors").default(false).notNull(),
   workbookId: uuid("workbook_id").references(() => workbooks.id, { onDelete: "set null" }),
   workbookVersionId: uuid("workbook_version_id").references(() => workbookVersions.id, {
     onDelete: "set null",

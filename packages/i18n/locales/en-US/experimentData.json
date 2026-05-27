@@ -54,7 +54,9 @@
       "creationSuccess": "Export created successfully!",
       "creationSuccessDescription": "Your export has been queued and will be available for download shortly.",
       "creationError": "Failed to create export",
-      "backToList": "Back to exports"
+      "backToList": "Back to exports",
+      "anonymizeContributors": "Anonymize contributors in the exported file",
+      "overridingDefault": "overrides experiment default"
     }
   }
 }
