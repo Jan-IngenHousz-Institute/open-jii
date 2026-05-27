@@ -21,6 +21,7 @@ const tabTriggerClass = cn(
 
 interface WorkspaceInspectorProps {
   form: UseFormReturn<ChartFormValues>;
+  experimentId: string;
   tables: ExperimentTableMetadata[];
   isTablesLoading?: boolean;
   tablesError?: unknown;
@@ -45,6 +46,7 @@ interface WorkspaceInspectorBodyProps extends WorkspaceInspectorProps {
 
 export function WorkspaceInspectorBody({
   form,
+  experimentId,
   tables,
   isTablesLoading = false,
   tablesError,
@@ -83,6 +85,7 @@ export function WorkspaceInspectorBody({
         <TabsContent value="data" className="mt-0 space-y-6">
           <DataTabContent
             form={form}
+            experimentId={experimentId}
             tables={tables}
             isTablesLoading={isTablesLoading}
             tablesError={tablesError}

@@ -54,6 +54,7 @@ function Harness({
       <DataSourcesFieldArrayProvider form={form}>
         <DataTabContent
           form={form}
+          experimentId="exp-1"
           tables={tables}
           isTablesLoading={isTablesLoading}
           tablesError={tablesError}
@@ -112,6 +113,36 @@ describe("DataTabContent", () => {
     mountDistinct();
     render(<Harness selectedTableName="readings" />);
     expect(screen.getByText("workspace.inspector.noValidColumns")).toBeInTheDocument();
+  });
+
+  it("renders the data panel and filters shelf once columns are available", async () => {
+    mountDistinct();
+    const columns: DataColumn[] = [
+      { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+      { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
+    ];
+
+    render(
+      <Harness
+        selectedTableName="readings"
+        columns={columns}
+        formDefaults={defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              { tableName: "readings", columnName: "temp", role: "y" },
+            ],
+          },
+        })}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "workspace.shelves.filters" }),
+      ).toBeInTheDocument(),
+    );
   });
 
   it("shows the failed-to-load-tables note inside the dropdown when tablesError is set", async () => {
