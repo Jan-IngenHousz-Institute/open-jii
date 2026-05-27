@@ -9,6 +9,7 @@ import type {
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { showAlert } from "~/shared/ui/AlertDialog";
 import { Card } from "~/shared/ui/Card";
 import { RowItem } from "~/shared/ui/RowItem";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -31,10 +32,24 @@ function StatusIcon({ status }: { status: MeasurementStatus }) {
 
 export function HomeRecentMeasurements() {
   const router = useRouter();
-  const { t } = useTranslation("home");
+  const { t } = useTranslation(["home", "common"]);
   const themeColors = useThemeColors();
   const { measurements: top } = useTopMeasurements(3);
   const isEmpty = top.length === 0;
+
+  // Mirror profile-account-card's safe external-open (same docs URL): confirm a
+  // handler exists and surface a fallback instead of a silently rejected promise.
+  const handleOpenDocs = async () => {
+    try {
+      if (await Linking.canOpenURL(DOCS_URL)) {
+        await Linking.openURL(DOCS_URL);
+        return;
+      }
+    } catch {
+      // fall through to the alert
+    }
+    showAlert(t("common:errorTitle"), t("home:recent.docsUnavailable"));
+  };
 
   return (
     <View className="mt-4">
@@ -53,7 +68,7 @@ export function HomeRecentMeasurements() {
         <Card tone="white" padded>
           <Text className="text-muted-body text-center text-[13px]">{t("recent.emptyHint")}</Text>
           <Pressable
-            onPress={() => void Linking.openURL(DOCS_URL)}
+            onPress={() => void handleOpenDocs()}
             className="mt-3 flex-row items-center justify-center gap-1.5"
             hitSlop={8}
           >

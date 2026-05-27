@@ -8,8 +8,9 @@ vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
-        "recentMeasurements:swipe.uploadButton": "Upload",
-        "recentMeasurements:swipe.commentButton": "Comment",
+        "swipe.uploadButton": "Upload",
+        "swipe.commentButton": "Comment",
+        "swipe.deleteButton": "Delete",
       };
       return map[key] ?? key;
     },

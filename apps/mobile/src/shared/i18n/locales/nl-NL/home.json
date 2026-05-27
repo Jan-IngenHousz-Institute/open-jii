@@ -33,6 +33,7 @@
     "seeAll": "Bekijk alle",
     "emptyHint": "Nog geen metingen — start er hierboven een.",
     "emptyCtaDocs": "Lees de startgids",
+    "docsUnavailable": "Kon de documentatie niet openen. Probeer het later opnieuw.",
     "metaCountNodes_one": "{{count}} node",
     "metaCountNodes_other": "{{count}} nodes",
     "tagSynced": "Gesynchroniseerd",

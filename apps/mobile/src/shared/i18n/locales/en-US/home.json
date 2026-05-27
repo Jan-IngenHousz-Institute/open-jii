@@ -33,6 +33,7 @@
     "seeAll": "See all",
     "emptyHint": "No measurements yet — start one above.",
     "emptyCtaDocs": "Read the getting-started guide",
+    "docsUnavailable": "Couldn't open the documentation. Please try again later.",
     "metaCountNodes_one": "{{count}} node",
     "metaCountNodes_other": "{{count}} nodes",
     "tagSynced": "Synced",

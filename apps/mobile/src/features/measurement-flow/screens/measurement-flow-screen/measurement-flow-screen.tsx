@@ -16,6 +16,7 @@ import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-paused-flow-store";
 import { colors } from "~/shared/constants/colors";
+import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
@@ -47,6 +48,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const openExitSheet = useExitFlowSheetStore((s) => s.open);
   const router = useRouter();
   const themeColors = useThemeColors();
+  const { t } = useTranslation("measurementFlow");
 
   // Picker state has no tab bar to bail out to (the flow now covers the tabs
   // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
@@ -144,6 +146,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
             onPress={dismissFlow}
             hitSlop={8}
             accessibilityRole="button"
+            accessibilityLabel={t("hero.exitLabel")}
             className="h-11 w-11 items-center justify-center"
           >
             <X size={26} color={themeColors.onSurface} />

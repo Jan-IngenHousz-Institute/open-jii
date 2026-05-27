@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { MeasurementItem } from "~/features/recent-measurements/components/measurement-item";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useTranslation } from "~/shared/i18n";
 import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
@@ -51,6 +52,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   peekToken = 0,
 }: SwipeableMeasurementRowProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation("recentMeasurements");
   const { data: online } = useIsOnline();
   const translateX = useSharedValue(0);
   const startX = useSharedValue(0);
@@ -140,7 +142,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
             className="items-center justify-center"
             style={{ width: SEGMENT_WIDTH }}
             accessibilityRole="button"
-            accessibilityLabel="Upload"
+            accessibilityLabel={t("swipe.uploadButton")}
           >
             <UploadCloud size={22} color={colors.semantic.info} strokeWidth={1.8} />
           </TouchableOpacity>
@@ -153,7 +155,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
             className="items-center justify-center"
             style={{ width: SEGMENT_WIDTH }}
             accessibilityRole="button"
-            accessibilityLabel="Comment"
+            accessibilityLabel={t("swipe.commentButton")}
           >
             <MessageSquare size={22} color={colors.onSurface} strokeWidth={1.8} />
           </TouchableOpacity>
@@ -166,7 +168,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
             className="items-center justify-center"
             style={{ width: SEGMENT_WIDTH }}
             accessibilityRole="button"
-            accessibilityLabel="Delete"
+            accessibilityLabel={t("swipe.deleteButton")}
           >
             <Trash2 size={22} color={colors.semantic.error} strokeWidth={1.8} />
           </TouchableOpacity>
