@@ -8,8 +8,8 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { DeviceChip } from "~/shared/ui/widgets/device-chip";
 
 interface Props {
-  onSyncAll: () => void;
-  onDeleteAllSynced: () => void;
+  onSyncAll: (unsyncedCount: number) => void;
+  onDeleteAllSynced: (syncedCount: number) => void;
   onDevSeed?: () => void;
 }
 
@@ -38,7 +38,7 @@ export function MeasurementsHeaderActions({ onSyncAll, onDeleteAllSynced, onDevS
         </Pressable>
       )}
       <Pressable
-        onPress={onDeleteAllSynced}
+        onPress={() => onDeleteAllSynced(syncedCount)}
         disabled={deleteDisabled}
         hitSlop={6}
         className="bg-jii-mint h-9 w-9 items-center justify-center rounded-full"
@@ -51,7 +51,7 @@ export function MeasurementsHeaderActions({ onSyncAll, onDeleteAllSynced, onDevS
       </Pressable>
       <View className="relative">
         <Pressable
-          onPress={onSyncAll}
+          onPress={() => onSyncAll(unsyncedCount)}
           disabled={syncDisabled}
           hitSlop={6}
           className="bg-jii-mint h-9 w-9 items-center justify-center rounded-full"
