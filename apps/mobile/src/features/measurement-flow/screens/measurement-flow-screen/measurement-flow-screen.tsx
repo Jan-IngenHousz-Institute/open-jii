@@ -99,25 +99,22 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
 
   return (
     <View className="bg-background flex-1">
-      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "dark"} />}
+      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "auto"} />}
 
       {hasActiveFlow ? (
         <>
-          {/* Photo extends ~48% of the screen so the body's larger rounded
-              top corners curve over a generous slice of greenhouse — like
-              the old design but with more breathing room. */}
           <Image
             source={HERO_IMAGE}
-            style={{ position: "absolute", left: 0, right: 0, top: 0, height: "48%" }}
+            className="absolute left-0 right-0 top-0 h-[42%] w-full"
             resizeMode="cover"
           />
           {/* Brand-teal overlay covers the FULL photo area, not just the
               FlowHero's bounding box, so the strip between the hero and the
               body's rounded corner stays consistently masked. */}
           <LinearGradient
-            colors={[colors.jii.darkerGreen + "E0", colors.jii.darkGreen + "99"]}
+            colors={[colors.jii.darkGreen + "88", colors.jii.darkerGreen + "D0"]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 0, y: 1 }}
             style={{
               position: "absolute",
               left: 0,

@@ -1,13 +1,6 @@
-import { Search } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import React, { useMemo } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
@@ -22,13 +15,13 @@ import { Banner } from "~/shared/ui/Banner";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
 import { Tag } from "~/shared/ui/Tag";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { ExperimentCard } from "./experiment-card";
 import { OfflineModeIndicator } from "./offline-mode-indicator";
 
 export function ExperimentSelectionStep() {
-  const { colors } = useTheme();
+  const colors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
@@ -63,10 +56,7 @@ export function ExperimentSelectionStep() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <View className="flex-1">
       <View className="flex-1">
         <View className="px-4 pb-2 pt-4">
           <View className="flex-row items-start justify-between">
@@ -90,6 +80,16 @@ export function ExperimentSelectionStep() {
               onChangeText={setSearch}
               placeholder={t("experimentSelection.searchPlaceholder")}
               leftIcon={<Search size={18} color={colors.inactive} />}
+              rightElement={
+                search.length > 0 ? (
+                  <TouchableOpacity
+                    className="bg-gray-background mr-2 rounded-md p-1"
+                    onPress={() => setSearch("")}
+                  >
+                    <X size={20} color={colors.onSurface} />
+                  </TouchableOpacity>
+                ) : undefined
+              }
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -118,7 +118,7 @@ export function ExperimentSelectionStep() {
           <FlatList
             data={filtered}
             keyExtractor={(item) => item.value}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 200, gap: 10 }}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 4 }}
             renderItem={({ item }) => {
               const meta = flowMeta[item.value];
               return (
@@ -169,6 +169,6 @@ export function ExperimentSelectionStep() {
           size="lg"
         />
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

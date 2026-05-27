@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react-native";
 import React, { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { cn } from "~/shared/utils/cn";
 
 interface RowItemProps {
@@ -28,6 +29,7 @@ export function RowItem({
   isLast,
   className,
 }: RowItemProps) {
+  const themeColors = useThemeColors();
   const Container: typeof View | typeof Pressable = onPress ? Pressable : View;
   const titleClass = danger ? "text-error" : "text-on-surface";
 
@@ -61,7 +63,7 @@ export function RowItem({
           </Text>
         ) : null}
       </View>
-      {right ?? (onPress ? <ChevronRight size={18} color="#9CA3AF" /> : null)}
+      {right ?? (onPress ? <ChevronRight size={18} color={themeColors.inactive} /> : null)}
     </Container>
   );
 }

@@ -1,9 +1,10 @@
 import { FlashList } from "@shopify/flash-list";
-import { ChevronsLeft } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, InteractionManager, Text, View } from "react-native";
+import { useNavigation } from "expo-router";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { ActivityIndicator, InteractionManager, View } from "react-native";
 import { DevSeedMeasurementsDialog } from "~/features/recent-measurements/components/dev-seed-measurements-dialog";
 import { MeasurementsDayHeader } from "~/features/recent-measurements/components/measurements-day-header";
+import { MeasurementsHeaderActions } from "~/features/recent-measurements/components/measurements-header-actions";
 import { MeasurementsListEmpty } from "~/features/recent-measurements/components/measurements-list-empty";
 import { MeasurementsListFooter } from "~/features/recent-measurements/components/measurements-list-footer";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
@@ -29,11 +30,12 @@ type ListRow =
   | { kind: "header"; key: string; section: MeasurementDaySection }
   | { kind: "row"; key: string; item: MeasurementItem };
 
-const FLASHLIST_CONTENT_STYLE = { paddingTop: 0, paddingBottom: 16 };
+const FLASHLIST_CONTENT_STYLE = { paddingTop: 12, paddingBottom: 16 };
 
 export function RecentMeasurementsScreen() {
   const { colors } = useTheme();
-  const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
+  const navigation = useNavigation();
+  const { i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const [devSeedVisible, setDevSeedVisible] = useState(false);
@@ -73,6 +75,18 @@ export function RecentMeasurementsScreen() {
       clearTimeout(fallback);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <MeasurementsHeaderActions
+          onSyncAll={confirmSyncAll}
+          onDeleteAllSynced={confirmDeleteAllSynced}
+          onDevSeed={__DEV__ ? () => setDevSeedVisible(true) : undefined}
+        />
+      ),
+    });
+  }, [navigation, confirmSyncAll, confirmDeleteAllSynced, setDevSeedVisible]);
 
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
@@ -174,22 +188,7 @@ export function RecentMeasurementsScreen() {
 
   return (
     <View className="bg-background flex-1">
-      <MeasurementsToolbar
-        filter={filter}
-        onFilterChange={setFilter}
-        onSyncAll={confirmSyncAll}
-        onDeleteAllSynced={confirmDeleteAllSynced}
-        onDevSeed={__DEV__ ? () => setDevSeedVisible(true) : undefined}
-      />
-
-      {hasItems && (
-        <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
-          <ChevronsLeft size={13} color={colors.inactive} />
-          <Text className="text-muted-body text-sm font-normal">
-            {t("recentMeasurements:list.swipeHint")}
-          </Text>
-        </View>
-      )}
+      <MeasurementsToolbar filter={filter} onFilterChange={setFilter} showSwipeHint={hasItems} />
 
       {listReady ? (
         <FlashList

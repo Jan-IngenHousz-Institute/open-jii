@@ -70,7 +70,7 @@ export const colors = {
     inactive: "#757575",
     divider: "#2C2C2C",
     statusBar: "#000000",
-    grayBackground: "#1C2128",
+    grayBackground: "#2E2E2E",
     brand: "#49e06d", // primary.bright — interactive accent in dark
     warningFg: "#fde68a", // amber-200 — readable warning text/icon on dark amber-tinted surfaces
   },
