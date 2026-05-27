@@ -30,7 +30,7 @@ type ListRow =
   | { kind: "header"; key: string; section: MeasurementDaySection }
   | { kind: "row"; key: string; item: MeasurementItem };
 
-const FLASHLIST_CONTENT_STYLE = { paddingTop: 0, paddingBottom: 16 };
+const FLASHLIST_CONTENT_STYLE = { paddingTop: 12, paddingBottom: 16 };
 
 export function RecentMeasurementsScreen() {
   const { colors } = useTheme();
