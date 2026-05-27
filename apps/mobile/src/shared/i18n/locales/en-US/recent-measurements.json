@@ -32,7 +32,8 @@
   },
   "swipe": {
     "uploadButton": "Upload",
-    "commentButton": "Comment"
+    "commentButton": "Comment",
+    "deleteButton": "Delete"
   },
   "commentModal": {
     "title": "Add comment",

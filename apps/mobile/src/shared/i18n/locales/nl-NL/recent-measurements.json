@@ -32,7 +32,8 @@
   },
   "swipe": {
     "uploadButton": "Uploaden",
-    "commentButton": "Opmerking"
+    "commentButton": "Opmerking",
+    "deleteButton": "Verwijderen"
   },
   "commentModal": {
     "title": "Opmerking toevoegen",

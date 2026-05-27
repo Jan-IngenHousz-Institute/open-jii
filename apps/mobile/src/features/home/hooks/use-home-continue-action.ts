@@ -7,7 +7,7 @@ import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-pause
 
 /**
  * Resume a paused flow: atomically read + clear the snapshot, rehydrate the
- * measurement-flow runner, then navigate to the Measure tab.
+ * measurement-flow runner, then push the measurement-flow screen.
  */
 export function useHomeContinueAction() {
   const router = useRouter();
@@ -43,6 +43,6 @@ export function useHomeContinueAction() {
 
     useFlowAnswersStore.setState({ answersHistory: snap.answersHistory });
 
-    router.push("/(tabs)/measurement-flow");
+    router.push("/measurement-flow");
   }, [router]);
 }

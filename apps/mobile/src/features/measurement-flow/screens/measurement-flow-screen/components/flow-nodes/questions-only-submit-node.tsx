@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
+import { useFinishFlow } from "~/features/measurement-flow/hooks/use-finish-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
@@ -29,9 +30,9 @@ export function QuestionsOnlySubmitNode() {
     iterationCount,
     flowNodes,
     dismissQuestionsSubmit,
-    finishFlow,
     navigateToQuestionFromOverview,
   } = useMeasurementFlowStore();
+  const finishAndExit = useFinishFlow();
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { experiments } = useExperiments();
@@ -103,7 +104,7 @@ export function QuestionsOnlySubmitNode() {
     if (!success) {
       return;
     }
-    finishFlow();
+    finishAndExit();
   };
 
   return (

@@ -29,7 +29,7 @@
   },
   "signOut": {
     "title": "Sign out",
-    "subtitle": "Clears any in-progress flow"
+    "subtitle": "Clears any in-progress measurement"
   },
   "footer": "openJII Mobile · v{{version}} ({{build}})",
   "appSettingsSheet": {

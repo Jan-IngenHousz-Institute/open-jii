@@ -25,7 +25,7 @@ export function NextButton({ onPress, isDisabled = false }: NextButtonProps) {
       onPress={onPress}
       disabled={isDisabled}
       className={clsx(
-        "bg-primary h-[44px] flex-row items-center justify-center gap-1 rounded-full px-5",
+        "bg-primary h-[44px] flex-row items-center justify-center gap-1 rounded-lg px-5",
         isDisabled && "opacity-50",
       )}
     >

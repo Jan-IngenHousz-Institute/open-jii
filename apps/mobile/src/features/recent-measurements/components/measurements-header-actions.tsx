@@ -1,4 +1,4 @@
-import { FlaskConical, Trash2, UploadCloud } from "lucide-react-native";
+import { Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useMeasurementCounts } from "~/features/recent-measurements/hooks/use-all-measurements";
@@ -10,10 +10,9 @@ import { DeviceChip } from "~/shared/ui/widgets/device-chip";
 interface Props {
   onSyncAll: (unsyncedCount: number) => void;
   onDeleteAllSynced: (syncedCount: number) => void;
-  onDevSeed?: () => void;
 }
 
-export function MeasurementsHeaderActions({ onSyncAll, onDeleteAllSynced, onDevSeed }: Props) {
+export function MeasurementsHeaderActions({ onSyncAll, onDeleteAllSynced }: Props) {
   // Subscribe to outbox progress AND counts here so settle-tick re-renders
   // are scoped to the header subtree, not the whole screen. See OJD-1470.
   const { count: uploadingCount, isUploading } = useOutboxSnapshot();
@@ -26,17 +25,6 @@ export function MeasurementsHeaderActions({ onSyncAll, onDeleteAllSynced, onDevS
 
   return (
     <View className="flex-row items-center gap-3">
-      {__DEV__ && onDevSeed && (
-        <Pressable
-          onPress={onDevSeed}
-          hitSlop={6}
-          className="bg-jii-mint h-9 w-9 items-center justify-center rounded-full"
-          accessibilityRole="button"
-          accessibilityLabel="Seed measurements (DEV)"
-        >
-          <FlaskConical size={18} color={colors.brand} strokeWidth={1.8} />
-        </Pressable>
-      )}
       <Pressable
         onPress={() => onDeleteAllSynced(syncedCount)}
         disabled={deleteDisabled}

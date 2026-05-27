@@ -637,6 +637,63 @@ describe("measurements-storage", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // countRecentMeasurementsByExperiment
+  // ---------------------------------------------------------------------------
+
+  describe("countRecentMeasurementsByExperiment", () => {
+    function insertForExperiment(id: string, experimentName: string, timestamp: string) {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+           VALUES (?, 'successful', 'test/topic', ?, ?, 'protocol-1', ?, ?, NULL, 0, NULL)`,
+        )
+        .run(id, compressForStorage({ value: 42 }), experimentName, timestamp, Date.now());
+    }
+
+    it("counts measurements per experiment at or after the cutoff (single GROUP BY)", async () => {
+      insertForExperiment("a1", "Alpha", "2026-03-02T10:00:00.000Z");
+      insertForExperiment("a2", "Alpha", "2026-03-03T10:00:00.000Z");
+      insertForExperiment("b1", "Beta", "2026-03-04T10:00:00.000Z");
+
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+
+      expect(counts).toEqual({ Alpha: 2, Beta: 1 });
+    });
+
+    it("excludes rows older than the cutoff (lexicographic ISO compare)", async () => {
+      insertForExperiment("old", "Alpha", "2026-02-01T10:00:00.000Z");
+      insertForExperiment("recent", "Alpha", "2026-03-10T10:00:00.000Z");
+
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+
+      expect(counts).toEqual({ Alpha: 1 });
+    });
+
+    it("returns an empty map when nothing falls within the window", async () => {
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+      expect(counts).toEqual({});
+    });
+
+    it("returns an empty map and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+
+      expect(counts).toEqual({});
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to count recent measurements by experiment"),
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // markAsSuccessful
   // ---------------------------------------------------------------------------
 

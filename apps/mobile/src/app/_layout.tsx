@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
@@ -8,6 +13,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
@@ -60,14 +66,19 @@ function AndroidNavigationBarBackground({ color }: { color: string }) {
 function RootLayoutNav() {
   const themeColors = useThemeColors();
   const { session, isLoaded } = useSession();
+  const [everLoaded, setEverLoaded] = useState(false);
 
   useEffect(() => {
     if (isLoaded) {
+      setEverLoaded(true);
       void SplashScreen.hideAsync();
     }
   }, [isLoaded]);
 
-  if (!isLoaded) {
+  // Gate on the splash only for the very first load. After that, a transient
+  // isLoaded=false (Better Auth re-validating while signing out) must not drop
+  // the tree to null — that null frame is the black blink seen on logout.
+  if (!isLoaded && !everLoaded) {
     return null;
   }
 
@@ -77,6 +88,8 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerShown: false,
+        animation: "fade",
+        animationDuration: 400,
         headerStyle: {
           backgroundColor: themeColors.background,
         },
@@ -92,10 +105,14 @@ function RootLayoutNav() {
       }}
     >
       <Stack.Protected guard={isSignedIn}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen
+          name="measurement-flow"
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!isSignedIn}>
-        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false, animation: "none" }} />
       </Stack.Protected>
     </Stack>
   );
@@ -216,6 +233,23 @@ function RootLayoutContent() {
   const themeColors = useThemeColors();
   const { colorScheme } = useColorScheme();
 
+  // Theme the navigator container background so instant screen swaps (e.g.
+  // logout) don't expose the default white React Navigation background — that
+  // gap is what flashes white in dark mode.
+  const navBase = colorScheme === "dark" ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...navBase,
+    colors: { ...navBase.colors, background: themeColors.background, card: themeColors.surface },
+  };
+
+  // Match the native root view to the in-app theme. The OS-level DayNight
+  // window background follows system appearance, so when the app's dark mode
+  // is toggled while the OS is light, instant screen swaps (logout) flash the
+  // white native root. Painting it the theme background removes that flash.
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(themeColors.background);
+  }, [themeColors.background]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TimeSyncProvider>
@@ -227,7 +261,9 @@ function RootLayoutContent() {
               <BottomSheetModalProvider>
                 <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
                 {__DEV__ && <DrizzleDevTools />}
-                <RootLayoutNav />
+                <NavigationThemeProvider value={navTheme}>
+                  <RootLayoutNav />
+                </NavigationThemeProvider>
                 <AndroidNavigationBarBackground color={themeColors.surface} />
                 <Toaster />
                 <AlertDialog />

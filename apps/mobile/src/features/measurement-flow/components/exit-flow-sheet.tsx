@@ -20,6 +20,12 @@ export function ExitFlowSheet() {
   const isOpen = useExitFlowSheetStore((s) => s.isOpen);
   const close = useExitFlowSheetStore((s) => s.close);
   const router = useRouter();
+  const dismissFlow = () => {
+    // Pop the pushed flow back to the tab it launched from; fall back to the
+    // tabs root if the flow was somehow the entry route (e.g. a deep link).
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/");
+  };
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useTheme();
   const { t } = useTranslation("measurementFlow");
@@ -70,7 +76,7 @@ export function ExitFlowSheet() {
     flow.resetFlow();
     useExperimentSelectionStore.getState().setSelectedExperimentId(undefined);
     close();
-    router.replace("/(tabs)/");
+    dismissFlow();
   };
 
   const handleDiscard = () => {
@@ -79,7 +85,7 @@ export function ExitFlowSheet() {
     useFlowAnswersStore.getState().clearHistory();
     useExperimentSelectionStore.getState().setSelectedExperimentId(undefined);
     close();
-    router.replace("/(tabs)/");
+    dismissFlow();
   };
 
   return (
