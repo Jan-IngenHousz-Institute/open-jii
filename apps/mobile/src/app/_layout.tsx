@@ -9,9 +9,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
@@ -35,6 +35,19 @@ SplashScreen.preventAutoHideAsync();
 function DrizzleDevTools() {
   useDrizzleStudio(db.$client);
   return null;
+}
+
+function AndroidNavigationBarBackground({ color }: { color: string }) {
+  const insets = useSafeAreaInsets();
+  if (Platform.OS !== "android") return;
+
+  return (
+    <View
+      pointerEvents="none"
+      className="absolute bottom-0 left-0 right-0"
+      style={{ height: Math.max(insets.bottom, 24), backgroundColor: color }}
+    />
+  );
 }
 
 function RootLayoutNav() {
@@ -159,6 +172,7 @@ function AutoUploadEffect() {
 }
 
 function RootLayoutContent() {
+  const themeColors = useThemeColors();
   const { colorScheme } = useColorScheme();
 
   return (
@@ -172,6 +186,7 @@ function RootLayoutContent() {
                 <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
                 {__DEV__ && <DrizzleDevTools />}
                 <RootLayoutNav />
+                <AndroidNavigationBarBackground color={themeColors.surface} />
                 <Toaster />
                 <AlertDialog />
               </BottomSheetModalProvider>

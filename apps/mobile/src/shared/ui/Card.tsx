@@ -17,7 +17,7 @@ interface CardProps {
 const cardVariants = cva("my-2 rounded-xl", {
   variants: {
     tone: {
-      white: "bg-card",
+      white: "bg-card border border-border",
       mint: "bg-jii-mint dark:bg-jii-mint/40",
       yellow: "bg-jii-yellow-light dark:bg-jii-yellow-light/40",
       teal: "bg-jii-primary",

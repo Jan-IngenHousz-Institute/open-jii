@@ -6,7 +6,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { FLAG_TYPE_LABELS } from "~/shared/utils/measurement-annotations";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
@@ -21,7 +21,7 @@ interface FlagTypeModalProps {
 }
 
 export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTypeModalProps) {
-  const { colors, classes } = useTheme();
+  const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const sheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
@@ -61,11 +61,12 @@ export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTyp
       backdropComponent={renderBackdrop}
       onDismiss={onCancel}
       handleIndicatorStyle={{ backgroundColor: colors.inactive }}
+      backgroundStyle={{ backgroundColor: colors.card }}
       stackBehavior="push"
     >
       <BottomSheetView className="gap-2 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <View className="flex-row items-center justify-between pb-2">
-          <Text className={clsx("text-lg font-bold", classes.text)}>
+          <Text className="text-on-surface text-lg font-bold">
             {t("recentMeasurements:flagModal.title")}
           </Text>
           <TouchableOpacity onPress={onCancel} className="p-1">
@@ -83,7 +84,7 @@ export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTyp
             )}
             activeOpacity={0.7}
           >
-            <Text className={clsx("text-base", classes.text)}>
+            <Text className="text-on-surface text-base">
               {t(`recentMeasurements:flagType.${value}`)}
             </Text>
             {selected === value && <Check size={18} color={colors.onSurface} />}
@@ -96,7 +97,7 @@ export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTyp
             className="mt-1 items-center py-2"
             activeOpacity={0.7}
           >
-            <Text className={clsx("text-sm", classes.textMuted)}>
+            <Text className="text-muted-foreground text-sm">
               {t("recentMeasurements:flagModal.removeFlag")}
             </Text>
           </TouchableOpacity>

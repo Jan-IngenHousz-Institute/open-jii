@@ -6,7 +6,6 @@ import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
@@ -115,9 +114,9 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
 
                   {(isAutoincrement || isRemember) &&
                     (isAutoincrement ? (
-                      <Repeat2 size={16} color={colors.neutral.black} />
+                      <Repeat2 size={16} color={themeColors.onSurface} />
                     ) : (
-                      <Bookmark size={16} color={colors.neutral.black} />
+                      <Bookmark size={16} color={themeColors.onSurface} />
                     ))}
                 </View>
               </View>

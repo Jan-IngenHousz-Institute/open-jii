@@ -1,9 +1,4 @@
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { X } from "lucide-react-native";
@@ -13,7 +8,8 @@ import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { Input } from "~/shared/ui/Input";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 
@@ -45,7 +41,7 @@ export function CommentModal({
   questions,
   timestamp,
 }: CommentModalProps) {
-  const { colors, classes } = useTheme();
+  const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const [text, setText] = useState(initialText);
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -95,13 +91,14 @@ export function CommentModal({
         onCancel();
       }}
       handleIndicatorStyle={{ backgroundColor: colors.inactive }}
+      backgroundStyle={{ backgroundColor: colors.card }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       stackBehavior="push"
     >
       <BottomSheetView className="gap-4 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <View className="flex-row items-center justify-between">
-          <Text className={clsx("text-lg font-bold", classes.text)}>
+          <Text className="text-on-surface text-lg font-bold">
             {t("recentMeasurements:commentModal.title")}
           </Text>
 
@@ -111,7 +108,7 @@ export function CommentModal({
         </View>
         <View className="bg-muted gap-1.5 rounded-xl p-4">
           <View className="flex-row items-center">
-            <Text className={clsx("font-semibold", classes.text)}>
+            <Text className="text-on-surface font-semibold">
               {t("recentMeasurements:commentModal.answersLabel")}
             </Text>
 
@@ -120,7 +117,7 @@ export function CommentModal({
               ellipsizeMode="tail"
               className={clsx(
                 answersValueStyle({ hasAnswers: questions.length > 0 }),
-                classes.textMuted,
+                "text-muted-foreground",
               )}
             >
               {questions.length === 0
@@ -130,50 +127,35 @@ export function CommentModal({
           </View>
           {experimentName && (
             <View className="flex-row items-center">
-              <Text className={clsx("font-semibold", classes.text)}>
+              <Text className="text-on-surface font-semibold">
                 {t("recentMeasurements:commentModal.experimentLabel")}
               </Text>
-              <Text
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                className={clsx("flex-1", classes.textMuted)}
-              >
+              <Text numberOfLines={1} ellipsizeMode="tail" className="text-muted-foreground flex-1">
                 {experimentName}
               </Text>
             </View>
           )}
           {timestamp && (
             <View className="flex-row items-center">
-              <Text className={clsx("font-semibold", classes.text)}>
+              <Text className="text-on-surface font-semibold">
                 {t("recentMeasurements:commentModal.measurementDoneLabel")}
               </Text>
-              <Text
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                className={clsx("flex-1", classes.textMuted)}
-              >
+              <Text numberOfLines={1} ellipsizeMode="tail" className="text-muted-foreground flex-1">
                 {formatTimeAgo(timestamp)}
               </Text>
             </View>
           )}
         </View>
-        <BottomSheetTextInput
+        <Input
+          asBottomSheet
           value={text}
           onChangeText={setText}
           placeholder={t("recentMeasurements:commentModal.placeholder")}
-          placeholderTextColor={colors.inactive}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
-          className={clsx(
-            "min-h-[100px] rounded-lg border px-3 py-2 text-base",
-            classes.border,
-            classes.text,
-          )}
-          style={{
-            backgroundColor: colors.background,
-            color: colors.onSurface,
-          }}
+          style={{ minHeight: 100 }}
+          containerStyle={{ marginBottom: 0 }}
         />
         <Button title={t("recentMeasurements:commentModal.saveButton")} onPress={handleSave} />
       </BottomSheetView>
