@@ -305,15 +305,17 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
         filters: filtersJson,
       },
     },
+    // page/pageSize are stripped from the request when filters are active, so
+    // they must not appear in the key or we'd split the cache on a value the
+    // server never sees.
     queryKey: [
       "experiment",
       experimentId,
-      page,
-      pageSize,
       tableName,
       orderBy,
       orderDirection,
       filtersJson,
+      ...(hasFilters ? [] : [page, pageSize]),
     ],
     staleTime: STALE_TIME,
     enabled,

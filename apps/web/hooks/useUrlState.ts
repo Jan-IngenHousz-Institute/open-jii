@@ -26,7 +26,6 @@ export function useUrlState<T>(options: UseUrlStateOptions<T>): readonly [T, (ne
   const [value, setValue] = useState<T>(initial);
 
   const serialized = serialize(value);
-  const serializedKey = serialized ?? "";
 
   const navigate = useCallback(
     (qs: string) => {
@@ -50,8 +49,8 @@ export function useUrlState<T>(options: UseUrlStateOptions<T>): readonly [T, (ne
   useEffect(() => {
     if (isInitialEffectRef.current) {
       isInitialEffectRef.current = false;
-      const current = searchParamsRef.current.get(key) ?? "";
-      if (current === serializedKey) return;
+      // null and "" are distinct: null means "no key in URL", "" means "key present with empty value".
+      if (searchParamsRef.current.get(key) === serialized) return;
     }
     const next = new URLSearchParams(searchParamsRef.current.toString());
     if (serialized === null) {
@@ -60,18 +59,17 @@ export function useUrlState<T>(options: UseUrlStateOptions<T>): readonly [T, (ne
       next.set(key, serialized);
     }
     navigate(next.toString());
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load-bearing signal is `serializedKey`; depending on searchParams would re-fire on every identity churn.
-  }, [serializedKey, key, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load-bearing signal is `serialized`; depending on searchParams would re-fire on every identity churn.
+  }, [serialized, key, navigate]);
 
   // Back/forward replay.
   const urlRaw = searchParams.get(key);
-  const urlKey = urlRaw ?? "";
   useEffect(() => {
     if (!bidirectional) return;
-    if (urlKey === serializedKey) return;
+    if (urlRaw === serialized) return;
     setValue(parse(urlRaw));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally drives off URL change only.
-  }, [urlKey, bidirectional]);
+  }, [urlRaw, bidirectional]);
 
   return [value, setValue] as const;
 }

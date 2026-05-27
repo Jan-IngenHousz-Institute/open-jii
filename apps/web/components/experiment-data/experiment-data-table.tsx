@@ -185,9 +185,11 @@ export function ExperimentDataTable({
   });
 
   // Filters drop totalPages to 1; snap pageIndex back so the UI doesn't show "page 5 of 1".
+  // Selection is keyed by row id and would point at rows that no longer exist after a filter change.
   const filtersKey = JSON.stringify(activeFilters);
   useEffect(() => {
     setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    setRowSelection({});
   }, [filtersKey]);
 
   const onPaginationChange = useCallback(
