@@ -7,7 +7,7 @@ import {
   UploadCloud,
 } from "lucide-react-native";
 import React, { memo } from "react";
-import { ActivityIndicator, Pressable, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
@@ -15,6 +15,19 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { cn } from "~/shared/utils/cn";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/utils/format-time-ago";
+
+interface SemanticColors {
+  success: string;
+  info: string;
+  error: string;
+}
+
+const STATUS_ICON: Record<MeasurementStatus, (c: { semantic: SemanticColors }) => React.ReactNode> =
+  {
+    successful: (c) => <CloudCheck size={16} color={c.semantic.success} />,
+    pending: (c) => <UploadCloud size={16} color={c.semantic.info} />,
+    failed: (c) => <CloudAlert size={16} color={c.semantic.error} />,
+  };
 
 const answersTextStyle = cva("mb-1.5 text-base", {
   variants: {
@@ -58,6 +71,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   const isSyncing = useIsProcessing(id);
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
+
   return (
     <Pressable className="border-divider bg-card border-t px-4 py-3" onPress={() => onPress?.(id)}>
       {/* Top: answers */}
@@ -114,13 +128,7 @@ export const MeasurementItem = memo(function MeasurementItem({
           <Text className="text-muted-body shrink-0 text-sm" numberOfLines={1}>
             {formatTimeAgo(timestamp)}
           </Text>
-          {isSyncing ? (
-            <ActivityIndicator size={16} color={colors.semantic.info} />
-          ) : isSynced ? (
-            <CloudCheck size={16} color={colors.semantic.success} />
-          ) : (
-            <CloudAlert size={16} color={colors.semantic.error} />
-          )}
+          {STATUS_ICON[status](colors)}
         </View>
       </View>
     </Pressable>
