@@ -14,8 +14,8 @@ vi.mock("~/features/connection/services/contentful", () => ({
   fetchActiveAlerts: (...args: unknown[]) => mockFetchActiveAlerts(...args),
 }));
 
-vi.mock("~/utils/load-env-variables-from-expo", () => ({
-  loadEnvVariablesFromExpo: vi.fn().mockReturnValue({}),
+vi.mock("~/shared/utils/load-env-variables-from-expo", () => ({
+  loadEnvVariablesFromExpo: vi.fn().mockReturnValue({ prod: {}, staging: {}, dev: {} }),
 }));
 
 const makeAlert = (overrides: Record<string, unknown> = {}) => ({

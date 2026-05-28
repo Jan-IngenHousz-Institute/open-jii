@@ -20,7 +20,6 @@ import { Platform, Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
-import { AlertsBar } from "~/shared/ui/widgets/alerts-container";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
@@ -36,6 +35,7 @@ import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-bou
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
 import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
+import { AlertsBar } from "~/shared/ui/widgets/alerts-container";
 import { createLogger } from "~/shared/utils/logger";
 import { shouldHideSplash } from "~/shared/utils/should-hide-splash";
 

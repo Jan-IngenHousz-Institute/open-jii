@@ -51,7 +51,10 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
   const hasAlerts = useActiveAlerts().length > 0;
-  const isDark = themeColors.scheme === "dark";
+  const isLightMode = themeColors.scheme !== "dark";
+
+  const hasActiveFlow = !!experimentId;
+  const statusBarStyle = hasAlerts && isLightMode ? "dark" : hasActiveFlow ? "light" : "auto";
 
   // Picker state has no tab bar to bail out to (the flow now covers the tabs
   // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
@@ -112,13 +115,9 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
     return () => sub.remove();
   }, [isFocused, experimentId, openExitSheet]);
 
-  const hasActiveFlow = !!experimentId;
-
   return (
     <View className="bg-background flex-1">
-      {isFocused && (
-        <StatusBar style={hasAlerts && !isDark ? "dark" : hasActiveFlow ? "light" : "auto"} />
-      )}
+      {isFocused && <StatusBar style={statusBarStyle} />}
 
       {hasActiveFlow ? (
         <>
