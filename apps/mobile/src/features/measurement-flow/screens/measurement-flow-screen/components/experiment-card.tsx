@@ -1,12 +1,6 @@
 import { FlaskConical, MessageSquare } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React from "react";
 import { Pressable, Text, View } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-} from "react-native-reanimated";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Card } from "~/shared/ui/Card";
@@ -57,69 +51,54 @@ export function ExperimentCard({
   const { t } = useTranslation("measurementFlow");
   const tag = pickTag(requiresSensor, questionsOnly);
 
-  // Subtle pop when this card becomes the selected one. Driven off `selected`
-  // so it fires once when a card is first chosen, not on every re-tap. The peak
-  // is kept small so the full-width card never scales past the screen edges.
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  useEffect(() => {
-    if (!selected) return;
-    scale.value = withSequence(
-      withSpring(1.03, { damping: 18, stiffness: 320 }),
-      withSpring(1, { damping: 15, stiffness: 240 }),
-    );
-  }, [selected, scale]);
-
   return (
-    <Animated.View style={animatedStyle}>
-      <Pressable onPress={() => onPress(id)} accessibilityRole="button">
-        <Card tone={selected ? "mint" : "white"} padded style={{ marginVertical: 0, padding: 14 }}>
-          <View className="flex-row items-start gap-3">
-            <View
-              className="h-11 w-11 items-center justify-center rounded-xl"
-              style={{ backgroundColor: questionsOnly ? colors.badge.published : colors.jii.mint }}
+    <Pressable onPress={() => onPress(id)} accessibilityRole="button">
+      <Card tone={selected ? "mint" : "white"} padded style={{ marginVertical: 0, padding: 14 }}>
+        <View className="flex-row items-start gap-3">
+          <View
+            className="h-11 w-11 items-center justify-center rounded-xl"
+            style={{ backgroundColor: questionsOnly ? colors.badge.published : colors.jii.mint }}
+          >
+            {questionsOnly ? (
+              <MessageSquare size={20} color={colors.jii.darkGreen} />
+            ) : (
+              <FlaskConical size={20} color={colors.jii.darkGreen} />
+            )}
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text
+              className="text-on-surface"
+              style={{ fontFamily: "Poppins-Bold", fontSize: 15, lineHeight: 19 }}
+              numberOfLines={2}
             >
-              {questionsOnly ? (
-                <MessageSquare size={20} color={colors.jii.darkGreen} />
-              ) : (
-                <FlaskConical size={20} color={colors.jii.darkGreen} />
-              )}
-            </View>
-            <View className="min-w-0 flex-1">
-              <Text
-                className="text-on-surface"
-                style={{ fontFamily: "Poppins-Bold", fontSize: 15, lineHeight: 19 }}
-                numberOfLines={2}
-              >
-                {title}
+              {title}
+            </Text>
+            {description ? (
+              <Text className="text-muted-body mt-1 text-[12.5px]" numberOfLines={2}>
+                {description}
               </Text>
-              {description ? (
-                <Text className="text-muted-body mt-1 text-[12.5px]" numberOfLines={2}>
-                  {description}
+            ) : null}
+            <View className="mt-2 flex-row flex-wrap items-center gap-2">
+              {recentCount > 0 ? (
+                <Tag variant="synced">
+                  {t("experimentSelection.recentThisWeek", { n: recentCount })}
+                </Tag>
+              ) : null}
+              {tag ? (
+                <Tag variant={tag.variant}>{t(`experimentSelection.tag.${tag.key}`)}</Tag>
+              ) : null}
+              {nodeCount > 0 ? (
+                <Text className="text-muted-body text-[11.5px]">
+                  {t("experimentSelection.meta.nodesAndDuration", {
+                    nodes: nodeCount,
+                    minutes: durationMin,
+                  })}
                 </Text>
               ) : null}
-              <View className="mt-2 flex-row flex-wrap items-center gap-2">
-                {recentCount > 0 ? (
-                  <Tag variant="synced">
-                    {t("experimentSelection.recentThisWeek", { n: recentCount })}
-                  </Tag>
-                ) : null}
-                {tag ? (
-                  <Tag variant={tag.variant}>{t(`experimentSelection.tag.${tag.key}`)}</Tag>
-                ) : null}
-                {nodeCount > 0 ? (
-                  <Text className="text-muted-body text-[11.5px]">
-                    {t("experimentSelection.meta.nodesAndDuration", {
-                      nodes: nodeCount,
-                      minutes: durationMin,
-                    })}
-                  </Text>
-                ) : null}
-              </View>
             </View>
           </View>
-        </Card>
-      </Pressable>
-    </Animated.View>
+        </View>
+      </Card>
+    </Pressable>
   );
 }
