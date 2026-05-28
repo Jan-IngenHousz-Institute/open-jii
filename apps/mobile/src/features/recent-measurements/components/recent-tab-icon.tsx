@@ -5,10 +5,6 @@ import { useMeasurementCounts } from "~/features/recent-measurements/hooks/use-a
 import { cn } from "~/shared/utils/cn";
 
 export function RecentTabIcon({ color, size }: { color: string; size: number }) {
-  // SQL GROUP BY count — does NOT decompress measurement payloads. Reading
-  // the full pending/failed list here was the root cause of the
-  // budget-phone freeze at ~20 stored measurements: every cache invalidation
-  // re-ran a gzip+JSON.parse for every row on the JS thread.
   const { unsyncedCount } = useMeasurementCounts();
 
   return (
