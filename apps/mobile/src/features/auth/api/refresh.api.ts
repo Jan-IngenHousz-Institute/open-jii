@@ -1,6 +1,11 @@
 import { getAuthClient } from "~/features/auth/services/auth";
 
 let refreshInFlight: Promise<boolean> | null = null;
+let refreshController: AbortController | null = null;
+
+// Bounded so an offline `getSession` can't keep the fetcher stuck on a 401
+// retry beyond the per-request fetch budget.
+const REFRESH_TIMEOUT_MS = 8_000;
 
 /**
  * Single-flight session re-validation.
@@ -13,23 +18,37 @@ let refreshInFlight: Promise<boolean> | null = null;
  * single-flight lock that prevents the OJD-1515 burst class where N
  * parallel requests on a stale session each tried to refresh
  * independently.
+ *
+ * Each caller is bounded by REFRESH_TIMEOUT_MS via Promise.race; the
+ * timeout also aborts the shared upstream fetch through fetchOptions.signal
+ * so the underlying request actually stops, and refreshInFlight stays tied
+ * to that upstream call (not the race) so concurrent callers always dedupe.
  */
 export async function refreshSession(): Promise<boolean> {
-  if (refreshInFlight) return refreshInFlight;
-
-  refreshInFlight = (async () => {
-    try {
-      const authClient = getAuthClient();
-      const { data } = await authClient.getSession({
+  if (!refreshInFlight) {
+    const authClient = getAuthClient();
+    refreshController = new AbortController();
+    refreshInFlight = authClient
+      .getSession({
         query: { disableCookieCache: true },
+        fetchOptions: { signal: refreshController.signal },
+      })
+      .then((res) => !!res?.data?.session)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null;
+        refreshController = null;
       });
-      return !!data?.session;
-    } catch {
-      return false;
-    } finally {
-      refreshInFlight = null;
-    }
-  })();
+  }
 
-  return refreshInFlight;
+  const upstream = refreshInFlight;
+  return Promise.race([
+    upstream,
+    new Promise<boolean>((resolve) =>
+      setTimeout(() => {
+        refreshController?.abort();
+        resolve(false);
+      }, REFRESH_TIMEOUT_MS),
+    ),
+  ]);
 }
