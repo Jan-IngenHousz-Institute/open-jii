@@ -31,19 +31,17 @@ export class DatabricksConfigService {
       host: this.configService.getOrThrow<string>("databricks.host"),
       clientId: this.configService.getOrThrow<string>("databricks.clientId"),
       clientSecret: this.configService.getOrThrow<string>("databricks.clientSecret"),
-      ambyteProcessingJobId: this.configService.getOrThrow<string>(
-        "databricks.ambyteProcessingJobId",
-      ),
       dataExportJobId: this.configService.getOrThrow<string>("databricks.dataExportJobId"),
+      dataUploadJobId: this.configService.getOrThrow<string>("databricks.dataUploadJobId"),
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
       centrumSchemaName: this.configService.getOrThrow<string>("databricks.centrumSchemaName"),
       rawDataTableName: this.configService.getOrThrow<string>("databricks.rawDataTableName"),
       deviceDataTableName: this.configService.getOrThrow<string>("databricks.deviceDataTableName"),
-      rawAmbyteDataTableName: this.configService.getOrThrow<string>(
-        "databricks.rawAmbyteDataTableName",
-      ),
       macroDataTableName: this.configService.getOrThrow<string>("databricks.macroDataTableName"),
+      uploadedDataTableName: this.configService.getOrThrow<string>(
+        "databricks.uploadedDataTableName",
+      ),
     };
   }
 
@@ -97,20 +95,6 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the Databricks ambyte processing job ID
-   */
-  getAmbyteProcessingJobId(): string {
-    return this.config.ambyteProcessingJobId;
-  }
-
-  /**
-   * Returns the Databricks ambyte processing job ID as a number
-   */
-  getAmbyteProcessingJobIdAsNumber(): number {
-    return parseInt(this.config.ambyteProcessingJobId, 10);
-  }
-
-  /**
    * Returns the Databricks data export job ID
    */
   getDataExportJobId(): string {
@@ -160,16 +144,30 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the raw ambyte data table name
-   */
-  getRawAmbyteDataTableName(): string {
-    return this.config.rawAmbyteDataTableName;
-  }
-
-  /**
    * Returns the macro data table name
    */
   getMacroDataTableName(): string {
     return this.config.macroDataTableName;
+  }
+
+  /**
+   * Returns the gold uploaded-data table name (experiment_uploaded_data).
+   */
+  getUploadedDataTableName(): string {
+    return this.config.uploadedDataTableName;
+  }
+
+  /**
+   * Returns the data upload Databricks job ID
+   */
+  getDataUploadJobId(): string {
+    return this.config.dataUploadJobId;
+  }
+
+  /**
+   * Returns the data upload Databricks job ID as a number
+   */
+  getDataUploadJobIdAsNumber(): number {
+    return parseInt(this.config.dataUploadJobId, 10);
   }
 }

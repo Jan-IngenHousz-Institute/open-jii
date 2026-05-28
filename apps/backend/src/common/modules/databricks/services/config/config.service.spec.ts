@@ -33,7 +33,7 @@ describe("DatabricksConfigService", () => {
       expect(config.host).toBeDefined();
       expect(config.clientId).toBeDefined();
       expect(config.clientSecret).toBeDefined();
-      expect(config.ambyteProcessingJobId).toBeDefined();
+      expect(config.dataUploadJobId).toBeDefined();
       expect(config.warehouseId).toBeDefined();
       expect(config.catalogName).toBeDefined();
     });
@@ -46,7 +46,7 @@ describe("DatabricksConfigService", () => {
       const getOrThrowSpy = vi
         .spyOn(configService, "getOrThrow")
         .mockImplementation((key: string) => {
-          if (key === "databricks.ambyteProcessingJobId") {
+          if (key === "databricks.dataUploadJobId") {
             return "";
           }
 
@@ -77,16 +77,14 @@ describe("DatabricksConfigService", () => {
       expect(clientSecret).toBe(process.env.DATABRICKS_CLIENT_SECRET);
     });
 
-    it("should return the correct ambyte processing job ID", () => {
-      const ambyteProcessingJobId = configService.getAmbyteProcessingJobId();
-      expect(ambyteProcessingJobId).toBe(process.env.DATABRICKS_AMBYTE_PROCESSING_JOB_ID);
+    it("should return the correct data upload job ID", () => {
+      const dataUploadJobId = configService.getDataUploadJobId();
+      expect(dataUploadJobId).toBe(process.env.DATABRICKS_DATA_UPLOAD_JOB_ID);
     });
 
-    it("should return the correct ambyte processing job ID as a number", () => {
-      const ambyteProcessingJobIdAsNumber = configService.getAmbyteProcessingJobIdAsNumber();
-      expect(ambyteProcessingJobIdAsNumber).toBe(
-        Number(process.env.DATABRICKS_AMBYTE_PROCESSING_JOB_ID),
-      );
+    it("should return the correct data upload job ID as a number", () => {
+      const dataUploadJobIdAsNumber = configService.getDataUploadJobIdAsNumber();
+      expect(dataUploadJobIdAsNumber).toBe(Number(process.env.DATABRICKS_DATA_UPLOAD_JOB_ID));
     });
 
     it("should return the correct data export job ID", () => {
@@ -122,11 +120,6 @@ describe("DatabricksConfigService", () => {
     it("should return the correct device data table name", () => {
       const deviceDataTableName = configService.getDeviceDataTableName();
       expect(deviceDataTableName).toBe(process.env.DATABRICKS_DEVICE_DATA_TABLE_NAME);
-    });
-
-    it("should return the correct raw ambyte data table name", () => {
-      const rawAmbyteDataTableName = configService.getRawAmbyteDataTableName();
-      expect(rawAmbyteDataTableName).toBe(process.env.DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME);
     });
 
     it("should return the correct macro data table name", () => {

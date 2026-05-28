@@ -57,6 +57,94 @@
       "backToList": "Zurück zu Exporten",
       "anonymizeContributors": "Mitwirkende in der exportierten Datei anonymisieren",
       "overridingDefault": "überschreibt Experimentstandard"
+    },
+    "uploadDataModal": {
+      "title": "Daten hochladen",
+      "description": "Laden Sie CSV-, TSV-, Parquet-, Excel-, JSON- oder NDJSON-Dateien in eine neue oder bestehende Benutzertabelle hoch. Das Schema wird aus der Datei abgeleitet.",
+      "targetKind": {
+        "new": "Neue Tabelle erstellen",
+        "existing": "An bestehende anhängen"
+      },
+      "newTable": {
+        "label": "Tabellenname",
+        "placeholder": "z. B. greenhouse_temps"
+      },
+      "existingTable": {
+        "label": "Bestehende Tabelle",
+        "placeholder": "Tabelle auswählen",
+        "rowCount_one": "{{count}} Zeile",
+        "rowCount_other": "{{count}} Zeilen"
+      },
+      "sourceKind": {
+        "label": "Datenformat"
+      },
+      "files": {
+        "label": "Datendatei(en) (CSV, TSV, Parquet, Excel, JSON, NDJSON)",
+        "ambyteLabel": "Ambyte-Datenordner"
+      },
+      "validation": {
+        "title": "Hochladen nicht möglich",
+        "noTarget": "Zieltabelle auswählen oder benennen",
+        "invalidName": "Der Name muss mit einem Buchstaben beginnen; erlaubt sind Buchstaben, Ziffern und Unterstriche (max. 63)",
+        "noFiles": "Wählen Sie mindestens eine Datendatei aus",
+        "unsupportedFormat": "'{{fileName}}' ist kein unterstütztes Dateiformat (CSV, TSV, Parquet, Excel, JSON, NDJSON)",
+        "mixedFormats": "Alle Dateien eines Uploads müssen dasselbe Format haben",
+        "ambyteInvalidStructure": "Der gewählte Ordner entspricht nicht dem erwarteten Ambyte_N-Layout",
+        "ambyteOversizedFiles_one": "{{count}} Datei überschreitet die maximal zulässige Größe",
+        "ambyteOversizedFiles_other": "{{count}} Dateien überschreiten die maximal zulässige Größe"
+      },
+      "submitError": {
+        "title": "Upload fehlgeschlagen",
+        "fallback": "Upload fehlgeschlagen"
+      },
+      "status": {
+        "succeeded": {
+          "title": "Upload erfolgreich",
+          "description": "Die Zeilen werden in '{{tableName}}' geschrieben. Die Tabelle erscheint, sobald die Pipeline sie materialisiert hat."
+        },
+        "failed": {
+          "title": "Upload fehlgeschlagen",
+          "fallback": "Der Verarbeitungsjob ist fehlgeschlagen."
+        },
+        "processing": {
+          "title": "Wird verarbeitet…",
+          "description": "Ihre Datei wurde hochgeladen; der Verarbeitungsjob läuft."
+        }
+      },
+      "actions": {
+        "cancel": "Abbrechen",
+        "close": "Schließen",
+        "upload": "Hochladen"
+      },
+      "history": {
+        "title": "Letzte Uploads",
+        "empty": "Noch keine Uploads.",
+        "loading": "Uploads werden geladen…",
+        "uploadCount_one": "{{count}} kürzlicher Upload",
+        "uploadCount_other": "{{count}} kürzliche Uploads",
+        "uploadTitle": "Upload #{{number}}",
+        "failedTooltip": "Dieser Upload ist fehlgeschlagen. Details finden Sie in den Logs des Verarbeitungsjobs.",
+        "status": {
+          "pending": "Ausstehend",
+          "running": "Wird verarbeitet",
+          "completed": "Abgeschlossen",
+          "failed": "Fehlgeschlagen"
+        },
+        "sourceKind": {
+          "ambyte": "Ambyte",
+          "csv": "CSV",
+          "tsv": "TSV",
+          "parquet": "Parquet",
+          "xlsx": "Excel",
+          "json": "JSON",
+          "ndjson": "NDJSON"
+        },
+        "rowCount_one": "{{count}} Zeile",
+        "rowCount_other": "{{count}} Zeilen",
+        "fileCount_one": "{{count}} Datei",
+        "fileCount_other": "{{count}} Dateien",
+        "untargeted": "(keine Tabelle)"
+      }
     }
   }
 }

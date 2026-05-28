@@ -171,8 +171,8 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
 _TABLE_CONFIG = {
     "raw_data": ("enriched_experiment_raw_data", "timestamp"),
     "device": ("experiment_device_data", "processed_timestamp"),
-    "raw_ambyte_data": ("enriched_raw_ambyte_data", "processed_at"),
     "macro": ("enriched_experiment_macro_data", "timestamp"),
+    "upload": ("enriched_experiment_uploaded_data", "uploaded_at"),
 }
 
 _MACRO_EXCLUDE_COLS = ["raw_id", "macro_id", "macro_name", "macro_filename", "date"]

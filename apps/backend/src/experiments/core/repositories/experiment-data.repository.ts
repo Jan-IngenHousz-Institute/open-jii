@@ -9,7 +9,11 @@ import type {
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
-import { STATIC_TABLE_CONFIG, MACRO_TABLE_CONFIG } from "../models/experiment-data.model";
+import {
+  MACRO_TABLE_CONFIG,
+  STATIC_TABLE_CONFIG,
+  UPLOAD_TABLE_CONFIG,
+} from "../models/experiment-data.model";
 import type {
   ExperimentTableMetadata,
   SchemaDataDto,
@@ -214,11 +218,15 @@ export class ExperimentDataRepository {
       macroSchema,
       questionsSchema,
       customMetadataSchema,
+      uploadSchema,
     } = metadata;
 
     const config = (() => {
       if (tableType === "macro") {
         return MACRO_TABLE_CONFIG;
+      }
+      if (tableType === "upload") {
+        return UPLOAD_TABLE_CONFIG;
       }
       return STATIC_TABLE_CONFIG[tableName];
     })();
@@ -256,6 +264,14 @@ export class ExperimentDataRepository {
         variants.push({ columnName: "custom_metadata", schema: customMetadataSchema });
       } else {
         exceptColumns.push("custom_metadata");
+      }
+    }
+
+    if (config.variantColumns.includes("uploaded_data")) {
+      if (uploadSchema) {
+        variants.push({ columnName: "uploaded_data", schema: uploadSchema });
+      } else {
+        exceptColumns.push("uploaded_data");
       }
     }
 

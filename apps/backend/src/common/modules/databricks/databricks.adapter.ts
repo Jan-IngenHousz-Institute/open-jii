@@ -1,11 +1,16 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Readable } from "stream";
 
-import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
+import { ExperimentTableName, zUploadSourceKind } from "@repo/api/schemas/experiment.schema";
 
-import type { ExportMetadata } from "../../../experiments/core/models/experiment-data-exports.model";
+import type {
+  ExportFormat,
+  ExportMetadata,
+} from "../../../experiments/core/models/experiment-data-exports.model";
+import type { UploadMetadata } from "../../../experiments/core/models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
+import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -13,7 +18,6 @@ import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
-import { JobLifecycleState, JobResultState } from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import type {
   AggregationSpec,
@@ -31,8 +35,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
   readonly RAW_DATA_TABLE_NAME: string;
   readonly DEVICE_DATA_TABLE_NAME: string;
-  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
   readonly MACRO_DATA_TABLE_NAME: string;
+  readonly UPLOADED_DATA_TABLE_NAME: string;
 
   constructor(
     private readonly jobsService: DatabricksJobsService,
@@ -45,30 +49,52 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
     this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
     this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
-    this.RAW_AMBYTE_DATA_TABLE_NAME = this.configService.getRawAmbyteDataTableName();
     this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
+    this.UPLOADED_DATA_TABLE_NAME = this.configService.getUploadedDataTableName();
   }
 
   async healthCheck(): Promise<Result<DatabricksHealthCheck>> {
     return this.jobsService.healthCheck();
   }
 
-  async triggerAmbyteProcessingJob(
-    params: Record<string, string>,
-  ): Promise<Result<DatabricksJobRunResponse>> {
+  /**
+   * Trigger the data upload Databricks job. Accepts semantic input and maps to
+   * the per-kind widget keys the Python task reads via dbutils.widgets.get(...).
+   */
+  async triggerDataUploadJob(input: DataUploadJobInput): Promise<Result<DatabricksJobRunResponse>> {
     this.logger.log({
-      msg: "Triggering ambyte processing job",
-      operation: "triggerAmbyteProcessingJob",
-      experimentId: params.EXPERIMENT_ID,
+      msg: "Triggering data upload job",
+      operation: "triggerDataUploadJob",
+      experimentId: input.experimentId,
+      sourceKind: input.sourceKind,
+      uploadId: "uploadId" in input ? input.uploadId : undefined,
+      uploadTableName: "uploadTableName" in input ? input.uploadTableName : undefined,
     });
 
-    const jobParams = {
-      ...params,
+    const jobParams: Record<string, string> = {
+      SOURCE_KIND: input.sourceKind,
+      EXPERIMENT_ID: input.experimentId,
+      UPLOAD_DIRECTORY: input.uploadDirectory,
+      UPLOAD_ID: input.uploadId,
+      USER_ID: input.userId,
       CATALOG_NAME: this.configService.getCatalogName(),
     };
+    jobParams.UPLOAD_TABLE_ID = input.uploadTableId;
+    jobParams.UPLOAD_TABLE_NAME = input.uploadTableName;
+    if (input.sourceKind === "ambyte") {
+      jobParams.EXPERIMENT_NAME = input.experimentName;
+      // Year prefix tracks the calendar year of upload — used to partition the
+      // ambyte volume layout. Sourced from the system clock so it never goes stale.
+      jobParams.YEAR_PREFIX = new Date().getUTCFullYear().toString();
+    }
 
-    const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
+    const jobId = this.configService.getDataUploadJobIdAsNumber();
     return this.jobsService.triggerJob(jobId, jobParams);
+  }
+
+  /** Run status for any Databricks job by runId. */
+  async getJobRunStatus(runId: number) {
+    return this.jobsService.getJobRunStatus(runId);
   }
 
   /**
@@ -213,75 +239,36 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     experimentId: string,
     tableName: string,
   ): Promise<Result<ExportMetadata[]>> {
-    this.logger.log({
-      msg: "Fetching active exports from job runs",
-      operation: "getActiveExports",
-      experimentId,
-      tableName,
-    });
-
     const jobId = this.configService.getDataExportJobIdAsNumber();
-
-    const runsResult = await this.jobsService.listRunsForJob(jobId, true);
-
+    const runsResult = await this.jobsService.listActiveRunsWithParams(jobId);
     if (runsResult.isFailure()) {
       return failure(runsResult.error);
     }
 
-    const runs = runsResult.value.runs ?? [];
-
-    const activeExports = runs.reduce<ExportMetadata[]>((acc, run) => {
-      const paramsArray = run.job_parameters ?? [];
-      const params: Record<string, string> = paramsArray.reduce((record, param) => {
-        record[param.name] = param.value;
-        return record;
-      }, {});
-
+    const exports: ExportMetadata[] = [];
+    for (const { run, params, status } of runsResult.value) {
       if (params.EXPERIMENT_ID !== experimentId || params.TABLE_NAME !== tableName) {
-        return acc;
+        continue;
       }
-
-      const lifecycleState = run.state.life_cycle_state;
-      let status: ExportMetadata["status"];
-      switch (lifecycleState) {
-        case JobLifecycleState.QUEUED:
-          status = "queued";
-          break;
-        case JobLifecycleState.PENDING:
-          status = "pending";
-          break;
-        case JobLifecycleState.RUNNING:
-        case JobLifecycleState.TERMINATING:
-          status = "running";
-          break;
-        case JobLifecycleState.INTERNAL_ERROR:
-          // Platform-level error, not caught by getFailedExports()
-          status = "failed";
-          break;
-        default:
-          // active_only should not return TERMINATED or SKIPPED
-          return acc;
+      if (!params.USER_ID) {
+        continue;
       }
-
-      acc.push({
+      exports.push({
         exportId: null,
         experimentId: params.EXPERIMENT_ID,
         tableName: params.TABLE_NAME,
-        format: params.FORMAT as "csv" | "ndjson" | "json-array" | "parquet",
+        format: params.FORMAT as ExportFormat,
         status,
         filePath: null,
         rowCount: null,
         fileSize: null,
-        createdBy: params.USER_ID || "",
+        createdBy: params.USER_ID,
         createdAt: new Date(run.start_time).toISOString(),
         completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
         jobRunId: run.run_id,
       });
-
-      return acc;
-    }, []);
-
-    return success(activeExports);
+    }
+    return success(exports);
   }
 
   async getFailedExports(
@@ -289,69 +276,173 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     tableName: string,
     completedExportRunIds: Set<number>,
   ): Promise<Result<ExportMetadata[]>> {
-    this.logger.log({
-      msg: "Fetching failed exports from completed job runs",
-      operation: "getFailedExports",
-      experimentId,
-      tableName,
-    });
-
     const jobId = this.configService.getDataExportJobIdAsNumber();
-
-    const runsResult = await this.jobsService.listRunsForJob(jobId, false, 25, true);
-
+    const runsResult = await this.jobsService.listFailedRunsWithParams(
+      jobId,
+      completedExportRunIds,
+    );
     if (runsResult.isFailure()) {
       return failure(runsResult.error);
     }
 
-    const runs = runsResult.value.runs ?? [];
-
-    const failedExports = runs.reduce<ExportMetadata[]>((acc, run) => {
-      // Skip runs already represented by a completed export record in Delta Lake
-      if (completedExportRunIds.has(run.run_id)) {
-        return acc;
-      }
-
-      const paramsArray = run.job_parameters ?? [];
-      const params: Record<string, string> = paramsArray.reduce(
-        (record: Record<string, string>, param) => {
-          record[param.name] = param.value;
-          return record;
-        },
-        {},
-      );
-
+    const exports: ExportMetadata[] = [];
+    for (const { run, params } of runsResult.value) {
       if (params.EXPERIMENT_ID !== experimentId || params.TABLE_NAME !== tableName) {
-        return acc;
+        continue;
       }
-
-      const resultState = run.state.result_state;
-      if (
-        run.state.life_cycle_state !== JobLifecycleState.TERMINATED ||
-        resultState === JobResultState.SUCCESS
-      ) {
-        return acc;
+      if (!params.USER_ID) {
+        continue;
       }
-
-      acc.push({
+      exports.push({
         exportId: null,
         experimentId: params.EXPERIMENT_ID,
         tableName: params.TABLE_NAME,
-        format: params.FORMAT as "csv" | "ndjson" | "json-array" | "parquet",
+        format: params.FORMAT as ExportFormat,
         status: "failed",
         filePath: null,
         rowCount: null,
         fileSize: null,
-        createdBy: params.USER_ID || "",
+        createdBy: params.USER_ID,
         createdAt: new Date(run.start_time).toISOString(),
         completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
         jobRunId: run.run_id,
       });
+    }
+    return success(exports);
+  }
 
-      return acc;
-    }, []);
+  /**
+   * Get completed upload metadata for an experiment from the Delta history table.
+   */
+  async getUploadMetadata(
+    experimentId: string,
+    options?: { uploadTableId?: string; uploadTableName?: string },
+  ): Promise<Result<SchemaData>> {
+    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
+    if (options?.uploadTableId) {
+      whereConditions.push(["upload_table_id", options.uploadTableId]);
+    }
+    if (options?.uploadTableName) {
+      whereConditions.push(["upload_table_name", options.uploadTableName]);
+    }
+    const queryResult = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_upload_metadata`,
+      whereConditions,
+      orderBy: "created_at",
+      orderDirection: "DESC",
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
 
-    return success(failedExports);
+    return this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+  }
+
+  /**
+   * Get active (in-progress) uploads for an experiment by querying the data upload job runs.
+   * Filters job-runs API by EXPERIMENT_ID widget (and optionally UPLOAD_TABLE_ID / UPLOAD_TABLE_NAME).
+   */
+  async getActiveUploads(
+    experimentId: string,
+    options?: { uploadTableId?: string; uploadTableName?: string },
+  ): Promise<Result<UploadMetadata[]>> {
+    const jobId = this.configService.getDataUploadJobIdAsNumber();
+    const runsResult = await this.jobsService.listActiveRunsWithParams(jobId);
+    if (runsResult.isFailure()) {
+      return failure(runsResult.error);
+    }
+
+    const uploads: UploadMetadata[] = [];
+    for (const { run, params, status } of runsResult.value) {
+      if (params.EXPERIMENT_ID !== experimentId) {
+        continue;
+      }
+      if (options?.uploadTableId && params.UPLOAD_TABLE_ID !== options.uploadTableId) {
+        continue;
+      }
+      if (options?.uploadTableName && params.UPLOAD_TABLE_NAME !== options.uploadTableName) {
+        continue;
+      }
+      if (!params.UPLOAD_ID || !params.USER_ID) {
+        continue;
+      }
+      const parsedKind = zUploadSourceKind.safeParse(params.SOURCE_KIND);
+      if (!parsedKind.success) {
+        continue;
+      }
+      uploads.push({
+        uploadId: params.UPLOAD_ID,
+        experimentId: params.EXPERIMENT_ID,
+        uploadTableId: params.UPLOAD_TABLE_ID || null,
+        uploadTableName: params.UPLOAD_TABLE_NAME || null,
+        sourceKind: parsedKind.data,
+        // Upload history doesn't surface "queued" separately; collapse into "pending".
+        status: status === "queued" ? "pending" : status,
+        fileCount: null,
+        rowCount: null,
+        createdBy: params.USER_ID,
+        createdAt: new Date(run.start_time).toISOString(),
+        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
+        errorMessage: null,
+      });
+    }
+    return success(uploads);
+  }
+
+  /**
+   * Get failed uploads from completed job runs (terminated + non-SUCCESS),
+   * deduped against the set of upload_ids already in the Delta history table.
+   */
+  async getFailedUploads(
+    experimentId: string,
+    completedUploadIds: Set<string>,
+    options?: { uploadTableId?: string; uploadTableName?: string },
+  ): Promise<Result<UploadMetadata[]>> {
+    const jobId = this.configService.getDataUploadJobIdAsNumber();
+    // Pass an empty run-id set: dedup happens by UPLOAD_ID below since the
+    // upload metadata table keys on it, not on the Databricks run id.
+    const runsResult = await this.jobsService.listFailedRunsWithParams(jobId, new Set());
+    if (runsResult.isFailure()) {
+      return failure(runsResult.error);
+    }
+
+    const uploads: UploadMetadata[] = [];
+    for (const { run, params } of runsResult.value) {
+      if (params.EXPERIMENT_ID !== experimentId) {
+        continue;
+      }
+      if (options?.uploadTableId && params.UPLOAD_TABLE_ID !== options.uploadTableId) {
+        continue;
+      }
+      if (options?.uploadTableName && params.UPLOAD_TABLE_NAME !== options.uploadTableName) {
+        continue;
+      }
+      if (!params.UPLOAD_ID || !params.USER_ID) {
+        continue;
+      }
+      if (completedUploadIds.has(params.UPLOAD_ID)) {
+        continue;
+      }
+      const parsedKind = zUploadSourceKind.safeParse(params.SOURCE_KIND);
+      if (!parsedKind.success) {
+        continue;
+      }
+      uploads.push({
+        uploadId: params.UPLOAD_ID,
+        experimentId: params.EXPERIMENT_ID,
+        uploadTableId: params.UPLOAD_TABLE_ID || null,
+        uploadTableName: params.UPLOAD_TABLE_NAME || null,
+        sourceKind: parsedKind.data,
+        status: "failed",
+        fileCount: null,
+        rowCount: null,
+        createdBy: params.USER_ID,
+        createdAt: new Date(run.start_time).toISOString(),
+        completedAt: run.end_time ? new Date(run.end_time).toISOString() : null,
+        errorMessage: null,
+      });
+    }
+    return success(uploads);
   }
 
   /**
@@ -373,12 +464,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       ? [
           "identifier",
           "table_type",
+          "display_name",
           "row_count",
           "macro_schema",
           "questions_schema",
           "custom_metadata_schema",
+          "upload_schema",
         ]
-      : ["identifier", "table_type", "row_count"];
+      : ["identifier", "table_type", "display_name", "row_count"];
 
     const whereConditions: [string, string][] = [["experiment_id", experimentId]];
     if (options?.identifier) {
@@ -412,24 +505,27 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return failure(AppError.internal("Invalid query result format", "INVALID_QUERY_RESULT"));
     }
 
-    const metadata = result.value.rows.map((row) => {
-      const base = {
-        // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
-        identifier: row[0] as string,
-        tableType: (row[1] ?? "static") as "static" | "macro",
-        rowCount: row[2] ? parseInt(row[2], 10) : 0,
-      };
+    const metadata: ExperimentTableMetadata[] = result.value.rows.map((row) => {
+      // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+      const identifier = row[0] as string;
+      const tableType = (row[1] ?? "static") as "static" | "macro" | "upload";
+      const displayName = row[2] ?? null;
+      const rowCount = row[3] ? parseInt(row[3], 10) : 0;
 
       if (includeSchemas) {
         return {
-          ...base,
-          macroSchema: row[3],
-          questionsSchema: row[4],
-          customMetadataSchema: row[5],
+          identifier,
+          tableType,
+          displayName,
+          rowCount,
+          macroSchema: row[4],
+          questionsSchema: row[5],
+          customMetadataSchema: row[6],
+          uploadSchema: row[7],
         };
       }
 
-      return base;
+      return { identifier, tableType, displayName, rowCount };
     });
 
     return success(metadata);
@@ -440,7 +536,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
    */
   buildExperimentQuery(params: {
     tableName: string;
-    tableType: "static" | "macro";
+    tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
     variants?: { columnName: string; schema: string }[];
@@ -496,10 +592,31 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       });
     }
 
+    if (tableType === "upload") {
+      // Upload tables: query the gold experiment_uploaded_data, filter by experiment_id AND
+      // upload_table_id. `tableName` here is the stable upload_table_id passed by the caller.
+      const table = `${catalog}.${schema}.${this.UPLOADED_DATA_TABLE_NAME}`;
+      const whereConditions: [string, string][] = [
+        ["experiment_id", experimentId],
+        ["upload_table_id", tableName],
+      ];
+
+      return this.queryBuilder.buildQuery({
+        table,
+        columns,
+        variants,
+        exceptColumns,
+        whereConditions,
+        orderBy,
+        orderDirection,
+        limit,
+        offset,
+      });
+    }
+
     const staticTableMapping: Record<string, string> = {
       [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
       [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
-      [ExperimentTableName.RAW_AMBYTE_DATA]: this.RAW_AMBYTE_DATA_TABLE_NAME,
     };
 
     const physicalTable = staticTableMapping[tableName];
@@ -548,12 +665,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     sourceType: string,
     directoryName: string,
     fileName: string,
-    fileBuffer: Buffer,
+    body: Buffer | NodeJS.ReadableStream,
   ): Promise<Result<UploadFileResponse>> {
     const catalogName = this.configService.getCatalogName();
 
     const filePath = `/Volumes/${catalogName}/${schemaName}/data-imports/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
-    return this.filesService.upload(filePath, fileBuffer);
+    return this.filesService.upload(filePath, body);
   }
 }

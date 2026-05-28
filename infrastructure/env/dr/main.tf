@@ -263,15 +263,15 @@ module "databricks_secrets" {
   description = "Databricks connection secrets for the openJII services"
 
   secret_string = jsonencode({
-    DATABRICKS_HOST                     = var.databricks_host
-    DATABRICKS_CLIENT_ID                = var.databricks_service_principal_client_id
-    DATABRICKS_CLIENT_SECRET            = var.databricks_service_principal_client_secret
-    DATABRICKS_AMBYTE_PROCESSING_JOB_ID = var.databricks_ambyte_processing_job_id
-    DATABRICKS_DATA_EXPORT_JOB_ID       = var.databricks_data_export_job_id
-    DATABRICKS_WAREHOUSE_ID             = var.backend_databricks_warehouse_id
-    DATABRICKS_WEBHOOK_API_KEY_ID       = var.backend_webhook_api_key_id
-    DATABRICKS_WEBHOOK_SECRET           = var.backend_webhook_secret
-    DATABRICKS_WEBHOOK_API_KEY          = var.backend_webhook_api_key
+    DATABRICKS_HOST               = var.databricks_host
+    DATABRICKS_CLIENT_ID          = var.databricks_service_principal_client_id
+    DATABRICKS_CLIENT_SECRET      = var.databricks_service_principal_client_secret
+    DATABRICKS_DATA_UPLOAD_JOB_ID = var.databricks_data_upload_job_id
+    DATABRICKS_DATA_EXPORT_JOB_ID = var.databricks_data_export_job_id
+    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
   })
 
   tags = {
@@ -505,7 +505,7 @@ module "backend_ecs" {
     { name = "DATABRICKS_CLIENT_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::" },
     { name = "DATABRICKS_CLIENT_SECRET", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::" },
     { name = "DATABRICKS_HOST", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::" },
-    { name = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::" },
+    { name = "DATABRICKS_DATA_UPLOAD_JOB_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_ID::" },
     { name = "DATABRICKS_DATA_EXPORT_JOB_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::" },
     { name = "DATABRICKS_WAREHOUSE_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::" },
     { name = "DATABRICKS_WEBHOOK_API_KEY_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::" },
@@ -521,8 +521,8 @@ module "backend_ecs" {
     { name = "DATABRICKS_CENTRUM_SCHEMA_NAME", value = "centrum" },
     { name = "DATABRICKS_RAW_DATA_TABLE_NAME", value = "enriched_experiment_raw_data" },
     { name = "DATABRICKS_DEVICE_DATA_TABLE_NAME", value = "experiment_device_data" },
-    { name = "DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME", value = "enriched_raw_ambyte_data" },
     { name = "DATABRICKS_MACRO_DATA_TABLE_NAME", value = "enriched_experiment_macro_data" },
+    { name = "DATABRICKS_UPLOADED_DATA_TABLE_NAME", value = "enriched_experiment_uploaded_data" },
     { name = "DB_HOST", value = module.aurora_db.cluster_endpoint },
     { name = "DB_NAME", value = module.aurora_db.database_name },
     { name = "DB_PORT", value = module.aurora_db.cluster_port },
@@ -584,7 +584,7 @@ module "backend_waf" {
 
   large_body_bypass_routes = [
     {
-      search_string         = "/upload"
+      search_string         = "/uploads"
       positional_constraint = "ENDS_WITH"
       method                = "POST"
     },
