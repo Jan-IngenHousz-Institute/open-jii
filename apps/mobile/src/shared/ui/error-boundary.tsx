@@ -4,14 +4,14 @@ import { createLogger } from "~/shared/utils/logger";
 
 const log = createLogger("error-boundary");
 
-type Props = {
+interface Props {
   children: React.ReactNode;
-};
+}
 
-type State = {
+interface State {
   error: Error | null;
   info: React.ErrorInfo | null;
-};
+}
 
 export class ErrorBoundary extends React.Component<Props, State> {
   state: State = { error: null, info: null };

@@ -1,5 +1,4 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { clsx } from "clsx";
 import { Clock, Flag, FlaskConical, MessageCircleMore, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Text, TouchableOpacity, View } from "react-native";
@@ -8,7 +7,7 @@ import { CommentModal } from "~/features/recent-measurements/components/comment-
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
 import {
   getCommentFromMeasurementResult,
@@ -26,7 +25,7 @@ export function MeasurementQuestionsModal({
   measurement,
   onClose,
 }: MeasurementQuestionsModalProps) {
-  const { colors, classes } = useTheme();
+  const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const insets = useSafeAreaInsets();
   const { updateMeasurementComment } = useMeasurements();
@@ -89,19 +88,14 @@ export function MeasurementQuestionsModal({
         backdropComponent={renderBackdrop}
         onDismiss={onClose}
         handleIndicatorStyle={{ backgroundColor: colors.inactive }}
+        backgroundStyle={{ backgroundColor: colors.card }}
         topInset={insets.top}
         stackBehavior="push"
       >
         {/* Header */}
-        <View
-          className={clsx(
-            "flex-row items-start justify-between border-b px-4 pb-4 pt-2",
-            classes.border,
-            classes.background,
-          )}
-        >
+        <View className="border-border flex-row items-start justify-between border-b px-4 pb-4 pt-2">
           <View className="mr-3 flex-1">
-            <Text className={clsx("text-xl font-bold", classes.text)}>{experimentName}</Text>
+            <Text className="text-on-surface text-xl font-bold">{experimentName}</Text>
 
             <View className="mt-2 flex-row flex-wrap items-center gap-2">
               {protocolName && (
@@ -118,7 +112,7 @@ export function MeasurementQuestionsModal({
 
               <View className="flex-row items-center gap-1">
                 <Clock size={11} color={colors.inactive} />
-                <Text className={clsx("text-xs", classes.textMuted)}>{timestamp}</Text>
+                <Text className="text-muted-foreground text-xs">{timestamp}</Text>
               </View>
             </View>
           </View>
@@ -157,40 +151,23 @@ export function MeasurementQuestionsModal({
         >
           {(currentFlagType !== null || currentComment !== "") && (
             <View className="mb-4 gap-2">
-              <Text
-                className={clsx(
-                  "text-xs font-semibold uppercase tracking-wider",
-                  classes.textMuted,
-                )}
-              >
+              <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
                 {t("recentMeasurements:questionsModal.annotationsHeading")}
               </Text>
 
               {currentFlagType && (
-                <View
-                  className={clsx(
-                    "flex-row items-center gap-2 rounded-xl border px-3 py-2",
-                    classes.card,
-                    classes.border,
-                  )}
-                >
+                <View className="bg-surface border-border flex-row items-center gap-2 rounded-xl border px-3 py-2">
                   <Flag size={14} color={colors.brand} />
-                  <Text className={clsx("text-sm font-semibold", classes.text)}>
+                  <Text className="text-on-surface text-sm font-semibold">
                     {t(`recentMeasurements:flagType.${currentFlagType}`)}
                   </Text>
                 </View>
               )}
 
               {currentComment !== "" && (
-                <View
-                  className={clsx(
-                    "flex-row items-start gap-2 rounded-xl border px-3 py-2",
-                    classes.card,
-                    classes.border,
-                  )}
-                >
+                <View className="bg-surface border-border flex-row items-start gap-2 rounded-xl border px-3 py-2">
                   <MessageCircleMore size={14} color={colors.brand} style={{ marginTop: 2 }} />
-                  <Text className={clsx("flex-1 text-sm", classes.text)}>{currentComment}</Text>
+                  <Text className="text-on-surface flex-1 text-sm">{currentComment}</Text>
                 </View>
               )}
             </View>
@@ -198,26 +175,21 @@ export function MeasurementQuestionsModal({
 
           {questions.length === 0 ? (
             <View className="items-center justify-center py-8">
-              <Text className={clsx("text-center", classes.textSecondary)}>
+              <Text className="text-muted-foreground text-center">
                 {t("recentMeasurements:questionsModal.noQuestionsAnswered")}
               </Text>
             </View>
           ) : (
             <View className="gap-2">
               <View className="mb-1 flex-row items-center justify-between">
-                <Text
-                  className={clsx(
-                    "text-xs font-semibold uppercase tracking-wider",
-                    classes.textMuted,
-                  )}
-                >
+                <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
                   {t("recentMeasurements:questionsModal.questionsHeading")}
                 </Text>
                 <View
                   className="rounded-full px-2 py-0.5"
                   style={{ backgroundColor: colors.surface }}
                 >
-                  <Text className={clsx("text-xs font-semibold", classes.textMuted)}>
+                  <Text className="text-muted-foreground text-xs font-semibold">
                     {questions.length}
                   </Text>
                 </View>
@@ -226,11 +198,7 @@ export function MeasurementQuestionsModal({
               {questions.map((question, index) => (
                 <View
                   key={index}
-                  className={clsx(
-                    "overflow-hidden rounded-xl border",
-                    classes.card,
-                    classes.border,
-                  )}
+                  className="bg-surface border-border overflow-hidden rounded-xl border"
                 >
                   <View className="flex-row items-start gap-3 p-4">
                     <View
@@ -243,18 +211,11 @@ export function MeasurementQuestionsModal({
                     </View>
 
                     <View className="flex-1">
-                      <Text
-                        className={clsx(
-                          "mb-0.5 text-xs font-semibold uppercase tracking-wide",
-                          classes.textMuted,
-                        )}
-                      >
+                      <Text className="text-muted-foreground mb-0.5 text-xs font-semibold uppercase tracking-wide">
                         {question.question_label}
                       </Text>
 
-                      <Text className={clsx("mb-3 text-sm", classes.text)}>
-                        {question.question_text}
-                      </Text>
+                      <Text className="text-on-surface mb-3 text-sm">{question.question_text}</Text>
 
                       <View
                         className="self-start rounded-lg px-3 py-1.5"

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { addLogSink, clearLogSinks, setMinLogLevel, type LogEntry } from "./logger";
+import { addLogSink, clearLogSinks, setMinLogLevel } from "./logger";
+import type { LogEntry } from "./logger";
 import { clearTraceRegistry, getTrace, startTrace } from "./trace";
 
 function captureSink() {
@@ -47,7 +48,7 @@ describe("trace", () => {
     t.end("ok", { attempts: 1, bytes: 18472 });
 
     expect(entries).toHaveLength(1);
-    const entry = entries[0]!;
+    const entry = entries[0];
     expect(entry.ns).toBe("trace");
     expect(entry.msg).toBe("upload");
     expect(entry.level).toBe("info");
@@ -72,7 +73,7 @@ describe("trace", () => {
     getTrace("m_x")?.event("slot_acquired", { slot: 2 });
     getTrace("m_x")?.end("ok");
 
-    const events = entries[0]!.fields.events as string[];
+    const events = entries[0].fields.events as string[];
     expect(events).toEqual(["slot_acquired+0(slot=2)"]);
     expect(getTrace("m_x")).toBeUndefined();
   });
@@ -88,9 +89,9 @@ describe("trace", () => {
     t2.end("ok");
 
     expect(t1).toBe(t2);
-    const events = entries[0]!.fields.events as string[];
+    const events = entries[0].fields.events as string[];
     expect(events).toEqual(["attempt_1_failed+0", "attempt_2_ok+0"]);
-    expect(entries[0]!.fields.retried).toBe(true);
+    expect(entries[0].fields.retried).toBe(true);
   });
 
   it("end emits at error level when status is error", () => {
@@ -100,8 +101,8 @@ describe("trace", () => {
     const t = startTrace("upload", "m_e");
     t.end("error", { err: "boom" });
 
-    expect(entries[0]!.level).toBe("error");
-    expect(entries[0]!.fields.status).toBe("error");
-    expect(entries[0]!.fields.err).toBe("boom");
+    expect(entries[0].level).toBe("error");
+    expect(entries[0].fields.status).toBe("error");
+    expect(entries[0].fields.err).toBe("boom");
   });
 });

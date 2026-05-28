@@ -1,10 +1,9 @@
-import { Tabs, useSegments } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { FlaskConical, House, Settings, Workflow } from "lucide-react-native";
-import { View } from "react-native";
+import { Easing, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DeviceSheet } from "~/features/connection/components/device-sheet";
 import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
 import { usePruneExpiredMeasurements } from "~/features/recent-measurements/hooks/use-prune-expired-measurements";
 import { useTranslation } from "~/shared/i18n";
@@ -17,24 +16,25 @@ import { OpenJiiLogo } from "~/shared/ui/widgets/openjii-logo";
 export default function TabLayout() {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const segments = useSegments();
+  const router = useRouter();
   const { t: tHome } = useTranslation("home");
-  const hasActiveExperiment = useMeasurementFlowStore((s) => !!s.experimentId);
 
   useAutoReconnect();
   usePruneExpiredMeasurements();
 
-  // Hide the bar only once an experiment has been selected — keep it visible
-  // on the picker so the user can still bail out.
-  const inActiveFlow = segments.some((s) => s === "measurement-flow") && hasActiveExperiment;
-
   return (
     <View className="flex-1">
       <Tabs
-        tabBar={(props) => <AnimatedTabBar {...props} hidden={inActiveFlow} />}
+        tabBar={(props) => <AnimatedTabBar {...props} hidden={false} />}
         screenOptions={{
+          animation: "fade",
+          transitionSpec: {
+            animation: "timing",
+            config: { duration: 400, easing: Easing.inOut(Easing.ease) },
+          },
           sceneStyle: {
-            paddingBottom: inActiveFlow ? insets.bottom : 60 + insets.bottom,
+            paddingBottom: 60 + insets.bottom,
+            backgroundColor: themeColors.background,
           },
           tabBarActiveTintColor: themeColors.brand,
           tabBarInactiveTintColor: themeColors.inactive,
@@ -70,12 +70,20 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="measurement-flow"
+          name="measure"
           options={{
-            title: "Flow",
+            title: "Measure",
             tabBarLabel: "Measure",
             headerShown: false,
             tabBarIcon: ({ color, size }) => <Workflow size={size} color={color} />,
+          }}
+          listeners={{
+            // Launch the flow as a pushed screen over the tabs (native slide
+            // transition) rather than switching into a flat tab scene.
+            tabPress: (e) => {
+              e.preventDefault();
+              router.push("/measurement-flow");
+            },
           }}
         />
         <Tabs.Screen

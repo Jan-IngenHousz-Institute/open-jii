@@ -6,9 +6,11 @@ import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function HomeDeviceCard() {
   const { t } = useTranslation("home");
+  const themeColors = useThemeColors();
   const { data: connectedDevice } = useConnectedDevice();
   const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
@@ -38,7 +40,7 @@ export function HomeDeviceCard() {
 
   return (
     <Pressable onPress={onPress} className="mb-1 mt-3">
-      <View className="border-divider bg-card rounded-2xl border p-3.5 shadow-sm shadow-black/10">
+      <View className="bg-card rounded-2xl p-3.5 shadow-sm shadow-black/10">
         <View className="flex-row items-center">
           <View
             className="mr-3 items-center justify-center"
@@ -81,7 +83,7 @@ export function HomeDeviceCard() {
             </Text>
           </View>
 
-          <ChevronRight size={20} color="#9CA3AF" />
+          <ChevronRight size={20} color={themeColors.inactive} />
         </View>
       </View>
     </Pressable>

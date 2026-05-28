@@ -140,4 +140,59 @@ describe("customApiFetcher", () => {
     const sent = mockTsRestFetch.mock.calls[0][0];
     expect(sent.headers.Cookie).toBeUndefined();
   });
+
+  it("aborts the underlying fetch when the upstream signal aborts", async () => {
+    const upstream = new AbortController();
+    mockTsRestFetch.mockImplementation((sentArgs: { signal: AbortSignal }) => {
+      return new Promise((_resolve, reject) => {
+        sentArgs.signal.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        );
+      });
+    });
+
+    const p = customApiFetcher({ ...args, signal: upstream.signal } as ApiFetcherArgs);
+    upstream.abort();
+
+    await expect(p).rejects.toThrow();
+  });
+
+  it("aborts a hung fetch via its internal timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      mockTsRestFetch.mockImplementation((sentArgs: { signal: AbortSignal }) => {
+        return new Promise((_resolve, reject) => {
+          sentArgs.signal.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        });
+      });
+
+      const p = customApiFetcher(args);
+      // Catch the rejection synchronously so the unhandled-rejection check passes
+      // while we still advance the clock to trigger the timeout abort.
+      const settled = p.catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const err = await settled;
+      expect((err as Error)?.name).toBe("AbortError");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not abort a request that resolves within the timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      mockTsRestFetch.mockResolvedValueOnce({ status: 200 });
+
+      const result = await customApiFetcher(args);
+
+      expect(result.status).toBe(200);
+      // The internal timeout would have fired had it not been cleared on success.
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(mockSignOut).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

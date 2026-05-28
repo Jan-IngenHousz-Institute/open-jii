@@ -2,9 +2,11 @@
 import { useIsFocused } from "@react-navigation/native";
 import { useKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { X } from "lucide-react-native";
 import React from "react";
-import { BackHandler, Image, View } from "react-native";
+import { BackHandler, Image, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
@@ -14,6 +16,8 @@ import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-paused-flow-store";
 import { colors } from "~/shared/constants/colors";
+import { useTranslation } from "~/shared/i18n";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
 import { NavigationButtons } from "./components/navigation-buttons";
@@ -42,6 +46,16 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const openExitSheet = useExitFlowSheetStore((s) => s.open);
+  const router = useRouter();
+  const themeColors = useThemeColors();
+  const { t } = useTranslation("measurementFlow");
+
+  // Picker state has no tab bar to bail out to (the flow now covers the tabs
+  // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
+  const dismissFlow = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/");
+  };
 
   const experimentLabel = experiments.find((e) => e.value === experimentId)?.label ?? "";
 
@@ -99,25 +113,22 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
 
   return (
     <View className="bg-background flex-1">
-      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "dark"} />}
+      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "auto"} />}
 
       {hasActiveFlow ? (
         <>
-          {/* Photo extends ~48% of the screen so the body's larger rounded
-              top corners curve over a generous slice of greenhouse — like
-              the old design but with more breathing room. */}
           <Image
             source={HERO_IMAGE}
-            style={{ position: "absolute", left: 0, right: 0, top: 0, height: "48%" }}
+            className="absolute left-0 right-0 top-0 h-[42%] w-full"
             resizeMode="cover"
           />
           {/* Brand-teal overlay covers the FULL photo area, not just the
               FlowHero's bounding box, so the strip between the hero and the
               body's rounded corner stays consistently masked. */}
           <LinearGradient
-            colors={[colors.jii.darkerGreen + "E0", colors.jii.darkGreen + "99"]}
+            colors={[colors.jii.darkGreen + "88", colors.jii.darkerGreen + "D0"]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 0, y: 1 }}
             style={{
               position: "absolute",
               left: 0,
@@ -130,7 +141,17 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
           <FlowHero title={experimentLabel} onExitPress={openExitSheet} />
         </>
       ) : (
-        <View style={{ height: insets.top }} />
+        <View style={{ paddingTop: insets.top }} className="px-2 pb-1">
+          <TouchableOpacity
+            onPress={dismissFlow}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t("hero.exitLabel")}
+            className="h-11 w-11 items-center justify-center"
+          >
+            <X size={26} color={themeColors.onSurface} />
+          </TouchableOpacity>
+        </View>
       )}
 
       <View className="flex-1">

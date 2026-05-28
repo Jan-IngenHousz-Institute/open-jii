@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { addLogSink, clearLogSinks, createLogger, setMinLogLevel, type LogEntry } from "./logger";
+import { addLogSink, clearLogSinks, createLogger, setMinLogLevel } from "./logger";
+import type { LogEntry } from "./logger";
 
 function captureSink() {
   const entries: LogEntry[] = [];
@@ -43,7 +44,7 @@ describe("logger", () => {
       msg: "publish start",
       fields: { id: "row-1", topic: "t/a" },
     });
-    expect(typeof entries[0]!.ts).toBe("number");
+    expect(typeof entries[0].ts).toBe("number");
   });
 
   it("respects min log level", () => {
@@ -68,7 +69,7 @@ describe("logger", () => {
     const child = root.child({ topic: "t/a" });
     child.info("publish", { id: 7 });
 
-    expect(entries[0]!.fields).toEqual({ slot: 2, topic: "t/a", id: 7 });
+    expect(entries[0].fields).toEqual({ slot: 2, topic: "t/a", id: 7 });
   });
 
   it("a throwing sink does not break other sinks or callers", () => {

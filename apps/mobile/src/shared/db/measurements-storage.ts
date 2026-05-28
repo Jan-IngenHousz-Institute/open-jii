@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, lt, inArray, count, desc } from "drizzle-orm";
+import { eq, and, gte, lt, inArray, count, desc } from "drizzle-orm";
 import { DateTime, Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import type { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
@@ -198,6 +198,34 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
   } catch (error) {
     log.error("Failed to count measurements", { err: (error as Error)?.message });
     return { pending: 0, failed: 0, successful: 0 };
+  }
+}
+
+/**
+ * Count measurements per experiment name since `sinceIso` (an ISO timestamp).
+ * Used to surface recently-active experiments first in the flow picker.
+ * `timestamp` is stored as a UTC ISO string, so a lexicographic `>=` compare
+ * is a correct time filter.
+ */
+export async function countRecentMeasurementsByExperiment(
+  sinceIso: string,
+): Promise<Record<string, number>> {
+  await ensureMigrated();
+  try {
+    const rows = db
+      .select({ name: measurements.experimentName, total: count() })
+      .from(measurements)
+      .where(gte(measurements.timestamp, sinceIso))
+      .groupBy(measurements.experimentName)
+      .all();
+    const out: Record<string, number> = {};
+    for (const r of rows) out[r.name] = r.total;
+    return out;
+  } catch (error) {
+    log.error("Failed to count recent measurements by experiment", {
+      err: (error as Error)?.message,
+    });
+    return {};
   }
 }
 

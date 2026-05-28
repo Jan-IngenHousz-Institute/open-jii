@@ -1,22 +1,33 @@
 import { cva } from "class-variance-authority";
-import { MessageCircleMore, Trash2, UploadCloud } from "lucide-react-native";
+import {
+  CloudAlert,
+  CloudCheck,
+  MessageCircleMore,
+  Trash2,
+  UploadCloud,
+} from "lucide-react-native";
 import React, { memo } from "react";
-import { View, Text, TouchableOpacity, Pressable } from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
-import { Tag } from "~/shared/ui/Tag";
-import type { TagVariant } from "~/shared/ui/Tag";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { cn } from "~/shared/utils/cn";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 
-const STATUS_TAG: Record<MeasurementStatus, { variant: TagVariant; key: string }> = {
-  successful: { variant: "synced", key: "tag.synced" },
-  pending: { variant: "queued", key: "tag.queued" },
-  failed: { variant: "failed", key: "tag.failed" },
-};
+interface SemanticColors {
+  success: string;
+  info: string;
+  error: string;
+}
+
+const STATUS_ICON: Record<MeasurementStatus, (c: { semantic: SemanticColors }) => React.ReactNode> =
+  {
+    successful: (c) => <CloudCheck size={16} color={c.semantic.success} />,
+    pending: (c) => <UploadCloud size={16} color={c.semantic.info} />,
+    failed: (c) => <CloudAlert size={16} color={c.semantic.error} />,
+  };
 
 const answersTextStyle = cva("mb-1.5 text-base", {
   variants: {
@@ -117,9 +128,7 @@ export const MeasurementItem = memo(function MeasurementItem({
           <Text className="text-muted-body shrink-0 text-sm" numberOfLines={1}>
             {formatTimeAgo(timestamp)}
           </Text>
-          <Tag variant={STATUS_TAG[status].variant}>
-            {t(`recentMeasurements:${STATUS_TAG[status].key}`)}
-          </Tag>
+          {STATUS_ICON[status](colors)}
         </View>
       </View>
     </Pressable>

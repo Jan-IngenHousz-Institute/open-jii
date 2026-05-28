@@ -1,21 +1,28 @@
-import { Trash2 } from "lucide-react-native";
+import { MessageSquare, Trash2, UploadCloud } from "lucide-react-native";
 import React, { memo, useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { MeasurementItem } from "~/features/recent-measurements/components/measurement-item";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useTranslation } from "~/shared/i18n";
-import { Button } from "~/shared/ui/Button";
+import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 
 const SPRING_CONFIG = { damping: 40, stiffness: 350 };
 /** Horizontal movement (px) before pan activates - avoids revealing on light touch */
 const ACTIVATE_OFFSET_X = 8;
-/** Dimensions for action buttons */
-const ICON_BUTTON_SIZE = 38;
-const COMMENT_BUTTON_WIDTH = 100;
+/** Width of each full-height swipe action segment (icon-only, so narrow). */
+const SEGMENT_WIDTH = 52;
 
 interface SwipeableMeasurementRowProps {
   id: string;
@@ -28,6 +35,7 @@ interface SwipeableMeasurementRowProps {
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
   hasComment?: boolean;
+  peekToken?: number;
 }
 
 export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
@@ -41,24 +49,42 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   onSync,
   onDelete,
   hasComment = false,
+  peekToken = 0,
 }: SwipeableMeasurementRowProps) {
   const { colors } = useTheme();
-  const { t } = useTranslation(["common", "recentMeasurements"]);
+  const { t } = useTranslation("recentMeasurements");
+  const { data: online } = useIsOnline();
   const translateX = useSharedValue(0);
   const startX = useSharedValue(0);
   const actionWidthSV = useSharedValue(0);
 
   const canFlag = status === "pending" || status === "failed";
   const showComment = canFlag && !!onComment;
-  const showSync = canFlag && !!onSync;
+  // Hide the upload action when offline — it can't sync anyway.
+  const showSync = canFlag && !!onSync && online !== false;
   const showDelete = !!onDelete;
 
   // Reset swipe offset when status changes AND on recycle (id change) — FlashList
   // reuses the same cell view for a different row, so leftover translateX would
-  // make the new row appear pre-opened.
+  // make the new row appear pre-opened. Set it instantly (no spring) so a row
+  // that was scrolled away open doesn't animate-closed in the recycled cell.
   useEffect(() => {
-    translateX.value = withSpring(0, SPRING_CONFIG);
+    translateX.value = 0;
   }, [id, status, translateX]);
+
+  // Discoverability nudge: about a second after the list renders, slowly crack
+  // the row open just a bit, hold, then ease it shut. The parent bumps
+  // `peekToken` on each focus, so this re-fires on every visit.
+  useEffect(() => {
+    if (!peekToken) return;
+    translateX.value = withDelay(
+      1000,
+      withSequence(
+        withTiming(-36, { duration: 650, easing: Easing.out(Easing.cubic) }),
+        withDelay(650, withTiming(0, { duration: 450, easing: Easing.inOut(Easing.cubic) })),
+      ),
+    );
+  }, [peekToken, translateX]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])
@@ -86,6 +112,12 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
     transform: [{ translateX: translateX.value }],
   }));
 
+  // Keep the action layer fully transparent at rest so a mount/layout race can
+  // never flash the buttons open; ramp it in over the first few px of the swipe.
+  const actionsStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.max(0, translateX.value / -6)),
+  }));
+
   const handleComment = () => onComment?.(id);
   const handleSync = () => onSync?.(id);
   const handleDelete = () => onDelete?.(id);
@@ -93,45 +125,55 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   return (
     <View className="overflow-hidden">
       {/* Hidden actions (revealed when swiping left) */}
-      <View
+      <Animated.View
         onLayout={(e) => {
           const width = e.nativeEvent.layout.width;
           if (width > 0) {
             actionWidthSV.value = width;
           }
         }}
-        className="bg-surface absolute bottom-0 right-0 top-0 flex-row justify-center gap-3 overflow-hidden rounded-bl-lg rounded-tl-xl p-4"
+        style={actionsStyle}
+        className="border-divider bg-card absolute bottom-0 right-0 top-0 flex-row border-t"
       >
         {showSync && (
-          <Button
-            title={t("recentMeasurements:swipe.uploadButton")}
+          <TouchableOpacity
             onPress={handleSync}
-            variant="tertiary"
-            style={{ borderColor: "transparent", width: COMMENT_BUTTON_WIDTH }}
-          />
+            activeOpacity={0.7}
+            className="items-center justify-center"
+            style={{ width: SEGMENT_WIDTH }}
+            accessibilityRole="button"
+            accessibilityLabel={t("swipe.uploadButton")}
+          >
+            <UploadCloud size={22} color={colors.semantic.info} strokeWidth={1.8} />
+          </TouchableOpacity>
         )}
 
         {showComment && (
-          <Button
-            title={t("recentMeasurements:swipe.commentButton")}
+          <TouchableOpacity
             onPress={handleComment}
-            variant="light"
-            style={{ width: COMMENT_BUTTON_WIDTH }}
-          />
+            activeOpacity={0.7}
+            className="items-center justify-center"
+            style={{ width: SEGMENT_WIDTH }}
+            accessibilityRole="button"
+            accessibilityLabel={t("swipe.commentButton")}
+          >
+            <MessageSquare size={22} color={colors.onSurface} strokeWidth={1.8} />
+          </TouchableOpacity>
         )}
 
         {showDelete && (
-          <View style={{ width: ICON_BUTTON_SIZE }} className="bg-muted overflow-hidden rounded-lg">
-            <TouchableOpacity
-              onPress={handleDelete}
-              className="flex-1 items-center justify-center"
-              activeOpacity={0.7}
-            >
-              <Trash2 size={16} color={colors.onSurface} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleDelete}
+            activeOpacity={0.7}
+            className="items-center justify-center"
+            style={{ width: SEGMENT_WIDTH }}
+            accessibilityRole="button"
+            accessibilityLabel={t("swipe.deleteButton")}
+          >
+            <Trash2 size={22} color={colors.semantic.error} strokeWidth={1.8} />
+          </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
 
       <GestureDetector gesture={panGesture}>
         <Animated.View style={animatedStyle}>
