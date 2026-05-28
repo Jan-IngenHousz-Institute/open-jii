@@ -18,7 +18,7 @@ export class ListUploadsUseCase {
   async execute(
     experimentId: string,
     userId: string,
-    query: { uploadTableName?: string },
+    query: { uploadTableId?: string; uploadTableName?: string },
   ): Promise<Result<{ uploads: UploadMetadata[] }>> {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
     if (accessResult.isFailure()) {
@@ -40,6 +40,7 @@ export class ListUploadsUseCase {
 
     const uploadsResult = await this.uploadsRepository.listUploads({
       experimentId,
+      uploadTableId: query.uploadTableId,
       uploadTableName: query.uploadTableName,
     });
     if (uploadsResult.isFailure()) {

@@ -10,7 +10,7 @@ export function HomePrimaryCta() {
   const router = useRouter();
   const { t } = useTranslation("home");
 
-  const onStart = () => router.push("/(tabs)/measurement-flow");
+  const onStart = () => router.push("/measurement-flow");
 
   return (
     <Pressable onPress={onStart} className="mt-2">

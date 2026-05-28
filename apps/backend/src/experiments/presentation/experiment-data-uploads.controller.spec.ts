@@ -98,7 +98,7 @@ describe("ExperimentDataUploadsController", () => {
       expect(firstCall[0].fixedSourceKind).toBeUndefined();
     });
 
-    it("falls back to an empty uploadTableName when the use case returns undefined", async () => {
+    it("propagates undefined uploadTableId/uploadTableName when the use case returns none", async () => {
       vi.spyOn(uploadDataUseCase, "execute").mockResolvedValue(
         success({
           uploadId: "u-3",
@@ -116,7 +116,9 @@ describe("ExperimentDataUploadsController", () => {
       });
 
       expect(result.status).toBe(201);
-      expect((result.body as { uploadTableName: string }).uploadTableName).toBe("");
+      const body = result.body as { uploadTableId?: string; uploadTableName?: string };
+      expect(body.uploadTableId).toBeUndefined();
+      expect(body.uploadTableName).toBeUndefined();
     });
 
     it("returns 409 when the target table name is taken", async () => {

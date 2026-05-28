@@ -1587,7 +1587,7 @@ describe("DatabricksAdapter", () => {
 
       const [, sql] = querySpy.mock.calls[0];
       expect(sql).toContain("experiment_upload_metadata");
-      expect(sql).not.toContain("upload_table_name");
+      expect(sql).not.toMatch(/where[\s\S]*upload_table_name\s*=/i);
     });
   });
 

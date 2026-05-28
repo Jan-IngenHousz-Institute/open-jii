@@ -37,8 +37,8 @@ export class ExperimentDataUploadsController {
         status: StatusCodes.CREATED,
         body: {
           uploadId: result.value.uploadId,
-          uploadTableId: result.value.uploadTableId ?? "",
-          uploadTableName: result.value.uploadTableName ?? "",
+          uploadTableId: result.value.uploadTableId,
+          uploadTableName: result.value.uploadTableName,
           runId: result.value.runId,
           files: result.value.files,
         },
@@ -50,6 +50,7 @@ export class ExperimentDataUploadsController {
   listUploads(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.listUploads, async ({ params, query }) => {
       const result = await this.listUploadsUseCase.execute(params.id, session.user.id, {
+        uploadTableId: query.uploadTableId,
         uploadTableName: query.uploadTableName,
       });
       if (result.isFailure()) {

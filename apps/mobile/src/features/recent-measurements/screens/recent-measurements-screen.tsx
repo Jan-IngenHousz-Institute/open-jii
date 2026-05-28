@@ -1,11 +1,11 @@
+import { useIsFocused } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
-import { ChevronsLeft } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, InteractionManager, Text, View } from "react-native";
-import { DevSeedMeasurementsDialog } from "~/features/recent-measurements/components/dev-seed-measurements-dialog";
+import { useNavigation } from "expo-router";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { ActivityIndicator, InteractionManager, View } from "react-native";
 import { MeasurementsDayHeader } from "~/features/recent-measurements/components/measurements-day-header";
+import { MeasurementsHeaderActions } from "~/features/recent-measurements/components/measurements-header-actions";
 import { MeasurementsListEmpty } from "~/features/recent-measurements/components/measurements-list-empty";
-import { MeasurementsListFooter } from "~/features/recent-measurements/components/measurements-list-footer";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
 import { MeasurementsRow } from "~/features/recent-measurements/components/measurements-row";
@@ -14,7 +14,6 @@ import type {
   MeasurementFilter,
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
-import { useHasAnyMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
 import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
@@ -29,15 +28,17 @@ type ListRow =
   | { kind: "header"; key: string; section: MeasurementDaySection }
   | { kind: "row"; key: string; item: MeasurementItem };
 
-const FLASHLIST_CONTENT_STYLE = { paddingTop: 0, paddingBottom: 16 };
+const FLASHLIST_CONTENT_STYLE = { paddingTop: 12, paddingBottom: 16 };
 
 export function RecentMeasurementsScreen() {
   const { colors } = useTheme();
-  const { t, i18n } = useTranslation(["common", "recentMeasurements"]);
+  const navigation = useNavigation();
+  const { i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
-  const [devSeedVisible, setDevSeedVisible] = useState(false);
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
+  const isFocused = useIsFocused();
+  const [peekToken, setPeekToken] = useState(0);
 
   const {
     measurements,
@@ -48,12 +49,8 @@ export function RecentMeasurementsScreen() {
     confirmDelete,
     confirmSyncAll,
     confirmDeleteAllSynced,
-    handleExport,
     saveComment,
   } = useRecentMeasurementsActions(filter);
-  // Boolean-selected so the screen only re-renders when it flips 0↔n — not on
-  // every settle tick (counts now live in the toolbar). See OJD-1470.
-  const hasAnyMeasurements = useHasAnyMeasurements();
 
   // [perf] Defer the first heavy list commit (50 rows × a gesture-handler +
   // reanimated swipeable each ≈ 200 ms on the shared JS thread) until the
@@ -73,6 +70,17 @@ export function RecentMeasurementsScreen() {
       clearTimeout(fallback);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <MeasurementsHeaderActions
+          onSyncAll={confirmSyncAll}
+          onDeleteAllSynced={confirmDeleteAllSynced}
+        />
+      ),
+    });
+  }, [navigation, confirmSyncAll, confirmDeleteAllSynced]);
 
   // The list row is lean (no `measurement_result`). Loading the full payload
   // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
@@ -109,6 +117,14 @@ export function RecentMeasurementsScreen() {
     }
     return out;
   }, [measurements, locale]);
+
+  const firstRowKey = useMemo(() => data.find((r) => r.kind === "row")?.key, [data]);
+
+  // Peek the most-recent row each time the screen gains focus (once the
+  // deferred list is ready) so the swipe action stays discoverable.
+  useEffect(() => {
+    if (isFocused && listReady && firstRowKey) setPeekToken((t) => t + 1);
+  }, [isFocused, listReady, firstRowKey]);
 
   const itemsById = useMemo(() => {
     const map = new Map<string, MeasurementItem>();
@@ -155,41 +171,21 @@ export function RecentMeasurementsScreen() {
           onComment={onRowComment}
           onDelete={onRowDelete}
           onSync={onRowSync}
+          peekToken={row.key === firstRowKey ? peekToken : 0}
         />
       );
     },
-    [onRowPress, onRowComment, onRowDelete, onRowSync],
+    [onRowPress, onRowComment, onRowDelete, onRowSync, peekToken, firstRowKey],
   );
 
   const keyExtractor = useCallback((row: ListRow) => row.key, []);
   const getItemType = useCallback((row: ListRow) => row.kind, []);
 
   const listEmpty = useMemo(() => <MeasurementsListEmpty filter={filter} />, [filter]);
-  const listFooter = useMemo(
-    () => <MeasurementsListFooter onExport={handleExport} isDisabled={!hasAnyMeasurements} />,
-    [handleExport, hasAnyMeasurements],
-  );
-
-  const hasItems = measurements.length > 0;
 
   return (
     <View className="bg-background flex-1">
-      <MeasurementsToolbar
-        filter={filter}
-        onFilterChange={setFilter}
-        onSyncAll={confirmSyncAll}
-        onDeleteAllSynced={confirmDeleteAllSynced}
-        onDevSeed={__DEV__ ? () => setDevSeedVisible(true) : undefined}
-      />
-
-      {hasItems && (
-        <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
-          <ChevronsLeft size={13} color={colors.inactive} />
-          <Text className="text-muted-body text-sm font-normal">
-            {t("recentMeasurements:list.swipeHint")}
-          </Text>
-        </View>
-      )}
+      <MeasurementsToolbar filter={filter} onFilterChange={setFilter} />
 
       {listReady ? (
         <FlashList
@@ -201,7 +197,6 @@ export function RecentMeasurementsScreen() {
           ListEmptyComponent={listEmpty}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={listFooter}
           drawDistance={150}
         />
       ) : (
@@ -211,12 +206,6 @@ export function RecentMeasurementsScreen() {
       )}
 
       <MeasurementsModals state={modal} onClose={closeModal} onSaveComment={saveComment} />
-      {__DEV__ && (
-        <DevSeedMeasurementsDialog
-          visible={devSeedVisible}
-          onClose={() => setDevSeedVisible(false)}
-        />
-      )}
     </View>
   );
 }

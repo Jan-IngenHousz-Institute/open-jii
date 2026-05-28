@@ -367,7 +367,7 @@ def write_upload_metadata(status: str, result: dict | None, error_message: str |
         return "'" + value.replace("'", "''") + "'"
 
     try:
-        completed_at = datetime.now()
+        completed_at = datetime.now(timezone.utc)
         file_count = int(result.get("files_processed", 0)) if result else 0
         row_count = int(result.get("rows_written", 0)) if result else 0
 

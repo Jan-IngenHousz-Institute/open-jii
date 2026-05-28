@@ -38,9 +38,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const {
     scanResult,
     previousStep,
+    nextStep,
     experimentId,
     protocolId,
-    finishFlow,
     iterationCount,
     flowNodes,
   } = useMeasurementFlowStore();
@@ -129,7 +129,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       commentText: measurementComment.trim() || undefined,
       protocolName: protocol?.name ?? protocolId,
     });
-    finishFlow();
+    nextStep();
   };
 
   const handleRetry = () => {

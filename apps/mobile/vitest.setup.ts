@@ -83,7 +83,23 @@ vi.mock("react-native-reanimated", () => {
     useAnimatedKeyboard: () => ({ height: { value: 0 } }),
     useAnimatedStyle: (fn: () => unknown) => fn(),
     useSharedValue: <T>(initial: T) => ({ value: initial }),
+    cancelAnimation: () => undefined,
+    // Animation helpers run as identity stubs: `sv.value = withTiming(x)` just
+    // settles to the target synchronously without the native worklets runtime.
+    // withSequence resolves to its first step; withDelay to its target value.
     withSpring: (v: unknown) => v,
+    withTiming: (v: unknown) => v,
+    withDelay: (_delay: number, v: unknown) => v,
+    withSequence: (...steps: unknown[]) => steps[0],
+    Easing: {
+      linear: (t: number) => t,
+      ease: (t: number) => t,
+      quad: (t: number) => t,
+      cubic: (t: number) => t,
+      in: (e: unknown) => e,
+      out: (e: unknown) => e,
+      inOut: (e: unknown) => e,
+    },
   };
 });
 

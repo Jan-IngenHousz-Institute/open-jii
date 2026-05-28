@@ -8,6 +8,7 @@ interface Props {
   onComment: (id: string) => void;
   onDelete: (id: string) => void;
   onSync: (id: string) => void;
+  peekToken?: number;
 }
 
 export const MeasurementsRow = memo(function MeasurementsRow({
@@ -16,6 +17,7 @@ export const MeasurementsRow = memo(function MeasurementsRow({
   onComment,
   onDelete,
   onSync,
+  peekToken,
 }: Props) {
   const canFlag = item.status === "pending" || item.status === "failed";
   return (
@@ -30,6 +32,7 @@ export const MeasurementsRow = memo(function MeasurementsRow({
       onDelete={onDelete}
       onSync={canFlag ? onSync : undefined}
       hasComment={item.hasComment}
+      peekToken={peekToken}
     />
   );
 });

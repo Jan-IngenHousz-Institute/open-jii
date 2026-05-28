@@ -128,6 +128,53 @@ describe("UploadDataModal", () => {
     });
   });
 
+  it("blocks submit and surfaces the noFiles validation when no files are picked", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+    const spy = mountUploadCapture();
+
+    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+
+    await userEvent.type(
+      screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
+      "leaf_traits",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("experimentData.uploadDataModal.validation.noFiles"),
+      ).toBeInTheDocument();
+    });
+    expect(spy.called).toBe(false);
+  });
+
+  it("rejects files whose extension isn't on the supported list", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+    const spy = mountUploadCapture();
+
+    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+
+    await userEvent.type(
+      screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
+      "leaf_traits",
+    );
+    await selectFiles(["payload.bin"]);
+    await userEvent.click(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/uploadDataModal\.validation\.unsupportedFormat/),
+      ).toBeInTheDocument();
+    });
+    expect(spy.called).toBe(false);
+  });
+
   it("surfaces a submit error message when the upload request fails", async () => {
     setExperimentTables();
     mountEmptyHistory();

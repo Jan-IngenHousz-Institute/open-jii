@@ -177,7 +177,6 @@ export function useMeasurementUpload() {
       }
 
       getOutbox().enqueue(savedId);
-      toast.info(t("recentMeasurements:toasts.savedQueued"));
     },
   });
 

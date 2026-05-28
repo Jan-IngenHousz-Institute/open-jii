@@ -10,9 +10,12 @@ const log = createLogger("prefetch");
  * Prefetches all experiment data needed for offline use.
  * Called after login to ensure measurements can run without network.
  */
-export async function prefetchOfflineData(queryClient: QueryClient): Promise<void> {
+export async function prefetchOfflineData(
+  queryClient: QueryClient,
+  userId?: string,
+): Promise<void> {
   try {
-    await _prefetchOfflineData(queryClient);
+    await _prefetchOfflineData(queryClient, userId);
   } catch (err) {
     log.error("Failed to prefetch offline data", {
       err: err instanceof Error ? err.message : String(err),
@@ -20,7 +23,24 @@ export async function prefetchOfflineData(queryClient: QueryClient): Promise<voi
   }
 }
 
-async function _prefetchOfflineData(queryClient: QueryClient): Promise<void> {
+async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): Promise<void> {
+  // Kick off the profile prefetch in parallel — it's independent of experiments.
+  // 404 is expected for accounts that haven't completed registration on web yet.
+  const profilePromise = userId
+    ? queryClient
+        .prefetchQuery({
+          queryKey: ["userProfile", userId],
+          queryFn: () => tsr.users.getUserProfile.query({ params: { id: userId } }),
+          staleTime: 0,
+          meta: { suppressToast: true },
+        })
+        .catch((err) => {
+          log.warn("user profile prefetch failed", {
+            err: err instanceof Error ? err.message : String(err),
+          });
+        })
+    : Promise.resolve();
+
   // 1. Fetch all user experiments
   const experimentsResponse = await queryClient.fetchQuery({
     queryKey: ["experiments"],
@@ -122,6 +142,9 @@ async function _prefetchOfflineData(queryClient: QueryClient): Promise<void> {
       total: uniqueProtocolIds.length + uniqueMacroIds.length,
     });
   }
+
+  // Make sure the parallel profile prefetch has settled before returning.
+  await profilePromise;
 
   const flowsCached = experiments.length - flowFailures.length;
   const assetsCached = uniqueProtocolIds.length + uniqueMacroIds.length - assetFailures.length;

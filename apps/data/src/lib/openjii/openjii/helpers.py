@@ -194,7 +194,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     experiment_id : str
         The experiment identifier
     table_name : str
-        The table name (e.g., 'raw_data', 'device', 'raw_ambyte_data', or macro filename)
+        The table name (e.g., 'raw_data', 'device', 'upload', or macro filename)
     catalog_name : str
         The catalog name (e.g., 'open_jii_dev')
     schema_name : str, optional
@@ -224,7 +224,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     questions_schema = normalize_schema(metadata["questions_schema"])
     
     # Resolve table type: known names map directly, anything else is a macro
-    table_type = table_name if table_name in {"raw_data", "device", "raw_ambyte_data"} else "macro"
+    table_type = table_name if table_name in _TABLE_CONFIG else "macro"
     source_name, order_col = _TABLE_CONFIG[table_type]
     
     # Load and filter base dataframe
