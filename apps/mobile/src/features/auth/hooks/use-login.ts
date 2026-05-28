@@ -5,6 +5,7 @@ import {
   signInWithOrcid,
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
+import { getAuthClient } from "~/features/auth/services/auth";
 import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
 import { createLogger } from "~/shared/utils/logger";
 
@@ -13,8 +14,13 @@ const log = createLogger("auth");
 export function useLoginFlow() {
   const queryClient = useQueryClient();
 
-  const prefetch = () => {
-    void prefetchOfflineData(queryClient);
+  const prefetch = async () => {
+    // Resolve the freshly-signed-in userId so the profile prefetch has a target.
+    const session = await getAuthClient()
+      .getSession()
+      .catch(() => null);
+    const userId = session?.data?.user?.id;
+    void prefetchOfflineData(queryClient, userId);
   };
 
   const github = useMutation({

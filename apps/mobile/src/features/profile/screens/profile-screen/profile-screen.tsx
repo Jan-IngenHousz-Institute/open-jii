@@ -10,6 +10,7 @@ import { ProfileAccountCard } from "~/features/profile/components/profile-accoun
 import { ProfileHardwareCard } from "~/features/profile/components/profile-hardware-card";
 import { ProfileIdentity } from "~/features/profile/components/profile-identity";
 import { ProfileSignoutCard } from "~/features/profile/components/profile-signout-card";
+import { useGetUserProfile } from "~/features/profile/hooks/use-get-user-profile";
 import { useIsDevelopment } from "~/features/profile/hooks/use-is-development";
 import { DevSeedMeasurementsDialog } from "~/features/recent-measurements/components/dev-seed-measurements-dialog";
 import { colors } from "~/shared/constants/colors";
@@ -19,6 +20,7 @@ import { RowItem } from "~/shared/ui/RowItem";
 
 export function ProfileScreen() {
   const { session } = useSession();
+  const { userProfile } = useGetUserProfile(session?.data.user.id);
   const { t } = useTranslation("profile");
   const sheetRef = useRef<BottomSheetModal>(null);
   // Dev tooling only appears when the app points at a non-prod environment.
@@ -28,13 +30,15 @@ export function ProfileScreen() {
   if (!session) return null;
 
   const { user } = session.data;
+  const profileName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : "";
+  const displayName = profileName.length > 0 ? profileName : user.name;
 
   return (
     <ScrollView
       className="bg-background flex-1"
       contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
     >
-      <ProfileIdentity name={user.name} email={user.email} imageUri={user.image} />
+      <ProfileIdentity name={displayName} email={user.email} imageUri={user.image} />
       <ProfileHardwareCard />
       <ProfileAccountCard onOpenAppSettings={() => sheetRef.current?.present()} />
 
