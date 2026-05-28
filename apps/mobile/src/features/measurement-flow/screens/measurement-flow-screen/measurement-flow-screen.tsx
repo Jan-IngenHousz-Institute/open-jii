@@ -47,8 +47,8 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const experimentLabel = experiment?.name ?? "";
   const hasActiveFlow = !!experimentId;
 
-  useAutoPauseFlow(isFocused, experimentLabel);
-  useFlowBackHandler(isFocused, hasActiveFlow);
+  useAutoPauseFlow(experimentLabel);
+  useFlowBackHandler(hasActiveFlow);
 
   // Picker state has no tab bar to bail out to (the flow now covers the tabs
   // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
