@@ -17,6 +17,7 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-paused-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { useActiveAlerts } from "~/shared/ui/hooks/use-active-alerts";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
@@ -49,6 +50,8 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const router = useRouter();
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
+  const hasAlerts = useActiveAlerts().length > 0;
+  const isDark = themeColors.scheme === "dark";
 
   // Picker state has no tab bar to bail out to (the flow now covers the tabs
   // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
@@ -113,7 +116,9 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
 
   return (
     <View className="bg-background flex-1">
-      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "auto"} />}
+      {isFocused && (
+        <StatusBar style={hasAlerts && !isDark ? "dark" : hasActiveFlow ? "light" : "auto"} />
+      )}
 
       {hasActiveFlow ? (
         <>

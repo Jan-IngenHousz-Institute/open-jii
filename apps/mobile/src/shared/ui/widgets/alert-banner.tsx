@@ -12,22 +12,22 @@ export type Severity = "critical" | "warning" | "info";
 const bannerVariants = cva("overflow-hidden border-b border-black/5 dark:border-white/10", {
   variants: {
     severity: {
-      info: "bg-[#E2FCFC] dark:bg-[#005e5e]/20",
-      warning: "bg-[#FFF8D6] dark:bg-amber-950/60",
-      critical: "bg-[#FDECEC] dark:bg-red-950/60",
+      info: "bg-[#E2FCFC] dark:bg-teal-800",
+      warning: "bg-[#FFF8D6] dark:bg-amber-800",
+      critical: "bg-[#FDECEC] dark:bg-red-800",
     },
   },
   defaultVariants: { severity: "info" },
 });
 
 const badgeVariants = cva(
-  "h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/5 dark:border-white/10",
+  "h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/5 dark:border-white/15",
   {
     variants: {
       severity: {
-        info: "bg-[#005e5e]/10 dark:bg-[#005e5e]/30",
-        warning: "bg-[#FFE98A] dark:bg-amber-900/40",
-        critical: "bg-[#F9D2D2] dark:bg-red-900/40",
+        info: "bg-[#005e5e]/10 dark:bg-teal-600",
+        warning: "bg-[#FFE98A] dark:bg-amber-600",
+        critical: "bg-[#F9D2D2] dark:bg-red-600",
       },
     },
     defaultVariants: { severity: "info" },
@@ -37,9 +37,9 @@ const badgeVariants = cva(
 const actionButtonVariants = cva("shrink-0 flex-row items-center gap-1 rounded-lg px-3 py-1.5", {
   variants: {
     severity: {
-      info: "bg-[#005e5e] active:bg-[#003a3a]",
-      warning: "bg-[#D97706] active:bg-[#B45309]",
-      critical: "bg-[#B91C1C] active:bg-[#991B1B]",
+      info: "bg-[#005e5e] active:bg-[#003a3a] dark:bg-teal-500 dark:active:bg-teal-400",
+      warning: "bg-[#D97706] active:bg-[#B45309] dark:bg-amber-500 dark:active:bg-amber-400",
+      critical: "bg-[#B91C1C] active:bg-[#991B1B] dark:bg-red-500 dark:active:bg-red-400",
     },
   },
   defaultVariants: { severity: "info" },
@@ -79,12 +79,12 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
         <Text className="flex-1 text-sm leading-5 text-gray-900 dark:text-gray-100">
           {alert.title && <Text className="font-semibold">{alert.title}</Text>}
           {alert.title && alert.body?.json && (
-            <Text className="text-gray-700 opacity-50 dark:text-gray-400"> · </Text>
+            <Text className="text-gray-700 opacity-50 dark:text-gray-100 dark:opacity-70"> · </Text>
           )}
           {alert.body?.json && (
             <CtfRichText
               json={alert.body.json}
-              textClass="text-gray-700 dark:text-gray-400"
+              textClass="text-gray-700 dark:text-gray-100"
               inline
             />
           )}
