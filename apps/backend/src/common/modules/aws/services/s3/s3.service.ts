@@ -27,7 +27,7 @@ export class AwsS3Service {
       async () => {
         const key = `large-iot/${experimentId}/${crypto.randomUUID()}.json`;
         const command = new PutObjectCommand({
-          Bucket: this.awsConfig.s3Config.iotArchiveBucketName,
+          Bucket: this.awsConfig.s3Config.largeIotBucketName,
           Key: key,
           ContentType: "application/json",
         });

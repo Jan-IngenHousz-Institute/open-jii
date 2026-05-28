@@ -9,7 +9,7 @@ describe("AwsS3Service", () => {
 
   const mockAwsConfig = {
     region: "eu-central-1",
-    s3Config: { iotArchiveBucketName: "test-iot-archive-bucket" },
+    s3Config: { iotArchiveBucketName: "test-iot-archive-bucket", largeIotBucketName: "test-large-iot-bucket" },
   } as unknown as AwsConfigService;
 
   beforeEach(() => {
@@ -36,7 +36,7 @@ describe("AwsS3Service", () => {
       await service.getIotUploadUrl("experiment-abc");
 
       const [command] = spy.mock.calls[0] as [PutObjectCommand];
-      expect(command.input.Bucket).toBe("test-iot-archive-bucket");
+      expect(command.input.Bucket).toBe("test-large-iot-bucket");
       expect(command.input.Key).toMatch(/^large-iot\/experiment-abc\/.+\.json$/);
       expect(command.input.ContentType).toBe("application/json");
     });

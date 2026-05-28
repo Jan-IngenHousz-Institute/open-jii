@@ -105,6 +105,38 @@ module "iot_raw_archive_s3" {
   }
 }
 
+module "large_iot_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-large-iot-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id     = "archive-tiering"
+      status = "Enabled"
+      transitions = [
+        { days = 30, storage_class = "STANDARD_IA" },
+        { days = 90, storage_class = "GLACIER" },
+        { days = 365, storage_class = "DEEP_ARCHIVE" }
+      ]
+      expiration_days = null
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
@@ -119,6 +151,10 @@ module "iot_core" {
   s3_archive_bucket_arn  = module.iot_raw_archive_s3.bucket_arn
   iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
+
+  enable_large_iot_sqs  = true
+  large_iot_bucket_name = module.large_iot_s3.bucket_id
+  large_iot_bucket_arn  = module.large_iot_s3.bucket_arn
 }
 
 module "cognito" {
@@ -345,6 +381,8 @@ module "storage_credential" {
   bucket_name     = var.centralized_metastore_bucket_name
   isolation_mode  = "ISOLATION_MODE_OPEN"
 
+  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
+
   providers = {
     databricks.workspace = databricks.workspace
   }
@@ -371,6 +409,31 @@ module "external_location" {
         "READ_FILES",
         "WRITE_FILES"
       ]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
+module "large_iot_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "large-iot-${var.environment}"
+  bucket_name             = module.large_iot_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for large IoT payloads (>128 KB) uploaded via pre-signed URL"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES"]
     }
   }
 
@@ -475,6 +538,9 @@ module "centrum_pipeline" {
     "ENVIRONMENT"                = upper(var.environment)
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
+    "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
+    "LARGE_IOT_SQS_QUEUE_URL"    = module.iot_core.large_iot_sqs_queue_url
+    "LARGE_IOT_INGEST_ENABLED"   = "true"
   }
 
   continuous_mode  = true
@@ -1718,6 +1784,10 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_ARCHIVE_BUCKET_NAME"
       value = module.iot_raw_archive_s3.bucket_id
+    },
+    {
+      name  = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME"
+      value = module.large_iot_s3.bucket_id
     }
   ]
 
@@ -2058,6 +2128,9 @@ module "grafana_dashboard" {
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
+
+  large_iot_notification_queue_name = module.iot_core.large_iot_notification_queue_name
+  large_iot_dlq_name                = module.iot_core.large_iot_dlq_name
 
   providers = {
     grafana.amg = grafana.amg
