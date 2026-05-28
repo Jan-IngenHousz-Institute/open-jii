@@ -1,8 +1,7 @@
 import { FlaskConical, MessageSquare } from "lucide-react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
-  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -58,24 +57,22 @@ export function ExperimentCard({
   const { t } = useTranslation("measurementFlow");
   const tag = pickTag(requiresSensor, questionsOnly);
 
-  // Bounce the card on every tap so selecting always animates.
+  // Subtle pop when this card becomes the selected one. Driven off `selected`
+  // so it fires once when a card is first chosen, not on every re-tap. The peak
+  // is kept small so the full-width card never scales past the screen edges.
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const handlePress = () => {
-    // Cancel any in-flight bounce so a fresh tap always restarts it (reanimated
-    // won't replay an identical assignment otherwise).
-    cancelAnimation(scale);
-    scale.value = 1;
+  useEffect(() => {
+    if (!selected) return;
     scale.value = withSequence(
-      withSpring(1.05, { damping: 11, stiffness: 360 }),
-      withSpring(1, { damping: 13, stiffness: 220 }),
+      withSpring(1.03, { damping: 18, stiffness: 320 }),
+      withSpring(1, { damping: 15, stiffness: 240 }),
     );
-    onPress(id);
-  };
+  }, [selected, scale]);
 
   return (
     <Animated.View style={animatedStyle}>
-      <Pressable onPress={handlePress} accessibilityRole="button">
+      <Pressable onPress={() => onPress(id)} accessibilityRole="button">
         <Card tone={selected ? "mint" : "white"} padded style={{ marginVertical: 0, padding: 14 }}>
           <View className="flex-row items-start gap-3">
             <View
