@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useExperiment } from "~/features/experiments/hooks/use-experiment";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
 import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
-import { useAutoPauseFlow } from "~/features/measurement-flow/hooks/use-auto-pause-flow";
 import { useFlowBackHandler } from "~/features/measurement-flow/hooks/use-flow-back-handler";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
@@ -47,7 +46,6 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const experimentLabel = experiment?.name ?? "";
   const hasActiveFlow = !!experimentId;
 
-  useAutoPauseFlow(experimentLabel);
   useFlowBackHandler(hasActiveFlow);
 
   // Picker state has no tab bar to bail out to (the flow now covers the tabs

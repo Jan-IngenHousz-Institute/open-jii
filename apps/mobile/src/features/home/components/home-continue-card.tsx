@@ -1,32 +1,37 @@
 import { ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
+import { useShallow } from "zustand/react/shallow";
 import { useHomeContinueAction } from "~/features/home/hooks/use-home-continue-action";
-import {
-  useHasPausedFlow,
-  usePausedFlowSnapshot,
-} from "~/features/measurement-flow/stores/use-paused-flow-store";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function HomeContinueCard() {
-  const hasPausedFlow = useHasPausedFlow();
-  const snapshot = usePausedFlowSnapshot();
+  const { experimentId, experimentLabel, currentFlowStep, totalSteps, isQuestionsSubmitPending } =
+    useMeasurementFlowStore(
+      useShallow((s) => ({
+        experimentId: s.experimentId,
+        experimentLabel: s.experimentLabel,
+        currentFlowStep: s.currentFlowStep,
+        totalSteps: s.flowNodes.length,
+        isQuestionsSubmitPending: s.isQuestionsSubmitPending,
+      })),
+    );
   const continueAction = useHomeContinueAction();
   const { t } = useTranslation("home");
   const colors = useThemeColors();
 
-  if (!hasPausedFlow || !snapshot) return null;
+  // Show the card when an experiment is active and the user has moved past the
+  // picker (currentFlowStep > 0) or is on the questions-only submit screen.
+  const isInProgress = !!experimentId && (currentFlowStep > 0 || isQuestionsSubmitPending);
+  if (!isInProgress) return null;
 
-  const total = Math.max(snapshot.totalSteps, 1);
-  const step = Math.min(snapshot.currentFlowStep + 1, total);
+  const total = Math.max(totalSteps, 1);
+  const step = Math.min(currentFlowStep + 1, total);
   const progress = Math.min(Math.max((step - 1) / total, 0), 1);
-
-  const stepLine = snapshot.plotLabel
-    ? t("continue.stepOfTotalWithPlot", { step, total, plot: snapshot.plotLabel })
-    : t("continue.stepOfTotal", { step, total });
 
   return (
     <Card
@@ -46,9 +51,11 @@ export function HomeContinueCard() {
         style={{ fontFamily: "Poppins-Bold", fontSize: 17, lineHeight: 22 }}
         numberOfLines={2}
       >
-        {snapshot.experimentLabel}
+        {experimentLabel}
       </Text>
-      <Text className="text-muted-body mt-1 text-[13px]">{stepLine}</Text>
+      <Text className="text-muted-body mt-1 text-[13px]">
+        {t("continue.stepOfTotal", { step, total })}
+      </Text>
 
       <View className="bg-jii-primary/15 mt-3 h-1 overflow-hidden rounded-full dark:bg-white/10">
         <View
