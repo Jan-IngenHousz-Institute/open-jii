@@ -28,9 +28,9 @@ describe("histogramDataShelves summaries", () => {
 
   it("variables is undefined / column / count summary", () => {
     expect(variables.summary?.(form([]), t)).toBeUndefined();
-    expect(
-      variables.summary?.(form([{ tableName: "t", columnName: "yield", role: "y" }]), t),
-    ).toBe("yield");
+    expect(variables.summary?.(form([{ tableName: "t", columnName: "yield", role: "y" }]), t)).toBe(
+      "yield",
+    );
     expect(
       variables.summary?.(
         form([
