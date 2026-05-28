@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { AlertBanner } from "./alert-banner";
 
-vi.mock("~/components/contentful/ctf-rich-text", () => ({
+vi.mock("~/shared/ui/ctf-rich-text", () => ({
   CtfRichText: ({ json }: { json: unknown }) =>
     React.createElement(Text, null, JSON.stringify(json)),
 }));

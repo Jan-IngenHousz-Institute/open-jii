@@ -3,14 +3,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useDismissedAlertsStore } from "~/stores/dismissed-alerts-store";
-import { useEnvironmentStore } from "~/stores/environment-store";
+import { useDismissedAlertsStore } from "~/features/measurement-flow/stores/dismissed-alerts-store";
+import { useEnvironmentStore } from "~/shared/stores/environment-store";
 
 import { useActiveAlerts } from "../use-active-alerts";
 
 const mockFetchActiveAlerts = vi.fn();
 
-vi.mock("~/services/contentful", () => ({
+vi.mock("~/features/connection/services/contentful", () => ({
   fetchActiveAlerts: (...args: unknown[]) => mockFetchActiveAlerts(...args),
 }));
 

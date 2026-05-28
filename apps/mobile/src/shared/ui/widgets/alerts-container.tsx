@@ -1,8 +1,8 @@
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AlertBanner } from "~/components/cms-alert/alert-banner";
-import { useActiveAlerts } from "~/hooks/use-active-alerts";
-import { useDismissedAlertsStore } from "~/stores/dismissed-alerts-store";
+import { useDismissedAlertsStore } from "~/features/measurement-flow/stores/dismissed-alerts-store";
+import { useActiveAlerts } from "~/shared/ui/hooks/use-active-alerts";
+import { AlertBanner } from "~/shared/ui/widgets/alert-banner";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 

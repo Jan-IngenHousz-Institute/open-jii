@@ -2,32 +2,32 @@ import { cva } from "class-variance-authority";
 import { AlertTriangle, ArrowRight, Info, Sparkles, Wrench, X } from "lucide-react-native";
 import React from "react";
 import { Linking, Pressable, Text, View } from "react-native";
-import { CtfRichText } from "~/components/contentful/ctf-rich-text";
-import { colors } from "~/constants/colors";
+import { CtfRichText } from "~/shared/ui/ctf-rich-text";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms";
 
 export type Severity = "critical" | "warning" | "info";
 
-const bannerVariants = cva("overflow-hidden border-b border-black/5", {
+const bannerVariants = cva("overflow-hidden border-b border-black/5 dark:border-white/10", {
   variants: {
     severity: {
-      info: "bg-[#E2FCFC]",
-      warning: "bg-[#FFF8D6]",
-      critical: "bg-[#FDECEC]",
+      info: "bg-[#E2FCFC] dark:bg-[#005e5e]/20",
+      warning: "bg-[#FFF8D6] dark:bg-amber-950/60",
+      critical: "bg-[#FDECEC] dark:bg-red-950/60",
     },
   },
   defaultVariants: { severity: "info" },
 });
 
 const badgeVariants = cva(
-  "h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/5",
+  "h-7 w-7 shrink-0 items-center justify-center rounded-full border border-black/5 dark:border-white/10",
   {
     variants: {
       severity: {
-        info: "bg-[#005e5e]/10",
-        warning: "bg-[#FFE98A]",
-        critical: "bg-[#F9D2D2]",
+        info: "bg-[#005e5e]/10 dark:bg-[#005e5e]/30",
+        warning: "bg-[#FFE98A] dark:bg-amber-900/40",
+        critical: "bg-[#F9D2D2] dark:bg-red-900/40",
       },
     },
     defaultVariants: { severity: "info" },
@@ -60,6 +60,7 @@ export interface AlertBannerProps {
 
 export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerProps) {
   const severity = (alert.severity ?? "info") as Severity;
+  const themeColors = useThemeColors();
 
   const Icon = typeIcons[alert.type ?? ""] ?? null;
 
@@ -71,15 +72,21 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
       >
         {Icon && (
           <View className={badgeVariants({ severity })}>
-            <Icon size={14} color={colors.neutral.gray700} />
+            <Icon size={14} color={themeColors.onSurface} />
           </View>
         )}
 
-        <Text className="flex-1 text-sm leading-5 text-gray-900">
+        <Text className="flex-1 text-sm leading-5 text-gray-900 dark:text-gray-100">
           {alert.title && <Text className="font-semibold">{alert.title}</Text>}
-          {alert.title && alert.body?.json && <Text className="text-gray-700 opacity-50"> · </Text>}
+          {alert.title && alert.body?.json && (
+            <Text className="text-gray-700 opacity-50 dark:text-gray-400"> · </Text>
+          )}
           {alert.body?.json && (
-            <CtfRichText json={alert.body.json} textClass="text-gray-700" inline />
+            <CtfRichText
+              json={alert.body.json}
+              textClass="text-gray-700 dark:text-gray-400"
+              inline
+            />
           )}
         </Text>
 
@@ -104,7 +111,7 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
             accessibilityLabel="Dismiss alert"
             className="shrink-0 p-2"
           >
-            <X size={16} color={colors.neutral.gray700} />
+            <X size={16} color={themeColors.onSurface} />
           </Pressable>
         )}
       </View>

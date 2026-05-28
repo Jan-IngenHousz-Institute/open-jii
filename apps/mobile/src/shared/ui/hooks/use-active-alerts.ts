@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchActiveAlerts } from "~/services/contentful";
-import { useDismissedAlertsStore } from "~/stores/dismissed-alerts-store";
-import { useEnvironmentStore } from "~/stores/environment-store";
+import { fetchActiveAlerts } from "~/features/connection/services/contentful";
+import { useDismissedAlertsStore } from "~/features/measurement-flow/stores/dismissed-alerts-store";
+import { useEnvironmentStore } from "~/shared/stores/environment-store";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 

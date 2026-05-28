@@ -1,4 +1,4 @@
-import { getEnvVar } from "~/stores/environment-store";
+import { getEnvVar } from "~/shared/stores/environment-store";
 
 import { createContentfulClient } from "@repo/cms/client";
 import type { ComponentAlertFieldsFragment } from "@repo/cms/lib/__generated/sdk";
