@@ -5,5 +5,6 @@ export function useExperimentFlowQuery(experimentId: string | undefined) {
     queryKey: ["experiment-flow", experimentId],
     queryData: { params: { id: experimentId ?? "" } },
     enabled: !!experimentId,
+    networkMode: "offlineFirst",
   });
 }
