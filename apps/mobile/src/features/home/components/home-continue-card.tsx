@@ -51,7 +51,7 @@ export function HomeContinueCard() {
         style={{ fontFamily: "Poppins-Bold", fontSize: 17, lineHeight: 22 }}
         numberOfLines={2}
       >
-        {experimentLabel}
+        {experimentLabel ?? t("continue.untitled")}
       </Text>
       <Text className="text-muted-body mt-1 text-[13px]">
         {t("continue.stepOfTotal", { step, total })}

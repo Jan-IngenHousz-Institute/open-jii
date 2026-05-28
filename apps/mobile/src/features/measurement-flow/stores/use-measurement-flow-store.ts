@@ -43,7 +43,7 @@ interface MeasurementFlowStore {
 // is set. No separate snapshot store needed.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       experimentId: undefined,
       experimentLabel: undefined,
       protocolId: undefined,
@@ -125,14 +125,9 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           return { currentStep: Math.max(0, state.currentStep - 1) };
         }),
 
-      reset: () =>
-        set({
-          experimentId: undefined,
-          experimentLabel: undefined,
-          protocolId: undefined,
-          currentStep: 0,
-          isFromOverview: false,
-        }),
+      // Route through resetFlow so the persisted slice (flowNodes,
+      // currentFlowStep, iterationCount, scanResult, …) is cleared too.
+      reset: () => get().resetFlow(),
 
       setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0 }),
 
