@@ -13,7 +13,8 @@
     "inProgress": "BEZIG",
     "stepOfTotal": "Stap {{step}} van {{total}}",
     "stepOfTotalWithPlot": "Stap {{step}} van {{total}} · {{plot}}",
-    "action": "Meting voortzetten"
+    "action": "Meting voortzetten",
+    "untitled": "Meting bezig"
   },
   "cta": {
     "title": "Start een meting",
