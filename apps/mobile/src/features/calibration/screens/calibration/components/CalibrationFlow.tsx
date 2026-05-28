@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ScrollView } from "react-native";
 import { toast } from "sonner-native";
 import { useTranslation } from "~/shared/i18n";
+import { createLogger } from "~/shared/utils/logger";
 
 import {
   CalibrationProtocol,
@@ -16,6 +17,8 @@ import { GainCalibrationStep } from "./GainCalibrationStep";
 import { MeasurementsStep } from "./MeasurementsStep";
 import { ProcessingStep } from "./ProcessingStep";
 import { SetupStep } from "./SetupStep";
+
+const log = createLogger("calibration");
 
 export type CalibrationStep = "setup" | "gain" | "measurements" | "processing" | "complete";
 
@@ -37,44 +40,37 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
   const gainStep = protocol._protocol_set_.find((step) => step.label === "gain");
 
   const handleStartCalibration = () => {
-    console.log("Starting calibration process...");
+    log.info("start");
     setCurrentStep("gain");
     setMeasurements([]);
     setCurrentMeasurementIndex(0);
     setProcessedOutput(null);
-    toast.info(t("calibration:flow.toastStarted"));
   };
 
   const handleGainCalibration = async () => {
     if (!gainStep) return;
 
-    console.log("Starting gain calibration (auto-blanking)...");
-    console.log("Auto-blank parameters:", gainStep.auto_blank);
+    log.info("gain calibration start", { auto_blank: gainStep.auto_blank });
 
-    // Generate device command
     const deviceCommand = generateDeviceCommand(gainStep);
-    console.log("Sending auto-blank commands to device:", deviceCommand);
+    log.debug("auto-blank command", { deviceCommand });
 
-    // Simulate device processing time
     setIsProcessing(true);
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
     setIsProcessing(false);
 
-    console.log("Gain calibration completed");
+    log.info("gain calibration done");
     setCurrentStep("measurements");
-    toast.success(t("calibration:flow.toastGainComplete"));
   };
 
   const handleMeasurement = async (panelNumber: number) => {
     const currentStepData = measurementSteps[currentMeasurementIndex];
     if (!currentStepData) return;
 
-    console.log(`Taking measurement for panel #${panelNumber}...`);
-    console.log("Measurement parameters:", currentStepData.spad);
+    log.info("measurement start", { panel: panelNumber, spad: currentStepData.spad });
 
-    // Generate device command
     const deviceCommand = generateDeviceCommand(currentStepData);
-    console.log("Sending measurement command to device:", deviceCommand);
+    log.debug("measurement command", { deviceCommand });
 
     // Simulate device processing time
     setIsProcessing(true);
@@ -99,18 +95,10 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
     setMeasurements((prev) => [...prev, measurementData]);
     setCurrentUserInput("");
 
-    console.log(`Measurement completed for panel #${panelNumber}:`, measurementData);
+    log.info("measurement done", { panel: panelNumber });
 
     if (currentMeasurementIndex < measurementSteps.length - 1) {
       setCurrentMeasurementIndex((prev) => prev + 1);
-      const nextPanelNumber =
-        measurementSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
-      toast.info(
-        t("calibration:flow.toastPanelMeasured", {
-          panel: panelNumber,
-          next: nextPanelNumber,
-        }),
-      );
     } else {
       setCurrentStep("processing");
       handleDataProcessing();
@@ -118,8 +106,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
   };
 
   const handleDataProcessing = async () => {
-    console.log("Processing calibration data...");
-    console.log("Measurements collected:", measurements);
+    log.info("processing", { measurement_count: measurements.length });
 
     setIsProcessing(true);
 
@@ -127,16 +114,13 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
       const output = await simulateDataProcessing(measurements, protocol);
       setProcessedOutput(output);
 
-      console.log("Processed calibration output:", output);
-
-      // Simulate sending configuration commands to device
-      console.log("Sending device configuration commands:", output.toDevice);
+      log.debug("processed output", { device_commands: output.toDevice });
       await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
 
       setCurrentStep("complete");
       toast.success(t("calibration:flow.toastComplete"));
     } catch (error) {
-      console.error("Error processing calibration data:", error);
+      log.error("processing failed", { err: (error as Error)?.message });
       toast.error(t("calibration:flow.toastProcessingError"));
     } finally {
       setIsProcessing(false);
@@ -187,7 +171,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
             progressPercentage={getProgressPercentage()}
             onUserInputChange={setCurrentUserInput}
             onTakeMeasurement={handleMeasurement}
-            onCancelMeasurement={console.log}
+            onCancelMeasurement={() => log.info("measurement cancelled")}
           />
         );
 

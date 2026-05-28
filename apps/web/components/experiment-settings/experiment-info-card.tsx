@@ -21,15 +21,24 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
   const { data: session } = useSession();
   const currentUserId = session?.user.id;
 
-  const currentUserRole = members.find((m) => m.user.id === currentUserId)?.role ?? "member";
-  const isAdmin = currentUserRole === "admin";
+  const currentMember = currentUserId
+    ? members.find((m) => m.user.id === currentUserId)
+    : undefined;
+  const isAdmin = currentMember?.role === "admin";
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.EXPERIMENT_DELETION);
 
   const isArchived = experiment.status === "archived";
 
+  if (!isAdmin && !isDeletionEnabled) return null;
+
   return (
     <>
-      <div className="mt-8">
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        className="text-muted-foreground mx-4 border-t"
+      />
+      <div className="px-6 py-4">
         {isAdmin && (
           <p className="text-muted-foreground mb-2 text-sm">
             {t(

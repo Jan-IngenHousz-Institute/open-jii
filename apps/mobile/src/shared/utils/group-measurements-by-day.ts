@@ -13,36 +13,46 @@ export interface MeasurementDaySection {
   data: MeasurementItem[];
 }
 
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * Groups measurements by calendar day in the device timezone. Sections
- * preserve the descending order of the input (newest day first); within a
- * section, items keep their incoming order.
+ * Groups measurements by calendar day. Rows carry a precomputed `dayKey`
+ * ("YYYY-MM-DD", the local date resolved at save time) so the hot path is a
+ * string bucket with no per-item Luxon parsing — that per-item parse was the
+ * ~140 ms mount hitch on the Recent tab (OJD-1470). Legacy rows without a
+ * valid dayKey fall back to parsing the ISO timestamp. Sections are
+ * newest-day-first; order within a section is preserved.
  */
 export function groupMeasurementsByDay(
   items: MeasurementItem[],
   now: DateTime = DateTime.now(),
   locale = "en-GB",
 ): MeasurementDaySection[] {
-  const today = now.startOf("day");
-  const yesterday = today.minus({ days: 1 });
+  const zone = now.zoneName ?? undefined;
+  const startOfToday = now.startOf("day");
+  const todayKey = startOfToday.toISODate();
+  const yesterdayKey = startOfToday.minus({ days: 1 }).toISODate();
 
   const sectionsMap = new Map<string, MeasurementDaySection>();
 
   for (const item of items) {
-    const dt = DateTime.fromISO(item.timestamp, { zone: now.zoneName ?? undefined });
-    if (!dt.isValid) continue;
-    const dayStart = dt.startOf("day");
-    const key = dayStart.toISODate();
+    // Fast path: trust the precomputed day_key. Fall back to parsing the
+    // timestamp for legacy rows pending backfill (dayKey "" or malformed).
+    let key = DAY_KEY_RE.test(item.dayKey) ? item.dayKey : null;
+    if (!key) {
+      const dt = DateTime.fromISO(item.timestamp, { zone });
+      key = dt.isValid ? dt.toISODate() : null;
+    }
     if (!key) continue;
 
     let section = sectionsMap.get(key);
     if (!section) {
-      const kind: DayKind = dayStart.equals(today)
-        ? "today"
-        : dayStart.equals(yesterday)
-          ? "yesterday"
-          : "other";
-      const dateLabel = dayStart.setLocale(locale).toFormat("ccc d LLL");
+      const kind: DayKind =
+        key === todayKey ? "today" : key === yesterdayKey ? "yesterday" : "other";
+      // Label formatting is per-section (a handful), not per-item, so the
+      // Luxon cost here is negligible.
+      const labelDt = DateTime.fromISO(key);
+      const dateLabel = labelDt.isValid ? labelDt.setLocale(locale).toFormat("ccc d LLL") : key;
       section = { key, kind, dateLabel, data: [] };
       sectionsMap.set(key, section);
     }

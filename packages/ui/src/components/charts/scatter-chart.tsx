@@ -6,6 +6,7 @@ import React from "react";
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
+import { useChartSizing } from "./use-is-compact";
 import {
   createBaseLayout,
   createPlotlyConfig,
@@ -59,8 +60,33 @@ export interface ScatterChartProps extends BaseChartProps {
 }
 
 export function ScatterChart({ data, config = {}, className, loading, error }: ScatterChartProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
+
+  // Shrink the colorbar across responsive tiers; title font, tick font,
+  // thickness and length all sit alongside the plot area and steal
+  // horizontal room from a small chart.
+  const adaptColorbar = (cb: NonNullable<ScatterSeriesData["marker"]>["colorbar"]) => {
+    if (!cb) return undefined;
+    if (!sizing.snug) return cb;
+    const tickFontSize = sizing.veryCompact ? 8 : sizing.compact ? 9 : 11;
+    const titleFontSize = sizing.veryCompact ? 8 : sizing.compact ? 9 : 11;
+    const thickness = sizing.veryCompact ? 6 : sizing.compact ? 8 : 12;
+    const len = sizing.veryCompact ? 0.5 : sizing.compact ? 0.6 : 0.8;
+    return {
+      ...cb,
+      thickness,
+      len,
+      tickfont: { ...(cb as { tickfont?: { size?: number } }).tickfont, size: tickFontSize },
+      title: cb.title
+        ? {
+            ...cb.title,
+            font: { ...cb.title.font, size: titleFontSize },
+          }
+        : undefined,
+    };
+  };
 
   const plotData: PlotData[] = data.map(
     (series) =>
@@ -78,7 +104,7 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
           opacity: series.marker?.opacity || series.opacity || 0.8,
           colorscale: series.marker?.colorscale,
           showscale: series.marker?.showscale || false,
-          colorbar: series.marker?.colorbar,
+          colorbar: adaptColorbar(series.marker?.colorbar),
           line: series.marker?.line,
           sizemode: series.sizemode,
           sizeref: series.sizeref,
@@ -116,8 +142,13 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
       }) as PlotData,
   );
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  // Detect any continuous-color trace; its colorbar lives in the right
+  // gutter, same column the default right-anchored legend wants. The
+  // base layout uses this to either nudge the legend further right (full
+  // size) or anchor it at the bottom (compact tiers).
+  const hasColorbar = data.some((s) => s.marker?.showscale);
+  const layout = createBaseLayout(config, { ...sizing, hasColorbar });
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   layout.xaxis = refineAxisType(
     layout.xaxis,
@@ -129,7 +160,7 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   );
 
   return (
-    <div className={cn("flex h-full w-full flex-col", className)}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

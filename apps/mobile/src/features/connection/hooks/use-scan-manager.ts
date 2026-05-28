@@ -7,6 +7,7 @@ export function useScanner() {
   const { setBatteryLevel } = useDeviceConnectionStore();
 
   const mutation = useMutation({
+    networkMode: "always",
     mutationFn: async (protocol: { code: Record<string, unknown>[] }) => {
       const protocolCode = protocol.code;
       if (!protocolCode) {

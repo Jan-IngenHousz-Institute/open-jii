@@ -28,7 +28,6 @@ interface MeasurementFlowStore {
   // Flow orchestration
   setFlowNodes: (nodes: FlowNode[]) => void;
   resetFlow: () => void;
-  startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
   setScanResult: (result: any) => void;
@@ -148,15 +147,6 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       protocolId: undefined,
       isFromOverview: false,
     }),
-
-  startNewIteration: () =>
-    set((state) => ({
-      currentFlowStep: 0,
-      iterationCount: state.iterationCount + 1,
-      isQuestionsSubmitPending: false,
-      scanResult: undefined,
-      isFromOverview: false,
-    })),
 
   retryCurrentIteration: () =>
     set(() => ({

@@ -1,38 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { toast } from "sonner-native";
-import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
+import { getOutbox } from "~/shared/composition/upload";
 import {
   clearMeasurements,
   getMeasurements,
   markAsFailed,
-  markAsSuccessful,
-  markAsUploading,
   removeMeasurement as removeMeasurementFromStorage,
   saveMeasurement as saveMeasurementToStorage,
   updateMeasurement,
-  pruneExpiredMeasurements,
 } from "~/shared/db/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/shared/db/measurements-storage";
-import { useTranslation } from "~/shared/i18n";
 import {
   buildAnnotations,
   getFlagTypeFromMeasurementResult,
 } from "~/shared/utils/measurement-annotations";
 
-export function useMeasurements() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation(["common", "recentMeasurements"]);
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
-    null,
-  );
-  const uploadingKeysRef = useRef<Set<string>>(new Set());
-
-  // Both "pending" (never tried) and "failed" (tried, errored) rows are
-  // candidates for the next upload attempt. The variable retains its old
-  // "failedUploads" name for callsite stability — semantically it's
-  // "everything-not-yet-on-the-cloud."
-  const { data: failedUploads = [] } = useQuery({
+// Standalone hook for callers that ONLY need the pending-or-failed list
+// (e.g. the tab-bar icon badge). Mounting `useMeasurements` from those
+// callers would also subscribe to the upload mutation and a host of
+// unused query refs, all of which churn during heavy upload.
+export function useFailedUploads() {
+  const { data = [] } = useQuery({
     queryKey: ["measurements", "pending-or-failed"],
     queryFn: async () => {
       const rows = await getMeasurements(["pending", "failed"]);
@@ -40,118 +27,25 @@ export function useMeasurements() {
     },
     networkMode: "always",
   });
+  return data;
+}
 
-  const failedUploadsRef = useRef(failedUploads);
-  failedUploadsRef.current = failedUploads;
+export function useMeasurements() {
+  const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
-    // useAutoUpload guards offline at the call site; the mutationFn itself
-    // should always run when invoked (default "online" mode would pause it
-    // and rows would silently stay in "uploading" forever).
     networkMode: "always",
     mutationFn: async () => {
-      // 3 keeps a single phone's burst well below AWS Cognito Identity Pool
-      // throttling when multiple field devices come online at the same time.
-      const CONCURRENCY = 3;
-      const items = [...failedUploadsRef.current];
-
-      const transitioned = new Set(await markAsUploading(items.map(({ key }) => key)));
-      const itemsToUpload = items.filter(({ key }) => transitioned.has(key));
-      setUploadProgress({ done: 0, total: itemsToUpload.length });
+      const outbox = getOutbox();
+      const rows = await getMeasurements(["pending", "failed"]);
+      for (const row of rows) outbox.enqueue(row.id);
       await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-
-      const taskFns = itemsToUpload.map(({ key, data }) => async () => {
-        try {
-          try {
-            await sendMqttEvent(data.topic, data.measurementResult);
-          } catch (error) {
-            console.warn(`Failed to upload item with key ${key}:`, error);
-            await markAsFailed(key);
-            throw error;
-          }
-
-          // Publish succeeded — local-state failure must not flip the row
-          // back to failed.
-          try {
-            await markAsSuccessful(key);
-          } catch (localError) {
-            console.warn(
-              `Local status update failed after successful publish for ${key}:`,
-              localError,
-            );
-          }
-        } finally {
-          setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : null));
-        }
-      });
-
-      let next = 0;
-      const settled: PromiseSettledResult<void>[] = [];
-      await Promise.all(
-        Array.from({ length: Math.min(CONCURRENCY, taskFns.length) }, async () => {
-          while (next < taskFns.length) {
-            const fn = taskFns[next++];
-            try {
-              await fn();
-              settled.push({ status: "fulfilled", value: undefined });
-            } catch (reason) {
-              settled.push({ status: "rejected", reason });
-            }
-          }
-        }),
-      );
-
-      setUploadProgress(null);
-      await pruneExpiredMeasurements();
-      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-
-      const rejected = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected");
-      if (rejected.length > 0) {
-        throw rejected[rejected.length - 1].reason;
-      }
     },
   });
 
   const uploadOne = async (key: string) => {
-    if (uploadingKeysRef.current.has(key)) return;
-    const item = failedUploads.find((u) => u.key === key);
-    if (!item) return;
-
-    uploadingKeysRef.current.add(key);
-
-    try {
-      const transitioned = await markAsUploading([key]);
-      if (transitioned.length === 0) return;
-      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-
-      // Only a publish failure should mark the row failed — if MQTT
-      // succeeded but the local status write later fails, the data is on
-      // the cloud and we must not regress the row to "failed".
-      try {
-        try {
-          await sendMqttEvent(item.data.topic, item.data.measurementResult);
-        } catch (error) {
-          console.warn(`Failed to upload item with key ${key}:`, error);
-          await markAsFailed(key);
-          toast.info(t("recentMeasurements:toasts.uploadOneFailed"));
-          return;
-        }
-
-        try {
-          await markAsSuccessful(key);
-        } catch (localError) {
-          console.warn(
-            `Local status update failed after successful publish for ${key}:`,
-            localError,
-          );
-        }
-      } finally {
-        await pruneExpiredMeasurements();
-        await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-      }
-    } finally {
-      uploadingKeysRef.current.delete(key);
-    }
+    getOutbox().enqueue(key);
+    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
   const saveMeasurement = async (upload: Measurement, status: MeasurementStatus) => {
@@ -160,26 +54,9 @@ export function useMeasurements() {
     return id;
   };
 
-  const markUploaded = async (key: string) => {
-    await markAsSuccessful(key);
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-  };
-
   const markFailed = async (key: string) => {
     await markAsFailed(key);
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-  };
-
-  // Atomically claim a freshly-saved "pending" row as "uploading" before the
-  // direct-publish path attempts MQTT — prevents useAutoUpload's concurrent
-  // uploadAll from grabbing the same row off the failed/pending refetch and
-  // double-publishing. Returns the keys that actually transitioned.
-  const claimForUpload = async (keys: string[]) => {
-    const claimed = await markAsUploading(keys);
-    if (claimed.length > 0) {
-      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
-    }
-    return claimed;
   };
 
   const removeMeasurement = async (key: string) => {
@@ -203,14 +80,10 @@ export function useMeasurements() {
   };
 
   return {
-    failedUploads,
-    uploadProgress,
     isUploading: uploadMutation.isPending,
     uploadAll: () => uploadMutation.mutateAsync(),
     uploadOne,
     saveMeasurement,
-    claimForUpload,
-    markUploaded,
     markFailed,
     removeMeasurement,
     clearSyncedMeasurements,

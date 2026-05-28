@@ -1,10 +1,6 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Keyboard, View } from "react-native";
-import Animated, {
-  useAnimatedKeyboard,
-  useAnimatedStyle,
-  useSharedValue,
-} from "react-native-reanimated";
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
@@ -25,42 +21,20 @@ export function NavigationButtons() {
     isFromOverview,
     isQuestionsSubmitPending,
     returnToOverview,
+    iterationCount,
   } = useMeasurementFlowStore();
 
   const keyboard = useAnimatedKeyboard();
   const insets = useSafeAreaInsets();
 
-  const isKeyboardVisibleSV = useSharedValue(false);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => {
-      isKeyboardVisibleSV.value = true;
-    });
-
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      isKeyboardVisibleSV.value = false;
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [isKeyboardVisibleSV]);
-
-  const navStyle = useAnimatedStyle(() => {
-    let height = keyboard.height.value;
-
-    // fallback only if keyboard is hidden but value is stuck
-    if (!isKeyboardVisibleSV.value && height > 0) {
-      height = 0;
-    }
-
-    return {
-      paddingBottom: Math.max(0, height - insets.bottom),
-    };
-  });
+  const navStyle = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(insets.bottom, keyboard.height.value),
+  }));
   // Get current node to check type
   const currentNode = flowNodes[currentFlowStep];
+  const currentAnswer = useFlowAnswersStore((s) =>
+    currentNode?.type === "question" ? s.getAnswer(iterationCount, currentNode.id) : undefined,
+  );
   const isInstructionOrQuestion =
     currentNode?.type === "instruction" || currentNode?.type === "question";
 
@@ -92,10 +66,7 @@ export function NavigationButtons() {
     Keyboard.dismiss();
     // For questions, use shared utility to handle answer logic and advance
     if (currentNode?.type === "question") {
-      const { getAnswer } = useFlowAnswersStore.getState();
-      const answerValue =
-        getAnswer(useMeasurementFlowStore.getState().iterationCount, currentNode.id) ?? "";
-      advanceWithAnswer(currentNode, answerValue);
+      advanceWithAnswer(currentNode, currentAnswer ?? "");
     } else {
       // For non-question nodes, just advance
       useMeasurementFlowStore.getState().nextStep();
@@ -104,11 +75,7 @@ export function NavigationButtons() {
 
   // For questions, check if answer is valid
   const isNextDisabled =
-    currentNode?.type === "question" &&
-    currentNode.content.required &&
-    !useFlowAnswersStore
-      .getState()
-      .getAnswer(useMeasurementFlowStore.getState().iterationCount, currentNode.id);
+    currentNode?.type === "question" && currentNode.content.required && !currentAnswer;
 
   return (
     <Animated.View className="bg-card w-full" style={navStyle}>

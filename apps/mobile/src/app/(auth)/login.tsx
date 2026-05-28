@@ -382,7 +382,7 @@ export default function LoginScreen() {
               <Text className="text-destructive mb-2 mt-2 text-sm">{formError}</Text>
             )}
 
-            {(githubLoading || orcidLoading || emailLoading || verifyLoading) && (
+            {verifyLoading && (
               <View className="mt-4 items-center">
                 <ActivityIndicator size="small" color={themeColors.onSurface} />
               </View>

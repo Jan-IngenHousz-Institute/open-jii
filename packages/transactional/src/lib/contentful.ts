@@ -12,7 +12,9 @@ export type CmsEmailType =
   | "added-user-notification"
   | "otp-email"
   | "project-transfer-complete"
-  | "transfer-request-confirmation";
+  | "transfer-request-confirmation"
+  | "join-request-submitted"
+  | "join-request-rejected";
 
 export interface CmsEmail {
   internalName: string;

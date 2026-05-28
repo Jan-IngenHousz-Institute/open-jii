@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
-import { TouchableOpacity } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SwipeableMeasurementRow } from "./swipeable-measurement-row";
@@ -9,12 +8,22 @@ vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
-        "recentMeasurements:swipe.uploadButton": "Upload",
-        "recentMeasurements:swipe.commentButton": "Comment",
+        "swipe.uploadButton": "Upload",
+        "swipe.commentButton": "Comment",
+        "swipe.deleteButton": "Delete",
       };
       return map[key] ?? key;
     },
   }),
+}));
+
+// The row reads connectivity to hide the upload action when offline. Controllable
+// per-test via mockUseIsOnline; defaults to online. Avoids a QueryClientProvider.
+const { mockUseIsOnline } = vi.hoisted(() => ({
+  mockUseIsOnline: vi.fn((): { data: boolean | undefined } => ({ data: true })),
+}));
+vi.mock("~/shared/ui/hooks/use-is-online", () => ({
+  useIsOnline: () => mockUseIsOnline(),
 }));
 
 // react-native-gesture-handler uses native code; stub the gesture surface.
@@ -43,6 +52,7 @@ const defaultProps = {
 describe("SwipeableMeasurementRow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseIsOnline.mockReturnValue({ data: true });
   });
 
   it("renders the experiment name", () => {
@@ -52,29 +62,34 @@ describe("SwipeableMeasurementRow", () => {
 
   it("shows the Upload button for unsynced rows when onSync is provided", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="pending" onSync={vi.fn()} />);
-    expect(screen.getByText("Upload")).toBeTruthy();
+    expect(screen.getByLabelText("Upload")).toBeTruthy();
   });
 
   it("does not show the Upload button for synced rows", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="successful" onSync={vi.fn()} />);
-    expect(screen.queryByText("Upload")).toBeNull();
+    expect(screen.queryByLabelText("Upload")).toBeNull();
+  });
+
+  it("hides the Upload button when offline, even for an unsynced row", () => {
+    mockUseIsOnline.mockReturnValue({ data: false });
+    render(<SwipeableMeasurementRow {...defaultProps} status="pending" onSync={vi.fn()} />);
+    expect(screen.queryByLabelText("Upload")).toBeNull();
   });
 
   it("shows the Comment button for unsynced rows when onComment is provided", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="pending" onComment={vi.fn()} />);
-    expect(screen.getByText("Comment")).toBeTruthy();
+    expect(screen.getByLabelText("Comment")).toBeTruthy();
   });
 
   it("does not show the Comment button for synced rows", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="successful" onComment={vi.fn()} />);
-    expect(screen.queryByText("Comment")).toBeNull();
+    expect(screen.queryByLabelText("Comment")).toBeNull();
   });
 
   it("calls onDelete with the row id when the delete button is pressed", () => {
     const onDelete = vi.fn();
     render(<SwipeableMeasurementRow {...defaultProps} status="successful" onDelete={onDelete} />);
-    const touchables = screen.UNSAFE_getAllByType(TouchableOpacity);
-    fireEvent.press(touchables[0]);
+    fireEvent.press(screen.getByLabelText("Delete"));
     expect(onDelete).toHaveBeenCalledWith("m1");
   });
 
@@ -88,14 +103,14 @@ describe("SwipeableMeasurementRow", () => {
   it("calls onSync with the row id when Upload is pressed", () => {
     const onSync = vi.fn();
     render(<SwipeableMeasurementRow {...defaultProps} onSync={onSync} />);
-    fireEvent.press(screen.getByText("Upload"));
+    fireEvent.press(screen.getByLabelText("Upload"));
     expect(onSync).toHaveBeenCalledWith("m1");
   });
 
   it("calls onComment with the row id when Comment is pressed", () => {
     const onComment = vi.fn();
     render(<SwipeableMeasurementRow {...defaultProps} onComment={onComment} />);
-    fireEvent.press(screen.getByText("Comment"));
+    fireEvent.press(screen.getByLabelText("Comment"));
     expect(onComment).toHaveBeenCalledWith("m1");
   });
 
@@ -111,5 +126,10 @@ describe("SwipeableMeasurementRow", () => {
     );
     expect(screen.getByText(/Yes/)).toBeTruthy();
     expect(screen.getByText(/Fast/)).toBeTruthy();
+  });
+
+  it("runs the peek hint without error when peekToken is set", () => {
+    render(<SwipeableMeasurementRow {...defaultProps} peekToken={1} />);
+    expect(screen.getByText("Photosynthesis")).toBeTruthy();
   });
 });

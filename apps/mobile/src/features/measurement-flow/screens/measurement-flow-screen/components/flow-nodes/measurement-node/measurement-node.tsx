@@ -11,12 +11,15 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { createLogger } from "~/shared/utils/logger";
 import { playSound } from "~/shared/utils/play-sound";
 
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
 import { ReadyState } from "./components/ready-state";
 import { ScanningState } from "./components/scanning-state";
+
+const log = createLogger("measurement-node");
 
 interface MeasurementNodeProps {
   content: {
@@ -90,7 +93,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       await playSound();
       nextStep();
     } catch (error) {
-      console.log("scan error", error);
+      log.warn("scan error", { err: (error as Error)?.message });
       toast.error(t("measurementFlow:measurementNode.toast.scanError"));
     }
   };

@@ -9,7 +9,7 @@ import { createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface PolarSeriesData extends BaseSeries {
   r: number[];
-  theta: number[] | string[];
+  theta: (number | string)[];
   mode?:
     | "markers"
     | "lines"

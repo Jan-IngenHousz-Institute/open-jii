@@ -134,8 +134,7 @@ describe("Heatmap", () => {
         x: ["A", "B", "C"],
         y: ["X", "Y", "Z"],
         colorbar: {
-          title: "Values",
-          titleside: "top",
+          title: { text: "Values", side: "top" },
           thickness: 20,
           len: 0.8,
           x: 1.1,
@@ -155,8 +154,7 @@ describe("Heatmap", () => {
     const chartData = JSON.parse(getByTestId("chart-data").textContent || "[]");
     expect(chartData[0]).toMatchObject({
       colorbar: {
-        title: "Values",
-        titleside: "top",
+        title: { text: "Values", side: "top" },
         thickness: 20,
         len: 0.8,
         x: 1.1,
@@ -489,12 +487,13 @@ describe("CorrelationMatrix", () => {
     );
 
     const chartData = JSON.parse(getByTestId("chart-data").textContent || "[]");
+    // Default texttemplate exposes the per-cell values; textfont is left
+    // undefined so Plotly picks a default. We previously hardcoded black
+    // text — but that reads poorly on the saturated ends of the diverging
+    // RdBu scale, and our chart-type renderer now drives `showValues`,
+    // `textDecimals`, and font choices via `CorrelationMatrixChartOptions`.
     expect(chartData[0]).toMatchObject({
       texttemplate: "%{text}",
-      textfont: {
-        color: "black",
-        size: 12,
-      },
     });
 
     // Should have text data for values

@@ -1,6 +1,9 @@
 import * as Updates from "expo-updates";
 import { useEffect } from "react";
 import { toast } from "sonner-native";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("ota");
 
 export function useOtaUpdate(): void {
   useEffect(() => {
@@ -26,14 +29,14 @@ export function useOtaUpdate(): void {
           if (cancelled) return;
           Updates.reloadAsync().catch((err) => {
             if (cancelled) return;
-            console.error("[ota] reload failed", err);
+            log.error("reload failed", { err: (err as Error)?.message });
             toast.error("Restart failed", {
               description: "Please restart the app manually to apply update.",
             });
           });
         }, 2000);
       } catch (err) {
-        console.warn("[ota] update check failed", err);
+        log.warn("update check failed", { err: (err as Error)?.message });
       }
     })();
 

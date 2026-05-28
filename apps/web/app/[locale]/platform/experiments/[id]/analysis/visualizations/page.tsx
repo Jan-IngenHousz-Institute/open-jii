@@ -1,13 +1,13 @@
 "use client";
 
-import { lineChartType } from "@/components/experiment-visualizations/charts/line";
+import { lineChartType } from "@/components/experiment-visualizations/charts/basic/line";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { useLocale } from "@/hooks/useLocale";
 import { Loader2, PlusCircle } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
-import ExperimentVisualizationsList from "~/components/experiment-visualizations/experiment-visualizations-list";
+import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -57,7 +57,7 @@ export default function ExperimentVisualizationsPage() {
         name: defaultName,
         chartFamily: lineChartType.family,
         chartType: lineChartType.type,
-        config: lineChartType.defaultConfig() as unknown as Record<string, unknown>,
+        config: { ...lineChartType.defaultConfig() },
         dataConfig: lineChartType.defaultDataConfig(),
       },
     });

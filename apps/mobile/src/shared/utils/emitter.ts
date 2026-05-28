@@ -1,12 +1,23 @@
+import { createLogger } from "./logger";
+
+const log = createLogger("emitter");
+
 type Handler<T> = T extends void
   ? () => void | Promise<void>
   : (payload: T) => void | Promise<void>;
 type ErrorHandler = (error: unknown, context: { event: string; payload: any }) => void;
 
+const defaultErrorHandler: ErrorHandler = (error, ctx) => {
+  log.warn("handler threw", {
+    event: ctx.event,
+    err: error instanceof Error ? error.message : String(error),
+  });
+};
+
 export class Emitter<Events extends Record<string, any>> {
   private handlers = new Map<keyof Events, Set<Handler<any>>>();
   private history = new Map<keyof Events, Events[keyof Events] | undefined>();
-  private errorHandler: ErrorHandler = console.log;
+  private errorHandler: ErrorHandler = defaultErrorHandler;
 
   async emit<K extends keyof Events>(
     event: K,

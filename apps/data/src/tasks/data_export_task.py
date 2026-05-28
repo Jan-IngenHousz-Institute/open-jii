@@ -10,9 +10,9 @@ import json
 import uuid
 from datetime import datetime
 from typing import Optional
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import to_json, col, lit
-from pyspark.sql.types import StructType, ArrayType, MapType, VariantType
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import to_json, col, lit, expr, when, struct
+from pyspark.sql.types import StructType, ArrayType, MapType, VariantType, StringType
 from pyspark.dbutils import DBUtils
 
 # Import openjii utilities
@@ -36,6 +36,10 @@ CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
 FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, or parquet
 USER_ID = dbutils.widgets.get("USER_ID")  # User who initiated the export
 ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT") if dbutils.widgets.get("ENVIRONMENT") else "DEV"
+try:
+    ANONYMIZE_CONTRIBUTORS = (dbutils.widgets.get("ANONYMIZE_CONTRIBUTORS") or "").lower() == "true"
+except Exception:
+    ANONYMIZE_CONTRIBUTORS = False
 
 # Generate unique export ID within the task
 EXPORT_ID = str(uuid.uuid4())
@@ -61,6 +65,7 @@ log(f"Format: {FORMAT}")
 log(f"Export ID: {EXPORT_ID}")
 log(f"Catalog: {CATALOG_NAME}")
 log(f"Output path: {OUTPUT_PATH}")
+log(f"Anonymise contributors: {ANONYMIZE_CONTRIBUTORS}")
 
 # COMMAND ----------
 
@@ -92,6 +97,62 @@ def load_data():
     except Exception as e:
         log(f"Error loading data: {e}", "ERROR")
         raise
+
+# COMMAND ----------
+
+# DBTITLE 1,Anonymise Contributors
+# Well-known CONTRIBUTOR struct: STRUCT<id: STRING, name: STRING, avatar: STRING>.
+# Identifying by the full type signature mirrors the API's `WellKnownColumnTypes.CONTRIBUTOR`
+# check, so a generic struct named "contributor" wouldn't get rewritten.
+CONTRIBUTOR_STRUCT_FIELDS = ("id", "name", "avatar")
+
+
+def _is_contributor_field(field) -> bool:
+    """Match the well-known CONTRIBUTOR struct shape exactly."""
+    if not isinstance(field.dataType, StructType):
+        return False
+    field_names = tuple(f.name for f in field.dataType.fields)
+    if field_names != CONTRIBUTOR_STRUCT_FIELDS:
+        return False
+    return all(isinstance(f.dataType, StringType) for f in field.dataType.fields)
+
+
+def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
+    """
+    Rewrite every CONTRIBUTOR-typed column in the dataframe to a deterministic
+    pseudonym, matching the API's `ContributorAnonymizerService` exactly:
+
+        Contributor-{upper(substring(sha256(experimentId:userId), 1, 6))}
+
+    `id` and `name` both receive the pseudonym (no side-channel back to the
+    real identity); `avatar` is nulled out. Null cells pass through.
+
+    The Spark expression mirrors the JS `createHash("sha256").update(...).digest("hex").slice(0,6).toUpperCase()`
+    pipeline: `sha2(..., 256)` returns lowercase hex, `substring(_, 1, 6)`
+    takes the first 6 chars, `upper(_)` matches the `.toUpperCase()`.
+    """
+    contributor_fields = [f for f in df.schema.fields if _is_contributor_field(f)]
+    if not contributor_fields:
+        return df
+    for field in contributor_fields:
+        col_name = field.name
+        # `concat('Contributor-', upper(substring(sha2(<experimentId>:<userId>, 256), 1, 6)))`
+        pseudonym_expr = (
+            f"concat('Contributor-', upper(substring(sha2(concat('{experiment_id}', ':', `{col_name}`.id), 256), 1, 6)))"
+        )
+        df = df.withColumn(
+            col_name,
+            when(
+                col(col_name).isNotNull(),
+                struct(
+                    expr(pseudonym_expr).alias("id"),
+                    expr(pseudonym_expr).alias("name"),
+                    lit(None).cast(StringType()).alias("avatar"),
+                ),
+            ).otherwise(col(col_name)),
+        )
+        log(f"Anonymised contributor column: {col_name}")
+    return df
 
 # COMMAND ----------
 
@@ -245,12 +306,15 @@ def main():
     
     # Load data
     df, row_count = load_data()
-    
+
     if row_count == 0:
         log("No data to export", "WARN")
         dbutils.notebook.exit({"status": "no_data", "row_count": 0})
         return
-    
+
+    if ANONYMIZE_CONTRIBUTORS:
+        df = anonymize_contributors(df, EXPERIMENT_ID)
+
     # Export data in requested format
     output_path = export_data(df)
     

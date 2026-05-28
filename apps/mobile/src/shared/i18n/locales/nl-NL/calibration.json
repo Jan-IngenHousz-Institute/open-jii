@@ -4,9 +4,6 @@
     "body": "Deze kalibratiestroom draait momenteel in demonstratiemodus. Alle metingen en berekeningen zijn gesimuleerd en uitsluitend bedoeld om te testen."
   },
   "flow": {
-    "toastStarted": "Kalibratie gestart. Volg de instructies.",
-    "toastGainComplete": "Versterkingskalibratie voltooid. Doorgaan naar metingen.",
-    "toastPanelMeasured": "Paneel #{{panel}} gemeten. Volgende: paneel #{{next}}",
     "toastComplete": "Kalibratie succesvol voltooid!",
     "toastProcessingError": "Fout bij het verwerken van kalibratiegegevens. Probeer het opnieuw."
   },

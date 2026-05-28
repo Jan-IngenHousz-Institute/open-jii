@@ -8,20 +8,15 @@ const NOW = DateTime.fromISO("2026-05-18T10:00:00", { zone: "utc" });
 
 function item(iso: string, key = iso): MeasurementItem {
   return {
+    id: key,
     key,
     timestamp: iso,
     experimentName: "exp",
+    protocolName: "proto",
     status: "successful",
     questions: [],
-    data: {
-      topic: "topic",
-      measurementResult: {},
-      metadata: {
-        experimentName: "exp",
-        protocolName: "proto",
-        timestamp: iso,
-      },
-    },
+    hasComment: false,
+    dayKey: iso.split("T")[0],
   };
 }
 

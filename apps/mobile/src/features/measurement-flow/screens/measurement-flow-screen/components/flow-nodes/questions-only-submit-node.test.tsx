@@ -17,6 +17,7 @@ const {
   getSyncedUtcISO,
   getSyncedLocalISO,
   getTimeSyncState,
+  finishAndExit,
 } = vi.hoisted(() => ({
   uploadQuestions: vi.fn(),
   useExperiments: vi.fn(),
@@ -25,6 +26,7 @@ const {
   getSyncedUtcISO: vi.fn(),
   getSyncedLocalISO: vi.fn(),
   getTimeSyncState: vi.fn(),
+  finishAndExit: vi.fn(),
 }));
 
 vi.mock("~/features/experiments/hooks/use-experiments", () => ({
@@ -35,6 +37,9 @@ vi.mock("~/features/auth/hooks/use-session", () => ({
 }));
 vi.mock("~/features/recent-measurements/hooks/use-questions-upload", () => ({
   useQuestionsUpload: () => useQuestionsUpload(),
+}));
+vi.mock("~/features/measurement-flow/hooks/use-finish-flow", () => ({
+  useFinishFlow: () => finishAndExit,
 }));
 vi.mock("~/shared/utils/time-sync", () => ({
   getSyncedUtcISO: () => getSyncedUtcISO(),
@@ -90,6 +95,7 @@ beforeEach(() => {
     rememberAnswerSettings: {},
   });
   uploadQuestions.mockReset();
+  finishAndExit.mockReset();
   useExperiments.mockReturnValue({
     experiments: [{ value: "exp-1", label: "Amazing Experiment" }],
   });
@@ -178,12 +184,10 @@ describe("QuestionsOnlySubmitNode", () => {
     await waitFor(() => expect(dismissQuestionsSubmit).toHaveBeenCalled());
   });
 
-  it("'Finish' uploads and finishes the flow", async () => {
-    const finishFlow = vi.fn();
+  it("'Finish' uploads then exits the flow to Recent Measurements", async () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1")],
-      finishFlow,
     });
     uploadQuestions.mockResolvedValueOnce(undefined);
 
@@ -191,7 +195,7 @@ describe("QuestionsOnlySubmitNode", () => {
     fireEvent.press(screen.getByText("Finish"));
 
     await waitFor(() => expect(uploadQuestions).toHaveBeenCalled());
-    await waitFor(() => expect(finishFlow).toHaveBeenCalled());
+    await waitFor(() => expect(finishAndExit).toHaveBeenCalled());
   });
 
   it("falls back to 'Experiment' when no matching experiment is found", async () => {
@@ -215,7 +219,7 @@ describe("QuestionsOnlySubmitNode", () => {
     );
   });
 
-  it("logs upload rejections through console.error", async () => {
+  it("logs upload rejections through the logger", async () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1")],
@@ -227,7 +231,9 @@ describe("QuestionsOnlySubmitNode", () => {
     render(<QuestionsOnlySubmitNode />);
     fireEvent.press(screen.getByText("Submit & Continue"));
 
-    await waitFor(() => expect(errorSpy).toHaveBeenCalledWith(err));
+    await waitFor(() =>
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("handler failed")),
+    );
     errorSpy.mockRestore();
   });
 });

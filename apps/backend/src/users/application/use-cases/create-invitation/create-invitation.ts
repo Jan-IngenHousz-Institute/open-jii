@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, failure, Result, success } from "../../../../common/utils/fp-utils";
+import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import type { InvitationDto } from "../../../core/models/user-invitation.model";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
@@ -15,6 +16,7 @@ export class CreateInvitationUseCase {
   constructor(
     private readonly invitationRepository: InvitationRepository,
     private readonly userRepository: UserRepository,
+    private readonly experimentRepository: ExperimentRepository,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
@@ -30,6 +32,18 @@ export class CreateInvitationUseCase {
     role: string,
     invitedBy: string,
   ): Promise<Result<InvitationDto>> {
+    const accessResult = await this.experimentRepository.checkAccess(resourceId, invitedBy);
+    if (accessResult.isFailure()) {
+      return failure(AppError.internal("Failed to check experiment access"));
+    }
+    const { experiment, hasArchiveAccess } = accessResult.value;
+    if (!experiment) {
+      return failure(AppError.notFound(`Experiment with ID ${resourceId} not found`));
+    }
+    if (!hasArchiveAccess) {
+      return failure(AppError.forbidden("You do not have access to this experiment"));
+    }
+
     const existingResult = await this.invitationRepository.findPendingByResourceAndEmail(
       resourceType,
       resourceId,

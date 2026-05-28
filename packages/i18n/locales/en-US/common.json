@@ -102,6 +102,7 @@
     "viewDetails": "View Details",
     "experimentCreated": "Experiment created successfully",
     "experimentUpdated": "Experiment updated successfully",
+    "experimentUpdateFailed": "Failed to update experiment",
     "experimentDeleted": "Experiment deleted successfully",
     "listDescription": "This page will show a list of existing experiments.",
     "archiveDescription": "This page will show a list of archived experiments.",
@@ -113,7 +114,7 @@
     "experimentId": "Experiment ID",
     "descriptionTitle": "Description",
     "searchUsers": "Search users",
-    "searchUsersPlaceholder": "Enter name or email...",
+    "searchUsersPlaceholder": "Add by name or email...",
     "noUsersFound": "No users found for \"{{search}}\"",
     "inviteByEmail": "Invite {{email}} by email",
     "sendInviteByEmail": "Send invite by email",
@@ -237,7 +238,6 @@
     "addLocationsDescription": "Click on the map to add experiment locations",
     "locationsListTitle": "Selected Locations"
   },
-
   "experimentSettings": {
     "loading": "Loading experiment settings...",
     "notFound": "Experiment not found",
@@ -309,9 +309,48 @@
     "invitationRevoked": "Invitation revoked successfully",
     "revoke": "Revoke",
     "collaborators": "Collaborators",
-    "collaboratorsDescription": "Manage who has access to this experiment",
+    "collaboratorsDescription": "Manage members, invitations and join requests for this experiment.",
+    "collaboratorsTab": "Collaborators",
+    "requestsTab": "Requests",
+    "membersTab": "Members",
+    "invitedTab": "Invited",
     "dangerZoneNote": "Once you archive an experiment, it will be read-only and no longer editable.",
-    "dangerZoneNote_deleteAllowed": "Once you archive an experiment, it will be read-only and no longer editable. Alternatively, you can permanently delete it."
+    "dangerZoneNote_deleteAllowed": "Once you archive an experiment, it will be read-only and no longer editable. Alternatively, you can permanently delete it.",
+    "requestToJoin": "Request to join",
+    "requestToJoinPrompt": "Want to collaborate on this public experiment?",
+    "requestToJoinPromptSuffix": "and add an optional note for the admins.",
+    "requestToJoinTitle": "Request to join this experiment",
+    "requestToJoinDescription": "Send a short message to the experiment admins. They'll review your request and you'll be notified by email.",
+    "requestToJoinPlaceholder": "Why would you like to join? (optional)",
+    "requestToJoinSubmit": "Send request",
+    "requestToJoinSubmitting": "Sending…",
+    "requestSubmitted": "Request submitted",
+    "requestSubmittedError": "Could not send your request. Please try again.",
+    "requestPending": "Request pending",
+    "requestPendingDescription": "Your request to join is awaiting admin review.",
+    "cancelRequestPrompt": "Changed your mind?",
+    "cancelRequest": "Cancel request",
+    "requestCancelled": "Request cancelled",
+    "requestCancelledError": "Could not cancel your request. Please try again.",
+    "pendingJoinRequests": "Pending join requests",
+    "pendingJoinRequestsDescription": "People who have asked to join this experiment.",
+    "approveJoinRequest": "Approve",
+    "rejectJoinRequest": "Reject",
+    "joinRequestApproved": "Join request approved",
+    "joinRequestApprovedError": "Could not approve the request. Please try again.",
+    "joinRequestRejected": "Join request rejected",
+    "joinRequestRejectedError": "Could not reject the request. Please try again.",
+    "joinRequestMessageLabel": "Message",
+    "joinRequestNoMessage": "No message provided.",
+    "noInvitations": "No pending invitations",
+    "noInvitationsHint": "People you invite by email will appear here until they accept.",
+    "noJoinRequests": "No join requests",
+    "noJoinRequestsHint": "When the experiment is public, requests from researchers will land here for review.",
+    "invite": "Invite",
+    "inviteCollaborators": "Invite collaborators",
+    "inviteCollaboratorsDescription": "Add an existing user or invite someone by email. Members get immediate access; invitees are emailed and join after accepting.",
+    "filterCollaboratorsPlaceholder": "Filter by name or email…",
+    "noMembers": "No members"
   },
   "experimentVisibility": {
     "visibilityCardTitle": "Actions",
@@ -321,7 +360,10 @@
     "changeToPrivateTitle": "Change to Private?",
     "changeToPrivateDescription": "Making this experiment private will restrict access to only members."
   },
-
+  "experimentAnonymize": {
+    "title": "Anonymize contributors",
+    "description": "Replaces participant names and avatars with stable pseudonyms in tables and charts."
+  },
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to openJII",
@@ -807,22 +849,30 @@
     "analyticsDisabledToast": "Analytics cookies have been disabled."
   },
   "autosave": {
-    "saving": "Saving…",
+    "saving": "Saving\u2026",
     "saved": "All changes saved",
     "failed": "Couldn't save your changes"
+  },
+  "columnPicker": {
+    "dragHandle": "Drag {{name}}",
+    "remove": "Remove {{name}}",
+    "emptyState": "No columns selected.",
+    "addColumn": "Add column",
+    "searchPlaceholder": "Search columns\u2026",
+    "noColumnsLeft": "No columns left to add."
   },
   "dataFilters": {
     "placeholderSubstring": "Substring",
     "placeholderValue": "Value",
-    "placeholderCommaSeparated": "value1, value2, …",
+    "placeholderCommaSeparated": "value1, value2, \u2026",
     "rangeFrom": "From",
     "rangeTo": "To",
     "pickDate": "Pick a date",
     "pickValue": "Pick a value",
     "pickValues": "Pick values",
     "selectedCount": "{{count}} selected",
-    "searchPlaceholder": "Search…",
-    "loading": "Loading…",
+    "searchPlaceholder": "Search\u2026",
+    "loading": "Loading\u2026",
     "noValues": "No values found.",
     "truncatedNotice": "Showing first {{count}} values; refine the search to find more.",
     "removeValue": "Remove {{name}}",
@@ -834,7 +884,7 @@
     "removeFilter": "Remove filter",
     "removeFilterOn": "Remove filter on {{name}}",
     "noFiltersHint": "No filters. All matching rows are included.",
-    "filterByColumnPlaceholder": "Filter by column…",
+    "filterByColumnPlaceholder": "Filter by column\u2026",
     "noColumnsToFilter": "No columns to filter on.",
     "kindTemporal": "Date / time",
     "kindNumeric": "Numeric",
@@ -850,5 +900,11 @@
     "presetLastMonth": "Last month",
     "presetThisYear": "This year",
     "presetYearToDate": "Year to date"
+  },
+  "ui": {
+    "actions": {
+      "error": "Something went wrong",
+      "deleting": "Deleting\u2026"
+    }
   }
 }

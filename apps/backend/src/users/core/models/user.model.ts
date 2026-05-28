@@ -16,13 +16,13 @@ export const selectUserSchema = createSelectSchema(users);
 export const createUserProfileSchema = createInsertSchema(profiles)
   .omit({
     id: true,
-    avatarUrl: true,
     userId: true,
     organizationId: true,
     createdAt: true,
   })
   .extend({
     organization: z.string().optional(),
+    avatarUrl: z.string().nullable().optional(),
   });
 export const selectUserProfileSchema = createSelectSchema(profiles)
   .omit({
@@ -33,15 +33,12 @@ export const selectUserProfileSchema = createSelectSchema(profiles)
     organization: z.string().optional(),
     email: z.string().email().nullable(),
   });
-export const userProfileMetadataSchema = createSelectSchema(profiles)
-  .pick({
-    userId: true,
-    firstName: true,
-    lastName: true,
-  })
-  .extend({
-    image: z.string().nullable(),
-  });
+export const userProfileMetadataSchema = createSelectSchema(profiles).pick({
+  userId: true,
+  firstName: true,
+  lastName: true,
+  avatarUrl: true,
+});
 
 // Define the types
 export type CreateUserDto = typeof createUserSchema._type;

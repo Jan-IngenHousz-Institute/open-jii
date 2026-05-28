@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import type { ChartFormValues } from "../charts/form-values";
-import { lineChartType } from "../charts/line";
+import { lineChartType } from "../charts/basic/line";
+import type { ChartFormValues } from "../charts/chart-config";
 import { WorkspaceCanvas } from "./workspace-canvas";
 
 function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {

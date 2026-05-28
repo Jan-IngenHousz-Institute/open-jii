@@ -6,6 +6,7 @@ import type {
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { exportMeasurementsToFile } from "~/features/recent-measurements/services/export-measurements";
+import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
@@ -37,21 +38,16 @@ function confirmAndRun(
 }
 
 export function useRecentMeasurementsActions(filter: MeasurementFilter) {
-  const { measurements, counts, uploadingCount, invalidate } = useAllMeasurements(filter);
+  const { measurements, invalidate, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useAllMeasurements(filter);
   const {
     uploadAll,
-    isUploading,
     uploadOne,
     removeMeasurement,
     clearSyncedMeasurements,
     updateMeasurementComment,
   } = useMeasurements();
   const { t } = useTranslation(["common", "recentMeasurements"]);
-
-  // Counts come from SQL — independent of the active filter.
-  const unsyncedCount = counts.pending + counts.failed;
-  const syncedCount = counts.successful;
-  const totalCount = counts.pending + counts.failed + counts.uploading + counts.successful;
 
   const confirmSync = (m: MeasurementItem) =>
     confirmAndRun(t, {
@@ -79,7 +75,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
         ? t("recentMeasurements:alerts.removeMeasurementMessage", { name: m.experimentName })
         : t("recentMeasurements:alerts.deleteMeasurementMessage", { name: m.experimentName }),
       confirmText: isSynced ? t("recentMeasurements:alerts.removeButton") : t("common:delete"),
-      variant: "danger",
+      variant: "primary",
       errorMessage: t("recentMeasurements:alerts.deleteMeasurementError"),
       run: async () => {
         await removeMeasurement(m.key);
@@ -88,7 +84,9 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     });
   };
 
-  const confirmSyncAll = () =>
+  // Count is supplied by the caller (the toolbar owns the counts subscription
+  // now) so this hook stays off the per-settle re-render path.
+  const confirmSyncAll = (unsyncedCount = 0) =>
     confirmAndRun(t, {
       title: t("recentMeasurements:alerts.uploadAllTitle"),
       message: t("recentMeasurements:alerts.uploadAllMessage", { count: unsyncedCount }),
@@ -97,17 +95,16 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       errorMessage: t("recentMeasurements:alerts.uploadAllError"),
       run: async () => {
         await uploadAll();
-        toast.success(t("recentMeasurements:alerts.uploadAllSuccess"));
         invalidate();
       },
     });
 
-  const confirmDeleteAllSynced = () =>
+  const confirmDeleteAllSynced = (syncedCount = 0) =>
     confirmAndRun(t, {
       title: t("recentMeasurements:alerts.deleteAllSyncedTitle"),
       message: t("recentMeasurements:alerts.deleteAllSyncedMessage", { count: syncedCount }),
       confirmText: t("common:delete"),
-      variant: "danger",
+      variant: "primary",
       errorMessage: t("recentMeasurements:alerts.deleteAllSyncedError"),
       run: async () => {
         await clearSyncedMeasurements();
@@ -121,18 +118,16 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     });
   };
 
-  const saveComment = async (m: MeasurementItem, text: string) => {
-    await updateMeasurementComment(m.key, m.data, text);
+  const saveComment = async (m: StoredMeasurement, text: string) => {
+    await updateMeasurementComment(m.id, m.data, text);
     invalidate();
   };
 
   return {
     measurements,
-    hasAnyMeasurements: totalCount > 0,
-    syncedCount,
-    unsyncedCount,
-    uploadingCount,
-    isUploading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     confirmSync,
     confirmDelete,
     confirmSyncAll,

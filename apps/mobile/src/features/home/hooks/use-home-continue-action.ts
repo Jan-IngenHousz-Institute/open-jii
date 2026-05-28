@@ -7,7 +7,7 @@ import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-pause
 
 /**
  * Resume a paused flow: atomically read + clear the snapshot, rehydrate the
- * measurement-flow runner, then navigate to the Measure tab.
+ * measurement-flow runner, then push the measurement-flow screen.
  */
 export function useHomeContinueAction() {
   const router = useRouter();
@@ -23,16 +23,26 @@ export function useHomeContinueAction() {
     flowStore.setExperimentId(snap.experimentId);
     if (snap.protocolId) flowStore.setProtocolId(snap.protocolId);
     flowStore.setFlowNodes(snap.flowNodes);
-    flowStore.setCurrentFlowStep(snap.currentFlowStep);
+
+    // If the snapshot landed on the analysis node but the scan result is
+    // missing (legacy snapshot from before scanResult was persisted), snap
+    // back to the measurement node so the user can re-scan instead of being
+    // stuck on an inert "Accept data" button.
+    const targetNode = snap.flowNodes[snap.currentFlowStep];
+    const needsRescan = targetNode?.type === "analysis" && snap.scanResult === undefined;
+    const measurementStep = snap.flowNodes.findIndex((n) => n.type === "measurement");
+    const resumeStep = needsRescan && measurementStep >= 0 ? measurementStep : snap.currentFlowStep;
+    flowStore.setCurrentFlowStep(resumeStep);
 
     useMeasurementFlowStore.setState({
       iterationCount: snap.iterationCount,
       isQuestionsSubmitPending: snap.isQuestionsSubmitPending,
       isFromOverview: snap.isFromOverview,
+      scanResult: snap.scanResult,
     });
 
     useFlowAnswersStore.setState({ answersHistory: snap.answersHistory });
 
-    router.push("/(tabs)/measurement-flow");
+    router.push("/measurement-flow");
   }, [router]);
 }

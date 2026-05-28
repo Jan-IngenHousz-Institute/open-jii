@@ -10,6 +10,7 @@ At the moment the mobile app is mostly targeted at the MultispeQ sensor, but mor
 - Inspect MultispeQ battery status
 - **Take measurements** via MultispeQ
 - Streamlined measurement flow with animated progress bar
+  - Pick from experiments assigned to you, with recently-measured ones surfaced first
   - Do measurements with or without internet connectivity (online/offline)
   - Auto-advance on yes/no and multi-choice answers
   - Auto-remember answers and auto-skip instructions on repeat iterations
@@ -18,7 +19,7 @@ At the moment the mobile app is mostly targeted at the MultispeQ sensor, but mor
 - **Question-only flows** — collect survey data or field observations without a sensor
 - **Add comments** to measurements via bottom-sheet modal
 - **Swipe actions** on measurements — swipe to upload, comment, or delete
-- **Export measurements** locally as JSON for backup or external analysis
+- **Export measurements** locally as JSON (from your profile) for backup or external analysis
 - **Python macro processing** — run Python macros on-device via embedded Pyodide runtime
 - **View measurement data** of experiments
 - **Turn off** sensor device

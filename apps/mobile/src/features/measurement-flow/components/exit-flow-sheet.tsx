@@ -2,7 +2,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/
 import { useRouter } from "expo-router";
 import { ChevronRight, Pause, Trash2 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Keyboard, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
@@ -20,6 +20,12 @@ export function ExitFlowSheet() {
   const isOpen = useExitFlowSheetStore((s) => s.isOpen);
   const close = useExitFlowSheetStore((s) => s.close);
   const router = useRouter();
+  const dismissFlow = () => {
+    // Pop the pushed flow back to the tab it launched from; fall back to the
+    // tabs root if the flow was somehow the entry route (e.g. a deep link).
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/");
+  };
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useTheme();
   const { t } = useTranslation("measurementFlow");
@@ -28,8 +34,12 @@ export function ExitFlowSheet() {
   const { experiments } = useExperiments();
 
   useEffect(() => {
-    if (isOpen) sheetRef.current?.present();
-    else sheetRef.current?.dismiss();
+    if (isOpen) {
+      Keyboard.dismiss();
+      sheetRef.current?.present();
+    } else {
+      sheetRef.current?.dismiss();
+    }
   }, [isOpen]);
 
   const renderBackdrop = useCallback(
@@ -58,6 +68,7 @@ export function ExitFlowSheet() {
         // Deep-clone so later writes to useFlowAnswersStore don't mutate the
         // persisted snapshot (Zustand state is reference-shared).
         answersHistory: JSON.parse(JSON.stringify(answersHistory)),
+        scanResult: flow.scanResult,
         pausedAt: new Date().toISOString(),
       });
     }
@@ -65,7 +76,7 @@ export function ExitFlowSheet() {
     flow.resetFlow();
     useExperimentSelectionStore.getState().setSelectedExperimentId(undefined);
     close();
-    router.replace("/(tabs)/");
+    dismissFlow();
   };
 
   const handleDiscard = () => {
@@ -74,7 +85,7 @@ export function ExitFlowSheet() {
     useFlowAnswersStore.getState().clearHistory();
     useExperimentSelectionStore.getState().setSelectedExperimentId(undefined);
     close();
-    router.replace("/(tabs)/");
+    dismissFlow();
   };
 
   return (
@@ -97,22 +108,21 @@ export function ExitFlowSheet() {
 
         <Pressable
           onPress={handlePause}
-          className="border-jii-mint flex-row items-center gap-3 rounded-2xl border p-3.5"
-          style={{ backgroundColor: colors.jii.mintLight }}
+          className="bg-jii-mint-light border-jii-mint flex-row items-center gap-3 rounded-2xl border p-3.5"
         >
           <View
             className="h-10 w-10 items-center justify-center rounded-xl"
-            style={{ backgroundColor: "#FFFFFF" }}
+            style={{ backgroundColor: themeColors.brand + "30" }}
           >
-            <Pause size={20} color={colors.jii.darkGreen} />
+            <Pause size={20} color={themeColors.brand} />
           </View>
           <View className="min-w-0 flex-1">
-            <Text className="text-[15px] font-bold" style={{ color: colors.jii.darkGreen }}>
+            <Text className="text-[15px] font-bold" style={{ color: themeColors.brand }}>
               {t("exitSheet.pause")}
             </Text>
             <Text className="text-muted-body mt-0.5 text-[12.5px]">{t("exitSheet.pauseSub")}</Text>
           </View>
-          <ChevronRight size={20} color={colors.jii.darkGreen} />
+          <ChevronRight size={20} color={themeColors.brand} />
         </Pressable>
 
         <Pressable
@@ -123,7 +133,7 @@ export function ExitFlowSheet() {
             className="h-10 w-10 items-center justify-center rounded-xl"
             style={{ backgroundColor: "#fee2e2" }}
           >
-            <Trash2 size={20} color="#b00020" />
+            <Trash2 size={20} color={colors.semantic.error} />
           </View>
           <View className="min-w-0 flex-1">
             <Text className="text-error text-[15px] font-bold">{t("exitSheet.discard")}</Text>
@@ -131,7 +141,7 @@ export function ExitFlowSheet() {
               {t("exitSheet.discardSub")}
             </Text>
           </View>
-          <ChevronRight size={20} color="#b00020" />
+          <ChevronRight size={20} color={colors.semantic.error} />
         </Pressable>
 
         <Button title={t("exitSheet.continue")} onPress={close} variant="ghost" size="md" />

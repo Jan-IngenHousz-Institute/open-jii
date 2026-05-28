@@ -1,15 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
-import { useNetworkState } from "expo-network";
 import { toast } from "sonner-native";
-import { sendMqttEvent } from "~/features/connection/services/mqtt/send-mqtt-event";
 import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
+import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 import { compressSample } from "~/shared/utils/compress-sample";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/utils/logger";
 import { buildAnnotations } from "~/shared/utils/measurement-annotations";
+
+const log = createLogger("measurement-upload");
 
 type TFn = ReturnType<typeof useTranslation>["t"];
 
@@ -88,7 +90,9 @@ function promptMeasurementFileSave(
         variant: "primary",
         onPress: () => {
           exportSingleMeasurementToFile(measurement).catch((exportError) => {
-            console.error("Failed to export measurement to file:", exportError);
+            log.error("Failed to export measurement to file", {
+              err: (exportError as Error)?.message,
+            });
             toast.error(t("recentMeasurements:alerts.saveToFileError"));
           });
         },
@@ -99,14 +103,12 @@ function promptMeasurementFileSave(
 }
 
 export function useMeasurementUpload() {
-  const { saveMeasurement, claimForUpload, markUploaded, markFailed } = useMeasurements();
-  const networkState = useNetworkState();
+  const { saveMeasurement } = useMeasurements();
   const { t } = useTranslation(["common", "recentMeasurements"]);
 
   const mutation = useMutation({
-    // mutationFn handles offline internally (saves locally, bails before MQTT).
-    // Default `networkMode: "online"` would pause the mutation while offline
-    // and never run mutationFn — the user would see "Uploading…" forever.
+    // Save runs locally; the Outbox handles offline/online itself, so
+    // there's no reason to pause the mutation off-network.
     networkMode: "always",
     mutationFn: async ({
       rawMeasurement,
@@ -133,8 +135,14 @@ export function useMeasurementUpload() {
       questions: AnswerData[];
       commentText?: string;
     }) => {
-      if (typeof rawMeasurement !== "object") {
-        return;
+      // Reject malformed input instead of resolving as a no-op. `typeof
+      // null === "object"` would otherwise slip a null through to
+      // prepareMeasurementForUpload() and crash on `"sample" in null`, and a
+      // silent success would let the flow advance with nothing saved.
+      if (rawMeasurement === null || typeof rawMeasurement !== "object") {
+        throw new Error(
+          `Invalid rawMeasurement: expected object, got ${rawMeasurement === null ? "null" : typeof rawMeasurement}`,
+        );
       }
 
       const measurementData = prepareMeasurementForUpload({
@@ -148,72 +156,27 @@ export function useMeasurementUpload() {
       });
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });
-
-      const failedUploadData = {
+      const measurement = {
         topic,
         measurementResult: measurementData,
-        metadata: {
-          experimentName,
-          protocolName,
-          timestamp: measurementData.timestamp,
-        },
+        metadata: { experimentName, protocolName, timestamp: measurementData.timestamp },
       };
 
-      // Save locally first so the measurement appears in Recent immediately
-      // and can be flagged on-device, regardless of upload outcome. Status
-      // starts as "pending" — only flipped to "failed" once an actual MQTT
-      // attempt errors out, so field metrics distinguish never-tried from
-      // genuinely-failed rows.
       let savedId: string;
       try {
-        savedId = await saveMeasurement(failedUploadData, "pending");
+        savedId = await saveMeasurement(measurement, "pending");
       } catch (storageError) {
-        console.error("Failed to save measurement to local storage:", storageError);
-        promptMeasurementFileSave(t, failedUploadData);
-        return;
+        log.error("Failed to save measurement to local storage", {
+          err: (storageError as Error)?.message,
+        });
+        promptMeasurementFileSave(t, measurement);
+        // Rethrow so callers awaiting uploadMeasurement(...) can distinguish a
+        // failed local save from success and avoid advancing the flow with
+        // nothing persisted.
+        throw storageError;
       }
 
-      // If the device is offline, skip the publish entirely. Cognito's
-      // credential fetch inside sendMqttEvent would throw and we'd mark the
-      // row "failed" — but the schema reserves "failed" for rows that
-      // actually attempted a publish. Leaving it "pending" lets
-      // useAutoUpload's network-restore listener pick it up on reconnect.
-      // `!== true` also catches the brief null/undefined window expo-network
-      // exposes around connectivity transitions — otherwise we'd fall through
-      // to MQTT and freeze the UI on the full connect timeout.
-      if (networkState.isInternetReachable !== true) {
-        toast.info(t("recentMeasurements:toasts.savedOffline"));
-        return;
-      }
-
-      // Claim the row before publishing — otherwise useAutoUpload's parallel
-      // uploadAll (triggered by the saveMeasurement query invalidation) can
-      // grab the same "pending" row and double-publish.
-      const claimed = await claimForUpload([savedId]);
-      if (claimed.length === 0) {
-        return;
-      }
-
-      // Split into two phases: a publish failure means the data didn't reach
-      // the cloud (mark failed, surface error). A local-state update failure
-      // *after* a successful publish must not flip the row back to failed —
-      // the data is already on the cloud; only log/toast the local issue.
-      try {
-        await sendMqttEvent(topic, measurementData);
-      } catch (uploadError) {
-        console.error("Upload failed:", uploadError);
-        await markFailed(savedId);
-        toast.error(t("recentMeasurements:toasts.uploadNotAvailable"));
-        return;
-      }
-
-      try {
-        await markUploaded(savedId);
-        toast.success(t("recentMeasurements:toasts.measurementUploaded"));
-      } catch (localError) {
-        console.error("Local status update failed after successful publish:", localError);
-        toast.info(t("recentMeasurements:toasts.uploadedLocalStatusRefresh"));
-      }
+      getOutbox().enqueue(savedId);
     },
   });
 

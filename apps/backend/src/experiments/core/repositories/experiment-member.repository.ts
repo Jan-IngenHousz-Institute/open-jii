@@ -8,6 +8,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
   getAnonymizedEmail,
+  getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
 import { ExperimentMemberRole, ExperimentMemberDto } from "../models/experiment-members.model";
 
@@ -30,6 +31,7 @@ export class ExperimentMemberRepository {
             firstName: getAnonymizedFirstName(),
             lastName: getAnonymizedLastName(),
             email: getAnonymizedEmail(),
+            avatarUrl: getAnonymizedAvatarUrl(),
           },
         })
         .from(experimentMembers)
@@ -66,6 +68,7 @@ export class ExperimentMemberRepository {
             firstName: getAnonymizedFirstName(),
             lastName: getAnonymizedLastName(),
             email: getAnonymizedEmail(),
+            avatarUrl: getAnonymizedAvatarUrl(),
           },
         })
         .from(experimentMembers)
@@ -188,6 +191,7 @@ export class ExperimentMemberRepository {
             firstName: getAnonymizedFirstName(),
             lastName: getAnonymizedLastName(),
             email: getAnonymizedEmail(),
+            avatarUrl: getAnonymizedAvatarUrl(),
           },
         })
         .from(experimentMembers)

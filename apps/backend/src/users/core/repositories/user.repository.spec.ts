@@ -660,7 +660,7 @@ describe("UserRepository", () => {
       testUser1Id = await testApp.createTestUser({
         email: "finduser1@example.com",
         name: "Find User 1",
-        image: "https://example.com/avatar1.jpg",
+        image: null,
       });
       testUser2Id = await testApp.createTestUser({
         email: "finduser2@example.com",
@@ -705,7 +705,7 @@ describe("UserRepository", () => {
         userId: testUser1Id,
         firstName: "Find",
         lastName: "User1",
-        image: "https://example.com/avatar1.jpg",
+        avatarUrl: null,
       });
 
       // Check second user
@@ -715,7 +715,7 @@ describe("UserRepository", () => {
         userId: testUser2Id,
         firstName: "Find",
         lastName: "User2",
-        image: null,
+        avatarUrl: null,
       });
     });
 
@@ -754,7 +754,7 @@ describe("UserRepository", () => {
         userId: testUser1Id,
         firstName: "Find",
         lastName: "User1",
-        image: "https://example.com/avatar1.jpg",
+        avatarUrl: null,
       });
 
       // User without profile should not be included
