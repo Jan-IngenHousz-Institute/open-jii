@@ -9,7 +9,10 @@ describe("AwsS3Service", () => {
 
   const mockAwsConfig = {
     region: "eu-central-1",
-    s3Config: { iotArchiveBucketName: "test-iot-archive-bucket", largeIotBucketName: "test-large-iot-bucket" },
+    s3Config: {
+      iotArchiveBucketName: "test-iot-archive-bucket",
+      largeIotBucketName: "test-large-iot-bucket",
+    },
   } as unknown as AwsConfigService;
 
   beforeEach(() => {
