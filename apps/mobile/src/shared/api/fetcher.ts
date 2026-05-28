@@ -4,6 +4,12 @@ import { refreshSession } from "~/features/auth/api/refresh.api";
 import { getAuthClient } from "~/features/auth/services/auth";
 import { getEnvVar } from "~/shared/stores/environment-store";
 
+// Without this, fetch hangs at the platform default whenever the backend is
+// unreachable (Wi-Fi-without-internet, captive portal, sleeping device). The
+// hung promises cascade across mounted queries and the UI lags for tens of
+// seconds offline. 10s is generous for any real call and fails fast otherwise.
+const FETCH_TIMEOUT_MS = 10_000;
+
 function removeTrailingSlashes(value: string) {
   return value.replace(/\/+$/, "");
 }
@@ -19,15 +25,25 @@ export const customApiFetcher = async (args: ApiFetcherArgs) => {
   const path = removeLeadingSlashes(args.path);
   const fullPath = `${base}/${path}`;
 
-  const send = () =>
-    tsRestFetchApi({
+  const send = () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    // Honor any upstream signal (e.g. React Query unmount) by forwarding aborts.
+    const upstream = args.signal;
+    if (upstream) {
+      if (upstream.aborted) controller.abort();
+      else upstream.addEventListener("abort", () => controller.abort(), { once: true });
+    }
+    return tsRestFetchApi({
       ...args,
       path: fullPath,
+      signal: controller.signal,
       headers: {
         ...args.headers,
         ...(authClient.getCookie() ? { Cookie: authClient.getCookie() } : {}),
       },
-    });
+    }).finally(() => clearTimeout(timeoutId));
+  };
 
   let result = await send();
 

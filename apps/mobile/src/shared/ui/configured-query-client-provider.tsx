@@ -61,9 +61,12 @@ export function ConfiguredQueryClientProvider({ children }) {
 
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
-      onError: (error: any) => {
+      onError: (error: any, query) => {
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
         log.warn("query error", { message, status: error?.status });
+        // Queries that gracefully fall back (e.g. user profile) opt out of the
+        // global toast via meta.suppressToast so a 404 doesn't blare at the user.
+        if (query.meta?.suppressToast) return;
         toast.error(message);
       },
     });
