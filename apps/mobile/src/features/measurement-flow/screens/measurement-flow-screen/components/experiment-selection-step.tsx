@@ -82,9 +82,6 @@ export function ExperimentSelectionStep() {
               >
                 {t("experimentSelection.heroTitle")}
               </Text>
-              <Text className="text-muted-body mt-1 text-[13px]">
-                {t("experimentSelection.heroSubtitle")}
-              </Text>
             </View>
             <OfflineModeIndicator isVisible={!!precachedData} />
           </View>
@@ -97,25 +94,21 @@ export function ExperimentSelectionStep() {
               placeholder={t("experimentSelection.searchPlaceholder")}
               leftIcon={<Search size={18} color={colors.inactive} />}
               rightElement={
-                search.length > 0 ? (
-                  <TouchableOpacity
-                    className="bg-gray-background mr-2 rounded-md p-1"
-                    onPress={() => setSearch("")}
-                  >
-                    <X size={20} color={colors.onSurface} />
-                  </TouchableOpacity>
-                ) : undefined
+                <View className="mr-2 flex-row items-center gap-1.5">
+                  {search.length > 0 ? (
+                    <TouchableOpacity
+                      className="bg-gray-background rounded-md p-1"
+                      onPress={() => setSearch("")}
+                    >
+                      <X size={18} color={colors.onSurface} />
+                    </TouchableOpacity>
+                  ) : null}
+                  <Tag>{`${filtered.length}`}</Tag>
+                </View>
               }
               autoCapitalize="none"
               autoCorrect={false}
             />
-          </View>
-
-          <View className="mt-4 flex-row items-center justify-between">
-            <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 14 }}>
-              {t("experimentSelection.assignedToYou")}
-            </Text>
-            {experiments.length > 0 ? <Tag>{`${experiments.length}`}</Tag> : null}
           </View>
         </View>
 
@@ -134,7 +127,7 @@ export function ExperimentSelectionStep() {
           <FlatList
             data={filtered}
             keyExtractor={(item) => item.value}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 4 }}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 0 }}
             renderItem={({ item }) => {
               const meta = flowMeta[item.value];
               return (
