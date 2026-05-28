@@ -12,6 +12,9 @@ export function useGetUserProfile(userId: string | undefined, enabled = true) {
       }
       return failureCount < 3;
     },
+    // Greeting/profile screen fall back gracefully; don't blast the user with
+    // a toast on a missing profile.
+    meta: { suppressToast: true },
   });
 
   return { userProfile: data?.body, isLoading, error };

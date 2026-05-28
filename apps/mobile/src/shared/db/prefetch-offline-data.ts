@@ -32,6 +32,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
           queryKey: ["userProfile", userId],
           queryFn: () => tsr.users.getUserProfile.query({ params: { id: userId } }),
           staleTime: 0,
+          meta: { suppressToast: true },
         })
         .catch((err) => {
           log.warn("user profile prefetch failed", {
