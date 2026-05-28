@@ -78,6 +78,20 @@ describe("VisualizationTableRow", () => {
     },
   );
 
+  it.each([
+    ["histogram", "workspace.charts.types.histogram"],
+    ["box-plot", "workspace.charts.types.boxPlot"],
+    ["violin-plot", "workspace.charts.types.violinPlot"],
+    ["density-plot", "workspace.charts.types.densityPlot"],
+    ["ridge-plot", "workspace.charts.types.ridgePlot"],
+    ["histogram-2d", "workspace.charts.types.histogram2d"],
+    ["density-plot-2d", "workspace.charts.types.densityPlot2d"],
+    ["spc-control-chart", "workspace.charts.types.spcControlChart"],
+  ] as const)("renders the statistical-family badge for chartType=%s", (chartType, labelKey) => {
+    renderRow({ visualization: viz({ chartType }) });
+    expect(screen.getByText(labelKey)).toHaveClass("bg-badge-stale");
+  });
+
   it("opens the confirm dialog when the delete menu item is selected", async () => {
     const user = userEvent.setup();
     renderRow();
