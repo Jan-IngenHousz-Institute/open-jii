@@ -34,6 +34,7 @@ describe("refreshSession", () => {
   it("returns false when getSession hangs past the timeout", async () => {
     vi.useFakeTimers();
     try {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional: simulates a hang
       mockGetSession.mockImplementationOnce(() => new Promise(() => {}));
 
       const p = refreshSession();
