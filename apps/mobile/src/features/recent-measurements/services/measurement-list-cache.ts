@@ -24,7 +24,6 @@ export const queryKeys = {
   list: (filter: MeasurementFilter) => ["measurements", "list", filter] as const,
   listAll: ["measurements", "list"] as const,
   counts: ["measurements", "counts"] as const,
-  pendingOrFailed: ["measurements", "pending-or-failed"] as const,
   top: (n: number) => ["measurements", "top", n] as const,
   topAll: ["measurements", "top"] as const,
 } as const;
@@ -64,22 +63,6 @@ export function applySettledPatchBatch(
         patchFlatBulk(old, updates),
       );
     }
-
-    // pending-or-failed: drop rows that left the unsynced set.
-    queryClient.setQueryData<{ key: string; data: unknown }[]>(queryKeys.pendingOrFailed, (old) => {
-      if (!old) return old;
-      let touched = false;
-      const next = old.filter((r) => {
-        const status = updates.get(r.key);
-        if (status === undefined) return true;
-        if (status === "successful") {
-          touched = true;
-          return false;
-        }
-        return true;
-      });
-      return touched ? next : old;
-    });
 
     // Counts: apply the net delta of all settles in one update. When the
     // previous status isn't recorded in cache (cold start), the next
