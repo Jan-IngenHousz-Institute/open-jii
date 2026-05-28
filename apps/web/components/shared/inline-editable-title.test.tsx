@@ -105,4 +105,33 @@ describe("InlineEditableTitle", () => {
     expect(screen.getByTestId("badge")).toBeInTheDocument();
     expect(screen.getByTestId("action")).toBeInTheDocument();
   });
+
+  it("commits the new value when the user presses Enter", async () => {
+    const user = userEvent.setup();
+    render(<InlineEditableTitle {...defaultProps} />);
+
+    await user.click(screen.getByText("My Title"));
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.type(input, "Renamed via Enter");
+    await user.keyboard("{Enter}");
+
+    expect(defaultProps.onSave).toHaveBeenCalledWith("Renamed via Enter");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("cancels the edit when the user presses Escape", async () => {
+    const user = userEvent.setup();
+    render(<InlineEditableTitle {...defaultProps} />);
+
+    await user.click(screen.getByText("My Title"));
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.type(input, "Discarded");
+    await user.keyboard("{Escape}");
+
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByText("My Title")).toBeInTheDocument();
+  });
 });

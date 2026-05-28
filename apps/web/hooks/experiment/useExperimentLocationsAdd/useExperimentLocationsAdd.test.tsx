@@ -18,7 +18,7 @@ describe("useExperimentLocationsAdd", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-1" },
-        body: [{ name: "Site A", latitude: 42.36, longitude: -71.06 }],
+        body: { locations: [{ name: "Site A", latitude: 42.36, longitude: -71.06 }] },
       });
     });
 
@@ -37,12 +37,12 @@ describe("useExperimentLocationsAdd", () => {
     const locations = [{ name: "Site A", latitude: 42.36, longitude: -71.06 }];
 
     act(() => {
-      result.current.mutate({ params: { id: "exp-1" }, body: locations });
+      result.current.mutate({ params: { id: "exp-1" }, body: { locations } });
     });
 
     await waitFor(() => {
       expect(spy.params.id).toBe("exp-1");
-      expect(spy.body).toMatchObject(locations);
+      expect(spy.body).toMatchObject({ locations });
     });
   });
 
@@ -54,7 +54,7 @@ describe("useExperimentLocationsAdd", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-1" },
-        body: [{ name: "Site A", latitude: 42.36, longitude: -71.06 }],
+        body: { locations: [{ name: "Site A", latitude: 42.36, longitude: -71.06 }] },
       });
     });
 

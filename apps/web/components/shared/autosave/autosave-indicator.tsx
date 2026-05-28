@@ -50,7 +50,7 @@ export function AutosaveIndicator({
       };
     }
     return {
-      icon: <CheckCircle2 className="size-4 text-emerald-500" />,
+      icon: <CheckCircle2 className="size-4 text-[#09B732]" />,
       label: t("autosave.saved", "All changes saved"),
       labelClassName: "text-[#68737B]",
     };

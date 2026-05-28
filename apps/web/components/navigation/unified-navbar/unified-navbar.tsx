@@ -41,10 +41,12 @@ function UserMenu({
   locale,
   session,
   displayName,
+  avatarUrl,
 }: {
   locale: string;
   session: Session | null;
   displayName: string;
+  avatarUrl?: string | null;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -69,9 +71,9 @@ function UserMenu({
           className="group flex gap-2 hover:bg-transparent focus:bg-transparent"
           aria-label={t("auth.userMenu", "User menu")}
         >
-          {session.user.image ? (
+          {avatarUrl ? (
             <Avatar className="group-hover:bg-jii-medium-green/20 h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_theme(colors.jii-medium-green)]">
-              <AvatarImage src={session.user.image} alt={displayName} />
+              <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
               </AvatarFallback>
@@ -86,9 +88,9 @@ function UserMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-          {session.user.image && (
+          {avatarUrl && (
             <Avatar className="h-8 w-8">
-              <AvatarImage src={session.user.image} alt={displayName} />
+              <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
               </AvatarFallback>
@@ -297,7 +299,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         <div className="col-start-3 col-end-4 flex items-center justify-end space-x-3 justify-self-end md:justify-end">
           {/* Desktop User Menu */}
           <div className="hidden md:block">
-            <UserMenu locale={locale} session={session} displayName={displayName} />
+            <UserMenu
+              locale={locale}
+              session={session}
+              displayName={displayName}
+              avatarUrl={profile?.avatarUrl}
+            />
           </div>
           <LanguageSwitcher locale={locale} />
 
@@ -340,9 +347,9 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   <>
                     <DropdownMenuSeparator />
                     <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-                      {session.user.image && (
+                      {profile?.avatarUrl && (
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={session.user.image} alt={displayName} />
+                          <AvatarImage src={profile.avatarUrl} alt={displayName} />
                           <AvatarFallback>
                             <User className="h-3 w-3" />
                           </AvatarFallback>

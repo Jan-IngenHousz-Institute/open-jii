@@ -20,7 +20,7 @@ describe("ExperimentLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id");
-    vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+    vi.mocked(useParams).mockReturnValue({ id: "test-id" });
   });
 
   const renderLayout = () =>
@@ -68,8 +68,10 @@ describe("ExperimentLayout", () => {
   });
 
   it("shows not-found when experiment data is missing", async () => {
+    // Simulate a successful response whose `experiment` is null — the layout
+    // defends against this even though it's outside the schema's typed shape.
     server.mount(contract.experiments.getExperimentAccess, {
-      body: { experiment: null, hasAccess: false, isAdmin: false },
+      body: { experiment: null, hasAccess: false, isAdmin: false } as never,
     });
     renderLayout();
     await waitFor(() => {
@@ -96,6 +98,7 @@ describe("ExperimentLayout", () => {
     });
     expect(screen.getByText("overview")).toBeInTheDocument();
     expect(screen.getByText("data")).toBeInTheDocument();
+    expect(screen.getByText("dashboards.tabLabel")).toBeInTheDocument();
     expect(screen.getByText("analysis.title")).toBeInTheDocument();
     expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
     expect(screen.getByTestId("child")).toBeInTheDocument();

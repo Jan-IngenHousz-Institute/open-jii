@@ -162,7 +162,7 @@ vi.mock("@repo/ui/components/select", async (importOriginal) => {
         value={value}
         disabled={disabled}
         onChange={(e) => {
-          const result = onValueChange?.(e.target.value);
+          const result: unknown = onValueChange?.(e.target.value);
           if (result instanceof Promise)
             result.catch(() => {
               /* noop */

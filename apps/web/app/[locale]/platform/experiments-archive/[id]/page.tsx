@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
+import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/list/experiment-visualizations-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
@@ -33,11 +33,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const locations = locationsData?.body ?? [];
 
   // Members
-  const {
-    data: membersData,
-    isLoading: isMembersLoading,
-    isError: isMembersError,
-  } = useExperimentMembers(id);
+  const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
   const members = membersData?.body ?? [];
 
   // Visualizations
@@ -69,7 +65,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         locations={locations}
         members={members}
         isMembersLoading={isMembersLoading}
-        isMembersError={isMembersError}
         isArchived
       />
 

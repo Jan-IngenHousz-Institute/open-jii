@@ -1,0 +1,44 @@
+{
+  "tab": {
+    "title": "openJII"
+  },
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "fallbackName": "there",
+    "addressee": "{{greeting}},\n{{name}}."
+  },
+  "continue": {
+    "inProgress": "IN PROGRESS",
+    "stepOfTotal": "Step {{step}} of {{total}}",
+    "stepOfTotalWithPlot": "Step {{step}} of {{total}} · {{plot}}",
+    "action": "Continue measurement"
+  },
+  "cta": {
+    "title": "Start a measurement",
+    "body": "Pick an experiment from your assigned list, then start measuring.",
+    "action": "Choose experiment"
+  },
+  "device": {
+    "connectedSub": "Battery {{battery}}%",
+    "connectedSubWithFirmware": "Battery {{battery}}% · Firmware {{firmware}}",
+    "disconnectedTitle": "No device connected",
+    "disconnectedSub": "Connect a MultispeQ to start measuring",
+    "reconnectTitle": "Reconnect {{name}}",
+    "reconnectSub": "Tap to reconnect your last MultispeQ"
+  },
+  "recent": {
+    "sectionTitle": "Recent measurements",
+    "seeAll": "See all",
+    "emptyHint": "No measurements yet — start one above.",
+    "emptyCtaDocs": "Read the getting-started guide",
+    "docsUnavailable": "Couldn't open the documentation. Please try again later.",
+    "metaCountNodes_one": "{{count}} node",
+    "metaCountNodes_other": "{{count}} nodes",
+    "tagSynced": "Synced",
+    "tagQueued": "Queued",
+    "tagUploading": "Uploading",
+    "tagFailed": "Failed"
+  }
+}

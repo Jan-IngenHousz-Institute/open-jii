@@ -213,9 +213,9 @@ describe("ParallelCoordinates", () => {
     const { getByTestId } = render(<ParallelCoordinates data={lineDataWithoutColorbar} />);
 
     const chartData = JSON.parse(getByTestId("chart-data").textContent || "[]");
+    // Plotly's new colorbar contract nests `side` inside `title`.
     expect(chartData[0].line.colorbar).toEqual({
-      title: "Value",
-      titleside: "right",
+      title: { text: "Value", side: "right" },
     });
   });
 

@@ -7,6 +7,7 @@ import type { MarkdownCell as MarkdownCellType } from "@repo/api/schemas/workboo
 import { Button } from "@repo/ui/components/button";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
+import { cn } from "@repo/ui/lib/utils";
 
 import { CellWrapper } from "../cell-wrapper";
 
@@ -38,6 +39,19 @@ export function MarkdownCellComponent({
 
   const toggleMode = () => setIsEditing(!isEditing);
 
+  const enterEditMode = () => {
+    if (!readOnly) setIsEditing(true);
+  };
+
+  // Cmd/Ctrl+Enter commits the edit and switches to preview. Plain Enter
+  // still inserts a newline in the rich-text editor.
+  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      setIsEditing(false);
+    }
+  };
+
   return (
     <CellWrapper
       icon={<FileText className="h-3.5 w-3.5" />}
@@ -54,7 +68,7 @@ export function MarkdownCellComponent({
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground h-7 gap-1 px-2 text-xs"
+            className="text-muted-foreground h-7 gap-1 px-2 text-xs hover:text-[#005E5E]"
             onClick={toggleMode}
           >
             {isEditing ? (
@@ -71,15 +85,34 @@ export function MarkdownCellComponent({
       }
     >
       {!readOnly && isEditing ? (
-        <RichTextarea
-          value={cell.content}
-          onChange={handleContentChange}
-          placeholder="Write something..."
-        />
+        <div onKeyDown={handleEditorKeyDown}>
+          <RichTextarea
+            value={cell.content}
+            onChange={handleContentChange}
+            placeholder="Write something..."
+          />
+        </div>
       ) : cell.content && cell.content !== "<p><br></p>" ? (
-        <RichTextRenderer content={cell.content} />
+        <div
+          onClick={enterEditMode}
+          onKeyDown={(e) => {
+            if (!readOnly && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              enterEditMode();
+            }
+          }}
+          role={readOnly ? undefined : "button"}
+          tabIndex={readOnly ? undefined : 0}
+          aria-label={readOnly ? undefined : "Edit markdown"}
+          className={readOnly ? undefined : "cursor-text"}
+        >
+          <RichTextRenderer content={cell.content} />
+        </div>
       ) : (
-        <p className="px-1 py-3 text-sm italic text-[#68737B]">
+        <p
+          className={cn("px-1 py-3 text-sm italic text-[#68737B]", !readOnly && "cursor-text")}
+          onClick={enterEditMode}
+        >
           {readOnly ? "No content" : "Click to add content..."}
         </p>
       )}

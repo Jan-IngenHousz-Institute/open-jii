@@ -98,8 +98,8 @@ export function AddCellButton({
         {showEmptyState ? (
           <div className="flex flex-col items-center pb-2 pt-4">
             <BookOpen className="mb-4 size-12 text-[#CDD5DB]" />
-            <p className="mb-1 text-sm font-medium text-[#68737B]">Empty workbook</p>
-            <p className="text-xs text-[#CDD5DB]">Add a cell to get started</p>
+            <p className="mb-1 text-sm font-medium text-[#011111]">Empty workbook</p>
+            <p className="text-xs text-[#68737B]">Add a cell to get started</p>
           </div>
         ) : (
           <span className="text-[13px] font-normal leading-[21px] text-[#808080]">Add new</span>
@@ -111,7 +111,7 @@ export function AddCellButton({
               opt.label,
               <button
                 key={opt.label}
-                className="inline-flex h-[38px] items-center justify-center gap-1 rounded-lg bg-[#EDF2F6] px-4 text-[13px] font-semibold leading-[18px] text-[#011111]"
+                className="inline-flex h-[38px] items-center justify-center gap-1 rounded-lg bg-[#EDF2F6] px-4 text-[13px] font-semibold leading-[18px] text-[#011111] transition-colors hover:bg-[#E5EBF0]"
                 onClick={() => handleClick(opt.type)}
               >
                 <opt.icon className="size-4" style={{ color: opt.color }} />
@@ -142,7 +142,7 @@ export function AddCellButton({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 rounded-full p-0"
+                      className="h-7 w-7 rounded-full p-0 hover:bg-[#EDF2F6]"
                       onClick={() => handleClick(opt.type)}
                     >
                       <opt.icon className="h-3.5 w-3.5" style={{ color: opt.color }} />

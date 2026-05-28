@@ -1,0 +1,2 @@
+export const UPLOAD_CONCURRENCY = 8;
+export const UPLOAD_RETRY_BACKOFF_MS = [1_000, 4_000, 15_000];

@@ -21,17 +21,38 @@ export interface ParallelCoordinatesSeriesData extends BaseSeries {
   line?: {
     color?: (string | number)[] | string;
     colorscale?: string | Array<[number, string]>;
+    /** Reverse the colorscale (Plotly `reversescale`). */
+    reversescale?: boolean;
     showscale?: boolean;
     cmin?: number;
     cmax?: number;
     cmid?: number;
     colorbar?: {
-      title?: string;
-      titleside?: "right" | "top" | "bottom";
+      /**
+       * Plotly 3.x uses the nested `title: { text, side }` form. The older
+       * top-level `title: string, titleside: "right"` shape is silently
+       * dropped on render.
+       */
+      title?: { text?: string; side?: "right" | "top" | "bottom" };
       thickness?: number;
       len?: number;
       x?: number;
       y?: number;
+      /**
+       * `tickmode: "array"` plus `tickvals`/`ticktext` lets a categorical
+       * encoding show category *names* on the colorbar instead of the
+       * synthesised integer indices the parcoords trace requires under
+       * the hood. Required for any non-numeric color column.
+       */
+      tickmode?: "linear" | "array";
+      tickvals?: number[];
+      ticktext?: string[];
+      /**
+       * Font for the tick labels. Smaller sizes pack more category
+       * names into the colorbar without overlap when the encoding has
+       * a lot of unique values.
+       */
+      tickfont?: { family?: string; size?: number; color?: string };
     };
     width?: number;
     opacity?: number;
@@ -87,13 +108,13 @@ export function ParallelCoordinates({
           ? {
               color: series.line.color || series.color,
               colorscale: series.line.colorscale || "Viridis",
+              reversescale: series.line.reversescale === true,
               showscale: series.line.showscale !== false,
               cmin: series.line.cmin,
               cmax: series.line.cmax,
               cmid: series.line.cmid,
               colorbar: series.line.colorbar || {
-                title: "Value",
-                titleside: "right",
+                title: { text: "Value", side: "right" },
               },
               width: series.line.width || 1,
               opacity: series.line.opacity || series.opacity || 1,

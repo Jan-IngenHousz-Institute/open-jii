@@ -43,6 +43,7 @@
     "@ts-rest/react-query": "^3.52.1",
     "@uiw/react-codemirror": "^4.25.9",
     "@xyflow/react": "^12.10.2",
+    "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.507.0",
@@ -52,8 +53,10 @@
     "posthog-node": "catalog:",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
+    "react-grid-layout": "^2.2.3",
     "react-hook-form": "catalog:",
     "react-i18next": "^15.7.4",
+    "react-resizable": "^3",
     "tailwind-merge": "^3.5.0",
     "uuid": "^14.0.0",
     "zod": "catalog:"

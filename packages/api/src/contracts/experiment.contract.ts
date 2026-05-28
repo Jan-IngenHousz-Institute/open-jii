@@ -17,6 +17,8 @@ import {
   zExperimentMemberPathParam,
   zExperimentDataQuery,
   zExperimentDataResponse,
+  zDistinctValuesQuery,
+  zDistinctValuesResponse,
   zExperimentTablesMetadataList,
   zExperimentAccess,
   zUploadExperimentDataBody,
@@ -50,6 +52,10 @@ import {
   zCreateExperimentMetadataBody,
   zUpdateExperimentMetadataBody,
   zMetadataPathParam,
+  zCreateJoinRequestBody,
+  zExperimentJoinRequest,
+  zExperimentJoinRequestList,
+  zJoinRequestPathParam,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -203,6 +209,91 @@ export const experimentContract = c.router({
     description: "Updates the role of an existing experiment member",
   },
 
+  createJoinRequest: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/join-requests",
+    pathParams: zIdPathParam,
+    body: zCreateJoinRequestBody,
+    responses: {
+      201: zExperimentJoinRequest,
+      200: zExperimentJoinRequest,
+      403: zErrorResponse,
+      404: zErrorResponse,
+      409: zErrorResponse,
+    },
+    summary: "Request to join an experiment",
+    description:
+      "Submits a request from the signed-in user to join the experiment as a member. Returns the existing pending request if one already exists.",
+  },
+
+  listJoinRequests: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/join-requests",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentJoinRequestList,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List pending join requests for an experiment",
+    description: "Returns all pending join requests for the experiment.",
+  },
+
+  getMyJoinRequest: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/join-requests/me",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentJoinRequest,
+      404: zErrorResponse,
+    },
+    summary: "Get the signed-in user's pending join request for an experiment",
+    description: "Returns the current user's pending join request, if any.",
+  },
+
+  approveJoinRequest: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/join-requests/:requestId/approve",
+    pathParams: zJoinRequestPathParam,
+    body: z.object({}).optional(),
+    responses: {
+      200: zExperimentJoinRequest,
+      403: zErrorResponse,
+      404: zErrorResponse,
+      409: zErrorResponse,
+    },
+    summary: "Approve a join request",
+    description: "Admin-only. Approves a pending join request and adds the requester as a member.",
+  },
+
+  rejectJoinRequest: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/join-requests/:requestId/reject",
+    pathParams: zJoinRequestPathParam,
+    body: z.object({}).optional(),
+    responses: {
+      200: zExperimentJoinRequest,
+      403: zErrorResponse,
+      404: zErrorResponse,
+      409: zErrorResponse,
+    },
+    summary: "Reject a join request",
+    description: "Admin-only. Marks a pending join request as rejected.",
+  },
+
+  cancelJoinRequest: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/join-requests/:requestId",
+    pathParams: zJoinRequestPathParam,
+    responses: {
+      204: null,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Cancel own pending join request",
+    description: "Cancels a pending join request submitted by the signed-in user.",
+  },
+
   getExperimentData: {
     method: "GET",
     path: "/api/v1/experiments/:id/data",
@@ -215,7 +306,24 @@ export const experimentContract = c.router({
       400: zErrorResponse,
     },
     summary: "Get experiment data",
-    description: "Retrieves data tables from the experiment with pagination support",
+    description:
+      "Retrieves rows from an experiment table. Supports plain page-based reads, column projection, and structured filters/aggregation (JSON-encoded) using the same primitives as the persisted visualization config. When `aggregation` is set, page/pageSize are ignored and `limit` caps the result.",
+  },
+
+  getDistinctColumnValues: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/data/distinct",
+    pathParams: zIdPathParam,
+    query: zDistinctValuesQuery,
+    responses: {
+      200: zDistinctValuesResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get distinct values for a column",
+    description:
+      "Returns the distinct (non-null) values of a single column on an experiment table, capped at `limit`. Powers the searchable categorical filter combobox and any consumer that needs a values list.",
   },
 
   getExperimentTables: {

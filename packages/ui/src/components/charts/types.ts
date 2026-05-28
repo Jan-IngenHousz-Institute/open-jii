@@ -19,12 +19,28 @@ export interface PlotlyChartConfig extends Partial<Config> {
   showGrid?: boolean;
   backgroundColor?: string;
   /**
-   * Where to anchor the legend relative to the plot area. All three options
-   * sit OUTSIDE the data area so the legend never occludes points. Defaults
-   * to "right" — Plotly's own default puts it inside the top-right corner,
-   * which overlaps data once you have more than a couple of series.
+   * Where to anchor the legend.
+   *
+   * - "right" / "left" / "top" / "bottom": outside the plot area, in the
+   *   corresponding margin. Plotly's autoMargin (or our reserved-margin
+   *   floors for top/bottom) keeps them from colliding with axis ticks.
+   * - "inside-top-right" etc.: inside the plot area, anchored to a
+   *   corner. The semi-transparent legend background keeps the data
+   *   visible underneath. Useful when there's no spare margin to give up
+   *   to a side-anchored legend.
+   *
+   * Defaults to "right"; Plotly's own default ("inside top-right") often
+   * occludes data once you have more than a couple of series.
    */
-  legendPosition?: "right" | "top" | "bottom";
+  legendPosition?:
+    | "right"
+    | "left"
+    | "top"
+    | "bottom"
+    | "inside-top-right"
+    | "inside-top-left"
+    | "inside-bottom-right"
+    | "inside-bottom-left";
 
   // Mode bar configuration
   showModeBar?: boolean;
@@ -34,6 +50,21 @@ export interface PlotlyChartConfig extends Partial<Config> {
   xAxisType?: "linear" | "log" | "date" | "category" | "multicategory";
   yAxisType?: "linear" | "log" | "date" | "category" | "multicategory";
   zAxisType?: "linear" | "log" | "date" | "category";
+
+  // Secondary Y-axis (twin axis on the right, overlaying the primary X).
+  // Only takes effect when at least one series in the chart targets it
+  // (`axis: "secondary"` on the corresponding cartesian series). Independent
+  // of the primary axis type so log-on-right + linear-on-left combos work.
+  y2AxisTitle?: string;
+  y2AxisType?: "linear" | "log" | "date" | "category";
+
+  // Bar-layout fields. Plotly ignores them when no bar traces are present,
+  // so they live alongside the rest of the chart-level config. Per-series
+  // orientation is carried on the `CartesianSeries` itself.
+  barmode?: "stack" | "group" | "overlay" | "relative";
+  barnorm?: "" | "fraction" | "percent";
+  bargap?: number;
+  bargroupgap?: number;
 
   // Annotations and shapes
   annotations?: Array<{
@@ -55,6 +86,20 @@ export interface PlotlyChartConfig extends Partial<Config> {
     line?: { color: string; width: number; dash?: string };
     fillcolor?: string;
     opacity?: number;
+  }>;
+
+  /**
+   * Static reference lines: axis-aligned threshold / baseline markers
+   * drawn on top of the plot. Materialised into `layout.shapes` (and
+   * `layout.annotations` when labelled) by each chart wrapper.
+   */
+  referenceLines?: Array<{
+    axis: "x" | "y";
+    value: number;
+    label?: string;
+    color?: string;
+    dash?: "solid" | "dash" | "dot" | "dashdot";
+    width?: number;
   }>;
 
   // Subplot configuration
@@ -105,6 +150,7 @@ export interface MarkerConfig {
   opacity?: number | number[];
   colorscale?: string | Array<[number, string]>;
   showscale?: boolean;
+  reversescale?: boolean;
   colorbar?: {
     title?: {
       text?: string;
@@ -214,4 +260,4 @@ export interface SafeLayout extends Partial<Omit<Layout, "yaxis" | "scene">> {
 export type SafePlotData = PlotData;
 
 // Export all plotly.js types for convenience
-export type { Config, Layout, PlotData } from "plotly.js";
+export type { Config, Layout, PlotData, Shape } from "plotly.js";

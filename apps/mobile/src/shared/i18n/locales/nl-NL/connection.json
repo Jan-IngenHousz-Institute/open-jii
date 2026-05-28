@@ -1,0 +1,46 @@
+{
+  "setup": {
+    "title": "Apparaatverbinding",
+    "scanButton": "Zoek naar apparaten",
+    "errorDisconnect": "Verbinding verbreken mislukt",
+    "errorConnect": "Verbinden mislukt"
+  },
+  "connectedDevice": {
+    "heading": "Verbonden apparaat",
+    "statusConnected": "Verbonden",
+    "disconnectButton": "Verbinding verbreken",
+    "turnOffMultispeQ": "MultispeQ uitschakelen"
+  },
+  "deviceList": {
+    "scanning": "Apparaten zoeken...",
+    "nearbyTitle": "Apparaten in de buurt",
+    "pairedTitle": "Gekoppelde apparaten",
+    "empty": "Geen apparaten gevonden. Probeer opnieuw te zoeken.",
+    "fallbackName": "N.v.t.",
+    "signal": "Signaal: {{strength}}",
+    "signalStrong": "Sterk",
+    "signalMedium": "Gemiddeld",
+    "signalWeak": "Zwak"
+  },
+  "deviceSheet": {
+    "title": "Apparaten",
+    "currentSubMultispeQ": "MultispeQ · Batterij {{battery}}% · v{{firmware}}",
+    "currentSubMultispeQNoFirmware": "MultispeQ · Batterij {{battery}}%",
+    "noDeviceTitle": "Geen apparaat verbonden",
+    "noDeviceSub": "Koppel een MultispeQ om te beginnen met meten.",
+    "reconnectTitle": "Verbind {{name}} opnieuw",
+    "reconnectSub": "Laatst gekoppelde apparaat",
+    "disconnect": "Verbinding verbreken",
+    "reconnect": "Opnieuw verbinden",
+    "nearbyTitle": "Apparaten in de buurt",
+    "scan": "Zoeken",
+    "scanning": "Zoeken…",
+    "pair": "Koppelen",
+    "pairing": "Koppelen…",
+    "helperText": "Vind je je apparaat niet? Houd de knop op de MultispeQ 3 seconden ingedrukt."
+  },
+  "chip": {
+    "connect": "Verbinden",
+    "reconnect": "Opnieuw verbinden"
+  }
+}

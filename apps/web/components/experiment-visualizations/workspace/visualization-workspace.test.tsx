@@ -6,10 +6,11 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import type { ChartFormValues } from "../charts/form-values";
-import { lineChartType } from "../charts/line";
-import { scatterChartType } from "../charts/scatter";
-import { VisualizationSaveProvider } from "./save-context";
+import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
+import { lineChartType } from "../charts/basic/line";
+import { scatterChartType } from "../charts/basic/scatter";
+import type { ChartFormValues } from "../charts/chart-config";
+import { DataSourcesFieldArrayProvider } from "./context/data-sources-field-array-context";
 import { VisualizationWorkspace } from "./visualization-workspace";
 
 function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
@@ -28,9 +29,11 @@ function Harness({ formDefaults = defaults() }: { formDefaults?: ChartFormValues
   const form = useForm<ChartFormValues>({ defaultValues: formDefaults });
   return (
     <FormProvider {...form}>
-      <VisualizationSaveProvider>
-        <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-      </VisualizationSaveProvider>
+      <DataSourcesFieldArrayProvider form={form}>
+        <AutosaveStatusProvider>
+          <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+        </AutosaveStatusProvider>
+      </DataSourcesFieldArrayProvider>
     </FormProvider>
   );
 }
@@ -113,9 +116,11 @@ describe("VisualizationWorkspace", () => {
       formRef = useForm<ChartFormValues>({ defaultValues: defaults() });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }
@@ -173,9 +178,11 @@ describe("VisualizationWorkspace", () => {
       });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }
@@ -208,9 +215,11 @@ describe("VisualizationWorkspace", () => {
       });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }
@@ -248,9 +257,11 @@ describe("VisualizationWorkspace", () => {
       });
       return (
         <FormProvider {...formRef}>
-          <VisualizationSaveProvider>
-            <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
-          </VisualizationSaveProvider>
+          <DataSourcesFieldArrayProvider form={formRef}>
+            <AutosaveStatusProvider>
+              <VisualizationWorkspace experimentId="exp-1" visualizationId="viz-1" />
+            </AutosaveStatusProvider>
+          </DataSourcesFieldArrayProvider>
         </FormProvider>
       );
     }

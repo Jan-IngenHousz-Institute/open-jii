@@ -45,7 +45,7 @@ export const EmailLayout = ({
             {children}
 
             {/* Footer */}
-            <Section className="rounded-b-xl border-t border-gray-100 bg-gray-50 px-8 py-4">
+            <Section className="rounded-b-xl border-t border-gray-100 bg-gray-50 px-8 py-2">
               <Text className="m-0 text-center text-[12px] text-gray-400">
                 This email was sent by {senderName} • {host}
               </Text>

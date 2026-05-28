@@ -1,0 +1,48 @@
+{
+  "demoDisclaimer": {
+    "badge": "Demo Mode",
+    "body": "This calibration is currently running in demonstration mode. All measurements and calculations are simulated for testing purposes only."
+  },
+  "flow": {
+    "toastComplete": "Calibration completed successfully!",
+    "toastProcessingError": "Error processing calibration data. Please try again."
+  },
+  "setup": {
+    "title": "Device Calibration Setup",
+    "intro": "This calibration process will help ensure accurate device measurements. You'll need:",
+    "bulletDevice": "• MultispeQ device connected",
+    "bulletCards": "• Chlorophyll calibration cards (panels #2, #3, #4, #6, #7, #8, #10, #11, #12)",
+    "bulletReferences": "• Known reference values for each calibration card",
+    "startButton": "Start Calibration"
+  },
+  "gain": {
+    "title": "Gain Calibration (Auto-blanking)",
+    "body": "The device will now perform auto-blanking to establish baseline readings for each LED channel.",
+    "buttonIdle": "Start Auto-blanking",
+    "buttonProcessing": "Calibrating..."
+  },
+  "measurements": {
+    "title": "Calibration Measurements ({{current}}/{{total}})",
+    "panelLabel": "Panel #{{panel}} Value:",
+    "inputPlaceholder": "Enter value",
+    "startButton": "Start Measurement",
+    "cancelButton": "Cancel Measurement",
+    "progress": "{{current}} of {{total}} measurements completed"
+  },
+  "processing": {
+    "title": "Processing Calibration Data",
+    "subtitle": "Analyzing measurement data and calculating calibration parameters...",
+    "cardBody": "Please wait while we process your calibration data"
+  },
+  "completion": {
+    "title": "Calibration Complete!",
+    "subtitle": "Your MultispeQ device has been successfully calibrated and is ready for measurements.",
+    "resultsHeading": "Calibration Results",
+    "measurementsTaken": "Measurements Taken:",
+    "calibrationQuality": "Calibration Quality:",
+    "qualityExcellent": "Excellent (R² = {{value}})",
+    "offset": "Offset:",
+    "slope": "Slope:",
+    "startNewButton": "Start New Calibration"
+  }
+}

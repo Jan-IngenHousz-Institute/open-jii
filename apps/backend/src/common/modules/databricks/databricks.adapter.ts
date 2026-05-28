@@ -15,6 +15,10 @@ import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
 import { JobLifecycleState, JobResultState } from "./services/jobs/jobs.types";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
+import type {
+  AggregationSpec,
+  FilterCondition,
+} from "./services/query-builder/query-builder.types";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
 
@@ -22,11 +26,9 @@ import type { SchemaData } from "./services/sql/sql.types";
 export class DatabricksAdapter implements ExperimentDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
-  // Schema and catalog names exposed to repository
   readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
 
-  // Physical Databricks table names exposed to repository
   readonly RAW_DATA_TABLE_NAME: string;
   readonly DEVICE_DATA_TABLE_NAME: string;
   readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
@@ -47,16 +49,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
   }
 
-  /**
-   * Check if the Databricks service is available and responding
-   */
   async healthCheck(): Promise<Result<DatabricksHealthCheck>> {
     return this.jobsService.healthCheck();
   }
 
-  /**
-   * Trigger the ambyte processing Databricks job with the specified parameters
-   */
   async triggerAmbyteProcessingJob(
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>> {
@@ -66,7 +62,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       experimentId: params.EXPERIMENT_ID,
     });
 
-    // Add catalog name to params
     const jobParams = {
       ...params,
       CATALOG_NAME: this.configService.getCatalogName(),
@@ -77,18 +72,15 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * Trigger the data export Databricks job with the specified parameters
-   * @param experimentId - The experiment ID
-   * @param tableName - The table name to export
-   * @param format - The export format (csv, ndjson, json-array, parquet)
-   * @param userId - User ID who initiated the export
-   * @returns Result containing the job run response
+   * Trigger the data export job. Booleans are stringified because Databricks
+   * job widgets are string-only on the wire; the PySpark task parses them back.
    */
   async triggerDataExportJob(
     experimentId: string,
     tableName: string,
     format: string,
     userId: string,
+    anonymizeContributors: boolean,
   ): Promise<Result<DatabricksJobRunResponse>> {
     const jobParams = {
       EXPERIMENT_ID: experimentId,
@@ -96,19 +88,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       FORMAT: format,
       USER_ID: userId,
       CATALOG_NAME: this.configService.getCatalogName(),
+      ANONYMIZE_CONTRIBUTORS: anonymizeContributors ? "true" : "false",
     };
 
     const jobId = this.configService.getDataExportJobIdAsNumber();
     return this.jobsService.triggerJob(jobId, jobParams);
   }
 
-  /**
-   * Stream an export file by export ID
-   * Fetches metadata, validates status, and streams the file
-   * @param exportId - The export ID
-   * @param experimentId - The experiment ID (for additional validation)
-   * @returns Result containing a readable stream and file path
-   */
   async streamExport(
     exportId: string,
     experimentId: string,
@@ -120,8 +106,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       experimentId,
     });
 
-    // Fetch export metadata using query builder (select all columns)
-    const query = this.queryBuilder.buildQuery({
+    const queryResult = this.queryBuilder.buildQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_export_metadata`,
       whereConditions: [
         ["export_id", exportId],
@@ -129,8 +114,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       ],
       limit: 1,
     });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
 
-    const metadataResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, query);
+    const metadataResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
 
     if (metadataResult.isFailure()) {
       return metadataResult;
@@ -147,7 +135,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return failure(AppError.notFound("Export not found"));
     }
 
-    // Parse file path and table name from query result
     const filePathIndex = schemaData.columns.findIndex((col) => col.name === "file_path");
     const tableNameIndex = schemaData.columns.findIndex((col) => col.name === "table_name");
     const filePath = schemaData.rows[0][filePathIndex];
@@ -171,7 +158,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return failure(AppError.internal("Export table name is missing"));
     }
 
-    // Stream the file
     const downloadResult = await this.filesService.download(filePath);
 
     if (downloadResult.isFailure()) {
@@ -185,13 +171,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     });
   }
 
-  /**
-   * Get completed export metadata for an experiment and table from Delta Lake
-   * Returns raw SchemaData from the database query
-   * @param experimentId - The experiment ID
-   * @param tableName - The table name
-   * @returns Result containing raw SchemaData with export records
-   */
   async getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>> {
     this.logger.log({
       msg: "Fetching completed exports from Delta Lake",
@@ -200,7 +179,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       tableName,
     });
 
-    const query = this.queryBuilder.buildQuery({
+    const queryResult = this.queryBuilder.buildQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_export_metadata`,
       whereConditions: [
         ["experiment_id", experimentId],
@@ -209,8 +188,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       orderBy: "created_at",
       orderDirection: "DESC",
     });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
 
-    const completedResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, query);
+    const completedResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
 
     if (completedResult.isFailure()) {
       return failure(completedResult.error);
@@ -227,13 +209,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return completedResult;
   }
 
-  /**
-   * Get active (in-progress) exports for an experiment by querying job runs
-   * Filters active job runs by experiment_id and table_name parameters
-   * @param experimentId - The experiment ID to filter by
-   * @param tableName - The table name to filter by
-   * @returns Result containing array of ExportMetadata for active exports
-   */
   async getActiveExports(
     experimentId: string,
     tableName: string,
@@ -247,7 +222,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     const jobId = this.configService.getDataExportJobIdAsNumber();
 
-    // Get active job runs for the export job
     const runsResult = await this.jobsService.listRunsForJob(jobId, true);
 
     if (runsResult.isFailure()) {
@@ -285,8 +259,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
           status = "failed";
           break;
         default:
-          // Skip runs with unexpected lifecycle states
-          // (active_only should not return TERMINATED or SKIPPED)
+          // active_only should not return TERMINATED or SKIPPED
           return acc;
       }
 
@@ -311,14 +284,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return success(activeExports);
   }
 
-  /**
-   * Get failed exports for an experiment by querying completed job runs
-   * Filters completed job runs that have a non-SUCCESS result state
-   * @param experimentId - The experiment ID to filter by
-   * @param tableName - The table name to filter by
-   * @param completedExportRunIds - Set of job run IDs already present in completed exports (to avoid duplicates)
-   * @returns Result containing array of ExportMetadata for failed exports
-   */
   async getFailedExports(
     experimentId: string,
     tableName: string,
@@ -333,7 +298,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     const jobId = this.configService.getDataExportJobIdAsNumber();
 
-    // Get completed (terminated) job runs for the export job
     const runsResult = await this.jobsService.listRunsForJob(jobId, false, 25, true);
 
     if (runsResult.isFailure()) {
@@ -343,7 +307,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const runs = runsResult.value.runs ?? [];
 
     const failedExports = runs.reduce<ExportMetadata[]>((acc, run) => {
-      // Skip runs that already have a completed export record in Delta Lake
+      // Skip runs already represented by a completed export record in Delta Lake
       if (completedExportRunIds.has(run.run_id)) {
         return acc;
       }
@@ -361,7 +325,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         return acc;
       }
 
-      // Only include runs that terminated with a non-success result
       const resultState = run.state.result_state;
       if (
         run.state.life_cycle_state !== JobLifecycleState.TERMINATED ||
@@ -392,21 +355,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * Get consolidated experiment table metadata (row counts and schemas) from the
-   * experiment_table_metadata cache table. This is a single-query optimization
-   * that replaces multiple separate queries.
-   *
-   * Returns metadata for all tables in an experiment:
-   * - Raw data table (identifier: 'raw_data', tableType: 'static')
-   * - Device data table (identifier: 'device', tableType: 'static')
-   * - Ambyte data table (identifier: 'raw_ambyte_data', tableType: 'static')
-   * - All macro tables (identifier: macro_id UUID, tableType: 'macro')
-   *
-   * @param experimentId - The experiment identifier
-   * @param options - Optional configuration
-   * @param options.identifier - If provided, only return metadata for this specific table (static name or macro_id)
-   * @param options.includeSchemas - If false, exclude macro_schema, questions_schema, and custom_metadata_schema columns (default: true)
-   * @returns Result containing array of table metadata with identifiers, types, and row counts
+   * Read row counts and (optionally) schemas from the experiment_table_metadata
+   * cache table in a single query.
    */
   async getExperimentTableMetadata(
     experimentId: string,
@@ -418,7 +368,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const catalog = this.configService.getCatalogName();
     const schema = this.configService.getCentrumSchemaName();
 
-    const includeSchemas = options?.includeSchemas !== false; // Default to true
+    const includeSchemas = options?.includeSchemas !== false;
     const columns = includeSchemas
       ? [
           "identifier",
@@ -435,11 +385,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       whereConditions.push(["identifier", options.identifier]);
     }
 
-    const query = this.queryBuilder.buildQuery({
+    const queryResult = this.queryBuilder.buildQuery({
       table: `${catalog}.${schema}.experiment_table_metadata`,
       columns,
       whereConditions,
     });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
 
     this.logger.debug({
       msg: "Querying experiment table metadata",
@@ -449,13 +402,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       includeSchemas,
     });
 
-    const result = await this.sqlService.executeSqlQuery(schema, query);
+    const result = await this.sqlService.executeSqlQuery(schema, queryResult.value);
 
     if (result.isFailure()) {
       return failure(result.error);
     }
 
-    // Transform rows into structured data
     if (!("rows" in result.value)) {
       return failure(AppError.internal("Invalid query result format", "INVALID_QUERY_RESULT"));
     }
@@ -484,8 +436,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * Build a SQL query for experiment data with optional VARIANT parsing
-   * Automatically handles both simple SELECT and VARIANT parsing based on variants parameter
+   * Build a SQL query for experiment data, dispatching to static vs macro table.
    */
   buildExperimentQuery(params: {
     tableName: string;
@@ -494,6 +445,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     columns?: string[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
+    filters?: FilterCondition[];
+    aggregation?: AggregationSpec;
+    distinct?: boolean;
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
     limit?: number;
@@ -506,6 +460,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       columns,
       variants,
       exceptColumns,
+      filters,
+      aggregation,
+      distinct,
       orderBy,
       orderDirection,
       limit,
@@ -516,29 +473,29 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const schema = this.configService.getCentrumSchemaName();
 
     if (tableType === "macro") {
-      // Macro tables: query the shared macro data table, filter by experiment_id AND macro_id
+      // Macro tables share a single physical table, filtered by experiment_id and macro_id
       const table = `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
       const whereConditions: [string, string][] = [
         ["experiment_id", experimentId],
         ["macro_id", tableName],
       ];
 
-      return success(
-        this.queryBuilder.buildQuery({
-          table,
-          columns,
-          variants,
-          exceptColumns,
-          whereConditions,
-          orderBy,
-          orderDirection,
-          limit,
-          offset,
-        }),
-      );
+      return this.queryBuilder.buildQuery({
+        table,
+        columns,
+        variants,
+        exceptColumns,
+        whereConditions,
+        filters,
+        aggregation,
+        distinct,
+        orderBy,
+        orderDirection,
+        limit,
+        offset,
+      });
     }
 
-    // Static tables: map identifier to physical table name
     const staticTableMapping: Record<string, string> = {
       [ExperimentTableName.RAW_DATA]: this.RAW_DATA_TABLE_NAME,
       [ExperimentTableName.DEVICE]: this.DEVICE_DATA_TABLE_NAME,
@@ -557,25 +514,22 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const table = `${catalog}.${schema}.${physicalTable}`;
     const whereConditions: [string, string][] = [["experiment_id", experimentId]];
 
-    return success(
-      this.queryBuilder.buildQuery({
-        table,
-        columns,
-        variants,
-        exceptColumns,
-        whereConditions,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      }),
-    );
+    return this.queryBuilder.buildQuery({
+      table,
+      columns,
+      variants,
+      exceptColumns,
+      whereConditions,
+      filters,
+      aggregation,
+      distinct,
+      orderBy,
+      orderDirection,
+      limit,
+      offset,
+    });
   }
 
-  /**
-   * Execute a SQL query in a specific schema.
-   * Uses INLINE disposition and JSON_ARRAY format.
-   */
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
     this.logger.debug({
       msg: "Executing SQL query",
@@ -586,15 +540,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * Upload a file to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-imports/{sourceType}/{directoryName}/{fileName}
-   *
-   * @param schemaName - Schema name of the experiment
-   * @param sourceType - Type of data source (e.g., 'ambyte')
-   * @param directoryName - Unique directory name for this upload session
-   * @param fileName - Name of the file
-   * @param fileBuffer - File contents as a buffer
-   * @returns Result containing the upload response
+   * Upload to /Volumes/{catalog}/{schema}/data-imports/{experimentId}/{sourceType}/{dir}/{file}.
    */
   async uploadExperimentData(
     schemaName: string,
@@ -606,7 +552,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   ): Promise<Result<UploadFileResponse>> {
     const catalogName = this.configService.getCatalogName();
 
-    // Construct the full path with experiment_id subdirectory
     const filePath = `/Volumes/${catalogName}/${schemaName}/data-imports/${experimentId}/${sourceType}/${directoryName}/${fileName}`;
 
     return this.filesService.upload(filePath, fileBuffer);

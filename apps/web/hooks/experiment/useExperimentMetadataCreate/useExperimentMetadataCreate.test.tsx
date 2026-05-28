@@ -6,11 +6,19 @@ import { contract } from "@repo/api/contract";
 
 import { useExperimentMetadataCreate } from "./useExperimentMetadataCreate";
 
+const metadataPayload = {
+  name: "Plates",
+  columns: [{ id: "col-1", name: "plate_id", type: "string" as const }],
+  rows: [],
+  identifierColumnId: "col-1",
+  experimentQuestionId: "q-1",
+};
+
 const metadataResponse = {
-  metadataId: "meta-new",
-  experimentId: "exp-123",
-  metadata: { location: "Lab B" },
-  createdBy: "user-1",
+  metadataId: "00000000-0000-0000-0000-000000000001",
+  experimentId: "00000000-0000-0000-0000-0000000000aa",
+  metadata: metadataPayload,
+  createdBy: "00000000-0000-0000-0000-0000000000bb",
   createdAt: "2025-01-01T00:00:00.000Z",
   updatedAt: "2025-01-01T00:00:00.000Z",
 };
@@ -26,13 +34,13 @@ describe("useExperimentMetadataCreate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123" },
-        body: { metadata: { location: "Lab B" } },
+        body: { metadata: metadataPayload },
       });
     });
 
     await waitFor(() => {
       expect(spy.params.id).toBe("exp-123");
-      expect(spy.body).toMatchObject({ metadata: { location: "Lab B" } });
+      expect(spy.body).toMatchObject({ metadata: metadataPayload });
     });
   });
 
@@ -51,7 +59,7 @@ describe("useExperimentMetadataCreate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123" },
-        body: { metadata: { location: "Lab B" } },
+        body: { metadata: metadataPayload },
       });
     });
 
@@ -74,7 +82,7 @@ describe("useExperimentMetadataCreate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123" },
-        body: { metadata: { location: "New" } },
+        body: { metadata: metadataPayload },
       });
     });
 
@@ -97,7 +105,7 @@ describe("useExperimentMetadataCreate", () => {
     act(() => {
       result.current.mutate({
         params: { id: "exp-123" },
-        body: { metadata: { key: "new" } },
+        body: { metadata: metadataPayload },
       });
     });
 

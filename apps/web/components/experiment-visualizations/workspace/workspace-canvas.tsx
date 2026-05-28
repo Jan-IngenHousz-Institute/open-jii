@@ -10,9 +10,9 @@ import { useTranslation } from "@repo/i18n";
 
 import { useExperimentVisualizationData } from "../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import "../../../styles/plotly-chart.css";
-import type { ChartFormValues } from "../charts/form-values";
-import { dataSourcesByRole } from "../charts/form-values";
-import { getChartTypeDef } from "../charts/registry";
+import type { ChartFormValues } from "../charts/chart-config";
+import { getChartTypeDef } from "../charts/chart-registry";
+import { dataSourcesByRole } from "../charts/data/data-sources";
 
 interface WorkspaceCanvasProps {
   control: Control<ChartFormValues>;
@@ -20,19 +20,13 @@ interface WorkspaceCanvasProps {
   visualizationId?: string;
 }
 
-// Pinned timestamps for the preview-only visualization. Re-deriving with
-// `new Date().toISOString()` on every render meant `previewVisualization`
-// always had a fresh identity, defeating downstream memoization. The values
-// are never read by the renderer for preview mode but the schema requires
-// them; pick a stable sentinel.
+// Stable sentinel so previewVisualization identity holds across renders.
 const PREVIEW_TIMESTAMP = "1970-01-01T00:00:00.000Z";
 
 export function WorkspaceCanvas({ control, experimentId, visualizationId }: WorkspaceCanvasProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  // Subscribe to the precise slices the canvas depends on. A bare
-  // `useWatch({ control })` re-renders the canvas on every keystroke in
-  // unrelated fields (description, name) and forces Plotly to redraw.
+  // Slice-level watch; bare `useWatch({ control })` would force a Plotly redraw per keystroke.
   const chartType = useWatch({ control, name: "chartType" });
   const chartFamily = useWatch({ control, name: "chartFamily" });
   const dataConfig = useWatch({ control, name: "dataConfig" });
@@ -48,13 +42,19 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
   const xColumn = dataSourcesByRole(configuredSources, "x")[0]?.source.columnName;
 
   const def = getChartTypeDef(chartType);
-  // Render as soon as one column is configured. The renderers handle the
-  // partial-config UX: X-only is treated as a Y series with synthesized X
-  // index; Y-only synthesizes X from row indices. `validateDataConfig` is
-  // intentionally NOT used here — that contract is the stricter "ready to
-  // save" check, while the canvas wants the more permissive "ready to draw".
+  // Draw on first configured column; renderers synthesize the missing axis.
   const hasAnyColumn = configuredSources.length > 0;
   const isReady = Boolean(def) && Boolean(tableName) && hasAnyColumn;
+
+  const aggregation = dataConfig.aggregation;
+  const filters = dataConfig.filters;
+  // Keep color/facet columns through aggregation so renderer can split traces.
+  const colorColumn = dataSourcesByRole(configuredSources, "color")[0]?.source.columnName;
+  const facetColumn = dataSourcesByRole(configuredSources, "facet")[0]?.source.columnName;
+  const extraSplitColumns = [colorColumn, facetColumn].filter(
+    (col): col is string => typeof col === "string" && col.length > 0,
+  );
+  const extraGroupByColumns = extraSplitColumns.length > 0 ? extraSplitColumns : undefined;
 
   const {
     data: fetched,
@@ -66,16 +66,17 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
       ? {
           tableName,
           columns: configuredSources.map((ds) => ds.columnName),
+          filters,
+          aggregation,
+          extraGroupByColumns,
+          // Hook resolves to alias under aggregation, or drops if not projected.
           orderBy: xColumn,
-          orderDirection: "ASC",
+          orderDirection: xColumn ? "ASC" : undefined,
         }
       : { tableName: "", columns: [] },
     isReady,
   );
 
-  // Memoize the preview visualization so the renderer (and Plotly underneath)
-  // can skip work when only an unrelated form field changed. Identity flips
-  // exactly when chartType/family/dataConfig/config/name/description change.
   const previewVisualization = useMemo<ExperimentVisualization>(
     () => ({
       id: visualizationId ?? "preview",
@@ -140,19 +141,12 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
     );
   }
 
-  // Surface fetch failures here instead of falling through with `undefined`
-  // rows. Forwarding undefined makes the renderer's `useChartData` think
-  // no provider gave it data, so it subscribes to the same query key —
-  // TanStack then refetches because the query is in error state, kicking
-  // off a fresh retry pipeline. Two pipelines means twice the retries.
+  // Surface fetch failures here; forwarding undefined would double-subscribe.
   if (fetchError) {
     return (
       <CanvasPlaceholder
         title={t("errors.failedToLoadData")}
-        body={t(
-          "workspace.canvas.fetchErrorBody",
-          "The query couldn't run with the current data configuration. Try a different column or table.",
-        )}
+        body={t("workspace.canvas.fetchErrorBody")}
       />
     );
   }

@@ -324,6 +324,7 @@ const sidebars: SidebarsConfig = {
               items: [
                 "for-developers/tools/multispeq-mqtt-interface/mqtt-protocol/topic-structure",
                 "for-developers/tools/multispeq-mqtt-interface/mqtt-protocol/message-format",
+                "for-developers/tools/multispeq-mqtt-interface/mqtt-protocol/measurements-sync",
               ],
             },
             {

@@ -1,3 +1,4 @@
+import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,13 +31,17 @@ vi.mock("../steps/export-list-step", () => ({
 }));
 
 function mountExportHandlers(initiateOverrides?: {
-  status?: number;
+  status?: 201 | 400 | 403 | 404 | 500;
   body?: unknown;
-  delay?: number;
+  delay?: number | "infinite";
 }) {
   const spy = server.mount(contract.experiments.initiateExport, {
-    body: { status: "queued" },
-    ...initiateOverrides,
+    body: { status: "queued" as const },
+    ...(initiateOverrides as {
+      status?: 201 | 400 | 403 | 404 | 500;
+      body?: { status: "queued" } | { message: string };
+      delay?: number | "infinite";
+    }),
   });
   server.mount(contract.experiments.listExports, { body: { exports: [] } });
   return spy;
@@ -142,6 +147,33 @@ describe("DataExportModal", () => {
     const user = userEvent.setup();
     await user.click(screen.getByTestId("step-close"));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("forwards the anonymize override and surfaces the divergence badge when the user flips the checkbox", async () => {
+    const initiateSpy = mountExportHandlers();
+    server.mount(contract.experiments.getExperiment, {
+      body: createExperiment({ anonymizeContributors: false }),
+    });
+
+    render(<DataExportModal {...defaultProps} />);
+    const user = userEvent.setup();
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /exportModal\.anonymizeContributors/,
+    });
+    await waitFor(() => expect(checkbox).not.toBeDisabled());
+    await user.click(checkbox);
+
+    expect(screen.getByText(/exportModal\.overridingDefault/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Create CSV Export" }));
+
+    await waitFor(() => expect(initiateSpy.callCount).toBe(1));
+    expect(initiateSpy.body).toEqual({
+      tableName: "raw_data",
+      format: "csv",
+      anonymizeContributors: true,
+    });
   });
 
   it("resets creationStatus when modal closes and reopens", async () => {

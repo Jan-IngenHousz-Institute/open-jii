@@ -11,6 +11,7 @@ import { contract } from "@repo/api/contract";
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
@@ -22,6 +23,7 @@ export class ExperimentDataController {
   constructor(
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
+    private readonly getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
   ) {}
 
@@ -63,7 +65,6 @@ export class ExperimentDataController {
   getExperimentData(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
-      const { page, pageSize, tableName, columns, orderBy, orderDirection } = query;
 
       this.logger.log({
         msg: "Processing data request",
@@ -72,18 +73,16 @@ export class ExperimentDataController {
         userId: session.user.id,
       });
 
-      const result = await this.getExperimentDataUseCase.execute(experimentId, session.user.id, {
-        page,
-        pageSize,
-        tableName,
-        columns,
-        orderBy,
-        orderDirection,
-      });
+      // Forward the parsed query verbatim; `filters` and `aggregation` are
+      // already decoded from JSON-encoded strings into their structured
+      // shapes by the contract's zod transforms.
+      const result = await this.getExperimentDataUseCase.execute(
+        experimentId,
+        session.user.id,
+        query,
+      );
 
       if (result.isSuccess()) {
-        const data = result.value;
-
         this.logger.log({
           msg: "Successfully retrieved data",
           operation: "getData",
@@ -93,12 +92,45 @@ export class ExperimentDataController {
 
         return {
           status: StatusCodes.OK,
-          body: data,
+          body: result.value,
         };
       }
 
       return handleFailure(result, this.logger);
     });
+  }
+
+  @TsRestHandler(contract.experiments.getDistinctColumnValues)
+  getDistinctColumnValues(@Session() session: UserSession) {
+    return tsRestHandler(
+      contract.experiments.getDistinctColumnValues,
+      async ({ params, query }) => {
+        const { id: experimentId } = params;
+
+        this.logger.log({
+          msg: "Processing distinct values request",
+          operation: "getDistinctColumnValues",
+          experimentId,
+          userId: session.user.id,
+          column: query.column,
+        });
+
+        const result = await this.getDistinctColumnValuesUseCase.execute(
+          experimentId,
+          session.user.id,
+          query,
+        );
+
+        if (result.isSuccess()) {
+          return {
+            status: StatusCodes.OK,
+            body: result.value,
+          };
+        }
+
+        return handleFailure(result, this.logger);
+      },
+    );
   }
 
   @TsRestHandler(contract.experiments.uploadExperimentData)

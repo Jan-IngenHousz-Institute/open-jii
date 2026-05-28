@@ -87,8 +87,10 @@ describe("<ExperimentLayout />", () => {
 
   describe("No Data State", () => {
     it("shows not found message when no experiment data is returned", async () => {
+      // Simulate a successful response whose `experiment` is null — the
+      // layout defends against this even though it's outside the typed shape.
       server.mount(contract.experiments.getExperimentAccess, {
-        body: { experiment: null, hasAccess: false, isAdmin: false },
+        body: { experiment: null, hasAccess: false, isAdmin: false } as never,
       });
       renderLayout();
 

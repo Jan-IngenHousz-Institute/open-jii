@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ChartType } from "@repo/api/schemas/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 import { isPlottableColumn } from "@repo/api/utils/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -21,8 +22,8 @@ import { Button } from "@repo/ui/components/button";
 
 import { useExperimentData } from "../../../hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "../../../hooks/experiment/useExperimentTables/useExperimentTables";
-import type { ChartFormValues } from "../charts/form-values";
-import { getChartTypeDef } from "../charts/registry";
+import type { ChartFormValues } from "../charts/chart-config";
+import { getChartTypeDef } from "../charts/chart-registry";
 import { ChartTypePicker } from "./chart-type-picker";
 import { WorkspaceCanvas } from "./workspace-canvas";
 import { WorkspaceInspector } from "./workspace-inspector";
@@ -66,33 +67,44 @@ export function VisualizationWorkspace({
   // One plottable column list (complex types stripped). Each chart's
   // data-panel applies per-role kind filtering on top via
   // `filterColumnsForRole` from the visualization contracts.
+  //
+  // CONTRIBUTOR (STRUCT) and QUESTIONS (ARRAY<STRUCT>) would normally be
+  // stripped here as kind="complex", but the bar chart accepts them on its
+  // X axis to support per-contributor and per-question-answer histograms.
+  // Keeping them in the list is safe for other chart types because
+  // `filterColumnsForRole` re-drops complex kinds for any role whose
+  // contract doesn't explicitly accept them.
   const columns = useMemo(
-    () => (tableMetadata?.rawColumns ?? []).filter((col) => isPlottableColumn(col.type_text)),
+    () =>
+      (tableMetadata?.rawColumns ?? []).filter(
+        (col) =>
+          isPlottableColumn(col.type_text) || col.type_text === WellKnownColumnTypes.CONTRIBUTOR,
+      ),
     [tableMetadata],
   );
 
   const handleTableChange = (newTable: string) => {
     const currentDataSources = form.getValues("dataConfig.dataSources");
+    // Reset column-bound state; traceType/axis/role survive.
     const reset = currentDataSources.map((ds) => ({
       ...ds,
       tableName: newTable,
       columnName: "",
       alias: "",
+      aggregate: undefined,
     }));
     form.setValue("dataConfig.dataSources", reset, { shouldDirty: true });
+    form.setValue("dataConfig.aggregation", undefined, { shouldDirty: true });
+    form.setValue("dataConfig.filters", undefined, { shouldDirty: true });
     form.setValue("config.xAxisTitle", "", { shouldDirty: true });
     form.setValue("config.yAxisTitle", "", { shouldDirty: true });
   };
 
   const applyChartType = (type: ChartType) => {
     const def = getChartTypeDef(type);
-    if (!def) return;
-    // Drive each field through `setValue` so the autosave watch sees a
-    // `change` event for every modified slice; the trailing chartType update
-    // ensures the debounce ends with a snapshot containing all four values.
-    // The previous `reset` + trailing `setValue` combo only emitted a single
-    // change event for `chartType`, leaving autosave's snapshot internally
-    // consistent only by accident of RHF's synchronous read semantics.
+    if (!def) {
+      return;
+    }
     const tableName = form.getValues("dataConfig.tableName");
     form.setValue("chartFamily", def.family, { shouldDirty: true });
     form.setValue("config", def.defaultConfig(), { shouldDirty: true });
@@ -106,7 +118,9 @@ export function VisualizationWorkspace({
   };
 
   const handleChartTypeChange = (type: ChartType) => {
-    if (type === form.getValues("chartType")) return;
+    if (type === form.getValues("chartType")) {
+      return;
+    }
     if (hasMeaningfulConfig()) {
       setPendingChartType(type);
     } else {
@@ -163,6 +177,7 @@ export function VisualizationWorkspace({
           <div className="w-full lg:w-[320px] lg:shrink-0 xl:w-[380px] 2xl:w-[440px]">
             <WorkspaceInspector
               form={form}
+              experimentId={experimentId}
               tables={tables ?? []}
               isTablesLoading={isLoadingTables}
               tablesError={tablesError}
@@ -179,7 +194,9 @@ export function VisualizationWorkspace({
       <AlertDialog
         open={pendingChartType !== null}
         onOpenChange={(open) => {
-          if (!open) setPendingChartType(null);
+          if (!open) {
+            setPendingChartType(null);
+          }
         }}
       >
         <AlertDialogContent>
@@ -190,7 +207,7 @@ export function VisualizationWorkspace({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("ui.actions.back", "Cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>{t("ui.actions.back")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmChartTypeChange}>
               {t("workspace.charts.switchConfirm")}
             </AlertDialogAction>

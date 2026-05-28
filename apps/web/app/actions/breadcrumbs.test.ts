@@ -58,17 +58,20 @@ describe("enrichPathSegments", () => {
       id: "proto-1",
       name: "My Protocol",
     },
-  ])(
-    "fetches $entityKey name for entity ID segments",
-    async ({ path, method, entityKey, id, name }) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      mockClient[entityKey][method].mockResolvedValue({ status: 200, body: { id, name } });
+  ])("fetches $entityKey name for entity ID segments", async ({ path, entityKey, id, name }) => {
+    const mocks = mockClient[entityKey];
+    const mock =
+      "getExperiment" in mocks
+        ? mocks.getExperiment
+        : "getMacro" in mocks
+          ? mocks.getMacro
+          : mocks.getProtocol;
+    mock.mockResolvedValue({ status: 200, body: { id, name } });
 
-      const result = await enrichPathSegments(path, "en");
-      expect(result[1]).toEqual(expect.objectContaining({ segment: id, title: name }));
-      expect(mockClient[entityKey][method]).toHaveBeenCalledWith({ params: { id } });
-    },
-  );
+    const result = await enrichPathSegments(path, "en");
+    expect(result[1]).toEqual(expect.objectContaining({ segment: id, title: name }));
+    expect(mock).toHaveBeenCalledWith({ params: { id } });
+  });
 
   it("keeps original segment on API error or non-200", async () => {
     mockClient.experiments.getExperiment.mockRejectedValue(new Error("boom"));

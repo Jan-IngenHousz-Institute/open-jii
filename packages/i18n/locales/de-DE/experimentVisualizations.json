@@ -79,8 +79,10 @@
     "types": {
       "line": "Liniendiagramm",
       "scatter": "Streudiagramm",
+      "bar": "Balkendiagramm",
       "lineDescription": "Zeigt Datenpunkte verbunden durch gerade Liniensegmente an",
-      "scatterDescription": "Zeigt Daten als Punkte auf x- und y-Koordinaten an"
+      "scatterDescription": "Zeigt Daten als Punkte auf x- und y-Koordinaten an",
+      "barDescription": "Gruppiert Zeilen nach Spalte und vergleicht Anzahl oder Aggregate"
     },
     "families": {
       "basic": "Grunddiagramme"
@@ -185,7 +187,10 @@
       "blackbody": "Schwarzkörper",
       "earth": "Erde",
       "electric": "Elektrisch",
-      "bluered": "Blau-Rot"
+      "bluered": "Blau-Rot",
+      "orrd": "Orange-Rot",
+      "magma": "Magma",
+      "openjii": "openJII"
     }
   },
 
@@ -202,6 +207,15 @@
     "noData": "Keine Daten verfügbar",
     "configuration": "Konfigurationsfehler",
     "invalidConfiguration": "Ungültige Diagrammkonfiguration",
+    "heatmapSameColumnAxes": "X und Y verwenden dieselbe Spalte. Das Diagramm benötigt zwei verschiedene Spalten, um ein Zeilen × Spalten-Gitter zu bilden.",
+    "heatmapSingleAxisValue": "Jede Achse benötigt mindestens 2 unterschiedliche Werte. Die ausgewählte(n) Spalte(n) haben nur einen beobachteten Wert.",
+    "heatmapFlatZ": "Alle Zellwerte sind identisch. Das Diagramm benötigt variierende Z-Werte zwischen Zellen, um Farbe darzustellen.",
+    "heatmapSparseGrid": "Kontinuierliche X- und Y-Werte ergaben ein fast leeres Gitter (die meisten Zellen ohne Beobachtungen). Nutzen Sie histogram-2d für die Dichte oder aggregieren Sie Ihre Daten zuerst in diskrete Klassen.",
+    "contourSameColumnAxes": "X und Y verwenden dieselbe Spalte. Konturen benötigen zwei verschiedene Koordinatenachsen.",
+    "contourSingleAxisValue": "Konturen benötigen mindestens 2 unterschiedliche Werte auf jeder Achse, um Iso-Linien zu berechnen.",
+    "contourFlatZ": "Iso-Linien benötigen variierende Z-Werte. Alle Werte sind identisch.",
+    "contourSparseGrid": "Konturen benötigen gerasterte Daten. Kontinuierliche X- und Y-Werte ergaben eine fast leere Matrix (die meisten Zellen ohne Beobachtungen). Nutzen Sie density-plot-2d für die Dichte oder aggregieren Sie Ihre Daten zuerst in Klassen.",
+    "correlationMatrixNeedsTwoColumns": "Korrelationsmatrix benötigt mindestens 2 verschiedene numerische Spalten.",
     "xAxisNotConfigured": "X-Achsen-Spalte nicht konfiguriert",
     "yAxisNotConfigured": "Y-Achsen-Spalte nicht konfiguriert",
     "loadingData": "Diagrammdaten werden geladen...",
@@ -246,7 +260,8 @@
       "noColumns": "No columns configured",
       "configureColumns": "Choose at least one column in the Data tab to render the chart.",
       "loading": "Loading chart data...",
-      "previewName": "Preview"
+      "previewName": "Preview",
+      "fetchErrorBody": "Die Abfrage konnte mit der aktuellen Datenkonfiguration nicht ausgeführt werden. Versuche eine andere Spalte oder Tabelle."
     },
     "inspector": {
       "dataset": "Dataset",
@@ -267,15 +282,38 @@
       "expandLabel": "Configuration"
     },
     "shelves": {
-      "xAxis": "X axis",
-      "yAxis": "Y axis",
+      "xAxis": "X-Achse",
+      "yAxis": "Y-Achse",
+      "barYAxisHelp": "Optional. Leer lassen, um Zeilen pro X-Wert zu zählen.",
       "colorDimension": "Color dimension",
+      "facetDimension": "Facet (kleine Mehrfachgrafiken)",
+      "facetNone": "Keine (einzelne Grafik)",
+      "facetHelp": "Teilt die Grafik in einen Subplot pro eindeutigem Wert der ausgewählten Spalte. Layout-Optionen im Stil-Tab.",
+      "sizeDimension": "Size dimension",
+      "labels": "Labels",
+      "values": "Values",
+      "zAxis": "Z (Zellwert)",
+      "zAxisLevel": "Z (Niveau)",
+      "correlationColumns": "Variablen",
+      "parcoordsAxes": "Achsen",
+      "radarAxes": "Achsen",
+      "polarTheta": "Winkelachse (θ)",
+      "polarRadial": "Radialachse (r)",
+      "windRoseDirection": "Richtung (Grad)",
+      "windRoseMagnitude": "Magnitude (Wertebins)",
+      "ternaryA": "A-Achse (oberer Scheitelpunkt)",
+      "ternaryB": "B-Achse (unten rechts)",
+      "ternaryC": "C-Achse (unten links)",
+      "alluvialStages": "Stufen (geordnet)",
+      "alluvialValue": "Flusswert (optional)",
       "column": "Column",
       "selectColumn": "Select a column",
+      "none": "Keine",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
       "series": "Series {{index}}",
+      "seriesCount": "{{count}} Serien",
       "removeSeries": "Remove series",
       "addSeries": "Add series",
       "seriesName": "Series name",
@@ -288,7 +326,29 @@
       "colorAxisTitlePlaceholder": "Color axis title",
       "colorAxisTitlePosition": "Title position",
       "showColorbar": "Show colorbar",
-      "preview": "Preview"
+      "reverseScale": "Farbskala umkehren",
+      "preview": "Preview",
+      "renderAs": "Darstellen als",
+      "renderAsDefault": "Standard ({{type}})",
+      "axisAssignment": "Achse",
+      "secondaryAxisTitle": "Titel der Sekundärachse",
+      "secondaryAxisTitlePlaceholder": "Titel der Sekundärachse",
+      "secondaryAxisType": "Skala der Sekundärachse",
+      "errorColumn": "Fehlerspalte (±)",
+      "errorColumnPlaceholder": "Keine",
+      "errorColumnNone": "Keine",
+      "variable": "Variable",
+      "variables": "Variablen",
+      "traceType": {
+        "line": "Linie",
+        "bar": "Balken",
+        "scatter": "Punkte",
+        "area": "Fläche"
+      },
+      "axis": {
+        "primary": "Primär",
+        "secondary": "Sekundär (rechts)"
+      }
     },
     "axisTypes": {
       "linear": "Linear",
@@ -303,7 +363,39 @@
     "modes": {
       "lines": "Lines",
       "markers": "Markers",
-      "linesMarkers": "Lines + markers"
+      "linesMarkers": "Lines + markers",
+      "fillOnly": "Fill only"
+    },
+    "stackModes": {
+      "none": "None",
+      "stacked": "Stacked",
+      "percent": "Percent"
+    },
+    "sizemodes": {
+      "area": "Scale by area",
+      "diameter": "Scale by diameter"
+    },
+    "histnorms": {
+      "none": "Keine",
+      "percent": "Prozent",
+      "probability": "Wahrscheinlichkeit",
+      "density": "Dichte",
+      "probabilityDensity": "Wahrscheinlichkeitsdichte"
+    },
+    "textinfos": {
+      "label": "Label",
+      "value": "Value",
+      "percent": "Percent",
+      "labelPercent": "Label + percent",
+      "labelValue": "Label + value",
+      "valuePercent": "Value + percent",
+      "none": "None"
+    },
+    "pieTextPositions": {
+      "auto": "Auto",
+      "inside": "Inside",
+      "outside": "Outside",
+      "none": "None"
     },
     "markerSymbols": {
       "circle": "Circle",
@@ -326,8 +418,13 @@
     },
     "legendPositions": {
       "right": "Right of plot",
+      "left": "Left of plot",
       "top": "Above plot",
-      "bottom": "Below plot"
+      "bottom": "Below plot",
+      "insideTopRight": "Inside top right",
+      "insideTopLeft": "Inside top left",
+      "insideBottomRight": "Inside bottom right",
+      "insideBottomLeft": "Inside bottom left"
     },
     "hoverModes": {
       "closest": "Nearest point",
@@ -348,7 +445,13 @@
       "legendPosition": "Position",
       "hoverMode": "Hover behaviour",
       "lineOptions": "Line options",
+      "lineSeriesOptions": "Linienserie",
+      "scatterSeriesOptions": "Punktserie",
+      "barSeriesOptions": "Balkenserie",
+      "areaSeriesOptions": "Flächenserie",
+      "markerOptions": "Marker",
       "scatterOptions": "Scatter options",
+      "barOptions": "Balkendiagramm-Optionen",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",
@@ -356,7 +459,77 @@
       "lineDash": "Line style",
       "markerSize": "Marker size",
       "markerShape": "Marker shape",
-      "markerOpacity": "Marker opacity"
+      "markerOpacity": "Marker opacity",
+      "referenceLineAdd": "Add reference line",
+      "referenceLineAxis": "Axis",
+      "referenceLineColor": "Color",
+      "referenceLineDash": "Dash",
+      "referenceLineDashes": {
+        "dash": "Dashed",
+        "dashdot": "Dash-dot",
+        "dot": "Dotted",
+        "solid": "Solid"
+      },
+      "referenceLineLabel": "Label",
+      "referenceLineLabelPlaceholder": "Optional label",
+      "referenceLineRemove": "Remove reference line",
+      "referenceLineValue": "Value",
+      "referenceLines": "Reference lines",
+      "referenceLinesEmpty": "Add a vertical or horizontal line at a fixed value - useful for thresholds, targets, and baselines."
+    },
+    "orientations": {
+      "vertical": "Vertical",
+      "horizontal": "Horizontal"
+    },
+    "barmodes": {
+      "group": "Grouped",
+      "stack": "Stacked",
+      "overlay": "Overlay",
+      "relative": "Relative"
+    },
+    "boxmodes": {
+      "group": "Gruppiert",
+      "overlay": "Überlagert"
+    },
+    "boxmeans": {
+      "off": "Aus",
+      "mean": "Mittellinie",
+      "sd": "Mittel + Standardabw."
+    },
+    "boxpoints": {
+      "outliers": "Nur Ausreißer",
+      "suspectedoutliers": "Vermutete Ausreißer",
+      "all": "Alle Punkte",
+      "none": "Keine"
+    },
+    "violinSides": {
+      "both": "Vollständig",
+      "positive": "Nur positiv",
+      "negative": "Nur negativ"
+    },
+    "violinScalemodes": {
+      "width": "Gleiche Breite",
+      "count": "Fläche nach Stichprobengröße"
+    },
+    "ridgeSortOrders": {
+      "alphabetical": "Alphabetisch",
+      "median": "Median (aufsteigend)",
+      "mean": "Mittelwert (aufsteigend)",
+      "count": "Stichprobenanzahl (absteigend)"
+    },
+    "hist2dRenderModes": {
+      "heatmap": "Heatmap",
+      "contour": "Kontur"
+    },
+    "spcModes": {
+      "linesMarkers": "Linien + Marker",
+      "lines": "Nur Linien",
+      "markers": "Nur Marker"
+    },
+    "barnorms": {
+      "none": "None",
+      "fraction": "Fraction",
+      "percent": "Percent"
     },
     "charts": {
       "pickerLabel": "Choose chart type",
@@ -364,12 +537,14 @@
       "switchConfirmDescription": "Switching to a different chart type resets your column choices and style settings. This change saves automatically.",
       "switchConfirm": "Switch",
       "types": {
-        "line": "Line",
-        "scatter": "Scatter"
+        "line": "Linie",
+        "scatter": "Streuung",
+        "bar": "Balken"
       },
       "descriptions": {
-        "line": "Data points connected by line segments",
-        "scatter": "Data plotted as points on x and y coordinates"
+        "line": "Datenpunkte durch Liniensegmente verbunden",
+        "scatter": "Daten als Punkte auf x- und y-Koordinaten",
+        "bar": "Gruppiert Zeilen nach Spalte und vergleicht Anzahl oder Aggregate"
       }
     },
     "families": {
@@ -397,6 +572,43 @@
       "earth": "Earth",
       "electric": "Electric",
       "bluered": "Blue-Red"
+    },
+    "bar": {
+      "aggregation": "Aggregation",
+      "filters": "Filter",
+      "addFilter": "Filter hinzufügen",
+      "removeFilter": "Filter entfernen",
+      "noFiltersHelp": "Keine Filter. Alle Zeilen fließen in die Grafik ein.",
+      "filterColumn": "Spalte",
+      "filterValue": "Wert",
+      "filterValuePlaceholder": "Wert auswählen",
+      "filterValueLoading": "Werte werden geladen…",
+      "filterValuePickColumn": "Zuerst Spalte wählen",
+      "question": "Frage",
+      "questionPlaceholder": "Frage auswählen",
+      "questionLoading": "Fragen werden geladen…",
+      "aggregations": {
+        "count": "Anzahl Zeilen",
+        "sum": "Summe von Y",
+        "avg": "Durchschnitt von Y",
+        "min": "Min von Y",
+        "max": "Max von Y"
+      },
+      "layoutSubsection": "Layout",
+      "rankingSubsection": "Rangfolge",
+      "orientation": "Ausrichtung",
+      "orientations": {
+        "vertical": "Vertikal",
+        "horizontal": "Horizontal"
+      },
+      "sortDirection": "Nach Wert sortieren",
+      "sortOptions": {
+        "none": "Keine (Eingabereihenfolge)",
+        "asc": "Niedrigste zuerst",
+        "desc": "Höchste zuerst"
+      },
+      "topN": "Top N anzeigen",
+      "topNPlaceholder": "Alle"
     }
   }
 }

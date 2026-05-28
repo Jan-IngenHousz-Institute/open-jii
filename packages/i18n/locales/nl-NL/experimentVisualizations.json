@@ -79,8 +79,10 @@
     "types": {
       "line": "Lijndiagram",
       "scatter": "Spreidingsdiagram",
+      "bar": "Staafdiagram",
       "lineDescription": "Toont datapunten verbonden door rechte lijnsegmenten",
-      "scatterDescription": "Toont gegevens als punten uitgezet op x- en y-coördinaten"
+      "scatterDescription": "Toont gegevens als punten uitgezet op x- en y-coördinaten",
+      "barDescription": "Groepeer rijen op kolom en vergelijk tellingen of aggregaties"
     },
     "families": {
       "basic": "Basisgrafieken"
@@ -185,7 +187,10 @@
       "blackbody": "Zwarte lichaam",
       "earth": "Aarde",
       "electric": "Elektrisch",
-      "bluered": "Blauw-Rood"
+      "bluered": "Blauw-Rood",
+      "orrd": "Oranje-Rood",
+      "magma": "Magma",
+      "openjii": "openJII"
     }
   },
 
@@ -202,6 +207,15 @@
     "noData": "Geen gegevens beschikbaar",
     "configuration": "Configuratiefout",
     "invalidConfiguration": "Ongeldige grafiekconfiguratie",
+    "heatmapSameColumnAxes": "X en Y gebruiken dezelfde kolom. De grafiek heeft twee verschillende kolommen nodig om een rij × kolom-raster te vormen.",
+    "heatmapSingleAxisValue": "Elke as heeft minstens 2 verschillende waarden nodig. De geselecteerde kolom(men) heeft slechts één waargenomen waarde.",
+    "heatmapFlatZ": "Alle celwaarden zijn identiek. De grafiek heeft variërende Z-waarden tussen cellen nodig om kleur weer te geven.",
+    "heatmapSparseGrid": "Continue X- en Y-waarden leverden een bijna leeg raster op (de meeste cellen hebben geen waarnemingen). Gebruik histogram-2d voor dichtheid, of aggregeer je gegevens eerst in discrete bins.",
+    "contourSameColumnAxes": "X en Y gebruiken dezelfde kolom. Contour heeft twee verschillende coördinatenassen nodig.",
+    "contourSingleAxisValue": "Contour heeft minstens 2 verschillende waarden op elke as nodig om iso-lijnen te berekenen.",
+    "contourFlatZ": "Iso-lijnen hebben variërende Z-waarden nodig. Alle waarden zijn identiek.",
+    "contourSparseGrid": "Contour heeft gerasterde gegevens nodig. Continue X- en Y-waarden leverden een bijna lege matrix op (de meeste cellen hebben geen waarnemingen). Gebruik density-plot-2d voor dichtheid, of aggregeer je gegevens eerst in bins.",
+    "correlationMatrixNeedsTwoColumns": "Correlatiematrix heeft minstens 2 verschillende numerieke kolommen nodig.",
     "xAxisNotConfigured": "X-as kolom niet geconfigureerd",
     "yAxisNotConfigured": "Y-as kolom niet geconfigureerd",
     "loadingData": "Grafiekgegevens laden...",
@@ -246,7 +260,8 @@
       "noColumns": "No columns configured",
       "configureColumns": "Choose at least one column in the Data tab to render the chart.",
       "loading": "Loading chart data...",
-      "previewName": "Preview"
+      "previewName": "Preview",
+      "fetchErrorBody": "De query kon niet worden uitgevoerd met de huidige dataconfiguratie. Probeer een andere kolom of tabel."
     },
     "inspector": {
       "dataset": "Dataset",
@@ -267,15 +282,38 @@
       "expandLabel": "Configuration"
     },
     "shelves": {
-      "xAxis": "X axis",
-      "yAxis": "Y axis",
+      "xAxis": "X-as",
+      "yAxis": "Y-as",
+      "barYAxisHelp": "Optioneel. Laat leeg om rijen per X-waarde te tellen.",
       "colorDimension": "Color dimension",
+      "facetDimension": "Facet (kleine veelvouden)",
+      "facetNone": "Geen (één grafiek)",
+      "facetHelp": "Splitst de grafiek op in één subplot per unieke waarde van de gekozen kolom. Pas de rasterindeling aan in het Stijl-tabblad.",
+      "sizeDimension": "Size dimension",
+      "labels": "Labels",
+      "values": "Values",
+      "zAxis": "Z (celwaarde)",
+      "zAxisLevel": "Z (niveau)",
+      "correlationColumns": "Variabelen",
+      "parcoordsAxes": "Assen",
+      "radarAxes": "Assen",
+      "polarTheta": "Hoekas (θ)",
+      "polarRadial": "Radiale as (r)",
+      "windRoseDirection": "Richting (graden)",
+      "windRoseMagnitude": "Magnitude (waardenbins)",
+      "ternaryA": "A-as (bovenste hoekpunt)",
+      "ternaryB": "B-as (rechtsonder)",
+      "ternaryC": "C-as (linksonder)",
+      "alluvialStages": "Fasen (geordend)",
+      "alluvialValue": "Stroomwaarde (optioneel)",
       "column": "Column",
       "selectColumn": "Select a column",
+      "none": "Geen",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
       "series": "Series {{index}}",
+      "seriesCount": "{{count}} reeksen",
       "removeSeries": "Remove series",
       "addSeries": "Add series",
       "seriesName": "Series name",
@@ -288,7 +326,29 @@
       "colorAxisTitlePlaceholder": "Color axis title",
       "colorAxisTitlePosition": "Title position",
       "showColorbar": "Show colorbar",
-      "preview": "Preview"
+      "reverseScale": "Kleurschaal omkeren",
+      "preview": "Preview",
+      "renderAs": "Weergeven als",
+      "renderAsDefault": "Standaard ({{type}})",
+      "axisAssignment": "As",
+      "secondaryAxisTitle": "Titel secundaire as",
+      "secondaryAxisTitlePlaceholder": "Titel secundaire as",
+      "secondaryAxisType": "Schaal secundaire as",
+      "errorColumn": "Foutkolom (±)",
+      "errorColumnPlaceholder": "Geen",
+      "errorColumnNone": "Geen",
+      "variable": "Variabele",
+      "variables": "Variabelen",
+      "traceType": {
+        "line": "Lijn",
+        "bar": "Staaf",
+        "scatter": "Punten",
+        "area": "Vlak"
+      },
+      "axis": {
+        "primary": "Primair",
+        "secondary": "Secundair (rechts)"
+      }
     },
     "axisTypes": {
       "linear": "Linear",
@@ -303,7 +363,39 @@
     "modes": {
       "lines": "Lines",
       "markers": "Markers",
-      "linesMarkers": "Lines + markers"
+      "linesMarkers": "Lines + markers",
+      "fillOnly": "Fill only"
+    },
+    "stackModes": {
+      "none": "None",
+      "stacked": "Stacked",
+      "percent": "Percent"
+    },
+    "sizemodes": {
+      "area": "Scale by area",
+      "diameter": "Scale by diameter"
+    },
+    "histnorms": {
+      "none": "Geen",
+      "percent": "Percentage",
+      "probability": "Kans",
+      "density": "Dichtheid",
+      "probabilityDensity": "Kansdichtheid"
+    },
+    "textinfos": {
+      "label": "Label",
+      "value": "Value",
+      "percent": "Percent",
+      "labelPercent": "Label + percent",
+      "labelValue": "Label + value",
+      "valuePercent": "Value + percent",
+      "none": "None"
+    },
+    "pieTextPositions": {
+      "auto": "Auto",
+      "inside": "Inside",
+      "outside": "Outside",
+      "none": "None"
     },
     "markerSymbols": {
       "circle": "Circle",
@@ -326,8 +418,13 @@
     },
     "legendPositions": {
       "right": "Right of plot",
+      "left": "Left of plot",
       "top": "Above plot",
-      "bottom": "Below plot"
+      "bottom": "Below plot",
+      "insideTopRight": "Inside top right",
+      "insideTopLeft": "Inside top left",
+      "insideBottomRight": "Inside bottom right",
+      "insideBottomLeft": "Inside bottom left"
     },
     "hoverModes": {
       "closest": "Nearest point",
@@ -348,7 +445,13 @@
       "legendPosition": "Position",
       "hoverMode": "Hover behaviour",
       "lineOptions": "Line options",
+      "lineSeriesOptions": "Lijnserie",
+      "scatterSeriesOptions": "Puntenserie",
+      "barSeriesOptions": "Staafserie",
+      "areaSeriesOptions": "Vlakserie",
+      "markerOptions": "Markers",
       "scatterOptions": "Scatter options",
+      "barOptions": "Staafdiagram opties",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",
@@ -356,7 +459,77 @@
       "lineDash": "Line style",
       "markerSize": "Marker size",
       "markerShape": "Marker shape",
-      "markerOpacity": "Marker opacity"
+      "markerOpacity": "Marker opacity",
+      "referenceLineAdd": "Add reference line",
+      "referenceLineAxis": "Axis",
+      "referenceLineColor": "Color",
+      "referenceLineDash": "Dash",
+      "referenceLineDashes": {
+        "dash": "Dashed",
+        "dashdot": "Dash-dot",
+        "dot": "Dotted",
+        "solid": "Solid"
+      },
+      "referenceLineLabel": "Label",
+      "referenceLineLabelPlaceholder": "Optional label",
+      "referenceLineRemove": "Remove reference line",
+      "referenceLineValue": "Value",
+      "referenceLines": "Reference lines",
+      "referenceLinesEmpty": "Add a vertical or horizontal line at a fixed value - useful for thresholds, targets, and baselines."
+    },
+    "orientations": {
+      "vertical": "Vertical",
+      "horizontal": "Horizontal"
+    },
+    "barmodes": {
+      "group": "Grouped",
+      "stack": "Stacked",
+      "overlay": "Overlay",
+      "relative": "Relative"
+    },
+    "boxmodes": {
+      "group": "Gegroepeerd",
+      "overlay": "Overlay"
+    },
+    "boxmeans": {
+      "off": "Uit",
+      "mean": "Gemiddelde-lijn",
+      "sd": "Gemiddelde + std.dev"
+    },
+    "boxpoints": {
+      "outliers": "Alleen uitschieters",
+      "suspectedoutliers": "Vermoedelijke uitschieters",
+      "all": "Alle punten",
+      "none": "Geen"
+    },
+    "violinSides": {
+      "both": "Volledig",
+      "positive": "Alleen positief",
+      "negative": "Alleen negatief"
+    },
+    "violinScalemodes": {
+      "width": "Gelijke breedte",
+      "count": "Oppervlak per steekproefgrootte"
+    },
+    "ridgeSortOrders": {
+      "alphabetical": "Alfabetisch",
+      "median": "Mediaan (oplopend)",
+      "mean": "Gemiddelde (oplopend)",
+      "count": "Steekproefgrootte (aflopend)"
+    },
+    "hist2dRenderModes": {
+      "heatmap": "Heatmap",
+      "contour": "Contour"
+    },
+    "spcModes": {
+      "linesMarkers": "Lijnen + markers",
+      "lines": "Alleen lijnen",
+      "markers": "Alleen markers"
+    },
+    "barnorms": {
+      "none": "None",
+      "fraction": "Fraction",
+      "percent": "Percent"
     },
     "charts": {
       "pickerLabel": "Choose chart type",
@@ -364,12 +537,14 @@
       "switchConfirmDescription": "Switching to a different chart type resets your column choices and style settings. This change saves automatically.",
       "switchConfirm": "Switch",
       "types": {
-        "line": "Line",
-        "scatter": "Scatter"
+        "line": "Lijn",
+        "scatter": "Spreiding",
+        "bar": "Staaf"
       },
       "descriptions": {
-        "line": "Data points connected by line segments",
-        "scatter": "Data plotted as points on x and y coordinates"
+        "line": "Datapunten verbonden door lijnsegmenten",
+        "scatter": "Gegevens als punten op x- en y-coördinaten",
+        "bar": "Groepeer rijen op kolom en vergelijk tellingen of aggregaties"
       }
     },
     "families": {
@@ -397,6 +572,43 @@
       "earth": "Earth",
       "electric": "Electric",
       "bluered": "Blue-Red"
+    },
+    "bar": {
+      "aggregation": "Aggregatie",
+      "filters": "Filters",
+      "addFilter": "Filter toevoegen",
+      "removeFilter": "Filter verwijderen",
+      "noFiltersHelp": "Geen filters. Alle rijen tellen mee in de grafiek.",
+      "filterColumn": "Kolom",
+      "filterValue": "Waarde",
+      "filterValuePlaceholder": "Selecteer een waarde",
+      "filterValueLoading": "Waarden laden…",
+      "filterValuePickColumn": "Kies eerst een kolom",
+      "question": "Vraag",
+      "questionPlaceholder": "Selecteer een vraag",
+      "questionLoading": "Vragen laden…",
+      "aggregations": {
+        "count": "Aantal rijen",
+        "sum": "Som van Y",
+        "avg": "Gemiddelde van Y",
+        "min": "Min van Y",
+        "max": "Max van Y"
+      },
+      "layoutSubsection": "Layout",
+      "rankingSubsection": "Rangschikking",
+      "orientation": "Oriëntatie",
+      "orientations": {
+        "vertical": "Verticaal",
+        "horizontal": "Horizontaal"
+      },
+      "sortDirection": "Sorteren op waarde",
+      "sortOptions": {
+        "none": "Geen (invoervolgorde)",
+        "asc": "Laagste eerst",
+        "desc": "Hoogste eerst"
+      },
+      "topN": "Top N weergeven",
+      "topNPlaceholder": "Alles"
     }
   }
 }

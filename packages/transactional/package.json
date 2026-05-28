@@ -30,6 +30,14 @@
     "./render/project-transfer-complete": {
       "types": "./dist/render/project-transfer-complete.d.ts",
       "default": "./dist/render/project-transfer-complete.js"
+    },
+    "./render/join-request-submitted": {
+      "types": "./dist/render/join-request-submitted.d.ts",
+      "default": "./dist/render/join-request-submitted.js"
+    },
+    "./render/join-request-rejected": {
+      "types": "./dist/render/join-request-rejected.d.ts",
+      "default": "./dist/render/join-request-rejected.js"
     }
   },
   "scripts": {
@@ -52,7 +60,6 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@react-email/preview-server": "5.2.10",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/qrcode": "^1.5.6",

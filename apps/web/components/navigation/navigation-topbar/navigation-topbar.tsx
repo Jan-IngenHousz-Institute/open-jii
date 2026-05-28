@@ -113,7 +113,6 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
               user={{
                 id: user.id,
                 email: user.email,
-                avatar: user.image ?? "",
               }}
               locale={locale}
               compact

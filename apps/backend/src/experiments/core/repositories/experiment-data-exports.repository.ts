@@ -25,8 +25,9 @@ export class ExperimentDataExportsRepository {
     tableName: string;
     format: string;
     userId: string;
+    anonymizeContributors: boolean;
   }): Promise<Result<void>> {
-    const { experimentId, tableName, format, userId } = params;
+    const { experimentId, tableName, format, userId, anonymizeContributors } = params;
 
     this.logger.log({
       msg: "Initiating export",
@@ -34,6 +35,7 @@ export class ExperimentDataExportsRepository {
       experimentId,
       tableName,
       format,
+      anonymizeContributors,
     });
 
     // Trigger the data export job (job will create metadata record on completion)
@@ -42,6 +44,7 @@ export class ExperimentDataExportsRepository {
       tableName,
       format,
       userId,
+      anonymizeContributors,
     );
 
     if (jobRunResult.isFailure()) {

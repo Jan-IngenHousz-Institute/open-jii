@@ -144,8 +144,8 @@ describe("ProtocolLayout", () => {
       });
     });
 
-    it("should call notFound for 400 errors (invalid UUID)", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 400 });
+    it("should call notFound for 404 errors (invalid UUID)", async () => {
+      server.mount(contract.protocols.getProtocol, { status: 404 });
       renderLayout();
 
       await waitFor(() => {

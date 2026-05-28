@@ -1,0 +1,90 @@
+{
+  "filters": {
+    "all": "All",
+    "synced": "Synced",
+    "unsynced": "Unsynced"
+  },
+  "sectionHeader": {
+    "today": "Today · {{date}}",
+    "yesterday": "Yesterday · {{date}}",
+    "other": "{{date}}"
+  },
+  "tag": {
+    "synced": "Synced",
+    "queued": "Queued",
+    "uploading": "Uploading",
+    "failed": "Failed"
+  },
+  "toolbar": {
+    "deleteAllSyncedAccessibilityLabel": "Delete all synced measurements",
+    "deleteAllSyncedAccessibilityHint": "Removes measurements that have already been uploaded",
+    "syncAllAccessibilityLabel": "Sync all measurements",
+    "syncAllAccessibilityHint": "Uploads all unsynced measurements"
+  },
+  "list": {
+    "swipeHint": "Swipe",
+    "emptyTitle": "No measurements found",
+    "emptyHintAll": "Start measuring to see your data here",
+    "emptyHintSynced": "No synced measurements yet",
+    "emptyHintUnsynced": "All measurements have been synced",
+    "exportButton": "Export measurements",
+    "noQuestionsAnswered": "No questions answered"
+  },
+  "swipe": {
+    "uploadButton": "Upload",
+    "commentButton": "Comment",
+    "deleteButton": "Delete"
+  },
+  "commentModal": {
+    "title": "Add comment",
+    "answersLabel": "Answers: ",
+    "experimentLabel": "Experiment: ",
+    "measurementDoneLabel": "Measurement done: ",
+    "placeholder": "Enter your comment here...",
+    "saveButton": "Save comment"
+  },
+  "flagModal": {
+    "title": "Select flag type",
+    "removeFlag": "Remove flag"
+  },
+  "flagType": {
+    "outlier": "Outlier",
+    "needs_review": "Needs Review"
+  },
+  "questionsModal": {
+    "annotationsHeading": "Annotations",
+    "questionsHeading": "Questions & Answers",
+    "noQuestionsAnswered": "No questions answered for this measurement"
+  },
+  "alerts": {
+    "uploadMeasurementTitle": "Upload Measurement",
+    "uploadMeasurementMessage": "Are you sure you want to upload \"{{name}}\"?",
+    "uploadButton": "Upload",
+    "uploadMeasurementError": "Failed to upload measurement. Please try again.",
+    "deleteMeasurementTitle": "Delete Measurement",
+    "removeMeasurementTitle": "Remove Measurement",
+    "deleteMeasurementMessage": "Are you sure you want to delete \"{{name}}\" from local storage?",
+    "removeMeasurementMessage": "Are you sure you want to remove \"{{name}}\"? This will delete it from local storage.",
+    "removeButton": "Remove",
+    "deleteMeasurementError": "Failed to delete measurement. Please try again.",
+    "uploadAllTitle": "Upload All Measurements",
+    "uploadAllMessage_one": "Are you sure you want to sync {{count}} unsynced measurement?",
+    "uploadAllMessage_other": "Are you sure you want to sync {{count}} unsynced measurements?",
+    "uploadAllButton": "Upload All",
+    "uploadAllError": "Sync failed. Please try again.",
+    "deleteAllSyncedTitle": "Delete all synced measurements",
+    "deleteAllSyncedMessage": "Are you sure you want to delete all {{count}} synced measurements from local storage?",
+    "deleteAllSyncedError": "Failed to delete synced measurements",
+    "exportError": "Export failed. Please try again.",
+    "saveErrorTitle": "Something went wrong",
+    "saveErrorMessage": "Could not save the measurement. Would you like to save it as a file instead?",
+    "saveToFileButton": "Save to File",
+    "saveToFileError": "Could not save measurement. Please try again."
+  },
+  "toasts": {
+    "uploadFailed": "Upload failed. Please try again.",
+    "uploadNotAvailable": "Upload not available, upload it later from Recent",
+    "answersSaveFailed": "Answers could not be saved on this device. Please export your data now to avoid losing it.",
+    "savedQueued": "Saved. Uploading in the background."
+  }
+}

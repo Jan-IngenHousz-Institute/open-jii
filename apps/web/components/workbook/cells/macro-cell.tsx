@@ -130,16 +130,25 @@ export function MacroCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       forceActionsVisible={langSelectOpen}
-      headerBadges={
-        <div className="flex items-center gap-1">
-          <Link href={`/platform/macros/${macroId}`} target="_blank">
-            <ExternalLink className="text-muted-foreground hover:text-foreground h-3 w-3 transition-colors" />
-          </Link>
-        </div>
-      }
       onRun={onRun}
       headerActions={
         <div className="flex items-center gap-1">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground h-7 w-7 p-0 hover:text-[#005E5E]"
+            title="Open macro in new tab"
+          >
+            <Link
+              href={`/platform/macros/${macroId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open macro in new tab"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          </Button>
           {isOwner && (
             <Select
               value={macroLanguage ?? language}

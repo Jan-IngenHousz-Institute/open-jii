@@ -29,7 +29,7 @@ export class UserWebhookController {
           userId: user.userId,
           firstName: user.firstName,
           lastName: user.lastName,
-          avatarUrl: user.image,
+          avatarUrl: user.avatarUrl,
         }));
 
         this.logger.log({

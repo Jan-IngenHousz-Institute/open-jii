@@ -1,0 +1,241 @@
+{
+  "screen": {
+    "stepLabel": {
+      "chooseExperiment": "Kies een experiment om te beginnen met meten.",
+      "reviewAnswers": "Controleer je antwoorden en upload ze voordat je doorgaat.",
+      "checkRecent": "Bekijk je recente metingen voordat je verdergaat.",
+      "instruction": "Lees deze instructies zorgvuldig.",
+      "question": "Beantwoord de vragen hieronder om door te gaan met de meting.",
+      "measurement": "Hieronder kun je de antwoorden bij de vragen zien en bewerken.",
+      "analysis": "Bekijk de meetgegevens en accepteer of verwerp ze."
+    }
+  },
+  "endFlow": {
+    "buttonTitle": "Beëindigen",
+    "alertTitle": "Meting beëindigen?",
+    "alertMessage": "Als je nu stopt, wordt deze meting niet opgeslagen.",
+    "confirm": "Beëindigen"
+  },
+  "experimentSelection": {
+    "heading": "Selecteer experiment",
+    "heroTitle": "Kies een experiment",
+    "heroSubtitle": "Kies een experiment om te starten.",
+    "searchPlaceholder": "Zoek experimenten…",
+    "recentThisWeek": "{{n}} metingen in de afgelopen week",
+    "assignedToYou": "Aan jou toegewezen",
+    "loadingExperiments": "Experimenten laden...",
+    "loadFailed": "Kon experimenten niet laden. Probeer het opnieuw.",
+    "chooseExperimentPlaceholder": "Kies een experiment",
+    "description": "Beschrijving",
+    "noDescription": "Geen beschrijving beschikbaar",
+    "startFlow": "Meting starten",
+    "startNamedFlow": "{{label}} meten",
+    "sensorBannerTitle": "Deze meting heeft een sensor nodig",
+    "sensorBannerBody": "Verbind een MultispeQ om metingen vast te leggen.",
+    "sensorBannerAction": "Verbinden",
+    "tag": {
+      "sensorRequired": "Sensor vereist",
+      "questionsOnly": "Alleen vragen",
+      "sensorAndQuestions": "Sensor + vragen"
+    },
+    "meta": {
+      "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
+    }
+  },
+  "hero": {
+    "activeFlow": "BEZIG",
+    "stepOfTotal": "Stap {{step}} van {{total}}",
+    "stepTypeLabel": {
+      "instruction": "Instructie",
+      "question": "Vraag",
+      "measurement": "Meting",
+      "analysis": "Analyse",
+      "review": "Antwoorden controleren",
+      "completed": "Afgerond"
+    },
+    "exitLabel": "Afsluiten"
+  },
+  "exitSheet": {
+    "title": "Meting afsluiten?",
+    "body": "Je bent bij stap {{step}} van {{total}}. Pauzeer om je voortgang te behouden of verwijder om opnieuw te starten.",
+    "pause": "Pauzeren",
+    "pauseSub": "We bewaren je antwoorden en voortgang.",
+    "discard": "Verwijderen",
+    "discardSub": "Gooi deze poging weg en start opnieuw.",
+    "continue": "Doorgaan"
+  },
+  "offlineIndicator": {
+    "ready": "Offline beschikbaar"
+  },
+  "navigation": {
+    "next": "Volgende",
+    "backToOverview": "Terug naar overzicht"
+  },
+  "cameraPermission": {
+    "deniedTitle": "Toestemming uitgeschakeld",
+    "requiredTitle": "Cameratoegang vereist",
+    "deniedMessage": "Cameratoegang is permanent geweigerd. Open de instellingen op je toestel om dit voor openJII in te schakelen.",
+    "requiredMessage": "openJII heeft toegang tot je camera nodig om QR-codes te scannen.",
+    "grant": "Toestemming geven",
+    "openSettings": "Instellingen openen"
+  },
+  "instructionNode": {
+    "heading": "Instructiedetails",
+    "empty": "Geen instructies beschikbaar"
+  },
+  "qrScanner": {
+    "alignPrompt": "Plaats een QR-code binnen het kader",
+    "matchNote": "De QR-code moet exact overeenkomen met een van de beschikbare opties."
+  },
+  "questionsSubmit": {
+    "editComment": "Opmerking bewerken",
+    "addComment": "Opmerking toevoegen",
+    "flag": "Markeren",
+    "finish": "Voltooien",
+    "uploading": "Uploaden...",
+    "submitContinue": "Indienen & doorgaan",
+    "defaultExperimentName": "Experiment"
+  },
+  "analysis": {
+    "actionBar": {
+      "discardRetry": "Verwerpen & opnieuw",
+      "uploading": "Uploaden...",
+      "acceptData": "Gegevens accepteren"
+    },
+    "macroResult": {
+      "noDataTitle": "Geen meetgegevens",
+      "noDataMessage": "Voltooi eerst de meetstap",
+      "loadingMacro": "Macro laden...",
+      "macroNotFound": "Macro niet gevonden",
+      "macroIdLabel": "Macro-ID: {{macroId}}"
+    },
+    "node": {
+      "heading": "Meting voltooid",
+      "defaultExperimentName": "Experiment",
+      "defaultProtocolName": "Protocol"
+    },
+    "summary": {
+      "experiment": "Experiment: ",
+      "protocol": "Protocol: ",
+      "answers": "Antwoorden: ",
+      "date": "Datum: ",
+      "noQuestionsAnswered": "Geen vragen beantwoord"
+    }
+  },
+  "measurementNode": {
+    "errorState": {
+      "title": "Meting mislukt",
+      "fallbackMessage": "Er is een fout opgetreden tijdens de meting"
+    },
+    "noDevice": {
+      "disconnected": "Apparaat losgekoppeld — {{name}}",
+      "reconnect": "Opnieuw verbinden met {{name}}",
+      "connectDifferent": "Verbind een ander apparaat",
+      "connectFirst": "Maak eerst verbinding met een apparaat"
+    },
+    "readyState": {
+      "noQuestions": "Dit experiment heeft geen vragen, begin direct met meten!",
+      "overviewHeading": "Overzicht van je antwoorden",
+      "defaultQuestionLabel": "Vraag",
+      "notSet": "Niet ingesteld"
+    },
+    "scanning": {
+      "title": "Bezig met meten"
+    },
+    "toast": {
+      "notConnected": "Geen verbinding met sensor",
+      "noProtocol": "Geen protocol geselecteerd",
+      "scanError": "Scanfout"
+    },
+    "privacyNote": "Je (gps-)locatie en volledige naam worden samen met de meetgegevens opgeslagen. Houd er rekening mee dat deze openbaar zijn.",
+    "cancelMeasurement": "Meting annuleren",
+    "startMeasurement": "Meting starten",
+    "retryMeasurement": "Meting opnieuw proberen",
+    "connectToDevice": "Verbinden met apparaat"
+  },
+  "questionNode": {
+    "autoProceeded": {
+      "currentPlot": "Jouw huidige plot"
+    },
+    "rememberAnswer": "Antwoord onthouden",
+    "autoProceed": "Automatisch doorgaan",
+    "searchPlaceholder": "Zoek opties...",
+    "unsupportedKind": "Niet-ondersteund vraagtype: {{kind}}",
+    "qrNotMatch": "\"{{data}}\" bestaat niet.",
+    "qrDismissLabel": "Sluiten"
+  },
+  "questionTypes": {
+    "multipleChoice": {
+      "selectionRequired": "Een optie selecteren is verplicht",
+      "disabledHint": "Eerder gebruikte opties zijn uitgeschakeld"
+    },
+    "number": {
+      "placeholder": "Voer een getal in...",
+      "range": "Bereik: {{min}} - {{max}}",
+      "minimum": "Minimum: {{min}}",
+      "maximum": "Maximum: {{max}}",
+      "required": "Dit veld is verplicht"
+    },
+    "openEnded": {
+      "placeholder": "Voer je antwoord in...",
+      "clear": "Tekst wissen",
+      "required": "Dit veld is verplicht"
+    },
+    "singleChoice": {
+      "required": "Selecteer een optie"
+    },
+    "text": {
+      "placeholder": "Voer je antwoord in...",
+      "required": "Dit veld is verplicht"
+    },
+    "yesNo": {
+      "yes": "Ja",
+      "no": "Nee",
+      "required": "Selecteer een optie"
+    }
+  },
+  "flowStates": {
+    "completed": {
+      "tabs": {
+        "all": "Alle",
+        "synced": "Gesynchroniseerd",
+        "unsynced": "Niet gesynchroniseerd"
+      },
+      "swipeHint": "Vegen",
+      "noMeasurements": "Geen metingen gevonden",
+      "emptyAll": "Je geüploade metingen verschijnen hier",
+      "emptySynced": "Nog geen gesynchroniseerde metingen",
+      "emptyUnsynced": "Alle metingen zijn gesynchroniseerd",
+      "startNext": "Volgende meting starten",
+      "uploadAlertTitle": "Meting uploaden",
+      "uploadAlertMessage": "Weet je zeker dat je \"{{experimentName}}\" wilt uploaden?",
+      "uploadConfirm": "Uploaden",
+      "removeAlertTitle": "Verwijderen van telefoon",
+      "removeAlertMessage": "\"{{experimentName}}\" is al naar de cloud geüpload. Verwijderen van deze telefoon? De cloudkopie blijft intact.",
+      "deleteAlertTitle": "Niet-gesynchroniseerde meting verwijderen",
+      "deleteAlertMessage": "\"{{experimentName}}\" is nog niet geüpload. Als je dit nu verwijdert, gaat de meting definitief verloren.",
+      "deleteBlockedUploading": "Kan niet verwijderen tijdens uploaden — probeer het zo opnieuw."
+    },
+    "empty": "Geen stappen beschikbaar.",
+    "error": "Kon experiment niet laden. Probeer het opnieuw.",
+    "loading": "Experiment laden..."
+  },
+  "result": {
+    "comment": "Opmerking",
+    "tabResults": "Resultaten",
+    "tabRaw": "Ruwe gegevens",
+    "processingError": "Verwerkingsfout: {{message}}",
+    "noDataAvailable": "Geen gegevens beschikbaar",
+    "messages": {
+      "criticalIssues": "Kritieke problemen",
+      "warnings": "Waarschuwingen",
+      "information": "Informatie"
+    },
+    "chart": {
+      "noData": "Geen gegevens beschikbaar"
+    },
+    "header": {
+      "title": "Meetresultaten"
+    }
+  }
+}

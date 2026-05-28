@@ -337,17 +337,6 @@ export function QuestionCellComponent({
         executionError={executionError}
         readOnly={readOnly}
         headerBadges={undefined}
-        headerActions={
-          <div className="text-muted-foreground flex items-center gap-1 text-xs">
-            <span>Required</span>
-            <Switch
-              checked={question.required}
-              onCheckedChange={handleRequiredToggle}
-              className="scale-75"
-              disabled={readOnly}
-            />
-          </div>
-        }
       >
         <div className="space-y-3">
           <div className="flex items-center gap-0.5 rounded-lg border bg-[#EDF2F6] p-0.5">
@@ -383,6 +372,17 @@ export function QuestionCellComponent({
             className="border-[#CDD5DB] bg-white text-sm placeholder:text-[#CDD5DB]"
             disabled={readOnly}
           />
+
+          {!readOnly && (
+            <label className="text-muted-foreground flex items-center gap-2 text-xs">
+              <Switch
+                checked={question.required}
+                onCheckedChange={handleRequiredToggle}
+                className="scale-75"
+              />
+              <span>Required</span>
+            </label>
+          )}
 
           {question.kind === "multi_choice" && (
             <div className="space-y-1.5 pl-1">

@@ -16,6 +16,7 @@ import { ProtocolRepository } from "../protocols/core/repositories/protocol.repo
 import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
+import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
@@ -28,9 +29,16 @@ import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data
 import { DownloadExportUseCase } from "./application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "./application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "./application/use-cases/experiment-data-exports/list-exports";
+import { GetDistinctColumnValuesUseCase } from "./application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
+import { ApproveJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/approve-join-request";
+import { CancelJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/cancel-join-request";
+import { GetMyJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/get-my-join-request";
+import { ListExperimentJoinRequestsUseCase } from "./application/use-cases/experiment-join-requests/list-experiment-join-requests";
+import { RejectJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/reject-join-request";
+import { RequestJoinExperimentUseCase } from "./application/use-cases/experiment-join-requests/request-join-experiment";
 import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
 import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locations/geocode-location";
 import { GetExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/get-experiment-locations";
@@ -70,6 +78,7 @@ import { ExperimentDataAnnotationsRepository } from "./core/repositories/experim
 import { ExperimentDataExportsRepository } from "./core/repositories/experiment-data-exports.repository";
 // Repositories
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
+import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
@@ -82,6 +91,7 @@ import { ExperimentDataAnnotationsController } from "./presentation/experiment-d
 import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
+import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
@@ -108,6 +118,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentFlowsController,
     ExperimentWorkbooksController,
     ExperimentMembersController,
+    ExperimentJoinRequestsController,
     ExperimentMetadataController,
     ExperimentVisualizationsController,
     ExperimentLocationsController,
@@ -137,6 +148,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Repositories
     ExperimentRepository,
     ExperimentMemberRepository,
+    ExperimentJoinRequestRepository,
     ExperimentMetadataRepository,
     ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
@@ -155,6 +167,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
     // Services
     EmbargoProcessorService,
+    ContributorAnonymizerService,
 
     // General experiment use cases
     CreateExperimentUseCase,
@@ -167,6 +180,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Experiment data use cases
     GetExperimentDataUseCase,
     GetExperimentTablesUseCase,
+    GetDistinctColumnValuesUseCase,
     UploadAmbyteDataUseCase,
     InitiateExportUseCase,
     ListExportsUseCase,
@@ -177,6 +191,14 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     AddExperimentMembersUseCase,
     RemoveExperimentMemberUseCase,
     UpdateExperimentMemberRoleUseCase,
+
+    // Experiment join request use cases
+    RequestJoinExperimentUseCase,
+    ListExperimentJoinRequestsUseCase,
+    GetMyJoinRequestUseCase,
+    ApproveJoinRequestUseCase,
+    RejectJoinRequestUseCase,
+    CancelJoinRequestUseCase,
 
     // Experiment location use cases
     GetExperimentLocationsUseCase,
