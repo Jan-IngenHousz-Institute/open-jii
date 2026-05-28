@@ -10,6 +10,9 @@ export function useExperiments() {
         filter: "member",
       },
     },
+    // Explicit: prefer the persisted cache when offline so the picker
+    // doesn't render an empty list while the network is unreachable.
+    networkMode: "offlineFirst",
   });
   const experiments = data?.body;
 
