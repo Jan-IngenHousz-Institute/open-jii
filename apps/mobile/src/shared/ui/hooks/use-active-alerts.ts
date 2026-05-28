@@ -5,7 +5,7 @@ import { useEnvironmentStore } from "~/shared/stores/environment-store";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
-const FIVE_MINUTES = 1000;
+const FIVE_MINUTES = 5 * 60 * 1000;
 
 const SEVERITY_ORDER = { critical: 0, warning: 1, info: 2 } as const;
 type Severity = keyof typeof SEVERITY_ORDER;
