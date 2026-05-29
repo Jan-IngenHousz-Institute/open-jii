@@ -38,7 +38,10 @@ export function DeviceSheet() {
 
   const [showAllDevices, setShowAllDevices] = useState(false);
   const { named, unnamed } = useMemo(() => partitionDevices(nearbyDevices), [nearbyDevices]);
-  const visibleDevices = showAllDevices ? [...named, ...unnamed] : named;
+  // When nothing has a friendly name (common: MultispeQs advertise as a MAC),
+  // show every device directly instead of an empty list above "See more".
+  const collapseUnnamed = named.length > 0 && !showAllDevices;
+  const visibleDevices = collapseUnnamed ? named : [...named, ...unnamed];
 
   useEffect(() => {
     if (!isOpen) setShowAllDevices(false);
@@ -207,12 +210,10 @@ export function DeviceSheet() {
                   device={d}
                   isPairing={connectingDeviceId === d.id}
                   onPair={(dev) => void handleConnect(dev)}
-                  isLast={
-                    i === visibleDevices.length - 1 && !(!showAllDevices && unnamed.length > 0)
-                  }
+                  isLast={i === visibleDevices.length - 1 && !collapseUnnamed}
                 />
               ))}
-              {!showAllDevices && unnamed.length > 0 ? (
+              {collapseUnnamed && unnamed.length > 0 ? (
                 <Pressable
                   onPress={() => setShowAllDevices(true)}
                   className="flex-row items-center justify-center gap-1.5 py-3"
