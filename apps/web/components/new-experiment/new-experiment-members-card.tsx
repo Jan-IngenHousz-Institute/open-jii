@@ -72,8 +72,8 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
       firstName: selectedUser.firstName,
       lastName: selectedUser.lastName,
       email: selectedUser.email,
+      avatarUrl: selectedUser.avatarUrl,
     });
-
     setSelectedUser(null);
     setUserSearch("");
     setSelectedRole("member");
@@ -100,14 +100,12 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
     return members.filter((m) => m.role === "admin").length;
   }, [members]);
 
-  // Build combined profiles from members for display
-  const combinedProfiles = useMemo(() => {
-    const allProfiles: UserProfile[] = [];
-
-    // Add profiles from members that have user data
-    members.forEach((member) => {
-      if (member.firstName || member.lastName || member.email) {
-        allProfiles.push({
+  const membersWithUserInfo = useMemo(
+    () =>
+      members.map((member) => ({
+        role: member.role ?? "member",
+        joinedAt: "",
+        user: {
           userId: member.userId,
           firstName: member.firstName ?? "",
           lastName: member.lastName ?? "",
@@ -115,21 +113,11 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
           bio: null,
           activated: null,
           organization: undefined,
-        });
-      }
-    });
-
-    // Add any profiles from search results that aren't already in the list
-    if (userSearchData?.body) {
-      userSearchData.body.forEach((profile: UserProfile) => {
-        if (!allProfiles.some((p) => p.userId === profile.userId)) {
-          allProfiles.push(profile);
-        }
-      });
-    }
-
-    return allProfiles;
-  }, [members, userSearchData]);
+          avatarUrl: member.avatarUrl ?? null,
+        },
+      })),
+    [members],
+  );
 
   return (
     <Card className="min-w-0 flex-1">
@@ -160,8 +148,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
 
         {/* Current members section */}
         <MemberList
-          members={members}
-          users={combinedProfiles}
+          membersWithUserInfo={membersWithUserInfo}
           onRemoveMember={handleRemoveMember}
           isRemovingMember={false}
           removingMemberId={null}

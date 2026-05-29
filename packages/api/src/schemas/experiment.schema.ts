@@ -993,6 +993,7 @@ export const zCreateExperimentBodyBase = z.object({
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         email: z.string().email().nullable().optional(),
+        avatarUrl: z.string().nullable().optional(),
       }),
     )
     .optional()

@@ -18,20 +18,23 @@ describe("<MemberList />", () => {
     expect(screen.getByText("experimentSettings.addCollaborators")).toBeInTheDocument();
   });
 
-  it("renders member from raw members + users props", async () => {
+  it("renders member from membersWithUserInfo prop", async () => {
     const onRemove = vi.fn();
     const user = userEvent.setup();
 
     render(
       <MemberList
-        members={[{ userId: "user-2", role: "member" }]}
-        users={[
-          createUserProfile({
-            userId: "user-2",
-            firstName: "Grace",
-            lastName: "Hopper",
-            email: "grace@example.com",
-          }),
+        membersWithUserInfo={[
+          {
+            role: "member",
+            joinedAt: "2023-01-01T00:00:00.000Z",
+            user: createUserProfile({
+              userId: "user-2",
+              firstName: "Grace",
+              lastName: "Hopper",
+              email: "grace@example.com",
+            }),
+          },
         ]}
         onRemoveMember={onRemove}
         isRemovingMember={false}
