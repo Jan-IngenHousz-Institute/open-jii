@@ -92,6 +92,22 @@ describe("VisualizationTableRow", () => {
     expect(screen.getByText(labelKey)).toHaveClass("bg-badge-stale");
   });
 
+  it.each([
+    ["heatmap", "workspace.charts.types.heatmap"],
+    ["contour", "workspace.charts.types.contour"],
+    ["correlation-matrix", "workspace.charts.types.correlationMatrix"],
+    ["parallel-coordinates", "workspace.charts.types.parallelCoordinates"],
+    ["radar", "workspace.charts.types.radar"],
+    ["polar", "workspace.charts.types.polar"],
+    ["wind-rose", "workspace.charts.types.windRose"],
+    ["ternary", "workspace.charts.types.ternary"],
+    ["alluvial", "workspace.charts.types.alluvial"],
+    ["carpet", "workspace.charts.types.carpet"],
+  ] as const)("renders the scientific-family badge for chartType=%s", (chartType, labelKey) => {
+    renderRow({ visualization: viz({ chartType }) });
+    expect(screen.getByText(labelKey)).toHaveClass("bg-badge-archived");
+  });
+
   it("opens the confirm dialog when the delete menu item is selected", async () => {
     const user = userEvent.setup();
     renderRow();

@@ -1,6 +1,5 @@
 "use client";
 
-import { lineChartType } from "@/components/experiment-visualizations/charts/basic/line";
 import type { ChartFormValues } from "@/components/experiment-visualizations/charts/chart-config";
 import { chartFormResolver } from "@/components/experiment-visualizations/charts/chart-config";
 import { getChartTypeDef } from "@/components/experiment-visualizations/charts/chart-registry";
@@ -59,7 +58,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
 }
 
 function buildDefaults(visualization: ExperimentVisualization): ChartFormValues {
-  const def = getChartTypeDef(visualization.chartType) ?? lineChartType;
+  const def = getChartTypeDef(visualization.chartType);
   return {
     name: visualization.name,
     description: visualization.description ?? "",

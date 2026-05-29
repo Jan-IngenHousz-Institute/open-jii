@@ -26,7 +26,7 @@ export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
 
   const grouped = useMemo(() => listChartTypesByFamily(), []);
   const current = getChartTypeDef(value);
-  const TriggerIcon = current?.icon;
+  const TriggerIcon = current.icon;
   const pickerLabel = t("workspace.charts.pickerLabel");
 
   // Hide families with no registered chart types (e.g. empty "3d" tab).
@@ -36,10 +36,9 @@ export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
   );
 
   // Open on the family of the current chart so reopens land in the right tab.
-  const initialFamily =
-    current?.family && availableFamilies.includes(current.family)
-      ? current.family
-      : (availableFamilies[0] ?? "basic");
+  const initialFamily = availableFamilies.includes(current.family)
+    ? current.family
+    : (availableFamilies[0] ?? "basic");
   const [activeFamily, setActiveFamily] = useState<ChartFamily>(initialFamily);
 
   // Re-sync the active tab on reopen — otherwise the tab stays on the user's
@@ -61,8 +60,8 @@ export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 gap-2" aria-label={pickerLabel}>
-          {TriggerIcon && <TriggerIcon className="size-4" />}
-          <span className="text-sm font-medium">{current ? t(current.labelKey) : value}</span>
+          <TriggerIcon className="size-4" />
+          <span className="text-sm font-medium">{t(current.labelKey)}</span>
           <ChevronDown className="text-muted-foreground size-4" />
         </Button>
       </PopoverTrigger>
