@@ -22,6 +22,11 @@ function signalKey(
   return "signalWeak";
 }
 
+// MultispeQ stickers show the last 4 octets of the MAC, so match that.
+function shortMac(id: string): string {
+  return id.split(/[:-]/).slice(-4).join(":");
+}
+
 interface NearbyDeviceRowProps {
   device: Device;
   isPairing: boolean;
@@ -35,7 +40,8 @@ export function NearbyDeviceRow({ device, isPairing, onPair, isLast }: NearbyDev
 
   const sigKey = signalKey(device.rssi);
 
-  const macId = device.type === "bluetooth-classic" || device.type === "ble" ? device.id : null;
+  const macId =
+    device.type === "bluetooth-classic" || device.type === "ble" ? shortMac(device.id) : null;
   const hasName = device.name.trim().length > 0;
   const title = hasName ? device.name : (macId ?? t("deviceList.fallbackName"));
   const subParts: string[] = [];
