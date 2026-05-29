@@ -885,7 +885,7 @@ describe("Scenario I — countMeasurementsByStatus", () => {
     dropIndexes(dbNoIdx);
     seedCompressed(dbNoIdx, COUNTS_N);
     seedCompressed(dbIdx, COUNTS_N);
-  }, HOOK_TIMEOUT);
+  }, 120_000); // COUNTS_N=500 rows each need gzip (~100 ms/row on CI = ~50 s total)
 
   it("GROUP BY status with vs without index", () => {
     const stmtNoIdx = dbNoIdx.prepare(
@@ -1126,7 +1126,7 @@ describe("Scenario M — Pagination LIMIT/OFFSET cost", () => {
     db = createDb();
     seedCompressed(db, SCAN_N);
     addIndexes(db);
-  }, HOOK_TIMEOUT);
+  }, 120_000); // SCAN_N=500 rows each need gzip (~100 ms/row on CI = ~50 s total)
 
   it("LIMIT 50 OFFSET … at offsets 0, 100, 1k, 5k", () => {
     const offsets = [0, 50, 200, 450];
