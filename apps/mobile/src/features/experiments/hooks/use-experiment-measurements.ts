@@ -28,5 +28,6 @@ export function useExperimentMeasurements(experimentId: string | undefined) {
       query: { tableName: "raw_data" },
     },
     enabled: !!experimentId,
+    networkMode: "offlineFirst",
   });
 }

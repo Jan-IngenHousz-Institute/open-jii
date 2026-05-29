@@ -6,15 +6,14 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { X } from "lucide-react-native";
 import React from "react";
-import { BackHandler, Image, TouchableOpacity, View } from "react-native";
+import { Image, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useExperiments } from "~/features/experiments/hooks/use-experiments";
+import { useExperiment } from "~/features/experiments/hooks/use-experiment";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
 import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
+import { useFlowBackHandler } from "~/features/measurement-flow/hooks/use-flow-back-handler";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
-import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-paused-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -31,18 +30,12 @@ interface MeasurementFlowScreenProps {
 
 export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
-  const {
-    flowNodes,
-    currentFlowStep,
-    isFlowFinished,
-    experimentId,
-    protocolId,
-    isQuestionsSubmitPending,
-    iterationCount,
-    isFromOverview,
-    scanResult,
-  } = useMeasurementFlowStore();
-  const { experiments } = useExperiments();
+  // Subscribe only to the field this screen renders against. The auto-pause
+  // and back-handler hooks read the rest of the store via getState() so the
+  // screen doesn't re-render on every flow tick (scanResult, currentFlowStep,
+  // …) and cascade through MeasurementFlowContainer and its children.
+  const experimentId = useMeasurementFlowStore((s) => s.experimentId);
+  const { experiment } = useExperiment(experimentId);
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const openExitSheet = useExitFlowSheetStore((s) => s.open);
@@ -50,66 +43,17 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
 
+  const experimentLabel = experiment?.name ?? "";
+  const hasActiveFlow = !!experimentId;
+
+  useFlowBackHandler(hasActiveFlow);
+
   // Picker state has no tab bar to bail out to (the flow now covers the tabs
   // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
   const dismissFlow = () => {
     if (router.canGoBack()) router.back();
     else router.replace("/(tabs)/");
   };
-
-  const experimentLabel = experiments.find((e) => e.value === experimentId)?.label ?? "";
-
-  // Auto-save a snapshot when the user leaves a mid-flow screen without
-  // explicitly ending it. The Exit sheet's Discard path clears the runner
-  // first, so this guard skips finished/empty flows.
-  React.useEffect(() => {
-    if (isFocused) return;
-    if (!experimentId) return;
-    if (isFlowFinished) return;
-    if (currentFlowStep <= 0 && !isQuestionsSubmitPending) return;
-
-    const answersHistory = useFlowAnswersStore.getState().answersHistory;
-
-    usePausedFlowStore.getState().pauseFlow({
-      experimentId,
-      experimentLabel,
-      protocolId,
-      currentFlowStep,
-      totalSteps: flowNodes.length,
-      iterationCount,
-      isQuestionsSubmitPending,
-      isFromOverview,
-      flowNodes,
-      answersHistory: JSON.parse(JSON.stringify(answersHistory)),
-      scanResult,
-      pausedAt: new Date().toISOString(),
-    });
-  }, [
-    isFocused,
-    experimentId,
-    experimentLabel,
-    protocolId,
-    currentFlowStep,
-    flowNodes,
-    iterationCount,
-    isQuestionsSubmitPending,
-    isFromOverview,
-    isFlowFinished,
-    scanResult,
-  ]);
-
-  // Android hardware back routes through the Exit sheet when a flow is active.
-  React.useEffect(() => {
-    if (!isFocused) return;
-    if (!experimentId) return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      openExitSheet();
-      return true;
-    });
-    return () => sub.remove();
-  }, [isFocused, experimentId, openExitSheet]);
-
-  const hasActiveFlow = !!experimentId;
 
   return (
     <View className="bg-background flex-1">

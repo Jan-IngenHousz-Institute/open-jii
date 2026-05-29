@@ -1,18 +1,18 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { scatterChartType } from "../../../charts/basic/scatter";
 import type { ChartFormValues } from "../../../charts/chart-config";
+import { densityPlot2DChartType } from "../../../charts/statistical/density-plot-2d";
 import { ContinuousColorSettings } from "./continuous-color-settings";
 
 function defaults(overrides: Partial<ChartFormValues["config"]> = {}): ChartFormValues {
   return {
     name: "Untitled",
     description: "",
-    chartFamily: scatterChartType.family,
-    chartType: scatterChartType.type,
+    chartFamily: densityPlot2DChartType.family,
+    chartType: densityPlot2DChartType.type,
     config: {
-      ...scatterChartType.defaultConfig(),
+      ...densityPlot2DChartType.defaultConfig(),
       marker: {
         colorscale: "Viridis",
         showscale: true,
@@ -21,7 +21,7 @@ function defaults(overrides: Partial<ChartFormValues["config"]> = {}): ChartForm
       },
       ...overrides,
     },
-    dataConfig: scatterChartType.defaultDataConfig(),
+    dataConfig: densityPlot2DChartType.defaultDataConfig(),
   };
 }
 

@@ -5,6 +5,7 @@ export function useExperiment(experimentId: string | undefined) {
     queryKey: ["experiment", experimentId],
     queryData: { params: { id: experimentId ?? "" } },
     enabled: !!experimentId,
+    networkMode: "offlineFirst",
   });
 
   const experiment = data?.body;

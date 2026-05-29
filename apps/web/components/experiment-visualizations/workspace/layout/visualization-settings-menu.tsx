@@ -58,10 +58,6 @@ export function VisualizationSettingsMenu({
 
   const handleClear = () => {
     const def = getChartTypeDef(form.getValues("chartType"));
-    if (!def) {
-      setIsClearOpen(false);
-      return;
-    }
     const tableName = form.getValues("dataConfig.tableName");
     form.setValue("config", def.defaultConfig(), { shouldDirty: true });
     form.setValue("dataConfig", def.defaultDataConfig(tableName), { shouldDirty: true });

@@ -5,6 +5,7 @@ import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 export function useProtocols() {
   const { data, isLoading, error } = tsr.protocols.listProtocols.useQuery({
     queryKey: ["protocols"],
+    networkMode: "offlineFirst",
   });
 
   const protocols = data?.body;

@@ -71,7 +71,7 @@ export function VisualizationTableRow({
   const viewHref = `/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`;
   const author = visualization.createdByName ?? `${visualization.createdBy.slice(0, 8)}…`;
   const def = getChartTypeDef(visualization.chartType);
-  const typeLabel = def ? t(def.labelKey) : visualization.chartType;
+  const typeLabel = t(def.labelKey);
   const typeBadgeClass = badgeClassFor(visualization.chartType);
 
   const handleConfirmDelete = (e: React.MouseEvent) => {
@@ -177,6 +177,5 @@ export function VisualizationTableRow({
 }
 
 function badgeClassFor(chartType: ChartType): string {
-  const family = getChartTypeDef(chartType)?.family;
-  return family ? FAMILY_BADGE_CLASS[family] : "bg-badge-archived";
+  return FAMILY_BADGE_CLASS[getChartTypeDef(chartType).family];
 }

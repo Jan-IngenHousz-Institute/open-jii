@@ -113,7 +113,7 @@ export function DataTabContent({
         error={columnsError}
         hasColumns={columns.length > 0}
       >
-        {def ? <def.DataPanel form={form} columns={columns} /> : <UnsupportedPanel />}
+        <def.DataPanel form={form} columns={columns} />
       </ColumnsState>
 
       {Boolean(selectedTableName) && columns.length > 0 && (
@@ -175,13 +175,4 @@ function ColumnsState({ hasTable, isLoading, error, hasColumns, children }: Colu
     );
   }
   return <>{children}</>;
-}
-
-function UnsupportedPanel() {
-  const { t } = useTranslation("experimentVisualizations");
-  return (
-    <div className="text-muted-foreground rounded-md border border-dashed p-4 text-sm">
-      {t("errors.chartTypeNotSupported")}
-    </div>
-  );
 }

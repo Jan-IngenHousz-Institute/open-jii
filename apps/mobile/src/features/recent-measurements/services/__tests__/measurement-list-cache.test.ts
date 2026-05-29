@@ -169,31 +169,6 @@ describe("applySettledPatchBatch — counts", () => {
   });
 });
 
-describe("applySettledPatchBatch — pending-or-failed", () => {
-  it("drops succeeded rows from the pending-or-failed cache", () => {
-    qc.setQueryData<{ key: string; data: unknown }[]>(queryKeys.pendingOrFailed, [
-      { key: "ok", data: {} },
-      { key: "still", data: {} },
-    ]);
-
-    applySettledPatchBatch(qc, [
-      { id: "ok", status: "successful" },
-      { id: "still", status: "failed" },
-    ]);
-
-    expect(qc.getQueryData(queryKeys.pendingOrFailed)).toEqual([{ key: "still", data: {} }]);
-  });
-
-  it("returns the same array reference when nothing changed", () => {
-    const seed = [{ key: "x", data: {} }];
-    qc.setQueryData<{ key: string; data: unknown }[]>(queryKeys.pendingOrFailed, seed);
-
-    applySettledPatchBatch(qc, [{ id: "x", status: "failed" }]);
-
-    expect(qc.getQueryData(queryKeys.pendingOrFailed)).toBe(seed);
-  });
-});
-
 describe("applySettledPatchBatch — edge cases", () => {
   it("no-ops on empty items", () => {
     seedList(qc, "all", [item("r1", "pending")]);

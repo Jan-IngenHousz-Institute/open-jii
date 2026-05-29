@@ -18,6 +18,7 @@ import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
 import { Tag } from "~/shared/ui/Tag";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { ellipsize } from "~/shared/utils/ellipsize";
 
 import { ExperimentCard } from "./experiment-card";
 import { OfflineModeIndicator } from "./offline-mode-indicator";
@@ -67,7 +68,7 @@ export function ExperimentSelectionStep() {
   const handleStart = () => {
     if (!selectedExperimentId || !experimentFlowReady) return;
     clearHistory();
-    setExperimentId(selectedExperimentId);
+    setExperimentId(selectedExperimentId, selectedExperiment?.label);
   };
 
   return (
@@ -170,7 +171,7 @@ export function ExperimentSelectionStep() {
           title={
             selectedExperiment
               ? t("experimentSelection.startNamedFlow", {
-                  label: selectedExperiment.label.split(" ")[0].toLowerCase(),
+                  label: ellipsize(selectedExperiment.label.trim(), 21),
                 })
               : t("experimentSelection.startFlow")
           }
