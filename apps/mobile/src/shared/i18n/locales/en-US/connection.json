@@ -37,6 +37,7 @@
     "scanning": "Scanning…",
     "pair": "Pair",
     "pairing": "Pairing…",
+    "seeMoreDevices": "See more devices ({{count}})",
     "helperText": "Can't find your device? Hold the button on the MultispeQ for 3 seconds."
   },
   "chip": {
