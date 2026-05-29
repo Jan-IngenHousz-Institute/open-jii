@@ -1,6 +1,6 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
-import { Bluetooth, X } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef } from "react";
+import { Bluetooth, ChevronDown, X } from "lucide-react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +11,7 @@ import {
   useConnectedDevice,
 } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
@@ -34,6 +35,14 @@ export function DeviceSheet() {
   const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
   const { data: nearbyDevices = [], refetch: refreshDevices, isFetching } = useAllDevices();
   const { connectToDevice, disconnectFromDevice, connectingDeviceId } = useConnectToDevice();
+
+  const [showAllDevices, setShowAllDevices] = useState(false);
+  const { named, unnamed } = useMemo(() => partitionDevices(nearbyDevices), [nearbyDevices]);
+  const visibleDevices = showAllDevices ? [...named, ...unnamed] : named;
+
+  useEffect(() => {
+    if (!isOpen) setShowAllDevices(false);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) sheetRef.current?.present();
@@ -191,16 +200,29 @@ export function DeviceSheet() {
           {nearbyDevices.length === 0 ? (
             <Text className="text-muted-body py-3 text-[13px]">{t("deviceList.empty")}</Text>
           ) : (
-            <ScrollView style={{ maxHeight: 240 }}>
-              {nearbyDevices.map((d, i) => (
+            <ScrollView style={{ maxHeight: 280 }}>
+              {visibleDevices.map((d, i) => (
                 <NearbyDeviceRow
                   key={d.id}
                   device={d}
                   isPairing={connectingDeviceId === d.id}
                   onPair={(dev) => void handleConnect(dev)}
-                  isLast={i === nearbyDevices.length - 1}
+                  isLast={
+                    i === visibleDevices.length - 1 && !(!showAllDevices && unnamed.length > 0)
+                  }
                 />
               ))}
+              {!showAllDevices && unnamed.length > 0 ? (
+                <Pressable
+                  onPress={() => setShowAllDevices(true)}
+                  className="flex-row items-center justify-center gap-1.5 py-3"
+                >
+                  <ChevronDown size={16} color={themeColors.inactive} />
+                  <Text className="text-muted-body text-[13px] font-semibold">
+                    {t("deviceSheet.seeMoreDevices", { count: unnamed.length })}
+                  </Text>
+                </Pressable>
+              ) : null}
             </ScrollView>
           )}
         </View>
