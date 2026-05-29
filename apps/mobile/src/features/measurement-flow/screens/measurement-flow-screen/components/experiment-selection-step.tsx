@@ -171,7 +171,7 @@ export function ExperimentSelectionStep() {
           title={
             selectedExperiment
               ? t("experimentSelection.startNamedFlow", {
-                  label: ellipsize(selectedExperiment.label.trim(), 16),
+                  label: ellipsize(selectedExperiment.label.trim(), 21),
                 })
               : t("experimentSelection.startFlow")
           }
