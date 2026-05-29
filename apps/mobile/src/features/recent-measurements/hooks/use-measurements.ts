@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getOutbox } from "~/shared/composition/upload";
 import {
   clearMeasurements,
@@ -13,22 +13,6 @@ import {
   buildAnnotations,
   getFlagTypeFromMeasurementResult,
 } from "~/shared/utils/measurement-annotations";
-
-// Standalone hook for callers that ONLY need the pending-or-failed list
-// (e.g. the tab-bar icon badge). Mounting `useMeasurements` from those
-// callers would also subscribe to the upload mutation and a host of
-// unused query refs, all of which churn during heavy upload.
-export function useFailedUploads() {
-  const { data = [] } = useQuery({
-    queryKey: ["measurements", "pending-or-failed"],
-    queryFn: async () => {
-      const rows = await getMeasurements(["pending", "failed"]);
-      return rows.map(({ id, data }) => ({ key: id, data }));
-    },
-    networkMode: "always",
-  });
-  return data;
-}
 
 export function useMeasurements() {
   const queryClient = useQueryClient();

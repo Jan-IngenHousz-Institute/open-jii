@@ -15,6 +15,7 @@ export function useGetUserProfile(userId: string | undefined, enabled = true) {
     // Greeting/profile screen fall back gracefully; don't blast the user with
     // a toast on a missing profile.
     meta: { suppressToast: true },
+    networkMode: "offlineFirst",
   });
 
   return { userProfile: data?.body, isLoading, error };

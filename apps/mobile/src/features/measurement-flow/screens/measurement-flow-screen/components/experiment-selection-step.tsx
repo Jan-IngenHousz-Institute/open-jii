@@ -67,7 +67,7 @@ export function ExperimentSelectionStep() {
   const handleStart = () => {
     if (!selectedExperimentId || !experimentFlowReady) return;
     clearHistory();
-    setExperimentId(selectedExperimentId);
+    setExperimentId(selectedExperimentId, selectedExperiment?.label);
   };
 
   return (
