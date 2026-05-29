@@ -35,6 +35,14 @@ export function NearbyDeviceRow({ device, isPairing, onPair, isLast }: NearbyDev
 
   const sigKey = signalKey(device.rssi);
 
+  const macId = device.type === "bluetooth-classic" || device.type === "ble" ? device.id : null;
+  const hasName = device.name.trim().length > 0;
+  const title = hasName ? device.name : (macId ?? t("deviceList.fallbackName"));
+  const subParts: string[] = [];
+  if (hasName && macId) subParts.push(`(${macId})`);
+  if (sigKey) subParts.push(t("deviceList.signal", { strength: t(`deviceList.${sigKey}`) }));
+  const subtitle = subParts.join("  ·  ");
+
   return (
     <View
       className={[
@@ -47,11 +55,11 @@ export function NearbyDeviceRow({ device, isPairing, onPair, isLast }: NearbyDev
       </View>
       <View className="min-w-0 flex-1">
         <Text className="text-on-surface text-[15px] font-semibold" numberOfLines={1}>
-          {device.name || t("deviceList.fallbackName")}
+          {title}
         </Text>
-        {sigKey ? (
-          <Text className="text-muted-body mt-0.5 text-[12px]">
-            {t("deviceList.signal", { strength: t(`deviceList.${sigKey}`) })}
+        {subtitle ? (
+          <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
+            {subtitle}
           </Text>
         ) : null}
       </View>
