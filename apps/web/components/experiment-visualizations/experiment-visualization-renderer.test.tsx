@@ -37,14 +37,6 @@ describe("ExperimentVisualizationRenderer", () => {
     );
   });
 
-  it("renders the unsupported placeholder for an unregistered chart type", () => {
-    const visualization = createVisualization({ chartType: "alluvial" });
-    render(
-      <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
-    );
-    expect(screen.getByText("errors.unsupportedChartType")).toBeInTheDocument();
-  });
-
   it("renders title and description by default", () => {
     const visualization = createVisualization({ name: "Title", description: "Subtitle" });
     render(

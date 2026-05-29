@@ -231,14 +231,21 @@ export function QuestionNode({ node }: QuestionNodeProps) {
           </TouchableOpacity>
         </View>
       )}
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={true}
-        keyboardShouldPersistTaps="handled"
-      >
+      {content.kind === "multi_choice" ? (
+        // FlashList in MultipleChoiceQuestion handles scrolling + virtualization.
+        // Wrapping it in a ScrollView would force every option to mount eagerly
+        // and tank perf on flows with thousands of options.
         <View className="flex-1">{renderQuestionType()}</View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="flex-1">{renderQuestionType()}</View>
+        </ScrollView>
+      )}
     </View>
   );
 }

@@ -83,30 +83,21 @@ describe("ExperimentVisualizationsList", () => {
   it.each([
     ["line", "workspace.charts.types.line"],
     ["scatter", "workspace.charts.types.scatter"],
-    ["customChart", "customChart"],
   ] as const)("displays chart type %s as '%s'", (chartType, expected) => {
     render(
-      <ExperimentVisualizationsList
-        visualizations={[viz({ chartType: chartType as "line" })]}
-        experimentId={expId}
-      />,
+      <ExperimentVisualizationsList visualizations={[viz({ chartType })]} experimentId={expId} />,
     );
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
   it.each([
-    // Both line and scatter are in the "basic" family — color is family-keyed
+    // Both line and scatter are in the "basic" family. Color is family-keyed
     // so the list scales to 20+ chart types without per-type bookkeeping.
     ["line", "workspace.charts.types.line", "bg-badge-published"],
     ["scatter", "workspace.charts.types.scatter", "bg-badge-published"],
-    // Unregistered chart types fall back to the neutral badge.
-    ["unknown", "unknown", "bg-badge-archived"],
   ] as const)("type pill for %s carries class %s", (chartType, label, className) => {
     render(
-      <ExperimentVisualizationsList
-        visualizations={[viz({ chartType: chartType as "line" })]}
-        experimentId={expId}
-      />,
+      <ExperimentVisualizationsList visualizations={[viz({ chartType })]} experimentId={expId} />,
     );
     expect(screen.getByText(label)).toHaveClass(className);
   });

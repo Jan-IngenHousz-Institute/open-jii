@@ -114,15 +114,6 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
     );
   }
 
-  if (!def) {
-    return (
-      <CanvasPlaceholder
-        title={t("errors.unsupportedChartType")}
-        body={t("errors.chartTypeNotSupported")}
-      />
-    );
-  }
-
   if (!hasAnyColumn) {
     return (
       <CanvasPlaceholder

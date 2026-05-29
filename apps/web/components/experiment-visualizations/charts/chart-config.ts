@@ -20,6 +20,16 @@ import type {
   ReferenceLinesOptions,
   SecondaryAxisOptions,
 } from "./chart-options";
+import type { AlluvialChartOptions } from "./scientific/alluvial/options";
+import type { CarpetChartOptions } from "./scientific/carpet/options";
+import type { ContourChartOptions } from "./scientific/contour/options";
+import type { CorrelationMatrixChartOptions } from "./scientific/correlation-matrix/options";
+import type { HeatmapChartOptions } from "./scientific/heatmap/options";
+import type { ParallelCoordinatesChartOptions } from "./scientific/parallel-coordinates/options";
+import type { PolarChartOptions } from "./scientific/polar/options";
+import type { RadarChartOptions } from "./scientific/radar/options";
+import type { TernaryChartOptions } from "./scientific/ternary/options";
+import type { WindRoseChartOptions } from "./scientific/wind-rose/options";
 import type { BoxPlotChartOptions } from "./statistical/box-plot/options";
 import type { DensityPlot2DChartOptions } from "./statistical/density-plot-2d/options";
 import type { DensityPlotChartOptions } from "./statistical/density-plot/options";
@@ -40,6 +50,16 @@ export type ChartFormConfig = PlotlyChartConfig &
   PieChartOptions &
   HistogramChartOptions &
   Histogram2DChartOptions &
+  HeatmapChartOptions &
+  ContourChartOptions &
+  CorrelationMatrixChartOptions &
+  ParallelCoordinatesChartOptions &
+  RadarChartOptions &
+  PolarChartOptions &
+  WindRoseChartOptions &
+  TernaryChartOptions &
+  AlluvialChartOptions &
+  CarpetChartOptions &
   FacetOptions &
   ReferenceLinesOptions &
   DensityPlot2DChartOptions &
