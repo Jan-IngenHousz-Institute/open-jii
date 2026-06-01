@@ -85,10 +85,20 @@ describe("WorkbookSidebar", () => {
       />,
     );
 
-    // The outer row button carries `draggable=true` so the user can grab
-    // anywhere on the card, not just the GripVertical icon.
-    const rows = screen.getAllByRole("button").filter((el) => el.getAttribute("draggable"));
+    // The whole row is the dnd-kit sortable drag source (not just the grip),
+    // marked with aria-roledescription="sortable" on the row button.
+    const rows = screen
+      .getAllByRole("button")
+      .filter((el) => el.getAttribute("aria-roledescription") === "sortable");
     expect(rows.length).toBeGreaterThanOrEqual(2);
-    rows.forEach((row) => expect(row).toHaveAttribute("draggable", "true"));
+  });
+
+  it("does not make rows draggable when onReorder is omitted", () => {
+    render(<WorkbookSidebar cells={[markdownCell, protocolCell]} onCellClick={onCellClick} />);
+
+    const sortable = screen
+      .getAllByRole("button")
+      .filter((el) => el.getAttribute("aria-roledescription") === "sortable");
+    expect(sortable).toHaveLength(0);
   });
 });
