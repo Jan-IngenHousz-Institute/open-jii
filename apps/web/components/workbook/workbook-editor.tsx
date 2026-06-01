@@ -351,6 +351,7 @@ export function WorkbookEditor({
           onRunAll={onRunAll}
           onStopExecution={onStopExecution ?? noop}
           onClearOutputs={onClearOutputs ?? noop}
+          readOnly={readOnly}
         />
       )}
 
