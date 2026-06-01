@@ -13,7 +13,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api/contract";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
-import { WorkbookEditor, createDefaultCell } from "./workbook-editor";
+import {
+  WorkbookEditor,
+  createDefaultCell,
+  reorderCellsWithGluedOutput,
+} from "./workbook-editor";
 
 vi.mock("./workbook-code-editor", () => ({
   WorkbookCodeEditor: ({ value }: { value: string }) => (
@@ -365,5 +369,42 @@ describe("WorkbookEditor — answer auto-creates an output cell", () => {
     expect(outputs).toHaveLength(1);
     expect(outputs[0].id).toBe("o-1");
     expect(outputs[0].data).toEqual({ answer: "new" });
+  });
+});
+
+describe("reorderCellsWithGluedOutput", () => {
+  // q0 owns out0; q1 owns out1.
+  const q0 = createQuestionCell({ id: "q0" });
+  const out0 = createOutputCell({ id: "out0", producedBy: "q0" });
+  const q1 = createQuestionCell({ id: "q1" });
+  const out1 = createOutputCell({ id: "out1", producedBy: "q1" });
+  const ids = (cells: WorkbookCell[]) => cells.map((c) => c.id);
+
+  it("carries the glued output cell when moving a question forward", () => {
+    const q2 = createQuestionCell({ id: "q2" });
+    const out2 = createOutputCell({ id: "out2", producedBy: "q2" });
+    const cells = [q0, out0, q1, out1, q2, out2];
+    // Drop q0 before q2's original slot (raw insertion index 4).
+    const result = reorderCellsWithGluedOutput(cells, 0, 4);
+    expect(ids(result)).toEqual(["q1", "out1", "q0", "out0", "q2", "out2"]);
+  });
+
+  it("carries the glued output cell when moving a question to the end", () => {
+    const cells = [q0, out0, q1, out1];
+    const result = reorderCellsWithGluedOutput(cells, 0, cells.length);
+    expect(ids(result)).toEqual(["q1", "out1", "q0", "out0"]);
+  });
+
+  it("moves a question backward with its output", () => {
+    const cells = [q0, out0, q1, out1];
+    const result = reorderCellsWithGluedOutput(cells, 2, 0);
+    expect(ids(result)).toEqual(["q1", "out1", "q0", "out0"]);
+  });
+
+  it("moves a lone cell (no output) without disturbing others", () => {
+    const md = createMarkdownCell({ id: "md" });
+    const cells = [md, q0, out0];
+    const result = reorderCellsWithGluedOutput(cells, 0, cells.length);
+    expect(ids(result)).toEqual(["q0", "out0", "md"]);
   });
 });

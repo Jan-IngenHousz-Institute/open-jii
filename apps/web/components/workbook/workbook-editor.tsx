@@ -90,6 +90,28 @@ export function createDefaultCell(
   }
 }
 
+/**
+ * Move the cell at `fromIndex` to the raw insertion point `toIndex` in the
+ * full cell list. A question's output cell is glued to it, so moving the
+ * question carries its output along; the insertion index is adjusted for the
+ * number of cells removed before it. Used by the sidebar reorder, where output
+ * cells are hidden and would otherwise be left behind.
+ */
+export function reorderCellsWithGluedOutput(
+  cells: WorkbookCell[],
+  fromIndex: number,
+  toIndex: number,
+): WorkbookCell[] {
+  const updated = [...cells];
+  const source = updated[fromIndex];
+  const next = updated[fromIndex + 1];
+  const groupLen = next && next.type === "output" && next.producedBy === source.id ? 2 : 1;
+  const moved = updated.splice(fromIndex, groupLen);
+  const adjustedIndex = toIndex > fromIndex ? toIndex - groupLen : toIndex;
+  updated.splice(adjustedIndex, 0, ...moved);
+  return updated;
+}
+
 export function WorkbookEditor({
   cells,
   onCellsChange,
@@ -286,10 +308,7 @@ export function WorkbookEditor({
 
   const handleSidebarReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
-      const updated = [...cells];
-      const [moved] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, moved);
-      onCellsChange(updated);
+      onCellsChange(reorderCellsWithGluedOutput(cells, fromIndex, toIndex));
     },
     [cells, onCellsChange],
   );

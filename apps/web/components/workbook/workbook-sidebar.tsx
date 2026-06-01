@@ -121,9 +121,12 @@ export function WorkbookSidebar({
       return;
     }
     const fromOriginal = visibleCells[dragIndex].originalIndex;
+    // Insertion point in the full cell list. `onReorder` is responsible for any
+    // index adjustment after removing the dragged cell (and its glued output),
+    // so we pass the raw target index here.
     const toOriginal =
       dropIndex < visibleCells.length ? visibleCells[dropIndex].originalIndex : cells.length;
-    onReorder(fromOriginal, toOriginal > fromOriginal ? toOriginal - 1 : toOriginal);
+    onReorder(fromOriginal, toOriginal);
     setDragIndex(null);
     setDropIndex(null);
   }, [dragIndex, dropIndex, visibleCells, cells.length, onReorder]);
