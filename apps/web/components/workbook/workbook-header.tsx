@@ -58,6 +58,7 @@ interface WorkbookHeaderProps {
   isSticky?: boolean;
   flowchartOpen?: boolean;
   onToggleFlowchart?: () => void;
+  readOnly?: boolean;
 }
 
 function downloadFile(content: string, filename: string, type: string) {
@@ -111,6 +112,7 @@ export function WorkbookHeader({
   flowchartOpen,
   onToggleFlowchart,
   isSticky,
+  readOnly = false,
 }: WorkbookHeaderProps) {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -386,29 +388,32 @@ export function WorkbookHeader({
         <span className="hidden xl:inline">Clear all</span>
       </button>
 
-      {isRunningAll ? (
-        <button
-          className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
-          style={{ background: "#DC2626", borderRadius: 8, color: "#FFFFFF" }}
-          onClick={onStopExecution}
-        >
-          <Square className="size-4 fill-current" />
-          <span className="hidden xl:inline">Stop</span>
-        </button>
-      ) : (
-        <button
-          className={cn(
-            "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
-            cells.length === 0 && "cursor-not-allowed opacity-50",
-          )}
-          style={{ background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }}
-          onClick={onRunAll}
-          disabled={cells.length === 0}
-        >
-          <Play className="size-4 fill-current" />
-          <span className="hidden xl:inline">Run all</span>
-        </button>
-      )}
+      {/* Only the workbook creator can run cells; the backend rejects updates
+          from others, so non-creators don't see the Run all / Stop control. */}
+      {!readOnly &&
+        (isRunningAll ? (
+          <button
+            className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
+            style={{ background: "#DC2626", borderRadius: 8, color: "#FFFFFF" }}
+            onClick={onStopExecution}
+          >
+            <Square className="size-4 fill-current" />
+            <span className="hidden xl:inline">Stop</span>
+          </button>
+        ) : (
+          <button
+            className={cn(
+              "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+              cells.length === 0 && "cursor-not-allowed opacity-50",
+            )}
+            style={{ background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }}
+            onClick={onRunAll}
+            disabled={cells.length === 0}
+          >
+            <Play className="size-4 fill-current" />
+            <span className="hidden xl:inline">Run all</span>
+          </button>
+        ))}
     </div>
   );
 }

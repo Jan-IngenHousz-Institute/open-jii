@@ -96,9 +96,12 @@ export function CellWrapper({
   readOnly = false,
 }: CellWrapperProps) {
   const [localCollapsed, setLocalCollapsed] = useState(isCollapsed);
-  const collapsed = onToggleCollapse ? isCollapsed : localCollapsed;
+  // Non-creators cannot persist collapse state (the update is rejected by the
+  // backend), so the expand/collapse control is hidden and the cell stays open.
+  const collapsed = readOnly ? false : onToggleCollapse ? isCollapsed : localCollapsed;
 
   const handleToggle = () => {
+    if (readOnly) return;
     if (onToggleCollapse) {
       onToggleCollapse(!collapsed);
     } else {
@@ -131,15 +134,17 @@ export function CellWrapper({
             borderColor: "#EDF2F6",
           }}
         >
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-              {collapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
+          {!readOnly && (
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                {collapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          )}
 
           <div
             className="flex items-center gap-2 rounded px-1 py-0.5"
