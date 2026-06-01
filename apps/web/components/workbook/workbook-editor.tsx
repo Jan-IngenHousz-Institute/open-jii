@@ -104,8 +104,8 @@ export function reorderCellsWithGluedOutput(
 ): WorkbookCell[] {
   const updated = [...cells];
   const source = updated[fromIndex];
-  const next = updated[fromIndex + 1];
-  const groupLen = next && next.type === "output" && next.producedBy === source.id ? 2 : 1;
+  const next = fromIndex + 1 < updated.length ? updated[fromIndex + 1] : undefined;
+  const groupLen = next?.type === "output" && next.producedBy === source.id ? 2 : 1;
   const moved = updated.splice(fromIndex, groupLen);
   const adjustedIndex = toIndex > fromIndex ? toIndex - groupLen : toIndex;
   updated.splice(adjustedIndex, 0, ...moved);
