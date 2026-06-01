@@ -1,10 +1,11 @@
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDismissedAlertsStore } from "~/features/measurement-flow/stores/dismissed-alerts-store";
-import { useActiveAlerts } from "~/shared/ui/hooks/use-active-alerts";
-import { AlertBanner } from "~/shared/ui/widgets/alert-banner";
+import { useActiveAlerts } from "~/features/alerts/hooks/use-active-alerts";
+import { useDismissedAlertsStore } from "~/features/alerts/stores/dismissed-alerts-store";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms/lib/__generated/sdk";
+
+import { AlertBanner } from "./alert-banner";
 
 export function AlertsBar() {
   const insets = useSafeAreaInsets();

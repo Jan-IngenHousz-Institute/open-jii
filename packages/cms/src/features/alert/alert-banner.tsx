@@ -11,13 +11,12 @@ import { Button } from "@repo/ui/components/button";
 
 import type { ComponentAlertFieldsFragment } from "../../lib/__generated/sdk";
 import { CtfRichText } from "../contentful/ctf-rich-text";
+import { getSeverity } from "./severity";
 
 interface AlertBannerProps {
   alert: ComponentAlertFieldsFragment;
   onDismiss: () => void;
 }
-
-type Severity = "info" | "warning" | "critical";
 
 const bannerVariants = cva(
   "relative isolate flex items-center gap-x-6 overflow-hidden px-6 py-2.5 transition-[opacity,transform] duration-300 ease-out sm:px-3.5",
@@ -77,7 +76,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
   const [shown, setShown] = useState(false);
   const inspectorProps = useContentfulInspectorMode({ entryId: alert.sys.id });
 
-  const severity = (alert.severity ?? "info") as Severity;
+  const severity = getSeverity(alert);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setShown(true));

@@ -8,6 +8,7 @@ import { X } from "lucide-react-native";
 import React from "react";
 import { Image, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useActiveAlerts } from "~/features/alerts/hooks/use-active-alerts";
 import { useExperiment } from "~/features/experiments/hooks/use-experiment";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
 import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
@@ -16,7 +17,6 @@ import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-ex
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
-import { useActiveAlerts } from "~/shared/ui/hooks/use-active-alerts";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";

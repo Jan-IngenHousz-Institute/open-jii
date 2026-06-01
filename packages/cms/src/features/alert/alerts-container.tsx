@@ -4,12 +4,11 @@ import React, { useEffect, useRef, useState } from "react";
 
 import type { ComponentAlertFieldsFragment } from "../../lib/__generated/sdk";
 import { AlertBanner } from "./alert-banner";
+import { severityRank } from "./severity";
 
 interface AlertsContainerProps {
   alerts: ComponentAlertFieldsFragment[];
 }
-
-const SEVERITY_ORDER = { critical: 0, warning: 1, info: 2 } as const;
 
 export const AlertsContainer: React.FC<AlertsContainerProps> = ({ alerts }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,11 +30,7 @@ export const AlertsContainer: React.FC<AlertsContainerProps> = ({ alerts }) => {
 
   const visible = alerts
     .filter((a) => !dismissed.has(a.internalName ?? a.sys.id))
-    .sort((a, b) => {
-      const aOrder = SEVERITY_ORDER[(a.severity ?? "info") as keyof typeof SEVERITY_ORDER] ?? 2;
-      const bOrder = SEVERITY_ORDER[(b.severity ?? "info") as keyof typeof SEVERITY_ORDER] ?? 2;
-      return aOrder - bOrder;
-    });
+    .sort((a, b) => severityRank(a) - severityRank(b));
 
   useEffect(() => {
     const el = containerRef.current;

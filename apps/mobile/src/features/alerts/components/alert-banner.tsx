@@ -6,8 +6,7 @@ import { CtfRichText } from "~/shared/ui/ctf-rich-text";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms";
-
-export type Severity = "critical" | "warning" | "info";
+import { getSeverity } from "@repo/cms/alert";
 
 const bannerVariants = cva("overflow-hidden border-b border-black/5 dark:border-white/10", {
   variants: {
@@ -59,7 +58,7 @@ export interface AlertBannerProps {
 }
 
 export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerProps) {
-  const severity = (alert.severity ?? "info") as Severity;
+  const severity = getSeverity(alert);
   const themeColors = useThemeColors();
 
   const Icon = typeIcons[alert.type ?? ""] ?? null;

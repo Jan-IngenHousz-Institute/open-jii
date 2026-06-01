@@ -25,6 +25,10 @@
       "types": "./dist/lib/__generated/sdk.d.ts",
       "default": "./dist/lib/__generated/sdk.js"
     },
+    "./alert": {
+      "types": "./dist/features/alert/severity.d.ts",
+      "default": "./dist/features/alert/severity.js"
+    },
     "./client": {
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"

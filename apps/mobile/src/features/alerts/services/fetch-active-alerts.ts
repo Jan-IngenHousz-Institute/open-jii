@@ -51,13 +51,7 @@ export async function fetchActiveAlerts(locale: string): Promise<ComponentAlertF
     audience: ["mobile", "both"],
   });
 
-  const alerts = (data.componentAlertCollection?.items ?? []).filter(
+  return (data.componentAlertCollection?.items ?? []).filter(
     (item): item is ComponentAlertFieldsFragment => item !== null,
   );
-  console.log(
-    "[contentful] fetched alerts:",
-    alerts.length,
-    JSON.stringify(alerts.map((a) => ({ id: a.sys.id, title: a.title, severity: a.severity }))),
-  );
-  return alerts;
 }
