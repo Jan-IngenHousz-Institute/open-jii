@@ -627,8 +627,9 @@ describe("Scenario F — INDEXES: status filter performance", () => {
     dbNoIndex = createDb();
     dbIndex = createDb();
     dropIndexes(dbNoIndex);
-    seedCompressed(dbNoIndex, N_ROWS);
-    seedCompressed(dbIndex, N_ROWS);
+    // Plain seed: payload compression is irrelevant for index vs full-scan timing.
+    seedPlain(dbNoIndex, N_ROWS);
+    seedPlain(dbIndex, N_ROWS);
   }, HOOK_TIMEOUT);
 
   it("WHERE status IN (...) with and without index", () => {
@@ -1125,7 +1126,8 @@ describe("Scenario M — Pagination LIMIT/OFFSET cost", () => {
 
   beforeAll(() => {
     db = createDb();
-    seedCompressed(db, SCAN_N);
+    // Plain seed: payload compression is irrelevant for LIMIT/OFFSET scan cost.
+    seedPlain(db, SCAN_N);
     addIndexes(db);
   }, HOOK_TIMEOUT);
 
