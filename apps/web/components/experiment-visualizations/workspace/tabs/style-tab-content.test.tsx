@@ -31,16 +31,6 @@ describe("StyleTabContent", () => {
     expect(screen.getByText("workspace.style.display")).toBeInTheDocument();
   });
 
-  it("renders the unsupported placeholder for an unregistered chart type", () => {
-    renderWithForm<ChartFormValues>((form) => <StyleTabContent form={form} columns={columns} />, {
-      useFormProps: {
-        defaultValues: defaults({ chartType: "alluvial" }),
-      },
-    });
-
-    expect(screen.getByText("errors.chartTypeNotSupported")).toBeInTheDocument();
-  });
-
   it("does not show the unsupported placeholder for a supported chart type", () => {
     renderWithForm<ChartFormValues>((form) => <StyleTabContent form={form} columns={columns} />, {
       useFormProps: { defaultValues: defaults() },

@@ -102,9 +102,6 @@ export function VisualizationWorkspace({
 
   const applyChartType = (type: ChartType) => {
     const def = getChartTypeDef(type);
-    if (!def) {
-      return;
-    }
     const tableName = form.getValues("dataConfig.tableName");
     form.setValue("chartFamily", def.family, { shouldDirty: true });
     form.setValue("config", def.defaultConfig(), { shouldDirty: true });

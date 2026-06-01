@@ -13,7 +13,8 @@
     "inProgress": "IN PROGRESS",
     "stepOfTotal": "Step {{step}} of {{total}}",
     "stepOfTotalWithPlot": "Step {{step}} of {{total}} · {{plot}}",
-    "action": "Continue measurement"
+    "action": "Continue measurement",
+    "untitled": "Measurement in progress"
   },
   "cta": {
     "title": "Start a measurement",
