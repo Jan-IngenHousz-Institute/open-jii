@@ -95,8 +95,8 @@ export function ColumnPicker({ available, value, onChange, isLoading }: ColumnPi
 
   const handleContainerDragLeave = (e: DragEvent<HTMLDivElement>) => {
     // Crossing into a child fires dragleave but stays inside the container.
-    const next = e.relatedTarget as Node | null;
-    if (next && e.currentTarget.contains(next)) return;
+    const next = e.relatedTarget;
+    if (next instanceof Node && e.currentTarget.contains(next)) return;
     setDropInsertIndex(null);
   };
 

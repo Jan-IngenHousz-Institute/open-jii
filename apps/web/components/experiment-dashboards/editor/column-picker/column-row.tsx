@@ -64,6 +64,8 @@ export function ColumnRow({
     onDropRow(computeInsertAt(e));
   };
 
+  const handleRemove = () => onRemove(name);
+
   return (
     <div
       ref={rowRef}
@@ -94,7 +96,7 @@ export function ColumnRow({
       )}
       <button
         type="button"
-        onClick={() => onRemove(name)}
+        onClick={handleRemove}
         className="text-muted-foreground hover:text-destructive shrink-0 rounded p-0.5"
         aria-label={t("columnPicker.remove", { name })}
       >

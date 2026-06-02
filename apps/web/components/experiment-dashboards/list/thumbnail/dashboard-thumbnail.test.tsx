@@ -69,7 +69,7 @@ describe("DashboardThumbnail", () => {
     expect(region.style.height).toBe("100px");
   });
 
-  it("falls back to the empty thumbnail placeholder text — not the renderer — for zero widgets", () => {
+  it("falls back to the empty thumbnail placeholder text (not the renderer) for zero widgets", () => {
     const dashboard = createExperimentDashboard({ widgets: [] });
     render(<DashboardThumbnail dashboard={dashboard} experimentId="exp-1" />);
     expect(screen.getByText("widget.emptyDashboardDescription")).toBeInTheDocument();

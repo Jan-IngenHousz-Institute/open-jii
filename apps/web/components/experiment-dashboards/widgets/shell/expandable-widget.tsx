@@ -25,12 +25,13 @@ export function ExpandableWidget({ title, children }: ExpandableWidgetProps) {
   const { t } = useTranslation("experimentDashboards");
   const [open, setOpen] = useState(false);
   const tabSlotEl = useContext(WidgetCardTabSlotContext);
+  const handleOpen = () => setOpen(true);
 
   const tab = (
     <button
       type="button"
       aria-label={t("widget.expand")}
-      onClick={() => setOpen(true)}
+      onClick={handleOpen}
       data-no-drag=""
       className="bg-card text-muted-foreground hover:text-foreground focus-visible:ring-primary/40 pointer-events-auto inline-flex translate-y-1 items-center justify-center rounded-t-md border-x border-t px-2 py-1 opacity-0 shadow-sm transition-[opacity,transform] duration-150 focus-visible:translate-y-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 group-hover/widget:translate-y-0 group-hover/widget:opacity-100"
     >

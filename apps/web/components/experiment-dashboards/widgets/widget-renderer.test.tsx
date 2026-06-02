@@ -42,7 +42,7 @@ describe("WidgetRenderer", () => {
       config: { visualizationId: undefined, showTitle: true, showDescription: false },
     });
     render(<WidgetRenderer widget={widget} experimentId="exp-1" />);
-    // The visualization renderer is dynamic — wait for it to mount.
+    // The visualization renderer is dynamic; wait for it to mount.
     expect(await screen.findByText("widget.emptyVisualization")).toBeInTheDocument();
   });
 });

@@ -30,7 +30,7 @@
 }
 
 /* While the user is actively resizing or dragging, force the inner
- * widget card to drop its rounded corners — matches the selected look
+ * widget card to drop its rounded corners; matches the selected look
  * so handles never sit on a curve. */
 .dashboard-canvas-root .react-grid-item.resizing [data-dashboard-widget],
 .dashboard-canvas-root .react-grid-item.react-draggable-dragging [data-dashboard-widget] {
@@ -50,7 +50,7 @@
   opacity: 1 !important;
 }
 
-/* Kill RGL's `::after` chevron — it draws an L-bracket via right+bottom
+/* Kill RGL's `::after` chevron: it draws an L-bracket via right+bottom
  * borders that rotates with the per-axis transform and shows as a tick
  * at each corner. We render our own visuals via `::before`. */
 .dashboard-canvas-root .react-resizable-handle::after {
@@ -134,8 +134,8 @@
 
 /* --- Corner handles: small squares centered on the geometric corner.
  * Selected widgets drop their rounded corners (see WidgetCard), so the
- * 8×8 visible square sits exactly on the corner point — no curve to
- * fight. Hit area (14×14) extends 7px out from the corner in each axis. */
+ * 8×8 visible square sits exactly on the corner point (no curve to
+ * fight). Hit area (14×14) extends 7px out from the corner in each axis. */
 .dashboard-canvas-root .react-resizable-handle-nw,
 .dashboard-canvas-root .react-resizable-handle-ne,
 .dashboard-canvas-root .react-resizable-handle-sw,
@@ -184,7 +184,7 @@
 
 /* Handles only show on selection (or while the user is mid-action).
  * The selected class lives on the inner widget card, not on the
- * `.react-grid-item` wrapper RGL controls — `:has()` walks down to
+ * `.react-grid-item` wrapper RGL controls, so `:has()` walks down to
  * find it. Keeps the canvas calm at rest. */
 .dashboard-canvas-root
   .react-grid-item:has(.dashboard-widget--selected)

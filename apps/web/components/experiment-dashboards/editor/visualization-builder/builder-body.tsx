@@ -121,8 +121,12 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
     setPendingChartType(null);
   };
 
+  const handleCancelSwitch = () => setPendingChartType(null);
+
   const handleTabChange = (v: string) => {
-    setActiveTab(v as BuilderTab);
+    if (v === "widget" || v === "data" || v === "style") {
+      setActiveTab(v);
+    }
   };
 
   const chartTypePicker = (
@@ -182,7 +186,7 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingChartType(null)}>
+            <AlertDialogCancel onClick={handleCancelSwitch}>
               {tCommon("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmSwitch}>

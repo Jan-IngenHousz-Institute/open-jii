@@ -230,12 +230,13 @@ interface SectionTabProps {
 
 function SectionTab({ section, isActive, label, onSelect }: SectionTabProps) {
   const Icon = section.icon;
+  const handleClick = () => onSelect(section.key);
   return (
     <button
       type="button"
       aria-pressed={isActive}
       aria-label={label}
-      onClick={() => onSelect(section.key)}
+      onClick={handleClick}
       className={cn(
         "inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
         isActive

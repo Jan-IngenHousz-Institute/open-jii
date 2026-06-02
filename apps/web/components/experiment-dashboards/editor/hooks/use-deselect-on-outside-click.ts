@@ -37,8 +37,8 @@ export function useDeselectOnOutsideClick({
       if (selectedWidgetIdRef.current === null) {
         return;
       }
-      const target = e.target as HTMLElement | null;
-      if (!target) {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) {
         return;
       }
       if (target.closest("[data-dashboard-widget]")) {

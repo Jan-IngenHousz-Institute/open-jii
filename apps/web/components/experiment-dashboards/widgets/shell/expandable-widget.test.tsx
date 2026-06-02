@@ -27,7 +27,7 @@ describe("ExpandableWidget", () => {
     expect(screen.getByRole("button", { name: "widget.expand" })).toBeInTheDocument();
   });
 
-  it("renders nothing extra without a card slot context — inline content only", () => {
+  it("renders nothing extra without a card slot context (inline content only)", () => {
     render(
       <ExpandableWidget title="Plot">
         <div>chart body</div>

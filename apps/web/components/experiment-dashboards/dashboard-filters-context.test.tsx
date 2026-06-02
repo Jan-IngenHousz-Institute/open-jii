@@ -127,7 +127,7 @@ describe("useDashboardFiltersForTable", () => {
 });
 
 describe("useDashboardFilterWidget", () => {
-  it("throws outside a provider — filter widgets cannot function without one", () => {
+  it("throws outside a provider (filter widgets cannot function without one)", () => {
     const originalError = console.error;
     console.error = () => {
       /* swallow React's error log */

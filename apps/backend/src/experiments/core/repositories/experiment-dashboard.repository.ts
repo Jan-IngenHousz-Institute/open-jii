@@ -34,14 +34,7 @@ export class ExperimentDashboardRepository {
         .where(eq(experimentDashboards.experimentId, experimentId))
         .orderBy(desc(experimentDashboards.createdAt));
 
-      return results.map((result) => {
-        const augmented = result.experiment_dashboards as ExperimentDashboardDto;
-        augmented.createdByName =
-          result.firstName && result.lastName
-            ? `${result.firstName} ${result.lastName}`
-            : undefined;
-        return augmented;
-      });
+      return results.map((r) => this.toDashboardDto(r));
     });
   }
 
@@ -76,14 +69,7 @@ export class ExperimentDashboardRepository {
         .innerJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
         .where(eq(experimentDashboards.id, insertResults[0].id));
 
-      return results.map((result) => {
-        const augmented = result.experiment_dashboards as ExperimentDashboardDto;
-        augmented.createdByName =
-          result.firstName && result.lastName
-            ? `${result.firstName} ${result.lastName}`
-            : undefined;
-        return augmented;
-      });
+      return results.map((r) => this.toDashboardDto(r));
     });
   }
 
@@ -103,13 +89,7 @@ export class ExperimentDashboardRepository {
       if (result.length === 0) {
         return null;
       }
-
-      const augmented = result[0].experiment_dashboards as ExperimentDashboardDto;
-      augmented.createdByName =
-        result[0].firstName && result[0].lastName
-          ? `${result[0].firstName} ${result[0].lastName}`
-          : undefined;
-      return augmented;
+      return this.toDashboardDto(result[0]);
     });
   }
 
@@ -133,14 +113,7 @@ export class ExperimentDashboardRepository {
         .innerJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
         .where(eq(experimentDashboards.id, id));
 
-      return results.map((result) => {
-        const augmented = result.experiment_dashboards as ExperimentDashboardDto;
-        augmented.createdByName =
-          result.firstName && result.lastName
-            ? `${result.firstName} ${result.lastName}`
-            : undefined;
-        return augmented;
-      });
+      return results.map((r) => this.toDashboardDto(r));
     });
   }
 
@@ -148,5 +121,18 @@ export class ExperimentDashboardRepository {
     return tryCatch(async () => {
       await this.database.delete(experimentDashboards).where(eq(experimentDashboards.id, id));
     });
+  }
+
+  // Drizzle's jsonb columns surface as `unknown`, so the cast bridges to the
+  // zod-validated DTO shape here at the read boundary. Done once per row.
+  private toDashboardDto(row: {
+    experiment_dashboards: typeof experimentDashboards.$inferSelect;
+    firstName: string | null;
+    lastName: string | null;
+  }): ExperimentDashboardDto {
+    return {
+      ...(row.experiment_dashboards as Omit<ExperimentDashboardDto, "createdByName">),
+      createdByName: row.firstName && row.lastName ? `${row.firstName} ${row.lastName}` : undefined,
+    };
   }
 }

@@ -27,6 +27,7 @@ export function DashboardModebar({ visible }: DashboardModebarProps) {
   const pickTool = (next: DashboardTool) => {
     setTool(tool === next ? "cursor" : next);
   };
+  const handleCursor = () => setTool("cursor");
   const noop = () => undefined;
 
   return (
@@ -36,25 +37,36 @@ export function DashboardModebar({ visible }: DashboardModebarProps) {
           icon={MousePointer2}
           label={t("editor.modebar.cursor")}
           active={tool === "cursor"}
-          onClick={() => setTool("cursor")}
+          onClick={handleCursor}
         />
         <Separator orientation="vertical" className="mx-0.5 h-5" />
-        {PLACEMENT_TOOLS.map((placementTool) => {
-          const meta = widgetMetaForTool(placementTool);
-          return (
-            <ToolButton
-              key={placementTool}
-              icon={meta.icon}
-              label={t(meta.labelKey)}
-              active={tool === placementTool}
-              onClick={() => pickTool(placementTool)}
-            />
-          );
-        })}
+        {PLACEMENT_TOOLS.map((placementTool) => (
+          <PlacementToolButton
+            key={placementTool}
+            placementTool={placementTool}
+            active={tool === placementTool}
+            onPick={pickTool}
+          />
+        ))}
         <Separator orientation="vertical" className="mx-0.5 h-5" />
         <ToolButton icon={Undo2} label={t("editor.modebar.undo")} disabled onClick={noop} />
         <ToolButton icon={Redo2} label={t("editor.modebar.redo")} disabled onClick={noop} />
       </ToolbarShell>
     </TooltipProvider>
+  );
+}
+
+interface PlacementToolButtonProps {
+  placementTool: PlacementTool;
+  active: boolean;
+  onPick: (tool: PlacementTool) => void;
+}
+
+function PlacementToolButton({ placementTool, active, onPick }: PlacementToolButtonProps) {
+  const { t } = useTranslation("experimentDashboards");
+  const meta = widgetMetaForTool(placementTool);
+  const handleClick = () => onPick(placementTool);
+  return (
+    <ToolButton icon={meta.icon} label={t(meta.labelKey)} active={active} onClick={handleClick} />
   );
 }

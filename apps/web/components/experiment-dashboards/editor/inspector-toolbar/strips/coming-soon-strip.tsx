@@ -10,7 +10,7 @@ export function ComingSoonStrip() {
   return (
     <div className="text-muted-foreground inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs">
       <Construction className="size-3.5" />
-      <span>{t("editor.inspector.comingSoon", "Coming next")}</span>
+      <span>{t("editor.inspector.comingSoon")}</span>
     </div>
   );
 }
