@@ -22,7 +22,12 @@ export function HomeDeviceCard() {
   let title: string;
   let subtitle: string;
   if (isConnected) {
-    title = connectedDevice?.name ?? "MultispeQ";
+    const name = connectedDevice?.name ?? "MultispeQ";
+    const id = connectedDevice?.id;
+    const isBt = connectedDevice?.type === "bluetooth-classic" || connectedDevice?.type === "ble";
+    // Last 4 MAC octets match the MultispeQ sticker, so field users can tell devices apart.
+    const mac = isBt && id ? id.split(/[:-]/).slice(-4).join(":") : null;
+    title = mac ? `${name} (${mac})` : name;
     subtitle =
       batteryLevel != null
         ? t("device.connectedSub", { battery: batteryLevel })
