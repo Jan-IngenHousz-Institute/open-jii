@@ -8,18 +8,11 @@ import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-const HEX_CHARS = new Set("0123456789abcdefABCDEF");
+const MAC_PATTERN = /^(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
 
 function macTail(id: string): string | null {
-  const sep = id.includes(":") ? ":" : id.includes("-") ? "-" : null;
-  if (!sep) return null;
-  const parts = id.split(sep);
-  if (parts.length !== 6) return null;
-  for (const p of parts) {
-    if (p.length !== 2) return null;
-    for (const ch of p) if (!HEX_CHARS.has(ch)) return null;
-  }
-  return parts.slice(-4).join(":");
+  if (!MAC_PATTERN.test(id)) return null;
+  return id.split(/[:-]/).slice(-4).join(":");
 }
 
 export function HomeDeviceCard() {
