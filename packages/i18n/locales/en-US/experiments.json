@@ -48,6 +48,9 @@
     "lastProcessed": "Last Processed",
     "seeAll": "See all"
   },
+  "dashboards": {
+    "tabLabel": "Dashboards"
+  },
   "flow": {
     "title": "Workbook",
     "legend": "Legend",
