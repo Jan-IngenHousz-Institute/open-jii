@@ -1,155 +1,110 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { useHeaderHeight } from "@react-navigation/elements";
 import { useIsFocused } from "@react-navigation/native";
-import clsx from "clsx";
 import { useKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { X } from "lucide-react-native";
 import React from "react";
-import { Image, View, Text } from "react-native";
+import { Image, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
-import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useExperiment } from "~/features/experiments/hooks/use-experiment";
+import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
+import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
+import { useFlowBackHandler } from "~/features/measurement-flow/hooks/use-flow-back-handler";
+import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-import { EndFlowButton } from "./components/end-flow-button";
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
 import { NavigationButtons } from "./components/navigation-buttons";
 
-type StepLabelTranslator = (key: string) => string;
-
-function getStepLabel(
-  experimentId: string | undefined,
-  currentFlowStep: number,
-  flowNodes: any[],
-  isFlowFinished: boolean,
-  isQuestionsSubmitPending: boolean,
-  t: StepLabelTranslator,
-): string {
-  // No experiment selected yet
-  if (!experimentId) {
-    return t("measurementFlow:screen.stepLabel.chooseExperiment");
-  }
-
-  // Questions-only submit screen
-  if (isQuestionsSubmitPending) {
-    return t("measurementFlow:screen.stepLabel.reviewAnswers");
-  }
-
-  // Flow completed
-  const isFlowCompleted = currentFlowStep >= flowNodes.length;
-  if (isFlowCompleted && isFlowFinished) {
-    return t("measurementFlow:screen.stepLabel.checkRecent");
-  }
-
-  // Get current node and show its name/type
-  const currentNode = flowNodes[currentFlowStep];
-  if (!currentNode) {
-    return "";
-  }
-
-  // You can customize these labels based on node type
-  switch (currentNode.type) {
-    case "instruction":
-      return t("measurementFlow:screen.stepLabel.instruction");
-    case "question":
-      return t("measurementFlow:screen.stepLabel.question");
-    case "measurement":
-      return t("measurementFlow:screen.stepLabel.measurement");
-    case "analysis":
-      return t("measurementFlow:screen.stepLabel.analysis");
-    default:
-      return currentNode.name;
-  }
-}
+const HERO_IMAGE = require("../../../../../assets/flow-header.jpg");
 
 interface MeasurementFlowScreenProps {
   /** Called after flow is ended (e.g. to navigate back to landing) */
   onEndFlowComplete?: () => void;
 }
 
-export function MeasurementFlowScreen({ onEndFlowComplete }: MeasurementFlowScreenProps = {}) {
+export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
-  const { classes } = useTheme();
-  const { t } = useTranslation("measurementFlow");
-  const {
-    resetFlow,
-    flowNodes,
-    currentFlowStep,
-    isFlowFinished,
-    experimentId,
-    isQuestionsSubmitPending,
-  } = useMeasurementFlowStore();
-  const { clearHistory } = useFlowAnswersStore();
-  const { setSelectedExperimentId } = useExperimentSelectionStore();
-  const router = useRouter();
+  // Subscribe only to the field this screen renders against. The auto-pause
+  // and back-handler hooks read the rest of the store via getState() so the
+  // screen doesn't re-render on every flow tick (scanResult, currentFlowStep,
+  // …) and cascade through MeasurementFlowContainer and its children.
+  const experimentId = useMeasurementFlowStore((s) => s.experimentId);
+  const { experiment } = useExperiment(experimentId);
   const isFocused = useIsFocused();
-  const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const openExitSheet = useExitFlowSheetStore((s) => s.open);
+  const router = useRouter();
+  const themeColors = useThemeColors();
+  const { t } = useTranslation("measurementFlow");
 
-  const handleEndFlow = () => {
-    setSelectedExperimentId(undefined);
-    resetFlow();
-    clearHistory();
-    onEndFlowComplete?.();
-    router.navigate("/(tabs)/");
+  const experimentLabel = experiment?.name ?? "";
+  const hasActiveFlow = !!experimentId;
+
+  useFlowBackHandler(hasActiveFlow);
+
+  // Picker state has no tab bar to bail out to (the flow now covers the tabs
+  // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
+  const dismissFlow = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/");
   };
 
-  // Get the dynamic step label
-  const stepLabel = getStepLabel(
-    experimentId,
-    currentFlowStep,
-    flowNodes,
-    isFlowFinished,
-    isQuestionsSubmitPending,
-    t,
-  );
-
   return (
-    <View className={clsx("flex-1", classes.card)} style={{ paddingBottom: insets.bottom }}>
-      {isFocused && <StatusBar style="light" />}
+    <View className="bg-background flex-1">
+      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "auto"} />}
 
-      {/* Background */}
-      <Image
-        source={require("../../../../../assets/flow-header.png")}
-        style={{
-          position: "absolute",
-          width: "100%",
-          height: "30%",
-        }}
-        resizeMode="cover"
-      />
-
-      <LinearGradient
-        colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.75)", "rgba(0,0,0,0.4)"]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 0 }}
-        style={{
-          position: "absolute",
-          width: "100%",
-          height: "30%",
-        }}
-      />
-
-      {/* Foreground */}
-      <View
-        className="flex-1"
-        style={{
-          paddingTop: headerHeight,
-        }}
-      >
-        <View className="mb-4 flex-row items-end px-4">
-          <Text className="mr-2 flex-1 text-lg text-white">{stepLabel}</Text>
-          <EndFlowButton onPress={handleEndFlow} />
+      {hasActiveFlow ? (
+        <>
+          <Image
+            source={HERO_IMAGE}
+            className="absolute left-0 right-0 top-0 h-[42%] w-full"
+            resizeMode="cover"
+          />
+          {/* Brand-teal overlay covers the FULL photo area, not just the
+              FlowHero's bounding box, so the strip between the hero and the
+              body's rounded corner stays consistently masked. */}
+          <LinearGradient
+            colors={[colors.jii.darkGreen + "88", colors.jii.darkerGreen + "D0"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 0,
+              height: "48%",
+              pointerEvents: "none",
+            }}
+          />
+          <FlowHero title={experimentLabel} onExitPress={openExitSheet} />
+        </>
+      ) : (
+        <View style={{ paddingTop: insets.top }} className="px-2 pb-1">
+          <TouchableOpacity
+            onPress={dismissFlow}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t("hero.exitLabel")}
+            className="h-11 w-11 items-center justify-center"
+          >
+            <X size={26} color={themeColors.onSurface} />
+          </TouchableOpacity>
         </View>
+      )}
 
+      <View className="flex-1">
         <MeasurementFlowContainer />
 
         <NavigationButtons />
       </View>
+
+      <ExitFlowSheet />
     </View>
   );
 }

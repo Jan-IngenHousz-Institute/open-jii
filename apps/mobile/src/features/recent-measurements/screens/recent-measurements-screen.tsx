@@ -1,124 +1,209 @@
-import { clsx } from "clsx";
-import { ChevronsLeft, Download } from "lucide-react-native";
-import React, { useCallback, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
+import { FlashList } from "@shopify/flash-list";
+import { useNavigation } from "expo-router";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { ActivityIndicator, InteractionManager, View } from "react-native";
+import { MeasurementsDayHeader } from "~/features/recent-measurements/components/measurements-day-header";
+import { MeasurementsHeaderActions } from "~/features/recent-measurements/components/measurements-header-actions";
+import { MeasurementsListEmpty } from "~/features/recent-measurements/components/measurements-list-empty";
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
+import { MeasurementsRow } from "~/features/recent-measurements/components/measurements-row";
 import { MeasurementsToolbar } from "~/features/recent-measurements/components/measurements-toolbar";
-import { SwipeableMeasurementRow } from "~/features/recent-measurements/components/swipeable-measurement-row";
 import type {
   MeasurementFilter,
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
+import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
-import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
+import type { MeasurementDaySection } from "~/shared/utils/group-measurements-by-day";
+import { groupMeasurementsByDay } from "~/shared/utils/group-measurements-by-day";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("recent-measurements");
+
+type ListRow =
+  | { kind: "header"; key: string; section: MeasurementDaySection }
+  | { kind: "row"; key: string; item: MeasurementItem };
+
+const FLASHLIST_CONTENT_STYLE = { paddingTop: 12, paddingBottom: 16 };
 
 export function RecentMeasurementsScreen() {
-  const { colors, classes } = useTheme();
-  const { t } = useTranslation(["common", "recentMeasurements"]);
+  const { colors } = useTheme();
+  const navigation = useNavigation();
+  const { i18n } = useTranslation(["common", "recentMeasurements"]);
   const [filter, setFilter] = useState<MeasurementFilter>("all");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const closeModal = useCallback(() => setModal({ kind: "none" }), []);
+  const isFocused = useIsFocused();
+  const [peekToken, setPeekToken] = useState(0);
 
   const {
     measurements,
-    hasAnyMeasurements,
-    syncedCount,
-    unsyncedCount,
-    uploadingCount,
-    isUploading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     confirmSync,
     confirmDelete,
     confirmSyncAll,
     confirmDeleteAllSynced,
-    handleExport,
     saveComment,
   } = useRecentMeasurementsActions(filter);
 
-  const renderItem = ({ item }: { item: MeasurementItem }) => (
-    <SwipeableMeasurementRow
-      id={item.key}
-      timestamp={item.timestamp}
-      experimentName={item.experimentName}
-      status={item.status}
-      questions={item.questions}
-      onPress={() => setModal({ kind: "questions", measurement: item })}
-      onComment={
-        item.status === "pending" || item.status === "failed"
-          ? () => setModal({ kind: "comment", measurement: item })
-          : undefined
+  // [perf] Defer the first heavy list commit (50 rows × a gesture-handler +
+  // reanimated swipeable each ≈ 200 ms on the shared JS thread) until the
+  // tab-transition interaction settles. paho parses PUBACKs on that same JS
+  // thread, so committing the list synchronously on focus stalls the in-flight
+  // acks ~1 s and inflates upload times. Yielding first lets paho drain the
+  // queued acks, then the list mounts. Stays true after the first paint so
+  // returning to the tab is instant. See OJD-1470.
+  const [listReady, setListReady] = useState(false);
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => setListReady(true));
+    // Fallback so a never-cleared interaction handle can't strand the list
+    // behind the spinner; 500 ms still clears most tab transitions first.
+    const fallback = setTimeout(() => setListReady(true), 500);
+    return () => {
+      task.cancel();
+      clearTimeout(fallback);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <MeasurementsHeaderActions
+          onSyncAll={confirmSyncAll}
+          onDeleteAllSynced={confirmDeleteAllSynced}
+        />
+      ),
+    });
+  }, [navigation, confirmSyncAll, confirmDeleteAllSynced]);
+
+  // The list row is lean (no `measurement_result`). Loading the full payload
+  // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
+  const openModal = useCallback(async (kind: "questions" | "comment", id: string) => {
+    const full = await getMeasurement(id);
+    if (full) setModal({ kind, measurement: full });
+  }, []);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
+
+  const data = useMemo<ListRow[]>(() => {
+    const t0 = Date.now();
+    const sections = groupMeasurementsByDay(measurements, undefined, locale);
+    const out: ListRow[] = [];
+    for (const section of sections) {
+      out.push({ kind: "header", key: `h:${section.key}`, section });
+      for (const item of section.data) {
+        out.push({ kind: "row", key: item.key, item });
       }
-      onDelete={() => confirmDelete(item)}
-      onSync={
-        item.status === "pending" || item.status === "failed" ? () => confirmSync(item) : undefined
-      }
-      hasComment={
-        !!getCommentFromMeasurementResult(item.data.measurementResult as Record<string, unknown>)
-      }
-    />
+    }
+    const build_ms = Date.now() - t0;
+    if (build_ms > 12) {
+      log.info("build-rows-slow", {
+        build_ms,
+        measurements: measurements.length,
+        rows: out.length,
+      });
+    }
+    return out;
+  }, [measurements, locale]);
+
+  const firstRowKey = useMemo(() => data.find((r) => r.kind === "row")?.key, [data]);
+
+  // Peek the most-recent row each time the screen gains focus (once the
+  // deferred list is ready) so the swipe action stays discoverable.
+  useEffect(() => {
+    if (isFocused && listReady && firstRowKey) setPeekToken((t) => t + 1);
+  }, [isFocused, listReady, firstRowKey]);
+
+  const itemsById = useMemo(() => {
+    const map = new Map<string, MeasurementItem>();
+    for (const item of measurements) map.set(item.key, item);
+    return map;
+  }, [measurements]);
+
+  const onRowPress = useCallback(
+    (id: string) => {
+      void openModal("questions", id);
+    },
+    [openModal],
+  );
+  const onRowComment = useCallback(
+    (id: string) => {
+      void openModal("comment", id);
+    },
+    [openModal],
+  );
+  const onRowDelete = useCallback(
+    (id: string) => {
+      const item = itemsById.get(id);
+      if (item) confirmDelete(item);
+    },
+    [itemsById, confirmDelete],
+  );
+  const onRowSync = useCallback(
+    (id: string) => {
+      const item = itemsById.get(id);
+      if (item) confirmSync(item);
+    },
+    [itemsById, confirmSync],
   );
 
-  const hasItems = measurements.length > 0;
+  const renderItem = useCallback(
+    ({ item: row }: { item: ListRow }) => {
+      if (row.kind === "header") {
+        return <MeasurementsDayHeader section={row.section} />;
+      }
+      return (
+        <MeasurementsRow
+          item={row.item}
+          onPress={onRowPress}
+          onComment={onRowComment}
+          onDelete={onRowDelete}
+          onSync={onRowSync}
+          peekToken={row.key === firstRowKey ? peekToken : 0}
+        />
+      );
+    },
+    [onRowPress, onRowComment, onRowDelete, onRowSync, peekToken, firstRowKey],
+  );
+
+  const keyExtractor = useCallback((row: ListRow) => row.key, []);
+  const getItemType = useCallback((row: ListRow) => row.kind, []);
+
+  const listEmpty = useMemo(() => <MeasurementsListEmpty filter={filter} />, [filter]);
 
   return (
-    <View className={clsx("flex-1", classes.background)}>
-      <MeasurementsToolbar
-        filter={filter}
-        onFilterChange={setFilter}
-        syncedCount={syncedCount}
-        unsyncedCount={unsyncedCount}
-        uploadingCount={uploadingCount}
-        isUploading={isUploading}
-        onSyncAll={confirmSyncAll}
-        onDeleteAllSynced={confirmDeleteAllSynced}
-      />
+    <View className="bg-background flex-1">
+      <MeasurementsToolbar filter={filter} onFilterChange={setFilter} />
 
-      {hasItems && (
-        <View className="flex-row items-center justify-end gap-1 px-4 pb-2">
-          <ChevronsLeft size={13} color={colors.neutral.gray500} />
-          <Text className={clsx("text-sm font-normal", classes.textMuted)}>
-            {t("recentMeasurements:list.swipeHint")}
-          </Text>
+      {listReady ? (
+        <FlashList
+          data={data}
+          keyExtractor={keyExtractor}
+          getItemType={getItemType}
+          renderItem={renderItem}
+          contentContainerStyle={FLASHLIST_CONTENT_STYLE}
+          ListEmptyComponent={listEmpty}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          drawDistance={150}
+        />
+      ) : (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={colors.inactive} />
         </View>
       )}
-
-      <FlatList
-        data={measurements}
-        keyExtractor={(item) => item.key}
-        renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: 0, paddingBottom: 16, flexGrow: 1 }}
-        windowSize={10}
-        maxToRenderPerBatch={10}
-        removeClippedSubviews
-        ListEmptyComponent={
-          <View className="flex-1 items-center justify-center p-4">
-            <Text className={clsx("text-center text-lg", classes.textSecondary)}>
-              {t("recentMeasurements:list.emptyTitle")}
-            </Text>
-            <Text className={clsx("mt-2 text-center", classes.textMuted)}>
-              {filter === "all"
-                ? t("recentMeasurements:list.emptyHintAll")
-                : filter === "synced"
-                  ? t("recentMeasurements:list.emptyHintSynced")
-                  : t("recentMeasurements:list.emptyHintUnsynced")}
-            </Text>
-          </View>
-        }
-        ListFooterComponent={
-          <View className="px-4 pt-4">
-            <Button
-              title={t("recentMeasurements:list.exportButton")}
-              variant="tertiary"
-              onPress={handleExport}
-              isDisabled={!hasAnyMeasurements}
-              icon={<Download size={16} color={colors.brand} strokeWidth={1.4} />}
-            />
-          </View>
-        }
-      />
 
       <MeasurementsModals state={modal} onClose={closeModal} onSaveComment={saveComment} />
     </View>

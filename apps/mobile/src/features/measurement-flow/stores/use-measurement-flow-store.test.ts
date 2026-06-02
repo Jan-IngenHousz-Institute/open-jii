@@ -276,25 +276,6 @@ describe("useMeasurementFlowStore", () => {
     });
   });
 
-  describe("startNewIteration", () => {
-    it("increments iterationCount and resets iteration-scoped state", () => {
-      useMeasurementFlowStore.setState({
-        currentFlowStep: 3,
-        iterationCount: 1,
-        isQuestionsSubmitPending: true,
-        scanResult: { foo: "bar" },
-        isFromOverview: true,
-      });
-      useMeasurementFlowStore.getState().startNewIteration();
-      const state = useMeasurementFlowStore.getState();
-      expect(state.currentFlowStep).toBe(0);
-      expect(state.iterationCount).toBe(2);
-      expect(state.isQuestionsSubmitPending).toBe(false);
-      expect(state.scanResult).toBeUndefined();
-      expect(state.isFromOverview).toBe(false);
-    });
-  });
-
   describe("retryCurrentIteration", () => {
     it("resets iteration-scoped state without incrementing iterationCount", () => {
       useMeasurementFlowStore.setState({

@@ -1,0 +1,4 @@
+ALTER TABLE "experiment_visualizations" ALTER COLUMN "chart_type" SET DATA TYPE text;--> statement-breakpoint
+DROP TYPE "public"."chart_type";--> statement-breakpoint
+CREATE TYPE "public"."chart_type" AS ENUM('line', 'scatter', 'bar', 'pie', 'area', 'dot-plot', 'bubble', 'lollipop', 'box-plot', 'histogram', 'violin-plot', 'density-plot', 'ridge-plot', 'histogram-2d', 'density-plot-2d', 'spc-control-chart', 'heatmap', 'contour', 'carpet', 'ternary', 'parallel-coordinates', 'wind-rose', 'radar', 'polar', 'correlation-matrix', 'alluvial');--> statement-breakpoint
+ALTER TABLE "experiment_visualizations" ALTER COLUMN "chart_type" SET DATA TYPE chart_type USING "chart_type"::chart_type;

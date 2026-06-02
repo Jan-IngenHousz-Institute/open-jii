@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentVisualizationsPage from "./page";
 
-vi.mock("~/components/experiment-visualizations/experiment-visualizations-list", () => ({
+vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-list", () => ({
   default: ({
     visualizations,
     experimentId,

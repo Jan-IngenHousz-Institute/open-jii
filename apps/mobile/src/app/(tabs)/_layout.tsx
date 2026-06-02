@@ -1,28 +1,41 @@
-import { Tabs, useSegments } from "expo-router";
-import { FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
-import { View } from "react-native";
+import { Tabs, useRouter } from "expo-router";
+import { FlaskConical, House, Settings, Workflow } from "lucide-react-native";
+import { Easing, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DeviceSheet } from "~/features/connection/components/device-sheet";
 import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
 import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
 import { usePruneExpiredMeasurements } from "~/features/recent-measurements/hooks/use-prune-expired-measurements";
+import { useTranslation } from "~/shared/i18n";
+import { AnimatedTabBar } from "~/shared/ui/animated-tab-bar";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { DevIndicator } from "~/shared/ui/widgets/dev-indicator";
-import { DeviceConnectionWidget } from "~/shared/ui/widgets/device-connection-widget";
+import { DeviceChip } from "~/shared/ui/widgets/device-chip";
+import { OpenJiiLogo } from "~/shared/ui/widgets/openjii-logo";
 
 export default function TabLayout() {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const segments = useSegments();
+  const router = useRouter();
+  const { t: tHome } = useTranslation("home");
 
   useAutoReconnect();
   usePruneExpiredMeasurements();
 
-  const inMeasureTab = segments.includes("measurement-flow");
-
   return (
     <View className="flex-1">
       <Tabs
+        tabBar={(props) => <AnimatedTabBar {...props} hidden={false} />}
         screenOptions={{
+          animation: "fade",
+          transitionSpec: {
+            animation: "timing",
+            config: { duration: 400, easing: Easing.inOut(Easing.ease) },
+          },
+          sceneStyle: {
+            paddingBottom: 60 + insets.bottom,
+            backgroundColor: themeColors.background,
+          },
           tabBarActiveTintColor: themeColors.brand,
           tabBarInactiveTintColor: themeColors.inactive,
           tabBarStyle: {
@@ -30,7 +43,6 @@ export default function TabLayout() {
             borderTopColor: themeColors.border,
             height: 60 + insets.bottom,
             paddingBottom: insets.bottom,
-            display: inMeasureTab ? "none" : "flex",
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -44,28 +56,34 @@ export default function TabLayout() {
             fontSize: 24,
           },
           headerShadowVisible: false,
-          headerRight: () => <DeviceConnectionWidget />,
+          headerRight: () => <DeviceChip />,
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
-            title: "Connect",
-            tabBarIcon: ({ color, size }) => <Bluetooth size={size} color={color} />,
+            title: tHome("tab.title"),
+            tabBarLabel: "Home",
+            tabBarIcon: ({ color, size }) => <House size={size} color={color} />,
+            headerTitle: () => <OpenJiiLogo height={52} />,
+            headerTitleAlign: "left",
           }}
         />
         <Tabs.Screen
-          name="measurement-flow"
+          name="measure"
           options={{
-            title: "Flow",
+            title: "Measure",
             tabBarLabel: "Measure",
-            headerTransparent: true,
-            headerTintColor: "white",
-            headerStyle: {
-              backgroundColor: "transparent",
-            },
-            headerShadowVisible: false,
+            headerShown: false,
             tabBarIcon: ({ color, size }) => <Workflow size={size} color={color} />,
+          }}
+          listeners={{
+            // Launch the flow as a pushed screen over the tabs (native slide
+            // transition) rather than switching into a flat tab scene.
+            tabPress: (e) => {
+              e.preventDefault();
+              router.push("/measurement-flow");
+            },
           }}
         />
         <Tabs.Screen
@@ -101,6 +119,8 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
+
+      <DeviceSheet />
     </View>
   );
 }

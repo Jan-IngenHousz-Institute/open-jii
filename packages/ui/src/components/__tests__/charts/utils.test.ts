@@ -1,3 +1,4 @@
+import type { Layout } from "plotly.js";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import type { PlotlyChartConfig } from "../../charts/types";
@@ -12,7 +13,11 @@ import {
   createPlotlyConfig,
   detectAxisType,
   refineAxisType,
+  extendLayoutForFacets,
+  defaultFacetColumns,
+  applyReferenceLines,
 } from "../../charts/utils";
+import type { ReferenceLineSpec } from "../../charts/utils";
 
 // Mock DOM APIs
 Object.defineProperty(window, "WebGLRenderingContext", {
@@ -305,22 +310,26 @@ describe("utils", () => {
 
     it("renders a horizontal legend above the plot when legendPosition is 'top'", () => {
       const layout = createBaseLayout({ ...baseConfig, legendPosition: "top" });
+      // Container-anchored: y: 1 at the container top, yanchor: 'top'.
       expect(layout.legend).toMatchObject({
         x: 0.5,
-        y: 1.1,
+        y: 1,
+        yref: "container",
         xanchor: "center",
-        yanchor: "bottom",
+        yanchor: "top",
         orientation: "h",
       });
     });
 
     it("renders a horizontal legend below the plot when legendPosition is 'bottom'", () => {
       const layout = createBaseLayout({ ...baseConfig, legendPosition: "bottom" });
+      // Container-anchored: y: 0 at the container bottom, yanchor: 'bottom'.
       expect(layout.legend).toMatchObject({
         x: 0.5,
-        y: -0.2,
+        y: 0,
+        yref: "container",
         xanchor: "center",
-        yanchor: "top",
+        yanchor: "bottom",
         orientation: "h",
       });
     });
@@ -447,6 +456,82 @@ describe("utils", () => {
       expect(layout.transition).toEqual({
         duration: 750,
         easing: "cubic",
+      });
+    });
+
+    it("shrinks chart-level title and legend fonts in veryCompact tier", () => {
+      const config: PlotlyChartConfig = { ...baseConfig, title: "T" };
+      const layout = createBaseLayout(config, { veryCompact: true });
+      // veryCompact implies compact and snug, so all tier flags trigger.
+      expect((layout.title as { font: { size: number } }).font.size).toBe(11);
+      expect(layout.legend?.font?.size).toBe(9);
+      expect(layout.hoverlabel?.font?.size).toBe(10);
+    });
+
+    it("shrinks cell-axis fonts and adds nticks cap under cellCompact", () => {
+      const layout = createBaseLayout(baseConfig, { cellCompact: true });
+      expect(layout.xaxis?.tickfont?.size).toBe(10);
+      expect(layout.yaxis?.tickfont?.size).toBe(10);
+      expect(layout.xaxis?.nticks).toBe(8);
+      expect(layout.yaxis?.nticks).toBe(8);
+      expect(layout.xaxis?.ticklen).toBe(3);
+    });
+
+    it("uses ultra-tight margins in veryCompact and grows them per legend side", () => {
+      const baseLayout = createBaseLayout(baseConfig, { veryCompact: true });
+      expect(baseLayout.margin).toMatchObject({ l: 24, r: 8, t: 16, b: 20 });
+
+      const bottomLegend = createBaseLayout(
+        { ...baseConfig, legendPosition: "bottom" },
+        { veryCompact: true },
+      );
+      // Bottom legend reserves at least 64px of bottom margin.
+      expect(bottomLegend.margin?.b).toBe(64);
+    });
+
+    it("forces legend to bottom under ultraCompact regardless of legendPosition", () => {
+      const layout = createBaseLayout(
+        { ...baseConfig, legendPosition: "right" },
+        { ultraCompact: true },
+      );
+      expect(layout.legend?.yref).toBe("container");
+      expect(layout.legend?.orientation).toBe("h");
+      expect(layout.legend?.yanchor).toBe("bottom");
+    });
+
+    it("leaves an inside legend in place even under ultraCompact", () => {
+      const layout = createBaseLayout(
+        { ...baseConfig, legendPosition: "inside-top-right" },
+        { ultraCompact: true },
+      );
+      // Inside legends overlay the plot; no need to force bottom.
+      expect(layout.legend?.xanchor).toBe("right");
+      expect(layout.legend?.yanchor).toBe("top");
+    });
+
+    it("nudges a right legend past the colorbar when hasColorbar is set", () => {
+      const layout = createBaseLayout(baseConfig, { hasColorbar: true });
+      // Default legendPosition is "right"; colorbar shifts x from 1.02 → 1.18.
+      expect(layout.legend?.x).toBe(1.18);
+    });
+
+    it("forces a right legend to bottom under compact + hasColorbar", () => {
+      const layout = createBaseLayout(
+        { ...baseConfig, legendPosition: "right" },
+        { compact: true, hasColorbar: true },
+      );
+      expect(layout.legend?.orientation).toBe("h");
+      expect(layout.legend?.yref).toBe("container");
+    });
+
+    it("renders inside-bottom-left legend at the bottom-left corner of the plot", () => {
+      const layout = createBaseLayout({ ...baseConfig, legendPosition: "inside-bottom-left" });
+      expect(layout.legend).toMatchObject({
+        x: 0.02,
+        y: 0.02,
+        xanchor: "left",
+        yanchor: "bottom",
+        orientation: "v",
       });
     });
   });
@@ -632,6 +717,28 @@ describe("utils", () => {
       expect(config.responsive).toBe(false);
       expect(config.staticPlot).toBe(true);
     });
+
+    it("switches modebar to hover-only under snug", () => {
+      const config = createPlotlyConfig(baseConfig, { snug: true });
+      expect(config.displayModeBar).toBe("hover");
+      expect(config.displaylogo).toBe(false);
+    });
+
+    it("switches modebar to hover-only under compact", () => {
+      const config = createPlotlyConfig(baseConfig, { compact: true });
+      expect(config.displayModeBar).toBe("hover");
+    });
+
+    it("disables the modebar entirely under veryCompact", () => {
+      const config = createPlotlyConfig(baseConfig, { veryCompact: true });
+      expect(config.displayModeBar).toBe(false);
+      expect(config.displaylogo).toBe(false);
+    });
+
+    it("keeps modebar off when showModeBar is false even under snug", () => {
+      const config = createPlotlyConfig({ ...baseConfig, showModeBar: false }, { snug: true });
+      expect(config.displayModeBar).toBe(false);
+    });
   });
 
   describe("detectAxisType", () => {
@@ -714,6 +821,329 @@ describe("utils", () => {
         title: { text: "X" },
         showgrid: true,
       });
+    });
+  });
+
+  describe("defaultFacetColumns", () => {
+    it("returns 1 for an empty or single-cell grid", () => {
+      expect(defaultFacetColumns(0)).toBe(1);
+      expect(defaultFacetColumns(1)).toBe(1);
+    });
+
+    it("returns ceil(sqrt(n)) for typical n", () => {
+      expect(defaultFacetColumns(2)).toBe(2);
+      expect(defaultFacetColumns(4)).toBe(2);
+      expect(defaultFacetColumns(5)).toBe(3);
+      expect(defaultFacetColumns(9)).toBe(3);
+      expect(defaultFacetColumns(10)).toBe(4);
+    });
+
+    it("caps at the cell count itself", () => {
+      expect(defaultFacetColumns(2)).toBeLessThanOrEqual(2);
+      expect(defaultFacetColumns(3)).toBe(2);
+    });
+  });
+
+  describe("extendLayoutForFacets", () => {
+    const baseConfig: PlotlyChartConfig = {
+      theme: "light",
+      xAxisTitle: "X",
+      yAxisTitle: "Y",
+    };
+    const baseLayout = createBaseLayout(baseConfig);
+
+    function getKey(layout: Partial<Plotly.Layout>, key: string): Record<string, unknown> {
+      const value = (layout as Record<string, unknown>)[key];
+      if (!value || typeof value !== "object") {
+        throw new Error(`expected layout key '${key}' to be an object`);
+      }
+      return value as Record<string, unknown>;
+    }
+
+    it("replaces single-axis keys with per-cell xaxisN/yaxisN entries", () => {
+      const cells = [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ];
+      const out = extendLayoutForFacets(baseLayout, cells, { rows: 1, columns: 2 });
+      // Cell 0 keeps the unsuffixed key, cell 1 gets xaxis2/yaxis2.
+      expect(out.xaxis).toBeDefined();
+      expect(out.yaxis).toBeDefined();
+      expect((out as Record<string, unknown>).xaxis2).toBeDefined();
+      expect((out as Record<string, unknown>).yaxis2).toBeDefined();
+    });
+
+    it("attaches a grid block with the given row/col/roworder", () => {
+      const cells = [{ title: "A", xaxisId: "x", yaxisId: "y" }];
+      const out = extendLayoutForFacets(baseLayout, cells, {
+        rows: 2,
+        columns: 3,
+        roworder: "bottom to top",
+      });
+      expect(out.grid).toMatchObject({
+        rows: 2,
+        columns: 3,
+        pattern: "independent",
+        roworder: "bottom to top",
+      });
+    });
+
+    it("matches non-first cells to cell 0 when sharedX/sharedY default to true", () => {
+      const cells = [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ];
+      const out = extendLayoutForFacets(baseLayout, cells, { rows: 1, columns: 2 });
+      expect(getKey(out, "xaxis2").matches).toBe("x");
+      expect(getKey(out, "yaxis2").matches).toBe("y");
+    });
+
+    it("drops the matches link when sharedX/sharedY are false", () => {
+      const cells = [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ];
+      const out = extendLayoutForFacets(baseLayout, cells, {
+        rows: 1,
+        columns: 2,
+        sharedX: false,
+        sharedY: false,
+      });
+      const x2 = getKey(out, "xaxis2");
+      expect(x2.matches).toBeUndefined();
+      expect(x2.showticklabels).toBeUndefined();
+    });
+
+    it("only shows X tick labels on the bottom row and Y on the leftmost column", () => {
+      // 2x2 grid: cells 0,1 on top, cells 2,3 on bottom.
+      const cells = [
+        { title: "TL", xaxisId: "x", yaxisId: "y" },
+        { title: "TR", xaxisId: "x2", yaxisId: "y2" },
+        { title: "BL", xaxisId: "x3", yaxisId: "y3" },
+        { title: "BR", xaxisId: "x4", yaxisId: "y4" },
+      ];
+      const out = extendLayoutForFacets(baseLayout, cells, { rows: 2, columns: 2 });
+      // Top row: X ticks hidden.
+      expect(getKey(out, "xaxis").showticklabels).toBe(false);
+      expect(getKey(out, "xaxis2").showticklabels).toBe(false);
+      // Bottom row: X ticks visible.
+      expect(getKey(out, "xaxis3").showticklabels).toBe(true);
+      expect(getKey(out, "xaxis4").showticklabels).toBe(true);
+      // Leftmost column: Y ticks visible.
+      expect(getKey(out, "yaxis").showticklabels).toBe(true);
+      expect(getKey(out, "yaxis3").showticklabels).toBe(true);
+      // Non-leftmost: Y ticks hidden.
+      expect(getKey(out, "yaxis2").showticklabels).toBe(false);
+      expect(getKey(out, "yaxis4").showticklabels).toBe(false);
+    });
+
+    it("emits one annotation per cell with non-empty title and honours titleFontSize", () => {
+      const cells = [
+        { title: "Alpha", xaxisId: "x", yaxisId: "y" },
+        { title: "", xaxisId: "x2", yaxisId: "y2" },
+        { title: "Gamma", xaxisId: "x3", yaxisId: "y3" },
+      ];
+      const out = extendLayoutForFacets(baseLayout, cells, {
+        rows: 1,
+        columns: 3,
+        titleFontSize: 10,
+      });
+      const annotations = (out.annotations ?? []) as Array<Record<string, unknown>>;
+      // Empty-title cell is skipped; remaining two annotations.
+      const labels = annotations.map((a) => a.text);
+      expect(labels).toContain("Alpha");
+      expect(labels).toContain("Gamma");
+      expect(labels).not.toContain("");
+      const alpha = annotations.find((a) => a.text === "Alpha");
+      expect((alpha?.font as { size: number }).size).toBe(10);
+    });
+
+    it("emits one shared X-title annotation and bumps bottom margin when sharedXTitle", () => {
+      const cells = [{ title: "A", xaxisId: "x", yaxisId: "y" }];
+      const out = extendLayoutForFacets(baseLayout, cells, {
+        rows: 1,
+        columns: 1,
+        sharedXTitle: true,
+      });
+      const annotations = (out.annotations ?? []) as Array<Record<string, unknown>>;
+      const sharedX = annotations.find((a) => a.text === "X" && a.xref === "paper");
+      expect(sharedX).toBeDefined();
+      expect(sharedX?.yshift).toBe(-50);
+      expect((out.margin as Record<string, number>).b).toBeGreaterThanOrEqual(90);
+    });
+
+    it("suppresses per-cell X-title when sharedXTitle is on", () => {
+      const cells = [{ title: "A", xaxisId: "x", yaxisId: "y" }];
+      const out = extendLayoutForFacets(baseLayout, cells, {
+        rows: 1,
+        columns: 1,
+        sharedXTitle: true,
+      });
+      expect(getKey(out, "xaxis").title).toBeUndefined();
+    });
+
+    it("emits a rotated shared Y-title and bumps left margin when sharedYTitle", () => {
+      const cells = [{ title: "A", xaxisId: "x", yaxisId: "y" }];
+      const out = extendLayoutForFacets(baseLayout, cells, {
+        rows: 1,
+        columns: 1,
+        sharedYTitle: true,
+      });
+      const annotations = (out.annotations ?? []) as Array<Record<string, unknown>>;
+      const sharedY = annotations.find((a) => a.text === "Y" && a.xref === "paper");
+      expect(sharedY).toBeDefined();
+      expect(sharedY?.textangle).toBe(-90);
+      expect((out.margin as Record<string, number>).l).toBeGreaterThanOrEqual(80);
+    });
+
+    it("does not mutate the input layout", () => {
+      const cells = [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ];
+      const xaxisBefore = baseLayout.xaxis;
+      extendLayoutForFacets(baseLayout, cells, { rows: 1, columns: 2 });
+      // Input's xaxis untouched.
+      expect(baseLayout.xaxis).toBe(xaxisBefore);
+    });
+  });
+
+  describe("applyReferenceLines", () => {
+    // Helpers narrow `Partial<Layout>` fields to plain object arrays for
+    // assertion. Plotly's own union types reject our matchObject shape.
+    function readShapes(layout: { shapes?: unknown }): Array<Record<string, unknown>> {
+      const value = layout.shapes;
+      if (value === undefined) return [];
+      if (!Array.isArray(value)) throw new Error("expected layout.shapes to be an array");
+      return value;
+    }
+    function readAnnotations(layout: { annotations?: unknown }): Array<Record<string, unknown>> {
+      const value = layout.annotations;
+      if (value === undefined) return [];
+      if (!Array.isArray(value)) throw new Error("expected layout.annotations to be an array");
+      return value;
+    }
+    function nth<T>(arr: T[], i: number): T {
+      const v = arr[i];
+      if (v === undefined) throw new Error(`expected index ${i} to exist`);
+      return v;
+    }
+
+    it("is a no-op when referenceLines is undefined or empty", () => {
+      const layout: Partial<Layout> = {};
+      applyReferenceLines(layout, undefined);
+      applyReferenceLines(layout, []);
+      expect(layout.shapes).toBeUndefined();
+      expect(layout.annotations).toBeUndefined();
+    });
+
+    it("emits a vertical line shape anchored to xaxis with y domain", () => {
+      const layout: Partial<Layout> = {};
+      const lines: ReferenceLineSpec[] = [{ axis: "x", value: 5 }];
+      applyReferenceLines(layout, lines);
+      const shapes = readShapes(layout);
+      expect(shapes).toHaveLength(1);
+      expect(nth(shapes, 0)).toMatchObject({
+        type: "line",
+        xref: "x",
+        yref: "y domain",
+        x0: 5,
+        x1: 5,
+        y0: 0,
+        y1: 1,
+        layer: "below",
+      });
+    });
+
+    it("emits a horizontal line shape anchored to yaxis with x domain", () => {
+      const layout: Partial<Layout> = {};
+      applyReferenceLines(layout, [{ axis: "y", value: 7 }]);
+      expect(nth(readShapes(layout), 0)).toMatchObject({
+        type: "line",
+        xref: "x domain",
+        yref: "y",
+        x0: 0,
+        x1: 1,
+        y0: 7,
+        y1: 7,
+      });
+    });
+
+    it("applies user color/dash/width and falls back to defaults", () => {
+      const layout: Partial<Layout> = {};
+      applyReferenceLines(layout, [
+        { axis: "x", value: 1, color: "#ff0000", dash: "dot", width: 3 },
+        { axis: "x", value: 2 },
+      ]);
+      const shapes = readShapes(layout);
+      expect(nth(shapes, 0).line).toEqual({ color: "#ff0000", width: 3, dash: "dot" });
+      // Defaults: #9ca3af / dash / 1.5.
+      expect(nth(shapes, 1).line).toEqual({ color: "#9ca3af", width: 1.5, dash: "dash" });
+    });
+
+    it("skips lines with non-finite value", () => {
+      const layout: Partial<Layout> = {};
+      applyReferenceLines(layout, [
+        { axis: "x", value: Number.NaN },
+        { axis: "y", value: Number.POSITIVE_INFINITY },
+        { axis: "x", value: 2 },
+      ]);
+      expect(readShapes(layout)).toHaveLength(1);
+    });
+
+    it("repeats each line across every cell when cells is provided", () => {
+      const layout: Partial<Layout> = {};
+      const cells = [
+        { xaxisId: "x", yaxisId: "y" },
+        { xaxisId: "x2", yaxisId: "y2" },
+        { xaxisId: "x3", yaxisId: "y3" },
+      ];
+      applyReferenceLines(layout, [{ axis: "x", value: 1 }], { cells });
+      const shapes = readShapes(layout);
+      expect(shapes).toHaveLength(3);
+      expect(shapes.map((s) => s.xref)).toEqual(["x", "x2", "x3"]);
+    });
+
+    it("emits a label annotation only on the first cell", () => {
+      const layout: Partial<Layout> = {};
+      const cells = [
+        { xaxisId: "x", yaxisId: "y" },
+        { xaxisId: "x2", yaxisId: "y2" },
+      ];
+      applyReferenceLines(layout, [{ axis: "x", value: 1, label: "Threshold" }], { cells });
+      const annotations = readAnnotations(layout);
+      expect(annotations).toHaveLength(1);
+      expect(nth(annotations, 0)).toMatchObject({
+        text: "Threshold",
+        xref: "x",
+        yref: "y domain",
+      });
+    });
+
+    it("y-axis labels anchor at the right edge of the first cell", () => {
+      const layout: Partial<Layout> = {};
+      applyReferenceLines(layout, [{ axis: "y", value: 3, label: "target" }]);
+      expect(nth(readAnnotations(layout), 0)).toMatchObject({
+        text: "target",
+        xref: "x domain",
+        yref: "y",
+        xanchor: "right",
+        yanchor: "bottom",
+      });
+    });
+
+    it("appends to existing shapes/annotations rather than replacing them", () => {
+      const existingShape = { type: "rect" as const };
+      const existingAnnotation = { text: "existing" };
+      const layout: Partial<Layout> = {
+        shapes: [existingShape],
+        annotations: [existingAnnotation],
+      };
+      applyReferenceLines(layout, [{ axis: "x", value: 1, label: "new" }]);
+      expect(readShapes(layout)).toHaveLength(2);
+      expect(readAnnotations(layout)).toHaveLength(2);
+      expect(nth(readShapes(layout), 0)).toBe(existingShape);
+      expect(nth(readAnnotations(layout), 0)).toBe(existingAnnotation);
     });
   });
 });

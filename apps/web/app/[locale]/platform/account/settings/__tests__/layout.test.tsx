@@ -42,10 +42,10 @@ describe("AccountSettingsLayout", () => {
   it("marks settings tab as active via aria-current", async () => {
     await renderLayout("/en-US/platform/account/settings");
 
-    const activeLink = screen
-      .getAllByRole("link")
-      .find((el) => el.getAttribute("aria-current") === "page");
-    expect(activeLink).toBeInTheDocument();
+    const activeTab = screen
+      .getAllByRole("tab")
+      .find((el) => el.getAttribute("data-state") === "active");
+    expect(activeTab).toBeInTheDocument();
   });
 
   it("renders disabled tabs without links", async () => {

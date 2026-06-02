@@ -5,6 +5,9 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
 import { isOnline } from "~/shared/utils/is-online";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("query-client");
 
 const CHECK_INTERVAL = 10 * 1000;
 
@@ -58,9 +61,12 @@ export function ConfiguredQueryClientProvider({ children }) {
 
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
-      onError: (error: any) => {
-        console.log("error", error);
+      onError: (error: any, query) => {
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
+        log.warn("query error", { message, status: error?.status });
+        // Queries that gracefully fall back (e.g. user profile) opt out of the
+        // global toast via meta.suppressToast so a 404 doesn't blare at the user.
+        if (query.meta?.suppressToast) return;
         toast.error(message);
       },
     });
@@ -77,6 +83,10 @@ export function ConfiguredQueryClientProvider({ children }) {
       persistOptions={{
         persister: asyncStoragePersister,
         maxAge: Infinity,
+        // Bump when a query's stored shape changes (e.g. useQuery →
+        // useInfiniteQuery). On mismatch the persisted cache is dropped, so
+        // hydrating code doesn't see an old shape and crash.
+        buster: "v2-measurements-infinite-query",
       }}
     >
       {children}

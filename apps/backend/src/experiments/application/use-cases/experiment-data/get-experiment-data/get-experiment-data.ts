@@ -9,13 +9,11 @@ import { ExperimentDto } from "../../../../core/models/experiment.model";
 import { ExperimentDataRepository } from "../../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 
-/**
- * Response is an array of table data
- */
 export type ExperimentDataDto = TableDataDto[];
 
 /**
- * Main use case for getting experiment data
+ * Read experiment table data with one of three behavioural modes
+ * (paginated, projected, or filtered/aggregated) under a single shape.
  */
 @Injectable()
 export class GetExperimentDataUseCase {
@@ -26,9 +24,6 @@ export class GetExperimentDataUseCase {
     private readonly experimentDataRepository: ExperimentDataRepository,
   ) {}
 
-  /**
-   * Execute the use case
-   */
   async execute(
     experimentId: string,
     userId: string,
@@ -42,7 +37,6 @@ export class GetExperimentDataUseCase {
       query,
     });
 
-    // Check if experiment exists and user has access
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
@@ -80,6 +74,9 @@ export class GetExperimentDataUseCase {
           columns,
           orderBy,
           orderDirection = "ASC",
+          filters,
+          aggregation,
+          limit,
         } = query;
 
         if (!tableName) {
@@ -98,10 +95,13 @@ export class GetExperimentDataUseCase {
           experiment,
           tableName,
           columns: parsedColumns,
+          filters,
+          aggregation,
           orderBy,
           orderDirection,
           page,
           pageSize,
+          limit,
         });
       },
     );

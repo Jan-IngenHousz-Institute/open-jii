@@ -71,11 +71,16 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return this.jobsService.triggerJob(jobId, jobParams);
   }
 
+  /**
+   * Trigger the data export job. Booleans are stringified because Databricks
+   * job widgets are string-only on the wire; the PySpark task parses them back.
+   */
   async triggerDataExportJob(
     experimentId: string,
     tableName: string,
     format: string,
     userId: string,
+    anonymizeContributors: boolean,
   ): Promise<Result<DatabricksJobRunResponse>> {
     const jobParams = {
       EXPERIMENT_ID: experimentId,
@@ -83,6 +88,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       FORMAT: format,
       USER_ID: userId,
       CATALOG_NAME: this.configService.getCatalogName(),
+      ANONYMIZE_CONTRIBUTORS: anonymizeContributors ? "true" : "false",
     };
 
     const jobId = this.configService.getDataExportJobIdAsNumber();

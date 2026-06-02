@@ -43,6 +43,7 @@ export const zCreateUserProfileBody = z.object({
   bio: z.string().optional().describe("Bio"),
   organization: z.string().trim().optional().describe("Organization"),
   activated: z.boolean().optional().describe("Whether the profile is active or deactivated"),
+  avatarUrl: z.string().nullable().optional().describe("Avatar URL seeded from OAuth provider"),
 });
 
 export const zCreateUserProfileResponse = z.object({});
@@ -55,6 +56,7 @@ export const zUserProfile = z.object({
   organization: z.string().optional(),
   activated: z.boolean().nullable(),
   email: z.string().email().nullable(),
+  avatarUrl: z.string().nullable().optional(),
 });
 
 export const zUserProfileList = z.array(zUserProfile);

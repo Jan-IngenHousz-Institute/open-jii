@@ -268,11 +268,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
-    // Stable boolean drives the context-management effect. Using a memoized
-    // primitive (rather than a `useCallback`) means the effect only re-runs
-    // when WebGL relevance actually flips, not on every data-array identity
-    // change — the previous shape caused release→reacquire churn on every
-    // keystroke in the editor.
+    // Stable boolean drives the context-management effect. Memoizing a
+    // primitive (vs `useCallback`) means the effect only re-runs when
+    // WebGL relevance flips; the previous shape caused release/reacquire
+    // churn on every keystroke in the editor.
     const needsWebGL = React.useMemo(() => {
       if (!isWebGLEnabled) return false;
       return safeData.some((trace: PlotData) => {

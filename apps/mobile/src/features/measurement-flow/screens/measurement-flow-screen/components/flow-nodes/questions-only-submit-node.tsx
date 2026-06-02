@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
+import { useFinishFlow } from "~/features/measurement-flow/hooks/use-finish-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
@@ -13,6 +14,7 @@ import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/utils/logger";
 import { FLAG_TYPE_LABELS } from "~/shared/utils/measurement-annotations";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/utils/time-sync";
 
@@ -20,15 +22,17 @@ import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
 import { ReadyState } from "./measurement-node/components/ready-state";
 
+const log = createLogger("questions-submit");
+
 export function QuestionsOnlySubmitNode() {
   const {
     experimentId,
     iterationCount,
     flowNodes,
     dismissQuestionsSubmit,
-    finishFlow,
     navigateToQuestionFromOverview,
   } = useMeasurementFlowStore();
+  const finishAndExit = useFinishFlow();
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { experiments } = useExperiments();
@@ -59,16 +63,13 @@ export function QuestionsOnlySubmitNode() {
   };
 
   const handleUpload = async (): Promise<boolean> => {
-    console.log("[questions-submit] handleUpload: invoked", {
-      hasComment: Boolean(trimmedComment),
-      flagType,
-    });
+    log.info("handleUpload invoked", { hasComment: Boolean(trimmedComment), flagType });
     if (!experimentId) {
-      console.log("[questions-submit] handleUpload: missing experimentId");
+      log.warn("handleUpload missing experimentId");
       return false;
     }
     if (!session?.data?.user?.id) {
-      console.log("[questions-submit] handleUpload: missing user id");
+      log.warn("handleUpload missing user id");
       return false;
     }
 
@@ -86,7 +87,7 @@ export function QuestionsOnlySubmitNode() {
       flagType,
     });
 
-    console.log("[questions-submit] handleUpload: returned");
+    log.info("handleUpload returned");
     return true;
   };
 
@@ -103,7 +104,7 @@ export function QuestionsOnlySubmitNode() {
     if (!success) {
       return;
     }
-    finishFlow();
+    finishAndExit();
   };
 
   return (
@@ -141,7 +142,9 @@ export function QuestionsOnlySubmitNode() {
       <View className="flex-row gap-4 px-4 py-3">
         <Button
           title={t("measurementFlow:questionsSubmit.finish")}
-          onPress={() => handleFinish().catch(console.error)}
+          onPress={() =>
+            handleFinish().catch((e) => log.error("handler failed", { err: (e as Error)?.message }))
+          }
           disabled={isUploading || !canUpload}
           variant="tertiary"
           style={{ flex: 1, height: 44, borderColor: "transparent" }}
@@ -152,7 +155,11 @@ export function QuestionsOnlySubmitNode() {
               ? t("measurementFlow:questionsSubmit.uploading")
               : t("measurementFlow:questionsSubmit.submitContinue")
           }
-          onPress={() => handleSubmitAndContinue().catch(console.error)}
+          onPress={() =>
+            handleSubmitAndContinue().catch((e) =>
+              log.error("handler failed", { err: (e as Error)?.message }),
+            )
+          }
           disabled={isUploading || !canUpload}
           style={{ flex: 1, height: 44 }}
         />

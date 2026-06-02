@@ -50,4 +50,77 @@ describe("ChartTypePicker", () => {
 
     expect(onChange).toHaveBeenCalledWith("scatter");
   });
+
+  it("paginates by family, only the active tab's chart types are visible at once", async () => {
+    const user = userEvent.setup();
+    render(<ChartTypePicker value="line" onChange={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
+
+    // Default tab = current chart's family (basic). Statistical and scientific
+    // chart types live on different tabs and shouldn't render until the user
+    // switches.
+    expect(
+      screen.getByRole("button", { name: /workspace\.charts\.types\.scatter/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /workspace\.charts\.types\.histogram/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /workspace\.charts\.types\.heatmap/ }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "workspace.families.scientific" }));
+    expect(
+      await screen.findByRole("button", { name: "workspace.charts.types.heatmap" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /workspace\.charts\.types\.scatter/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens on the family of the current chart so reopening drops the user where they are", async () => {
+    const user = userEvent.setup();
+    render(<ChartTypePicker value="heatmap" onChange={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
+
+    expect(screen.getByRole("tab", { name: "workspace.families.scientific" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "workspace.charts.types.heatmap" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides families that have no registered chart types", async () => {
+    const user = userEvent.setup();
+    render(<ChartTypePicker value="line" onChange={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
+
+    expect(screen.getByRole("tab", { name: "workspace.families.basic" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "workspace.families.statistical" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "workspace.families.scientific" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "workspace.families.3d" })).not.toBeInTheDocument();
+  });
+
+  it("renders a tile for every registered basic chart type", async () => {
+    const user = userEvent.setup();
+    render(<ChartTypePicker value="line" onChange={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
+
+    for (const type of [
+      "line",
+      "scatter",
+      "bar",
+      "area",
+      "dot-plot",
+      "lollipop",
+      "bubble",
+      "pie",
+    ]) {
+      expect(
+        screen.getByRole("button", { name: new RegExp(`workspace\\.charts\\.types\\.${type}`) }),
+      ).toBeInTheDocument();
+    }
+  });
 });

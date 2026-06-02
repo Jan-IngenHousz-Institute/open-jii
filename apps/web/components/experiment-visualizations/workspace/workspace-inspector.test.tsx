@@ -3,8 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataColumn, ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
 
-import type { ChartFormValues } from "../charts/form-values";
-import { lineChartType } from "../charts/line";
+import { lineChartType } from "../charts/basic/line";
+import type { ChartFormValues } from "../charts/chart-config";
+import { DataSourcesFieldArrayProvider } from "./context/data-sources-field-array-context";
 import { WorkspaceInspector } from "./workspace-inspector";
 
 function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
@@ -45,17 +46,20 @@ function renderInspector(opts: RenderOpts = {}) {
     onTableChange,
     ...renderWithForm<ChartFormValues>(
       (form) => (
-        <WorkspaceInspector
-          form={form}
-          tables={opts.tablesError ? [] : tables}
-          isTablesLoading={opts.isTablesLoading ?? false}
-          tablesError={opts.tablesError}
-          selectedTableName={opts.selectedTableName ?? ""}
-          onTableChange={onTableChange}
-          columns={columns}
-          isColumnsLoading={opts.isColumnsLoading ?? false}
-          columnsError={opts.columnsError}
-        />
+        <DataSourcesFieldArrayProvider form={form}>
+          <WorkspaceInspector
+            form={form}
+            experimentId="test-experiment"
+            tables={opts.tablesError ? [] : tables}
+            isTablesLoading={opts.isTablesLoading ?? false}
+            tablesError={opts.tablesError}
+            selectedTableName={opts.selectedTableName ?? ""}
+            onTableChange={onTableChange}
+            columns={columns}
+            isColumnsLoading={opts.isColumnsLoading ?? false}
+            columnsError={opts.columnsError}
+          />
+        </DataSourcesFieldArrayProvider>
       ),
       { useFormProps: { defaultValues: opts.formDefaults ?? defaults() } },
     ),
@@ -107,14 +111,17 @@ describe("WorkspaceInspector", () => {
     // render; existing helper short-circuits to `tables` when no error.
     renderWithForm<ChartFormValues>(
       (form) => (
-        <WorkspaceInspector
-          form={form}
-          tables={[]}
-          selectedTableName=""
-          onTableChange={vi.fn()}
-          columns={columns}
-          isColumnsLoading={false}
-        />
+        <DataSourcesFieldArrayProvider form={form}>
+          <WorkspaceInspector
+            form={form}
+            experimentId="test-experiment"
+            tables={[]}
+            selectedTableName=""
+            onTableChange={vi.fn()}
+            columns={columns}
+            isColumnsLoading={false}
+          />
+        </DataSourcesFieldArrayProvider>
       ),
       { useFormProps: { defaultValues: defaults() } },
     );

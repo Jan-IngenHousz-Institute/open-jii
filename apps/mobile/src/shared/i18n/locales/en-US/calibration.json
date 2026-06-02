@@ -1,12 +1,9 @@
 {
   "demoDisclaimer": {
     "badge": "Demo Mode",
-    "body": "This calibration flow is currently running in demonstration mode. All measurements and calculations are simulated for testing purposes only."
+    "body": "This calibration is currently running in demonstration mode. All measurements and calculations are simulated for testing purposes only."
   },
   "flow": {
-    "toastStarted": "Calibration started. Please follow the instructions.",
-    "toastGainComplete": "Gain calibration completed. Proceeding to measurements.",
-    "toastPanelMeasured": "Panel #{{panel}} measured. Next: Panel #{{next}}",
     "toastComplete": "Calibration completed successfully!",
     "toastProcessingError": "Error processing calibration data. Please try again."
   },

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { primaryKey, check, index, unique } from "drizzle-orm/pg-core";
+import { primaryKey, check, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -153,6 +153,7 @@ export const experiments = pgTable("experiments", {
   embargoUntil: timestamp("embargo_until")
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
     .notNull(),
+  anonymizeContributors: boolean("anonymize_contributors").default(false).notNull(),
   workbookId: uuid("workbook_id").references(() => workbooks.id, { onDelete: "set null" }),
   workbookVersionId: uuid("workbook_version_id").references(() => workbookVersions.id, {
     onDelete: "set null",
@@ -211,6 +212,40 @@ export const invitations = pgTable(
       "resource_id_check",
       sql`(${table.resourceType} = 'platform' AND ${table.resourceId} IS NULL) OR (${table.resourceType} != 'platform' AND ${table.resourceId} IS NOT NULL)`,
     ),
+  ],
+);
+
+// Join Request Status Enum
+export const joinRequestStatusEnum = pgEnum("join_request_status", [
+  "pending",
+  "approved",
+  "rejected",
+  "cancelled",
+]);
+
+// Experiment Join Requests Table
+export const experimentJoinRequests = pgTable(
+  "experiment_join_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    experimentId: uuid("experiment_id")
+      .references(() => experiments.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    message: varchar("message", { length: 250 }),
+    status: joinRequestStatusEnum("status").default("pending").notNull(),
+    decidedBy: uuid("decided_by").references(() => users.id),
+    decidedAt: timestamp("decided_at"),
+    ...timestamps,
+  },
+  (table) => [
+    // At most one pending request per (experiment, user); resolved rows are not deduped.
+    uniqueIndex("experiment_join_requests_pending_uniq")
+      .on(table.experimentId, table.userId)
+      .where(sql`${table.status} = 'pending'`),
+    index("experiment_join_requests_experiment_idx").on(table.experimentId),
   ],
 );
 
@@ -321,11 +356,10 @@ export const chartTypeEnum = pgEnum("chart_type", [
   "box-plot",
   "histogram",
   "violin-plot",
-  "error-bar",
   "density-plot",
   "ridge-plot",
   "histogram-2d",
-  "scatter2density",
+  "density-plot-2d",
   "spc-control-chart",
   // Scientific charts
   "heatmap",
@@ -333,7 +367,6 @@ export const chartTypeEnum = pgEnum("chart_type", [
   "carpet",
   "ternary",
   "parallel-coordinates",
-  "log-plot",
   "wind-rose",
   "radar",
   "polar",

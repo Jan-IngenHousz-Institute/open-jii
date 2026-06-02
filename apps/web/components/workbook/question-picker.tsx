@@ -4,7 +4,7 @@ import { HelpCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import { sanitizeQuestionLabel } from "@repo/api/schemas/experiment.schema";
+import { sanitizeQuestionLabel, stripSpecialCharacters } from "@repo/api/schemas/experiment.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -77,7 +77,7 @@ export function QuestionPicker({ existingCells, onSelect, children }: QuestionPi
           </p>
           <Input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setName(stripSpecialCharacters(e.target.value))}
             placeholder="e.g. Soil moisture"
             className="h-8 text-sm"
             maxLength={64}

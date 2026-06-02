@@ -20,7 +20,7 @@ describe("ExperimentLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id");
-    vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+    vi.mocked(useParams).mockReturnValue({ id: "test-id" });
   });
 
   const renderLayout = () =>
@@ -98,6 +98,7 @@ describe("ExperimentLayout", () => {
     });
     expect(screen.getByText("overview")).toBeInTheDocument();
     expect(screen.getByText("data")).toBeInTheDocument();
+    expect(screen.getByText("dashboards.tabLabel")).toBeInTheDocument();
     expect(screen.getByText("analysis.title")).toBeInTheDocument();
     expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
     expect(screen.getByTestId("child")).toBeInTheDocument();

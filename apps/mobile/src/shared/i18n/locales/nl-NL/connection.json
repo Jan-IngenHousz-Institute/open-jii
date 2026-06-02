@@ -21,5 +21,27 @@
     "signalStrong": "Sterk",
     "signalMedium": "Gemiddeld",
     "signalWeak": "Zwak"
+  },
+  "deviceSheet": {
+    "title": "Apparaten",
+    "currentSubMultispeQ": "MultispeQ · Batterij {{battery}}% · v{{firmware}}",
+    "currentSubMultispeQNoFirmware": "MultispeQ · Batterij {{battery}}%",
+    "noDeviceTitle": "Geen apparaat verbonden",
+    "noDeviceSub": "Koppel een MultispeQ om te beginnen met meten.",
+    "reconnectTitle": "Verbind {{name}} opnieuw",
+    "reconnectSub": "Laatst gekoppelde apparaat",
+    "disconnect": "Verbinding verbreken",
+    "reconnect": "Opnieuw verbinden",
+    "nearbyTitle": "Apparaten in de buurt",
+    "scan": "Zoeken",
+    "scanning": "Zoeken…",
+    "pair": "Koppelen",
+    "pairing": "Koppelen…",
+    "seeMoreDevices": "Meer apparaten tonen ({{count}})",
+    "helperText": "Vind je je apparaat niet? Houd de knop op de MultispeQ 3 seconden ingedrukt."
+  },
+  "chip": {
+    "connect": "Verbinden",
+    "reconnect": "Opnieuw verbinden"
   }
 }

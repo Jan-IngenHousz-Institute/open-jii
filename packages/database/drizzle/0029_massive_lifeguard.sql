@@ -1,0 +1,1 @@
+ALTER TABLE "experiments" ADD COLUMN "anonymize_contributors" boolean DEFAULT false NOT NULL;
