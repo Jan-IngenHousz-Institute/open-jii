@@ -5,8 +5,8 @@ import { useBatteryPoller } from "~/features/connection/hooks/use-battery-poller
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
-import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function DeviceChip() {
   // Battery polling owns its own enabled-by-connectedDevice gate.
@@ -17,6 +17,7 @@ export function DeviceChip() {
   const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
   const openSheet = useDeviceSheetStore((s) => s.open);
   const { t } = useTranslation("connection");
+  const { warningFg } = useThemeColors();
 
   let state: "connected" | "last-known" | "never";
   if (connectedDevice) state = "connected";
@@ -29,21 +30,12 @@ export function DeviceChip() {
     return (
       <Pressable
         onPress={openSheet}
-        className={`${baseClass} bg-jii-mint border-jii-darker-green/15`}
-        style={{ height: 28 }}
+        className={`${baseClass} bg-jii-mint border-jii-darker-green/15 dark:border-jii-primary-bright/20 h-7`}
         accessibilityRole="button"
       >
-        <View
-          className="rounded-full"
-          style={{
-            width: 6,
-            height: 6,
-            backgroundColor: colors.semantic.success,
-          }}
-        />
+        <View className="bg-success h-1.5 w-1.5 rounded-full" />
         <Text
-          className="text-[12px] font-semibold"
-          style={{ color: colors.jii.darkerGreen }}
+          className="text-jii-darker-green dark:text-jii-primary-bright text-[12px] font-semibold"
           numberOfLines={1}
         >
           {connectedDevice.name}
@@ -59,16 +51,15 @@ export function DeviceChip() {
   return (
     <Pressable
       onPress={openSheet}
-      className={`${baseClass} border-jii-yellow/60`}
-      style={{ height: 28, backgroundColor: "#fff4d6" }}
+      className={`${baseClass} bg-jii-yellow-light border-jii-yellow/60 h-7`}
       accessibilityRole="button"
     >
       {isLastKnown ? (
-        <RotateCw size={12} color="#8a6800" />
+        <RotateCw size={12} color={warningFg} />
       ) : (
-        <Bluetooth size={12} color="#8a6800" />
+        <Bluetooth size={12} color={warningFg} />
       )}
-      <Text className="text-[12px] font-semibold" style={{ color: "#8a6800" }}>
+      <Text className="text-[12px] font-semibold text-amber-800 dark:text-amber-200">
         {isLastKnown ? t("chip.reconnect") : t("chip.connect")}
       </Text>
     </Pressable>
