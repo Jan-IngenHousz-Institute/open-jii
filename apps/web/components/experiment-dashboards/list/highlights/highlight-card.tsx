@@ -22,9 +22,6 @@ export function HighlightCard({ dashboard, href, thumbnailMaxHeight }: Highlight
     ? `${updatedLabel} · ${dashboard.createdByName}`
     : updatedLabel;
   return (
-    // Link is an overlay sibling of CardContent, not an ancestor: the
-    // table widget renders pagination `<a>`s inside, so wrapping in a
-    // Link would nest anchors.
     <Card className="hover:border-foreground/20 group relative overflow-hidden shadow-none transition-colors">
       <Link
         href={href}

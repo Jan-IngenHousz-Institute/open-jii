@@ -12,16 +12,12 @@ export const useExperimentDashboardUpdate = (props: ExperimentDashboardUpdatePro
 
   return tsr.experiments.updateExperimentDashboard.useMutation({
     onSuccess: (data) => {
-      // Seed the single-dashboard cache so a quick back-navigation reads
-      // the just-saved state, mirroring the visualization-update pattern.
       queryClient.setQueryData(["experiment-dashboard", props.experimentId, data.body.id], {
         body: data.body,
       });
       props.onSuccess?.(data.body);
     },
     onSettled: async () => {
-      // List is read on the experiment overview slider; invalidate so card
-      // metadata (name, updatedAt) reflects the latest after editing.
       await queryClient.invalidateQueries({
         queryKey: ["experiment-dashboards", props.experimentId],
       });

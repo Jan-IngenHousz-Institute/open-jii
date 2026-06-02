@@ -12,7 +12,6 @@ import { DashboardCanvas } from "./dashboard-canvas";
 type DashboardEditor = ReturnType<typeof useDashboardEditor>;
 
 function setup(opts: { widgets?: DashboardWidget[] } = {}) {
-  // Tables endpoint is touched by the inspector lazily; mount a safe default.
   server.mount(contract.experiments.getExperimentTables, { body: [] });
 
   const editorRef: { current: DashboardEditor | null } = { current: null };

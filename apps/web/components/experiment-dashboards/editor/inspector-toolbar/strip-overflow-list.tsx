@@ -13,13 +13,9 @@ export type { StripOverflowItem };
 
 interface StripOverflowListProps {
   items: StripOverflowItem[];
-  /** Extra px to reserve for sibling controls (separators, kebab) in the parent flex row. */
   trailingSafetyPx?: number;
 }
 
-// Horizontal strip with overflow spilling into a "More" popover. The
-// width math lives in `useStripOverflow`; this component only renders
-// the live row, the shadow mirror, and the popover.
 export function StripOverflowList({ items, trailingSafetyPx = 0 }: StripOverflowListProps) {
   const { t } = useTranslation("experimentDashboards");
   const { containerRef, shadowItemsRef, shadowMoreRef, splitAt } = useStripOverflow({
@@ -69,10 +65,7 @@ export function StripOverflowList({ items, trailingSafetyPx = 0 }: StripOverflow
         )}
       </div>
 
-      {/* Shadow row: identical render for measurement only. Lives outside
-          the live container so trimming the visible row doesn't shrink
-          the source-of-truth widths. Shadow More mirrors the live button
-          so its width is known before the live one mounts. */}
+      {/* Shadow row: identical render off-screen for width measurement only. */}
       <div
         aria-hidden
         className="pointer-events-none absolute -left-[9999px] -top-[9999px] flex items-center gap-1 opacity-0"

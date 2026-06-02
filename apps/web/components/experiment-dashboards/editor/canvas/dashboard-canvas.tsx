@@ -36,7 +36,6 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
   const form = useFormContext<DashboardFormValues>();
   const { control } = form;
   const layout = useWatch({ control, name: "layout" });
-  // Canvas-level only; each WidgetSlot subscribes to its own slice.
   const widgets = useWatch({ control, name: "widgets" });
 
   const { selectedWidgetId, selectWidget, tool, setTool } = useDashboardEditor();

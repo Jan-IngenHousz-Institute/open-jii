@@ -4,14 +4,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 export interface StripOverflowItem {
-  /** Stable key; used as React key and to keep shadow row aligned with the live row. */
   key: string;
   node: ReactNode;
 }
 
 interface UseStripOverflowArgs {
   items: StripOverflowItem[];
-  /** Extra px reserved for sibling controls in the parent flex row. */
   trailingSafetyPx?: number;
 }
 
@@ -19,15 +17,9 @@ interface UseStripOverflowResult {
   containerRef: React.RefObject<HTMLDivElement | null>;
   shadowItemsRef: React.RefObject<HTMLDivElement | null>;
   shadowMoreRef: React.RefObject<HTMLButtonElement | null>;
-  /** Number of items that fit live; remainder goes into the More popover. */
   splitAt: number;
 }
 
-// Measures off-screen shadow item widths against the live container's
-// clientWidth on every resize, then returns how many items fit before
-// they must spill into the More popover. The caller owns rendering both
-// the live row and the shadow mirror; this hook owns the imperative
-// width math.
 export function useStripOverflow({
   items,
   trailingSafetyPx = 0,
@@ -48,8 +40,6 @@ export function useStripOverflow({
         setSplitAt(0);
         return;
       }
-      // Container is `flex-1 min-w-0 overflow-hidden`, so clientWidth is
-      // the space the strip actually gets after siblings claim theirs.
       const available = container.clientWidth - trailingSafetyPx;
       const moreWidth = shadowMoreRef.current?.offsetWidth ?? MORE_BUTTON_FALLBACK_PX;
       setSplitAt(computeSplitIndex(itemWidths, available, moreWidth));
@@ -60,8 +50,7 @@ export function useStripOverflow({
     ro.observe(shadowItems);
     if (shadowMoreRef.current) ro.observe(shadowMoreRef.current);
 
-    // Sync + RAF pass catches late layout settling (font load, tab-switch
-    // reflow) where the first read sees stale widths.
+    // Sync + RAF catches late layout settling (font load, tab-switch reflow).
     recompute();
     const raf = requestAnimationFrame(recompute);
 
@@ -75,8 +64,6 @@ export function useStripOverflow({
 }
 
 const STRIP_GAP = 4;
-// Fallback used only on the very first paint before the shadow More
-// button has been measured. The shadow ref takes over after mount.
 const MORE_BUTTON_FALLBACK_PX = 100;
 
 function readChildWidths(parent: HTMLElement): number[] {

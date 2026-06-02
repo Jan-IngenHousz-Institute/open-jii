@@ -5,8 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DashboardThumbnail } from "./dashboard-thumbnail";
 
-// jsdom's ResizeObserver is a noop; pin the hook to a known measured size
-// so the thumbnail enters its "measured + scaled" branch deterministically.
 vi.mock("@repo/ui/hooks/use-element-size", () => ({
   useElementSize: () => {
     const ref = React.useRef<HTMLDivElement>(null);
@@ -14,7 +12,6 @@ vi.mock("@repo/ui/hooks/use-element-size", () => ({
   },
 }));
 
-// IntersectionObserver isn't implemented either; force inView=true.
 vi.mock("@repo/ui/hooks/use-in-view", () => ({
   useInView: () => {
     const ref = React.useRef<HTMLDivElement>(null);
@@ -22,14 +19,10 @@ vi.mock("@repo/ui/hooks/use-in-view", () => ({
   },
 }));
 
-// Pretend the data layer has already settled for this experiment so the
-// renderer is unblocked.
 vi.mock("./use-ever-loaded", () => ({
   useEverLoaded: () => true,
 }));
 
-// DashboardRenderer transitively reaches into widget views. We only care
-// that this thumbnail handed it the dashboard.
 vi.mock("../../dashboard-renderer", () => ({
   DashboardRenderer: ({ dashboard }: { dashboard: { id: string } }) => (
     <div data-testid="renderer" data-dashboard-id={dashboard.id} />
@@ -60,7 +53,6 @@ describe("DashboardThumbnail", () => {
 
   it("respects the maxHeight prop as the upper bound on the rendered height", () => {
     const dashboard = createExperimentDashboard({
-      // Tall layout: many rows → unbounded height would exceed maxHeight.
       widgets: [createRichTextWidget({ layout: { col: 0, row: 0, colSpan: 12, rowSpan: 10 } })],
       layout: { rowHeight: 200, gap: 0, columns: 12 },
     });

@@ -30,7 +30,6 @@ describe("FeaturedDashboardCard", () => {
     });
     render(<FeaturedDashboardCard dashboard={dashboard} href="/x" />);
 
-    // i18n is mocked to return the key, so the date is interpolated separately by the component.
     expect(screen.getByText("ui.labels.updatedAgo")).toBeInTheDocument();
     expect(screen.queryByText(`· ${formatDate(dashboard.updatedAt)}`)).toBeNull();
   });

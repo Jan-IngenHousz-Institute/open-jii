@@ -4,8 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import ExperimentDashboardsList from "./experiment-dashboards-list";
 
-// DashboardTableRow has its own thorough tests; this suite focuses on the
-// surrounding list (sorting, headers, empty / loading branches).
 vi.mock("./dashboard-table-row", () => ({
   DashboardTableRow: ({
     dashboard,

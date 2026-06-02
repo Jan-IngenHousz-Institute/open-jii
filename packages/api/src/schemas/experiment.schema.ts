@@ -921,11 +921,6 @@ export const zExperimentVisualizationPathParam = z.object({
 export const zCreateExperimentVisualizationResponse = zExperimentVisualization;
 export const zUpdateExperimentVisualizationResponse = zExperimentVisualization;
 
-// --- Dashboard Schemas ---
-
-// Per-widget grid placement. Coordinates are 0-indexed; a widget at
-// `{ col: 0, row: 0, colSpan: 6, rowSpan: 4 }` on a 12-column grid takes the
-// left half of rows 0..3.
 export const zWidgetLayout = z.object({
   col: z.number().int().min(0),
   row: z.number().int().min(0),
@@ -938,11 +933,6 @@ const zWidgetBase = z.object({
   layout: zWidgetLayout,
 });
 
-// Visualization widget: references an existing chart by id (BI pattern).
-// `visualizationId` is optional so a freshly added widget persists in a draft
-// state until the user picks a chart. `title` / `description` override the
-// linked visualization's name / description when set; `showTitle` /
-// `showDescription` are independent visibility toggles.
 export const zVisualizationWidget = zWidgetBase.extend({
   type: z.literal("visualization"),
   config: z.object({
@@ -954,7 +944,6 @@ export const zVisualizationWidget = zWidgetBase.extend({
   }),
 });
 
-// Rich-text widget: stores Quill-produced HTML inline.
 export const zRichTextWidget = zWidgetBase.extend({
   type: z.literal("richText"),
   config: z.object({
@@ -962,10 +951,6 @@ export const zRichTextWidget = zWidgetBase.extend({
   }),
 });
 
-// Table widget: paginated rows from one of the experiment's data tables.
-// `tableName` is optional so a freshly added widget persists in a draft state.
-// `columns` (when set) is the explicit ordered subset to project; when unset
-// the renderer falls back to all columns in natural metadata order.
 export const zTableWidget = zWidgetBase.extend({
   type: z.literal("table"),
   config: z.object({
@@ -976,18 +961,12 @@ export const zTableWidget = zWidgetBase.extend({
     description: z.string().optional(),
     showTitle: z.boolean().optional().default(true),
     showDescription: z.boolean().optional().default(true),
-    // Per-widget filters. AND-merged with dashboard-level filter widgets
-    // (`useDashboardFiltersForTable`) at fetch time; both layers contribute
-    // conditions to the same WHERE clause.
+    // AND-merged with dashboard-level filter widgets targeting the same table.
     filters: z.array(zDataFilter).optional(),
   }),
 });
 
-// Filter widget: a single-column control card. AND-merges into every
-// visualization widget whose `tableName` matches. One control per widget
-// mirrors Tableau / Looker / Sigma filter cards. `tableName` / `column` /
-// `operator` are optional only while freshly added. `defaultValue` is the
-// dashboard's saved value; viewer overrides don't persist.
+// Single-column control card; AND-merges into widgets whose `tableName` matches.
 export const zFilterWidget = zWidgetBase.extend({
   type: z.literal("filter"),
   config: z.object({
@@ -1009,7 +988,6 @@ export const zDashboardWidget = z.discriminatedUnion("type", [
   zFilterWidget,
 ]);
 
-// Dashboard-level grid configuration.
 export const zDashboardLayout = z.object({
   columns: z.number().int().min(1).max(24).default(12),
   rowHeight: z.number().int().min(20).max(400).default(80),
@@ -1038,8 +1016,6 @@ export const zCreateExperimentDashboardBody = z.object({
   widgets: z.array(zDashboardWidget).optional(),
 });
 
-// Update body: every top-level field is optional. When `widgets` is supplied
-// the array fully replaces existing; matches how the editor saves snapshots.
 export const zUpdateExperimentDashboardBody = zCreateExperimentDashboardBody.partial();
 
 export const zListExperimentDashboardsQuery = z.object({

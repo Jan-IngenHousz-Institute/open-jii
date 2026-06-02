@@ -9,9 +9,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 export interface StripPopoverControlProps {
   label: string;
-  /** Lucide icon or text-glyph component that accepts a `className`. */
   icon?: ComponentType<{ className?: string }>;
-  /** Current-value preview shown next to the label; truncates at 10rem. */
   summary?: string;
   side?: "top" | "bottom" | "left" | "right";
   align?: "start" | "center" | "end";
@@ -36,8 +34,6 @@ export function StripPopoverControl({
           variant="ghost"
           size="sm"
           aria-label={label}
-          // Narrow viewports collapse to icon + chevron only; icon stays
-          // visible so the trigger remains recognisable.
           className="text-foreground hover:text-foreground hover:bg-accent h-8 gap-1.5 rounded-full px-2.5 text-xs"
         >
           {Icon && <Icon className="text-muted-foreground size-3.5" />}
@@ -53,8 +49,6 @@ export function StripPopoverControl({
       <PopoverContent
         side={side}
         align={align}
-        // Cap height so unbounded content (Y series, filter chains)
-        // scrolls inside the popover instead of past the viewport.
         className={cn("scrollbar-thin max-h-[70vh] w-72 overflow-y-auto p-3", contentClassName)}
       >
         {children}

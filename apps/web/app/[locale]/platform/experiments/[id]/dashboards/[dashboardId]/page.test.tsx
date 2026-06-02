@@ -3,11 +3,8 @@ import { render, screen } from "@/test/test-utils";
 import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Import after mocks register so the page picks up the stubs.
 import DashboardPage from "./page";
 
-// SUT is a thin dispatcher: mode picks one of two bodies. Stub them so we
-// don't drag the full form/canvas tree into this test file.
 vi.mock("@/components/experiment-dashboards/dashboard-view-body", () => ({
   DashboardViewBody: ({
     experimentId,

@@ -435,8 +435,6 @@ export const workbookVersions = pgTable(
   ],
 );
 
-// Composes widgets (visualization references + rich-text blocks) into a
-// CSS-grid layout. Widgets denormalized inside the row for MVP.
 export const experimentDashboards = pgTable(
   "experiment_dashboards",
   {

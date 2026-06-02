@@ -25,7 +25,6 @@ describe("ColumnPicker", () => {
     const { container } = render(
       <ColumnPicker available={[]} value={undefined} onChange={vi.fn()} isLoading />,
     );
-    // Five placeholder rows render in the skeleton.
     expect(container.querySelectorAll("div.flex.h-8").length).toBe(5);
   });
 

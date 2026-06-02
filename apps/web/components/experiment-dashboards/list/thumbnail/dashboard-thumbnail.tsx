@@ -56,7 +56,6 @@ export function DashboardThumbnail({
       ref={setRefs}
       role="img"
       aria-label={dashboard.name}
-      // Inner is `absolute` so its 1280px box doesn't propagate a min-width up the flex chain.
       className="relative w-full overflow-hidden rounded-md"
       style={{ height: cardHeight }}
     >

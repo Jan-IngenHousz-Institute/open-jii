@@ -33,8 +33,6 @@ describe("EmbeddedVisualizationBuilder", () => {
       body: createVisualization({ id: "viz-1" }),
       delay: 30,
     });
-    // Post-resolution the BuilderBody fetches tables + data; pre-mount empties
-    // so the MSW unhandled-request channel stays quiet.
     server.mount(contract.experiments.getExperimentTables, { body: [] });
     server.mount(contract.experiments.getExperimentData, { body: [] });
     setupRender();
@@ -51,8 +49,6 @@ describe("EmbeddedVisualizationBuilder", () => {
   });
 
   it("mounts the BuilderBody with the supplied renderWidgetTab once the viz resolves", async () => {
-    // The factory's dataConfig.tableName ('test_table') triggers a data fetch
-    // in the builder body; mount the full cascade so requests resolve quietly.
     server.mount(contract.experiments.getExperimentVisualization, {
       body: createVisualization({ id: "viz-1" }),
     });

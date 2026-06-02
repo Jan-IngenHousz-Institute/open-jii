@@ -29,9 +29,6 @@ interface VisualizationStripsHostProps {
   section: VisualizationStripSection;
 }
 
-// Hosts a ChartFormValues form for the viz widget's Data and Style strips.
-// Same wiring as EmbeddedVisualizationBuilder (save + live preview); form
-// persists across section switches so both strips share one source of truth.
 export function VisualizationStripsHost({
   visualizationId,
   experimentId,

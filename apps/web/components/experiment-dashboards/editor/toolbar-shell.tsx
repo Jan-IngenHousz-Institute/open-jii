@@ -9,10 +9,7 @@ interface ToolbarShellProps {
   children: ReactNode;
 }
 
-// Shared chrome between DashboardModebar and DashboardToolbar: the floating
-// glass pill at the bottom of the canvas. `data-toolbar-shell` is the anchor
-// StripOverflowList walks up to so it can measure against the canvas width
-// (the pill itself is w-fit and would hide width gains).
+// `data-toolbar-shell` anchors StripOverflowList's width measurement (the pill is w-fit).
 export function ToolbarShell({ visible, children }: ToolbarShellProps) {
   return (
     <div

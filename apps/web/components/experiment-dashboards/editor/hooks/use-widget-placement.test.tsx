@@ -10,11 +10,8 @@ import type { DashboardFormValues } from "../../dashboard-form-shell";
 import type { DashboardTool } from "../context/dashboard-editor-context";
 import { useWidgetPlacement } from "./use-widget-placement";
 
-// jsdom lacks PointerEvent; synthesize one via a plain Event with the coords
-// the hook reads off the live event.
+// jsdom lacks PointerEvent; MouseEvent dispatches to pointer-typed listeners.
 function pointerEvent(type: string, props: { clientX?: number; clientY?: number } = {}) {
-  // jsdom omits PointerEvent. MouseEvent carries clientX/Y and dispatches to
-  // pointer-typed listeners just fine.
   return new MouseEvent(type, {
     bubbles: true,
     cancelable: true,
@@ -39,7 +36,6 @@ interface Harness {
 }
 
 function setup(tool: DashboardTool, onPlaced: (id: string) => void = vi.fn()) {
-  // Use a real DOM node so the hook's getBoundingClientRect works.
   const node = document.createElement("div");
   stubBoundingRect(node, { left: 0, top: 0, width: 1200, height: 800 });
   document.body.appendChild(node);
@@ -132,19 +128,14 @@ describe("useWidgetPlacement", () => {
 
   it("clamps the snapped column so the widget stays within usableColumns", () => {
     const { node, result } = setup("chart");
-    // Far-right pointer: the snap col should be clamped to leave room for the widget span.
     act(() => {
       node.dispatchEvent(pointerEvent("pointermove", { clientX: 1150, clientY: 50 }));
     });
     expect(result.current.snap).not.toBeNull();
-    // usableColumns is 9; chart default colSpan is at most 9 -> col must be <= 9 - colSpan.
     expect(result.current.snap?.col).toBeLessThanOrEqual(9);
   });
 
   it("auto-stacks a new widget to the next available row, even when the click lands far below", () => {
-    // No `static: true` on the draft: verticalCompactor packs the new
-    // widget directly under the existing ones, avoiding an unfillable
-    // band between them.
     const onPlaced = vi.fn<(id: string) => void>();
     const node = document.createElement("div");
     stubBoundingRect(node, { left: 0, top: 0, width: 1200, height: 1500 });
@@ -180,9 +171,6 @@ describe("useWidgetPlacement", () => {
       return { form, containerRef, snap };
     });
 
-    // rowPitch = rowHeight + gap = 96. Click at y=800 snaps to row 8.
-    // Existing widget occupies rows 0-3; the auto-stacked new widget
-    // should compact up to row 4 instead of staying at row 8.
     act(() => {
       const evt = new MouseEvent("click", {
         clientX: 100,
@@ -200,8 +188,6 @@ describe("useWidgetPlacement", () => {
     const placed = widgets.find((w) => w.id !== "existing");
     expect(existing?.layout.row).toBe(0);
 
-    // No gap: the new widget starts immediately after the existing
-    // widget ends (row = existing.row + existing.rowSpan).
     const existingEnd = (existing?.layout.row ?? 0) + (existing?.layout.rowSpan ?? 0);
     expect(placed?.layout.row).toBe(existingEnd);
   });

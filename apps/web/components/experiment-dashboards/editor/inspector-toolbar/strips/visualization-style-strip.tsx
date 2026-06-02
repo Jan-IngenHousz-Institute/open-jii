@@ -18,8 +18,6 @@ interface VisualizationStyleStripProps {
   columns: DataColumn[];
 }
 
-// Viz-widget Style section: one popover per shelf when the chart type
-// declares styleShelves; otherwise a single legacy Style popover.
 export function VisualizationStyleStrip({ form, columns }: VisualizationStyleStripProps) {
   const { t } = useTranslation("experimentDashboards");
   const { t: tViz } = useTranslation("experimentVisualizations");
@@ -52,7 +50,6 @@ export function VisualizationStyleStrip({ form, columns }: VisualizationStyleStr
         });
     }
 
-    // Legacy fallback: whole StylePanel in one popover.
     return [
       {
         key: "style",

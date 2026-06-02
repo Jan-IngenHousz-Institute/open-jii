@@ -6,7 +6,6 @@ import { ColumnPickerSkeleton } from "./column-picker-skeleton";
 describe("ColumnPickerSkeleton", () => {
   it("renders five placeholder rows plus the add-column placeholder", () => {
     const { container } = render(<ColumnPickerSkeleton />);
-    // 5 row containers + 1 add-column placeholder
     const rows = container.querySelectorAll("div.flex.h-8");
     expect(rows.length).toBe(5);
   });
