@@ -22,21 +22,24 @@ vi.mock("@/hooks/useDebounce", () => ({
 
 vi.mock("../current-members-list/current-members-list", () => ({
   MemberList: ({
-    members,
+    membersWithUserInfo,
     onRemoveMember,
     adminCount,
   }: {
-    members?: { userId: string; firstName?: string; user?: { firstName?: string } }[];
+    membersWithUserInfo?: {
+      user: { userId: string; firstName?: string; avatarUrl?: string | null };
+    }[];
     onRemoveMember: (userId: string) => void;
     adminCount?: number;
   }) => (
     <div>
-      {members?.map((m) => (
-        <div key={m.userId}>
-          <span>{m.firstName ?? m.user?.firstName}</span>
+      {membersWithUserInfo?.map((m) => (
+        <div key={m.user.userId}>
+          <span>{m.user.firstName}</span>
+          {m.user.avatarUrl && <span>{m.user.avatarUrl}</span>}
           <button
-            aria-label={`remove member ${m.firstName ?? m.user?.firstName}`}
-            onClick={() => onRemoveMember(m.userId)}
+            aria-label={`remove member ${m.user.firstName}`}
+            onClick={() => onRemoveMember(m.user.userId)}
           >
             Remove
           </button>
@@ -66,7 +69,12 @@ function renderMembersCard(initialMembers: FormMember[] = []) {
 
 const users = [
   createUserProfile({ userId: "current-user-id", firstName: "Me" }),
-  createUserProfile({ userId: "user-1", firstName: "Alice", lastName: "Tester" }),
+  createUserProfile({
+    userId: "user-1",
+    firstName: "Alice",
+    lastName: "Tester",
+    avatarUrl: "https://example.com/alice.jpg",
+  }),
   createUserProfile({ userId: "user-2", firstName: "Bob", lastName: "Tester" }),
 ];
 
@@ -100,6 +108,7 @@ describe("<NewExperimentMembersCard />", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Alice/)).toBeInTheDocument();
+      expect(screen.getByText("https://example.com/alice.jpg")).toBeInTheDocument();
     });
   });
 

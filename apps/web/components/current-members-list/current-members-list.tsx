@@ -20,15 +20,7 @@ interface MemberWithUserInfo {
   user: UserProfile;
 }
 
-interface Member {
-  userId: string;
-  role?: "admin" | "member";
-}
-
 interface MemberListProps {
-  // Accept either ready-made formatted membersWithUserInfo or raw members with users
-  members?: Member[];
-  users?: UserProfile[];
   membersWithUserInfo?: MemberWithUserInfo[];
   onRemoveMember: (memberId: string) => void;
   isRemovingMember: boolean;
@@ -44,8 +36,6 @@ interface MemberListProps {
 }
 
 export function MemberList({
-  members,
-  users,
   membersWithUserInfo: providedMembersWithUserInfo,
   onRemoveMember,
   isRemovingMember,
@@ -173,34 +163,13 @@ export function MemberList({
     }
   };
 
-  // Convert members and users to membersWithUserInfo if needed
   const membersWithUserInfo = useMemo(() => {
-    const baseMembers = providedMembersWithUserInfo
-      ? [...providedMembersWithUserInfo]
-      : (members ?? []).map((member) => {
-          const user = users?.find((u) => u.userId === member.userId) ?? {
-            userId: member.userId,
-            firstName: "",
-            lastName: "",
-            email: null,
-            bio: null,
-            organization: undefined,
-          };
-
-          return {
-            role: member.role ?? "member",
-            joinedAt: new Date().toISOString(),
-            user,
-          };
-        });
-
-    // Sort so current user appears first
-    return baseMembers.sort((a, b) => {
+    return [...(providedMembersWithUserInfo ?? [])].sort((a, b) => {
       if (a.user.userId === currentUserId) return -1;
       if (b.user.userId === currentUserId) return 1;
       return 0;
     });
-  }, [providedMembersWithUserInfo, members, users, currentUserId]);
+  }, [providedMembersWithUserInfo, currentUserId]);
 
   if (membersWithUserInfo.length === 0) {
     return (
