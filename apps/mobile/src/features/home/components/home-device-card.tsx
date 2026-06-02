@@ -8,6 +8,20 @@ import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
+const HEX_CHARS = new Set("0123456789abcdefABCDEF");
+
+function macTail(id: string): string | null {
+  const sep = id.includes(":") ? ":" : id.includes("-") ? "-" : null;
+  if (!sep) return null;
+  const parts = id.split(sep);
+  if (parts.length !== 6) return null;
+  for (const p of parts) {
+    if (p.length !== 2) return null;
+    for (const ch of p) if (!HEX_CHARS.has(ch)) return null;
+  }
+  return parts.slice(-4).join(":");
+}
+
 export function HomeDeviceCard() {
   const { t } = useTranslation("home");
   const themeColors = useThemeColors();
@@ -24,8 +38,7 @@ export function HomeDeviceCard() {
   if (isConnected) {
     const name = connectedDevice?.name ?? "MultispeQ";
     const id = connectedDevice?.id;
-    const isBt = connectedDevice?.type === "bluetooth-classic" || connectedDevice?.type === "ble";
-    const mac = isBt && id ? id.split(/[:-]/).slice(-4).join(":") : null;
+    const mac = id ? macTail(id) : null;
     title = mac ? `${name} (${mac})` : name;
     subtitle =
       batteryLevel != null
