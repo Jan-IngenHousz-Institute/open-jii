@@ -18,8 +18,9 @@ import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
+import { AlertsBar } from "~/features/alerts/components/alerts-container";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
@@ -216,6 +217,33 @@ function EventLoopLagMonitor() {
   return null;
 }
 
+// AlertsBar is rendered as an overlay above normal screens.
+// The navigator gets extra top padding equal to the alert height minus the real
+// status-bar inset, so normal screens sit below the alert without corrupting
+// safe-area values for modals.
+function AlertsAwareLayout() {
+  const insets = useSafeAreaInsets();
+  const [alertBarHeight, setAlertBarHeight] = useState(0);
+
+  const navigatorTopPadding = alertBarHeight > 0 ? Math.max(alertBarHeight - insets.top, 0) : 0;
+
+  return (
+    <View className="flex-1">
+      <View className="flex-1" style={{ paddingTop: navigatorTopPadding }}>
+        <RootLayoutNav />
+      </View>
+
+      <View
+        pointerEvents="box-none"
+        className="absolute inset-x-0 top-0"
+        onLayout={(e) => setAlertBarHeight(e.nativeEvent.layout.height)}
+      >
+        <AlertsBar />
+      </View>
+    </View>
+  );
+}
+
 function RootLayoutContent() {
   const themeColors = useThemeColors();
   const { colorScheme } = useColorScheme();
@@ -249,7 +277,7 @@ function RootLayoutContent() {
                 <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
                 {__DEV__ && <DrizzleDevTools />}
                 <NavigationThemeProvider value={navTheme}>
-                  <RootLayoutNav />
+                  <AlertsAwareLayout />
                 </NavigationThemeProvider>
                 <Toaster />
                 <AlertDialog />

@@ -242,6 +242,10 @@ const Sidebar = React.forwardRef<
             className,
           )}
           {...props}
+          style={{
+            top: "var(--banner-offset, 0px)",
+            height: "calc(100svh - var(--banner-offset, 0px))",
+          }}
         >
           <div
             data-sidebar="sidebar"

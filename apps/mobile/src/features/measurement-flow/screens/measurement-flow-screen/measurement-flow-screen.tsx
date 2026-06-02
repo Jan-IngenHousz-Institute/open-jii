@@ -8,6 +8,7 @@ import { X } from "lucide-react-native";
 import React from "react";
 import { Image, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useActiveAlerts } from "~/features/alerts/hooks/use-active-alerts";
 import { useExperiment } from "~/features/experiments/hooks/use-experiment";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
 import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
@@ -43,8 +44,11 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
 
+  const hasAlerts = useActiveAlerts().length > 0;
+  const isLightMode = themeColors.scheme !== "dark";
   const experimentLabel = experiment?.name ?? "";
   const hasActiveFlow = !!experimentId;
+  const statusBarStyle = hasAlerts && isLightMode ? "dark" : hasActiveFlow ? "light" : "auto";
 
   useFlowBackHandler(hasActiveFlow);
 
@@ -57,7 +61,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
 
   return (
     <View className="bg-background flex-1">
-      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "auto"} />}
+      {isFocused && <StatusBar style={statusBarStyle} />}
 
       {hasActiveFlow ? (
         <>

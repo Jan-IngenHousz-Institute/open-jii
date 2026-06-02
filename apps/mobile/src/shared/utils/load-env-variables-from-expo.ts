@@ -33,6 +33,10 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
         process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
         "EXPO_PUBLIC_POSTHOG_API_KEY",
       ),
+      CONTENTFUL_SPACE_ID: process.env.EXPO_PUBLIC_CONTENTFUL_SPACE_ID ?? "",
+      CONTENTFUL_ACCESS_TOKEN: process.env.EXPO_PUBLIC_CONTENTFUL_ACCESS_TOKEN ?? "",
+      CONTENTFUL_SPACE_ENVIRONMENT:
+        process.env.EXPO_PUBLIC_CONTENTFUL_SPACE_ENVIRONMENT ?? "master",
     },
 
     dev: {
@@ -56,6 +60,10 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
         process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
         "EXPO_PUBLIC_POSTHOG_API_KEY",
       ),
+      CONTENTFUL_SPACE_ID: process.env.EXPO_PUBLIC_CONTENTFUL_SPACE_ID ?? "",
+      CONTENTFUL_ACCESS_TOKEN: process.env.EXPO_PUBLIC_CONTENTFUL_ACCESS_TOKEN ?? "",
+      CONTENTFUL_SPACE_ENVIRONMENT:
+        process.env.EXPO_PUBLIC_CONTENTFUL_SPACE_ENVIRONMENT ?? "master",
     },
   };
 }
