@@ -116,3 +116,6 @@ release-summary-*.json
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# jiti transpile cache
+node-jiti/
