@@ -24,7 +24,13 @@ const experiment = createExperiment({ id: "exp-1", name: "Test", status: "active
 const members: ExperimentMember[] = [
   {
     role: "admin",
-    user: { id: "user-1", firstName: "Test", lastName: "Admin", email: "admin@test.com" },
+    user: {
+      id: "user-1",
+      firstName: "Test",
+      lastName: "Admin",
+      email: "admin@test.com",
+      avatarUrl: null,
+    },
     joinedAt: "2024-01-01T00:00:00.000Z",
   },
 ];
@@ -52,7 +58,13 @@ describe("ExperimentInfoCard", () => {
     const nonAdminMembers: ExperimentMember[] = [
       {
         role: "member",
-        user: { id: "user-1", firstName: "Test", lastName: "Member", email: "member@test.com" },
+        user: {
+          id: "user-1",
+          firstName: "Test",
+          lastName: "Member",
+          email: "member@test.com",
+          avatarUrl: null,
+        },
         joinedAt: "2024-01-01T00:00:00.000Z",
       },
     ];

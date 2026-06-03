@@ -1,25 +1,18 @@
 import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 
-vi.mock("./charts/line/renderer", () => ({
+vi.mock("./charts/basic/line/renderer", () => ({
   LineRenderer: ({ visualization }: { visualization: { name: string } }) => (
     <div data-testid="line-chart-renderer">Line Chart: {visualization.name}</div>
   ),
 }));
 
-vi.mock("./charts/scatter/renderer", () => ({
+vi.mock("./charts/basic/scatter/renderer", () => ({
   ScatterRenderer: ({ visualization }: { visualization: { name: string } }) => (
     <div data-testid="scatter-chart-renderer">Scatter Chart: {visualization.name}</div>
-  ),
-}));
-
-vi.mock("./charts/bar/renderer", () => ({
-  BarRenderer: ({ visualization }: { visualization: { name: string } }) => (
-    <div data-testid="bar-chart-renderer">Bar Chart: {visualization.name}</div>
   ),
 }));
 
@@ -42,22 +35,6 @@ describe("ExperimentVisualizationRenderer", () => {
     expect(screen.getByTestId("scatter-chart-renderer")).toHaveTextContent(
       "Scatter Chart: My Scatter",
     );
-  });
-
-  it("dispatches to BarRenderer for chartType=bar", () => {
-    const visualization = createVisualization({ chartType: "bar", name: "My Bar" });
-    render(
-      <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
-    );
-    expect(screen.getByTestId("bar-chart-renderer")).toHaveTextContent("Bar Chart: My Bar");
-  });
-
-  it("renders the unsupported placeholder for an unregistered chart type", () => {
-    const visualization = createVisualization({ chartType: "alluvial" });
-    render(
-      <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
-    );
-    expect(screen.getByText("errors.unsupportedChartType")).toBeInTheDocument();
   });
 
   it("renders title and description by default", () => {

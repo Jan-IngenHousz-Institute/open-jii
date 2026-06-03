@@ -32,10 +32,29 @@ export const colors = {
 
   // Semantic Colors
   semantic: {
-    success: "#10B981",
+    success: "#09b732",
     warning: "#FBBF24",
     error: "#EF4444",
     info: "#3B82F6",
+  },
+
+  // Redesign palette (Field Companion home + flow hero + badges)
+  jii: {
+    darkGreen: "#005e5e",
+    darkerGreen: "#002f2f",
+    brightGreen: "#49e06d",
+    yellow: "#fff481",
+    yellowLight: "#fbf8c1",
+    mint: "#e2fcfc",
+    mintLight: "#edffff",
+    mutedBody: "#68737b",
+  },
+
+  badge: {
+    active: "#ccfcd8",
+    stale: "#ffe0b2",
+    published: "#d8f2fc",
+    featured: "#e2fcfc",
   },
 
   // Theme Colors (dark theme)
@@ -51,7 +70,7 @@ export const colors = {
     inactive: "#757575",
     divider: "#2C2C2C",
     statusBar: "#000000",
-    grayBackground: "#1C2128",
+    grayBackground: "#2E2E2E",
     brand: "#49e06d", // primary.bright — interactive accent in dark
     warningFg: "#fde68a", // amber-200 — readable warning text/icon on dark amber-tinted surfaces
   },

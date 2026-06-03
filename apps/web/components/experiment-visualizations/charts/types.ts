@@ -8,18 +8,13 @@ import type {
   ExperimentVisualization,
 } from "@repo/api/schemas/experiment.schema";
 
-import type { ChartFormConfig, ChartFormDataConfig, ChartFormValues } from "./form-values";
+import type { ChartFormConfig, ChartFormDataConfig, ChartFormValues } from "./chart-config";
 
 export interface ChartPanelProps {
   form: UseFormReturn<ChartFormValues>;
-  /**
-   * All plottable columns from the active table (complex types already
-   * stripped). Each chart's data-panel further filters per role via
-   * `filterColumnsForRole` before passing into individual shelves — that
-   * way roles like `z` on a 3D scatter or `labels` on a pie can demand
-   * a narrower kind set without changing this surface.
-   */
   columns: DataColumn[];
+  /** Render inline with no Collapsible chrome (for popover-hosted shelves). */
+  flat?: boolean;
 }
 
 export interface ChartRendererProps {
@@ -30,6 +25,28 @@ export interface ChartRendererProps {
 
 export interface ChartTypeIconProps {
   className?: string;
+}
+
+/** Icon for `ShelfDef.icon`; widened past LucideIcon so text glyphs fit too. */
+export type ShelfIcon = ComponentType<{ className?: string }>;
+
+/** Translator passed to `ShelfDef.summary` so dynamic previews can stay i18n-clean. */
+export type ShelfSummaryT = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Declarative single shelf: one axis/encoding (data) or one style section.
+ * The dashboard toolbar iterates this list as popovers; the standalone
+ * sidebar stacks them with separators.
+ */
+export interface ShelfDef {
+  key: string;
+  labelKey: string;
+  icon?: ShelfIcon;
+  Component: ComponentType<ChartPanelProps>;
+  /** Opt the shelf out under the current form state (e.g. combo-only sections). */
+  visible?: (form: UseFormReturn<ChartFormValues>) => boolean;
+  /** Compact value preview shown on the strip's popover trigger. */
+  summary?: (form: UseFormReturn<ChartFormValues>, t: ShelfSummaryT) => string | undefined;
 }
 
 export interface ChartTypeDef {
@@ -43,4 +60,13 @@ export interface ChartTypeDef {
   DataPanel: ComponentType<ChartPanelProps>;
   StylePanel: ComponentType<ChartPanelProps>;
   Renderer: ComponentType<ChartRendererProps>;
+  /**
+   * Optional shelf descriptors backing the toolbar's per-shelf
+   * popovers. When present, the horizontal strip dispatches one popover
+   * trigger per shelf instead of one big "Fields" / "Style" popover.
+   * Defined per chart type during the migration; the strip falls back
+   * to the single-popover DataPanel/StylePanel when omitted.
+   */
+  dataShelves?: ShelfDef[];
+  styleShelves?: ShelfDef[];
 }

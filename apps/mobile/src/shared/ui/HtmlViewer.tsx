@@ -37,17 +37,20 @@ export function HtmlViewer({
   showsHorizontalScrollIndicator = false,
 }: HtmlViewerProps) {
   const { colorScheme } = useColorScheme();
+  // Body stays transparent so the parent <View>'s background bleeds through
+  // (matches whatever surface — bg-card / bg-background — wraps the WebView).
+  // Avoids the dark-mode gray-800 block that didn't line up with bg-card.
   const palette =
     colorScheme === "dark"
       ? {
-          body: "#1f2937",
+          body: "transparent",
           text: "#f9fafb",
-          codeBg: "#374151",
-          quoteBorder: "#6b7280",
-          quoteBg: "#374151",
+          codeBg: "rgba(255,255,255,0.08)",
+          quoteBorder: "rgba(255,255,255,0.2)",
+          quoteBg: "rgba(255,255,255,0.05)",
         }
       : {
-          body: "#ffffff",
+          body: "transparent",
           text: "#111827",
           codeBg: "#f3f4f6",
           quoteBorder: "#d1d5db",
@@ -128,7 +131,8 @@ export function HtmlViewer({
     <View className="flex-1">
       <WebView
         source={{ html: fullHtmlContent }}
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: "transparent" }}
+        opaque={false}
         scrollEnabled={scrollEnabled}
         showsVerticalScrollIndicator={showsVerticalScrollIndicator}
         showsHorizontalScrollIndicator={showsHorizontalScrollIndicator}

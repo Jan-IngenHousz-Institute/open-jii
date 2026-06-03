@@ -42,6 +42,25 @@ vi.mock("../../charts/utils", () => ({
     if (renderer === "webgl") return `${type}gl`;
     return type;
   }),
+  extendLayoutForFacets: vi.fn((layout) => layout),
+  applyReferenceLines: vi.fn(),
+}));
+
+vi.mock("../../charts/use-is-compact", () => ({
+  useChartSizing: vi.fn(() => [
+    { current: null },
+    {
+      snug: false,
+      compact: false,
+      veryCompact: false,
+      ultraCompact: false,
+      cellSnug: false,
+      cellCompact: false,
+      cellVeryCompact: false,
+      cellUltraCompact: false,
+    },
+  ]),
+  facetTierStyles: vi.fn(() => ({ cellTitleFontSize: 12 })),
 }));
 
 describe("BoxPlot", () => {
@@ -689,6 +708,49 @@ describe("BoxPlot", () => {
       expect(container).toHaveClass("accessible-chart");
     });
   });
+
+  describe("Subplot facets", () => {
+    const facetData: BoxSeriesData[] = [
+      { y: [1, 2, 3, 4], name: "A", xaxisId: "x", yaxisId: "y" },
+      { y: [5, 6, 7, 8], name: "B", xaxisId: "x2", yaxisId: "y2" },
+    ];
+
+    const subplots = {
+      rows: 1,
+      columns: 2,
+      cells: [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ],
+      sharedX: true,
+      sharedY: false,
+      sharedXTitle: true,
+      sharedYTitle: false,
+      roworder: "top to bottom" as const,
+    };
+
+    it("invokes extendLayoutForFacets when subplots is set", async () => {
+      const utils = await import("../../charts/utils");
+      const extendSpy = vi.mocked(utils.extendLayoutForFacets);
+      extendSpy.mockClear();
+
+      render(<BoxPlot data={facetData} subplots={subplots} />);
+
+      expect(extendSpy).toHaveBeenCalledTimes(1);
+      expect(extendSpy).toHaveBeenLastCalledWith(
+        expect.anything(),
+        subplots.cells,
+        expect.objectContaining({
+          rows: 1,
+          columns: 2,
+          sharedX: true,
+          sharedY: false,
+          sharedXTitle: true,
+          roworder: "top to bottom",
+        }),
+      );
+    });
+  });
 });
 
 describe("GroupedBoxPlot", () => {
@@ -964,6 +1026,40 @@ describe("ViolinPlot", () => {
 
       const container = chart.parentElement;
       expect(container).toHaveClass("accessible-chart");
+    });
+  });
+
+  describe("Subplot facets", () => {
+    const facetData: ViolinSeriesData[] = [
+      { y: [1, 2, 3, 4], name: "A", xaxisId: "x", yaxisId: "y" },
+      { y: [5, 6, 7, 8], name: "B", xaxisId: "x2", yaxisId: "y2" },
+    ];
+
+    const subplots = {
+      rows: 1,
+      columns: 2,
+      cells: [
+        { title: "A", xaxisId: "x", yaxisId: "y" },
+        { title: "B", xaxisId: "x2", yaxisId: "y2" },
+      ],
+      sharedX: true,
+      sharedY: false,
+      sharedXTitle: true,
+      sharedYTitle: false,
+      roworder: "top to bottom" as const,
+    };
+
+    it("invokes extendLayoutForFacets and routes traces to cell axes", async () => {
+      const utils = await import("../../charts/utils");
+      const extendSpy = vi.mocked(utils.extendLayoutForFacets);
+      extendSpy.mockClear();
+
+      render(<ViolinPlot data={facetData} subplots={subplots} />);
+
+      expect(extendSpy).toHaveBeenCalledTimes(1);
+      const chart = screen.getByTestId("plotly-chart");
+      const layoutData = JSON.parse(chart.getAttribute("data-layout") || "{}");
+      expect(layoutData.violinmode).toBe("group");
     });
   });
 });

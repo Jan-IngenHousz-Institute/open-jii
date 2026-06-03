@@ -162,6 +162,185 @@ enum AssetOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAlert)
+"""
+type ComponentAlert implements Entry & _Node {
+  _id: ID!
+  active(locale: String, useFallbackLocale: Boolean): Boolean
+  audience(locale: String, useFallbackLocale: Boolean): String
+  body(locale: String, useFallbackLocale: Boolean): ComponentAlertBody
+  contentfulMetadata: ContentfulMetadata!
+  dismissible(locale: String, useFallbackLocale: Boolean): Boolean
+  endAt(locale: String, useFallbackLocale: Boolean): DateTime
+  internalName(locale: String, useFallbackLocale: Boolean): String
+  link(locale: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentButtonFilter): ComponentButton
+  linkedFrom(allowedLocales: [String]): ComponentAlertLinkingCollections
+  severity(locale: String, useFallbackLocale: Boolean): String
+  startAt(locale: String, useFallbackLocale: Boolean): DateTime
+  sys: Sys!
+  title(locale: String, useFallbackLocale: Boolean): String
+  type(locale: String, useFallbackLocale: Boolean): String
+}
+
+type ComponentAlertBody {
+  json: JSON!
+  links: ComponentAlertBodyLinks!
+}
+
+type ComponentAlertBodyAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type ComponentAlertBodyEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type ComponentAlertBodyLinks {
+  assets: ComponentAlertBodyAssets!
+  entries: ComponentAlertBodyEntries!
+  resources: ComponentAlertBodyResources!
+}
+
+type ComponentAlertBodyResources {
+  block: [ComponentAlertBodyResourcesBlock!]!
+  hyperlink: [ComponentAlertBodyResourcesHyperlink!]!
+  inline: [ComponentAlertBodyResourcesInline!]!
+}
+
+type ComponentAlertBodyResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentAlertBodyResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentAlertBodyResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentAlertCollection {
+  items: [ComponentAlert]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type ComponentAlertCursorCollection {
+  items: [ComponentAlert]!
+  limit: Int!
+  pages: CursorPages!
+}
+
+input ComponentAlertFilter {
+  AND: [ComponentAlertFilter]
+  OR: [ComponentAlertFilter]
+  active: Boolean
+  active_exists: Boolean
+  active_not: Boolean
+  audience: String
+  audience_contains: String
+  audience_exists: Boolean
+  audience_in: [String]
+  audience_not: String
+  audience_not_contains: String
+  audience_not_in: [String]
+  body_contains: String
+  body_exists: Boolean
+  body_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  dismissible: Boolean
+  dismissible_exists: Boolean
+  dismissible_not: Boolean
+  endAt: DateTime
+  endAt_exists: Boolean
+  endAt_gt: DateTime
+  endAt_gte: DateTime
+  endAt_in: [DateTime]
+  endAt_lt: DateTime
+  endAt_lte: DateTime
+  endAt_not: DateTime
+  endAt_not_in: [DateTime]
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  link: cfComponentButtonNestedFilter
+  link_exists: Boolean
+  severity: String
+  severity_contains: String
+  severity_exists: Boolean
+  severity_in: [String]
+  severity_not: String
+  severity_not_contains: String
+  severity_not_in: [String]
+  startAt: DateTime
+  startAt_exists: Boolean
+  startAt_gt: DateTime
+  startAt_gte: DateTime
+  startAt_in: [DateTime]
+  startAt_lt: DateTime
+  startAt_lte: DateTime
+  startAt_not: DateTime
+  startAt_not_in: [DateTime]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+  type: String
+  type_contains: String
+  type_exists: Boolean
+  type_in: [String]
+  type_not: String
+  type_not_contains: String
+  type_not_in: [String]
+}
+
+type ComponentAlertLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): EntryCollection
+  entryCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): EntryCursorCollection
+}
+
+enum ComponentAlertOrder {
+  active_ASC
+  active_DESC
+  audience_ASC
+  audience_DESC
+  dismissible_ASC
+  dismissible_DESC
+  endAt_ASC
+  endAt_DESC
+  internalName_ASC
+  internalName_DESC
+  severity_ASC
+  severity_DESC
+  startAt_ASC
+  startAt_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+  type_ASC
+  type_DESC
+}
+
+"""
 [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor)
 """
 type ComponentAuthor implements Entry & _Node {
@@ -334,12 +513,72 @@ input ComponentButtonFilter {
 }
 
 type ComponentButtonLinkingCollections {
+  componentAlertCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsComponentAlertCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentAlertCollection
+  componentAlertCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentAlertCursorCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): EntryCollection
   entryCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): EntryCursorCollection
   footerCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsFooterCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): FooterCollection
   footerCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsFooterCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): FooterCursorCollection
   pageHomeHeroCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageHomeHeroCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): PageHomeHeroCollection
   pageHomeHeroCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageHomeHeroCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): PageHomeHeroCursorCollection
+}
+
+enum ComponentButtonLinkingCollectionsComponentAlertCollectionOrder {
+  active_ASC
+  active_DESC
+  audience_ASC
+  audience_DESC
+  dismissible_ASC
+  dismissible_DESC
+  endAt_ASC
+  endAt_DESC
+  internalName_ASC
+  internalName_DESC
+  severity_ASC
+  severity_DESC
+  startAt_ASC
+  startAt_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+  type_ASC
+  type_DESC
+}
+
+enum ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder {
+  active_ASC
+  active_DESC
+  audience_ASC
+  audience_DESC
+  dismissible_ASC
+  dismissible_DESC
+  endAt_ASC
+  endAt_DESC
+  internalName_ASC
+  internalName_DESC
+  severity_ASC
+  severity_DESC
+  startAt_ASC
+  startAt_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+  type_ASC
+  type_DESC
 }
 
 enum ComponentButtonLinkingCollectionsFooterCollectionOrder {
@@ -3420,6 +3659,9 @@ type Query {
   asset(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): Asset
   assetCollection(limit: Int = 100, locale: String, order: [AssetOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: AssetFilter): AssetCollection
   assetCursorCollection(limit: Int = 100, locale: String, order: [AssetOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: AssetFilter): AssetCursorCollection
+  componentAlert(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): ComponentAlert
+  componentAlertCollection(limit: Int = 100, locale: String, order: [ComponentAlertOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentAlertFilter): ComponentAlertCollection
+  componentAlertCursorCollection(limit: Int = 100, locale: String, order: [ComponentAlertOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentAlertFilter): ComponentAlertCursorCollection
   componentAuthor(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): ComponentAuthor
   componentAuthorCollection(limit: Int = 100, locale: String, order: [ComponentAuthorOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentAuthorFilter): ComponentAuthorCollection
   componentAuthorCursorCollection(limit: Int = 100, locale: String, order: [ComponentAuthorOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentAuthorFilter): ComponentAuthorCursorCollection

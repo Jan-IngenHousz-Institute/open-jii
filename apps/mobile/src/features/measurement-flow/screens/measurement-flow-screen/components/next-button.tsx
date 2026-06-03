@@ -1,9 +1,9 @@
-import { clsx } from "clsx";
+import clsx from "clsx";
 import { ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
 import { useTranslation } from "~/shared/i18n";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 interface NextButtonProps {
   onPress: () => void;
@@ -11,11 +11,12 @@ interface NextButtonProps {
 }
 
 export function NextButton({ onPress, isDisabled = false }: NextButtonProps) {
-  const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
+  const { scheme } = useThemeColors();
+  const iconColor = scheme === "dark" ? "#121212" : "#FFFFFF";
 
-  // WORKAROUND: Key with timestamp to force remount on every render
-  // This bypasses React Native's native style caching bug in Expo SDK 54
+  // WORKAROUND: Key with timestamp to force remount on every render — bypasses
+  // a native style caching bug in Expo SDK 54.
   const renderId = Date.now();
 
   return (
@@ -24,14 +25,14 @@ export function NextButton({ onPress, isDisabled = false }: NextButtonProps) {
       onPress={onPress}
       disabled={isDisabled}
       className={clsx(
-        "h-[44px] flex-row items-center justify-end gap-1 rounded-lg px-4",
+        "bg-primary h-[44px] flex-row items-center justify-center gap-1 rounded-lg px-5",
         isDisabled && "opacity-50",
       )}
     >
-      <Text className={clsx("text-lg font-medium", classes.text)}>
+      <Text className="text-primary-foreground text-lg font-semibold">
         {t("measurementFlow:navigation.next")}
       </Text>
-      <ChevronRight size={20} color={colors.onSurface} />
+      <ChevronRight size={20} color={iconColor} />
     </TouchableOpacity>
   );
 }

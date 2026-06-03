@@ -3,13 +3,26 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
+import type { FacetGridConfig } from "./cartesian-chart";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import { facetTierStyles, useChartSizing } from "./use-is-compact";
+import {
+  applyReferenceLines,
+  createBaseLayout,
+  createPlotlyConfig,
+  extendLayoutForFacets,
+  getRenderer,
+  getPlotType,
+} from "./utils";
 
 export interface BoxSeriesData extends BaseSeries {
   y?: (string | number)[];
   x?: (string | number | Date)[];
+  /** Facet routing: pins this trace to a specific subplot cell. */
+  xaxisId?: string;
+  yaxisId?: string;
   q1?: number[];
   median?: number[];
   q3?: number[];
@@ -48,6 +61,8 @@ export interface BoxPlotProps extends BaseChartProps {
   data: BoxSeriesData[];
   orientation?: "v" | "h";
   boxmode?: "group" | "overlay";
+  /** Optional facet grid spec, same shape used by other faceted charts. */
+  subplots?: FacetGridConfig;
 }
 
 export function BoxPlot({
@@ -58,7 +73,11 @@ export function BoxPlot({
   error,
   orientation = "v",
   boxmode = "group",
+  subplots,
 }: BoxPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
+    subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
+  );
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("box", renderer);
 
@@ -67,6 +86,8 @@ export function BoxPlot({
       ({
         y: (series.orientation || orientation) === "v" ? series.y : series.x,
         x: (series.orientation || orientation) === "v" ? series.x : series.y,
+        xaxis: series.xaxisId,
+        yaxis: series.yaxisId,
         name: series.name,
         type: plotType,
 
@@ -124,7 +145,26 @@ export function BoxPlot({
       }) as any as PlotData,
   );
 
-  const layout = createBaseLayout(config);
+  const layout = createBaseLayout(config, sizing);
+
+  // Faceted layout: same shape used by cartesian / histogram.
+  if (subplots) {
+    const { cellTitleFontSize } = facetTierStyles(sizing);
+    const forceSharedTitles = sizing.cellVeryCompact;
+    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
+    const faceted = extendLayoutForFacets(layout, subplots.cells, {
+      rows: subplots.rows,
+      columns: subplots.columns,
+      sharedX: subplots.sharedX,
+      sharedY: subplots.sharedY,
+      sharedXTitle: effectiveSharedXTitle,
+      sharedYTitle: effectiveSharedYTitle,
+      roworder: subplots.roworder,
+      titleFontSize: cellTitleFontSize,
+    });
+    Object.assign(layout, faceted);
+  }
 
   // Add box plot specific layout properties
   layout.boxmode = boxmode;
@@ -151,10 +191,12 @@ export function BoxPlot({
     };
   }
 
+  applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
+
   const plotConfig = createPlotlyConfig(config);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}
@@ -166,223 +208,5 @@ export function BoxPlot({
   );
 }
 
-// Grouped box plot component
-export interface GroupedBoxPlotProps extends BaseChartProps {
-  groups: {
-    name: string;
-    values: number[];
-    color?: string;
-  }[];
-  groupBy?: string[];
-  orientation?: "v" | "h";
-}
-
-export function GroupedBoxPlot({
-  groups,
-  groupBy, // Categories for grouping
-  orientation = "v",
-  ...props
-}: GroupedBoxPlotProps) {
-  // Create data structure for grouped box plots following Plotly.js pattern
-  // For grouped box plots, each group needs the same x categories repeated
-  const data: BoxSeriesData[] = groups.map((group) => {
-    // Create repeated x values for each category
-    const xValues: string[] = [];
-    const yValues: number[] = [];
-
-    const groupByArr =
-      groupBy && groupBy.length > 0 ? groupBy : group.values.map((_, i) => `Category ${i + 1}`);
-
-    const valuesPerCategory = Math.ceil(group.values.length / groupByArr.length);
-
-    for (let i = 0; i < groupByArr.length; i++) {
-      const categoryValues = group.values.slice(i * valuesPerCategory, (i + 1) * valuesPerCategory);
-
-      // Add x values (repeated category name) and corresponding y values
-      categoryValues.forEach((value) => {
-        xValues.push(groupByArr[i] || `Category ${i + 1}`);
-        yValues.push(value);
-      });
-    }
-
-    if (orientation === "v") {
-      return {
-        y: yValues,
-        x: xValues,
-        name: group.name,
-        color: group.color,
-        orientation: orientation,
-      };
-    } else {
-      return {
-        x: yValues,
-        y: xValues,
-        name: group.name,
-        color: group.color,
-        orientation: orientation,
-      };
-    }
-  });
-
-  return <BoxPlot data={data} orientation={orientation} boxmode="group" {...props} />;
-}
-
-// Violin plot component (similar to box plot but shows distribution)
-export interface ViolinSeriesData extends BaseSeries {
-  y?: (string | number)[];
-  x?: (string | number | Date)[];
-  bandwidth?: number;
-  scalegroup?: string;
-  scalemode?: "width" | "count";
-  spanmode?: "soft" | "hard" | "manual";
-  span?: [number, number];
-  side?: "positive" | "negative" | "both";
-  box?: {
-    visible?: boolean;
-    width?: number;
-    fillcolor?: string;
-    line?: {
-      color?: string;
-      width?: number;
-    };
-  };
-  meanline?: {
-    visible?: boolean;
-    color?: string;
-    width?: number;
-  };
-  points?: "all" | "outliers" | "suspectedoutliers" | false;
-  jitter?: number;
-  pointpos?: number;
-  orientation?: "v" | "h";
-  fillcolor?: string;
-  line?: {
-    color?: string;
-    width?: number;
-  };
-  marker?: {
-    size?: number;
-    color?: string;
-    opacity?: number;
-    symbol?: string;
-    line?: {
-      color?: string;
-      width?: number;
-    };
-  };
-}
-
-export interface ViolinPlotProps extends BaseChartProps {
-  data: ViolinSeriesData[];
-  orientation?: "v" | "h";
-  violinmode?: "group" | "overlay";
-}
-
-export function ViolinPlot({
-  data,
-  config = {},
-  className,
-  loading,
-  error,
-  orientation = "v",
-  violinmode = "group",
-}: ViolinPlotProps) {
-  const renderer = getRenderer(config.useWebGL);
-  const plotType = getPlotType("violin", renderer);
-
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        y: (series.orientation || orientation) === "v" ? series.y : series.x,
-        x: (series.orientation || orientation) === "v" ? series.x : series.y,
-        name: series.name,
-        type: plotType,
-
-        // Violin specific properties
-        bandwidth: series.bandwidth,
-        scalegroup: series.scalegroup,
-        scalemode: series.scalemode || "width",
-        spanmode: series.spanmode || "soft",
-        span: series.span,
-        side: series.side || "both",
-
-        // Box overlay
-        box: series.box
-          ? {
-              visible: series.box.visible !== false,
-              width: series.box.width || 0.25,
-              fillcolor: series.box.fillcolor,
-              line: series.box.line,
-            }
-          : { visible: true, width: 0.25 },
-
-        // Mean line
-        meanline: series.meanline
-          ? {
-              visible: series.meanline.visible !== false,
-              color: series.meanline.color,
-              width: series.meanline.width || 2,
-            }
-          : { visible: true },
-
-        // Points
-        points: series.points !== undefined ? series.points : false,
-        jitter: series.jitter || 0.3,
-        pointpos: series.pointpos || 0,
-
-        // Marker styling for points
-        marker: series.marker
-          ? {
-              size: series.marker.size || 6,
-              color: series.marker.color || series.color,
-              opacity: series.marker.opacity || 1,
-              symbol: series.marker.symbol || "circle",
-              line: series.marker.line,
-            }
-          : {
-              size: 6,
-              color: series.color,
-            },
-
-        // Styling
-        fillcolor: series.fillcolor || series.color,
-        line: series.line
-          ? {
-              color: series.line.color || series.color,
-              width: series.line.width || 0.5,
-            }
-          : {
-              color: series.color,
-              width: 0.5,
-            },
-
-        orientation: (series.orientation || orientation) === "h" ? "h" : "v",
-
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
-  );
-
-  const layout = createBaseLayout(config);
-
-  // Add violin plot specific layout properties
-  (layout as any).violinmode = violinmode;
-
-  const plotConfig = createPlotlyConfig(config);
-
-  return (
-    <div className={className}>
-      <PlotlyChart
-        data={plotData}
-        layout={layout}
-        config={plotConfig}
-        loading={loading}
-        error={error}
-      />
-    </div>
-  );
-}
+export { GroupedBoxPlot, type GroupedBoxPlotProps } from "./grouped-box-plot";
+export { ViolinPlot, type ViolinPlotProps, type ViolinSeriesData } from "./violin-plot";

@@ -1,3 +1,4 @@
+import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -146,6 +147,33 @@ describe("DataExportModal", () => {
     const user = userEvent.setup();
     await user.click(screen.getByTestId("step-close"));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("forwards the anonymize override and surfaces the divergence badge when the user flips the checkbox", async () => {
+    const initiateSpy = mountExportHandlers();
+    server.mount(contract.experiments.getExperiment, {
+      body: createExperiment({ anonymizeContributors: false }),
+    });
+
+    render(<DataExportModal {...defaultProps} />);
+    const user = userEvent.setup();
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /exportModal\.anonymizeContributors/,
+    });
+    await waitFor(() => expect(checkbox).not.toBeDisabled());
+    await user.click(checkbox);
+
+    expect(screen.getByText(/exportModal\.overridingDefault/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Create CSV Export" }));
+
+    await waitFor(() => expect(initiateSpy.callCount).toBe(1));
+    expect(initiateSpy.body).toEqual({
+      tableName: "raw_data",
+      format: "csv",
+      anonymizeContributors: true,
+    });
   });
 
   it("resets creationStatus when modal closes and reopens", async () => {

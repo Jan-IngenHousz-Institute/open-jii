@@ -10,7 +10,7 @@ import { SidebarProvider } from "@repo/ui/components/sidebar";
 
 import { NavUser } from "./nav-user";
 
-const baseUser = { id: "u-1", email: "ada@example.com", avatar: "https://example.com/a.png" };
+const baseUser = { id: "u-1", email: "ada@example.com" };
 
 function useProfileOverride(profile: { firstName?: string; lastName?: string } | null) {
   if (profile === null) {

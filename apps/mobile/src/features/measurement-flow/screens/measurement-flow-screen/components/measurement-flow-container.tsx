@@ -1,33 +1,28 @@
-import clsx from "clsx";
 import React from "react";
 import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useIterationStateSync } from "~/features/measurement-flow/hooks/use-iteration-state-sync";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
 import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
-import { FlowProgressIndicator } from "./flow-progress-indicator";
 import { ActiveState } from "./flow-states/active-state";
-import { CompletedState } from "./flow-states/completed-state";
 import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const { flowNodes, currentFlowStep, isFlowFinished, isQuestionsSubmitPending, experimentId } =
+  const { flowNodes, currentFlowStep, isQuestionsSubmitPending, experimentId } =
     useMeasurementFlowStore();
-  const { classes } = useTheme();
-  const isFlowCompleted = currentFlowStep >= flowNodes.length;
   const isFlowInitialized = flowNodes.length > 0;
   const currentNode = flowNodes[currentFlowStep];
+  const insets = useSafeAreaInsets();
 
   useIterationStateSync(flowNodes);
 
-  // Show experiment selection if no experiment is selected yet
+  // Picker — flat against the screen background.
   if (!experimentId) {
     return (
-      <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-        <FlowProgressIndicator />
+      <View className="bg-background flex-1">
         <ExperimentSelectionStep />
       </View>
     );
@@ -37,20 +32,14 @@ export function MeasurementFlowContainer() {
     return <LoadingState />;
   }
 
+  // Active flow states sit under the FlowHero with a rounded "card" lip.
   if (isQuestionsSubmitPending) {
     return (
-      <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-        <FlowProgressIndicator />
+      <View
+        className="bg-card flex-1 rounded-t-[36px] pt-3"
+        style={{ paddingBottom: insets.bottom }}
+      >
         <QuestionsOnlySubmitNode />
-      </View>
-    );
-  }
-
-  if (isFlowCompleted && isFlowFinished) {
-    return (
-      <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-        <FlowProgressIndicator />
-        <CompletedState />
       </View>
     );
   }
@@ -59,9 +48,17 @@ export function MeasurementFlowContainer() {
     return <EmptyState />;
   }
 
+  // Instruction/question nodes show the NavigationButtons bar, which carries
+  // its own bottom inset. Measurement/analysis nodes render their own action
+  // bar instead, so the card must supply the inset for those.
+  const navButtonsCarryInset =
+    currentNode.type === "instruction" || currentNode.type === "question";
+
   return (
-    <View className={clsx("flex-1 rounded-t-3xl", classes.card)}>
-      <FlowProgressIndicator />
+    <View
+      className="bg-card flex-1 rounded-t-[36px] pt-3"
+      style={{ paddingBottom: navButtonsCarryInset ? 0 : insets.bottom }}
+    >
       <ActiveState currentNode={currentNode} />
     </View>
   );

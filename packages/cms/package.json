@@ -25,6 +25,10 @@
       "types": "./dist/lib/__generated/sdk.d.ts",
       "default": "./dist/lib/__generated/sdk.js"
     },
+    "./alert": {
+      "types": "./dist/features/alert/severity.d.ts",
+      "default": "./dist/features/alert/severity.js"
+    },
     "./client": {
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
@@ -42,6 +46,7 @@
   },
   "dependencies": {
     "@contentful/live-preview": "^4.9.12",
+    "class-variance-authority": "^0.7.1",
     "@contentful/rich-text-react-renderer": "16.0.2",
     "@contentful/rich-text-types": "17.0.1",
     "@repo/i18n": "workspace:*",

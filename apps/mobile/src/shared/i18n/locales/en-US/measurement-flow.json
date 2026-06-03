@@ -1,9 +1,9 @@
 {
   "screen": {
     "stepLabel": {
-      "chooseExperiment": "Choose an experiment to begin your experiment workflow.",
+      "chooseExperiment": "Choose an experiment to begin measuring.",
       "reviewAnswers": "Review your answers and upload them before continuing.",
-      "checkRecent": "Check your recent measurements before you continue the flow.",
+      "checkRecent": "Check your recent measurements before you continue.",
       "instruction": "Read these instructions carefully.",
       "question": "Answer the questions below to continue to do the measurement.",
       "measurement": "Below you can see and edit the answers given in the questions.",
@@ -11,19 +11,58 @@
     }
   },
   "endFlow": {
-    "buttonTitle": "Finish flow",
-    "alertTitle": "Finish Flow",
-    "alertMessage": "If you finish now, this measurement flow will not be saved.",
-    "confirm": "Finish Flow"
+    "buttonTitle": "Finish",
+    "alertTitle": "Finish measurement?",
+    "alertMessage": "If you finish now, this measurement will not be saved.",
+    "confirm": "Finish"
   },
   "experimentSelection": {
     "heading": "Select experiment",
+    "heroTitle": "Choose an experiment",
+    "heroSubtitle": "Choose an experiment to begin.",
+    "searchPlaceholder": "Search experiments…",
+    "recentThisWeek": "{{n}} measurements in the last week",
+    "assignedToYou": "Assigned to you",
     "loadingExperiments": "Loading experiments...",
     "loadFailed": "Failed to load experiments. Please try again.",
     "chooseExperimentPlaceholder": "Choose an experiment",
     "description": "Description",
     "noDescription": "No description available",
-    "startFlow": "Start flow"
+    "startFlow": "Start measurement",
+    "startNamedFlow": "Measure {{label}}",
+    "sensorBannerTitle": "This measurement needs a sensor",
+    "sensorBannerBody": "Connect a MultispeQ to capture readings.",
+    "sensorBannerAction": "Connect",
+    "tag": {
+      "sensorRequired": "Sensor required",
+      "questionsOnly": "Questions only",
+      "sensorAndQuestions": "Sensor + questions"
+    },
+    "meta": {
+      "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
+    }
+  },
+  "hero": {
+    "activeFlow": "IN PROGRESS",
+    "stepOfTotal": "Step {{step}} of {{total}}",
+    "stepTypeLabel": {
+      "instruction": "Instruction",
+      "question": "Question",
+      "measurement": "Measurement",
+      "analysis": "Analysis",
+      "review": "Review answers",
+      "completed": "Completed"
+    },
+    "exitLabel": "Exit"
+  },
+  "exitSheet": {
+    "title": "Exit measurement?",
+    "body": "You're on step {{step}} of {{total}}. Pause to keep your progress, or discard to start over later.",
+    "pause": "Pause",
+    "pauseSub": "We'll save your answers and progress.",
+    "discard": "Discard",
+    "discardSub": "Throw away this attempt and start over.",
+    "continue": "Continue"
   },
   "offlineIndicator": {
     "ready": "Offline ready"
@@ -95,7 +134,7 @@
       "connectFirst": "Please connect to a device first"
     },
     "readyState": {
-      "noQuestions": "This flow has no questions, start measuring directly!",
+      "noQuestions": "This experiment has no questions, start measuring directly!",
       "overviewHeading": "Overview of your answers",
       "defaultQuestionLabel": "Question",
       "notSet": "Not set"
@@ -123,8 +162,7 @@
     "searchPlaceholder": "Search options...",
     "unsupportedKind": "Unsupported question kind: {{kind}}",
     "qrNotMatch": "\"{{data}}\" does not exist.",
-    "qrSelected": "\"{{match}}\" selected successfully!",
-    "qrApplied": "QR applied successfully!"
+    "qrDismissLabel": "Dismiss"
   },
   "questionTypes": {
     "multipleChoice": {
@@ -175,11 +213,12 @@
       "removeAlertTitle": "Remove from phone",
       "removeAlertMessage": "\"{{experimentName}}\" is already uploaded to the cloud. Remove it from this phone? The cloud copy stays intact.",
       "deleteAlertTitle": "Delete unsynced measurement",
-      "deleteAlertMessage": "\"{{experimentName}}\" has not been uploaded yet. Deleting it now means the measurement will be lost permanently."
+      "deleteAlertMessage": "\"{{experimentName}}\" has not been uploaded yet. Deleting it now means the measurement will be lost permanently.",
+      "deleteBlockedUploading": "Can't delete while uploading — try again in a moment."
     },
-    "empty": "No flow steps available.",
-    "error": "Failed to load experiment flow. Please try again.",
-    "loading": "Loading experiment flow..."
+    "empty": "No steps available.",
+    "error": "Failed to load experiment. Please try again.",
+    "loading": "Loading experiment..."
   },
   "result": {
     "comment": "Comment",

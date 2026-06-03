@@ -54,7 +54,9 @@
       "creationSuccess": "Export erfolgreich erstellt!",
       "creationSuccessDescription": "Ihr Export wurde in die Warteschlange gestellt und steht in Kürze zum Download bereit.",
       "creationError": "Export konnte nicht erstellt werden",
-      "backToList": "Zurück zu Exporten"
+      "backToList": "Zurück zu Exporten",
+      "anonymizeContributors": "Mitwirkende in der exportierten Datei anonymisieren",
+      "overridingDefault": "überschreibt Experimentstandard"
     }
   }
 }

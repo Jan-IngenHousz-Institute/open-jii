@@ -12,6 +12,7 @@ import { defaultLocale, isKnownLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
+import { AlertsBar } from "../../components/alerts-bar";
 import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
@@ -87,6 +88,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       >
         <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
           <PostHogIdentifier />
+          <AlertsBar locale={locale} preview={preview} />
           <QueryProvider>{children}</QueryProvider>
         </TranslationsProvider>
       </ContentfulPreviewProvider>

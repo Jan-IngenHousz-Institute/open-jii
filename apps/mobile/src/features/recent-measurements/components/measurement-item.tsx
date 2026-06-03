@@ -1,20 +1,33 @@
 import { cva } from "class-variance-authority";
-import { clsx } from "clsx";
 import {
-  UploadCloud,
-  Trash2,
-  CloudCheck,
   CloudAlert,
-  CloudUpload,
+  CloudCheck,
   MessageCircleMore,
+  Trash2,
+  UploadCloud,
 } from "lucide-react-native";
 import React, { memo } from "react";
-import { View, Text, TouchableOpacity, Pressable, ActivityIndicator } from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { cn } from "~/shared/utils/cn";
 import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/utils/format-time-ago";
+
+interface SemanticColors {
+  success: string;
+  info: string;
+  error: string;
+}
+
+const STATUS_ICON: Record<MeasurementStatus, (c: { semantic: SemanticColors }) => React.ReactNode> =
+  {
+    successful: (c) => <CloudCheck size={16} color={c.semantic.success} />,
+    pending: (c) => <UploadCloud size={16} color={c.semantic.info} />,
+    failed: (c) => <CloudAlert size={16} color={c.semantic.error} />,
+  };
 
 const answersTextStyle = cva("mb-1.5 text-base", {
   variants: {
@@ -52,25 +65,20 @@ export const MeasurementItem = memo(function MeasurementItem({
   hideActions = false,
   hasComment = false,
 }: MeasurementItemProps) {
-  const { colors, classes } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const isSynced = status === "successful";
-  const isSyncing = status === "uploading";
-  const isPending = status === "pending";
-
+  const isSyncing = useIsProcessing(id);
   const hasAnswers = questions && questions.length > 0;
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
 
   return (
-    <Pressable
-      className={clsx("border-t px-4 py-3", classes.card, classes.border)}
-      onPress={() => onPress?.(id)}
-    >
+    <Pressable className="border-divider bg-card border-t px-4 py-3" onPress={() => onPress?.(id)}>
       {/* Top: answers */}
       <Text
-        className={clsx(
+        className={cn(
           answersTextStyle({ state: hasAnswers }),
-          hasAnswers ? classes.text : classes.textMuted,
+          hasAnswers ? "text-on-surface" : "text-muted-body",
         )}
         numberOfLines={1}
       >
@@ -80,7 +88,7 @@ export const MeasurementItem = memo(function MeasurementItem({
       {/* Bottom row: experiment name on left, timestamp + icon on right */}
       <View className="flex-row items-center justify-between">
         <View className="mr-2 flex-1 flex-row items-center gap-1">
-          <Text className={clsx("shrink text-sm font-normal", classes.textMuted)} numberOfLines={1}>
+          <Text className="text-muted-body shrink text-sm font-normal" numberOfLines={1}>
             {experimentName}
           </Text>
           {hasComment && <MessageCircleMore size={14} color={colors.inactive} />}
@@ -117,18 +125,10 @@ export const MeasurementItem = memo(function MeasurementItem({
               )}
             </View>
           )}
-          <Text className={clsx("shrink-0 text-sm", classes.textMuted)} numberOfLines={1}>
+          <Text className="text-muted-body shrink-0 text-sm" numberOfLines={1}>
             {formatTimeAgo(timestamp)}
           </Text>
-          {isSyncing ? (
-            <ActivityIndicator size={16} color={colors.semantic.info} />
-          ) : isSynced ? (
-            <CloudCheck size={16} color={colors.semantic.success} />
-          ) : isPending ? (
-            <CloudUpload size={16} color={colors.semantic.info} />
-          ) : (
-            <CloudAlert size={16} color={colors.semantic.error} />
-          )}
+          {STATUS_ICON[status](colors)}
         </View>
       </View>
     </Pressable>

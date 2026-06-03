@@ -2,8 +2,11 @@ import { bleManager } from "~/features/connection/services/bluetooth-ble/prepare
 import { MultispeqStreamEvents } from "~/features/connection/services/multispeq-communication/multispeq-stream-events";
 import { delay } from "~/shared/utils/delay";
 import { Emitter } from "~/shared/utils/emitter";
+import { createLogger } from "~/shared/utils/logger";
 import { safeAsync } from "~/shared/utils/safe-async";
 import { stringifyIfObject } from "~/shared/utils/stringify-if-object";
+
+const log = createLogger("bt-ble");
 
 const SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef1";
 const WRITE_UUID = "abcdef01-1234-5678-9abc-def012345679";
@@ -37,8 +40,10 @@ export async function connectToBteDevice(deviceId: string) {
       const trimmed = values.join("").slice(0, -15);
       await delay(300);
       characteristicSubscription.remove();
-      device.cancelConnection().catch(console.error);
-      console.log("got response", trimmed);
+      device
+        .cancelConnection()
+        .catch((e) => log.warn("cancelConnection failed", { err: (e as Error)?.message }));
+      log.debug("got response", { bytes: trimmed.length });
       try {
         await emitter.emit("receivedReplyFromDevice", {
           data: JSON.parse(trimmed),

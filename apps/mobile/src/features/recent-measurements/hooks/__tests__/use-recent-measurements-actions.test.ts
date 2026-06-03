@@ -18,8 +18,7 @@ const mockExportMeasurementsToFile = vi.fn().mockResolvedValue(undefined);
 vi.mock("~/features/recent-measurements/hooks/use-all-measurements", () => ({
   useAllMeasurements: vi.fn(() => ({
     measurements: mockAllMeasurements,
-    counts: { pending: 0, uploading: 1, failed: 1, successful: 1 },
-    uploadingCount: 1,
+    counts: { pending: 0, failed: 1, successful: 1 },
     invalidate: mockInvalidate,
   })),
 }));
@@ -93,22 +92,21 @@ const makeItem = (
   status: MeasurementItem["status"],
   experimentName = "Exp",
 ): MeasurementItem => ({
+  id: key,
   key,
   status,
   experimentName,
+  protocolName: "p",
   timestamp: "2026-01-01T10:00:00Z",
   questions: [],
-  data: {
-    topic: "t/t",
-    measurementResult: {},
-    metadata: { experimentName, protocolName: "p", timestamp: "2026-01-01T10:00:00Z" },
-  },
+  hasComment: false,
+  dayKey: "2026-01-01",
 });
 
 const mockAllMeasurements: MeasurementItem[] = [
   makeItem("k1", "failed", "Exp Unsynced"),
   makeItem("k2", "successful", "Exp Synced"),
-  makeItem("k3", "uploading", "Exp Syncing"),
+  makeItem("k3", "pending", "Exp Pending"),
 ];
 
 describe("useRecentMeasurementsActions", () => {
@@ -116,14 +114,12 @@ describe("useRecentMeasurementsActions", () => {
     vi.clearAllMocks();
   });
 
-  it("returns derived counts and passthrough values", () => {
+  it("passes the measurement list through", () => {
     const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
-    expect(result.current.unsyncedCount).toBe(1);
-    expect(result.current.syncedCount).toBe(1);
-    expect(result.current.hasAnyMeasurements).toBe(true);
-    expect(result.current.uploadingCount).toBe(1);
-    expect(result.current.isUploading).toBe(false);
+    // Counts moved to useMeasurementCounts (toolbar-owned); the actions hook
+    // no longer subscribes to them, keeping the screen off the settle-tick
+    // re-render path. See OJD-1470.
     expect(result.current.measurements).toBe(mockAllMeasurements);
   });
 
@@ -222,7 +218,7 @@ describe("useRecentMeasurementsActions", () => {
       );
     });
 
-    it("calls uploadAll, toasts success, and invalidates on confirm", async () => {
+    it("calls uploadAll and invalidates on confirm (no success toast)", async () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
 
       act(() => result.current.confirmSyncAll());
@@ -230,7 +226,7 @@ describe("useRecentMeasurementsActions", () => {
       await act(() => confirmBtn.onPress());
 
       expect(mockUploadAll).toHaveBeenCalled();
-      expect(mockToastSuccess).toHaveBeenCalledWith("All measurements synced successfully");
+      expect(mockToastSuccess).not.toHaveBeenCalled();
       expect(mockInvalidate).toHaveBeenCalled();
     });
   });
@@ -284,11 +280,23 @@ describe("useRecentMeasurementsActions", () => {
   describe("saveComment", () => {
     it("calls updateMeasurementComment and invalidates", async () => {
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));
-      const m = makeItem("k1", "failed");
+      const stored = {
+        id: "k1",
+        status: "failed" as const,
+        data: {
+          topic: "t/t",
+          measurementResult: {},
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "p",
+            timestamp: "2026-01-01T10:00:00Z",
+          },
+        },
+      };
 
-      await act(() => result.current.saveComment(m, "great result"));
+      await act(() => result.current.saveComment(stored, "great result"));
 
-      expect(mockUpdateMeasurementComment).toHaveBeenCalledWith("k1", m.data, "great result");
+      expect(mockUpdateMeasurementComment).toHaveBeenCalledWith("k1", stored.data, "great result");
       expect(mockInvalidate).toHaveBeenCalled();
     });
   });

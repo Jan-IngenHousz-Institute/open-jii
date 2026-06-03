@@ -2,6 +2,9 @@ import { createAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 
 import successSound from "../../../assets/success.mp3";
+import { createLogger } from "./logger";
+
+const log = createLogger("play-sound");
 
 const player = createAudioPlayer(successSound);
 
@@ -21,12 +24,12 @@ export async function playSound() {
     }
     player.play();
   } catch (error) {
-    console.error("Error playing sound:", error);
+    log.error("Error playing sound", { err: (error as Error)?.message });
   }
 
   try {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   } catch (error) {
-    console.error("Error playing haptic feedback:", error);
+    log.error("Error playing haptic feedback", { err: (error as Error)?.message });
   }
 }

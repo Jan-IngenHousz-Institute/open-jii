@@ -21,5 +21,27 @@
     "signalStrong": "Strong",
     "signalMedium": "Medium",
     "signalWeak": "Weak"
+  },
+  "deviceSheet": {
+    "title": "Devices",
+    "currentSubMultispeQ": "MultispeQ · Battery {{battery}}% · v{{firmware}}",
+    "currentSubMultispeQNoFirmware": "MultispeQ · Battery {{battery}}%",
+    "noDeviceTitle": "No device connected",
+    "noDeviceSub": "Pair a MultispeQ to start measuring.",
+    "reconnectTitle": "Reconnect to {{name}}",
+    "reconnectSub": "Last paired device",
+    "disconnect": "Disconnect",
+    "reconnect": "Reconnect",
+    "nearbyTitle": "Nearby devices",
+    "scan": "Scan",
+    "scanning": "Scanning…",
+    "pair": "Pair",
+    "pairing": "Pairing…",
+    "seeMoreDevices": "See more devices ({{count}})",
+    "helperText": "Can't find your device? Hold the button on the MultispeQ for 3 seconds."
+  },
+  "chip": {
+    "connect": "Connect",
+    "reconnect": "Reconnect"
   }
 }

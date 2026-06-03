@@ -1,13 +1,17 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
 
 @Injectable()
 export class RevokeInvitationUseCase {
   private readonly logger = new Logger(RevokeInvitationUseCase.name);
 
-  constructor(private readonly invitationRepository: InvitationRepository) {}
+  constructor(
+    private readonly invitationRepository: InvitationRepository,
+    private readonly experimentRepository: ExperimentRepository,
+  ) {}
 
   /**
    * Revokes a pending invitation by ID.
@@ -37,6 +41,15 @@ export class RevokeInvitationUseCase {
       return failure(
         AppError.badRequest(`Invitation is already ${invitation.status}, cannot revoke`),
       );
+    }
+
+    const accessResult = await this.experimentRepository.checkAccess(invitation.resourceId, userId);
+    if (accessResult.isFailure()) {
+      return failure(AppError.internal("Failed to check experiment access"));
+    }
+    const { hasArchiveAccess } = accessResult.value;
+    if (!hasArchiveAccess) {
+      return failure(AppError.forbidden("You do not have access to this experiment"));
     }
 
     const revokeResult = await this.invitationRepository.revoke(invitationId);

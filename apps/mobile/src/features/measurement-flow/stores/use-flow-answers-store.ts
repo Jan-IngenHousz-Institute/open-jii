@@ -1,103 +1,75 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 interface FlowAnswersStore {
   answersHistory: Record<string, string>[];
   autoincrementSettings: Record<string, boolean>;
   rememberAnswerSettings: Record<string, boolean>;
 
-  // Set an answer for a specific cycle and question
   setAnswer: (cycle: number, name: string, value: string) => void;
-
-  // Clear all answers history
   clearHistory: () => void;
-
-  // Get a specific answer for a cycle and question
   getAnswer: (cycle: number, name: string) => string | undefined;
-
-  // Get answers for a specific cycle
   getCycleAnswers: (cycle: number) => Record<string, string> | undefined;
-
-  // Set autoincrement setting for a variable
   setAutoincrement: (name: string, enabled: boolean) => void;
-
-  // Check if autoincrement is enabled for a variable
   isAutoincrementEnabled: (name: string) => boolean;
-
-  // Set remember answer setting for a variable
   setRememberAnswer: (name: string, enabled: boolean) => void;
-
-  // Check if remember answer is enabled for a variable
   isRememberAnswerEnabled: (name: string) => boolean;
 }
 
-export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
-  answersHistory: [],
-  autoincrementSettings: {},
-  rememberAnswerSettings: {},
+// Persisted alongside useMeasurementFlowStore: a paused flow needs its
+// answers to come back on resume after a kill/background.
+export const useFlowAnswersStore = create<FlowAnswersStore>()(
+  persist(
+    (set, get) => ({
+      answersHistory: [],
+      autoincrementSettings: {},
+      rememberAnswerSettings: {},
 
-  setAnswer: (cycle: number, name: string, value: string) => {
-    set((state) => {
-      const newHistory = [...state.answersHistory];
-
-      // Ensure we have enough cycles in the array
-      while (newHistory.length <= cycle) {
-        newHistory.push({});
-      }
-
-      const cycleAnswers = { ...newHistory[cycle] };
-
-      if (value.trim() === "") {
-        // Treat clearing/deselecting as if the question was never answered
-        delete cycleAnswers[name];
-      } else {
-        cycleAnswers[name] = value;
-      }
-
-      newHistory[cycle] = cycleAnswers;
-
-      return { answersHistory: newHistory };
-    });
-  },
-
-  clearHistory: () => {
-    set({ answersHistory: [], autoincrementSettings: {}, rememberAnswerSettings: {} });
-  },
-
-  getAnswer: (cycle: number, name: string) => {
-    const state = get();
-    return state.answersHistory[cycle]?.[name];
-  },
-
-  getCycleAnswers: (cycle: number) => {
-    const state = get();
-    return state.answersHistory[cycle];
-  },
-
-  setAutoincrement: (name: string, enabled: boolean) => {
-    set((state) => ({
-      autoincrementSettings: {
-        ...state.autoincrementSettings,
-        [name]: enabled,
+      setAnswer: (cycle: number, name: string, value: string) => {
+        set((state) => {
+          const newHistory = [...state.answersHistory];
+          while (newHistory.length <= cycle) {
+            newHistory.push({});
+          }
+          const cycleAnswers = { ...newHistory[cycle] };
+          if (value.trim() === "") {
+            delete cycleAnswers[name];
+          } else {
+            cycleAnswers[name] = value;
+          }
+          newHistory[cycle] = cycleAnswers;
+          return { answersHistory: newHistory };
+        });
       },
-    }));
-  },
 
-  isAutoincrementEnabled: (name: string) => {
-    const state = get();
-    return state.autoincrementSettings[name] ?? false;
-  },
-
-  setRememberAnswer: (name: string, enabled: boolean) => {
-    set((state) => ({
-      rememberAnswerSettings: {
-        ...state.rememberAnswerSettings,
-        [name]: enabled,
+      clearHistory: () => {
+        set({ answersHistory: [], autoincrementSettings: {}, rememberAnswerSettings: {} });
       },
-    }));
-  },
 
-  isRememberAnswerEnabled: (name: string) => {
-    const state = get();
-    return state.rememberAnswerSettings[name] ?? false;
-  },
-}));
+      getAnswer: (cycle, name) => get().answersHistory[cycle]?.[name],
+      getCycleAnswers: (cycle) => get().answersHistory[cycle],
+
+      setAutoincrement: (name, enabled) =>
+        set((state) => ({
+          autoincrementSettings: { ...state.autoincrementSettings, [name]: enabled },
+        })),
+      isAutoincrementEnabled: (name) => get().autoincrementSettings[name] ?? false,
+
+      setRememberAnswer: (name, enabled) =>
+        set((state) => ({
+          rememberAnswerSettings: { ...state.rememberAnswerSettings, [name]: enabled },
+        })),
+      isRememberAnswerEnabled: (name) => get().rememberAnswerSettings[name] ?? false,
+    }),
+    {
+      name: "flow-answers-storage",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        answersHistory: state.answersHistory,
+        autoincrementSettings: state.autoincrementSettings,
+        rememberAnswerSettings: state.rememberAnswerSettings,
+      }),
+    },
+  ),
+);

@@ -1,0 +1,45 @@
+{
+  "tab": {
+    "title": "openJII"
+  },
+  "greeting": {
+    "morning": "Goedemorgen",
+    "afternoon": "Goedemiddag",
+    "evening": "Goedenavond",
+    "fallbackName": "hallo",
+    "addressee": "{{greeting}},\n{{name}}."
+  },
+  "continue": {
+    "inProgress": "BEZIG",
+    "stepOfTotal": "Stap {{step}} van {{total}}",
+    "stepOfTotalWithPlot": "Stap {{step}} van {{total}} · {{plot}}",
+    "action": "Meting voortzetten",
+    "untitled": "Meting bezig"
+  },
+  "cta": {
+    "title": "Start een meting",
+    "body": "Kies een experiment uit je lijst en begin met meten.",
+    "action": "Kies experiment"
+  },
+  "device": {
+    "connectedSub": "Batterij {{battery}}%",
+    "connectedSubWithFirmware": "Batterij {{battery}}% · Firmware {{firmware}}",
+    "disconnectedTitle": "Geen apparaat verbonden",
+    "disconnectedSub": "Verbind een MultispeQ om te beginnen met meten",
+    "reconnectTitle": "Verbind {{name}} opnieuw",
+    "reconnectSub": "Tik om je laatste MultispeQ opnieuw te verbinden"
+  },
+  "recent": {
+    "sectionTitle": "Recente metingen",
+    "seeAll": "Bekijk alle",
+    "emptyHint": "Nog geen metingen — start er hierboven een.",
+    "emptyCtaDocs": "Lees de startgids",
+    "docsUnavailable": "Kon de documentatie niet openen. Probeer het later opnieuw.",
+    "metaCountNodes_one": "{{count}} node",
+    "metaCountNodes_other": "{{count}} nodes",
+    "tagSynced": "Gesynchroniseerd",
+    "tagQueued": "In wachtrij",
+    "tagUploading": "Uploaden",
+    "tagFailed": "Mislukt"
+  }
+}

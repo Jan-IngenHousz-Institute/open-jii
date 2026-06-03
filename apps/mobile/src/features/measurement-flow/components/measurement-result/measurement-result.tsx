@@ -43,6 +43,9 @@ export function MeasurementResult({
     isLoading: isProcessing,
     error: processingError,
   } = useQuery({
+    // applyMacro is a pure local computation; "always" keeps it from being
+    // paused by the onlineManager while offline.
+    networkMode: "always",
     queryKey: ["measurement-result", rawMeasurement, macro],
     queryFn: () => applyMacro(rawMeasurement, macro),
   });

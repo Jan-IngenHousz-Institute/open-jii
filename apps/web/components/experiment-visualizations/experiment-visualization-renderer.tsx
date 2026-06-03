@@ -1,10 +1,9 @@
 "use client";
 
 import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
-import { useTranslation } from "@repo/i18n";
 
 import "../../styles/plotly-chart.css";
-import { getChartTypeDef } from "./charts/registry";
+import { getChartTypeDef } from "./charts/chart-registry";
 
 interface ExperimentVisualizationRendererProps {
   visualization: ExperimentVisualization;
@@ -21,9 +20,7 @@ export default function ExperimentVisualizationRenderer({
   showTitle = true,
   showDescription = true,
 }: ExperimentVisualizationRendererProps) {
-  const { t } = useTranslation("experimentVisualizations");
   const def = getChartTypeDef(visualization.chartType);
-  const labelKey = def?.labelKey ?? `charts.types.${visualization.chartType}`;
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -36,22 +33,11 @@ export default function ExperimentVisualizationRenderer({
         </div>
       )}
       <div className="flex min-h-0 w-full flex-1 flex-col">
-        {def ? (
-          <def.Renderer
-            visualization={visualization}
-            experimentId={experimentId}
-            data={data ?? undefined}
-          />
-        ) : (
-          <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed">
-            <div className="text-center">
-              <div className="mb-2 text-lg font-medium">{t("errors.unsupportedChartType")}</div>
-              <div className="text-sm">
-                {t(labelKey, visualization.chartType)} {t("errors.chartTypeNotSupported")}
-              </div>
-            </div>
-          </div>
-        )}
+        <def.Renderer
+          visualization={visualization}
+          experimentId={experimentId}
+          data={data ?? undefined}
+        />
       </div>
     </div>
   );

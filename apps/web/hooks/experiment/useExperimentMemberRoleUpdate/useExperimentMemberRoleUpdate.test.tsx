@@ -12,6 +12,7 @@ const memberResponse = {
     firstName: "Test",
     lastName: "User",
     email: "test@example.com",
+    avatarUrl: null,
   },
   role: "admin" as const,
   joinedAt: "2025-01-01T00:00:00.000Z",

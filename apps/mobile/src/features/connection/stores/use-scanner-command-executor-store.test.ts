@@ -171,8 +171,7 @@ describe("useScannerCommandExecutorStore", () => {
 
       expect(useScannerCommandExecutorStore.getState().error?.message).toBe("write to BT failed");
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to send cancel command",
-        expect.any(Error),
+        expect.stringContaining("Failed to send cancel command"),
       );
 
       consoleErrorSpy.mockRestore();

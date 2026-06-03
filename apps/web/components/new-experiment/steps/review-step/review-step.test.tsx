@@ -125,7 +125,25 @@ describe("ReviewStep", () => {
         members: [{ userId: "1", firstName: "Alice", lastName: "Brown" }],
       });
 
-      expect(screen.getByText("A")).toBeInTheDocument();
+      expect(screen.getByText("AB")).toBeInTheDocument();
+    });
+
+    it("displays member avatars when available", () => {
+      renderReviewStep({
+        members: [
+          {
+            userId: "1",
+            firstName: "Alice",
+            lastName: "Brown",
+            avatarUrl: "https://example.com/alice.jpg",
+          },
+        ],
+      });
+
+      expect(screen.getByAltText("AB")).toHaveAttribute(
+        "src",
+        expect.stringContaining("https://example.com/alice.jpg"),
+      );
     });
   });
 

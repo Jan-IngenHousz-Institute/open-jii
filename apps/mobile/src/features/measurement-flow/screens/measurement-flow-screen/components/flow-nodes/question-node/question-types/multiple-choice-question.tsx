@@ -1,6 +1,7 @@
+import { FlashList } from "@shopify/flash-list";
 import { clsx } from "clsx";
 import { Check } from "lucide-react-native";
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { View, Text } from "react-native";
 import { calculateGridLayout } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/question-node/question-types/utils/grid-layout";
 import { useTranslation } from "~/shared/i18n";
@@ -17,6 +18,8 @@ interface MultipleChoiceQuestionProps {
   searchTerm?: string;
 }
 
+const ROW_GAP = 8;
+
 export function MultipleChoiceQuestion({
   node,
   selectedValue,
@@ -28,27 +31,48 @@ export function MultipleChoiceQuestion({
   const { t } = useTranslation("measurementFlow");
   const content = node.content;
 
-  // If required, can't deselect by tapping again
-  // if not required, tapping again deselects (sets value to empty string)
-  // Both cases it auto advances on select to the next step
-  const handleOptionSelect = (value: string) => {
-    if (disabledOptions.includes(value)) return;
-
-    let newValue = value;
-
-    // Optional questions keep toggle behavior
-    if (!content.required && selectedValue === value) {
-      newValue = "";
-    }
-
-    onSelect(newValue);
-  };
-  const filteredOptions =
-    content.options?.filter((option) => option.toLowerCase().includes(searchTerm.toLowerCase())) ??
-    [];
+  const filteredOptions = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+    if (!needle) return content.options ?? [];
+    return content.options?.filter((option) => option.toLowerCase().includes(needle)) ?? [];
+  }, [content.options, searchTerm]);
 
   const numOptions = filteredOptions.length;
-  const { buttonHeight, buttonWidth } = calculateGridLayout(numOptions);
+  const { columns, buttonHeight, buttonWidth } = useMemo(
+    () => calculateGridLayout(numOptions),
+    [numOptions],
+  );
+  const fontSize = numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12;
+
+  const handleOptionSelect = useCallback(
+    (value: string) => {
+      if (disabledOptions.includes(value)) return;
+      // Optional questions toggle off when re-tapped; required ones stay set.
+      const next = !content.required && selectedValue === value ? "" : value;
+      onSelect(next);
+    },
+    [content.required, disabledOptions, onSelect, selectedValue],
+  );
+
+  const renderItem = useCallback(
+    ({ item: option }: { item: string }) => {
+      const isSelected = selectedValue === option;
+      const isDisabled = disabledOptions.includes(option);
+      return (
+        <Button
+          title={option}
+          variant={isSelected ? "tertiary" : "light"}
+          style={{ width: buttonWidth, height: buttonHeight }}
+          textStyle={{ fontSize }}
+          onPress={() => handleOptionSelect(option)}
+          isDisabled={isDisabled}
+          icon={isSelected ? <Check size={16} color="#005E5E" strokeWidth={3} /> : undefined}
+          iconPosition="right"
+        />
+      );
+    },
+    [buttonHeight, buttonWidth, disabledOptions, fontSize, handleOptionSelect, selectedValue],
+  );
 
   return (
     <View className="flex-1 gap-2">
@@ -57,28 +81,16 @@ export function MultipleChoiceQuestion({
           {t("measurementFlow:questionTypes.multipleChoice.selectionRequired")}
         </Text>
       )}
-      <View className="flex-row flex-wrap justify-center gap-2">
-        {filteredOptions.map((option, index) => {
-          const isSelected = selectedValue === option;
-          const isDisabled = disabledOptions.includes(option);
-
-          return (
-            <Button
-              key={index}
-              title={option}
-              variant={isSelected ? "tertiary" : "light"}
-              style={{
-                width: buttonWidth,
-                height: buttonHeight,
-              }}
-              textStyle={{ fontSize: numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12 }}
-              onPress={() => handleOptionSelect(option)}
-              isDisabled={isDisabled}
-              icon={isSelected ? <Check size={16} color="#005E5E" strokeWidth={3} /> : undefined}
-              iconPosition="right"
-            />
-          );
-        })}
+      <View className="flex-1">
+        <FlashList
+          data={filteredOptions}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => `${index}-${item}`}
+          numColumns={columns}
+          contentContainerStyle={{ paddingBottom: ROW_GAP }}
+          ItemSeparatorComponent={() => <View style={{ height: ROW_GAP }} />}
+          extraData={selectedValue}
+        />
       </View>
 
       {disabledOptions.length > 0 && (

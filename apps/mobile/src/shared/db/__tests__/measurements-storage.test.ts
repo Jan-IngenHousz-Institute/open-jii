@@ -8,7 +8,13 @@ import { compressForStorage } from "~/shared/utils/storage-compression";
 
 import * as schema from "../schema";
 
-const migrationFiles = ["0000_outgoing_firebird.sql", "0001_add_pending_status.sql"];
+const migrationFiles = [
+  "0000_outgoing_firebird.sql",
+  "0001_add_pending_status.sql",
+  "0002_dashing_lenny_balinger.sql",
+  "0003_drop_uploading_status.sql",
+  "0004_add_day_key.sql",
+];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../../drizzle", f), "utf-8"),
 );
@@ -60,13 +66,13 @@ const mockMeasurement = {
 
 function insertRow(
   id: string,
-  status: "pending" | "failed" | "uploading" | "successful",
+  status: "pending" | "failed" | "successful",
   overrides: Partial<{ topic: string; timestamp: string; createdAt: number }> = {},
 ) {
   sqlite
     .prepare(
-      `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)`,
     )
     .run(
       id,
@@ -133,6 +139,355 @@ describe("measurements-storage", () => {
           )
           .run(),
       ).toThrow(/CHECK constraint/i);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // saveMeasurement: derived columns
+  // ---------------------------------------------------------------------------
+
+  describe("saveMeasurement — derived columns", () => {
+    it("populates questions_text from the measurement payload at save time", async () => {
+      const mod = await import("../measurements-storage");
+      const payload = {
+        topic: "t/t",
+        measurementResult: {
+          questions: [{ question_label: "lbl", question_text: "ask?", question_answer: "yes" }],
+        },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      };
+      await mod.saveMeasurement(payload, "pending");
+
+      const row = sqlite.prepare("SELECT questions_text FROM measurements").get() as {
+        questions_text: string;
+      };
+      expect(JSON.parse(row.questions_text)).toEqual(payload.measurementResult.questions);
+    });
+
+    it("flags has_comment when the payload has an annotation with type 'comment'", async () => {
+      const mod = await import("../measurements-storage");
+      await mod.saveMeasurement(
+        {
+          topic: "t/t",
+          measurementResult: {
+            annotations: [{ type: "comment", content: { text: "looks good", flagType: null } }],
+          },
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "proto-1",
+            timestamp: "2026-03-02T10:00:00.000Z",
+          },
+        },
+        "pending",
+      );
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(1);
+    });
+
+    it("keeps has_comment=0 when no comment annotation is present", async () => {
+      const mod = await import("../measurements-storage");
+      await mod.saveMeasurement(
+        {
+          topic: "t/t",
+          measurementResult: { questions: [] },
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "proto-1",
+            timestamp: "2026-03-02T10:00:00.000Z",
+          },
+        },
+        "pending",
+      );
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // updateMeasurement — derived columns (parity with saveMeasurement)
+  // ---------------------------------------------------------------------------
+
+  describe("updateMeasurement — derived columns", () => {
+    it("refreshes questions_text from the updated measurement payload", async () => {
+      insertRow("u1", "failed");
+      const mod = await import("../measurements-storage");
+      const newQuestions = [
+        { question_label: "plot", question_text: "Plot?", question_answer: "B12" },
+      ];
+      await mod.updateMeasurement("u1", {
+        topic: "t/t",
+        measurementResult: { questions: newQuestions },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      });
+
+      const row = sqlite
+        .prepare("SELECT questions_text FROM measurements WHERE id = 'u1'")
+        .get() as { questions_text: string };
+      expect(JSON.parse(row.questions_text)).toEqual(newQuestions);
+    });
+
+    it("flips has_comment to 1 when an update adds a comment annotation", async () => {
+      insertRow("u1", "failed");
+      const mod = await import("../measurements-storage");
+      await mod.updateMeasurement("u1", {
+        topic: "t/t",
+        measurementResult: {
+          annotations: [{ type: "comment", content: { text: "needs reshoot", flagType: null } }],
+        },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      });
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements WHERE id = 'u1'").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(1);
+    });
+
+    it("keeps has_comment at 0 when the updated payload has no comment annotation", async () => {
+      insertRow("u1", "failed");
+      const mod = await import("../measurements-storage");
+      await mod.updateMeasurement("u1", {
+        topic: "t/t",
+        measurementResult: { questions: [] },
+        metadata: {
+          experimentName: "Exp",
+          protocolName: "proto-1",
+          timestamp: "2026-03-02T10:00:00.000Z",
+        },
+      });
+
+      const row = sqlite.prepare("SELECT has_comment FROM measurements WHERE id = 'u1'").get() as {
+        has_comment: number;
+      };
+      expect(row.has_comment).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getMeasurementsList
+  // ---------------------------------------------------------------------------
+
+  describe("getMeasurementsList", () => {
+    function insertListRow(
+      id: string,
+      status: "pending" | "failed" | "uploading" | "successful",
+      timestamp: string,
+      questionsText: string | null = null,
+      hasComment = 0,
+    ) {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements
+           (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          id,
+          status,
+          "test/topic",
+          compressForStorage({ value: 42 }),
+          "Test Experiment",
+          "protocol-1",
+          timestamp,
+          Date.now(),
+          questionsText,
+          hasComment,
+        );
+    }
+
+    it("returns rows ordered DESC by timestamp", async () => {
+      insertListRow("a", "successful", "2026-01-01T08:00:00Z");
+      insertListRow("b", "successful", "2026-01-01T12:00:00Z");
+      insertListRow("c", "successful", "2026-01-01T10:00:00Z");
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["successful"], { limit: 50, offset: 0 });
+
+      expect(rows.map((r) => r.id)).toEqual(["b", "c", "a"]);
+    });
+
+    it("honours limit and offset (offset pagination)", async () => {
+      for (let i = 0; i < 5; i++) {
+        insertListRow(`id-${i}`, "successful", `2026-01-0${i + 1}T10:00:00Z`);
+      }
+
+      const mod = await import("../measurements-storage");
+      const page1 = await mod.getMeasurementsList(["successful"], { limit: 2, offset: 0 });
+      const page2 = await mod.getMeasurementsList(["successful"], { limit: 2, offset: 2 });
+
+      expect(page1).toHaveLength(2);
+      expect(page2).toHaveLength(2);
+      expect(page1[0].id).not.toBe(page2[0].id);
+    });
+
+    it("parses questions_text from the plain column (no Zod, no decompression)", async () => {
+      const questions = [{ question_label: "lbl", question_text: "ask?", question_answer: "yes" }];
+      insertListRow("k1", "failed", "2026-01-01T10:00:00Z", JSON.stringify(questions), 0);
+
+      const mod = await import("../measurements-storage");
+      const [row] = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(row.questions).toEqual(questions);
+    });
+
+    it("returns empty questions array for legacy rows whose questions_text is NULL", async () => {
+      insertListRow("legacy", "failed", "2026-01-01T10:00:00Z", null, 0);
+
+      const mod = await import("../measurements-storage");
+      const [row] = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(row.questions).toEqual([]);
+    });
+
+    it("falls back to [] for a single malformed questions_text row without failing the rest", async () => {
+      insertListRow("bad", "failed", "2026-01-01T11:00:00Z", "not-json", 0);
+      insertListRow(
+        "good",
+        "failed",
+        "2026-01-01T10:00:00Z",
+        '[{"question_label":"x","question_text":"x","question_answer":"y"}]',
+        0,
+      );
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      const byId = new Map(rows.map((r) => [r.id, r.questions]));
+      expect(byId.get("bad")).toEqual([]);
+      expect(byId.get("good")).toEqual([
+        { question_label: "x", question_text: "x", question_answer: "y" },
+      ]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("questions_text malformed for bad"),
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("falls back to [] when questions_text parses to a non-array (e.g. '{}', null)", async () => {
+      insertListRow("obj", "failed", "2026-01-01T11:00:00Z", "{}", 0);
+      insertListRow("nul", "failed", "2026-01-01T10:00:00Z", "null", 0);
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(rows.find((r) => r.id === "obj")?.questions).toEqual([]);
+      expect(rows.find((r) => r.id === "nul")?.questions).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("questions_text not an array for obj"),
+        "object",
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("returns hasComment as boolean from the has_comment column", async () => {
+      insertListRow("with", "failed", "2026-01-01T11:00:00Z", "[]", 1);
+      insertListRow("without", "failed", "2026-01-01T10:00:00Z", "[]", 0);
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      const byId = new Map(rows.map((r) => [r.id, r.hasComment]));
+      expect(byId.get("with")).toBe(true);
+      expect(byId.get("without")).toBe(false);
+    });
+
+    it("filters by status (returns only rows matching the given statuses)", async () => {
+      insertListRow("p1", "pending", "2026-01-01T10:00:00Z");
+      insertListRow("f1", "failed", "2026-01-01T10:00:00Z");
+      insertListRow("s1", "successful", "2026-01-01T10:00:00Z");
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList(["pending", "failed"], { limit: 50, offset: 0 });
+
+      expect(rows).toHaveLength(2);
+      expect(rows.every((r) => ["pending", "failed"].includes(r.status))).toBe(true);
+    });
+
+    it("returns an empty array when called with no statuses", async () => {
+      insertListRow("p1", "pending", "2026-01-01T10:00:00Z");
+
+      const mod = await import("../measurements-storage");
+      const rows = await mod.getMeasurementsList([], { limit: 50, offset: 0 });
+
+      expect(rows).toEqual([]);
+    });
+
+    it("returns empty array and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(rows).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to fetch measurements list"),
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getMeasurement (fetch-one)
+  // ---------------------------------------------------------------------------
+
+  describe("getMeasurement", () => {
+    it("returns the full decompressed payload for the given id", async () => {
+      insertRow("k1", "pending");
+
+      const mod = await import("../measurements-storage");
+      const row = await mod.getMeasurement("k1");
+
+      expect(row).toMatchObject({
+        id: "k1",
+        status: "pending",
+        data: { measurementResult: { value: 42 } },
+      });
+    });
+
+    it("returns null when no row matches the id", async () => {
+      const mod = await import("../measurements-storage");
+      const row = await mod.getMeasurement("does-not-exist");
+      expect(row).toBeNull();
+    });
+
+    it("returns null and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const row = await mod.getMeasurement("anything");
+
+      expect(row).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to fetch measurement by id"),
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -248,7 +603,6 @@ describe("measurements-storage", () => {
       insertRow("p1", "pending");
       insertRow("p2", "pending");
       insertRow("f1", "failed");
-      insertRow("u1", "uploading");
       insertRow("s1", "successful");
       insertRow("s2", "successful");
       insertRow("s3", "successful");
@@ -256,13 +610,13 @@ describe("measurements-storage", () => {
       const mod = await import("../measurements-storage");
       const counts = await mod.countMeasurementsByStatus();
 
-      expect(counts).toEqual({ pending: 2, failed: 1, uploading: 1, successful: 3 });
+      expect(counts).toEqual({ pending: 2, failed: 1, successful: 3 });
     });
 
     it("returns zeros when the table is empty", async () => {
       const mod = await import("../measurements-storage");
       const counts = await mod.countMeasurementsByStatus();
-      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
+      expect(counts).toEqual({ pending: 0, failed: 0, successful: 0 });
     });
 
     it("returns zeros and logs when the underlying query throws", async () => {
@@ -273,8 +627,67 @@ describe("measurements-storage", () => {
 
       const counts = await mod.countMeasurementsByStatus();
 
-      expect(counts).toEqual({ pending: 0, failed: 0, uploading: 0, successful: 0 });
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to count measurements:", expect.any(Error));
+      expect(counts).toEqual({ pending: 0, failed: 0, successful: 0 });
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to count measurements"),
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // countRecentMeasurementsByExperiment
+  // ---------------------------------------------------------------------------
+
+  describe("countRecentMeasurementsByExperiment", () => {
+    function insertForExperiment(id: string, experimentName: string, timestamp: string) {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+           VALUES (?, 'successful', 'test/topic', ?, ?, 'protocol-1', ?, ?, NULL, 0, NULL)`,
+        )
+        .run(id, compressForStorage({ value: 42 }), experimentName, timestamp, Date.now());
+    }
+
+    it("counts measurements per experiment at or after the cutoff (single GROUP BY)", async () => {
+      insertForExperiment("a1", "Alpha", "2026-03-02T10:00:00.000Z");
+      insertForExperiment("a2", "Alpha", "2026-03-03T10:00:00.000Z");
+      insertForExperiment("b1", "Beta", "2026-03-04T10:00:00.000Z");
+
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+
+      expect(counts).toEqual({ Alpha: 2, Beta: 1 });
+    });
+
+    it("excludes rows older than the cutoff (lexicographic ISO compare)", async () => {
+      insertForExperiment("old", "Alpha", "2026-02-01T10:00:00.000Z");
+      insertForExperiment("recent", "Alpha", "2026-03-10T10:00:00.000Z");
+
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+
+      expect(counts).toEqual({ Alpha: 1 });
+    });
+
+    it("returns an empty map when nothing falls within the window", async () => {
+      const mod = await import("../measurements-storage");
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+      expect(counts).toEqual({});
+    });
+
+    it("returns an empty map and logs when the underlying query throws", async () => {
+      const mod = await import("../measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      const counts = await mod.countRecentMeasurementsByExperiment("2026-03-01T00:00:00.000Z");
+
+      expect(counts).toEqual({});
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to count recent measurements by experiment"),
+      );
 
       consoleSpy.mockRestore();
     });
@@ -285,8 +698,8 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("markAsSuccessful", () => {
-    it("transitions an uploading row to successful", async () => {
-      insertRow("m1", "uploading");
+    it("transitions a pending row to successful", async () => {
+      insertRow("m1", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("m1");
@@ -296,7 +709,7 @@ describe("measurements-storage", () => {
     });
 
     it("does not create a duplicate row", async () => {
-      insertRow("m1", "uploading");
+      insertRow("m1", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("m1");
@@ -306,15 +719,15 @@ describe("measurements-storage", () => {
     });
 
     it("does not affect other rows", async () => {
-      insertRow("target", "uploading");
-      insertRow("other", "uploading");
+      insertRow("target", "pending");
+      insertRow("other", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsSuccessful("target");
 
       const rows = sqlite.prepare("SELECT * FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("successful");
-      expect(rows.find((r) => r.id === "other")?.status).toBe("uploading");
+      expect(rows.find((r) => r.id === "other")?.status).toBe("pending");
     });
 
     it("is a no-op on a row that is already successful", async () => {
@@ -346,69 +759,6 @@ describe("measurements-storage", () => {
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // markAsUploading
-  // ---------------------------------------------------------------------------
-
-  describe("markAsUploading", () => {
-    it("returns an empty array for an empty key list", async () => {
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading([]);
-      expect(ids).toEqual([]);
-    });
-
-    it("returns the ids of rows transitioned from failed to uploading", async () => {
-      insertRow("m1", "failed");
-      insertRow("m2", "failed");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["m1", "m2"]);
-
-      expect([...ids].sort()).toEqual(["m1", "m2"]);
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.map((r) => r.status)).toEqual(["uploading", "uploading"]);
-    });
-
-    it("returns an empty array when the row is already uploading", async () => {
-      insertRow("m1", "uploading");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["m1"]);
-
-      expect(ids).toEqual([]);
-    });
-
-    it("returns an empty array when the row does not exist", async () => {
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["does-not-exist"]);
-      expect(ids).toEqual([]);
-    });
-
-    it("returns only pending or failed rows when given a mixed batch", async () => {
-      insertRow("m0", "pending");
-      insertRow("m1", "failed");
-      insertRow("m2", "uploading");
-      insertRow("m3", "successful");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["m0", "m1", "m2", "m3"]);
-
-      expect([...ids].sort()).toEqual(["m0", "m1"]);
-    });
-
-    it("transitions pending rows to uploading", async () => {
-      insertRow("p1", "pending");
-      insertRow("p2", "pending");
-
-      const mod = await import("../measurements-storage");
-      const ids = await mod.markAsUploading(["p1", "p2"]);
-
-      expect([...ids].sort()).toEqual(["p1", "p2"]);
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.map((r) => r.status)).toEqual(["uploading", "uploading"]);
     });
   });
 
@@ -531,17 +881,7 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("markAsFailed", () => {
-    it("reverts an uploading row to failed", async () => {
-      insertRow("m1", "uploading");
-
-      const mod = await import("../measurements-storage");
-      await mod.markAsFailed("m1");
-
-      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
-      expect(row.status).toBe("failed");
-    });
-
-    it("transitions a pending row to failed (save-first MQTT errored)", async () => {
+    it("transitions a pending row to failed", async () => {
       insertRow("m1", "pending");
 
       const mod = await import("../measurements-storage");
@@ -572,49 +912,15 @@ describe("measurements-storage", () => {
     });
 
     it("does not affect other rows", async () => {
-      insertRow("target", "uploading");
-      insertRow("other", "uploading");
+      insertRow("target", "pending");
+      insertRow("other", "pending");
 
       const mod = await import("../measurements-storage");
       await mod.markAsFailed("target");
 
       const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("failed");
-      expect(rows.find((r) => r.id === "other")?.status).toBe("uploading");
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // resetUploadingMeasurements
-  // ---------------------------------------------------------------------------
-
-  describe("resetUploadingMeasurements", () => {
-    it("reverts all uploading rows to pending (interrupted, not actually failed)", async () => {
-      insertRow("u1", "uploading");
-      insertRow("u2", "uploading");
-      insertRow("f1", "failed");
-      insertRow("s1", "successful");
-
-      const mod = await import("../measurements-storage");
-      await mod.resetUploadingMeasurements();
-
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.find((r) => r.id === "u1")?.status).toBe("pending");
-      expect(rows.find((r) => r.id === "u2")?.status).toBe("pending");
-      expect(rows.find((r) => r.id === "f1")?.status).toBe("failed");
-      expect(rows.find((r) => r.id === "s1")?.status).toBe("successful");
-    });
-
-    it("is a no-op when no rows are uploading", async () => {
-      insertRow("f1", "failed");
-      insertRow("s1", "successful");
-
-      const mod = await import("../measurements-storage");
-      await mod.resetUploadingMeasurements();
-
-      const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
-      expect(rows.find((r) => r.id === "f1")?.status).toBe("failed");
-      expect(rows.find((r) => r.id === "s1")?.status).toBe("successful");
+      expect(rows.find((r) => r.id === "other")?.status).toBe("pending");
     });
   });
 

@@ -65,7 +65,6 @@ export class ExperimentDataController {
   getExperimentData(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
-      const { page, pageSize, tableName, columns, orderBy, orderDirection } = query;
 
       this.logger.log({
         msg: "Processing data request",
@@ -74,18 +73,16 @@ export class ExperimentDataController {
         userId: session.user.id,
       });
 
-      const result = await this.getExperimentDataUseCase.execute(experimentId, session.user.id, {
-        page,
-        pageSize,
-        tableName,
-        columns,
-        orderBy,
-        orderDirection,
-      });
+      // Forward the parsed query verbatim; `filters` and `aggregation` are
+      // already decoded from JSON-encoded strings into their structured
+      // shapes by the contract's zod transforms.
+      const result = await this.getExperimentDataUseCase.execute(
+        experimentId,
+        session.user.id,
+        query,
+      );
 
       if (result.isSuccess()) {
-        const data = result.value;
-
         this.logger.log({
           msg: "Successfully retrieved data",
           operation: "getData",
@@ -95,7 +92,7 @@ export class ExperimentDataController {
 
         return {
           status: StatusCodes.OK,
-          body: data,
+          body: result.value,
         };
       }
 
