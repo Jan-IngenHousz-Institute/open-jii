@@ -8,6 +8,13 @@ import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
+const MAC_PATTERN = /^(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
+
+function macTail(id: string): string | null {
+  if (!MAC_PATTERN.test(id)) return null;
+  return id.split(/[:-]/).slice(-4).join(":");
+}
+
 export function HomeDeviceCard() {
   const { t } = useTranslation("home");
   const themeColors = useThemeColors();
@@ -22,7 +29,11 @@ export function HomeDeviceCard() {
   let title: string;
   let subtitle: string;
   if (isConnected) {
-    title = connectedDevice?.name ?? "MultispeQ";
+    const trimmedName = connectedDevice?.name.trim() ?? "";
+    const isBt = connectedDevice?.type === "bluetooth-classic" || connectedDevice?.type === "ble";
+    const name = trimmedName.length > 0 ? trimmedName : "MultispeQ";
+    const mac = isBt && connectedDevice ? macTail(connectedDevice.id) : null;
+    title = mac ? `${name} (${mac})` : name;
     subtitle =
       batteryLevel != null
         ? t("device.connectedSub", { battery: batteryLevel })

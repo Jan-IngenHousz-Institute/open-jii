@@ -32,6 +32,10 @@ vi.mock("../../providers/QueryProvider", () => ({
   QueryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock("../../components/alerts-bar", () => ({
+  AlertsBar: () => null,
+}));
+
 describe("LocaleLayout", () => {
   it("renders children within providers", async () => {
     const ui = await Layout({

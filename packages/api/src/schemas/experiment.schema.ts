@@ -419,6 +419,17 @@ export function sanitizeQuestionLabel(label: string): string {
 }
 
 /**
+ * Strip characters outside the allowlist (ASCII letters, digits, underscore,
+ * and space) from a user-typed value. Useful for inputs whose value later
+ * feeds a stricter canonicalizer like `sanitizeQuestionLabel`: without it,
+ * disallowed characters are silently folded (e.g. "weather1ç" -> "weather1"),
+ * so two visibly different names can collide. Spaces are kept for readability.
+ */
+export function stripSpecialCharacters(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_ ]/g, "");
+}
+
+/**
  * Column names that are reserved by the centrum gold tables. User-supplied
  * column keys (sanitized question labels, custom-metadata column names) must
  * not collide with these, since both questions_data and custom_metadata get
@@ -992,6 +1003,7 @@ export const zCreateExperimentBodyBase = z.object({
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         email: z.string().email().nullable().optional(),
+        avatarUrl: z.string().nullable().optional(),
       }),
     )
     .optional()

@@ -1,7 +1,24 @@
 "use client";
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Asterisk, GripVertical, List, PanelRightClose } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -65,9 +82,109 @@ interface WorkbookSidebarProps {
   cells: WorkbookCell[];
   activeCellId?: string | null;
   onCellClick?: (cellId: string) => void;
-  onReorder?: (fromIndex: number, toIndex: number) => void;
+  /** Reorder by moving the cell group `activeId` to the slot of `overId`. */
+  onReorder?: (activeId: string, overId: string) => void;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+}
+
+interface SidebarRowProps {
+  cell: WorkbookCell;
+  number: number;
+  isActive: boolean;
+  draggable: boolean;
+  onClick?: () => void;
+  requiredLabel: string;
+}
+
+function SidebarRow({
+  cell,
+  number,
+  isActive,
+  draggable,
+  onClick,
+  requiredLabel,
+}: SidebarRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: cell.id,
+    disabled: !draggable,
+  });
+
+  const color = cellColors[cell.type] ?? "#94A3B8";
+  const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
+
+  return (
+    <button
+      type="button"
+      ref={setNodeRef}
+      {...(draggable ? attributes : {})}
+      {...(draggable ? listeners : {})}
+      className={cn(
+        "flex h-[55px] w-full items-center justify-between rounded-[7px] text-left transition-colors",
+        isDragging && "opacity-40",
+        draggable && "cursor-grab active:cursor-grabbing",
+      )}
+      style={{
+        padding: "8px 9px 8px 9px",
+        borderLeft: `3px solid ${isActive ? color : "transparent"}`,
+        backgroundColor: isActive ? cellActiveBg[cell.type] : undefined,
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      onClick={onClick}
+    >
+      {/* Left: number badge + text */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {/* Numbered circle */}
+        <div
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold leading-[18px]"
+          style={{
+            backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
+            color,
+          }}
+        >
+          {number}
+        </div>
+
+        {/* Type + subtitle */}
+        <div className="flex min-w-0 flex-col" style={{ gap: 2, maxWidth: 160 }}>
+          <span className="flex items-center gap-0.5">
+            <span
+              className={cn(
+                "truncate text-[13px] leading-[18px] tracking-[0.02em]",
+                isActive ? "font-semibold" : "font-medium",
+              )}
+              style={
+                cell.type === "question" ? { color } : isActive ? { color } : { color: "#011111" }
+              }
+            >
+              {cellTypeLabels[cell.type] ?? cell.type}
+            </span>
+            {isRequiredQuestion && (
+              <Asterisk
+                className="size-3 shrink-0"
+                style={{ color: "#005E5E" }}
+                aria-label={requiredLabel}
+              />
+            )}
+          </span>
+          <span
+            className="truncate text-[13px] font-normal leading-[21px]"
+            style={{ color: "#68737B" }}
+          >
+            {getCellSubtitle(cell)}
+          </span>
+        </div>
+      </div>
+
+      {/* Drag handle (visual indicator only — the whole card drags) */}
+      {draggable && (
+        <div className="shrink-0">
+          <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
+        </div>
+      )}
+    </button>
+  );
 }
 
 export function WorkbookSidebar({
@@ -79,59 +196,28 @@ export function WorkbookSidebar({
   onToggleCollapsed,
 }: WorkbookSidebarProps) {
   const { t } = useTranslation("workbook");
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
-  // Filter to only executable cells (skip output)
-  const visibleCells = cells
-    .map((cell, index) => ({ cell, originalIndex: index }))
-    .filter(({ cell }) => cell.type !== "output");
-
-  const requiredCount = visibleCells.filter(
-    ({ cell }) => cell.type === "question" && cell.question.required,
-  ).length;
-
-  const handleDragStart = useCallback((index: number) => {
-    setDragIndex(index);
-  }, []);
-
-  const handleDragOver = useCallback(
-    (e: React.DragEvent, index: number) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (dragIndex === null) return;
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      const insertAt = e.clientY < midY ? index : index + 1;
-
-      if (insertAt === dragIndex || insertAt === dragIndex + 1) {
-        setDropIndex(null);
-      } else {
-        setDropIndex(insertAt);
-      }
-    },
-    [dragIndex],
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleDrop = useCallback(() => {
-    if (dragIndex === null || dropIndex === null || !onReorder) {
-      setDragIndex(null);
-      setDropIndex(null);
-      return;
-    }
-    const fromOriginal = visibleCells[dragIndex].originalIndex;
-    const toOriginal =
-      dropIndex < visibleCells.length ? visibleCells[dropIndex].originalIndex : cells.length;
-    onReorder(fromOriginal, toOriginal > fromOriginal ? toOriginal - 1 : toOriginal);
-    setDragIndex(null);
-    setDropIndex(null);
-  }, [dragIndex, dropIndex, visibleCells, cells.length, onReorder]);
+  // Filter to only executable cells (skip output).
+  const visibleCells = cells.filter((cell) => cell.type !== "output");
+  const visibleIds = visibleCells.map((cell) => cell.id);
 
-  const handleDragEnd = useCallback(() => {
-    setDragIndex(null);
-    setDropIndex(null);
-  }, []);
+  const requiredCount = visibleCells.filter(
+    (cell) => cell.type === "question" && cell.question.required,
+  ).length;
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || !onReorder) return;
+      onReorder(String(active.id), String(over.id));
+    },
+    [onReorder],
+  );
 
   if (collapsed) {
     return (
@@ -156,7 +242,7 @@ export function WorkbookSidebar({
       <div className="flex shrink-0 items-center justify-between">
         <span className="text-[13px] font-normal leading-[21px]" style={{ color: "#68737B" }}>
           {visibleCells.length} block{visibleCells.length !== 1 ? "s" : ""}
-          {requiredCount > 0 ? ` \u00b7 ${requiredCount} required` : ""}
+          {requiredCount > 0 ? ` · ${requiredCount} required` : ""}
         </span>
         {onToggleCollapsed && (
           <button
@@ -175,115 +261,26 @@ export function WorkbookSidebar({
         className="mt-4 flex flex-col gap-2 overflow-y-auto"
         style={{ maxHeight: "calc(100vh - 200px)" }}
       >
-        {visibleCells.map(({ cell, originalIndex: _originalIndex }, index) => {
-          const color = cellColors[cell.type] ?? "#94A3B8";
-          const isActive = cell.id === activeCellId;
-          const isBeingDragged = dragIndex === index;
-          const number = index + 1;
-
-          // The whole card is the drag source so the user can grab anywhere on
-          // it; the GripVertical icon is purely a visual hint.
-          const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
-
-          return (
-            <div key={cell.id}>
-              {/* Drop indicator */}
-              {dropIndex === index && dragIndex !== null && (
-                <div className="mb-1 h-0.5 rounded-full bg-[#005E5E]" />
-              )}
-
-              <button
-                type="button"
-                className={cn(
-                  "flex h-[55px] w-full items-center justify-between rounded-[7px] text-left transition-colors",
-                  isBeingDragged && "opacity-40",
-                  onReorder && "cursor-grab active:cursor-grabbing",
-                )}
-                style={{
-                  padding: "8px 9px 8px 9px",
-                  borderLeft: `3px solid ${isActive ? color : "transparent"}`,
-                  backgroundColor: isActive ? cellActiveBg[cell.type] : undefined,
-                }}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={visibleIds} strategy={verticalListSortingStrategy}>
+            {visibleCells.map((cell, index) => (
+              <SidebarRow
+                key={cell.id}
+                cell={cell}
+                number={index + 1}
+                isActive={cell.id === activeCellId}
                 draggable={onReorder !== undefined}
-                onDragStart={
-                  onReorder
-                    ? (e) => {
-                        const row = e.currentTarget;
-                        const rect = row.getBoundingClientRect();
-                        e.dataTransfer.setDragImage(row, rect.width / 2, rect.height / 2);
-                        e.dataTransfer.effectAllowed = "move";
-                        handleDragStart(index);
-                      }
-                    : undefined
-                }
-                onDragEnd={onReorder ? handleDragEnd : undefined}
                 onClick={() => onCellClick?.(cell.id)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={handleDrop}
-              >
-                {/* Left: number badge + text */}
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {/* Numbered circle */}
-                  <div
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold leading-[18px]"
-                    style={{
-                      backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
-                      color,
-                    }}
-                  >
-                    {number}
-                  </div>
-
-                  {/* Type + subtitle */}
-                  <div className="flex min-w-0 flex-col" style={{ gap: 2, maxWidth: 160 }}>
-                    <span className="flex items-center gap-0.5">
-                      <span
-                        className={cn(
-                          "truncate text-[13px] leading-[18px] tracking-[0.02em]",
-                          isActive ? "font-semibold" : "font-medium",
-                        )}
-                        style={
-                          cell.type === "question"
-                            ? { color }
-                            : isActive
-                              ? { color }
-                              : { color: "#011111" }
-                        }
-                      >
-                        {cellTypeLabels[cell.type] ?? cell.type}
-                      </span>
-                      {isRequiredQuestion && (
-                        <Asterisk
-                          className="size-3 shrink-0"
-                          style={{ color: "#005E5E" }}
-                          aria-label={t("workbooks.required")}
-                        />
-                      )}
-                    </span>
-                    <span
-                      className="truncate text-[13px] font-normal leading-[21px]"
-                      style={{ color: "#68737B" }}
-                    >
-                      {getCellSubtitle(cell)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Drag handle (visual indicator only — the whole card drags) */}
-                {onReorder && (
-                  <div className="shrink-0">
-                    <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
-                  </div>
-                )}
-              </button>
-            </div>
-          );
-        })}
-
-        {/* Drop indicator after last cell */}
-        {dropIndex === visibleCells.length && dragIndex !== null && (
-          <div className="h-0.5 rounded-full bg-[#005E5E]" />
-        )}
+                requiredLabel={t("workbooks.required")}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
     </div>
   );

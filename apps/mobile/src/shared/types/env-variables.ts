@@ -7,6 +7,9 @@ export interface EnvVariables {
   NEXT_AUTH_URI: string;
   BACKEND_URI: string;
   POSTHOG_API_KEY: string;
+  CONTENTFUL_SPACE_ID: string;
+  CONTENTFUL_ACCESS_TOKEN: string;
+  CONTENTFUL_SPACE_ENVIRONMENT: string;
 }
 
 export type EnvVariablesMap = Record<string, EnvVariables>;

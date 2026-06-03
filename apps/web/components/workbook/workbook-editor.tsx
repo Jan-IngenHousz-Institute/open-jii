@@ -1,7 +1,25 @@
 "use client";
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cn } from "@repo/ui/lib/utils";
@@ -90,6 +108,215 @@ export function createDefaultCell(
   }
 }
 
+/**
+ * A draggable unit in the editor. A question's output cell is "glued" to it: it
+ * is absorbed into the same group as its source so reordering carries the
+ * output along and never drops anything between the pair. Output cells without
+ * a preceding owner (which should not normally occur) become their own,
+ * non-draggable group so they are never lost.
+ */
+interface CellGroup {
+  id: string;
+  source: WorkbookCell;
+  sourceIndex: number;
+  output?: WorkbookCell;
+  outputIndex?: number;
+}
+
+export function buildCellGroups(cells: WorkbookCell[]): CellGroup[] {
+  const groups: CellGroup[] = [];
+  for (let i = 0; i < cells.length; i++) {
+    const source = cells[i];
+    if (source.type === "output") {
+      groups.push({ id: source.id, source, sourceIndex: i });
+      continue;
+    }
+    const next = i + 1 < cells.length ? cells[i + 1] : undefined;
+    if (next?.type === "output" && next.producedBy === source.id) {
+      groups.push({ id: source.id, source, sourceIndex: i, output: next, outputIndex: i + 1 });
+      i++;
+    } else {
+      groups.push({ id: source.id, source, sourceIndex: i });
+    }
+  }
+  return groups;
+}
+
+/**
+ * Reorder the flat cell list by moving the group identified by `activeId` to
+ * the slot occupied by the group identified by `overId`, using the same
+ * `arrayMove` semantics dnd-kit's sortable list expects. The glued output cell
+ * travels with its source.
+ */
+export function moveCellGroup(
+  cells: WorkbookCell[],
+  activeId: string,
+  overId: string,
+): WorkbookCell[] {
+  if (activeId === overId) return cells;
+  const groups = buildCellGroups(cells);
+  const from = groups.findIndex((g) => g.id === activeId);
+  const to = groups.findIndex((g) => g.id === overId);
+  if (from === -1 || to === -1) return cells;
+  return arrayMove(groups, from, to).flatMap((g) => (g.output ? [g.source, g.output] : [g.source]));
+}
+
+/**
+ * Move the cell at `fromIndex` to the raw insertion point `toIndex` in the
+ * full cell list. A question's output cell is glued to it, so moving the
+ * question carries its output along; the insertion index is adjusted for the
+ * number of cells removed before it.
+ *
+ * Retained as a pure, index-based reorder primitive (covered by unit tests);
+ * the interactive editor and sidebar reorder through {@link moveCellGroup}.
+ */
+export function reorderCellsWithGluedOutput(
+  cells: WorkbookCell[],
+  fromIndex: number,
+  toIndex: number,
+): WorkbookCell[] {
+  const updated = [...cells];
+  const source = updated[fromIndex];
+  const next = fromIndex + 1 < updated.length ? updated[fromIndex + 1] : undefined;
+  const groupLen = next?.type === "output" && next.producedBy === source.id ? 2 : 1;
+  const moved = updated.splice(fromIndex, groupLen);
+  const adjustedIndex = toIndex > fromIndex ? toIndex - groupLen : toIndex;
+  updated.splice(adjustedIndex, 0, ...moved);
+  return updated;
+}
+
+interface SortableCellGroupProps {
+  group: CellGroup;
+  cells: WorkbookCell[];
+  cellNumber?: number;
+  executionStates?: Record<string, CellExecutionState>;
+  sensorFamily?: "multispeq" | "ambit" | "generic";
+  readOnly?: boolean;
+  onRunCell?: (cellId: string) => void;
+  promptedQuestionId?: string;
+  onQuestionAnswered?: (answer: string) => void;
+  registerRef: (id: string, el: HTMLDivElement | null) => void;
+  onSelect: (id: string) => void;
+  onAdd: (type: WorkbookCell["type"], atIndex: number) => void;
+  onAddCell: (cell: WorkbookCell, atIndex: number) => void;
+  onUpdate: (index: number, cell: WorkbookCell) => void;
+  onDelete: (index: number) => void;
+}
+
+function SortableCellGroup({
+  group,
+  cells,
+  cellNumber,
+  executionStates,
+  sensorFamily,
+  readOnly,
+  onRunCell,
+  promptedQuestionId,
+  onQuestionAnswered,
+  registerRef,
+  onSelect,
+  onAdd,
+  onAddCell,
+  onUpdate,
+  onDelete,
+}: SortableCellGroupProps) {
+  const draggable = !readOnly && group.source.type !== "output";
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: group.id, disabled: !draggable });
+
+  const { source, sourceIndex, output, outputIndex } = group;
+  const cellState = executionStates?.[source.id];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("transition-opacity", isDragging && "z-10 opacity-40")}
+    >
+      <div ref={(el) => registerRef(source.id, el)} onClick={() => onSelect(source.id)}>
+        {!readOnly && (
+          <AddCellButton
+            onAdd={(type) => onAdd(type, sourceIndex)}
+            onAddCell={(cell) => onAddCell(cell, sourceIndex)}
+            existingCells={cells}
+            sensorFamily={sensorFamily}
+          />
+        )}
+        <div className="group/row flex items-stretch gap-1">
+          <div className="w-10 shrink-0">
+            <div className="flex flex-col items-center gap-1 pt-2">
+              {draggable && (
+                <button
+                  type="button"
+                  ref={setActivatorNodeRef}
+                  {...attributes}
+                  {...listeners}
+                  aria-label="Drag to reorder"
+                  className="cursor-grab opacity-0 transition-opacity active:cursor-grabbing group-hover/row:opacity-100"
+                >
+                  <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
+                </button>
+              )}
+              {cellNumber !== undefined && (
+                <span className="text-muted-foreground font-mono text-[10px] leading-none">
+                  [{executionStates?.[source.id]?.executionOrder?.at(-1) ?? cellNumber}]
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <CellRenderer
+              cell={source}
+              onUpdate={(updated) => onUpdate(sourceIndex, updated)}
+              onDelete={() => onDelete(sourceIndex)}
+              onRun={onRunCell ? () => onRunCell(source.id) : undefined}
+              allCells={cells}
+              executionStatus={cellState?.status}
+              executionError={cellState?.error}
+              promptedQuestionId={promptedQuestionId}
+              onQuestionAnswered={onQuestionAnswered}
+              readOnly={readOnly}
+            />
+          </div>
+        </div>
+      </div>
+
+      {output && outputIndex !== undefined && (
+        <div
+          ref={(el) => registerRef(output.id, el)}
+          onClick={() => onSelect(output.id)}
+          className="-mt-[10px]"
+        >
+          <div className="group/row flex items-stretch gap-1">
+            <div className="w-10 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <CellRenderer
+                cell={output}
+                onUpdate={(updated) => onUpdate(outputIndex, updated)}
+                onDelete={() => onDelete(outputIndex)}
+                onRun={onRunCell ? () => onRunCell(output.id) : undefined}
+                allCells={cells}
+                executionStatus={executionStates?.[output.id]?.status}
+                executionError={executionStates?.[output.id]?.error}
+                promptedQuestionId={promptedQuestionId}
+                onQuestionAnswered={onQuestionAnswered}
+                readOnly={readOnly}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WorkbookEditor({
   cells,
   onCellsChange,
@@ -113,11 +340,20 @@ export function WorkbookEditor({
   onQuestionAnswered,
   readOnly,
 }: WorkbookEditorProps) {
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [activeCellId, setActiveCellId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const cellRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const groups = useMemo(() => buildCellGroups(cells), [cells]);
+  const sortableIds = useMemo(
+    () => groups.filter((g) => g.source.type !== "output").map((g) => g.id),
+    [groups],
+  );
 
   const handleAdd = useCallback(
     (type: WorkbookCell["type"], atIndex: number) => {
@@ -195,70 +431,21 @@ export function WorkbookEditor({
     [cells, onCellsChange],
   );
 
-  // A source cell's output cell is glued to it: dragging the source moves both,
-  // and drops between the pair are rejected.
-  const dragRange = useCallback(
-    (srcIdx: number): [number, number] => {
-      const cell = cells[srcIdx];
-      const next = cells[srcIdx + 1];
-      if (next.type === "output" && next.producedBy === cell.id) {
-        return [srcIdx, srcIdx + 2];
-      }
-      return [srcIdx, srcIdx + 1];
+  const handleReorder = useCallback(
+    (activeId: string, overId: string) => {
+      onCellsChange(moveCellGroup(cells, activeId, overId));
     },
-    [cells],
+    [cells, onCellsChange],
   );
 
-  const handleDragStart = useCallback((index: number) => {
-    setDragIndex(index);
-  }, []);
-
-  const handleDragOver = useCallback(
-    (e: React.DragEvent, index: number) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (dragIndex === null) return;
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      const insertAt = e.clientY < midY ? index : index + 1;
-
-      const [start, end] = dragRange(dragIndex);
-      const noOp = insertAt >= start && insertAt <= end;
-
-      const before = cells[insertAt - 1];
-      const after = cells[insertAt];
-      const splitsOutputPair = after.type === "output" && after.producedBy === before.id;
-
-      if (noOp || splitsOutputPair) {
-        setDropIndex(null);
-      } else {
-        setDropIndex(insertAt);
-      }
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      handleReorder(String(active.id), String(over.id));
     },
-    [dragIndex, cells, dragRange],
+    [handleReorder],
   );
-
-  const handleDrop = useCallback(() => {
-    if (dragIndex === null || dropIndex === null) {
-      setDragIndex(null);
-      setDropIndex(null);
-      return;
-    }
-    const [start, end] = dragRange(dragIndex);
-    const updated = [...cells];
-    const moved = updated.splice(start, end - start);
-    const adjustedIndex = dropIndex > start ? dropIndex - moved.length : dropIndex;
-    updated.splice(adjustedIndex, 0, ...moved);
-    onCellsChange(updated);
-    setDragIndex(null);
-    setDropIndex(null);
-  }, [dragIndex, dropIndex, cells, onCellsChange, dragRange]);
-
-  const handleDragEnd = useCallback(() => {
-    setDragIndex(null);
-    setDropIndex(null);
-  }, []);
 
   const executionCounts = useMemo(() => {
     const counts: Record<string, number | undefined> = {};
@@ -276,6 +463,10 @@ export function WorkbookEditor({
     return counts;
   }, [cells]);
 
+  const registerRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    cellRefs.current[id] = el;
+  }, []);
+
   const handleSidebarCellClick = useCallback((cellId: string) => {
     setActiveCellId(cellId);
     const el = cellRefs.current[cellId];
@@ -283,16 +474,6 @@ export function WorkbookEditor({
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, []);
-
-  const handleSidebarReorder = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      const updated = [...cells];
-      const [moved] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, moved);
-      onCellsChange(updated);
-    },
-    [cells, onCellsChange],
-  );
 
   const showHeader = onConnect && onRunAll;
 
@@ -351,124 +532,41 @@ export function WorkbookEditor({
           onRunAll={onRunAll}
           onStopExecution={onStopExecution ?? noop}
           onClearOutputs={onClearOutputs ?? noop}
+          readOnly={readOnly}
         />
       )}
 
       <div className="flex gap-6">
         <div className="min-w-0 flex-1 space-y-0">
-          {cells.map((cell, index) => {
-            const cellState = executionStates?.[cell.id];
-            const isOutput = cell.type === "output";
-            const cellNumber = executionCounts[cell.id];
-            const isBeingDragged = dragIndex === index;
-            return (
-              <Fragment key={cell.id}>
-                {!readOnly && (
-                  <div
-                    className={cn(
-                      "grid transition-[grid-template-rows] duration-200 ease-in-out",
-                      dropIndex === index && dragIndex !== null
-                        ? "grid-rows-[1fr]"
-                        : "grid-rows-[0fr]",
-                    )}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="flex items-center gap-1 py-1">
-                        <div className="w-10 shrink-0" />
-                        <div className="h-0.5 flex-1 rounded-full bg-blue-400" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  ref={(el) => {
-                    cellRefs.current[cell.id] = el;
-                  }}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDrop={handleDrop}
-                  onClick={() => setActiveCellId(cell.id)}
-                  className={cn(
-                    "transition-opacity duration-200",
-                    isBeingDragged && "opacity-40",
-                    isOutput && "-mt-[10px]",
-                  )}
-                >
-                  {!isOutput &&
-                    (readOnly ? (
-                      <div className="py-3" />
-                    ) : (
-                      <AddCellButton
-                        onAdd={(type) => handleAdd(type, index)}
-                        onAddCell={(cell) => handleAddCell(cell, index)}
-                        existingCells={cells}
-                        sensorFamily={sensorFamily}
-                      />
-                    ))}
-                  <div className="group/row flex items-stretch gap-1">
-                    <div className="w-10 shrink-0">
-                      <div className="flex flex-col items-center gap-1 pt-2">
-                        {!isOutput && !readOnly && (
-                          <div
-                            className="cursor-grab opacity-0 transition-opacity group-hover/row:opacity-100"
-                            draggable
-                            onDragStart={(e) => {
-                              const row = e.currentTarget.parentElement?.parentElement;
-                              if (row) {
-                                e.dataTransfer.setDragImage(row, 20, 20);
-                              }
-                              e.dataTransfer.effectAllowed = "move";
-                              handleDragStart(index);
-                            }}
-                            onDragEnd={handleDragEnd}
-                          >
-                            <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
-                          </div>
-                        )}
-                        {cellNumber !== undefined && (
-                          <span className="text-muted-foreground font-mono text-[10px] leading-none">
-                            [{executionStates?.[cell.id]?.executionOrder?.at(-1) ?? cellNumber}]
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CellRenderer
-                        cell={cell}
-                        onUpdate={(updated) => handleUpdate(index, updated)}
-                        onDelete={() => handleDelete(index)}
-                        onRun={onRunCell ? () => onRunCell(cell.id) : undefined}
-                        allCells={cells}
-                        executionStatus={cellState?.status}
-                        executionError={cellState?.error}
-                        promptedQuestionId={promptedQuestionId}
-                        onQuestionAnswered={onQuestionAnswered}
-                        readOnly={readOnly}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Fragment>
-            );
-          })}
-
-          {!readOnly && (
-            <div
-              className={cn(
-                "grid transition-[grid-template-rows] duration-200 ease-in-out",
-                dropIndex === cells.length && dragIndex !== null
-                  ? "grid-rows-[1fr]"
-                  : "grid-rows-[0fr]",
-              )}
-            >
-              <div className="overflow-hidden">
-                <div className="flex items-center gap-1 py-1">
-                  <div className="w-10 shrink-0" />
-                  <div className="h-0.5 flex-1 rounded-full bg-blue-400" />
-                </div>
-              </div>
-            </div>
-          )}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToVerticalAxis]}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+              {groups.map((group) => (
+                <SortableCellGroup
+                  key={group.id}
+                  group={group}
+                  cells={cells}
+                  cellNumber={executionCounts[group.source.id]}
+                  executionStates={executionStates}
+                  sensorFamily={sensorFamily}
+                  readOnly={readOnly}
+                  onRunCell={onRunCell}
+                  promptedQuestionId={promptedQuestionId}
+                  onQuestionAnswered={onQuestionAnswered}
+                  registerRef={registerRef}
+                  onSelect={setActiveCellId}
+                  onAdd={handleAdd}
+                  onAddCell={handleAddCell}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
 
           {!readOnly && (
             <div className="flex items-stretch gap-1 pt-6">
@@ -491,7 +589,7 @@ export function WorkbookEditor({
             cells={cells}
             activeCellId={activeCellId}
             onCellClick={handleSidebarCellClick}
-            onReorder={readOnly ? undefined : handleSidebarReorder}
+            onReorder={readOnly ? undefined : handleReorder}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
           />

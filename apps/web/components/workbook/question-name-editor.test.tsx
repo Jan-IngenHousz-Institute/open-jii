@@ -98,6 +98,20 @@ describe("QuestionNameEditor", () => {
     expect(onRename).not.toHaveBeenCalled();
   });
 
+  it("strips special characters from the name as the user types", async () => {
+    const user = userEvent.setup();
+    const { onRename } = renderEditor({ initialName: "old" });
+
+    await user.click(screen.getByRole("button", { name: /old/i }));
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: /question name/i });
+    await user.clear(input);
+    await user.type(input, "weather1ç");
+
+    expect(input.value).toBe("weather1");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    expect(onRename).toHaveBeenCalledWith("weather1");
+  });
+
   it("excludes the cell being renamed from the duplicate check", async () => {
     const user = userEvent.setup();
     const self = createQuestionCell({ id: "q-1", name: "soil_moisture" });
