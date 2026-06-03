@@ -119,6 +119,8 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
 
     const { identityId, token } = tokenResult.value;
 
+    await this.cognitoService.attachIotPolicy(identityId);
+
     const credentialsResult = await this.cognitoService.getCredentialsForIdentity(
       identityId,
       token,

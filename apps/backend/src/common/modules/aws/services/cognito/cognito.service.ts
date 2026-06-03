@@ -3,6 +3,7 @@ import {
   GetOpenIdTokenForDeveloperIdentityCommand,
   GetCredentialsForIdentityCommand,
 } from "@aws-sdk/client-cognito-identity";
+import { IoTClient, AttachPolicyCommand } from "@aws-sdk/client-iot";
 import { Injectable } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -13,11 +14,22 @@ import type { IotCredentials, OpenIdTokenResult } from "./cognito.types";
 @Injectable()
 export class CognitoService {
   private readonly cognitoClient: CognitoIdentityClient;
+  private readonly iotClient: IoTClient;
 
   constructor(private readonly awsConfig: AwsConfigService) {
     this.cognitoClient = new CognitoIdentityClient({
       region: this.awsConfig.region,
     });
+    this.iotClient = new IoTClient({ region: this.awsConfig.region });
+  }
+
+  async attachIotPolicy(identityId: string): Promise<void> {
+    await this.iotClient.send(
+      new AttachPolicyCommand({
+        policyName: this.awsConfig.iotPolicyName,
+        target: identityId,
+      }),
+    );
   }
 
   /**

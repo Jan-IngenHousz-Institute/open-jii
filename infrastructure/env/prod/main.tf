@@ -1688,6 +1688,10 @@ module "backend_ecs" {
       value = module.cognito.developer_provider_name
     },
     {
+      name  = "AWS_IOT_POLICY_NAME"
+      value = module.iot_core.iot_policy_names[0]
+    },
+    {
       name  = "POSTHOG_KEY"
       value = var.posthog_key
     },

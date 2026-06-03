@@ -12,6 +12,9 @@ export default registerAs("aws", () => ({
     identityPoolId: process.env.AWS_COGNITO_IDENTITY_POOL_ID,
     developerProviderName: process.env.AWS_COGNITO_DEVELOPER_PROVIDER_NAME,
   },
+  iot: {
+    policyName: process.env.AWS_IOT_POLICY_NAME,
+  },
   lambda: {
     macroSandboxPythonFunctionName: process.env.AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME,
     macroSandboxJavascriptFunctionName:
