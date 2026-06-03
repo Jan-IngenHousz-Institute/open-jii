@@ -39,7 +39,9 @@ vi.mock("~/shared/time/time-sync", () => ({
   getTimeSyncState: vi.fn(),
 }));
 vi.mock("~/features/connection/utils/emitter", () => ({ Emitter: vi.fn() }));
-vi.mock("~/features/connection/utils/generate-random-string", () => ({ generateRandomString: () => "rand" }));
+vi.mock("~/features/connection/utils/generate-random-string", () => ({
+  generateRandomString: () => "rand",
+}));
 vi.mock("crypto-js", () => ({
   HmacSHA256: () => ({ toString: () => "h" }),
   SHA256: () => ({ toString: () => "s" }),

@@ -11,9 +11,9 @@ import {
 import { exportMeasurementsToFile } from "~/features/recent-measurements/services/export-measurements";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { Card } from "~/shared/ui/Card";
 import { RowItem } from "~/shared/ui/RowItem";
-import { formatTimeAgo } from "~/shared/time/format-time-ago";
 
 export function ProfileHardwareCard() {
   const { t } = useTranslation(["profile", "recentMeasurements"]);

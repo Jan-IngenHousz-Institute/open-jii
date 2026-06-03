@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { refreshSession } from "~/features/auth/api/refresh.api";
 
 const { mockGetSession } = vi.hoisted(() => ({ mockGetSession: vi.fn() }));

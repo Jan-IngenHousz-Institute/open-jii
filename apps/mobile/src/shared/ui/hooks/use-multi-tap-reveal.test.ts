@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { useMultiTapReveal } from "~/shared/ui/hooks/use-multi-tap-reveal";
 
 describe("useMultiTapReveal", () => {

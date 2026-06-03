@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { useRotateAnimation } from "~/shared/ui/hooks/use-rotate-animation";
 
 const { mockSetValue, mockStart, mockStop, mockLoop, mockTiming, mockValueCtor } = vi.hoisted(

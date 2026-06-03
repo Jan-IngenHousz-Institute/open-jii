@@ -1,6 +1,5 @@
 import { AppState } from "react-native";
 import type { AppStateStatus } from "react-native";
-
 import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("app-lifecycle");

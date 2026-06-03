@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { useAppState } from "~/shared/ui/hooks/use-app-state";
 
 const { mockAddListener, mockRemove } = vi.hoisted(() => ({

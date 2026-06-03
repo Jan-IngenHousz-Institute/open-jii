@@ -4,10 +4,10 @@ import React, { forwardRef, useCallback } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
+import { cn } from "~/shared/ui/cn";
 import type { ThemePreference } from "~/shared/ui/context/ThemeContext";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { useThemePreference } from "~/shared/ui/hooks/use-theme-preference";
-import { cn } from "~/shared/ui/cn";
 
 const THEME_OPTIONS: {
   key: ThemePreference;

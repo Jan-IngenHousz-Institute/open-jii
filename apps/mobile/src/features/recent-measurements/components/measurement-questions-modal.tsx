@@ -7,12 +7,12 @@ import { CommentModal } from "~/features/recent-measurements/components/comment-
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
-import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import {
   getCommentFromMeasurementResult,
   getFlagTypeFromMeasurementResult,
 } from "~/shared/measurements/measurement-annotations";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 interface MeasurementQuestionsModalProps {
   visible: boolean;

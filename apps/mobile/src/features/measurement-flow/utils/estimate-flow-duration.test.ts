@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
-
 import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
 
 const node = (type: FlowNode["type"]): FlowNode =>

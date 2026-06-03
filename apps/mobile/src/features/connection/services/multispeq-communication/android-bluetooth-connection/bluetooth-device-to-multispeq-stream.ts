@@ -1,7 +1,7 @@
 import type { BluetoothDevice } from "react-native-bluetooth-classic";
 import { Emitter } from "~/features/connection/utils/emitter";
-import { createLogger } from "~/shared/observability/logger";
 import { stringifyIfObject } from "~/features/connection/utils/stringify-if-object";
+import { createLogger } from "~/shared/observability/logger";
 
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
 

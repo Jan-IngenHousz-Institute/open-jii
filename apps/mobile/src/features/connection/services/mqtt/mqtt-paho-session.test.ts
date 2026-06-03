@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { MqttError } from "~/features/connection/services/mqtt/mqtt-errors";
 import type { DisconnectReason } from "~/features/connection/services/mqtt/mqtt-paho-session";
 

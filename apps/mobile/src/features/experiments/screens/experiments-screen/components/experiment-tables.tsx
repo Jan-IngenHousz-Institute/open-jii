@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView } from "react-native";
-import { useTranslation } from "~/shared/i18n";
 import { ParsedTableData } from "~/features/experiments/utils/parse-experiment-data";
+import { useTranslation } from "~/shared/i18n";
 
 import { DataTable } from "./data-table";
 

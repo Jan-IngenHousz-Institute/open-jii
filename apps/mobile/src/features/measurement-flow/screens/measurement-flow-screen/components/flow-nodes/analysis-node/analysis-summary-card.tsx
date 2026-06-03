@@ -4,8 +4,8 @@ import { DateTime } from "luxon";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTranslation } from "~/shared/i18n";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
 import type { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 const answersValueStyle = cva("flex-1", {
   variants: {

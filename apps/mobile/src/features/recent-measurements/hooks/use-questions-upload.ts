@@ -5,8 +5,8 @@ import { useMeasurements } from "~/features/recent-measurements/hooks/use-measur
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
-import { createLogger } from "~/shared/observability/logger";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
+import { createLogger } from "~/shared/observability/logger";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 

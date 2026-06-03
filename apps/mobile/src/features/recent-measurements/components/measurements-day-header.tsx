@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { Text, View } from "react-native";
-import { useTranslation } from "~/shared/i18n";
 import type { MeasurementDaySection } from "~/features/recent-measurements/utils/group-measurements-by-day";
+import { useTranslation } from "~/shared/i18n";
 
 interface Props {
   section: MeasurementDaySection;

@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
 import { useSession } from "~/features/auth/hooks/use-session";
 
 const { mockGetItem, mockSetItem, mockUseSession, mockSignOut } = vi.hoisted(() => ({

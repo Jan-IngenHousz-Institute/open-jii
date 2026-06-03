@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
 import { MqttError } from "~/features/connection/services/mqtt/mqtt-errors";
 import type {
   DisconnectReason,
@@ -8,7 +7,11 @@ import type {
   PahoSessionMessage,
   PahoPublishHandle,
 } from "~/features/connection/services/mqtt/mqtt-paho-session";
-import { IDLE_DISCONNECT_MS, PUBLISH_TIMEOUT_MS, createTransport } from "~/features/connection/services/mqtt/mqtt-transport";
+import {
+  IDLE_DISCONNECT_MS,
+  PUBLISH_TIMEOUT_MS,
+  createTransport,
+} from "~/features/connection/services/mqtt/mqtt-transport";
 
 // Stub the production paho-session's native + env imports. Tests construct
 // the Transport directly with a fake session factory, so paho/Cognito/env
@@ -16,7 +19,9 @@ import { IDLE_DISCONNECT_MS, PUBLISH_TIMEOUT_MS, createTransport } from "~/featu
 vi.mock("paho-mqtt", () => ({ Client: vi.fn(), Message: vi.fn() }));
 vi.mock("react-native-get-random-values", () => ({}));
 vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: () => "stub" }));
-vi.mock("~/features/connection/utils/generate-random-string", () => ({ generateRandomString: () => "rand" }));
+vi.mock("~/features/connection/utils/generate-random-string", () => ({
+  generateRandomString: () => "rand",
+}));
 vi.mock("~/features/connection/services/mqtt/aws-iot-auth", () => ({
   createSignedUrl: vi.fn(),
   getCredentials: vi.fn(),
@@ -280,7 +285,9 @@ describe("Transport", () => {
 
 describe("isRetryableMqttError", () => {
   it("classifies kinds: PublishError/Timeout/Disconnected retryable, CredentialError terminal", async () => {
-    const { isRetryableMqttError } = await import("~/features/connection/services/mqtt/mqtt-errors");
+    const { isRetryableMqttError } = await import(
+      "~/features/connection/services/mqtt/mqtt-errors"
+    );
     expect(isRetryableMqttError(new MqttError("PublishError", "x"))).toBe(true);
     expect(isRetryableMqttError(new MqttError("Timeout", "x"))).toBe(true);
     expect(isRetryableMqttError(new MqttError("Disconnected", "x"))).toBe(true);

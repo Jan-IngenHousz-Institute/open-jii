@@ -432,7 +432,9 @@ describe("time-sync", () => {
     });
 
     it("returns a time within tolerance of getSyncedUtcNow", async () => {
-      const { startTimeSync, getSyncedUtcISO, getSyncedUtcNow } = await import("~/shared/time/time-sync");
+      const { startTimeSync, getSyncedUtcISO, getSyncedUtcNow } = await import(
+        "~/shared/time/time-sync"
+      );
 
       mockServerUtcMs = Date.now() + 5000;
       startTimeSync();
@@ -445,7 +447,9 @@ describe("time-sync", () => {
     });
 
     it("differs from getSyncedLocalISO when timezone is not UTC", async () => {
-      const { startTimeSync, getSyncedUtcISO, getSyncedLocalISO } = await import("~/shared/time/time-sync");
+      const { startTimeSync, getSyncedUtcISO, getSyncedLocalISO } = await import(
+        "~/shared/time/time-sync"
+      );
 
       // GPS mock resolves to "America/Chicago" — local ISO will carry a UTC offset suffix
       mockServerUtcMs = Date.now();

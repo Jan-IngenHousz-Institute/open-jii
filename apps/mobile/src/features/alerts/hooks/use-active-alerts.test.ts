@@ -3,10 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useActiveAlerts } from "~/features/alerts/hooks/use-active-alerts";
 import { useDismissedAlertsStore } from "~/features/alerts/stores/dismissed-alerts-store";
 import { useEnvironmentStore } from "~/shared/stores/environment-store";
-
-import { useActiveAlerts } from "~/features/alerts/hooks/use-active-alerts";
 
 const mockFetchActiveAlerts = vi.fn();
 

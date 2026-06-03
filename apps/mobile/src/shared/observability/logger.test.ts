@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { addLogSink, clearLogSinks, createLogger, setMinLogLevel } from "~/shared/observability/logger";
+import {
+  addLogSink,
+  clearLogSinks,
+  createLogger,
+  setMinLogLevel,
+} from "~/shared/observability/logger";
 import type { LogEntry } from "~/shared/observability/logger";
 
 function captureSink() {

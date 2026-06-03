@@ -2,7 +2,6 @@
 import type { BottomSheetModalMethods } from "@gorhom/bottom-sheet/lib/typescript/types";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { useModalPresentation } from "~/shared/ui/hooks/use-modal-presentation";
 
 const { mockAddListener, mockRemove } = vi.hoisted(() => ({

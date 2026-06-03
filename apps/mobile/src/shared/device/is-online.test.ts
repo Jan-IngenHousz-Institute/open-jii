@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { isOnline } from "~/shared/device/is-online";
 
 const { mockHead } = vi.hoisted(() => ({ mockHead: vi.fn() }));

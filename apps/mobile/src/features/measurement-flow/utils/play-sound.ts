@@ -1,8 +1,8 @@
 import { createAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
+import { createLogger } from "~/shared/observability/logger";
 
 import successSound from "../../../../assets/success.mp3";
-import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("play-sound");
 

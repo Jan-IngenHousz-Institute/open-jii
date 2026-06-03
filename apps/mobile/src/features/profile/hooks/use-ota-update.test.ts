@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
 
 const mocks = vi.hoisted(() => ({

@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { addLogSink, clearLogSinks, setMinLogLevel } from "~/shared/observability/logger";
 import type { LogEntry } from "~/shared/observability/logger";
 import { clearTraceRegistry, getTrace, startTrace } from "~/shared/observability/trace";

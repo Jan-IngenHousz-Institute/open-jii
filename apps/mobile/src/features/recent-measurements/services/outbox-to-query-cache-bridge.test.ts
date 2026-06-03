@@ -1,7 +1,6 @@
 import type { InfiniteData } from "@tanstack/react-query";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-
 import { queryKeys } from "~/features/recent-measurements/services/measurement-list-cache";
 import type { MeasurementItem } from "~/features/recent-measurements/services/measurement-list-cache";
 import type { Outbox, SettledItem } from "~/features/recent-measurements/services/outbox";

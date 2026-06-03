@@ -28,7 +28,9 @@ import { mountOutboxBridge } from "~/features/recent-measurements/services/outbo
 import { getOutbox } from "~/shared/composition/upload";
 import { db } from "~/shared/db/client";
 import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
+import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 import { useI18nReady } from "~/shared/i18n";
+import { createLogger } from "~/shared/observability/logger";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
 import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
 import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
@@ -36,8 +38,6 @@ import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-bou
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
 import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
-import { createLogger } from "~/shared/observability/logger";
-import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
 

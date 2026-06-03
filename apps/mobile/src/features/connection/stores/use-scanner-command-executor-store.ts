@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/multispeq-command-executor";
 import { createMultispeqCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor";
-import type { Device } from "~/shared/types/device";
 import { createLogger } from "~/shared/observability/logger";
+import type { Device } from "~/shared/types/device";
 
 import { MULTISPEQ_CONSOLE } from "@repo/iot";
 

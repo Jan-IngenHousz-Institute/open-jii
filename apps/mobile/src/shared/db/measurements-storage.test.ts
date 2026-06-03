@@ -5,7 +5,6 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { compressForStorage } from "~/shared/compression/storage-compression";
-
 import * as schema from "~/shared/db/schema";
 
 const migrationFiles = [

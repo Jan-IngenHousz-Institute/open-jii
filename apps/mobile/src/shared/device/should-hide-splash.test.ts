@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-
 import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 
 describe("shouldHideSplash", () => {

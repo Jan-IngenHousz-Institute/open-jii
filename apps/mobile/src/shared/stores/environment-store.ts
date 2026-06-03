@@ -1,8 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { EnvVariablesMap } from "~/shared/types/env-variables";
 import { loadEnvVariablesFromExpo } from "~/shared/config/load-env-variables-from-expo";
+import { EnvVariablesMap } from "~/shared/types/env-variables";
 
 function loadEnvVariables(): EnvVariablesMap {
   try {

@@ -1,6 +1,5 @@
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { customApiFetcher } from "~/shared/api/fetcher";
 
 const { mockTsRestFetch, mockGetSession, mockSignOut, mockGetCookie } = vi.hoisted(() => ({

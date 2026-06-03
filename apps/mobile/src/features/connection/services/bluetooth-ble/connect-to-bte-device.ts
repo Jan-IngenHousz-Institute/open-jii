@@ -2,9 +2,9 @@ import { bleManager } from "~/features/connection/services/bluetooth-ble/prepare
 import { MultispeqStreamEvents } from "~/features/connection/services/multispeq-communication/multispeq-stream-events";
 import { delay } from "~/features/connection/utils/delay";
 import { Emitter } from "~/features/connection/utils/emitter";
-import { createLogger } from "~/shared/observability/logger";
 import { safeAsync } from "~/features/connection/utils/safe-async";
 import { stringifyIfObject } from "~/features/connection/utils/stringify-if-object";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("bt-ble");
 

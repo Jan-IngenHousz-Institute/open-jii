@@ -3,9 +3,9 @@ import React, { useState } from "react";
 import { Modal, Pressable, Text, TextInput, View } from "react-native";
 import { toast } from "sonner-native";
 import { devSeedMeasurements } from "~/features/recent-measurements/services/dev-seed-measurements";
+import { createLogger } from "~/shared/observability/logger";
 import { Button } from "~/shared/ui/Button";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("dev-seed");
 

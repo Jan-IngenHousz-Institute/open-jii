@@ -1,11 +1,16 @@
 import type { InfiniteData } from "@tanstack/react-query";
 import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { MeasurementCounts } from "~/shared/db/measurements-storage";
-
-import { applySettledPatchBatch, queryKeys } from "~/features/recent-measurements/services/measurement-list-cache";
-import type { MeasurementFilter, MeasurementItem } from "~/features/recent-measurements/services/measurement-list-cache";
+import {
+  applySettledPatchBatch,
+  queryKeys,
+} from "~/features/recent-measurements/services/measurement-list-cache";
+import type {
+  MeasurementFilter,
+  MeasurementItem,
+} from "~/features/recent-measurements/services/measurement-list-cache";
 import type { SettledItem } from "~/features/recent-measurements/services/outbox";
+import type { MeasurementCounts } from "~/shared/db/measurements-storage";
 
 // Pure-patcher unit tests. No hooks, no Outbox, no DB — just a fresh
 // QueryClient pre-seeded with cache entries and a synthetic batch of
