@@ -18,6 +18,8 @@ import type { IotCredentials } from "./services/cognito/cognito.types";
 import { AwsConfigService } from "./services/config/config.service";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
+import { AwsS3Service } from "./services/s3/s3.service";
+import type { IotUploadUrl } from "./services/s3/s3.types";
 
 @Injectable()
 export class AwsAdapter implements IotAwsPort, LambdaPort {
@@ -28,6 +30,7 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     private readonly cognitoService: CognitoService,
     private readonly awsLambdaService: AwsLambdaService,
     private readonly awsConfigService: AwsConfigService,
+    private readonly awsS3Service: AwsS3Service,
   ) {}
 
   /**
@@ -131,6 +134,10 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     }
 
     return credentialsResult;
+  }
+
+  async getIotUploadUrl(experimentId: string): Promise<Result<IotUploadUrl>> {
+    return this.awsS3Service.getIotUploadUrl(experimentId);
   }
 
   /**

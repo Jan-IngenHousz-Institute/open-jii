@@ -23,3 +23,9 @@ variable "isolation_mode" {
   type        = string
   default     = "ISOLATION_MODE_ISOLATED"
 }
+
+variable "additional_policy_arns" {
+  description = "Additional IAM policy ARNs to attach to the storage credential role"
+  type        = list(string)
+  default     = []
+}
