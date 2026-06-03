@@ -38,7 +38,8 @@
     "pair": "Koppelen",
     "pairing": "Koppelen…",
     "seeMoreDevices": "Meer apparaten tonen ({{count}})",
-    "helperText": "Vind je je apparaat niet? Houd de knop op de MultispeQ 3 seconden ingedrukt."
+    "helperText": "Vind je je apparaat niet? Houd de knop op de MultispeQ 3 seconden ingedrukt.",
+    "allowBluetooth": "Bluetooth-scannen toestaan"
   },
   "chip": {
     "connect": "Verbinden",

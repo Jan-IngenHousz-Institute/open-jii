@@ -12,6 +12,10 @@ import {
 } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
+import {
+  hasBluetoothPermission,
+  requestBluetoothPermission,
+} from "~/features/connection/services/request-bluetooth-permissions";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
@@ -37,6 +41,7 @@ export function DeviceSheet() {
   const { connectToDevice, disconnectFromDevice, connectingDeviceId } = useConnectToDevice();
 
   const [showAllDevices, setShowAllDevices] = useState(false);
+  const [bluetoothPermissionGranted, setBluetoothPermissionGranted] = useState(true);
   const { named, unnamed } = useMemo(() => partitionDevices(nearbyDevices), [nearbyDevices]);
   // When nothing has a friendly name (common: MultispeQs advertise as a MAC),
   // show every device directly instead of an empty list above "See more".
@@ -46,6 +51,16 @@ export function DeviceSheet() {
   useEffect(() => {
     if (!isOpen) setShowAllDevices(false);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) void hasBluetoothPermission().then(setBluetoothPermissionGranted);
+  }, [isOpen]);
+
+  const handleAllowBluetooth = useCallback(async () => {
+    const granted = await requestBluetoothPermission();
+    setBluetoothPermissionGranted(granted);
+    if (granted) void refreshDevices();
+  }, [refreshDevices]);
 
   useEffect(() => {
     if (isOpen) sheetRef.current?.present();
@@ -198,6 +213,18 @@ export function DeviceSheet() {
             </Text>
           </Pressable>
         </View>
+
+        {!bluetoothPermissionGranted ? (
+          <Pressable
+            onPress={() => void handleAllowBluetooth()}
+            hitSlop={8}
+            className="mt-1 self-end"
+          >
+            <Text className="text-primary text-[12px] font-semibold">
+              {t("deviceSheet.allowBluetooth")}
+            </Text>
+          </Pressable>
+        ) : null}
 
         <View className="border-divider bg-card rounded-2xl border px-3.5">
           {nearbyDevices.length === 0 ? (
