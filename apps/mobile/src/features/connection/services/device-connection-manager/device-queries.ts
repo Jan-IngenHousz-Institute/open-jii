@@ -1,6 +1,5 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { listSerialPortDevices } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
-import { requestBluetoothPermission } from "~/features/connection/services/request-bluetooth-permissions";
 import type { Device } from "~/shared/types/device";
 
 import { bluetoothDeviceToDevice, serialDeviceToDevice } from "./device-utils";
@@ -22,7 +21,6 @@ export async function getConnectedDevice(): Promise<Device | null> {
 }
 
 export async function getAllDevices(): Promise<Device[]> {
-  await requestBluetoothPermission();
   const [bluetoothResult, serialResult] = await Promise.allSettled([
     RNBluetoothClassic.startDiscovery(),
     listSerialPortDevices(),
@@ -35,11 +33,4 @@ export async function getAllDevices(): Promise<Device[]> {
     ...bluetoothDevices.map(bluetoothDeviceToDevice),
     ...serialDevices.map(serialDeviceToDevice),
   ];
-}
-
-export async function getPairedDevices(): Promise<Device[]> {
-  await requestBluetoothPermission();
-  const bluetoothDevices = await RNBluetoothClassic.getBondedDevices();
-
-  return bluetoothDevices.map(bluetoothDeviceToDevice);
 }
