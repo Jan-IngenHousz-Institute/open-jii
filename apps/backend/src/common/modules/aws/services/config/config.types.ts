@@ -10,6 +10,10 @@ export interface AwsConfig {
     macroSandboxJavascriptFunctionName: string;
     macroSandboxRFunctionName: string;
   };
+  s3: {
+    iotArchiveBucketName: string;
+    largeIotBucketName: string;
+  };
 }
 
 export const awsConfigSchema = z.object({
@@ -21,5 +25,9 @@ export const awsConfigSchema = z.object({
     macroSandboxPythonFunctionName: z.string().min(1),
     macroSandboxJavascriptFunctionName: z.string().min(1),
     macroSandboxRFunctionName: z.string().min(1),
+  }),
+  s3: z.object({
+    iotArchiveBucketName: z.string().min(1),
+    largeIotBucketName: z.string().min(1),
   }),
 });

@@ -43,6 +43,7 @@ export enum ErrorCodes {
   AWS_LOCATION_FAILED = "AWS_LOCATION_FAILED", // AWS Location Service failed
   AWS_COGNITO_TOKEN_FAILED = "AWS_COGNITO_TOKEN_FAILED", // Cognito OpenID token retrieval failed
   AWS_COGNITO_CREDENTIALS_FAILED = "AWS_COGNITO_CREDENTIALS_FAILED", // Cognito credentials retrieval failed
+  AWS_S3_PRESIGN_FAILED = "AWS_S3_PRESIGN_FAILED", // S3 pre-signed URL generation failed
   AWS_OPERATION_FAILED = "AWS_OPERATION_FAILED", // Other AWS operations failed
 
   // ==================== Email Operations ====================

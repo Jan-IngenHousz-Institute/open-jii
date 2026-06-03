@@ -69,6 +69,13 @@ vulnerabilities:
   - id: CVE-2026-31790
     statement: "RSASVE info disclosure. No RSA key encapsulation."
 
+  # libcap RPM bundles a Go binary compiled with a vulnerable Go toolchain.
+  # CVE is in Go's html/template package. Sandbox does not render HTML.
+  - id: CVE-2026-27142
+    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
+  - id: CVE-2026-39823
+    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
+
   # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
   # Only used for local testing - production Lambda ignores this binary.
   - id: CVE-2026-32280
