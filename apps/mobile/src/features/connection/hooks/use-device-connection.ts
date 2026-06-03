@@ -14,7 +14,6 @@ import {
   getConnectedDevice,
   getAllDevices,
   getPairedDevices,
-  getSerialDevices,
 } from "../services/device-connection-manager/device-queries";
 
 const CONNECTED_DEVICE_KEY = ["connected-device"] as const;
@@ -144,11 +143,3 @@ export function usePairedDevices() {
   });
 }
 
-export function useSerialDevices() {
-  return useQuery({
-    queryKey: ["serial-devices"],
-    queryFn: () => getSerialDevices(),
-    refetchInterval: 2500,
-    networkMode: "always",
-  });
-}
