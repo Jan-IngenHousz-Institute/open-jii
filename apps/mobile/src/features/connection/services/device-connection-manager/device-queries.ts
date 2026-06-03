@@ -23,14 +23,16 @@ export async function getConnectedDevice(): Promise<Device | null> {
 
 export async function getAllDevices(): Promise<Device[]> {
   await requestBluetoothPermission();
-  const [bluetoothDevices, serialDevices] = await Promise.all([
+  const [bluetoothResult, serialResult] = await Promise.allSettled([
     RNBluetoothClassic.startDiscovery(),
     listSerialPortDevices(),
   ]);
 
   return [
-    ...bluetoothDevices.map(bluetoothDeviceToDevice),
-    ...serialDevices.map(serialDeviceToDevice),
+    ...(bluetoothResult.status === "fulfilled"
+      ? bluetoothResult.value.map(bluetoothDeviceToDevice)
+      : []),
+    ...(serialResult.status === "fulfilled" ? serialResult.value.map(serialDeviceToDevice) : []),
   ];
 }
 
