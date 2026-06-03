@@ -1,32 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockGetItem = vi.fn();
-const mockSetItem = vi.fn();
-const mockRemoveItem = vi.fn();
+const mockGetCredentials = vi.fn();
 
-vi.mock("@react-native-async-storage/async-storage", () => ({
-  default: {
-    getItem: mockGetItem,
-    setItem: mockSetItem,
-    removeItem: mockRemoveItem,
-  },
-}));
-
-class MockGetIdCommand {
-  constructor(public readonly input: { IdentityPoolId: string }) {}
-}
-class MockGetCredentialsForIdentityCommand {
-  constructor(public readonly input: { IdentityId: string }) {}
-}
-
-const mockSend = vi.fn();
-class MockCognitoIdentityClient {
-  send = mockSend;
-}
-vi.mock("@aws-sdk/client-cognito-identity", () => ({
-  CognitoIdentityClient: MockCognitoIdentityClient,
-  GetIdCommand: MockGetIdCommand,
-  GetCredentialsForIdentityCommand: MockGetCredentialsForIdentityCommand,
+vi.mock("~/shared/api/client", () => ({
+  getApiClient: () => ({
+    iot: {
+      getCredentials: mockGetCredentials,
+    },
+  }),
 }));
 
 // Stub out the rest of the module's heavy/native imports.
@@ -49,23 +30,30 @@ vi.mock("crypto-js", () => ({
   lib: { WordArray: class {} },
 }));
 
-const POOL = "eu-central-1:test-pool";
-const REGION = "eu-central-1";
-
-const validCreds = (expiration: Date) => ({
-  AccessKeyId: "AKIA-EXAMPLE",
-  SecretKey: "secret-example",
-  SessionToken: "session-example",
-  Expiration: expiration,
+const okResponse = (expiration: string) => ({
+  status: 200 as const,
+  body: {
+    accessKeyId: "AKIA-EXAMPLE",
+    secretAccessKey: "secret-example",
+    sessionToken: "session-example",
+    expiration,
+  },
 });
 
 interface Mod {
-  getCredentials: (args: { region: string; identityPoolId: string }) => Promise<{
+  getCredentials: () => Promise<{
     accessKeyId: string;
     secretAccessKey: string;
     sessionToken: string;
   }>;
-  _resetIdentityIdCacheForTests: () => void;
+  createSignedUrl: (params: {
+    clientId: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken: string;
+    region: string;
+    endpoint: string;
+  }) => Promise<string>;
   _resetCredentialsCacheForTests: () => void;
 }
 
@@ -73,272 +61,127 @@ async function freshModule(): Promise<Mod> {
   return (await import("~/features/connection/services/mqtt/aws-iot-auth")) as unknown as Mod;
 }
 
-describe("getCredentials — Cognito IdentityId persistence", () => {
+describe("getCredentials — backend endpoint", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    mockGetItem.mockResolvedValue(null);
-    mockSetItem.mockResolvedValue(undefined);
-    mockRemoveItem.mockResolvedValue(undefined);
     const mod = await freshModule();
-    mod._resetIdentityIdCacheForTests();
     mod._resetCredentialsCacheForTests();
   });
 
-  it("calls GetIdCommand once and persists the IdentityId to AsyncStorage on first fetch", async () => {
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "id-1" });
-      return Promise.resolve({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
-    });
+  it("returns the credentials the contract returns", async () => {
+    mockGetCredentials.mockResolvedValue(okResponse(new Date(Date.now() + 3600_000).toISOString()));
 
     const mod = await freshModule();
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    const creds = await mod.getCredentials();
 
-    const getIdCalls = mockSend.mock.calls.filter((c) => c[0] instanceof MockGetIdCommand);
-    expect(getIdCalls).toHaveLength(1);
-    expect(mockSetItem).toHaveBeenCalledWith(`cognito_identity_id:${POOL}`, "id-1");
+    expect(creds).toEqual({
+      accessKeyId: "AKIA-EXAMPLE",
+      secretAccessKey: "secret-example",
+      sessionToken: "session-example",
+    });
+    expect(mockGetCredentials).toHaveBeenCalledTimes(1);
   });
 
-  it("reuses the persisted IdentityId on a fresh process (AsyncStorage hit) — no GetId call", async () => {
-    mockGetItem.mockResolvedValueOnce("persisted-id");
-    mockSend.mockResolvedValue({
-      Credentials: validCreds(new Date(Date.now() + 3600_000)),
-    });
+  it("returns cached credentials on a second call without refetching", async () => {
+    mockGetCredentials.mockResolvedValue(okResponse(new Date(Date.now() + 3600_000).toISOString()));
 
     const mod = await freshModule();
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    await mod.getCredentials();
+    await mod.getCredentials();
 
-    const getIdCalls = mockSend.mock.calls.filter((c) => c[0] instanceof MockGetIdCommand);
-    expect(getIdCalls).toHaveLength(0);
-
-    const credCalls = mockSend.mock.calls.filter(
-      (c) => c[0] instanceof MockGetCredentialsForIdentityCommand,
-    );
-    expect(credCalls[0][0].input.IdentityId).toBe("persisted-id");
+    expect(mockGetCredentials).toHaveBeenCalledTimes(1);
   });
 
-  it("clears the cached IdentityId and re-fetches when ResourceNotFoundException is raised", async () => {
-    mockGetItem.mockResolvedValueOnce("stale-id");
-
-    const stale = Object.assign(new Error("not found"), { name: "ResourceNotFoundException" });
-    let getCredsCalls = 0;
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "fresh-id" });
-      if (cmd instanceof MockGetCredentialsForIdentityCommand) {
-        getCredsCalls += 1;
-        if (getCredsCalls === 1) return Promise.reject(stale);
-        return Promise.resolve({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
-      }
-      return Promise.reject(new Error("unexpected"));
-    });
-
-    const mod = await freshModule();
-    const creds = await mod.getCredentials({ region: REGION, identityPoolId: POOL });
-
-    expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
-    expect(mockRemoveItem).toHaveBeenCalledWith(`cognito_identity_id:${POOL}`);
-    const getIdCalls = mockSend.mock.calls.filter((c) => c[0] instanceof MockGetIdCommand);
-    expect(getIdCalls).toHaveLength(1); // refresh after eviction
-  });
-
-  it("still caches in memory if AsyncStorage.setItem throws when persisting a new IdentityId", async () => {
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "minted" });
-      return Promise.resolve({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
-    });
-    mockSetItem.mockRejectedValueOnce(new Error("disk full"));
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
-
-    const mod = await freshModule();
-    const creds = await mod.getCredentials({ region: REGION, identityPoolId: POOL });
-    expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to persist Cognito IdentityId"),
-    );
-
-    // Second call within the same process uses the in-memory cache — no extra GetId.
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
-    const getIdCalls = mockSend.mock.calls.filter((c) => c[0] instanceof MockGetIdCommand);
-    expect(getIdCalls).toHaveLength(1);
-
-    consoleSpy.mockRestore();
-  });
-
-  it("continues when AsyncStorage.removeItem throws while clearing a stale IdentityId", async () => {
-    mockGetItem.mockResolvedValueOnce("stale-id");
-    mockRemoveItem.mockRejectedValueOnce(new Error("disk error"));
-
-    const stale = Object.assign(new Error("not found"), { name: "ResourceNotFoundException" });
-    let getCredsCalls = 0;
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "fresh-id" });
-      if (cmd instanceof MockGetCredentialsForIdentityCommand) {
-        getCredsCalls += 1;
-        if (getCredsCalls === 1) return Promise.reject(stale);
-        return Promise.resolve({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
-      }
-      return Promise.reject(new Error("unexpected"));
-    });
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
-
-    const mod = await freshModule();
-    const creds = await mod.getCredentials({ region: REGION, identityPoolId: POOL });
-
-    expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to clear persisted Cognito IdentityId"),
-    );
-
-    consoleSpy.mockRestore();
-  });
-
-  it("collapses concurrent first-time callers into one GetId + one GetCredentials", async () => {
-    let resolveCreds: (v: unknown) => void = () => undefined;
-    const credsPromise = new Promise((r) => {
-      resolveCreds = r;
-    });
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "id-1" });
-      return credsPromise;
-    });
-
-    const mod = await freshModule();
-    const a = mod.getCredentials({ region: REGION, identityPoolId: POOL });
-    const b = mod.getCredentials({ region: REGION, identityPoolId: POOL });
-    const c = mod.getCredentials({ region: REGION, identityPoolId: POOL });
-
-    resolveCreds({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
-    await Promise.all([a, b, c]);
-
-    const getIdCalls = mockSend.mock.calls.filter((c) => c[0] instanceof MockGetIdCommand);
-    const credCalls = mockSend.mock.calls.filter(
-      (c) => c[0] instanceof MockGetCredentialsForIdentityCommand,
-    );
-    expect(getIdCalls).toHaveLength(1);
-    expect(credCalls).toHaveLength(1);
-  });
-});
-
-describe("getCredentials — in-memory credential cache", () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    vi.useRealTimers();
-    mockGetItem.mockResolvedValue("id-1"); // simulate IdentityId already persisted
-    mockSetItem.mockResolvedValue(undefined);
-    mockRemoveItem.mockResolvedValue(undefined);
-    const mod = await freshModule();
-    mod._resetIdentityIdCacheForTests();
-    mod._resetCredentialsCacheForTests();
-  });
-
-  it("returns cached credentials on a second call without hitting Cognito", async () => {
-    mockSend.mockResolvedValue({
-      Credentials: validCreds(new Date(Date.now() + 3600_000)),
-    });
-
-    const mod = await freshModule();
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
-    const sendCallsAfterFirst = mockSend.mock.calls.length;
-
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
-    expect(mockSend.mock.calls.length).toBe(sendCallsAfterFirst); // no additional SDK calls
-  });
-
-  it("re-fetches credentials once the SDK-reported Expiration has passed", async () => {
+  it("re-fetches once the reported expiration has passed", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-13T12:00:00Z"));
-
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "id-1" });
-      return Promise.resolve({
-        // 30 minutes from "now"
-        Credentials: validCreds(new Date(Date.now() + 30 * 60_000)),
-      });
-    });
+    mockGetCredentials.mockImplementation(() =>
+      Promise.resolve(okResponse(new Date(Date.now() + 30 * 60_000).toISOString())),
+    );
 
     const mod = await freshModule();
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    await mod.getCredentials();
 
-    // Jump past expiration
     vi.setSystemTime(new Date("2026-05-13T12:31:00Z"));
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    await mod.getCredentials();
 
-    const credCalls = mockSend.mock.calls.filter(
-      (c) => c[0] instanceof MockGetCredentialsForIdentityCommand,
-    );
-    expect(credCalls).toHaveLength(2);
+    expect(mockGetCredentials).toHaveBeenCalledTimes(2);
   });
 
-  it("re-fetches credentials when within the safety margin of expiration (under 60s remaining)", async () => {
+  it("re-fetches when within the safety margin of expiration (under 60s remaining)", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-13T12:00:00Z"));
-
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "id-1" });
-      return Promise.resolve({
-        Credentials: validCreds(new Date(Date.now() + 60 * 60_000)),
-      });
-    });
+    mockGetCredentials.mockImplementation(() =>
+      Promise.resolve(okResponse(new Date(Date.now() + 60 * 60_000).toISOString())),
+    );
 
     const mod = await freshModule();
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    await mod.getCredentials();
 
     // 30 seconds before expiration — within the 60s safety margin
     vi.setSystemTime(new Date("2026-05-13T12:59:30Z"));
-    await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    await mod.getCredentials();
 
-    const credCalls = mockSend.mock.calls.filter(
-      (c) => c[0] instanceof MockGetCredentialsForIdentityCommand,
-    );
-    expect(credCalls).toHaveLength(2);
+    expect(mockGetCredentials).toHaveBeenCalledTimes(2);
   });
 
-  it("collapses concurrent in-flight credential fetches into one SDK call", async () => {
+  it("collapses concurrent in-flight fetches into one request", async () => {
     let resolveCreds: (v: unknown) => void = () => undefined;
-    const credsPromise = new Promise((r) => {
+    const pending = new Promise((r) => {
       resolveCreds = r;
     });
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "id-1" });
-      return credsPromise;
-    });
+    mockGetCredentials.mockReturnValue(pending);
 
     const mod = await freshModule();
-    const promises = [
-      mod.getCredentials({ region: REGION, identityPoolId: POOL }),
-      mod.getCredentials({ region: REGION, identityPoolId: POOL }),
-      mod.getCredentials({ region: REGION, identityPoolId: POOL }),
-    ];
+    const promises = [mod.getCredentials(), mod.getCredentials(), mod.getCredentials()];
 
-    resolveCreds({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
+    resolveCreds(okResponse(new Date(Date.now() + 3600_000).toISOString()));
     const results = await Promise.all(promises);
 
     expect(results).toHaveLength(3);
-    const credCalls = mockSend.mock.calls.filter(
-      (c) => c[0] instanceof MockGetCredentialsForIdentityCommand,
-    );
-    expect(credCalls).toHaveLength(1);
+    expect(mockGetCredentials).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws on a non-200 (e.g. 401 signed-out) and does not cache", async () => {
+    mockGetCredentials.mockResolvedValueOnce({ status: 401, body: { message: "Unauthorized" } });
+
+    const mod = await freshModule();
+    await expect(mod.getCredentials()).rejects.toThrow("Failed to fetch IoT credentials: 401");
+
+    // Next caller retries rather than returning a poisoned cache.
+    mockGetCredentials.mockResolvedValue(okResponse(new Date(Date.now() + 3600_000).toISOString()));
+    const creds = await mod.getCredentials();
+    expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
   });
 
   it("evicts the cache on failure so the next caller can retry cleanly", async () => {
-    mockSend.mockImplementationOnce((cmd: object) => {
-      if (cmd instanceof MockGetCredentialsForIdentityCommand) {
-        return Promise.reject(new Error("network down"));
-      }
-      return Promise.resolve({});
-    });
+    mockGetCredentials.mockRejectedValueOnce(new Error("network down"));
 
     const mod = await freshModule();
-    await expect(mod.getCredentials({ region: REGION, identityPoolId: POOL })).rejects.toThrow(
-      "network down",
-    );
+    await expect(mod.getCredentials()).rejects.toThrow("network down");
 
-    // Subsequent call should retry the SDK rather than returning a poisoned cache.
-    mockSend.mockImplementation((cmd: object) => {
-      if (cmd instanceof MockGetIdCommand) return Promise.resolve({ IdentityId: "id-1" });
-      return Promise.resolve({ Credentials: validCreds(new Date(Date.now() + 3600_000)) });
-    });
-    const creds = await mod.getCredentials({ region: REGION, identityPoolId: POOL });
+    mockGetCredentials.mockResolvedValue(okResponse(new Date(Date.now() + 3600_000).toISOString()));
+    const creds = await mod.getCredentials();
     expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
+  });
+});
+
+describe("createSignedUrl", () => {
+  it("builds a SigV4-presigned wss URL including the session token", async () => {
+    const mod = await freshModule();
+    const url = await mod.createSignedUrl({
+      clientId: "client-1",
+      accessKeyId: "AKIA-EXAMPLE",
+      secretAccessKey: "secret-example",
+      sessionToken: "session-example",
+      region: "eu-central-1",
+      endpoint: "iot.example.com",
+    });
+
+    expect(url).toMatch(/^wss:\/\/iot\.example\.com\/mqtt\?/);
+    expect(url).toContain("X-Amz-Algorithm=AWS4-HMAC-SHA256");
+    expect(url).toContain("X-Amz-Signature=");
+    expect(url).toContain("X-Amz-Security-Token=session-example");
   });
 });
