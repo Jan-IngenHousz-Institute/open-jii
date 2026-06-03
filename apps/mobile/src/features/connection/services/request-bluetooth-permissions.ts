@@ -2,10 +2,12 @@ import { PermissionsAndroid, Platform } from "react-native";
 import { keepTruthy } from "~/shared/utils/keep-truthy";
 
 function getRequiredBluetoothPermissions() {
+  const isAndroidPre12 =
+    Platform.OS === "android" && typeof Platform.Version === "number" && Platform.Version < 31;
   return keepTruthy([
     PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
     PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-    Platform.Version < 31 && PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    isAndroidPre12 && PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
   ]);
 }
 

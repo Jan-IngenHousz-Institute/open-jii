@@ -1,4 +1,5 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { useQuery } from "@tanstack/react-query";
 import { Bluetooth, ChevronDown, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -41,7 +42,14 @@ export function DeviceSheet() {
   const { connectToDevice, disconnectFromDevice, connectingDeviceId } = useConnectToDevice();
 
   const [showAllDevices, setShowAllDevices] = useState(false);
-  const [bluetoothPermissionGranted, setBluetoothPermissionGranted] = useState(true);
+  const { data: bluetoothPermissionGranted = true, refetch: refreshBluetoothPermission } = useQuery(
+    {
+      queryKey: ["bluetooth-permission"],
+      queryFn: hasBluetoothPermission,
+      enabled: isOpen,
+      networkMode: "always",
+    },
+  );
   const { named, unnamed } = useMemo(() => partitionDevices(nearbyDevices), [nearbyDevices]);
   // When nothing has a friendly name (common: MultispeQs advertise as a MAC),
   // show every device directly instead of an empty list above "See more".
@@ -52,15 +60,13 @@ export function DeviceSheet() {
     if (!isOpen) setShowAllDevices(false);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen) void hasBluetoothPermission().then(setBluetoothPermissionGranted);
-  }, [isOpen]);
-
   const handleAllowBluetooth = useCallback(async () => {
     const granted = await requestBluetoothPermission();
-    setBluetoothPermissionGranted(granted);
-    if (granted) void refreshDevices();
-  }, [refreshDevices]);
+    if (granted) {
+      void refreshBluetoothPermission();
+      void refreshDevices();
+    }
+  }, [refreshBluetoothPermission, refreshDevices]);
 
   useEffect(() => {
     if (isOpen) sheetRef.current?.present();
@@ -215,15 +221,33 @@ export function DeviceSheet() {
         </View>
 
         {!bluetoothPermissionGranted ? (
-          <Pressable
-            onPress={() => void handleAllowBluetooth()}
-            hitSlop={8}
-            className="mt-1 self-end"
-          >
-            <Text className="text-primary text-[12px] font-semibold">
-              {t("deviceSheet.allowBluetooth")}
-            </Text>
-          </Pressable>
+          <View className="border-divider bg-card flex-row items-center gap-3 rounded-2xl border p-3.5">
+            <View
+              className="h-10 w-10 items-center justify-center"
+              style={{ borderRadius: 12, backgroundColor: "rgba(0,0,0,0.04)" }}
+            >
+              <Bluetooth size={20} color={themeColors.inactive} />
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text
+                className="text-on-surface"
+                style={{ fontFamily: "Poppins-Bold", fontSize: 14 }}
+              >
+                {t("deviceSheet.permissionHeading")}
+              </Text>
+              <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={2}>
+                {t("deviceSheet.permissionExplainer")}
+              </Text>
+            </View>
+            <Button
+              title={t("deviceSheet.allowBluetooth")}
+              variant="primary"
+              size="sm"
+              hitSlop={8}
+              accessibilityLabel={t("deviceSheet.allowBluetooth")}
+              onPress={() => void handleAllowBluetooth()}
+            />
+          </View>
         ) : null}
 
         <View className="border-divider bg-card rounded-2xl border px-3.5">
