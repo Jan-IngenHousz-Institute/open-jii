@@ -36,9 +36,24 @@ describe("QuestionPicker", () => {
     renderPicker();
 
     await user.click(screen.getByRole("button", { name: /add question/i }));
-    await user.type(screen.getByRole("textbox", { name: /question name/i }), "Plant Height (cm)");
+    await user.type(screen.getByRole("textbox", { name: /question name/i }), "Plant height cm");
 
     expect(screen.getByText(/column key:\s*plant_height_cm/i)).toBeInTheDocument();
+  });
+
+  it("strips special characters from the name as the user types", async () => {
+    const user = userEvent.setup();
+    const { onSelect } = renderPicker();
+
+    await user.click(screen.getByRole("button", { name: /add question/i }));
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: /question name/i });
+    // Characters outside [a-z0-9_ ] would otherwise be silently folded into the
+    // column key, so they never make it into the displayed name at all.
+    await user.type(input, "weather1ç");
+
+    expect(input.value).toBe("weather1");
+    await user.click(screen.getByRole("button", { name: /^create$/i }));
+    expect(onSelect.mock.calls[0][0].name).toBe("weather1");
   });
 
   it("creates a question cell with the typed name when the user clicks Create", async () => {

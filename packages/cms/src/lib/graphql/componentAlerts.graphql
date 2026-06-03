@@ -1,0 +1,38 @@
+fragment ComponentAlertFields on ComponentAlert {
+  __typename
+  sys {
+    id
+  }
+  internalName
+  title
+  body {
+    json
+  }
+  type
+  severity
+  dismissible
+  link {
+    ...ButtonFields
+  }
+  audience
+  startAt
+  endAt
+  active
+}
+
+query activeAlerts($preview: Boolean, $now: DateTime!, $locale: String, $audience: [String]) {
+  componentAlertCollection(
+    preview: $preview
+    locale: $locale
+    where: {
+      active: true
+      audience_in: $audience
+      startAt_lte: $now
+      OR: [{ endAt_gt: $now }, { endAt_exists: false }]
+    }
+  ) {
+    items {
+      ...ComponentAlertFields
+    }
+  }
+}

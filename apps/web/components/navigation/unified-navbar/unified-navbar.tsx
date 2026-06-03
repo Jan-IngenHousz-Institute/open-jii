@@ -29,7 +29,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
-import { cva } from "@repo/ui/lib/utils";
 
 interface UnifiedNavbarProps {
   locale: string;
@@ -136,6 +135,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
   const pathname = usePathname();
   const router = useRouter();
   const [isIntersecting, setIsIntersecting] = useState(true);
+  const [bannerOffset, setBannerOffset] = useState(0);
   const signOut = useSignOut();
 
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
@@ -148,6 +148,18 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     router.push("/");
   };
 
+  // Track alert banner height so the hero intersection threshold stays accurate
+  useEffect(() => {
+    const read = () => {
+      const val = document.documentElement.style.getPropertyValue("--banner-offset");
+      setBannerOffset(val ? parseFloat(val) : 0);
+    };
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    return () => mo.disconnect();
+  }, []);
+
   // Intersection observer for hero section (only on home page)
   useEffect(() => {
     if (!isHomePage) return;
@@ -158,7 +170,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
       },
       {
         threshold: 0,
-        rootMargin: "-64px 0px 0px 0px", // Navbar height offset
+        rootMargin: `-${64 + bannerOffset}px 0px 0px 0px`,
       },
     );
 
@@ -173,7 +185,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         observer.unobserve(heroSection);
       }
     };
-  }, [isHomePage]);
+  }, [isHomePage, bannerOffset]);
 
   // Navigation items
   const navItems = useMemo(
@@ -226,31 +238,23 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     pathname.startsWith(`/${locale}/faq`) ||
     pathname.startsWith(`/${locale}/policies`);
 
-  // Determine navbar background based on intersection state
-  const navbarBackgroundVariants = cva(
-    "pointer-events-auto sticky left-0 top-0 z-50 w-full transition-colors duration-300",
-    {
-      variants: {
-        mode: {
-          dark: "bg-gradient-to-b from-black/80 to-transparent",
-          green: "bg-sidebar border-b border-white/40 shadow-lg",
-        },
-      },
-      defaultVariants: {
-        mode: "dark",
-      },
-    },
-  );
-
-  const getNavbarMode = (): "dark" | "green" => {
-    if ((isHomePage && !isIntersecting) || isGreenMode) {
-      return "green";
-    }
-    return "dark";
-  };
+  const showSolid = (isHomePage && !isIntersecting) || isGreenMode;
 
   return (
-    <header className={navbarBackgroundVariants({ mode: getNavbarMode() })}>
+    <header
+      className="pointer-events-auto sticky left-0 z-50 w-full"
+      style={{ top: "var(--banner-offset, 0px)" }}
+    >
+      {/* Gradient layer — hero/dark mode */}
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 -z-10 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
+      />
+      {/* Solid layer — green/nav mode */}
+      <div
+        aria-hidden="true"
+        className={`bg-sidebar absolute inset-0 -z-10 border-b border-white/40 shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
+      />
       <nav className="font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 text-white">
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">

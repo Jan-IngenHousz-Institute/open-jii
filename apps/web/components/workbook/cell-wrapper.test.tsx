@@ -68,15 +68,22 @@ describe("CellWrapper", () => {
     expect(errorIcon).toBeInTheDocument();
   });
 
-  it("hides delete and run buttons in readOnly mode", () => {
+  it("hides delete, run and collapse buttons in readOnly mode", () => {
     renderWrapper({
       readOnly: true,
       onDelete: vi.fn(),
       onRun: vi.fn(),
     });
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(1);
+    // Non-creators get no interactive controls: no delete, no run, and no
+    // expand/collapse toggle (toggling it would fail to persist).
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("keeps the cell content visible in readOnly mode", () => {
+    renderWrapper({ readOnly: true });
+
+    expect(screen.getByTestId("cell-content")).toBeInTheDocument();
   });
 
   it("renders headerActions when not readOnly", () => {

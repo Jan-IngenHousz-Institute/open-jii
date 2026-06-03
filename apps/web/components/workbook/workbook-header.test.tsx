@@ -126,6 +126,15 @@ describe("WorkbookHeader", () => {
     expect(runAllButton).toBeDisabled();
   });
 
+  it("hides Run all and Stop in readOnly mode", () => {
+    renderHeader({ readOnly: true });
+    expect(screen.queryByRole("button", { name: /run all/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^stop$/i })).not.toBeInTheDocument();
+
+    renderHeader({ readOnly: true, isRunningAll: true });
+    expect(screen.queryByRole("button", { name: /^stop$/i })).not.toBeInTheDocument();
+  });
+
   it("shows Stop button instead of Run all when running", async () => {
     const user = userEvent.setup();
     const { props } = renderHeader({ isRunningAll: true });
