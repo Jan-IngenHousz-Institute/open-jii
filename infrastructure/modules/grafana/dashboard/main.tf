@@ -1151,7 +1151,7 @@ EOT
     }
 
     no_data_state  = "OK"
-    exec_err_state = "OK"
+    exec_err_state = "Alerting"
     for            = "0s"
 
     annotations = {
