@@ -8,11 +8,11 @@ import { useMeasurements } from "~/features/recent-measurements/hooks/use-measur
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
+import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import {
   getCommentFromMeasurementResult,
   getFlagTypeFromMeasurementResult,
-} from "~/shared/utils/measurement-annotations";
+} from "~/shared/measurements/measurement-annotations";
 
 interface MeasurementQuestionsModalProps {
   visible: boolean;

@@ -5,7 +5,7 @@ import { Chart } from "~/features/measurement-flow/components/measurement-result
 import { KeyValue } from "~/features/measurement-flow/components/measurement-result/components/key-value";
 import { MeasurementHeader } from "~/features/measurement-flow/components/measurement-result/components/measurement-header";
 import { useTranslation } from "~/shared/i18n";
-import { ParsedTableData } from "~/shared/utils/parse-experiment-data";
+import { ParsedTableData } from "~/features/experiments/utils/parse-experiment-data";
 
 interface TableDetailModalProps {
   visible: boolean;

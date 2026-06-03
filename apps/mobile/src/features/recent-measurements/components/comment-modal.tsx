@@ -10,8 +10,8 @@ import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
-import { formatTimeAgo } from "~/shared/utils/format-time-ago";
+import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { formatTimeAgo } from "~/shared/time/format-time-ago";
 
 const answersValueStyle = cva("flex-1", {
   variants: {

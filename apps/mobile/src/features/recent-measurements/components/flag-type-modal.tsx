@@ -7,7 +7,7 @@ import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { FLAG_TYPE_LABELS } from "~/shared/utils/measurement-annotations";
+import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 

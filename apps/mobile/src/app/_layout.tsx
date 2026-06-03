@@ -36,8 +36,8 @@ import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-bou
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
 import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
-import { createLogger } from "~/shared/utils/logger";
-import { shouldHideSplash } from "~/shared/utils/should-hide-splash";
+import { createLogger } from "~/shared/observability/logger";
+import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 
 import migrations from "../../drizzle/migrations";
 

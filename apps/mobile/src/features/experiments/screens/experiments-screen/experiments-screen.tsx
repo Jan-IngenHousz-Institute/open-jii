@@ -7,7 +7,7 @@ import { useExperimentSelectionStore } from "~/features/experiments/stores/use-e
 import { useTranslation } from "~/shared/i18n";
 import { Dropdown } from "~/shared/ui/Dropdown";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { parseExperimentData } from "~/shared/utils/parse-experiment-data";
+import { parseExperimentData } from "~/features/experiments/utils/parse-experiment-data";
 
 import { ExperimentTables } from "./components";
 

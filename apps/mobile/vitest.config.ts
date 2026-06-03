@@ -59,7 +59,10 @@ export default defineConfig({
           // vitest.setup.ts holds this app's native-wrapper package mocks.
           setupFiles: [rnSetupFile, "./vitest.setup.ts"],
           include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-          exclude: ["**/node_modules/**", "src/**/hooks/__tests__/**"],
+          // Hook tests rely on @testing-library/react + DOM, so they run in
+          // the jsdom project below. Colocated next to the hook (no
+          // __tests__/ dir), selected by the hooks/ path segment.
+          exclude: ["**/node_modules/**", "src/**/hooks/**/*.test.{ts,tsx}"],
         },
       },
       {
@@ -69,7 +72,7 @@ export default defineConfig({
           name: "jsdom",
           globals: true,
           environment: "jsdom",
-          include: ["src/**/hooks/__tests__/**/*.test.{ts,tsx}"],
+          include: ["src/**/hooks/**/*.test.{ts,tsx}"],
         },
       },
     ],

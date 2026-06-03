@@ -1,8 +1,8 @@
 import { eq, isNull, or } from "drizzle-orm";
-import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
-import { createLogger } from "~/shared/utils/logger";
-import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
-import { decompressFromStorage } from "~/shared/utils/storage-compression";
+import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/observability/logger";
+import { getCommentFromMeasurementResult } from "~/shared/measurements/measurement-annotations";
+import { decompressFromStorage } from "~/shared/compression/storage-compression";
 
 import { db } from "./client";
 import { computeDayKey } from "./measurements-storage";

@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
 import { Image, Text, View } from "react-native";
-import { cn } from "~/shared/utils/cn";
+import { cn } from "~/shared/ui/cn";
 
 interface AvatarProps {
   uri?: string;

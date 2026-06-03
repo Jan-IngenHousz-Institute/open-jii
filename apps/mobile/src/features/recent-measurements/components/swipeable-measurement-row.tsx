@@ -16,7 +16,7 @@ import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use
 import { useTranslation } from "~/shared/i18n";
 import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
+import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 
 const SPRING_CONFIG = { damping: 40, stiffness: 350 };
 /** Horizontal movement (px) before pan activates - avoids revealing on light touch */

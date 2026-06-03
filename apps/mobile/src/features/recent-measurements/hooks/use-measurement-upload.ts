@@ -6,10 +6,10 @@ import { exportSingleMeasurementToFile } from "~/features/recent-measurements/se
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
-import { compressSample } from "~/shared/utils/compress-sample";
-import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
-import { createLogger } from "~/shared/utils/logger";
-import { buildAnnotations } from "~/shared/utils/measurement-annotations";
+import { compressSample } from "~/features/recent-measurements/utils/compress-sample";
+import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/observability/logger";
+import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 
 const log = createLogger("measurement-upload");
 

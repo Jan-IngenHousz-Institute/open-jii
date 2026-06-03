@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 import React, { ReactNode } from "react";
 import { Text, View } from "react-native";
-import { cn } from "~/shared/utils/cn";
+import { cn } from "~/shared/ui/cn";
 
 export type TagVariant =
   | "default"

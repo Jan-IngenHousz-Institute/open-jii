@@ -1,5 +1,5 @@
-import { Emitter } from "~/shared/utils/emitter";
-import { stringifyIfObject } from "~/shared/utils/stringify-if-object";
+import { Emitter } from "~/features/connection/utils/emitter";
+import { stringifyIfObject } from "~/features/connection/utils/stringify-if-object";
 
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
 import type { SerialPortEvents } from "./serial-port-events";

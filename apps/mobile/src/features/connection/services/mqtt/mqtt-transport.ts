@@ -1,6 +1,6 @@
-import { createLogger } from "~/shared/utils/logger";
-import { getSyncedUtcNow } from "~/shared/utils/time-sync";
-import { getTrace } from "~/shared/utils/trace";
+import { createLogger } from "~/shared/observability/logger";
+import { getSyncedUtcNow } from "~/shared/time/time-sync";
+import { getTrace } from "~/shared/observability/trace";
 
 import { MqttError } from "./mqtt-errors";
 import { createPahoSessionFactory } from "./mqtt-paho-session";

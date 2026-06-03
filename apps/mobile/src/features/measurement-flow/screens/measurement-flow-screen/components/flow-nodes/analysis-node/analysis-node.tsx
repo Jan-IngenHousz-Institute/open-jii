@@ -14,9 +14,9 @@ import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-m
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
-import { createLogger } from "~/shared/utils/logger";
-import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/utils/time-sync";
+import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/observability/logger";
+import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";

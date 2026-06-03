@@ -5,7 +5,7 @@ import { toast } from "sonner-native";
 import { devSeedMeasurements } from "~/features/recent-measurements/services/dev-seed-measurements";
 import { Button } from "~/shared/ui/Button";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("dev-seed");
 

@@ -4,7 +4,7 @@ import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { formatIsoDateString } from "~/shared/utils/format-iso-date-string";
+import { formatIsoDateString } from "~/features/measurement-flow/utils/format-iso-date-string";
 
 interface MeasurementHeaderProps {
   timestamp?: string;

@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useTranslation } from "~/shared/i18n";
-import { cn } from "~/shared/utils/cn";
+import { cn } from "~/shared/ui/cn";
 import {
   ParsedTableData,
   formatCellValue,
   getTableSummary,
-} from "~/shared/utils/parse-experiment-data";
+} from "~/features/experiments/utils/parse-experiment-data";
 
 import { TableDetailModal } from "./table-detail-modal";
 

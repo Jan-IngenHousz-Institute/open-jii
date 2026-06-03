@@ -13,10 +13,10 @@ import { useQuestionsUpload } from "~/features/recent-measurements/hooks/use-que
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
-import { createLogger } from "~/shared/utils/logger";
-import { FLAG_TYPE_LABELS } from "~/shared/utils/measurement-annotations";
-import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/utils/time-sync";
+import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { createLogger } from "~/shared/observability/logger";
+import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations";
+import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 

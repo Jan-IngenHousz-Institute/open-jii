@@ -12,9 +12,9 @@ import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use
 import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { cn } from "~/shared/utils/cn";
-import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
-import { formatTimeAgo } from "~/shared/utils/format-time-ago";
+import { cn } from "~/shared/ui/cn";
+import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { formatTimeAgo } from "~/shared/time/format-time-ago";
 
 interface SemanticColors {
   success: string;

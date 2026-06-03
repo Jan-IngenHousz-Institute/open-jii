@@ -13,7 +13,7 @@ import { showAlert } from "~/shared/ui/AlertDialog";
 import { Card } from "~/shared/ui/Card";
 import { RowItem } from "~/shared/ui/RowItem";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { formatTimeAgo } from "~/shared/utils/format-time-ago";
+import { formatTimeAgo } from "~/shared/time/format-time-ago";
 
 const DOCS_URL = "https://docs.openjii.org/docs/introduction/overview";
 

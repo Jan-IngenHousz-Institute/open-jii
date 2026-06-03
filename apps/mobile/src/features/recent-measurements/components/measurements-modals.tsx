@@ -2,8 +2,8 @@ import React from "react";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
 import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
-import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
-import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
+import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { getCommentFromMeasurementResult } from "~/shared/measurements/measurement-annotations";
 
 export type ModalState =
   | { kind: "none" }

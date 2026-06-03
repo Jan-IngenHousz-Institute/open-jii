@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useExperimentFlowQuery } from "~/features/experiments/hooks/use-experiment-flow-query";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { orderFlowNodes } from "~/shared/utils/order-flow-nodes";
+import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
 
 /**
  * Loads the experiment flow for the given experimentId and pushes the

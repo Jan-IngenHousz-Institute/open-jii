@@ -11,8 +11,8 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { createLogger } from "~/shared/utils/logger";
-import { playSound } from "~/shared/utils/play-sound";
+import { createLogger } from "~/shared/observability/logger";
+import { playSound } from "~/features/measurement-flow/utils/play-sound";
 
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";

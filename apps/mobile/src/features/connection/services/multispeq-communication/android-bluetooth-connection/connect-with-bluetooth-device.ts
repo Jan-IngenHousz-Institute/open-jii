@@ -1,5 +1,5 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("bt-classic");
 

@@ -18,9 +18,9 @@ import { useRecentMeasurementsActions } from "~/features/recent-measurements/hoo
 import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import type { MeasurementDaySection } from "~/shared/utils/group-measurements-by-day";
-import { groupMeasurementsByDay } from "~/shared/utils/group-measurements-by-day";
-import { createLogger } from "~/shared/utils/logger";
+import type { MeasurementDaySection } from "~/features/recent-measurements/utils/group-measurements-by-day";
+import { groupMeasurementsByDay } from "~/features/recent-measurements/utils/group-measurements-by-day";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("recent-measurements");
 

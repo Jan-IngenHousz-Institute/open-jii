@@ -7,7 +7,7 @@ import { useTranslation } from "~/shared/i18n";
 import type { ThemePreference } from "~/shared/ui/context/ThemeContext";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { useThemePreference } from "~/shared/ui/hooks/use-theme-preference";
-import { cn } from "~/shared/utils/cn";
+import { cn } from "~/shared/ui/cn";
 
 const THEME_OPTIONS: {
   key: ThemePreference;

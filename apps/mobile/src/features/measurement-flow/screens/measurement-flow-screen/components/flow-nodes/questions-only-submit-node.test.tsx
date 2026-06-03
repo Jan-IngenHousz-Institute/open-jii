@@ -41,7 +41,7 @@ vi.mock("~/features/recent-measurements/hooks/use-questions-upload", () => ({
 vi.mock("~/features/measurement-flow/hooks/use-finish-flow", () => ({
   useFinishFlow: () => finishAndExit,
 }));
-vi.mock("~/shared/utils/time-sync", () => ({
+vi.mock("~/shared/time/time-sync", () => ({
   getSyncedUtcISO: () => getSyncedUtcISO(),
   getSyncedLocalISO: () => getSyncedLocalISO(),
   getTimeSyncState: () => getTimeSyncState(),

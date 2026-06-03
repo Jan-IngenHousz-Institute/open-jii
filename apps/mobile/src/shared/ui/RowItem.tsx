@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react-native";
 import React, { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { cn } from "~/shared/utils/cn";
+import { cn } from "~/shared/ui/cn";
 
 interface RowItemProps {
   icon?: ReactNode;
