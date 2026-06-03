@@ -17,14 +17,7 @@ interface ChartFrameProps {
   children: ReactNode;
 }
 
-/**
- * Shared placeholder/state shell for chart renderers.
- *
- * Owning the loading/error/empty branches in one place keeps the per-chart
- * renderers focused on data→trace mapping, and gives every chart type a
- * consistent visual language for the failure modes. Each renderer just
- * passes its data state in and renders its trace component as `children`.
- */
+/** Shared placeholder/state shell for chart renderers. */
 export function ChartFrame({
   visualization,
   experimentId,
@@ -90,8 +83,8 @@ export function ChartFrame({
 export function ChartConfigError({ message }: { message: string }) {
   const { t } = useTranslation("experimentVisualizations");
   return (
-    <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed">
-      <div className="text-center">
+    <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed p-8">
+      <div className="max-w-md text-center">
         <div className="mb-2 font-medium">{t("errors.configuration")}</div>
         <div className="text-sm">{message}</div>
       </div>

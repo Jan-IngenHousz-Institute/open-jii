@@ -110,6 +110,9 @@ vi.mock("next/navigation", () => ({
   useParams: vi.fn(() => ({ locale: "en-US" })),
   redirect: vi.fn(),
   notFound: vi.fn(),
+  // Real next/navigation re-exports a RURP subclass; tests construct one via
+  // `new nav.ReadonlyURLSearchParams(qs)` to feed mockReturnValue without casts.
+  ReadonlyURLSearchParams: URLSearchParams,
 }));
 
 // `clearAllMocks` leaves per-test `mockReturnValue(...)` in place, so

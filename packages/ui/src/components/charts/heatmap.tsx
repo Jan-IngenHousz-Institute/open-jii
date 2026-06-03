@@ -12,14 +12,28 @@ export interface HeatmapSeriesData extends BaseSeries {
   y?: (string | number | Date)[];
   z: (string | number)[][];
   colorscale?: string | Array<[number, string]>;
+  /** Reverse the colorscale (Plotly `reversescale`). */
+  reversescale?: boolean;
   showscale?: boolean;
   zmid?: number;
   zmin?: number;
   zmax?: number;
   zauto?: boolean;
+  /**
+   * Cell-edge interpolation. `false` keeps the discrete-cell heatmap
+   * look; `"best"`/`"fast"` smooth the transitions for a gradient
+   * appearance. Plotly defaults to `false` on `heatmap`, which is the
+   * canonical academic look; surfacing this so a dense matrix can opt
+   * into smoothing without leaving the heatmap chart family.
+   */
+  zsmooth?: false | "best" | "fast";
   colorbar?: {
-    title?: string;
-    titleside?: "right" | "top" | "bottom";
+    /**
+     * Plotly 3.x uses the nested `title: { text, side }` form. The older
+     * top-level `title: string, titleside: "right"` shape is silently
+     * dropped on render.
+     */
+    title?: { text?: string; side?: "right" | "top" | "bottom" };
     thickness?: number;
     len?: number;
     x?: number;
@@ -71,25 +85,23 @@ export function Heatmap({
 
       // Color scale configuration - only set if provided
       colorscale: series.colorscale,
+      reversescale: series.reversescale === true,
       showscale: series.showscale,
       zmid: series.zmid,
       zmin: series.zmin,
       zmax: series.zmax,
       zauto: series.zauto !== false,
+      zsmooth: series.zsmooth ?? false,
 
-      // Color bar
+      // Color bar uses Plotly 3.x nested form.
       colorbar: series.colorbar || {
-        title: "Value",
-        titleside: "right",
+        title: { text: "Value", side: "right" },
       },
 
       // Text annotations
       text: series.text,
       texttemplate: series.texttemplate,
-      textfont: series.textfont || {
-        size: 12,
-        color: "white",
-      },
+      textfont: series.textfont,
 
       // Gaps and layout
       hoverongaps: series.hoverongaps !== false,
@@ -162,102 +174,4 @@ export function Heatmap({
   );
 }
 
-// Correlation matrix heatmap
-export interface CorrelationMatrixProps extends BaseChartProps {
-  correlationMatrix: number[][];
-  labels: string[];
-  name?: string;
-  showValues?: boolean;
-  colorscale?: string;
-}
-
-export function CorrelationMatrix({
-  correlationMatrix,
-  labels,
-  name = "Correlation Matrix",
-  showValues = true,
-  colorscale = "RdBu",
-  ...props
-}: CorrelationMatrixProps) {
-  const renderer = getRenderer(props.config?.useWebGL);
-  const plotType = getPlotType("heatmap", renderer);
-
-  const plotData = [
-    {
-      x: labels,
-      y: labels,
-      z: correlationMatrix,
-      type: "heatmap",
-      colorscale: colorscale,
-      showscale: true,
-      zmin: -1,
-      zmax: 1,
-      zmid: 0,
-      text: showValues
-        ? correlationMatrix.map((row) => row.map((val) => val.toFixed(2)))
-        : undefined,
-      texttemplate: showValues ? "%{text}" : undefined,
-      textfont: {
-        size: 12,
-        color: "black",
-      },
-      colorbar: {
-        title: "Correlation",
-        titleside: "right",
-        thickness: 15,
-        len: 0.8,
-        tickmode: "linear",
-        tick0: -1,
-        dtick: 0.5,
-      },
-      hovertemplate: "<b>%{y} vs %{x}</b><br>" + "Correlation: %{z:.3f}<br>" + "<extra></extra>",
-    },
-  ] as unknown as PlotData[];
-
-  const layout = createBaseLayout(props.config || {});
-
-  const enhancedLayout = {
-    ...layout,
-    title: {
-      ...layout.title,
-      text: props.config?.title || name,
-    },
-    xaxis: {
-      ...layout.xaxis,
-      side: "bottom" as const,
-      tickangle: 45,
-      showgrid: false,
-      zeroline: false,
-      showline: false,
-      ticks: "" as const,
-      showticklabels: true,
-      type: "category" as const,
-    },
-    yaxis: {
-      ...layout.yaxis,
-      showgrid: false,
-      zeroline: false,
-      showline: false,
-      ticks: "" as const,
-      showticklabels: true,
-      autorange: "reversed" as const,
-      type: "category" as const,
-    },
-    plot_bgcolor: "white",
-    paper_bgcolor: "white",
-  };
-
-  const plotConfig = createPlotlyConfig(props.config || {});
-
-  return (
-    <div className={props.className}>
-      <PlotlyChart
-        data={plotData}
-        layout={enhancedLayout}
-        config={plotConfig}
-        loading={props.loading}
-        error={props.error}
-      />
-    </div>
-  );
-}
+export { CorrelationMatrix, type CorrelationMatrixProps } from "./correlation-matrix";

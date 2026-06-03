@@ -128,7 +128,7 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalledWith({
-        body: { firstName: "Jane", lastName: "Doe", organization: "Acme" },
+        body: { firstName: "Jane", lastName: "Doe", organization: "Acme", avatarUrl: null },
       });
     });
   });
@@ -284,23 +284,18 @@ describe("RegistrationForm", () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Multi");
     await user.type(screen.getByLabelText("registration.lastName"), "Submit");
-    await user.click(screen.getByRole("checkbox"));
 
+    await user.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
-    // Use fireEvent (no internal act() wrapper) so the 100ms setTimeout in the mock
-    // is not flushed during the first submission. user.click() wraps in act() which
-    // would flush the timer, batch both setIsPending(true) and setIsPending(false)
-    // into one render, and hide the disabled state entirely.
-    fireEvent.click(submitButton);
+    // First click
+    await user.click(submitButton);
 
-    // react-hook-form's handleSubmit is async, so setIsPending(true) lands a few
-    // microtasks later. waitFor catches it well before the 100ms timer fires.
     await waitFor(() => {
       expect(submitButton).toBeDisabled();
     });
 
-    // Second click while pending — user-event won't dispatch to a disabled button.
+    // Second click while pending
     await user.click(submitButton);
 
     expect(createUserProfileMock).toHaveBeenCalledTimes(1);

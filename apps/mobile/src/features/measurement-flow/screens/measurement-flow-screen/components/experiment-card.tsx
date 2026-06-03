@@ -17,6 +17,7 @@ export interface ExperimentCardProps {
   questionsOnly: boolean;
   nodeCount: number;
   durationMin: number;
+  recentCount?: number;
 }
 
 function pickTag(
@@ -45,13 +46,19 @@ export function ExperimentCard({
   questionsOnly,
   nodeCount,
   durationMin,
+  recentCount = 0,
 }: ExperimentCardProps) {
   const { t } = useTranslation("measurementFlow");
   const tag = pickTag(requiresSensor, questionsOnly);
 
   return (
-    <Pressable onPress={() => onPress(id)} accessibilityRole="button">
-      <Card tone={selected ? "mint" : "white"} padded style={{ marginVertical: 0, padding: 14 }}>
+    <Pressable onPress={() => onPress(id)} accessibilityRole="button" className="active:opacity-60">
+      <Card
+        tone={selected ? "mint" : "white"}
+        padded
+        className="border-0"
+        style={{ marginVertical: 0, padding: 14 }}
+      >
         <View className="flex-row items-start gap-3">
           <View
             className="h-11 w-11 items-center justify-center rounded-xl"
@@ -77,6 +84,11 @@ export function ExperimentCard({
               </Text>
             ) : null}
             <View className="mt-2 flex-row flex-wrap items-center gap-2">
+              {recentCount > 0 ? (
+                <Tag variant="synced">
+                  {t("experimentSelection.recentThisWeek", { n: recentCount })}
+                </Tag>
+              ) : null}
               {tag ? (
                 <Tag variant={tag.variant}>{t(`experimentSelection.tag.${tag.key}`)}</Tag>
               ) : null}
@@ -90,16 +102,6 @@ export function ExperimentCard({
               ) : null}
             </View>
           </View>
-          <View
-            className="mt-1 items-center justify-center rounded-full"
-            style={{
-              width: 22,
-              height: 22,
-              borderWidth: selected ? 6 : 1.5,
-              borderColor: selected ? colors.jii.darkGreen : "rgba(0,0,0,0.18)",
-              backgroundColor: "#fff",
-            }}
-          />
         </View>
       </Card>
     </Pressable>

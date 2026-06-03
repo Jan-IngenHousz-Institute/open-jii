@@ -8,7 +8,9 @@ import type {
   ExperimentData,
   AnnotationType,
   DataColumn,
+  DataFilter,
 } from "@repo/api/schemas/experiment.schema";
+import { zDataFilter } from "@repo/api/schemas/experiment.schema";
 import {
   isTimestampType,
   isStringType,
@@ -39,19 +41,90 @@ export type DataRenderFunction = (
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
 
+// Pinned to the front in a fixed display order. Shared across the rendered
+// table columns AND the `rawColumns` array so consumers like the dashboard
+// table-widget column picker see the same default order the data tab
+// presents (timestamps first, then variants, structs, ...).
+const PINNED_TIME_COLUMNS = ["measurement_time_local", "local_time", "measurement_time_utc"];
+
+function getTypePrecedence(typeText: string): number {
+  if (isTimestampType(typeText)) {
+    return 1;
+  }
+  if (isVariantType(typeText)) {
+    return 2;
+  }
+  if (
+    isWellKnownType(typeText) ||
+    isMapType(typeText) ||
+    isStructArrayType(typeText) ||
+    isStructType(typeText)
+  ) {
+    return 3;
+  }
+  if (isStringType(typeText)) {
+    return 4;
+  }
+  if (isNumericType(typeText) || isDecimalType(typeText)) {
+    return 5;
+  }
+  if (isArrayType(typeText)) {
+    return 6;
+  }
+  return 7;
+}
+
+/**
+ * Default display order for an experiment's columns. The pinned-time
+ * columns (measurement_time_*) come first in their fixed order, then
+ * remaining columns are grouped by type precedence (timestamps, variants,
+ * structs, strings, numerics, arrays, other). Used as the canonical
+ * starting order whenever the user hasn't explicitly reordered.
+ */
+export function sortColumnsForDisplay<T extends DataColumn>(columns: readonly T[]): T[] {
+  return [...columns].sort((a, b) => {
+    const pinnedA = PINNED_TIME_COLUMNS.indexOf(a.name);
+    const pinnedB = PINNED_TIME_COLUMNS.indexOf(b.name);
+    if (pinnedA !== -1 && pinnedB !== -1) {
+      return pinnedA - pinnedB;
+    }
+    if (pinnedA !== -1) {
+      return -1;
+    }
+    if (pinnedB !== -1) {
+      return 1;
+    }
+    return getTypePrecedence(a.type_text) - getTypePrecedence(b.type_text);
+  });
+}
+
 export function getColumnWidth(typeText: string, columnName?: string): number | undefined {
   // Fixed widths for local time columns
-  if (columnName === "measurement_time_local") return 220;
-  if (columnName === "local_time") return 90;
-  if (columnName === "measurement_time_utc") return 175;
+  if (columnName === "measurement_time_local") {
+    return 220;
+  }
+  if (columnName === "local_time") {
+    return 90;
+  }
+  if (columnName === "measurement_time_utc") {
+    return 175;
+  }
   // Set medium width for well-known columns (user columns with avatar + name)
-  if (isWellKnownType(typeText)) return 180;
+  if (isWellKnownType(typeText)) {
+    return 180;
+  }
   // Set medium width for struct/map columns that contain collapsible JSON
-  if (isStructArrayType(typeText) || isMapType(typeText) || isStructType(typeText)) return 180;
+  if (isStructArrayType(typeText) || isMapType(typeText) || isStructType(typeText)) {
+    return 180;
+  }
   // Set smaller width for array columns that contain charts
-  if (isArrayType(typeText)) return 120;
+  if (isArrayType(typeText)) {
+    return 120;
+  }
   // Set medium width for VARIANT columns that contain collapsible JSON
-  if (isVariantType(typeText)) return 180;
+  if (isVariantType(typeText)) {
+    return 180;
+  }
   return undefined;
 }
 
@@ -79,63 +152,11 @@ function createTableColumns({
   const columnHelper = createColumnHelper<DataRow>();
 
   const columns: AccessorKeyColumnDef<DataRow, unknown>[] = [];
-  if (!data) return columns;
+  if (!data) {
+    return columns;
+  }
 
-  // Define type precedence for sorting
-  const getTypePrecedence = (typeText: string): number => {
-    // Timestamp types (precedence 1)
-    if (isTimestampType(typeText)) {
-      return 1;
-    }
-
-    // Variant types (precedence 2)
-    if (isVariantType(typeText)) {
-      return 2;
-    }
-
-    // Well-known types (CONTRIBUTOR, etc.), MAP, and ARRAY<STRUCT< types (precedence 3)
-    if (
-      isWellKnownType(typeText) ||
-      isMapType(typeText) ||
-      isStructArrayType(typeText) ||
-      isStructType(typeText)
-    ) {
-      return 3;
-    }
-
-    // String types (precedence 4)
-    if (isStringType(typeText)) {
-      return 4;
-    }
-
-    // Numeric types (precedence 5)
-    if (isNumericType(typeText) || isDecimalType(typeText)) {
-      return 5;
-    }
-
-    // Array types (precedence 6)
-    if (isArrayType(typeText)) {
-      return 6;
-    }
-
-    // Other types (precedence 7)
-    return 7;
-  };
-
-  // These columns are pinned to the front in a fixed display order
-  const PINNED_TIME_COLUMNS = ["measurement_time_local", "local_time", "measurement_time_utc"];
-
-  // Sort columns: pinned time columns first (in defined order), then by type precedence
-  const sortedColumns = [...data.columns].sort((a, b) => {
-    const pinnedA = PINNED_TIME_COLUMNS.indexOf(a.name);
-    const pinnedB = PINNED_TIME_COLUMNS.indexOf(b.name);
-    if (pinnedA !== -1 && pinnedB !== -1) return pinnedA - pinnedB;
-    if (pinnedA !== -1) return -1;
-    if (pinnedB !== -1) return 1;
-    const precedenceA = getTypePrecedence(a.type_text);
-    const precedenceB = getTypePrecedence(b.type_text);
-    return precedenceA - precedenceB;
-  });
+  const sortedColumns = sortColumnsForDisplay(data.columns);
 
   function getHeader(columnName: string) {
     return columnName;
@@ -195,6 +216,15 @@ export interface UseExperimentDataParams {
   tableName: string;
   orderBy?: string;
   orderDirection?: "ASC" | "DESC";
+  /**
+   * Optional structured filter conditions. Forwarded to the backend as a
+   * JSON-encoded query param. When non-empty the backend's ad-hoc path
+   * takes over from the paginated read: the response is the full filtered
+   * result capped by the server's hard limit, `totalPages` is always 1,
+   * and `totalRows` reports the row count returned (not the unfiltered
+   * table size).
+   */
+  filters?: DataFilter[];
   formatFunction?: DataRenderFunction;
   onChartClick?: (data: number[], columnName: string) => void;
   onAddAnnotation?: (rowIds: string[]) => void;
@@ -203,6 +233,14 @@ export interface UseExperimentDataParams {
   isCellExpanded?: (rowId: string, columnName: string) => boolean;
   errorColumn?: string;
   enabled?: boolean;
+}
+
+function compactFilters(filters: DataFilter[] | undefined): DataFilter[] | undefined {
+  if (!filters || filters.length === 0) {
+    return undefined;
+  }
+  const compact = filters.filter((f) => zDataFilter.safeParse(f).success);
+  return compact.length > 0 ? compact : undefined;
 }
 
 /**
@@ -231,6 +269,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     tableName,
     orderBy,
     orderDirection,
+    filters,
     formatFunction,
     onChartClick,
     onAddAnnotation,
@@ -240,12 +279,44 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     errorColumn,
     enabled = true,
   } = params;
+
+  const cleanedFilters = compactFilters(filters);
+  // Stable JSON for both cache key and request encoding so semantically
+  // identical filter sets share a query cache entry.
+  const filtersJson = useMemo(
+    () =>
+      cleanedFilters && cleanedFilters.length > 0 ? JSON.stringify(cleanedFilters) : undefined,
+    [cleanedFilters],
+  );
+  // When filters are active the backend switches off the paginated path.
+  // Sending page/pageSize would be ignored; stripping them keeps the cache
+  // key tight and the URL readable.
+  const hasFilters = filtersJson !== undefined;
+
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
       params: { id: experimentId },
-      query: { tableName, page, pageSize, orderBy, orderDirection },
+      query: {
+        tableName,
+        page: hasFilters ? undefined : page,
+        pageSize: hasFilters ? undefined : pageSize,
+        orderBy,
+        orderDirection,
+        filters: filtersJson,
+      },
     },
-    queryKey: ["experiment", experimentId, page, pageSize, tableName, orderBy, orderDirection],
+    // page/pageSize are stripped from the request when filters are active, so
+    // they must not appear in the key or we'd split the cache on a value the
+    // server never sees.
+    queryKey: [
+      "experiment",
+      experimentId,
+      tableName,
+      orderBy,
+      orderDirection,
+      filtersJson,
+      ...(hasFilters ? [] : [page, pageSize]),
+    ],
     staleTime: STALE_TIME,
     enabled,
   });
@@ -267,11 +338,20 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
           }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
-          rawColumns: tableData.data?.columns.map((col) => ({
-            name: col.name,
-            type_name: col.type_name,
-            type_text: col.type_text,
-          })),
+          // Same display order as `columns` above so downstream consumers
+          // (filter pickers, dashboard table-widget column picker, etc.)
+          // present columns in the canonical "timestamps first, then by
+          // type" sequence rather than whatever raw order Databricks
+          // returned.
+          rawColumns: tableData.data
+            ? sortColumnsForDisplay(
+                tableData.data.columns.map((col) => ({
+                  name: col.name,
+                  type_name: col.type_name,
+                  type_text: col.type_text,
+                })),
+              )
+            : undefined,
           errorColumn,
         }
       : undefined;

@@ -7,6 +7,7 @@ import { Button } from "@repo/ui/components/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import { cva } from "@repo/ui/lib/utils";
 
+import { UserAvatar } from "../../../user-avatar";
 import { embargoUntilHelperString } from "../../embargo-utils";
 
 interface MembersVisibilitySectionProps {
@@ -76,9 +77,12 @@ export function MembersVisibilitySection({
                   key={m.userId || i}
                   className="flex items-center gap-2 rounded-md border px-3 py-2"
                 >
-                  <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium">
-                    {(m.firstName?.[0] ?? m.lastName?.[0] ?? "U").toUpperCase()}
-                  </div>
+                  <UserAvatar
+                    avatarUrl={m.avatarUrl}
+                    firstName={m.firstName}
+                    lastName={m.lastName}
+                    className="h-8 w-8"
+                  />
                   <div className="text-sm font-medium">
                     {m.firstName || m.lastName
                       ? `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim()

@@ -1,158 +1,119 @@
-import { render, screen, userEvent } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { render, userEvent, within } from "@/test/test-utils";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 
 import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
 
+const mockColumnName = "test_column";
+const mockData = [1, 2, 3, 4, 5];
+
+// Scope every DOM query to the render's container; `isolate: false` leaves
+// other files' SVGs/icons in document.body so a global `document.querySelector`
+// can pick up the wrong element.
+function renderCell(props: Parameters<typeof ExperimentDataTableChartCell>[0]) {
+  const result = render(<ExperimentDataTableChartCell {...props} />);
+  const root = result.container.firstChild;
+  if (!(root instanceof HTMLElement)) throw new Error("expected a root element");
+  return { ...result, scoped: within(root), root };
+}
+
 describe("ExperimentDataTableChartCell", () => {
-  const mockColumnName = "test_column";
-  const mockData = [1, 2, 3, 4, 5];
-  const mockStringData = "[1,2,3,4,5]";
-
-  it("renders chart cell with SVG when data is provided as array", () => {
-    render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
-
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-    expect(svg?.tagName).toBe("svg");
+  it("renders an SVG when data is an array of numbers", () => {
+    const { root } = renderCell({ data: mockData, columnName: mockColumnName });
+    expect(root.querySelector("svg")).toBeInTheDocument();
   });
 
-  it("renders chart cell with SVG when data is provided as string", () => {
-    render(<ExperimentDataTableChartCell data={mockStringData} columnName={mockColumnName} />);
-
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
+  it("renders an SVG when data is a JSON-array string", () => {
+    const { root } = renderCell({ data: "[1,2,3,4,5]", columnName: mockColumnName });
+    expect(root.querySelector("svg")).toBeInTheDocument();
   });
 
-  it("renders 'No data' message when data array is empty", () => {
-    render(<ExperimentDataTableChartCell data={[]} columnName={mockColumnName} />);
-
-    expect(screen.getByText("No data")).toBeInTheDocument();
+  it("shows 'No data' when the array is empty", () => {
+    const { scoped } = renderCell({ data: [], columnName: mockColumnName });
+    expect(scoped.getByText("No data")).toBeInTheDocument();
   });
 
-  it("renders 'No data' message when string data is empty", () => {
-    render(<ExperimentDataTableChartCell data="[]" columnName={mockColumnName} />);
-
-    expect(screen.getByText("No data")).toBeInTheDocument();
+  it("shows 'No data' when the string represents an empty array", () => {
+    const { scoped } = renderCell({ data: "[]", columnName: mockColumnName });
+    expect(scoped.getByText("No data")).toBeInTheDocument();
   });
 
-  it("scrolls to experiment-data-chart when clicked", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it("parses a JSON-array string into rendered points", () => {
+    const { root } = renderCell({ data: "[1.5, 2.7, 3.9]", columnName: mockColumnName });
+    expect(root.querySelector("svg path")).toBeInTheDocument();
+  });
 
-    // Mock scrollIntoView
-    const mockScrollIntoView = vi.fn();
-    const mockGetElementById = vi.spyOn(document, "getElementById");
-    const mockElement = {
-      scrollIntoView: mockScrollIntoView,
-    } as unknown as HTMLElement;
-    mockGetElementById.mockReturnValue(mockElement);
+  it("parses a comma-separated string into rendered points", () => {
+    const { root } = renderCell({ data: "1.1,2.2,3.3", columnName: mockColumnName });
+    expect(root.querySelector("svg path")).toBeInTheDocument();
+  });
 
-    render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
+  it("filters out NaN tokens from a comma-separated string", () => {
+    const { root } = renderCell({ data: "1,invalid,3,NaN,5", columnName: mockColumnName });
+    expect(root.querySelector("svg path")).toBeInTheDocument();
+  });
 
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    if (chartContainer) {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-      await user.click(chartContainer);
-    }
+  it("falls back to 'No data' when the string is unparseable", () => {
+    const { scoped } = renderCell({
+      data: "invalid-data-that-cannot-be-parsed-[{",
+      columnName: mockColumnName,
+    });
+    expect(scoped.getByText("No data")).toBeInTheDocument();
+  });
 
-    // Fast-forward time to trigger setTimeout
-    vi.advanceTimersByTime(100);
+  it("generates a polyline-style SVG path from the data points", () => {
+    const { root } = renderCell({ data: [0, 5, 10], columnName: mockColumnName });
+    const path = root.querySelector("svg path");
+    expect(path).toBeInTheDocument();
+    expect(path?.getAttribute("d")).toMatch(
+      /^M \d+,\d+(\.\d+)? L \d+,\d+(\.\d+)? L \d+,\d+(\.\d+)?$/,
+    );
+  });
 
-    expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
+  it("applies hover/cursor classes to the chart cell wrapper", () => {
+    const { root } = renderCell({ data: mockData, columnName: mockColumnName });
+    expect(root).toHaveClass("hover:bg-muted/30");
+    expect(root).toHaveClass("cursor-pointer");
+    expect(root).toHaveClass("relative");
+  });
 
-    expect(mockScrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
+  describe("click → scrollIntoView", () => {
+    // Real DOM element with the id the component reads; scrollIntoView is
+    // globally stubbed in setup.ts so we assert against its call args.
+    let chartTarget: HTMLDivElement;
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      chartTarget = document.createElement("div");
+      chartTarget.id = "experiment-data-chart";
+      document.body.appendChild(chartTarget);
     });
 
-    mockGetElementById.mockRestore();
-    vi.useRealTimers();
-  });
+    afterEach(() => {
+      chartTarget.remove();
+      vi.useRealTimers();
+    });
 
-  it("handles missing chart container gracefully on click", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    it("scrolls the chart into view on click", async () => {
+      const { root } = renderCell({ data: mockData, columnName: mockColumnName });
 
-    const mockGetElementById = vi.spyOn(document, "getElementById");
-    mockGetElementById.mockReturnValue(null);
-
-    render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
-
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    if (chartContainer) {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-      await user.click(chartContainer);
-    }
+      await user.click(root);
+      vi.advanceTimersByTime(100);
 
-    // Fast-forward time to trigger setTimeout
-    vi.advanceTimersByTime(100);
+      expect(chartTarget.scrollIntoView).toHaveBeenCalledWith({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
 
-    expect(mockGetElementById).toHaveBeenCalledWith("experiment-data-chart");
+    it("doesn't scroll when the cell is the empty-state branch", async () => {
+      const { scoped } = renderCell({ data: [], columnName: mockColumnName });
 
-    mockGetElementById.mockRestore();
-    vi.useRealTimers();
-  });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+      await user.click(scoped.getByText("No data"));
+      vi.advanceTimersByTime(100);
 
-  it("does not scroll when clicking on empty data", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const mockGetElementById = vi.spyOn(document, "getElementById");
-
-    render(<ExperimentDataTableChartCell data={[]} columnName={mockColumnName} />);
-
-    const noDataElement = screen.getByText("No data");
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-    await user.click(noDataElement);
-
-    expect(mockGetElementById).not.toHaveBeenCalled();
-
-    mockGetElementById.mockRestore();
-    vi.useRealTimers();
-  });
-
-  it("parses JSON string data correctly", () => {
-    render(<ExperimentDataTableChartCell data="[1.5, 2.7, 3.9]" columnName={mockColumnName} />);
-
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-  });
-
-  it("parses comma-separated string data correctly", () => {
-    render(<ExperimentDataTableChartCell data="1.1,2.2,3.3" columnName={mockColumnName} />);
-
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-  });
-
-  it("filters out NaN values from parsed data", () => {
-    render(<ExperimentDataTableChartCell data="1,invalid,3,NaN,5" columnName={mockColumnName} />);
-
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-  });
-
-  it("handles malformed JSON gracefully", () => {
-    render(
-      <ExperimentDataTableChartCell
-        data="invalid-data-that-cannot-be-parsed-[{"
-        columnName={mockColumnName}
-      />,
-    );
-
-    expect(screen.getByText("No data")).toBeInTheDocument();
-  });
-
-  it("generates correct SVG path for data points", () => {
-    render(<ExperimentDataTableChartCell data={[0, 5, 10]} columnName={mockColumnName} />);
-
-    const path = document.querySelector("svg")?.querySelector("path");
-    expect(path).toBeInTheDocument();
-    expect(path?.getAttribute("d")).toMatch(/^M \d+,\d+ L \d+,\d+ L \d+,\d+$/);
-  });
-
-  it("applies correct CSS classes for styling", () => {
-    render(<ExperimentDataTableChartCell data={mockData} columnName={mockColumnName} />);
-
-    const chartContainer = document.querySelector("svg")?.parentElement;
-    expect(chartContainer).toHaveClass("hover:bg-muted/30");
-    expect(chartContainer).toHaveClass("cursor-pointer");
-    expect(chartContainer).toHaveClass("relative");
+      expect(chartTarget.scrollIntoView).not.toHaveBeenCalled();
+    });
   });
 });

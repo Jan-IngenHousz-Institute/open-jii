@@ -1,8 +1,7 @@
-import { clsx } from "clsx";
-import React, { useState } from "react";
-import { View, Text, TextInput } from "react-native";
+import React from "react";
+import { View, Text } from "react-native";
 import { useTranslation } from "~/shared/i18n";
-import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { Input } from "~/shared/ui/Input";
 
 import { QuestionContent } from "../../../../types";
 
@@ -13,24 +12,18 @@ interface TextQuestionProps {
 }
 
 export function TextQuestion({ content, value, onChange }: TextQuestionProps) {
-  const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const [internal, setInternal] = useState(value);
-  const handleChange = (text: string) => {
-    setInternal(text);
-    onChange(text);
-  };
 
   return (
     <View>
-      <TextInput
-        className={clsx("rounded-lg border p-3 text-base", classes.input, classes.border)}
+      <Input
         placeholder={content.placeholder ?? t("measurementFlow:questionTypes.text.placeholder")}
-        value={internal}
-        onChangeText={handleChange}
+        value={value}
+        onChangeText={onChange}
         multiline
         numberOfLines={3}
         textAlignVertical="top"
+        containerStyle={{ marginBottom: 0 }}
       />
       {content.required && !value && (
         <Text className="text-destructive mt-2 text-sm">

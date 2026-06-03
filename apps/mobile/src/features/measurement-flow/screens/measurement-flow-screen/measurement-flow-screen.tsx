@@ -2,18 +2,22 @@
 import { useIsFocused } from "@react-navigation/native";
 import { useKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { X } from "lucide-react-native";
 import React from "react";
-import { BackHandler, Image, View } from "react-native";
+import { Image, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useExperiments } from "~/features/experiments/hooks/use-experiments";
+import { useActiveAlerts } from "~/features/alerts/hooks/use-active-alerts";
+import { useExperiment } from "~/features/experiments/hooks/use-experiment";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
 import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
+import { useFlowBackHandler } from "~/features/measurement-flow/hooks/use-flow-back-handler";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
-import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { usePausedFlowStore } from "~/features/measurement-flow/stores/use-paused-flow-store";
 import { colors } from "~/shared/constants/colors";
+import { useTranslation } from "~/shared/i18n";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
 import { NavigationButtons } from "./components/navigation-buttons";
@@ -27,94 +31,52 @@ interface MeasurementFlowScreenProps {
 
 export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
-  const {
-    flowNodes,
-    currentFlowStep,
-    isFlowFinished,
-    experimentId,
-    protocolId,
-    isQuestionsSubmitPending,
-    iterationCount,
-    isFromOverview,
-  } = useMeasurementFlowStore();
-  const { experiments } = useExperiments();
+  // Subscribe only to the field this screen renders against. The auto-pause
+  // and back-handler hooks read the rest of the store via getState() so the
+  // screen doesn't re-render on every flow tick (scanResult, currentFlowStep,
+  // …) and cascade through MeasurementFlowContainer and its children.
+  const experimentId = useMeasurementFlowStore((s) => s.experimentId);
+  const { experiment } = useExperiment(experimentId);
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const openExitSheet = useExitFlowSheetStore((s) => s.open);
+  const router = useRouter();
+  const themeColors = useThemeColors();
+  const { t } = useTranslation("measurementFlow");
 
-  const experimentLabel = experiments.find((e) => e.value === experimentId)?.label ?? "";
-
-  // Auto-save a snapshot when the user leaves a mid-flow screen without
-  // explicitly ending it. The Exit sheet's Discard path clears the runner
-  // first, so this guard skips finished/empty flows.
-  React.useEffect(() => {
-    if (isFocused) return;
-    if (!experimentId) return;
-    if (isFlowFinished) return;
-    if (currentFlowStep <= 0 && !isQuestionsSubmitPending) return;
-
-    const answersHistory = useFlowAnswersStore.getState().answersHistory;
-
-    usePausedFlowStore.getState().pauseFlow({
-      experimentId,
-      experimentLabel,
-      protocolId,
-      currentFlowStep,
-      totalSteps: flowNodes.length,
-      iterationCount,
-      isQuestionsSubmitPending,
-      isFromOverview,
-      flowNodes,
-      answersHistory: JSON.parse(JSON.stringify(answersHistory)),
-      pausedAt: new Date().toISOString(),
-    });
-  }, [
-    isFocused,
-    experimentId,
-    experimentLabel,
-    protocolId,
-    currentFlowStep,
-    flowNodes,
-    iterationCount,
-    isQuestionsSubmitPending,
-    isFromOverview,
-    isFlowFinished,
-  ]);
-
-  // Android hardware back routes through the Exit sheet when a flow is active.
-  React.useEffect(() => {
-    if (!isFocused) return;
-    if (!experimentId) return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      openExitSheet();
-      return true;
-    });
-    return () => sub.remove();
-  }, [isFocused, experimentId, openExitSheet]);
-
+  const hasAlerts = useActiveAlerts().length > 0;
+  const isLightMode = themeColors.scheme !== "dark";
+  const experimentLabel = experiment?.name ?? "";
   const hasActiveFlow = !!experimentId;
+  const statusBarStyle = hasAlerts && isLightMode ? "dark" : hasActiveFlow ? "light" : "auto";
+
+  useFlowBackHandler(hasActiveFlow);
+
+  // Picker state has no tab bar to bail out to (the flow now covers the tabs
+  // as a pushed screen with swipe-back disabled), so it gets its own dismiss.
+  const dismissFlow = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/");
+  };
 
   return (
     <View className="bg-background flex-1">
-      {isFocused && <StatusBar style={hasActiveFlow ? "light" : "dark"} />}
+      {isFocused && <StatusBar style={statusBarStyle} />}
 
       {hasActiveFlow ? (
         <>
-          {/* Photo extends ~48% of the screen so the body's larger rounded
-              top corners curve over a generous slice of greenhouse — like
-              the old design but with more breathing room. */}
           <Image
             source={HERO_IMAGE}
-            style={{ position: "absolute", left: 0, right: 0, top: 0, height: "48%" }}
+            className="absolute left-0 right-0 top-0 h-[42%] w-full"
             resizeMode="cover"
           />
           {/* Brand-teal overlay covers the FULL photo area, not just the
               FlowHero's bounding box, so the strip between the hero and the
               body's rounded corner stays consistently masked. */}
           <LinearGradient
-            colors={[colors.jii.darkerGreen + "E0", colors.jii.darkGreen + "99"]}
+            colors={[colors.jii.darkGreen + "88", colors.jii.darkerGreen + "D0"]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 0, y: 1 }}
             style={{
               position: "absolute",
               left: 0,
@@ -127,7 +89,17 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
           <FlowHero title={experimentLabel} onExitPress={openExitSheet} />
         </>
       ) : (
-        <View style={{ height: insets.top }} />
+        <View style={{ paddingTop: insets.top }} className="px-2 pb-1">
+          <TouchableOpacity
+            onPress={dismissFlow}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t("hero.exitLabel")}
+            className="h-11 w-11 items-center justify-center"
+          >
+            <X size={26} color={themeColors.onSurface} />
+          </TouchableOpacity>
+        </View>
       )}
 
       <View className="flex-1">

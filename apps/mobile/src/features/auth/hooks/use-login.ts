@@ -5,30 +5,39 @@ import {
   signInWithOrcid,
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
+import { getAuthClient } from "~/features/auth/services/auth";
 import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
+import { createLogger } from "~/shared/utils/logger";
+
+const log = createLogger("auth");
 
 export function useLoginFlow() {
   const queryClient = useQueryClient();
 
-  const prefetch = () => {
-    void prefetchOfflineData(queryClient);
+  const prefetch = async () => {
+    // Resolve the freshly-signed-in userId so the profile prefetch has a target.
+    const session = await getAuthClient()
+      .getSession()
+      .catch(() => null);
+    const userId = session?.data?.user?.id;
+    void prefetchOfflineData(queryClient, userId);
   };
 
   const github = useMutation({
     mutationFn: signInWithGitHub,
     onSuccess: prefetch,
-    onError: (error) => console.error("GitHub login error:", error),
+    onError: (error) => log.error("GitHub login error", { err: error?.message }),
   });
 
   const orcid = useMutation({
     mutationFn: signInWithOrcid,
     onSuccess: prefetch,
-    onError: (error) => console.error("ORCID login error:", error),
+    onError: (error) => log.error("ORCID login error", { err: error?.message }),
   });
 
   const sendOtp = useMutation({
     mutationFn: sendEmailLoginOtp,
-    onError: (error) => console.error("Email OTP send error:", error),
+    onError: (error) => log.error("Email OTP send error", { err: error?.message }),
   });
 
   const verifyOtp = useMutation({
@@ -38,7 +47,7 @@ export function useLoginFlow() {
     onSuccess: (result) => {
       if (!result?.error) prefetch();
     },
-    onError: (error) => console.error("Email OTP verify error:", error),
+    onError: (error) => log.error("Email OTP verify error", { err: error?.message }),
   });
 
   return {

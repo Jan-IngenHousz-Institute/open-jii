@@ -80,4 +80,46 @@ export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort {
       experimentName,
     );
   }
+
+  async sendJoinRequestSubmittedNotification(
+    experimentId: string,
+    experimentName: string,
+    requesterName: string,
+    adminEmail: string,
+    message?: string,
+  ): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending join request submitted notification",
+      operation: "sendJoinRequestSubmittedNotification",
+      experimentId,
+      email: adminEmail,
+    });
+
+    return this.notificationService.sendJoinRequestSubmittedNotification(
+      experimentId,
+      experimentName,
+      requesterName,
+      adminEmail,
+      message,
+    );
+  }
+
+  async sendJoinRequestRejectedNotification(
+    experimentId: string,
+    experimentName: string,
+    requesterEmail: string,
+  ): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending join request rejected notification",
+      operation: "sendJoinRequestRejectedNotification",
+      experimentId,
+      email: requesterEmail,
+    });
+
+    return this.notificationService.sendJoinRequestRejectedNotification(
+      experimentId,
+      experimentName,
+      requesterEmail,
+    );
+  }
 }

@@ -6,9 +6,18 @@ import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+
+const MAC_PATTERN = /^(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
+
+function macTail(id: string): string | null {
+  if (!MAC_PATTERN.test(id)) return null;
+  return id.split(/[:-]/).slice(-4).join(":");
+}
 
 export function HomeDeviceCard() {
   const { t } = useTranslation("home");
+  const themeColors = useThemeColors();
   const { data: connectedDevice } = useConnectedDevice();
   const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
@@ -20,7 +29,11 @@ export function HomeDeviceCard() {
   let title: string;
   let subtitle: string;
   if (isConnected) {
-    title = connectedDevice?.name ?? "MultispeQ";
+    const trimmedName = connectedDevice?.name.trim() ?? "";
+    const isBt = connectedDevice?.type === "bluetooth-classic" || connectedDevice?.type === "ble";
+    const name = trimmedName.length > 0 ? trimmedName : "MultispeQ";
+    const mac = isBt && connectedDevice ? macTail(connectedDevice.id) : null;
+    title = mac ? `${name} (${mac})` : name;
     subtitle =
       batteryLevel != null
         ? t("device.connectedSub", { battery: batteryLevel })
@@ -38,7 +51,7 @@ export function HomeDeviceCard() {
 
   return (
     <Pressable onPress={onPress} className="mb-1 mt-3">
-      <View className="border-divider bg-card rounded-2xl border p-3.5 shadow-sm shadow-black/10">
+      <View className="bg-card rounded-2xl p-3.5 shadow-sm shadow-black/10">
         <View className="flex-row items-center">
           <View
             className="mr-3 items-center justify-center"
@@ -81,7 +94,7 @@ export function HomeDeviceCard() {
             </Text>
           </View>
 
-          <ChevronRight size={20} color="#9CA3AF" />
+          <ChevronRight size={20} color={themeColors.inactive} />
         </View>
       </View>
     </Pressable>

@@ -55,17 +55,18 @@ vi.mock("~/shared/api/client", () => ({
   }),
 }));
 
-// Mock AppState from react-native
-let capturedAppStateHandler: ((state: string) => void) | null = null;
-const mockRemove = vi.fn();
+// Mock the app-lifecycle service. time-sync no longer talks to AppState
+// directly — it subscribes via onAppForeground, so tests drive it the same
+// way. The mock captures the listener and the unsubscribe so we can fire
+// foregrounds and assert teardown.
+let capturedForegroundListener: (() => void) | null = null;
+const mockUnsubscribe = vi.fn();
 
-vi.mock("react-native", () => ({
-  AppState: {
-    addEventListener: vi.fn((_event: string, handler: (state: string) => void) => {
-      capturedAppStateHandler = handler;
-      return { remove: mockRemove };
-    }),
-  },
+vi.mock("~/shared/utils/app-lifecycle", () => ({
+  onAppForeground: vi.fn((listener: () => void) => {
+    capturedForegroundListener = listener;
+    return mockUnsubscribe;
+  }),
 }));
 
 // --- Helpers ---
@@ -82,8 +83,8 @@ async function advancePastDebounce() {
 describe("time-sync", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: false });
-    capturedAppStateHandler = null;
-    mockRemove.mockClear();
+    capturedForegroundListener = null;
+    mockUnsubscribe.mockClear();
     mockServerUtcMs = Date.now();
     getTimeCallCount = 0;
     mockIsInternetReachable = true;
@@ -101,13 +102,13 @@ describe("time-sync", () => {
     vi.resetModules();
   });
 
-  it("should register an AppState listener on start", async () => {
+  it("should register a foreground listener on start", async () => {
     const { startTimeSync } = await import("./time-sync");
-    const { AppState } = await import("react-native");
+    const { onAppForeground } = await import("~/shared/utils/app-lifecycle");
 
     startTimeSync();
 
-    expect(AppState.addEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+    expect(onAppForeground).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it("should trigger a sync when app comes to foreground", async () => {
@@ -131,8 +132,8 @@ describe("time-sync", () => {
     mockServerUtcMs = Date.now() + 12000;
 
     // Simulate app returning to foreground
-    expect(capturedAppStateHandler).not.toBeNull();
-    capturedAppStateHandler?.("active");
+    expect(capturedForegroundListener).not.toBeNull();
+    capturedForegroundListener?.();
     await vi.advanceTimersByTimeAsync(50);
 
     const stateAfterForeground = getTimeSyncState();
@@ -140,28 +141,7 @@ describe("time-sync", () => {
     expect(stateAfterForeground.offsetMs).not.toBe(initialOffset);
   });
 
-  it("should NOT trigger a sync for non-active states (background, inactive)", async () => {
-    const { startTimeSync, getTimeSyncState } = await import("./time-sync");
-
-    mockServerUtcMs = Date.now() + 5000;
-    startTimeSync();
-    await vi.advanceTimersByTimeAsync(50);
-
-    const offsetAfterInit = getTimeSyncState().offsetMs;
-
-    // Change server time so we can detect if a sync happened
-    mockServerUtcMs = Date.now() + 99000;
-
-    capturedAppStateHandler?.("background");
-    await vi.advanceTimersByTimeAsync(50);
-    expect(getTimeSyncState().offsetMs).toBe(offsetAfterInit);
-
-    capturedAppStateHandler?.("inactive");
-    await vi.advanceTimersByTimeAsync(50);
-    expect(getTimeSyncState().offsetMs).toBe(offsetAfterInit);
-  });
-
-  it("should remove the AppState listener on stop", async () => {
+  it("should unsubscribe from foreground events on stop", async () => {
     const { startTimeSync, stopTimeSync } = await import("./time-sync");
 
     startTimeSync();
@@ -169,7 +149,7 @@ describe("time-sync", () => {
 
     stopTimeSync();
 
-    expect(mockRemove).toHaveBeenCalled();
+    expect(mockUnsubscribe).toHaveBeenCalled();
   });
 
   it("should include timezone from GPS in synced state", async () => {
@@ -206,7 +186,7 @@ describe("time-sync", () => {
     mockServerUtcMs = realNow + 100;
 
     // App comes back to foreground → re-sync
-    capturedAppStateHandler?.("active");
+    capturedForegroundListener?.();
     await vi.advanceTimersByTimeAsync(50);
 
     // After re-sync, getSyncedUtcNow should reflect the server's reality,
@@ -229,7 +209,7 @@ describe("time-sync", () => {
 
     // Fire 10 rapid foreground events
     for (let i = 0; i < 10; i++) {
-      capturedAppStateHandler?.("active");
+      capturedForegroundListener?.();
     }
     await vi.advanceTimersByTimeAsync(50);
 
@@ -240,7 +220,7 @@ describe("time-sync", () => {
 
     // Fire more events immediately — still within the 5s window
     for (let i = 0; i < 5; i++) {
-      capturedAppStateHandler?.("active");
+      capturedForegroundListener?.();
     }
     await vi.advanceTimersByTimeAsync(50);
 
@@ -254,7 +234,7 @@ describe("time-sync", () => {
 
     // Now another foreground event should trigger a new sync
     mockServerUtcMs = Date.now() + 9000;
-    capturedAppStateHandler?.("active");
+    capturedForegroundListener?.();
     await vi.advanceTimersByTimeAsync(50);
 
     expect(getTimeCallCount - callsBeforeSecondBurst).toBe(1);
@@ -281,7 +261,7 @@ describe("time-sync", () => {
 
       // Advance past debounce, then trigger foreground sync
       await advancePastDebounce();
-      capturedAppStateHandler?.("active");
+      capturedForegroundListener?.();
       await vi.advanceTimersByTimeAsync(50);
 
       expect(getTimeSyncState().missedPings).toBe(1);
@@ -290,16 +270,14 @@ describe("time-sync", () => {
       spy.mockRestore();
     });
 
-    it("should show toast.warning when missedPings reaches threshold (3)", async () => {
+    it("does not toast on repeated sync failures (warnings were too noisy in the field)", async () => {
       const { startTimeSync, getTimeSyncState } = await import("./time-sync");
       const { toast } = await import("sonner-native");
 
-      // Successful initial sync
       mockServerUtcMs = Date.now();
       startTimeSync();
       await vi.advanceTimersByTimeAsync(50);
 
-      // Make server fail
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
@@ -309,23 +287,19 @@ describe("time-sync", () => {
 
       (toast.warning as ReturnType<typeof vi.fn>).mockClear();
 
-      // Trigger 3 failed syncs via foreground events (each needs debounce window to pass)
       for (let i = 0; i < 3; i++) {
         await advancePastDebounce();
-        capturedAppStateHandler?.("active");
+        capturedForegroundListener?.();
         await vi.advanceTimersByTimeAsync(50);
       }
 
       expect(getTimeSyncState().missedPings).toBe(3);
-      expect(toast.warning).toHaveBeenCalledWith(
-        "Time sync lost. Please check your phone's date and time settings.",
-      );
+      expect(toast.warning).not.toHaveBeenCalled();
 
       spy.mockRestore();
     });
 
-    it("should show toast.warning on initial sync failure", async () => {
-      // Make server fail from the start
+    it("does not toast on initial sync failure", async () => {
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
@@ -340,7 +314,7 @@ describe("time-sync", () => {
       startTimeSync();
       await vi.advanceTimersByTimeAsync(50);
 
-      expect(toast.warning).toHaveBeenCalledWith("Unable to synchronize time.");
+      expect(toast.warning).not.toHaveBeenCalled();
 
       spy.mockRestore();
     });
@@ -361,7 +335,7 @@ describe("time-sync", () => {
       } as any);
 
       await advancePastDebounce();
-      capturedAppStateHandler?.("active");
+      capturedForegroundListener?.();
       await vi.advanceTimersByTimeAsync(50);
       expect(getTimeSyncState().missedPings).toBe(1);
 
@@ -369,7 +343,7 @@ describe("time-sync", () => {
       spy.mockRestore();
 
       await advancePastDebounce();
-      capturedAppStateHandler?.("active");
+      capturedForegroundListener?.();
       await vi.advanceTimersByTimeAsync(50);
       expect(getTimeSyncState().missedPings).toBe(0);
     });
@@ -396,8 +370,9 @@ describe("time-sync", () => {
       // After restore + successful sync, isSynced should be true and missedPings reset
       expect(s.isSynced).toBe(true);
       expect(s.missedPings).toBe(0);
-      // timezone comes from the fresh GPS resolve, not the persisted value
-      expect(s.timezone).toBe("America/Chicago");
+      // Timezone is reused from the persisted state (cached < 24h) to avoid
+      // GPS calls that flap AppState on Android.
+      expect(s.timezone).toBe("Europe/Amsterdam");
     });
 
     it("should reset missedPings to 0 when restoring", async () => {
@@ -613,7 +588,7 @@ describe("time-sync", () => {
 
       for (let i = 0; i < 5; i++) {
         await advancePastDebounce();
-        capturedAppStateHandler?.("active");
+        capturedForegroundListener?.();
         await vi.advanceTimersByTimeAsync(50);
       }
 
@@ -635,7 +610,7 @@ describe("time-sync", () => {
       mockServerUtcMs = Date.now() + 3000;
 
       await advancePastDebounce();
-      capturedAppStateHandler?.("active");
+      capturedForegroundListener?.();
       await vi.advanceTimersByTimeAsync(50);
 
       expect(getTimeSyncState().isSynced).toBe(true);

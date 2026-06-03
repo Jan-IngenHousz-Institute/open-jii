@@ -160,101 +160,75 @@ resource "aws_iam_policy" "backend_s3_presign" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["s3:PutObject"]
-      Resource = "${var.s3_archive_bucket_arn}/large-iot/*"
+      Resource = "${var.large_iot_bucket_arn}/*"
     }]
   })
 }
 
-# ---------------------------------------------------------------
-# SQS queue + S3 event notifications for large-iot/ ingestion
-# ---------------------------------------------------------------
-
 resource "aws_sqs_queue" "large_iot_dlq" {
-  count                     = var.enable_large_iot_sqs ? 1 : 0
-  name                      = "open-jii-${var.environment}-large-iot-dlq"
-  message_retention_seconds = 1209600
-  sqs_managed_sse_enabled   = true
+  count = var.enable_large_iot_sqs ? 1 : 0
 
-  tags = {
-    Environment = var.environment
-    Project     = "open-jii"
-    ManagedBy   = "terraform"
-  }
+  name                      = "open-jii-${var.environment}-large-iot-dlq"
+  message_retention_seconds = 1209600 # 14 days
 }
 
 resource "aws_sqs_queue" "large_iot_notifications" {
-  count                      = var.enable_large_iot_sqs ? 1 : 0
+  count = var.enable_large_iot_sqs ? 1 : 0
+
   name                       = "open-jii-${var.environment}-large-iot-notifications"
   visibility_timeout_seconds = 300
-  message_retention_seconds  = 86400
-  sqs_managed_sse_enabled    = true
+  message_retention_seconds  = 86400 # 1 day
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.large_iot_dlq[0].arn
     maxReceiveCount     = 3
   })
-
-  tags = {
-    Environment = var.environment
-    Project     = "open-jii"
-    ManagedBy   = "terraform"
-  }
 }
 
 resource "aws_sqs_queue_policy" "large_iot_notifications" {
-  count     = var.enable_large_iot_sqs ? 1 : 0
-  queue_url = aws_sqs_queue.large_iot_notifications[0].id
+  count = var.enable_large_iot_sqs ? 1 : 0
 
+  queue_url = aws_sqs_queue.large_iot_notifications[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid       = "AllowS3SendMessage"
       Effect    = "Allow"
       Principal = { Service = "s3.amazonaws.com" }
       Action    = "sqs:SendMessage"
       Resource  = aws_sqs_queue.large_iot_notifications[0].arn
       Condition = {
-        ArnLike = {
-          "aws:SourceArn" = var.s3_archive_bucket_arn
-        }
+        ArnLike = { "aws:SourceArn" = var.large_iot_bucket_arn }
       }
     }]
   })
 }
 
 resource "aws_s3_bucket_notification" "large_iot" {
-  count  = var.enable_large_iot_sqs ? 1 : 0
-  bucket = var.s3_archive_bucket_name
+  count = var.enable_large_iot_sqs ? 1 : 0
+
+  bucket = var.large_iot_bucket_name
 
   queue {
-    queue_arn     = aws_sqs_queue.large_iot_notifications[0].arn
-    events        = ["s3:ObjectCreated:*"]
-    filter_prefix = "large-iot/"
+    queue_arn = aws_sqs_queue.large_iot_notifications[0].arn
+    events    = ["s3:ObjectCreated:*"]
   }
 
   depends_on = [aws_sqs_queue_policy.large_iot_notifications]
 }
 
-# IAM policy allowing the Databricks storage-credential role to read large-iot
-# objects from S3 and consume the SQS notification queue via Auto Loader.
 resource "aws_iam_policy" "databricks_large_iot_read" {
   count = var.enable_large_iot_sqs ? 1 : 0
-  name  = "open_jii_${var.environment}_databricks_large_iot_read"
 
+  name = "open_jii_${var.environment}_databricks_large_iot_read"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "S3Read"
-        Effect = "Allow"
-        Action = ["s3:GetObject", "s3:ListBucket"]
-        Resource = [
-          "${var.s3_archive_bucket_arn}",
-          "${var.s3_archive_bucket_arn}/large-iot/*"
-        ]
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:ListBucket"]
+        Resource = [var.large_iot_bucket_arn, "${var.large_iot_bucket_arn}/*"]
       },
       {
-        Sid    = "SQSConsume"
         Effect = "Allow"
         Action = [
           "sqs:ReceiveMessage",
@@ -267,7 +241,6 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
     ]
   })
 }
-
 
 # ----------------
 # IoT Topic Rules

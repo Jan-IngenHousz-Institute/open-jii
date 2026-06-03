@@ -51,4 +51,24 @@ export interface EmailPort {
     experimentId: string,
     experimentName: string,
   ): Promise<Result<void>>;
+
+  /**
+   * Sends a notification email to an experiment admin when a user submits a join request.
+   */
+  sendJoinRequestSubmittedNotification(
+    experimentId: string,
+    experimentName: string,
+    requesterName: string,
+    adminEmail: string,
+    message?: string,
+  ): Promise<Result<void>>;
+
+  /**
+   * Sends a neutral rejection email to a user whose join request was rejected.
+   */
+  sendJoinRequestRejectedNotification(
+    experimentId: string,
+    experimentName: string,
+    requesterEmail: string,
+  ): Promise<Result<void>>;
 }

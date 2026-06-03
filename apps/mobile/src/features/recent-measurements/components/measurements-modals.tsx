@@ -1,18 +1,19 @@
 import React from "react";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
 import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
-import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
+import type { StoredMeasurement } from "~/shared/db/measurements-storage";
+import { parseQuestions } from "~/shared/utils/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/shared/utils/measurement-annotations";
 
 export type ModalState =
   | { kind: "none" }
-  | { kind: "questions"; measurement: MeasurementItem }
-  | { kind: "comment"; measurement: MeasurementItem };
+  | { kind: "questions"; measurement: StoredMeasurement }
+  | { kind: "comment"; measurement: StoredMeasurement };
 
 interface Props {
   state: ModalState;
   onClose: () => void;
-  onSaveComment: (m: MeasurementItem, text: string) => Promise<void>;
+  onSaveComment: (m: StoredMeasurement, text: string) => Promise<void>;
 }
 
 export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
@@ -28,9 +29,9 @@ export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
         initialText={getCommentFromMeasurementResult(
           m.data.measurementResult as Record<string, unknown>,
         )}
-        experimentName={m.experimentName}
-        questions={m.questions}
-        timestamp={m.timestamp}
+        experimentName={m.data.metadata.experimentName}
+        questions={parseQuestions(m.data.measurementResult)}
+        timestamp={m.data.metadata.timestamp}
         onSave={async (text) => {
           await onSaveComment(m, text);
           onClose();

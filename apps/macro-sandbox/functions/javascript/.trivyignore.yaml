@@ -16,21 +16,31 @@ vulnerabilities:
     statement: >-
       HTTP transport hijack via prototype pollution. Sandbox has
       no outbound HTTP.
-    expired_at: 2026-06-07
+    expired_at: 2026-07-12
   - id: CVE-2026-42035
     statement: >-
       Header injection via prototype pollution. Sandbox has no
       outbound HTTP.
-    expired_at: 2026-06-07
+    expired_at: 2026-07-12
   - id: CVE-2026-42043
     statement: >-
       NO_PROXY bypass on crafted URL. Sandbox has no outbound HTTP.
-    expired_at: 2026-06-07
+    expired_at: 2026-07-12
   - id: CVE-2026-42264
     statement: >-
       Credential exfil via prototype-pollution gadget in HTTP
       adapter. Sandbox has no IAM creds and no outbound HTTP.
-    expired_at: 2026-06-07
+    expired_at: 2026-07-12
+  - id: CVE-2026-44492
+    statement: >-
+      shouldBypassProxy IPv4-mapped address handling. Sandbox
+      has no outbound HTTP and no proxy config.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44494
+    statement: >-
+      Full MITM via prototype pollution in HTTP path. Sandbox
+      has no outbound HTTP.
+    expired_at: 2026-07-12
 
   # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
   # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
@@ -58,6 +68,13 @@ vulnerabilities:
     statement: "CMS EnvelopedData NULL deref. No CMS processing."
   - id: CVE-2026-31790
     statement: "RSASVE info disclosure. No RSA key encapsulation."
+
+  # libcap RPM bundles a Go binary compiled with a vulnerable Go toolchain.
+  # CVE is in Go's html/template package. Sandbox does not render HTML.
+  - id: CVE-2026-27142
+    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
+  - id: CVE-2026-39823
+    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
 
   # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
   # Only used for local testing - production Lambda ignores this binary.

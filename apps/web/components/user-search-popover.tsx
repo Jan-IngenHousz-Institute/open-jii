@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { UserAvatar } from "./user-avatar";
+
 const emailSchema = z.string().email();
 
 function isValidEmail(value: string): boolean {
@@ -191,7 +193,7 @@ const SearchInput = React.forwardRef<
             type="button"
             variant="ghost"
             onClick={handleClear}
-            disabled={disabled}
+            disabled={isAddingUser || disabled}
             className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2 p-0 hover:bg-transparent disabled:pointer-events-none disabled:opacity-50"
           >
             <X className="h-4 w-4" />
@@ -201,7 +203,11 @@ const SearchInput = React.forwardRef<
       {hasSelection && (
         <>
           <div className="bg-border h-6 w-px" />
-          <Select value={selectedRole} onValueChange={onRoleChange} disabled={disabled}>
+          <Select
+            value={selectedRole}
+            onValueChange={onRoleChange}
+            disabled={isAddingUser || disabled}
+          >
             <SelectTrigger className="h-auto w-[100px] border-0 px-3 shadow-none focus:ring-0">
               <SelectValue />
             </SelectTrigger>
@@ -231,11 +237,13 @@ function InviteByEmailButton({
       type="button"
       onClick={onClick}
       onMouseDown={(e) => e.preventDefault()}
-      className="hover:bg-surface flex h-auto w-full items-center gap-2 px-3 py-2 text-left"
+      className="hover:bg-surface flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
     >
-      <Mail className="text-muted-foreground h-4 w-4 shrink-0" />
+      <div className="bg-surface flex h-8 w-8 shrink-0 items-center justify-center rounded-full border">
+        <Mail className="text-muted-foreground h-4 w-4" />
+      </div>
       <div className="flex-1">
-        <div className="text-sm">{email}</div>
+        <div className="text-sm font-medium">{email}</div>
         <div className="text-muted-foreground text-xs">{t("experiments.sendInviteByEmail")}</div>
       </div>
     </Button>
@@ -271,7 +279,7 @@ function PopoverResults({
 
   if (availableUsers.length > 0) {
     return (
-      <div className="space-y-3 py-1">
+      <div className="py-2">
         {availableUsers.map((user) => (
           <Button
             key={user.userId}
@@ -279,10 +287,16 @@ function PopoverResults({
             type="button"
             onClick={() => handleSelectUser(user)}
             onMouseDown={(e) => e.preventDefault()}
-            className="hover:bg-surface flex w-full items-center px-3 text-left"
+            className="hover:bg-surface flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
           >
+            <UserAvatar
+              avatarUrl={user.avatarUrl}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              className="h-9 w-9 shrink-0"
+            />
             <div className="flex-1 overflow-hidden">
-              <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm">
+              <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
                 {user.firstName} {user.lastName}
               </div>
               <div className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
@@ -292,7 +306,9 @@ function PopoverResults({
           </Button>
         ))}
         {canInviteByEmail && (
-          <InviteByEmailButton onClick={handleSelectEmail} email={email} t={t} />
+          <div className="border-border border-t">
+            <InviteByEmailButton onClick={handleSelectEmail} email={email} t={t} />
+          </div>
         )}
       </div>
     );

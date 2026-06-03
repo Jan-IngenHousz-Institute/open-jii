@@ -29,6 +29,7 @@ export const useExperimentMemberAdd = () => {
             firstName: "",
             lastName: "",
             email: null,
+            avatarUrl: null,
           },
           role: member.role ?? "member",
           // Use current timestamp as an estimate

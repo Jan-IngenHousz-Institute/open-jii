@@ -2,8 +2,11 @@ import { create } from "zustand";
 import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/multispeq-command-executor";
 import { createMultispeqCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor";
 import type { Device } from "~/shared/types/device";
+import { createLogger } from "~/shared/utils/logger";
 
 import { MULTISPEQ_CONSOLE } from "@repo/iot";
+
+const log = createLogger("scanner-executor");
 
 interface ScannerCommandExecutorStore {
   commandExecutor: IMultispeqCommandExecutor | undefined;
@@ -49,7 +52,9 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       // Cleanup existing executor
       const currentExecutor = get().commandExecutor;
       if (currentExecutor) {
-        await currentExecutor.destroy().catch(console.error);
+        await currentExecutor
+          .destroy()
+          .catch((e) => log.warn("executor destroy failed", { err: (e as Error)?.message }));
       }
 
       // Create new executor (or undefined if no device)
@@ -123,7 +128,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       await commandExecutor.execute(MULTISPEQ_CONSOLE.CANCEL);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      console.error("Failed to send cancel command", error);
+      log.error("Failed to send cancel command", { err: error.message });
       set({ error });
       throw error;
     }
@@ -136,7 +141,9 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
   destroy: async () => {
     const { commandExecutor } = get();
     if (commandExecutor) {
-      await commandExecutor.destroy().catch(console.error);
+      await commandExecutor
+        .destroy()
+        .catch((e) => log.warn("executor destroy failed", { err: (e as Error)?.message }));
       set({
         commandExecutor: undefined,
         commandResponse: undefined,

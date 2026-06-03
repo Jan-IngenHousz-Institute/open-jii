@@ -76,13 +76,13 @@ variable "macro_sandbox_function_names" {
 }
 
 variable "large_iot_notification_queue_name" {
-  description = "Name of the SQS notification queue for large-iot/ payloads"
+  description = "Name of the SQS notification queue for large-iot payloads"
   type        = string
   default     = ""
 }
 
 variable "large_iot_dlq_name" {
-  description = "Name of the SQS dead-letter queue for large-iot/ payloads"
+  description = "Name of the SQS dead-letter queue for large-iot payloads"
   type        = string
   default     = ""
 }

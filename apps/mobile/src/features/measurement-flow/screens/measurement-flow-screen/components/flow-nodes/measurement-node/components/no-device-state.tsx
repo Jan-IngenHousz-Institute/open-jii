@@ -1,60 +1,41 @@
-import React from "react";
-import { ActivityIndicator, Text, View } from "react-native";
-import { useConnectToDevice } from "~/features/connection/hooks/use-device-connection";
-import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import React, { useEffect, useRef } from "react";
+import { Text, View } from "react-native";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
+import { BackButton } from "~/features/measurement-flow/screens/measurement-flow-screen/components/back-button";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 export function NoDeviceState() {
-  const { lastConnectedDevice } = useDeviceConnectionStore();
-  const { connectToDevice, connectingDeviceId } = useConnectToDevice();
   const { t } = useTranslation("measurementFlow");
   const openDeviceSheet = useDeviceSheetStore((s) => s.open);
+  const previousStep = useMeasurementFlowStore((s) => s.previousStep);
 
-  const isReconnecting =
-    lastConnectedDevice !== undefined && connectingDeviceId === lastConnectedDevice.id;
-
-  if (lastConnectedDevice) {
-    return (
-      <View className="flex-1 items-center justify-center gap-4 p-6">
-        {isReconnecting ? (
-          <ActivityIndicator size="large" />
-        ) : (
-          <>
-            <Text className="text-muted-foreground text-center text-sm">
-              {t("measurementFlow:measurementNode.noDevice.disconnected", {
-                name: lastConnectedDevice.name,
-              })}
-            </Text>
-            <Button
-              title={t("measurementFlow:measurementNode.noDevice.reconnect", {
-                name: lastConnectedDevice.name,
-              })}
-              onPress={() => void connectToDevice(lastConnectedDevice)}
-              isDisabled={!!connectingDeviceId}
-              style={{ height: 44, width: "100%" }}
-            />
-            <Button
-              title={t("measurementFlow:measurementNode.noDevice.connectDifferent")}
-              onPress={openDeviceSheet}
-              variant="tertiary"
-              isDisabled={!!connectingDeviceId}
-              style={{ height: 44, width: "100%" }}
-            />
-          </>
-        )}
-      </View>
-    );
-  }
+  // Auto-open the connect overlay once when this state first appears. The ref
+  // guard keeps the 3s connected-device poll re-renders from re-opening it; a
+  // fresh disconnect remounts the component (new ref), so it opens again then.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    openDeviceSheet();
+  }, [openDeviceSheet]);
 
   return (
-    <View className="flex-1 items-center justify-center">
-      <Button
-        title={t("measurementFlow:measurementNode.noDevice.connectFirst")}
-        onPress={openDeviceSheet}
-        style={{ height: 44 }}
-      />
+    <View className="flex-1">
+      <View className="flex-1 items-center justify-center p-6">
+        <Text className="text-muted-foreground text-center text-sm">
+          {t("measurementFlow:measurementNode.noDevice.connectFirst")}
+        </Text>
+      </View>
+      <View className="flex-row items-center justify-between px-4 py-3">
+        <BackButton onPress={previousStep} />
+        <Button
+          title={t("measurementFlow:measurementNode.connectToDevice")}
+          onPress={openDeviceSheet}
+          style={{ height: 44 }}
+        />
+      </View>
     </View>
   );
 }

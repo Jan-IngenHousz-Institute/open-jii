@@ -1010,8 +1010,10 @@ EOT
 }
 
 resource "grafana_rule_group" "large_iot_alerts" {
+  count = var.large_iot_notification_queue_name != "" ? 1 : 0
+
   provider           = grafana.amg
-  name               = "Large IoT Ingestion Alerts"
+  name               = "Large IoT Ingest Health"
   folder_uid         = grafana_folder.folder.uid
   interval_seconds   = 60
   disable_provenance = true
@@ -1031,13 +1033,13 @@ resource "grafana_rule_group" "large_iot_alerts" {
         namespace  = "AWS/SQS"
         metricName = "ApproximateNumberOfMessagesVisible"
         statistic  = "Maximum"
-        dimensions = {
-          QueueName = var.large_iot_notification_queue_name
-        }
+        period     = "60"
+        dimensions = { QueueName = var.large_iot_notification_queue_name }
+        id         = "m1"
       })
 
       relative_time_range {
-        from = 300
+        from = 600
         to   = 0
       }
     }
@@ -1074,17 +1076,18 @@ EOT
       }
     }
 
-    no_data_state  = "NoData"
+    no_data_state  = "OK"
     exec_err_state = "OK"
     for            = "10m"
 
     annotations = {
-      description = "Large IoT SQS queue has more than 1000 unprocessed messages — Auto Loader may be lagging or the pipeline is down"
-      summary     = "Large IoT ingestion queue depth is high"
+      description = "Large IoT SQS queue has more than 1000 messages — Databricks Auto Loader may be lagging"
+      summary     = "Large IoT ingestion queue depth high"
     }
+
     labels = {
       severity = "warning"
-      service  = "iot-ingestion"
+      service  = "large-iot"
     }
   }
 
@@ -1103,13 +1106,13 @@ EOT
         namespace  = "AWS/SQS"
         metricName = "ApproximateNumberOfMessagesVisible"
         statistic  = "Maximum"
-        dimensions = {
-          QueueName = var.large_iot_dlq_name
-        }
+        period     = "60"
+        dimensions = { QueueName = var.large_iot_dlq_name }
+        id         = "m1"
       })
 
       relative_time_range {
-        from = 60
+        from = 300
         to   = 0
       }
     }
@@ -1146,17 +1149,18 @@ EOT
       }
     }
 
-    no_data_state  = "NoData"
-    exec_err_state = "OK"
+    no_data_state  = "OK"
+    exec_err_state = "Alerting"
     for            = "0s"
 
     annotations = {
-      description = "Messages have landed in the large IoT DLQ — S3 event notifications are failing to be processed after 3 retries"
-      summary     = "Large IoT DLQ is not empty"
+      description = "Large IoT dead-letter queue has messages — payloads failed to be ingested after 3 attempts"
+      summary     = "Large IoT DLQ has messages"
     }
+
     labels = {
       severity = "critical"
-      service  = "iot-ingestion"
+      service  = "large-iot"
     }
   }
 
@@ -1175,13 +1179,13 @@ EOT
         namespace  = "AWS/SQS"
         metricName = "ApproximateAgeOfOldestMessage"
         statistic  = "Maximum"
-        dimensions = {
-          QueueName = var.large_iot_notification_queue_name
-        }
+        period     = "60"
+        dimensions = { QueueName = var.large_iot_notification_queue_name }
+        id         = "m1"
       })
 
       relative_time_range {
-        from = 300
+        from = 600
         to   = 0
       }
     }
@@ -1218,17 +1222,18 @@ EOT
       }
     }
 
-    no_data_state  = "NoData"
+    no_data_state  = "OK"
     exec_err_state = "OK"
     for            = "5m"
 
     annotations = {
-      description = "The oldest unprocessed large IoT message is more than 15 minutes old — Auto Loader may be stuck or the pipeline has stopped consuming"
-      summary     = "Large IoT ingestion lag is high"
+      description = "Oldest message in the large IoT SQS queue is older than 15 minutes — Databricks Auto Loader may have stalled"
+      summary     = "Large IoT ingestion lag high"
     }
+
     labels = {
       severity = "warning"
-      service  = "iot-ingestion"
+      service  = "large-iot"
     }
   }
 }

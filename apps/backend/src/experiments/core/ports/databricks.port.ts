@@ -73,11 +73,17 @@ export interface DatabricksPort {
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>>;
 
+  /**
+   * Trigger the data export job. `anonymizeContributors` is the resolved
+   * boolean (experiment default vs per-export override); when true the job
+   * rewrites contributor struct cells to deterministic pseudonyms.
+   */
   triggerDataExportJob(
     experimentId: string,
     tableName: string,
     format: string,
     userId: string,
+    anonymizeContributors: boolean,
   ): Promise<Result<DatabricksJobRunResponse>>;
 
   streamExport(

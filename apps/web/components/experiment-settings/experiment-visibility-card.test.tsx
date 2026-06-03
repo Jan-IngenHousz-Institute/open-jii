@@ -10,6 +10,7 @@ describe("<ExperimentVisibilityCard />", () => {
       experimentId: "exp-123",
       initialVisibility: "private",
       embargoUntil: "2025-12-31T23:59:59.999Z",
+      initialAnonymize: false,
     };
     return render(<ExperimentVisibilityCard {...defaultProps} {...props} />);
   }

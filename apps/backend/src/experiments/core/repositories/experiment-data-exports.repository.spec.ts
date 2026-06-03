@@ -56,6 +56,7 @@ describe("ExperimentDataExportsRepository", () => {
         tableName,
         format,
         userId,
+        anonymizeContributors: false,
       });
 
       expect(result.isSuccess()).toBe(true);
@@ -67,6 +68,7 @@ describe("ExperimentDataExportsRepository", () => {
         tableName,
         format,
         userId,
+        false,
       );
     });
 
@@ -79,6 +81,7 @@ describe("ExperimentDataExportsRepository", () => {
         tableName,
         format,
         userId,
+        anonymizeContributors: false,
       });
 
       expect(result.isFailure()).toBe(true);

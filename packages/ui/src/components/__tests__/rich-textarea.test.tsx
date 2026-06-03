@@ -19,6 +19,10 @@ const mockQuillInstance = {
   on: vi.fn(),
   off: vi.fn(),
   enable: vi.fn(),
+  focus: vi.fn(),
+  getLength: vi.fn(() => 0),
+  getSelection: vi.fn<() => { index: number; length: number } | null>(() => null),
+  setSelection: vi.fn(),
   getModule: vi.fn(() => ({
     container: mockToolbarContainer,
   })),
@@ -117,22 +121,21 @@ describe("RichTextarea", () => {
     }
   });
 
-  it("does not call onChange if content is unchanged", () => {
+  it("forwards current html to onChange on every text-change event", () => {
     const testValue = "<p>Test content</p>";
     mockQuillInstance.root.innerHTML = testValue;
 
     render(<RichTextarea value={testValue} onChange={mockOnChange} />);
 
-    // Get the text-change handler
     const textChangeHandler = mockQuillInstance.on.mock.calls.find(
       (call) => call[0] === "text-change",
     )?.[1];
 
     if (textChangeHandler) {
-      // Simulate text change but content is same
       textChangeHandler();
 
-      expect(mockOnChange).not.toHaveBeenCalled();
+      // No equality guard in source; emits the current html unconditionally.
+      expect(mockOnChange).toHaveBeenCalledWith(testValue);
     }
   });
 
@@ -176,7 +179,7 @@ describe("RichTextarea", () => {
     expect(mockQuillInstance.enable).toHaveBeenCalledWith(false);
   });
 
-  it("re-registers event handlers when onChange changes", () => {
+  it("keeps the text-change handler stable across onChange changes", () => {
     const newOnChange = vi.fn();
     const { rerender } = render(<RichTextarea value="" onChange={mockOnChange} />);
 
@@ -185,10 +188,28 @@ describe("RichTextarea", () => {
 
     rerender(<RichTextarea value="" onChange={newOnChange} />);
 
-    // Should unregister old handler
-    expect(mockQuillInstance.off).toHaveBeenCalledWith("text-change", expect.any(Function));
-    // Should register new handler
-    expect(mockQuillInstance.on).toHaveBeenCalledWith("text-change", expect.any(Function));
+    // Source routes onChange through a ref so the handler stays bound across
+    // renders; avoids resetting cursor / selection on every keystroke.
+    expect(mockQuillInstance.off).not.toHaveBeenCalled();
+    expect(mockQuillInstance.on).not.toHaveBeenCalled();
+  });
+
+  it("routes through onChangeRef so a swapped onChange still receives events", () => {
+    const newOnChange = vi.fn();
+    const { rerender } = render(<RichTextarea value="" onChange={mockOnChange} />);
+
+    const textChangeHandler = mockQuillInstance.on.mock.calls.find(
+      (call) => call[0] === "text-change",
+    )?.[1];
+
+    rerender(<RichTextarea value="" onChange={newOnChange} />);
+
+    if (textChangeHandler) {
+      mockQuillInstance.root.innerHTML = "<p>updated</p>";
+      textChangeHandler();
+      expect(newOnChange).toHaveBeenCalledWith("<p>updated</p>");
+      expect(mockOnChange).not.toHaveBeenCalled();
+    }
   });
 
   it("prevents default on toolbar mousedown events", () => {
@@ -234,5 +255,101 @@ describe("RichTextarea", () => {
     unmount();
 
     expect(removeEventListener).toHaveBeenCalledWith("mousedown", mousedownHandler);
+  });
+
+  it("restores the caret after a value-prop update when a selection exists", () => {
+    // Mid-edit, the user has a selection in the editor. A new `value`
+    // arrives (programmatic reset / prefill); the effect must snapshot
+    // the selection, swap the html, then re-place the caret at a safe
+    // offset clamped to the new content length.
+    mockQuillInstance.getSelection.mockReturnValue({ index: 3, length: 0 });
+    mockQuillInstance.getLength.mockReturnValue(2);
+    mockQuillInstance.root.innerHTML = "<p>old</p>";
+
+    const { rerender } = render(<RichTextarea value="<p>old</p>" onChange={mockOnChange} />);
+    mockQuillInstance.setSelection.mockClear();
+
+    rerender(<RichTextarea value="<p>nu</p>" onChange={mockOnChange} />);
+
+    expect(mockQuillInstance.setSelection).toHaveBeenCalledWith(2, 0);
+    mockQuillInstance.getSelection.mockReturnValue(null);
+    mockQuillInstance.getLength.mockReturnValue(0);
+  });
+
+  it("falls back to empty string when value-prop update drops to undefined-ish", () => {
+    mockQuillInstance.root.innerHTML = "<p>old</p>";
+    const { rerender } = render(<RichTextarea value="<p>old</p>" onChange={mockOnChange} />);
+
+    rerender(<RichTextarea value="" onChange={mockOnChange} />);
+
+    // Empty string overwrite; setSelection not invoked since selection was null.
+    expect(mockQuillInstance.root.innerHTML).toBe("");
+  });
+
+  it("stops Tab keydown propagation when releaseTabKey is set", () => {
+    const root = { addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    const original = mockQuillInstance.root;
+    mockQuillInstance.root = Object.assign(root, { innerHTML: "" });
+
+    render(<RichTextarea value="" onChange={mockOnChange} releaseTabKey />);
+
+    expect(root.addEventListener).toHaveBeenCalledWith("keydown", expect.any(Function), true);
+    const handler = root.addEventListener.mock.calls.find((call) => call[0] === "keydown")?.[1];
+    const stopImmediatePropagation = vi.fn();
+    handler?.({ key: "Tab", stopImmediatePropagation });
+    expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
+
+    // Non-Tab keys leave propagation alone.
+    const stopOther = vi.fn();
+    handler?.({ key: "Enter", stopImmediatePropagation: stopOther });
+    expect(stopOther).not.toHaveBeenCalled();
+
+    mockQuillInstance.root = original;
+  });
+
+  it("does not register a keydown listener when releaseTabKey is false", () => {
+    const root = { addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    const original = mockQuillInstance.root;
+    mockQuillInstance.root = Object.assign(root, { innerHTML: "" });
+
+    render(<RichTextarea value="" onChange={mockOnChange} />);
+
+    const keydownCall = root.addEventListener.mock.calls.find((call) => call[0] === "keydown");
+    expect(keydownCall).toBeUndefined();
+
+    mockQuillInstance.root = original;
+  });
+
+  it("removes the keydown listener on unmount when releaseTabKey is set", () => {
+    const root = { addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    const original = mockQuillInstance.root;
+    mockQuillInstance.root = Object.assign(root, { innerHTML: "" });
+
+    const { unmount } = render(<RichTextarea value="" onChange={mockOnChange} releaseTabKey />);
+    const handler = root.addEventListener.mock.calls.find((call) => call[0] === "keydown")?.[1];
+
+    unmount();
+
+    expect(root.removeEventListener).toHaveBeenCalledWith("keydown", handler, true);
+    mockQuillInstance.root = original;
+  });
+
+  it("places the caret at the end on mount when autoFocus is set", () => {
+    mockQuillInstance.getLength.mockReturnValueOnce(7);
+
+    render(<RichTextarea value="<p>Hello!</p>" onChange={mockOnChange} autoFocus />);
+
+    expect(mockQuillInstance.focus).toHaveBeenCalledTimes(1);
+    expect(mockQuillInstance.setSelection).toHaveBeenCalledWith(7, 0);
+  });
+
+  it("renders the compact wrapper variant when compact is set", () => {
+    render(<RichTextarea value="" onChange={mockOnChange} compact />);
+
+    const textbox = screen.getByRole("textbox");
+    // Compact path swaps the 300px-tall wrapper for a fill-its-parent variant.
+    expect(textbox).not.toHaveClass("max-h-[300px]");
+    const wrapper = textbox.parentElement;
+    expect(wrapper).toHaveAttribute("data-rta-compact", "");
   });
 });

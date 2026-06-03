@@ -65,11 +65,10 @@ describe("NavTabs", () => {
 
       const list = screen.getByTestId("tabs-list");
       expect(list).toBeInTheDocument();
-      expect(list.className).toContain("bg-surface");
       expect(list.className).toContain("inline-flex");
-      expect(list.className).toContain("gap-1");
-      expect(list.className).toContain("rounded-md");
-      expect(list.className).toContain("p-1");
+      expect(list.className).toContain("gap-6");
+      expect(list.className).toContain("border-b");
+      expect(list.className).toContain("overflow-x-auto");
     });
 
     it("applies custom className to tabs list", () => {
@@ -133,9 +132,9 @@ describe("NavTabs", () => {
       expect(inactiveTrigger).toHaveAttribute("data-state", "inactive");
 
       // Check for base classes that should be present
-      expect(activeTrigger.className).toContain("rounded-sm");
-      expect(activeTrigger.className).toContain("px-4");
-      expect(activeTrigger.className).toContain("py-2");
+      expect(activeTrigger.className).toContain("inline-flex");
+      expect(activeTrigger.className).toContain("px-1");
+      expect(activeTrigger.className).toContain("pb-3");
     });
 
     it("applies custom className to trigger", () => {

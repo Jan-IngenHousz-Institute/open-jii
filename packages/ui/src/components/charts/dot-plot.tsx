@@ -3,8 +3,10 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
+import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface DotSeriesData extends BaseSeries {
@@ -17,6 +19,16 @@ export interface DotSeriesData extends BaseSeries {
       color?: string;
       width?: number;
     };
+  };
+  /**
+   * Trace-level line override. Only meaningful in stem mode (when
+   * `marker.size === 0`); the wrapper switches the trace to `mode:
+   * "lines"` and uses this for the stem's stroke. Used by `LollipopChart`
+   * to expose the `stemWidth` prop end-to-end.
+   */
+  line?: {
+    color?: string;
+    width?: number;
   };
   text?: string | string[];
   textposition?: string;
@@ -56,6 +68,7 @@ export function DotPlot({
   dotSize = 12,
   spacing = 0.8,
 }: DotPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
@@ -91,8 +104,8 @@ export function DotPlot({
       line:
         mode === "lines"
           ? {
-              color: series.color,
-              width: 3,
+              color: series.line?.color ?? series.color,
+              width: series.line?.width ?? 3,
             }
           : undefined,
 
@@ -112,12 +125,15 @@ export function DotPlot({
     } as unknown as PlotData;
   });
 
-  const layout = createBaseLayout({
-    ...config,
-    // Adjust bargap for dot spacing
-    xAxisType: config.xAxisType || (orientation === "h" ? "linear" : undefined),
-    yAxisType: config.yAxisType || (orientation === "v" ? "linear" : undefined),
-  });
+  const layout = createBaseLayout(
+    {
+      ...config,
+      // Adjust bargap for dot spacing
+      xAxisType: config.xAxisType || (orientation === "h" ? "linear" : undefined),
+      yAxisType: config.yAxisType || (orientation === "v" ? "linear" : undefined),
+    },
+    sizing,
+  );
 
   // Add specific layout adjustments for dot plots
   const dotLayout = {
@@ -146,10 +162,10 @@ export function DotPlot({
     };
   }
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={dotLayout}
@@ -161,68 +177,4 @@ export function DotPlot({
   );
 }
 
-// Lollipop chart component
-export interface LollipopChartProps extends BaseChartProps {
-  categories: string[];
-  values: number[];
-  name?: string;
-  color?: string;
-  orientation?: "v" | "h";
-  stemWidth?: number;
-  dotSize?: number;
-}
-
-export function LollipopChart({
-  categories,
-  values,
-  name,
-  color = "#636EFA",
-  orientation = "v",
-  stemWidth = 2,
-  dotSize = 12,
-  ...props
-}: LollipopChartProps) {
-  const isHorizontal = orientation === "h";
-
-  // Create stem lines
-  const stemData: DotSeriesData[] = categories.map((category, i) => ({
-    x: isHorizontal
-      ? ([0, values[i]] as (string | number | Date)[])
-      : ([category, category] as (string | number | Date)[]),
-    y: isHorizontal
-      ? ([category, category] as (string | number)[])
-      : ([0, values[i]] as (string | number)[]),
-    name: `Stem ${i}`,
-    color: color,
-    orientation: orientation,
-    marker: { size: 0 },
-    showlegend: false,
-  }));
-
-  // Create dots
-  const dotData: DotSeriesData = {
-    x: isHorizontal ? values : categories,
-    y: isHorizontal ? categories : values,
-    name: name || "Values",
-    color: color,
-    orientation: orientation,
-    marker: { size: dotSize, symbol: "circle" },
-  };
-
-  return (
-    <DotPlot
-      data={[...stemData, dotData]}
-      orientation={orientation}
-      config={{
-        ...props.config,
-        xAxisTitle: isHorizontal
-          ? props.config?.xAxisTitle || "Value"
-          : props.config?.xAxisTitle || "Category",
-        yAxisTitle: isHorizontal
-          ? props.config?.yAxisTitle || "Category"
-          : props.config?.yAxisTitle || "Value",
-      }}
-      {...props}
-    />
-  );
-}
+export { LollipopChart, type LollipopChartProps } from "./lollipop-chart";

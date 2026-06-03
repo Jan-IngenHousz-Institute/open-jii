@@ -1,9 +1,8 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
-import type { useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
-import type { ChartFormValues } from "../../charts/form-values";
-import { lineChartType } from "../../charts/line";
+import { lineChartType } from "../../charts/basic/line";
+import type { ChartFormValues } from "../../charts/chart-config";
 import { DisplayOptionsSection } from "./display-options-section";
 
 function defaults(overrides: Partial<ChartFormValues["config"]> = {}): ChartFormValues {
@@ -50,17 +49,13 @@ describe("DisplayOptionsSection", () => {
 
   it("writes typed characters back into the form's title field", async () => {
     const user = userEvent.setup();
-    let formRef!: ReturnType<typeof useForm<ChartFormValues>>;
-    renderWithForm<ChartFormValues>(
-      (form) => {
-        formRef = form;
-        return <DisplayOptionsSection form={form} />;
-      },
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => <DisplayOptionsSection form={form} />,
       { useFormProps: { defaultValues: defaults() } },
     );
 
     await user.type(screen.getByPlaceholderText("workspace.style.chartTitlePlaceholder"), "Hello");
-    expect(formRef.getValues("config.title")).toBe("Hello");
+    expect(form.getValues("config.title")).toBe("Hello");
   });
 
   it("reflects checkbox state from the form values", () => {
@@ -76,68 +71,52 @@ describe("DisplayOptionsSection", () => {
 
   it("toggles `config.showLegend` in the form when the checkbox is clicked", async () => {
     const user = userEvent.setup();
-    let formRef!: ReturnType<typeof useForm<ChartFormValues>>;
-    renderWithForm<ChartFormValues>(
-      (form) => {
-        formRef = form;
-        return <DisplayOptionsSection form={form} />;
-      },
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => <DisplayOptionsSection form={form} />,
       { useFormProps: { defaultValues: defaults({ showLegend: true }) } },
     );
 
     await user.click(screen.getByRole("checkbox", { name: "workspace.style.showLegend" }));
-    expect(formRef.getValues("config.showLegend")).toBe(false);
+    expect(form.getValues("config.showLegend")).toBe(false);
 
     await user.click(screen.getByRole("checkbox", { name: "workspace.style.showLegend" }));
-    expect(formRef.getValues("config.showLegend")).toBe(true);
+    expect(form.getValues("config.showLegend")).toBe(true);
   });
 
   it("toggles `config.showGrid` in the form when the grid checkbox is clicked", async () => {
     const user = userEvent.setup();
-    let formRef!: ReturnType<typeof useForm<ChartFormValues>>;
-    renderWithForm<ChartFormValues>(
-      (form) => {
-        formRef = form;
-        return <DisplayOptionsSection form={form} />;
-      },
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => <DisplayOptionsSection form={form} />,
       { useFormProps: { defaultValues: defaults({ showGrid: false }) } },
     );
 
     await user.click(screen.getByRole("checkbox", { name: "workspace.style.showGrid" }));
-    expect(formRef.getValues("config.showGrid")).toBe(true);
+    expect(form.getValues("config.showGrid")).toBe(true);
   });
 
   it("writes the picked legendPosition into the form", async () => {
     const user = userEvent.setup();
-    let formRef!: ReturnType<typeof useForm<ChartFormValues>>;
-    renderWithForm<ChartFormValues>(
-      (form) => {
-        formRef = form;
-        return <DisplayOptionsSection form={form} />;
-      },
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => <DisplayOptionsSection form={form} />,
       { useFormProps: { defaultValues: defaults({ legendPosition: "right" }) } },
     );
 
     await user.click(screen.getByRole("combobox", { name: "workspace.style.legendPosition" }));
     await user.click(await screen.findByText("workspace.legendPositions.bottom"));
 
-    expect(formRef.getValues("config.legendPosition")).toBe("bottom");
+    expect(form.getValues("config.legendPosition")).toBe("bottom");
   });
 
   it("writes the picked hoverMode into the form", async () => {
     const user = userEvent.setup();
-    let formRef!: ReturnType<typeof useForm<ChartFormValues>>;
-    renderWithForm<ChartFormValues>(
-      (form) => {
-        formRef = form;
-        return <DisplayOptionsSection form={form} />;
-      },
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => <DisplayOptionsSection form={form} />,
       { useFormProps: { defaultValues: defaults({ hoverMode: "closest" }) } },
     );
 
     await user.click(screen.getByRole("combobox", { name: "workspace.style.hoverMode" }));
     await user.click(await screen.findByText("workspace.hoverModes.xUnified"));
 
-    expect(formRef.getValues("config.hoverMode")).toBe("x unified");
+    expect(form.getValues("config.hoverMode")).toBe("x unified");
   });
 });

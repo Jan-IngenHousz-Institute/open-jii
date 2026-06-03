@@ -10,11 +10,18 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { UserAvatar } from "../user-avatar";
+
 interface MemberItemProps {
   member: {
     role: string;
     joinedAt: string;
-    user: Partial<UserProfile> & { userId: string; firstName: string; lastName: string };
+    user: Partial<UserProfile> & {
+      userId: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl?: string | null;
+    };
   };
   isLastAdmin: boolean;
   currentUserId?: string;
@@ -44,27 +51,37 @@ export function MemberItem({
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center justify-between rounded">
+    <div className="flex items-center gap-3 px-3 py-2.5">
+      <UserAvatar
+        avatarUrl={member.user.avatarUrl}
+        firstName={member.user.firstName}
+        lastName={member.user.lastName}
+        className="h-9 w-9"
+      />
       <div className="flex min-w-0 flex-1 flex-col">
-        <h4 className="text-foreground truncate text-sm font-medium">
+        <h4
+          className="text-foreground truncate text-sm font-medium"
+          title={`${member.user.firstName} ${member.user.lastName}`}
+        >
           {`${member.user.firstName} ${member.user.lastName}`}
         </h4>
-        <span
-          className="flex min-w-0 items-center gap-x-1"
-          title={member.user.email ?? t("experimentSettings.noEmail")}
-        >
+        <span className="flex min-w-0 items-center gap-x-1">
           <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-          <span className="text-muted-foreground truncate text-sm">
+          <span
+            className="text-muted-foreground truncate text-xs"
+            title={member.user.email ?? t("experimentSettings.noEmail")}
+          >
             {member.user.email ?? t("experimentSettings.noEmail")}
           </span>
         </span>
       </div>
 
-      <div className="flex flex-shrink-0 flex-col-reverse items-end space-x-3 pl-4 md:flex-row md:items-center">
+      <div className="flex flex-shrink-0">
         <Select
           value={member.role}
           disabled={
             isArchived ||
+            updatingMemberId === member.user.userId ||
             (!newExperiment && !isCurrentUserAdmin && member.user.userId !== currentUserId)
           }
           onValueChange={onValueChange}

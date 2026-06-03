@@ -22,9 +22,11 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "assert-new-arch": "tsx scripts/assert-new-arch.ts",
-    "postinstall": "cd ../../packages/api && pnpm run build && cd - && cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd - && cd ../../packages/iot && pnpm run build && cd -"
+    "postinstall": "cd ../../packages/api && pnpm run build && cd - && cd ../../packages/transactional && pnpm run build && cd - && cd ../../packages/auth && pnpm run build && cd - && cd ../../packages/iot && pnpm run build && cd - && cd ../../packages/cms && pnpm run build && cd -"
   },
   "dependencies": {
+    "@contentful/rich-text-react-renderer": "16.0.2",
+    "@contentful/rich-text-types": "17.0.1",
     "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
     "@expo/vector-icons": "^15.1.1",
     "@gorhom/bottom-sheet": "^5.2.8",
@@ -36,7 +38,9 @@
     "@react-navigation/native-stack": "^7.14.10",
     "@repo/api": "workspace:*",
     "@repo/auth": "workspace:*",
+    "@repo/cms": "workspace:*",
     "@repo/iot": "workspace:*",
+    "@shopify/flash-list": "^2.3.1",
     "@shopify/react-native-skia": "2.4.18",
     "@tanstack/pacer": "^0.19.0",
     "@tanstack/query-async-storage-persister": "catalog:react-query",

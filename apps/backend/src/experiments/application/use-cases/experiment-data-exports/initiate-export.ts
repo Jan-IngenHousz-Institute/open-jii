@@ -8,8 +8,7 @@ import { ExperimentDataRepository } from "../../../core/repositories/experiment-
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 /**
- * Use case for initiating an export job
- * Creates metadata record and triggers Databricks job without waiting
+ * Trigger the Databricks export job without waiting for completion.
  */
 @Injectable()
 export class InitiateExportUseCase {
@@ -24,7 +23,7 @@ export class InitiateExportUseCase {
   async execute(
     experimentId: string,
     userId: string,
-    query: { tableName: string; format: ExportFormat },
+    query: { tableName: string; format: ExportFormat; anonymizeContributors?: boolean },
   ): Promise<Result<{ status: string }>> {
     this.logger.debug({
       msg: "Initiating data export",
@@ -32,6 +31,7 @@ export class InitiateExportUseCase {
       experimentId,
       tableName: query.tableName,
       format: query.format,
+      anonymizeContributors: query.anonymizeContributors,
     });
 
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -68,12 +68,16 @@ export class InitiateExportUseCase {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    // Trigger the export job
+    // Per-export override takes precedence over the experiment's stored
+    // setting; resolved here so the adapter sees a single boolean.
+    const anonymizeContributors = query.anonymizeContributors ?? experiment.anonymizeContributors;
+
     const initiateResult = await this.exportsRepository.initiateExport({
       experimentId,
       tableName: query.tableName,
       format: query.format,
       userId,
+      anonymizeContributors,
     });
 
     if (initiateResult.isFailure()) {

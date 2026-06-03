@@ -29,7 +29,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
-import { cva } from "@repo/ui/lib/utils";
 
 interface UnifiedNavbarProps {
   locale: string;
@@ -42,10 +41,12 @@ function UserMenu({
   locale,
   session,
   displayName,
+  avatarUrl,
 }: {
   locale: string;
   session: Session | null;
   displayName: string;
+  avatarUrl?: string | null;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -70,9 +71,9 @@ function UserMenu({
           className="group flex gap-2 hover:bg-transparent focus:bg-transparent"
           aria-label={t("auth.userMenu", "User menu")}
         >
-          {session.user.image ? (
+          {avatarUrl ? (
             <Avatar className="group-hover:bg-jii-medium-green/20 h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_theme(colors.jii-medium-green)]">
-              <AvatarImage src={session.user.image} alt={displayName} />
+              <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
               </AvatarFallback>
@@ -87,9 +88,9 @@ function UserMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-          {session.user.image && (
+          {avatarUrl && (
             <Avatar className="h-8 w-8">
-              <AvatarImage src={session.user.image} alt={displayName} />
+              <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
               </AvatarFallback>
@@ -134,6 +135,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
   const pathname = usePathname();
   const router = useRouter();
   const [isIntersecting, setIsIntersecting] = useState(true);
+  const [bannerOffset, setBannerOffset] = useState(0);
   const signOut = useSignOut();
 
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
@@ -146,6 +148,18 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     router.push("/");
   };
 
+  // Track alert banner height so the hero intersection threshold stays accurate
+  useEffect(() => {
+    const read = () => {
+      const val = document.documentElement.style.getPropertyValue("--banner-offset");
+      setBannerOffset(val ? parseFloat(val) : 0);
+    };
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    return () => mo.disconnect();
+  }, []);
+
   // Intersection observer for hero section (only on home page)
   useEffect(() => {
     if (!isHomePage) return;
@@ -156,7 +170,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
       },
       {
         threshold: 0,
-        rootMargin: "-64px 0px 0px 0px", // Navbar height offset
+        rootMargin: `-${64 + bannerOffset}px 0px 0px 0px`,
       },
     );
 
@@ -171,7 +185,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         observer.unobserve(heroSection);
       }
     };
-  }, [isHomePage]);
+  }, [isHomePage, bannerOffset]);
 
   // Navigation items
   const navItems = useMemo(
@@ -224,31 +238,23 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     pathname.startsWith(`/${locale}/faq`) ||
     pathname.startsWith(`/${locale}/policies`);
 
-  // Determine navbar background based on intersection state
-  const navbarBackgroundVariants = cva(
-    "pointer-events-auto sticky left-0 top-0 z-50 w-full transition-colors duration-300",
-    {
-      variants: {
-        mode: {
-          dark: "bg-gradient-to-b from-black/80 to-transparent",
-          green: "bg-sidebar border-b border-white/40 shadow-lg",
-        },
-      },
-      defaultVariants: {
-        mode: "dark",
-      },
-    },
-  );
-
-  const getNavbarMode = (): "dark" | "green" => {
-    if ((isHomePage && !isIntersecting) || isGreenMode) {
-      return "green";
-    }
-    return "dark";
-  };
+  const showSolid = (isHomePage && !isIntersecting) || isGreenMode;
 
   return (
-    <header className={navbarBackgroundVariants({ mode: getNavbarMode() })}>
+    <header
+      className="pointer-events-auto sticky left-0 z-50 w-full"
+      style={{ top: "var(--banner-offset, 0px)" }}
+    >
+      {/* Gradient layer — hero/dark mode */}
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 -z-10 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
+      />
+      {/* Solid layer — green/nav mode */}
+      <div
+        aria-hidden="true"
+        className={`bg-sidebar absolute inset-0 -z-10 border-b border-white/40 shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
+      />
       <nav className="font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 text-white">
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
@@ -293,7 +299,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         <div className="col-start-3 col-end-4 flex items-center justify-end space-x-3 justify-self-end md:justify-end">
           {/* Desktop User Menu */}
           <div className="hidden md:block">
-            <UserMenu locale={locale} session={session} displayName={displayName} />
+            <UserMenu
+              locale={locale}
+              session={session}
+              displayName={displayName}
+              avatarUrl={profile?.avatarUrl}
+            />
           </div>
           <LanguageSwitcher locale={locale} />
 
@@ -336,9 +347,9 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   <>
                     <DropdownMenuSeparator />
                     <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-                      {session.user.image && (
+                      {profile?.avatarUrl && (
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={session.user.image} alt={displayName} />
+                          <AvatarImage src={profile.avatarUrl} alt={displayName} />
                           <AvatarFallback>
                             <User className="h-3 w-3" />
                           </AvatarFallback>

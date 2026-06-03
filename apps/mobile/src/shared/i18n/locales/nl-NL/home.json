@@ -13,11 +13,12 @@
     "inProgress": "BEZIG",
     "stepOfTotal": "Stap {{step}} van {{total}}",
     "stepOfTotalWithPlot": "Stap {{step}} van {{total}} · {{plot}}",
-    "action": "Flow voortzetten"
+    "action": "Meting voortzetten",
+    "untitled": "Meting bezig"
   },
   "cta": {
     "title": "Start een meting",
-    "body": "Kies een experiment uit je lijst en start de flow.",
+    "body": "Kies een experiment uit je lijst en begin met meten.",
     "action": "Kies experiment"
   },
   "device": {
@@ -32,6 +33,8 @@
     "sectionTitle": "Recente metingen",
     "seeAll": "Bekijk alle",
     "emptyHint": "Nog geen metingen — start er hierboven een.",
+    "emptyCtaDocs": "Lees de startgids",
+    "docsUnavailable": "Kon de documentatie niet openen. Probeer het later opnieuw.",
     "metaCountNodes_one": "{{count}} node",
     "metaCountNodes_other": "{{count}} nodes",
     "tagSynced": "Gesynchroniseerd",

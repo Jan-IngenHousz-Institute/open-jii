@@ -7,7 +7,9 @@
       "delete": "Delete",
       "deleting": "Deleting...",
       "create": "New Visualization",
-      "back": "Back"
+      "back": "Back",
+      "error": "Something went wrong",
+      "moreActions": "More actions"
     },
     "messages": {
       "noVisualizations": "No visualizations yet",
@@ -31,7 +33,6 @@
       }
     }
   },
-
   "form": {
     "details": {
       "title": "Visualization Details",
@@ -54,7 +55,6 @@
       "noValidColumns": "No valid columns found in this table for chart axes."
     }
   },
-
   "wizard": {
     "steps": {
       "basicInfo": {
@@ -75,7 +75,6 @@
       }
     }
   },
-
   "charts": {
     "types": {
       "line": "Line Chart",
@@ -92,7 +91,6 @@
     "preview": "Chart Preview",
     "showLegend": "Show Legend"
   },
-
   "configuration": {
     "columns": {
       "select": "Select Column",
@@ -188,10 +186,12 @@
       "blackbody": "Blackbody",
       "earth": "Earth",
       "electric": "Electric",
-      "bluered": "Blue-Red"
+      "bluered": "Blue-Red",
+      "orrd": "Orange-Red",
+      "magma": "Magma",
+      "openjii": "openJII"
     }
   },
-
   "preview": {
     "title": "Preview",
     "description": "Live preview of your chart configuration",
@@ -200,11 +200,19 @@
     "noColumns": "No columns configured",
     "configureColumns": "Configure at least one data column to see the preview"
   },
-
   "errors": {
     "noData": "No Data Available",
     "configuration": "Configuration Error",
     "invalidConfiguration": "Invalid chart configuration",
+    "heatmapSameColumnAxes": "X and Y use the same column. The chart needs two different columns to form a row \u00d7 column grid.",
+    "heatmapSingleAxisValue": "Each axis needs at least 2 distinct values. Picked column(s) have only one observed value.",
+    "heatmapFlatZ": "All cell values are identical. The chart needs Z to vary across cells to render any colour.",
+    "heatmapSparseGrid": "Continuous X and Y produced a near-empty grid (most cells have no observations). Try histogram-2d for density, or pre-aggregate your data into discrete bins.",
+    "contourSameColumnAxes": "X and Y use the same column. Contour needs two different coordinate axes.",
+    "contourSingleAxisValue": "Contour needs at least 2 distinct values on each axis to compute iso-lines.",
+    "contourFlatZ": "Contour iso-lines need varying Z. All values are identical.",
+    "contourSparseGrid": "Contour needs gridded data. Continuous X and Y produced a near-empty matrix (most cells have no observations). Try density-plot-2d for density, or pre-aggregate your data into bins.",
+    "correlationMatrixNeedsTwoColumns": "Correlation matrix needs at least 2 different numeric columns.",
     "xAxisNotConfigured": "X-axis column not configured",
     "yAxisNotConfigured": "Y-axis column not configured",
     "loadingData": "Loading chart data...",
@@ -214,13 +222,11 @@
     "unsupportedChartType": "Unsupported Chart Type",
     "chartTypeNotSupported": "is not supported"
   },
-
   "selector": {
     "noVisualizations": "No visualizations available for this experiment",
     "createVisualization": "Create visualization",
     "selectVisualization": "Select a visualization"
   },
-
   "workspace": {
     "layout": {
       "untitled": "Untitled visualization",
@@ -243,7 +249,10 @@
       "createdBy": "Created by",
       "deleteVisualization": "Delete visualization",
       "deleteWarning": "Once deleted, this visualization cannot be recovered.",
-      "deleteConfirm": "Delete"
+      "deleteConfirm": "Delete",
+      "clearVisualization": "Clear visualization",
+      "clearWarning": "This resets the data sources and style to defaults. The name, description, and chart type are kept.",
+      "clearConfirm": "Clear"
     },
     "canvas": {
       "noTable": "No data source selected",
@@ -251,7 +260,8 @@
       "noColumns": "No columns configured",
       "configureColumns": "Choose at least one column in the Data tab to render the chart.",
       "loading": "Loading chart data...",
-      "previewName": "Preview"
+      "previewName": "Preview",
+      "fetchErrorBody": "The query couldn't run with the current data configuration. Try a different column or table."
     },
     "inspector": {
       "dataset": "Dataset",
@@ -273,9 +283,31 @@
     },
     "shelves": {
       "xAxis": "X axis",
+      "xAxisNone": "None",
+      "xAxisNoneHelp": "X synthesised from row index.",
       "yAxis": "Y axis",
       "barYAxisHelp": "Optional. Leave empty to count rows per X value.",
       "colorDimension": "Color dimension",
+      "facetDimension": "Facet (small multiples)",
+      "facetNone": "None (single chart)",
+      "facetHelp": "Splits the chart into one subplot per unique value of the picked column. Tune the grid in the Style tab.",
+      "sizeDimension": "Size dimension",
+      "labels": "Labels",
+      "values": "Values",
+      "zAxis": "Z (cell value)",
+      "zAxisLevel": "Z (level)",
+      "correlationColumns": "Variables",
+      "parcoordsAxes": "Axes",
+      "radarAxes": "Axes",
+      "polarTheta": "Angular axis (\u03b8)",
+      "polarRadial": "Radial axis (r)",
+      "windRoseDirection": "Direction (degrees)",
+      "windRoseMagnitude": "Magnitude (value bins)",
+      "ternaryA": "A axis (top vertex)",
+      "ternaryB": "B axis (bottom-right)",
+      "ternaryC": "C axis (bottom-left)",
+      "alluvialStages": "Stages (ordered)",
+      "alluvialValue": "Flow value (optional)",
       "column": "Column",
       "selectColumn": "Select a column",
       "none": "None",
@@ -283,6 +315,10 @@
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
       "series": "Series {{index}}",
+      "seriesCount": "{{count}} series",
+      "stagesCount": "{{count}} stages",
+      "axesCount": "{{count}} axes",
+      "variablesCount": "{{count}} variables",
       "removeSeries": "Remove series",
       "addSeries": "Add series",
       "seriesName": "Series name",
@@ -295,12 +331,54 @@
       "colorAxisTitlePlaceholder": "Color axis title",
       "colorAxisTitlePosition": "Title position",
       "showColorbar": "Show colorbar",
-      "preview": "Preview"
+      "reverseScale": "Reverse colorscale",
+      "preview": "Preview",
+      "renderAs": "Render as",
+      "renderAsDefault": "Default ({{type}})",
+      "axisAssignment": "Axis",
+      "secondaryAxisTitle": "Secondary axis title",
+      "secondaryAxisTitlePlaceholder": "Secondary axis title",
+      "secondaryAxisType": "Secondary axis scale",
+      "errorColumn": "Error column (\u00b1)",
+      "errorColumnPlaceholder": "None",
+      "errorColumnNone": "None",
+      "variable": "Variable",
+      "variables": "Variables",
+      "traceType": {
+        "line": "Line",
+        "bar": "Bar",
+        "scatter": "Scatter",
+        "area": "Area"
+      },
+      "axis": {
+        "primary": "Primary",
+        "secondary": "Secondary (right)"
+      },
+      "aggregate": "Aggregate",
+      "aggregateNone": "None",
+      "colorMode": "Mode",
+      "colorModeCategorical": "Categorical (per value)",
+      "colorModeCategoricalHelp": "Each unique value gets its own color. Cycles through the palette above past 12.",
+      "colorModeContinuous": "Continuous (gradient)",
+      "filters": "Filters",
+      "groupBy": "Group by",
+      "groupByNone": "No grouping",
+      "groupByPlaceholder": "No grouping",
+      "noBucket": "None",
+      "pieValuesCountPlaceholder": "(rows)",
+      "timeBucket": "Bucket",
+      "aggregateNeedsXColumn": "Pick an X column first; cumulative sum needs it for the running-total order.",
+      "aggregateNeedsXColumnLabel": "{{label}} (needs X column)",
+      "colorModeContinuousNeedsNumeric": "Continuous gradient needs a numeric or temporal column.",
+      "groupByHint": "Draws one line per unique value of this column.",
+      "pieValuesCountHint": "Counts rows per label. Pick a column to count only its non-null values.",
+      "seriesSilentlyDropped": "Picks an aggregate for this series. GROUP BY drops un-aggregated columns from the SQL projection, so it would render blank."
     },
     "axisTypes": {
       "linear": "Linear",
       "log": "Logarithmic",
-      "date": "Date"
+      "date": "Date",
+      "category": "Category"
     },
     "positions": {
       "top": "Top",
@@ -310,7 +388,39 @@
     "modes": {
       "lines": "Lines",
       "markers": "Markers",
-      "linesMarkers": "Lines + markers"
+      "linesMarkers": "Lines + markers",
+      "fillOnly": "Fill only"
+    },
+    "stackModes": {
+      "none": "None",
+      "stacked": "Stacked",
+      "percent": "Percent"
+    },
+    "sizemodes": {
+      "area": "Scale by area",
+      "diameter": "Scale by diameter"
+    },
+    "histnorms": {
+      "none": "None",
+      "percent": "Percent",
+      "probability": "Probability",
+      "density": "Density",
+      "probabilityDensity": "Probability density"
+    },
+    "textinfos": {
+      "label": "Label",
+      "value": "Value",
+      "percent": "Percent",
+      "labelPercent": "Label + percent",
+      "labelValue": "Label + value",
+      "valuePercent": "Value + percent",
+      "none": "None"
+    },
+    "pieTextPositions": {
+      "auto": "Auto",
+      "inside": "Inside",
+      "outside": "Outside",
+      "none": "None"
     },
     "markerSymbols": {
       "circle": "Circle",
@@ -333,8 +443,13 @@
     },
     "legendPositions": {
       "right": "Right of plot",
+      "left": "Left of plot",
       "top": "Above plot",
-      "bottom": "Below plot"
+      "bottom": "Below plot",
+      "insideTopRight": "Inside top right",
+      "insideTopLeft": "Inside top left",
+      "insideBottomRight": "Inside bottom right",
+      "insideBottomLeft": "Inside bottom left"
     },
     "hoverModes": {
       "closest": "Nearest point",
@@ -355,6 +470,11 @@
       "legendPosition": "Position",
       "hoverMode": "Hover behaviour",
       "lineOptions": "Line options",
+      "lineSeriesOptions": "Line series",
+      "scatterSeriesOptions": "Scatter series",
+      "barSeriesOptions": "Bar series",
+      "areaSeriesOptions": "Area series",
+      "markerOptions": "Markers",
       "scatterOptions": "Scatter options",
       "barOptions": "Bar options",
       "mode": "Drawing mode",
@@ -364,7 +484,77 @@
       "lineDash": "Line style",
       "markerSize": "Marker size",
       "markerShape": "Marker shape",
-      "markerOpacity": "Marker opacity"
+      "markerOpacity": "Marker opacity",
+      "referenceLineAdd": "Add reference line",
+      "referenceLineAxis": "Axis",
+      "referenceLineColor": "Color",
+      "referenceLineDash": "Dash",
+      "referenceLineDashes": {
+        "dash": "Dashed",
+        "dashdot": "Dash-dot",
+        "dot": "Dotted",
+        "solid": "Solid"
+      },
+      "referenceLineLabel": "Label",
+      "referenceLineLabelPlaceholder": "Optional label",
+      "referenceLineRemove": "Remove reference line",
+      "referenceLineValue": "Value",
+      "referenceLines": "Reference lines",
+      "referenceLinesEmpty": "Add a vertical or horizontal line at a fixed value - useful for thresholds, targets, and baselines."
+    },
+    "orientations": {
+      "vertical": "Vertical",
+      "horizontal": "Horizontal"
+    },
+    "barmodes": {
+      "group": "Grouped",
+      "stack": "Stacked",
+      "overlay": "Overlay",
+      "relative": "Relative"
+    },
+    "boxmodes": {
+      "group": "Grouped",
+      "overlay": "Overlay"
+    },
+    "boxmeans": {
+      "off": "Off",
+      "mean": "Mean line",
+      "sd": "Mean + std dev"
+    },
+    "boxpoints": {
+      "outliers": "Outliers only",
+      "suspectedoutliers": "Suspected outliers",
+      "all": "All points",
+      "none": "None"
+    },
+    "violinSides": {
+      "both": "Full",
+      "positive": "Positive only",
+      "negative": "Negative only"
+    },
+    "violinScalemodes": {
+      "width": "Equal width",
+      "count": "Area by sample size"
+    },
+    "ridgeSortOrders": {
+      "alphabetical": "Alphabetical",
+      "median": "Median (ascending)",
+      "mean": "Mean (ascending)",
+      "count": "Sample count (descending)"
+    },
+    "hist2dRenderModes": {
+      "heatmap": "Heatmap",
+      "contour": "Contour"
+    },
+    "spcModes": {
+      "linesMarkers": "Lines + markers",
+      "lines": "Lines only",
+      "markers": "Markers only"
+    },
+    "barnorms": {
+      "none": "None",
+      "fraction": "Fraction",
+      "percent": "Percent"
     },
     "charts": {
       "pickerLabel": "Choose chart type",
@@ -374,7 +564,30 @@
       "types": {
         "line": "Line",
         "scatter": "Scatter",
-        "bar": "Bar"
+        "bar": "Bar",
+        "area": "Area",
+        "dot-plot": "Dot plot",
+        "lollipop": "Lollipop",
+        "bubble": "Bubble",
+        "pie": "Pie",
+        "histogram": "Histogram",
+        "boxPlot": "Box plot",
+        "violinPlot": "Violin plot",
+        "densityPlot": "Density plot",
+        "ridgePlot": "Ridge plot",
+        "histogram2d": "Histogram 2D",
+        "densityPlot2d": "Density plot 2D",
+        "spcControlChart": "SPC control chart",
+        "heatmap": "Heatmap",
+        "contour": "Contour",
+        "correlationMatrix": "Correlation matrix",
+        "parallelCoordinates": "Parallel coordinates",
+        "radar": "Radar",
+        "polar": "Polar",
+        "windRose": "Wind rose",
+        "ternary": "Ternary",
+        "alluvial": "Alluvial",
+        "carpet": "Carpet"
       },
       "descriptions": {
         "line": "Data points connected by line segments",
