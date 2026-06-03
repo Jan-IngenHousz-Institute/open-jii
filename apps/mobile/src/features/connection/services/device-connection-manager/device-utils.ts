@@ -24,6 +24,8 @@ export function serialDeviceToDevice(d: {
   return {
     id: d.deviceId.toString(),
     type: "usb",
-    name: isMultispeq ? "MultispeQ" : `${d.vendorId}:${d.productId}`,
+    name: isMultispeq
+      ? "MultispeQ"
+      : `${d.vendorId.toString(16).padStart(4, "0")}:${d.productId.toString(16).padStart(4, "0")}`,
   };
 }
