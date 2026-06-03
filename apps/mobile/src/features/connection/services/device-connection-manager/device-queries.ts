@@ -28,11 +28,12 @@ export async function getAllDevices(): Promise<Device[]> {
     listSerialPortDevices(),
   ]);
 
+  const bluetoothDevices = bluetoothResult.status === "fulfilled" ? bluetoothResult.value : [];
+  const serialDevices = serialResult.status === "fulfilled" ? serialResult.value : [];
+
   return [
-    ...(bluetoothResult.status === "fulfilled"
-      ? bluetoothResult.value.map(bluetoothDeviceToDevice)
-      : []),
-    ...(serialResult.status === "fulfilled" ? serialResult.value.map(serialDeviceToDevice) : []),
+    ...bluetoothDevices.map(bluetoothDeviceToDevice),
+    ...serialDevices.map(serialDeviceToDevice),
   ];
 }
 
