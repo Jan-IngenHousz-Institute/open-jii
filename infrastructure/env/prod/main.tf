@@ -399,11 +399,11 @@ module "large_iot_external_location" {
   source = "../../modules/databricks/external-location"
 
   external_location_name  = "large-iot-${var.environment}"
-  bucket_name             = module.iot_raw_archive_s3.bucket_id
-  external_location_path  = "large-iot"
+  bucket_name             = module.large_iot_s3.bucket_id
+  external_location_path  = ""
   storage_credential_name = module.storage_credential.storage_credential_name
   environment             = var.environment
-  comment                 = "External location for large IoT payloads in ${var.environment}"
+  comment                 = "External location for large IoT payloads (>128 KB) uploaded via pre-signed URL"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
 
   grants = {
@@ -439,31 +439,6 @@ module "external_location" {
         "READ_FILES",
         "WRITE_FILES"
       ]
-    }
-  }
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.storage_credential]
-}
-
-module "large_iot_external_location" {
-  source = "../../modules/databricks/external-location"
-
-  external_location_name  = "large-iot-${var.environment}"
-  bucket_name             = module.large_iot_s3.bucket_id
-  external_location_path  = ""
-  storage_credential_name = module.storage_credential.storage_credential_name
-  environment             = var.environment
-  comment                 = "External location for large IoT payloads (>128 KB) uploaded via pre-signed URL"
-  isolation_mode          = "ISOLATION_MODE_ISOLATED"
-
-  grants = {
-    node_service_principal = {
-      principal  = module.node_service_principal.service_principal_application_id
-      privileges = ["READ_FILES"]
     }
   }
 
