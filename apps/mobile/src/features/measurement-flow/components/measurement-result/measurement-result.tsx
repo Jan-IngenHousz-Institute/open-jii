@@ -137,7 +137,7 @@ export function MeasurementResult({
       {messageGroups.length > 0 && <MacroMessages messages={messageGroups} />}
 
       {/* Tab bar */}
-      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabBar variant="underline" tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Tab content */}
       {activeTab === "raw" ? renderRawContent() : renderProcessedContent()}
