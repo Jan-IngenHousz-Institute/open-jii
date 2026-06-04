@@ -22,6 +22,8 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { Toaster } from "sonner-native";
 import { AlertsBar } from "~/features/alerts/components/alerts-container";
 import { useSession } from "~/features/auth/hooks/use-session";
+import { ForceUpdateGate } from "~/features/force-update/components/force-update-gate";
+import type { ForceUpdateGateStatus } from "~/features/force-update/hooks/use-force-update-gate";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
 import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
@@ -32,7 +34,10 @@ import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 import { useI18nReady } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
-import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
+import {
+  ConfiguredQueryClientProvider,
+  ConnectivityWatcher,
+} from "~/shared/ui/configured-query-client-provider";
 import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
 import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-boundary";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -51,7 +56,7 @@ function DrizzleDevTools() {
   return null;
 }
 
-function RootLayoutNav() {
+function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => void }) {
   const themeColors = useThemeColors();
   const { session, isLoaded } = useSession();
   const [everLoaded, setEverLoaded] = useState(false);
@@ -59,9 +64,9 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoaded) {
       setEverLoaded(true);
-      void SplashScreen.hideAsync();
+      onReadyChange?.(true);
     }
-  }, [isLoaded]);
+  }, [isLoaded, onReadyChange]);
 
   // Gate on the splash only for the very first load. After that, a transient
   // isLoaded=false (Better Auth re-validating while signing out) must not drop
@@ -126,8 +131,6 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   const { success: migrationsReady, error: migrationsError } = useMigrations(db, migrations);
   const i18nReady = useI18nReady();
 
-  useOtaUpdate();
-
   useEffect(() => {
     if (error) {
       log.error("font load error", { err: error?.message });
@@ -138,10 +141,10 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   }, [error, migrationsError]);
 
   useEffect(() => {
-    if (shouldHideSplash(loaded, migrationsReady, migrationsError)) {
+    if (shouldHideSplash(loaded, migrationsReady, i18nReady, false, migrationsError)) {
       void SplashScreen.hideAsync();
     }
-  }, [loaded, migrationsReady, migrationsError]);
+  }, [loaded, migrationsReady, i18nReady, migrationsError]);
 
   useEffect(() => {
     if (!migrationsReady) return;
@@ -173,11 +176,9 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
 
   return (
     <ErrorBoundary>
-      <PostHogProvider>
-        <ThemeProvider>
-          <RootLayoutContent />
-        </ThemeProvider>
-      </PostHogProvider>
+      <ThemeProvider>
+        <RootLayoutContent />
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
@@ -195,6 +196,21 @@ function OutboxBootstrap() {
     return unmount;
   }, [queryClient]);
   return null;
+}
+
+function AllowedAppServices({ children }: { children: React.ReactNode }) {
+  useOtaUpdate();
+
+  return (
+    <PostHogProvider>
+      <TimeSyncProvider>
+        <ConnectivityWatcher />
+        <OutboxBootstrap />
+        {__DEV__ && <EventLoopLagMonitor />}
+        <PythonMacroProvider>{children}</PythonMacroProvider>
+      </TimeSyncProvider>
+    </PostHogProvider>
+  );
 }
 
 // [perf] App-wide event-loop lag probe. A frozen JS thread (e.g. a heavy
@@ -221,7 +237,11 @@ function EventLoopLagMonitor() {
 // The navigator gets extra top padding equal to the alert height minus the real
 // status-bar inset, so normal screens sit below the alert without corrupting
 // safe-area values for modals.
-function AlertsAwareLayout() {
+function AlertsAwareLayout({
+  onNavigationReadyChange,
+}: {
+  onNavigationReadyChange?: (ready: boolean) => void;
+}) {
   const insets = useSafeAreaInsets();
   const [alertBarHeight, setAlertBarHeight] = useState(0);
 
@@ -230,7 +250,7 @@ function AlertsAwareLayout() {
   return (
     <View className="flex-1">
       <View className="flex-1" style={{ paddingTop: navigatorTopPadding }}>
-        <RootLayoutNav />
+        <RootLayoutNav onReadyChange={onNavigationReadyChange} />
       </View>
 
       <View
@@ -247,6 +267,8 @@ function AlertsAwareLayout() {
 function RootLayoutContent() {
   const themeColors = useThemeColors();
   const { colorScheme } = useColorScheme();
+  const [forceUpdateStatus, setForceUpdateStatus] = useState<ForceUpdateGateStatus>("checking");
+  const [navigationReady, setNavigationReady] = useState(false);
 
   // Theme the navigator container background so instant screen swaps (e.g.
   // logout) don't expose the default white React Navigation background — that
@@ -265,27 +287,34 @@ function RootLayoutContent() {
     void SystemUI.setBackgroundColorAsync(themeColors.background);
   }, [themeColors.background]);
 
+  const initialUiReady =
+    forceUpdateStatus === "gated" || (forceUpdateStatus === "allowed" && navigationReady);
+
+  useEffect(() => {
+    if (shouldHideSplash(true, true, true, initialUiReady, undefined)) {
+      void SplashScreen.hideAsync();
+    }
+  }, [initialUiReady]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <TimeSyncProvider>
-        <ConfiguredQueryClientProvider>
-          <OutboxBootstrap />
-          {__DEV__ && <EventLoopLagMonitor />}
-          <SafeAreaProvider>
-            <PythonMacroProvider>
-              <BottomSheetModalProvider>
-                <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-                {__DEV__ && <DrizzleDevTools />}
-                <NavigationThemeProvider value={navTheme}>
-                  <AlertsAwareLayout />
-                </NavigationThemeProvider>
-                <Toaster />
-                <AlertDialog />
-              </BottomSheetModalProvider>
-            </PythonMacroProvider>
-          </SafeAreaProvider>
-        </ConfiguredQueryClientProvider>
-      </TimeSyncProvider>
+      <ConfiguredQueryClientProvider>
+        <SafeAreaProvider>
+          <BottomSheetModalProvider>
+            <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+            {__DEV__ && <DrizzleDevTools />}
+            <NavigationThemeProvider value={navTheme}>
+              <ForceUpdateGate onStatusChange={setForceUpdateStatus}>
+                <AllowedAppServices>
+                  <AlertsAwareLayout onNavigationReadyChange={setNavigationReady} />
+                </AllowedAppServices>
+              </ForceUpdateGate>
+            </NavigationThemeProvider>
+            <Toaster />
+            <AlertDialog />
+          </BottomSheetModalProvider>
+        </SafeAreaProvider>
+      </ConfiguredQueryClientProvider>
     </GestureHandlerRootView>
   );
 }

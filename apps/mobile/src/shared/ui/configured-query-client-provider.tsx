@@ -54,11 +54,6 @@ const asyncStoragePersister = createAsyncStoragePersister({
 export function ConfiguredQueryClientProvider({ children }) {
   const queryClientRef = useRef<QueryClient>(undefined);
 
-  useEffect(() => {
-    const stop = startConnectivityWatcher();
-    return stop;
-  }, []);
-
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
       onError: (error: any, query) => {
@@ -92,4 +87,13 @@ export function ConfiguredQueryClientProvider({ children }) {
       {children}
     </PersistQueryClientProvider>
   );
+}
+
+export function ConnectivityWatcher() {
+  useEffect(() => {
+    const stop = startConnectivityWatcher();
+    return stop;
+  }, []);
+
+  return null;
 }
