@@ -1,4 +1,5 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { useQuery } from "@tanstack/react-query";
 import { Bluetooth, ChevronDown, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -12,6 +13,10 @@ import {
 } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
+import {
+  hasBluetoothPermission,
+  requestBluetoothPermission,
+} from "~/features/connection/services/request-bluetooth-permissions";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
@@ -37,6 +42,14 @@ export function DeviceSheet() {
   const { connectToDevice, disconnectFromDevice, connectingDeviceId } = useConnectToDevice();
 
   const [showAllDevices, setShowAllDevices] = useState(false);
+  const { data: bluetoothPermissionGranted = true, refetch: refreshBluetoothPermission } = useQuery(
+    {
+      queryKey: ["bluetooth-permission"],
+      queryFn: hasBluetoothPermission,
+      enabled: isOpen,
+      networkMode: "always",
+    },
+  );
   const { named, unnamed } = useMemo(() => partitionDevices(nearbyDevices), [nearbyDevices]);
   // When nothing has a friendly name (common: MultispeQs advertise as a MAC),
   // show every device directly instead of an empty list above "See more".
@@ -46,6 +59,14 @@ export function DeviceSheet() {
   useEffect(() => {
     if (!isOpen) setShowAllDevices(false);
   }, [isOpen]);
+
+  const handleAllowBluetooth = useCallback(async () => {
+    const granted = await requestBluetoothPermission();
+    if (granted) {
+      void refreshBluetoothPermission();
+      void refreshDevices();
+    }
+  }, [refreshBluetoothPermission, refreshDevices]);
 
   useEffect(() => {
     if (isOpen) sheetRef.current?.present();
@@ -198,6 +219,36 @@ export function DeviceSheet() {
             </Text>
           </Pressable>
         </View>
+
+        {!bluetoothPermissionGranted ? (
+          <View className="border-divider bg-card flex-row items-center gap-3 rounded-2xl border p-3.5">
+            <View
+              className="h-10 w-10 items-center justify-center"
+              style={{ borderRadius: 12, backgroundColor: "rgba(0,0,0,0.04)" }}
+            >
+              <Bluetooth size={20} color={themeColors.inactive} />
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text
+                className="text-on-surface"
+                style={{ fontFamily: "Poppins-Bold", fontSize: 14 }}
+              >
+                {t("deviceSheet.permissionHeading")}
+              </Text>
+              <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={2}>
+                {t("deviceSheet.permissionExplainer")}
+              </Text>
+            </View>
+            <Button
+              title={t("deviceSheet.allowBluetooth")}
+              variant="primary"
+              size="sm"
+              hitSlop={8}
+              accessibilityLabel={t("deviceSheet.allowBluetooth")}
+              onPress={() => void handleAllowBluetooth()}
+            />
+          </View>
+        ) : null}
 
         <View className="border-divider bg-card rounded-2xl border px-3.5">
           {nearbyDevices.length === 0 ? (
