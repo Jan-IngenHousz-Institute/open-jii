@@ -382,10 +382,6 @@ module "storage_credential" {
   isolation_mode         = "ISOLATION_MODE_OPEN"
   additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
 
-  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
-
-  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
-
   providers = {
     databricks.workspace = databricks.workspace
   }
