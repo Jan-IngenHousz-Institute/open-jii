@@ -179,7 +179,7 @@ module "iot_core" {
   s3_archive_bucket_arn  = module.iot_raw_archive_s3.bucket_arn
   iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
-  
+
   enable_large_iot_sqs  = true
   large_iot_bucket_name = module.large_iot_s3.bucket_id
   large_iot_bucket_arn  = module.large_iot_s3.bucket_arn
@@ -407,6 +407,8 @@ module "storage_credential" {
   environment            = var.environment
   bucket_name            = var.centralized_metastore_bucket_name
   isolation_mode         = "ISOLATION_MODE_OPEN"
+  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
+
   additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
 
   additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
@@ -2188,8 +2190,9 @@ module "grafana_dashboard" {
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
 
-  large_iot_notification_queue_name = module.iot_core.large_iot_notification_queue_name
-  large_iot_dlq_name                = module.iot_core.large_iot_dlq_name
+  large_iot_notification_queue_name         = module.iot_core.large_iot_notification_queue_name
+  large_iot_dlq_name                        = module.iot_core.large_iot_dlq_name
+  large_iot_ingestion_lag_threshold_seconds = 10800 # 3 hours — pipeline disabled in dev
 
   providers = {
     grafana.amg = grafana.amg
