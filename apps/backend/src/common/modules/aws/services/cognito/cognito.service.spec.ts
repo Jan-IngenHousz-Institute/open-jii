@@ -3,6 +3,7 @@ import {
   GetOpenIdTokenForDeveloperIdentityCommand,
   GetCredentialsForIdentityCommand,
 } from "@aws-sdk/client-cognito-identity";
+import { IoTClient, AttachPolicyCommand } from "@aws-sdk/client-iot";
 import { mockClient } from "aws-sdk-client-mock";
 
 import { TestHarness } from "../../../../../test/test-harness";
@@ -10,6 +11,7 @@ import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { CognitoService } from "./cognito.service";
 
 const cognitoMock = mockClient(CognitoIdentityClient);
+const iotMock = mockClient(IoTClient);
 
 describe("CognitoService", () => {
   const testApp = TestHarness.App;
@@ -21,6 +23,7 @@ describe("CognitoService", () => {
 
   beforeEach(async () => {
     cognitoMock.reset();
+    iotMock.reset();
     await testApp.beforeEach();
     service = testApp.module.get(CognitoService);
   });
@@ -214,6 +217,31 @@ describe("CognitoService", () => {
 
       assertSuccess(result);
       expect(result.value.expiration).toBeInstanceOf(Date);
+    });
+  });
+
+  describe("attachIotPolicy", () => {
+    it("should attach the IoT policy to the given identity", async () => {
+      const identityId = "eu-central-1:identity-id-123";
+
+      iotMock.on(AttachPolicyCommand).resolves({});
+
+      await expect(service.attachIotPolicy(identityId)).resolves.toBeUndefined();
+
+      const calls = iotMock.commandCalls(AttachPolicyCommand);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].args[0].input).toMatchObject({
+        policyName: process.env.AWS_IOT_POLICY_NAME,
+        target: identityId,
+      });
+    });
+
+    it("should throw when IoT API call fails", async () => {
+      const identityId = "eu-central-1:identity-id-123";
+
+      iotMock.on(AttachPolicyCommand).rejects(new Error("IoT API error"));
+
+      await expect(service.attachIotPolicy(identityId)).rejects.toThrow("IoT API error");
     });
   });
 });
