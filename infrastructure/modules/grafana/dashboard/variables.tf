@@ -87,4 +87,10 @@ variable "large_iot_dlq_name" {
   default     = ""
 }
 
+variable "large_iot_ingestion_lag_threshold_seconds" {
+  description = "Seconds before the ingestion lag alert fires (ApproximateAgeOfOldestMessage). Set higher in dev where the pipeline runs less frequently."
+  type        = number
+  default     = 900 # 15 minutes
+}
+
 

@@ -1108,6 +1108,7 @@ EOT
         statistic  = "Maximum"
         period     = "60"
         dimensions = { QueueName = var.large_iot_dlq_name }
+        expression = "FILL(m1, 0)"
         id         = "m1"
       })
 
@@ -1211,7 +1212,7 @@ EOT
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 900"
+        expression = "$B > ${var.large_iot_ingestion_lag_threshold_seconds}"
         type       = "math"
         refId      = "C"
       })

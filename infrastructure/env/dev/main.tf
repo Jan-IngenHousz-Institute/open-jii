@@ -2160,8 +2160,9 @@ module "grafana_dashboard" {
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
 
-  large_iot_notification_queue_name = module.iot_core.large_iot_notification_queue_name
-  large_iot_dlq_name                = module.iot_core.large_iot_dlq_name
+  large_iot_notification_queue_name         = module.iot_core.large_iot_notification_queue_name
+  large_iot_dlq_name                        = module.iot_core.large_iot_dlq_name
+  large_iot_ingestion_lag_threshold_seconds = 10800 # 3 hours — pipeline disabled in dev
 
   providers = {
     grafana.amg = grafana.amg
