@@ -1,5 +1,6 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { listSerialPortDevices } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import { hasBluetoothPermission } from "~/features/connection/services/request-bluetooth-permissions";
 import type { Device } from "~/shared/types/device";
 
 import { bluetoothDeviceToDevice, serialDeviceToDevice } from "./device-utils";
@@ -21,8 +22,18 @@ export async function getConnectedDevice(): Promise<Device | null> {
 }
 
 export async function getAllDevices(): Promise<Device[]> {
+  // USB serial discovery must never depend on Bluetooth: since the Bluetooth
+  // permission became opt-in, calling startDiscovery() without it can reject
+  // or hang, and folding both into a single allSettled would stall (or drop)
+  // the serial results that are otherwise available immediately. Only scan for
+  // Bluetooth devices when the permission is actually granted; always list
+  // serial devices.
+  const bluetoothDiscovery = (await hasBluetoothPermission())
+    ? RNBluetoothClassic.startDiscovery()
+    : Promise.resolve([]);
+
   const [bluetoothResult, serialResult] = await Promise.allSettled([
-    RNBluetoothClassic.startDiscovery(),
+    bluetoothDiscovery,
     listSerialPortDevices(),
   ]);
 
