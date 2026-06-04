@@ -13,8 +13,6 @@ import {
 import {
   getConnectedDevice,
   getAllDevices,
-  getPairedDevices,
-  getSerialDevices,
 } from "../services/device-connection-manager/device-queries";
 
 const CONNECTED_DEVICE_KEY = ["connected-device"] as const;
@@ -95,9 +93,6 @@ export function useConnectToDevice() {
         await client.invalidateQueries({
           queryKey: ["connected-device"],
         });
-        await client.invalidateQueries({
-          queryKey: ["paired-devices"],
-        });
       } finally {
         setConnectingDeviceId(undefined);
       }
@@ -116,9 +111,6 @@ export function useConnectToDevice() {
         queryKey: ["connected-device"],
       });
 
-      await client.invalidateQueries({
-        queryKey: ["paired-devices"],
-      });
       // Update scanner command executor store based on current connected device state
       // (in case the unpaired device was the connected one)
       const connectedDevice = await getConnectedDevice();
@@ -132,23 +124,6 @@ export function useAllDevices() {
     queryKey: ["all-devices"],
     queryFn: () => getAllDevices(),
     enabled: false,
-    networkMode: "always",
-  });
-}
-
-export function usePairedDevices() {
-  return useQuery({
-    queryKey: ["paired-devices"],
-    queryFn: () => getPairedDevices(),
-    networkMode: "always",
-  });
-}
-
-export function useSerialDevices() {
-  return useQuery({
-    queryKey: ["serial-devices"],
-    queryFn: () => getSerialDevices(),
-    refetchInterval: 2500,
     networkMode: "always",
   });
 }
