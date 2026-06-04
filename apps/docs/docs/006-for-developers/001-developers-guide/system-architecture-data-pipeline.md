@@ -36,7 +36,7 @@ openJII is a monorepo built with [Turborepo](https://turbo.build/) and [pnpm](ht
 - **RDS (PostgreSQL)**: Application database
 - **Cognito**: User pool (validated from backend via Better Auth)
 - **IoT Core + Kinesis**: Real-time sensor data ingestion via MQTT
-- **S3**: Object storage for data lake, exports, and static assets
+- **S3**: Object storage for data lake, exports, large IoT payloads, and static assets
 - **CloudFront + ALB**: CDN and load balancing
 - **Lambda**: Server functions, automated code revert on failure, and sandboxed execution of user-authored macros (`apps/macro-sandbox`) in Python, JavaScript, and R. Each language runtime runs in its own Lambda container with pre-loaded helper libraries (Python also includes numpy, pandas, scipy). Supports timeout enforcement (1s per-item, 10-60s handler-level) and enforces limits: 1MB script size, 10MB output, 1000 items/request
 
@@ -72,16 +72,19 @@ S[IoT Sensors]
 M[Mobile App]
 W[Web Uploads]
 T[Project Transfers]
+L[Large IoT Payloads]
 end
 
 subgraph "Ingestion"
 MQTT[AWS IoT Core]
 K[Kinesis]
+S3L[S3]
+SQS[SQS]
 AL[Auto Loader]
 end
 
 subgraph "Databricks — centrum schema"
-B["Bronze<br/>raw_data<br/>raw_imported_data"]
+B["Bronze<br/>raw_data<br/>raw_imported_data<br/>raw_large_iot_data"]
 SV["Silver<br/>clean_data"]
 G["Gold<br/>experiment_raw_data<br/>experiment_device_data<br/>experiment_macro_data"]
 EV["Enriched Views"]
@@ -96,6 +99,8 @@ end
 S -->|"gzip+b64 MQTT"| MQTT
 M -->|"gzip+b64 MQTT"| MQTT
 MQTT --> K --> B
+L -->|"pre-signed URL"| S3L
+S3L --> SQS --> AL --> B
 W --> B
 T --> AL --> B
 B --> SV --> G
@@ -105,6 +110,12 @@ EV --> API
 META --> API
 G --> EXP
 ```
+
+**Data Flow:**
+
+1. **Real-time sensor data**: IoT devices and mobile app publish gzip+base64-encoded MQTT messages → AWS IoT Core → Kinesis → Bronze `raw_data` → Silver `clean_data` → Gold `experiment_device_data`
+2. **Large IoT payloads**: Client requests pre-signed S3 URL from backend (`/api/v1/iot/upload-url`) → uploads JSON directly to S3 (`s3://bucket/large-iot/{experimentId}/{uuid}.json`) → S3 sends notification to SQS → Databricks Auto Loader ingests into Bronze `raw_large_iot_data` → same Silver/Gold flow as real-time data
+3. **Web uploads & project transfers**: Files uploaded to S3 → Auto Loader → Bronze `raw_imported_data` → same Silver/Gold flow
 
 See [Data Ingestion Architecture](/docs/data-platform/ingestion-architecture) for detailed documentation on the medallion architecture, VARIANT columns, table identity model, and export system.
 
@@ -133,7 +144,7 @@ The `@repo/iot` package provides a layered architecture for sensor communication
 ## Key Architectural Patterns
 
 - **Centralized data schema**: Single `centrum` schema with VARIANT columns for flexible JSON storage, replacing per-experiment schemas
-- **Event-driven ingestion**: MQTT → IoT Core → Kinesis → Databricks streaming tables
+- **Event-driven ingestion**: MQTT → IoT Core → Kinesis → Databricks streaming tables; S3 → SQS notifications → Auto Loader for large IoT payloads and project uploads
 - **Async exports**: Background Databricks jobs with status tracking and multi-format support (CSV, NDJSON, JSON, Parquet)
 - **Many-to-many protocol/macro compatibility**: Join table linking protocols and macros independently
 - **Invitation system**: Email-based invitations with auto-acceptance on first sign-in
