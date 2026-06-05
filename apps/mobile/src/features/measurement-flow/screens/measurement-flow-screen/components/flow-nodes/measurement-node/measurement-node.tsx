@@ -80,20 +80,20 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
       return;
     }
+    if (!protocol) {
+      toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
+      return;
+    }
 
     resetScan();
     try {
-      if (!protocol) {
-        throw new Error("No protocol");
-      }
-
       const result = await executeScan(protocol);
       setScanResult(result);
       // Play system notification sound when measurement completes
       await playSound();
       nextStep();
     } catch (error) {
-      log.warn("scan error", { err: (error as Error)?.message });
+      log.error("scan error", { err: (error as Error)?.message });
       toast.error(t("measurementFlow:measurementNode.toast.scanError"));
     }
   };
