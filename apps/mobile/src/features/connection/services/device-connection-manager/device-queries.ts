@@ -1,9 +1,8 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { listSerialPortDevices } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
-import { requestBluetoothPermission } from "~/features/connection/services/request-bluetooth-permissions";
 import type { Device } from "~/shared/types/device";
 
-import { bluetoothDeviceToDevice } from "./device-utils";
+import { bluetoothDeviceToDevice, serialDeviceToDevice } from "./device-utils";
 import { getConnectedSerialPortDevice } from "./serial-port-connection";
 
 export async function getConnectedDevice(): Promise<Device | null> {
@@ -22,26 +21,16 @@ export async function getConnectedDevice(): Promise<Device | null> {
 }
 
 export async function getAllDevices(): Promise<Device[]> {
-  await requestBluetoothPermission();
-  const devices = await RNBluetoothClassic.startDiscovery();
+  const [bluetoothResult, serialResult] = await Promise.allSettled([
+    RNBluetoothClassic.startDiscovery(),
+    listSerialPortDevices(),
+  ]);
 
-  return devices.map(bluetoothDeviceToDevice);
-}
+  const bluetoothDevices = bluetoothResult.status === "fulfilled" ? bluetoothResult.value : [];
+  const serialDevices = serialResult.status === "fulfilled" ? serialResult.value : [];
 
-export async function getPairedDevices(): Promise<Device[]> {
-  await requestBluetoothPermission();
-  const bluetoothDevices = await RNBluetoothClassic.getBondedDevices();
-
-  return bluetoothDevices.map(bluetoothDeviceToDevice);
-}
-
-export async function getSerialDevices(): Promise<Device[]> {
-  const serialDevices = await listSerialPortDevices();
-
-  return serialDevices.map((d) => ({
-    name:
-      "USB " + d.deviceId.toString() + "/" + d.productId.toString() + "/" + d.vendorId.toString(),
-    type: "usb",
-    id: d.deviceId.toString(),
-  }));
+  return [
+    ...bluetoothDevices.map(bluetoothDeviceToDevice),
+    ...serialDevices.map(serialDeviceToDevice),
+  ];
 }

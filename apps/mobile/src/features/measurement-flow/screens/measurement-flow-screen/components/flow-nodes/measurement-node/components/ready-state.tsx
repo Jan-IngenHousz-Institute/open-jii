@@ -37,8 +37,8 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
 
   if (!hasQuestions) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <View className="bg-surface mb-4 h-14 w-14 items-center justify-center rounded-full">
+      <View className="flex-1 items-center justify-center gap-4 px-4">
+        <View className="bg-surface h-14 w-14 items-center justify-center rounded-full">
           <HelpCircle size={26} color={themeColors.onSurface} />
         </View>
         <Text className="text-muted-foreground text-center text-base font-medium">
