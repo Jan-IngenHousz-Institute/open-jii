@@ -89,6 +89,9 @@
         "noFiles": "Select at least one data file",
         "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, Excel, JSON, NDJSON)",
         "mixedFormats": "All files in a single upload must be the same format",
+        "oversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
+        "oversizedFiles_other": "{{count}} files exceed the maximum allowed size",
+        "tooManyFiles": "Too many files: select at most {{max}}",
         "ambyteInvalidStructure": "The selected folder doesn't match the expected Ambyte_N layout",
         "ambyteOversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
         "ambyteOversizedFiles_other": "{{count}} files exceed the maximum allowed size"
@@ -123,7 +126,6 @@
         "uploadCount_one": "{{count}} recent upload",
         "uploadCount_other": "{{count}} recent uploads",
         "uploadTitle": "Upload #{{number}}",
-        "failedTooltip": "This upload failed. Check the processing job logs for details.",
         "status": {
           "pending": "Pending",
           "running": "Processing",

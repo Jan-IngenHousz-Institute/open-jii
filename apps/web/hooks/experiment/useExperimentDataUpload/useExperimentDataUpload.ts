@@ -7,6 +7,8 @@ export type UploadValidationError =
   | { code: "noFiles" }
   | { code: "unsupportedFormat"; fileName: string }
   | { code: "mixedFormats" }
+  | { code: "oversizedFiles"; count: number }
+  | { code: "tooManyFiles"; max: number }
   | { code: "ambyteInvalidStructure" }
   | { code: "ambyteOversizedFiles"; count: number };
 
@@ -76,6 +78,16 @@ function validateTabular(
         : { code: "unsupportedFormat", fileName: file.name };
     }
   }
+
+  const { maxFileSize, maxFileCount } = UPLOAD_KIND_CONSTANTS[expectedKind];
+  const oversized = usable.filter((f) => f.size > maxFileSize).length;
+  if (oversized > 0) {
+    return { code: "oversizedFiles", count: oversized };
+  }
+  if (usable.length > maxFileCount) {
+    return { code: "tooManyFiles", max: maxFileCount };
+  }
+
   return { sourceKind: expectedKind };
 }
 

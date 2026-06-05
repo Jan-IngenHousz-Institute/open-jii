@@ -122,6 +122,18 @@ describe("useExperimentDataUpload (validate tabular)", () => {
     const files = makeFileList([makeFile(".DS_Store")]);
     expect(result.current.validate(files, "csv")).toEqual({ code: "noFiles" });
   });
+
+  it("returns oversizedFiles when a file exceeds the per-kind cap", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("big.csv", { size: 100 * 1024 * 1024 })]);
+    expect(result.current.validate(files, "csv")).toEqual({ code: "oversizedFiles", count: 1 });
+  });
+
+  it("returns tooManyFiles when the count exceeds the per-kind cap", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList(Array.from({ length: 101 }, (_, i) => makeFile(`row-${i}.csv`)));
+    expect(result.current.validate(files, "csv")).toEqual({ code: "tooManyFiles", max: 100 });
+  });
 });
 
 // ── validate (ambyte) ──────────────────────────────────────────

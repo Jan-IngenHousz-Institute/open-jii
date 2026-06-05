@@ -1225,7 +1225,7 @@ def raw_uploaded_data():
         .option("ignoreMissingFiles", "true")
         .schema(uploaded_data_schema)
         .load(uploaded_path)
-        .withColumn("uploaded_data", F.expr("parse_json(uploaded_data)"))
+        .withColumn("uploaded_data", F.expr("try_parse_json(uploaded_data)"))
     )
 
 # COMMAND ----------

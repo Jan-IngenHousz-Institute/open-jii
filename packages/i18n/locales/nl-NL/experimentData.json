@@ -89,6 +89,9 @@
         "noFiles": "Selecteer ten minste één gegevensbestand",
         "unsupportedFormat": "'{{fileName}}' is geen ondersteund bestandsformaat (CSV, TSV, parquet, Excel, JSON, NDJSON)",
         "mixedFormats": "Alle bestanden in één upload moeten hetzelfde formaat hebben",
+        "oversizedFiles_one": "{{count}} bestand overschrijdt de maximaal toegestane grootte",
+        "oversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte",
+        "tooManyFiles": "Te veel bestanden: selecteer er maximaal {{max}}",
         "ambyteInvalidStructure": "De geselecteerde map voldoet niet aan de verwachte Ambyte_N-structuur",
         "ambyteOversizedFiles_one": "{{count}} bestand overschrijdt de maximaal toegestane grootte",
         "ambyteOversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte"
@@ -123,7 +126,6 @@
         "uploadCount_one": "{{count}} recente upload",
         "uploadCount_other": "{{count}} recente uploads",
         "uploadTitle": "Upload #{{number}}",
-        "failedTooltip": "Deze upload is mislukt. Bekijk de logs van de verwerkingstaak voor details.",
         "status": {
           "pending": "In behandeling",
           "running": "Verwerken",

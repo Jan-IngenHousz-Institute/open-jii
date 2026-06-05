@@ -10,6 +10,7 @@ import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useE
 import { parseApiError } from "~/util/apiError";
 
 import {
+  AMBYTE_UPLOAD_TABLE_NAME,
   UPLOAD_KIND_CONSTANTS,
   zUploadFormFields,
   zUploadSourceKind,
@@ -45,7 +46,6 @@ export interface UploadDataModalProps {
 }
 
 const SOURCE_KIND_OPTIONS = zUploadSourceKind.options;
-const AMBYTE_TABLE_NAME = "raw_ambyte_data";
 
 export function UploadDataModal({ experimentId, open, onOpenChange }: UploadDataModalProps) {
   const { t } = useTranslation("experimentData");
@@ -60,7 +60,7 @@ export function UploadDataModal({ experimentId, open, onOpenChange }: UploadData
   // Ambyte uploads always land in one experiment-wide table named "raw_ambyte_data".
   // If it already exists, append; otherwise mint it on first upload.
   const existingAmbyteTable = React.useMemo(
-    () => uploadTables.find((table) => table.displayName === AMBYTE_TABLE_NAME),
+    () => uploadTables.find((table) => table.displayName === AMBYTE_UPLOAD_TABLE_NAME),
     [uploadTables],
   );
 
@@ -106,7 +106,7 @@ export function UploadDataModal({ experimentId, open, onOpenChange }: UploadData
       form.setValue("uploadTableId", existingAmbyteTable.identifier);
     } else {
       form.setValue("targetKind", "new");
-      form.setValue("targetName", AMBYTE_TABLE_NAME);
+      form.setValue("targetName", AMBYTE_UPLOAD_TABLE_NAME);
     }
   }, [isAmbyte, existingAmbyteTable, form]);
 
@@ -289,6 +289,14 @@ function useFileErrorMessage(error: UploadValidationError | null): string | null
       });
     case "mixedFormats":
       return t("experimentData.uploadDataModal.validation.mixedFormats");
+    case "oversizedFiles":
+      return t("experimentData.uploadDataModal.validation.oversizedFiles", {
+        count: error.count,
+      });
+    case "tooManyFiles":
+      return t("experimentData.uploadDataModal.validation.tooManyFiles", {
+        max: error.max,
+      });
     case "ambyteInvalidStructure":
       return t("experimentData.uploadDataModal.validation.ambyteInvalidStructure");
     case "ambyteOversizedFiles":

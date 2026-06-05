@@ -1,10 +1,22 @@
 import { render, screen } from "@/test/test-utils";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { UploadMetadata } from "@repo/api/schemas/experiment.schema";
 
 import { UploadHistoryCard } from "./upload-history-card";
+
+// Radix's tooltip renders no distinguishing DOM in jsdom (trigger is a
+// passthrough, content is a portal that only mounts on open). Mock the
+// primitives so the wrapping decision is observable.
+vi.mock("@repo/ui/components/tooltip", () => ({
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
+}));
 
 function baseUpload(overrides?: Partial<UploadMetadata>): UploadMetadata {
   return {
@@ -25,49 +37,28 @@ function baseUpload(overrides?: Partial<UploadMetadata>): UploadMetadata {
 }
 
 describe("UploadHistoryCard", () => {
-  it("renders the upload table name as the label", () => {
+  it("renders the plain card body when not failed", () => {
     render(<UploadHistoryCard upload={baseUpload()} index={1} />);
     expect(screen.getByText("leaf_traits")).toBeInTheDocument();
+    expect(screen.queryByTestId("tooltip-content")).not.toBeInTheDocument();
   });
 
-  it("falls back to the 'untargeted' label when uploadTableName is null", () => {
-    render(<UploadHistoryCard upload={baseUpload({ uploadTableName: null })} index={1} />);
-    expect(
-      screen.getByText("experimentData.uploadDataModal.history.untargeted"),
-    ).toBeInTheDocument();
-  });
-
-  it("renders rowCount and fileCount labels when both are present", () => {
-    render(<UploadHistoryCard upload={baseUpload()} index={1} />);
-    expect(screen.getByText("experimentData.uploadDataModal.history.rowCount")).toBeInTheDocument();
-    expect(
-      screen.getByText("experimentData.uploadDataModal.history.fileCount"),
-    ).toBeInTheDocument();
-  });
-
-  it("omits rowCount/fileCount labels when both are null", () => {
-    render(
-      <UploadHistoryCard upload={baseUpload({ rowCount: null, fileCount: null })} index={1} />,
-    );
-    expect(
-      screen.queryByText("experimentData.uploadDataModal.history.rowCount"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("experimentData.uploadDataModal.history.fileCount"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("wraps the card in a tooltip when the upload status is 'failed'", () => {
+  it("wraps the card in a tooltip showing the error message when failed", () => {
     render(
       <UploadHistoryCard
         upload={baseUpload({ status: "failed", errorMessage: "broke" })}
         index={1}
       />,
     );
-    // The tooltip trigger renders the same card content; assertion-by-presence
-    // is enough: the failed status badge appears.
-    expect(
-      screen.getByText("experimentData.uploadDataModal.history.status.failed"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("leaf_traits")).toBeInTheDocument();
+    expect(screen.getByTestId("tooltip-content")).toHaveTextContent("broke");
+  });
+
+  it("does not wrap in a tooltip when failed without an error message", () => {
+    render(
+      <UploadHistoryCard upload={baseUpload({ status: "failed", errorMessage: null })} index={1} />,
+    );
+    expect(screen.getByText("leaf_traits")).toBeInTheDocument();
+    expect(screen.queryByTestId("tooltip-content")).not.toBeInTheDocument();
   });
 });

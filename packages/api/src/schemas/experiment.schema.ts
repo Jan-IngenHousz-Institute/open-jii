@@ -25,6 +25,11 @@ export const zExperimentTableName = z.enum(["raw_data", "device"]);
  */
 export const zTableNameInput = z.union([zExperimentTableName, z.string().min(1).max(256)]);
 
+// Fixed table name every ambyte upload lands in, shared by the FE picker and
+// the pipeline's UPLOAD_TABLE_NAME widget. Not a core table (only present once
+// ambyte data is uploaded), so kept out of ExperimentTableName.
+export const AMBYTE_UPLOAD_TABLE_NAME = "raw_ambyte_data";
+
 // --- Location Schemas ---
 export const zLocation = z.object({
   id: z.string().uuid(),
