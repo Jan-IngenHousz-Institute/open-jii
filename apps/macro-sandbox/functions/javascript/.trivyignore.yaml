@@ -4,7 +4,7 @@
 
 vulnerabilities:
   # axios in Lambda runtime SDK (/var/runtime/node_modules/@aws-sdk/).
-  # Version drifts as AWS refreshes the base image; observed 1.13.5, 1.15.0.
+  # Version drifts as AWS refreshes the base image; observed 1.13.5, 1.15.0, 1.15.2.
   - id: CVE-2025-62718
     statement: >-
       axios SSRF requires proxy config that Lambda does not have.
@@ -39,6 +39,26 @@ vulnerabilities:
   - id: CVE-2026-44494
     statement: >-
       Full MITM via prototype pollution in HTTP path. Sandbox
+      has no outbound HTTP.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44486
+    statement: >-
+      Proxy-Authorization header leaks to redirect target.
+      Sandbox has no outbound HTTP and no proxy config.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44487
+    statement: >-
+      Proxy-Authorization credential leak to origin server.
+      Sandbox has no IAM creds, no outbound HTTP, no proxy config.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44488
+    statement: >-
+      Resource exhaustion on unbounded response. Sandbox issues
+      no outbound HTTP requests.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44496
+    statement: >-
+      ReDoS on attacker-influenced input through axios. Sandbox
       has no outbound HTTP.
     expired_at: 2026-07-12
 
