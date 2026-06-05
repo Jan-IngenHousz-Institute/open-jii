@@ -10,13 +10,14 @@ diff --git a/android/src/main/java/com/bastengao/usbserialport/UsbSerialportForA
  import com.hoho.android.usbserial.driver.UsbSerialDriver;
  import com.hoho.android.usbserial.driver.UsbSerialPort;
  import com.hoho.android.usbserial.driver.UsbSerialProber;
-@@ -129,7 +131,10 @@
+@@ -129,7 +131,11 @@
              return;
          }
 
 -        UsbSerialDriver driver = UsbSerialProber.getDefaultProber().probeDevice(device);
 +        ProbeTable customTable = UsbSerialProber.getDefaultProbeTable();
 +        customTable.addProduct(0x303A, 0x1001, CdcAcmSerialDriver.class); // ESP32-C3/S3 USB Serial/JTAG
++        customTable.addProduct(0x1A86, 0x55D4, CdcAcmSerialDriver.class); // CH9102F USB-UART bridge (Ambit)
 +        UsbSerialProber prober = new UsbSerialProber(customTable);
 +        UsbSerialDriver driver = prober.probeDevice(device);
          if (driver == null) {

@@ -540,10 +540,12 @@ module "backend_ecs" {
     { name = "POSTHOG_HOST", value = var.posthog_host },
     { name = "NEXT_PUBLIC_BASE_URL", value = "https://${module.route53.environment_domain}" },
     { name = "NEXT_PUBLIC_API_URL", value = "https://${module.route53.api_domain}" },
+    { name = "AWS_IOT_ARCHIVE_BUCKET_NAME", value = module.iot_raw_archive_s3.bucket_id },
   ]
 
   additional_task_role_policy_arns = [
-    module.location_service.iam_policy_arn
+    module.location_service.iam_policy_arn,
+    module.iot_core.backend_s3_presign_policy_arn,
   ]
 
   tags = {

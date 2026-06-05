@@ -75,4 +75,22 @@ variable "macro_sandbox_function_names" {
   default     = {}
 }
 
+variable "large_iot_notification_queue_name" {
+  description = "Name of the SQS notification queue for large-iot payloads"
+  type        = string
+  default     = ""
+}
+
+variable "large_iot_dlq_name" {
+  description = "Name of the SQS dead-letter queue for large-iot payloads"
+  type        = string
+  default     = ""
+}
+
+variable "large_iot_ingestion_lag_threshold_seconds" {
+  description = "Seconds before the ingestion lag alert fires (ApproximateAgeOfOldestMessage). Set higher in dev where the pipeline runs less frequently."
+  type        = number
+  default     = 900 # 15 minutes
+}
+
 

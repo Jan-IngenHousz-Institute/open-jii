@@ -38,7 +38,10 @@
     "pair": "Pair",
     "pairing": "Pairing…",
     "seeMoreDevices": "See more devices ({{count}})",
-    "helperText": "Can't find your device? Hold the button on the MultispeQ for 3 seconds."
+    "helperText": "Can't find your device? Hold the button on the MultispeQ for 3 seconds.",
+    "allowBluetooth": "Allow Bluetooth scanning",
+    "permissionHeading": "Bluetooth scanning is off",
+    "permissionExplainer": "Allow Bluetooth to find nearby MultispeQs."
   },
   "chip": {
     "connect": "Connect",

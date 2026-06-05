@@ -6,10 +6,18 @@ import { CognitoService } from "./services/cognito/cognito.service";
 import { AwsConfigService } from "./services/config/config.service";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import { AwsLocationService } from "./services/location/location.service";
+import { AwsS3Service } from "./services/s3/s3.service";
 
 @Module({
   imports: [ConfigModule],
-  providers: [AwsConfigService, AwsLocationService, CognitoService, AwsLambdaService, AwsAdapter],
+  providers: [
+    AwsConfigService,
+    AwsLocationService,
+    CognitoService,
+    AwsLambdaService,
+    AwsS3Service,
+    AwsAdapter,
+  ],
   exports: [AwsAdapter],
 })
 export class AwsModule {}
