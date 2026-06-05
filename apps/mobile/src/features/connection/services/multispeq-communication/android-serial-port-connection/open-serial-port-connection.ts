@@ -61,8 +61,19 @@ export async function openSerialPortConnection(deviceId: number) {
       .catch((e) => log.warn("dataReceivedFromDevice emit failed", { err: (e as Error)?.message }));
   });
 
+  // Briefly retry to absorb post-open warm-up: bulkTransfer can throw
+  // "send failed" while the device controller is still coming up after the
+  // patched open() asserts DTR/RTS.
   emitter.on("sendDataToDevice", async (data) => {
-    await usbSerialPort.send(toHex(data));
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await usbSerialPort.send(toHex(data));
+        return;
+      } catch (err) {
+        if (attempt === 2) throw err;
+        await delay(300);
+      }
+    }
   });
 
   return emitter;
