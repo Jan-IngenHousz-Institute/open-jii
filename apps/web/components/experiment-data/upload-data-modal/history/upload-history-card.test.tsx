@@ -1,22 +1,10 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { UploadMetadata } from "@repo/api/schemas/experiment.schema";
 
 import { UploadHistoryCard } from "./upload-history-card";
-
-// Radix's tooltip renders no distinguishing DOM in jsdom (trigger is a
-// passthrough, content is a portal that only mounts on open). Mock the
-// primitives so the wrapping decision is observable.
-vi.mock("@repo/ui/components/tooltip", () => ({
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="tooltip-content">{children}</div>
-  ),
-}));
 
 function baseUpload(overrides?: Partial<UploadMetadata>): UploadMetadata {
   return {
@@ -37,28 +25,29 @@ function baseUpload(overrides?: Partial<UploadMetadata>): UploadMetadata {
 }
 
 describe("UploadHistoryCard", () => {
-  it("renders the plain card body when not failed", () => {
+  it("renders the card and exposes no failure tooltip when not failed", async () => {
     render(<UploadHistoryCard upload={baseUpload()} index={1} />);
     expect(screen.getByText("leaf_traits")).toBeInTheDocument();
-    expect(screen.queryByTestId("tooltip-content")).not.toBeInTheDocument();
+    await userEvent.tab();
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
-  it("wraps the card in a tooltip showing the error message when failed", () => {
+  it("reveals the error message in a tooltip on keyboard focus when failed", async () => {
     render(
       <UploadHistoryCard
         upload={baseUpload({ status: "failed", errorMessage: "broke" })}
         index={1}
       />,
     );
-    expect(screen.getByText("leaf_traits")).toBeInTheDocument();
-    expect(screen.getByTestId("tooltip-content")).toHaveTextContent("broke");
+    await userEvent.tab();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("broke");
   });
 
-  it("does not wrap in a tooltip when failed without an error message", () => {
+  it("exposes no tooltip when failed without an error message", async () => {
     render(
       <UploadHistoryCard upload={baseUpload({ status: "failed", errorMessage: null })} index={1} />,
     );
-    expect(screen.getByText("leaf_traits")).toBeInTheDocument();
-    expect(screen.queryByTestId("tooltip-content")).not.toBeInTheDocument();
+    await userEvent.tab();
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 });

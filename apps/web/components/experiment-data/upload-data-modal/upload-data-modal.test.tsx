@@ -128,6 +128,41 @@ describe("UploadDataModal", () => {
     });
   });
 
+  it("releases the ambyte target lock when switching back to a tabular kind", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+
+    const sourceKind = await screen.findByLabelText(
+      "experimentData.uploadDataModal.sourceKind.label",
+    );
+
+    // Ambyte pins the target to raw_ambyte_data and hides the picker.
+    await userEvent.click(sourceKind);
+    await userEvent.click(
+      screen.getByRole("option", {
+        name: "experimentData.uploadDataModal.history.sourceKind.ambyte",
+      }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByLabelText("experimentData.uploadDataModal.newTable.label"),
+      ).not.toBeInTheDocument();
+    });
+
+    // Switching back releases the lock: the name is cleared, not raw_ambyte_data.
+    await userEvent.click(sourceKind);
+    await userEvent.click(
+      screen.getByRole("option", {
+        name: "experimentData.uploadDataModal.history.sourceKind.csv",
+      }),
+    );
+
+    const input = await screen.findByLabelText("experimentData.uploadDataModal.newTable.label");
+    expect(input).toHaveValue("");
+  });
+
   it("blocks submit and surfaces the noFiles validation when no files are picked", async () => {
     setExperimentTables();
     mountEmptyHistory();

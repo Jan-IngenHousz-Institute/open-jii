@@ -24,9 +24,12 @@ function makeUpload(id: string, name: string): UploadMetadata {
 }
 
 describe("UploadHistoryContent", () => {
-  it("renders the loading skeleton while loading", () => {
-    const { container } = render(<UploadHistoryContent isLoading uploads={[]} />);
-    expect(container.querySelectorAll('[class*="border-l-4"]')).toHaveLength(3);
+  it("shows neither the empty state nor cards while loading", () => {
+    render(<UploadHistoryContent isLoading uploads={[makeUpload("u-1", "leaf_traits")]} />);
+    expect(
+      screen.queryByText("experimentData.uploadDataModal.history.empty"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("leaf_traits")).not.toBeInTheDocument();
   });
 
   it("renders the empty state when not loading and there are no uploads", () => {
@@ -43,10 +46,5 @@ describe("UploadHistoryContent", () => {
     );
     expect(screen.getByText("leaf_traits")).toBeInTheDocument();
     expect(screen.getByText("soil_chem")).toBeInTheDocument();
-  });
-
-  it("prefers the loading state even if uploads are present", () => {
-    render(<UploadHistoryContent isLoading uploads={[makeUpload("u-1", "leaf_traits")]} />);
-    expect(screen.queryByText("leaf_traits")).not.toBeInTheDocument();
   });
 });

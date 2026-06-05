@@ -16,17 +16,22 @@ export interface UploadHistoryCardProps {
 }
 
 export function UploadHistoryCard({ upload, index }: UploadHistoryCardProps) {
-  const body = <UploadHistoryCardBody upload={upload} index={index} />;
-
   const errorMessage = upload.status === "failed" ? upload.errorMessage : null;
   if (!errorMessage) {
-    return body;
+    return <UploadHistoryCardBody upload={upload} index={index} />;
   }
 
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>{body}</TooltipTrigger>
+        <TooltipTrigger asChild>
+          <UploadHistoryCardBody
+            upload={upload}
+            index={index}
+            tabIndex={0}
+            className="focus-visible:ring-ring rounded-lg focus-visible:outline-none focus-visible:ring-2"
+          />
+        </TooltipTrigger>
         <TooltipContent
           side="top"
           className="max-w-xs border bg-white text-center text-gray-700 shadow-md dark:border-gray-700 dark:bg-gray-100 dark:text-gray-800"

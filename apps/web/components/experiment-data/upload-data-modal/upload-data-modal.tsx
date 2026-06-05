@@ -96,19 +96,26 @@ export function UploadDataModal({ experimentId, open, onOpenChange }: UploadData
     setSubmitError(null);
   }, [open, hasExistingTables, form]);
 
-  // Ambyte locks the target to the experiment's single raw_ambyte_data table.
-  React.useEffect(() => {
-    if (!isAmbyte) {
-      return;
+  // isAmbyte is the pre-change value, so it doubles as transition detection.
+  const applyTargetForSourceKind = (nextKind: string) => {
+    if (nextKind === "ambyte") {
+      if (existingAmbyteTable) {
+        form.setValue("targetKind", "existing");
+        form.setValue("uploadTableId", existingAmbyteTable.identifier);
+      } else {
+        form.setValue("targetKind", "new");
+        form.setValue("targetName", AMBYTE_UPLOAD_TABLE_NAME);
+      }
+    } else if (isAmbyte) {
+      if (hasExistingTables) {
+        form.setValue("targetKind", "existing");
+        form.setValue("uploadTableId", "");
+      } else {
+        form.setValue("targetKind", "new");
+        form.setValue("targetName", "");
+      }
     }
-    if (existingAmbyteTable) {
-      form.setValue("targetKind", "existing");
-      form.setValue("uploadTableId", existingAmbyteTable.identifier);
-    } else {
-      form.setValue("targetKind", "new");
-      form.setValue("targetName", AMBYTE_UPLOAD_TABLE_NAME);
-    }
-  }, [isAmbyte, existingAmbyteTable, form]);
+  };
 
   const acceptList = React.useMemo(() => {
     if (isAmbyte) {
@@ -193,7 +200,14 @@ export function UploadDataModal({ experimentId, open, onOpenChange }: UploadData
                 <Label htmlFor="source-kind">
                   {t("experimentData.uploadDataModal.sourceKind.label")}
                 </Label>
-                <Select value={field.value} onValueChange={field.onChange} disabled={isUploading}>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    applyTargetForSourceKind(value);
+                  }}
+                  disabled={isUploading}
+                >
                   <SelectTrigger id="source-kind">
                     <SelectValue />
                   </SelectTrigger>

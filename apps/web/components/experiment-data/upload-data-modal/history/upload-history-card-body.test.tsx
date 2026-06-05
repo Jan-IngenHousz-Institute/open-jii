@@ -63,4 +63,9 @@ describe("UploadHistoryCardBody", () => {
       screen.getByText("experimentData.uploadDataModal.history.status.failed"),
     ).toBeInTheDocument();
   });
+
+  it("renders no date for an unparseable createdAt instead of 'Invalid Date'", () => {
+    render(<UploadHistoryCardBody upload={baseUpload({ createdAt: "not-a-date" })} index={1} />);
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+  });
 });
