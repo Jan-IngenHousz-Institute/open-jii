@@ -3,7 +3,7 @@ import { colorScheme } from "nativewind";
 import React, { createContext, useState, useEffect } from "react";
 import { Appearance } from "react-native";
 import { Theme, darkTheme, lightTheme } from "~/shared/constants/theme";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("theme");
 

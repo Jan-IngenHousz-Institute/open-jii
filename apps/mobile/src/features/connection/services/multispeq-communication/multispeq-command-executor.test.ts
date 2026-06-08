@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Emitter } from "~/shared/utils/emitter";
+import { Emitter } from "~/features/connection/utils/emitter";
 
 import { MultispeqCommandExecutor } from "./multispeq-command-executor";
 import type { MultispeqStreamEvents } from "./multispeq-stream-events";

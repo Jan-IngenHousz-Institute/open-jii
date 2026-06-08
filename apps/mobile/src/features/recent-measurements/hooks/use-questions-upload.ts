@@ -4,9 +4,9 @@ import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
-import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
-import { createLogger } from "~/shared/utils/logger";
-import { buildAnnotations } from "~/shared/utils/measurement-annotations";
+import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
+import { createLogger } from "~/shared/observability/logger";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 

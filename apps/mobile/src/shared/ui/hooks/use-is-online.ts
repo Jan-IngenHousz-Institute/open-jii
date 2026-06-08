@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { isOnline } from "~/shared/utils/is-online";
+import { isOnline } from "~/shared/device/is-online";
 
 export function useIsOnline() {
   return useQuery({

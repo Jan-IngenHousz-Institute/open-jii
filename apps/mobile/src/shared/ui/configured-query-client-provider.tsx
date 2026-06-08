@@ -4,8 +4,8 @@ import { QueryClient, QueryCache, onlineManager } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
-import { isOnline } from "~/shared/utils/is-online";
-import { createLogger } from "~/shared/utils/logger";
+import { isOnline } from "~/shared/device/is-online";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("query-client");
 
