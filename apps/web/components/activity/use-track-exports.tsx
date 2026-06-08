@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  type ActivityEntry,
-  type ActivityJobStatus,
-  useActivity,
-} from "@/components/activity/activity-context";
+import { useActivity } from "@/components/activity/activity-context";
+import type { ActivityEntry, ActivityJobStatus } from "@/components/activity/activity-context";
 import * as React from "react";
 
 import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
@@ -45,7 +42,6 @@ export function useTrackExports(args: {
   const prevStatusRef = React.useRef<Map<string, ActivityJobStatus>>(new Map());
 
   React.useEffect(() => {
-    const now = new Date().toISOString();
     const seenIds = new Set<string>();
 
     for (const record of exports) {
@@ -63,7 +59,7 @@ export function useTrackExports(args: {
         format: record.format,
         experimentId,
         createdAt: record.createdAt,
-        updatedAt: record.completedAt ?? record.createdAt ?? now,
+        updatedAt: record.completedAt ?? record.createdAt,
         resultUrl: record.exportId
           ? `/api/experiments/${experimentId}/data/exports/${record.exportId}/download`
           : undefined,

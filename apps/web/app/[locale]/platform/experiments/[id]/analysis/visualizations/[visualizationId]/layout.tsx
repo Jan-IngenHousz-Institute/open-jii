@@ -6,8 +6,8 @@ import { getChartTypeDef } from "@/components/experiment-visualizations/charts/c
 import { DataSourcesFieldArrayProvider } from "@/components/experiment-visualizations/workspace/context/data-sources-field-array-context";
 import { useVisualizationAutosave } from "@/components/experiment-visualizations/workspace/hooks/use-visualization-autosave";
 import { VisualizationLayoutContent } from "@/components/experiment-visualizations/workspace/layout/visualization-layout-content";
-import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
 import { PageContainer } from "@/components/page-container";
+import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisualization/useExperimentVisualization";

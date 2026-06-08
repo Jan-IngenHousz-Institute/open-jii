@@ -8,7 +8,7 @@
 export function isMac(): boolean {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent;
-  return /Mac|iPhone|iPad|iPod/.test(window.navigator.platform) || /Macintosh/.test(ua);
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.platform) || ua.includes("Macintosh");
 }
 
 /** "⌘" on Mac, "Ctrl" everywhere else. */

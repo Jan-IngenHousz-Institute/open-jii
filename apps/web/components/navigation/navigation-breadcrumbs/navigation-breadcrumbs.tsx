@@ -2,7 +2,8 @@
 
 import { iconMap } from "@/components/navigation/navigation-config";
 import { useBreadcrumbs } from "@/hooks/breadcrumbs/useBreadcrumbs";
-import { ChevronRight, type LucideIcon, Send } from "lucide-react";
+import { ChevronRight, Send } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -57,10 +58,7 @@ export function Breadcrumbs({ locale }: BreadcrumbsProps) {
   // the content below — even the platform root (which has no breadcrumb)
   // keeps the slot.
   return (
-    <nav
-      aria-label="breadcrumb"
-      className="flex h-7 items-center text-sm text-muted-foreground"
-    >
+    <nav aria-label="breadcrumb" className="text-muted-foreground flex h-7 items-center text-sm">
       {segments && segments.length > 0 ? (
         <ol className="flex flex-wrap items-center gap-1.5">
           {segments.map((item, index) => {
@@ -73,24 +71,21 @@ export function Breadcrumbs({ locale }: BreadcrumbsProps) {
               <React.Fragment key={item.href}>
                 {index !== 0 && (
                   <li role="presentation" aria-hidden="true" className="flex items-center">
-                    <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60" />
+                    <ChevronRight className="text-muted-foreground/60 size-3.5 shrink-0" />
                   </li>
                 )}
                 <li className="inline-flex items-center gap-1.5">
-                  {Icon && <Icon className="size-3.5 shrink-0 text-muted-foreground" />}
+                  {Icon && <Icon className="text-muted-foreground size-3.5 shrink-0" />}
                   {isLast ? (
-                    <span
-                      aria-current="page"
-                      className="font-medium text-foreground"
-                    >
+                    <span aria-current="page" className="text-foreground font-medium">
                       {title}
                     </span>
                   ) : (
                     <Link
                       href={item.href}
                       className={cn(
-                        "transition-colors hover:text-foreground",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:rounded-sm",
+                        "hover:text-foreground transition-colors",
+                        "focus-visible:ring-ring focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                       )}
                     >
                       {title}

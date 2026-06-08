@@ -79,10 +79,7 @@ function writeStoredSidebar(next: StoredSidebarState) {
   if (typeof window === "undefined") return;
   try {
     const existing = readStoredSidebar() ?? {};
-    window.localStorage.setItem(
-      SIDEBAR_STORAGE_KEY,
-      JSON.stringify({ ...existing, ...next }),
-    );
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify({ ...existing, ...next }));
   } catch {
     /* localStorage might be unavailable in private mode — ignore */
   }
@@ -357,8 +354,8 @@ const Sidebar = React.forwardRef<
             "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex md:w-[--sidebar-width-tablet] lg:w-[--sidebar-width]",
             "group-data-[dragging=true]:transition-none",
             side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] group-data-[collapsible=hidden]:left-[calc(var(--sidebar-width)*-1)]"
-              : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] group-data-[collapsible=hidden]:right-[calc(var(--sidebar-width)*-1)]",
+              ? "left-0 group-data-[collapsible=hidden]:left-[calc(var(--sidebar-width)*-1)] group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
+              : "right-0 group-data-[collapsible=hidden]:right-[calc(var(--sidebar-width)*-1)] group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
             // Peek state: slide back to flush-left, raise z-index above the
             // topbar (z-40) and other chrome so it overlays without pushing
             // the page.
@@ -562,38 +559,37 @@ SidebarRail.displayName = "SidebarRail";
  * Mount once at the layout level alongside `<Sidebar collapsible="hidden" />`.
  * Hidden while the user is peeking (the sidebar itself is already visible).
  */
-const SidebarFloatingReopen = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button">
->(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, open, isMobile, peeking } = useSidebar();
-  if (open || isMobile || peeking) return null;
+const SidebarFloatingReopen = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+  ({ className, onClick, ...props }, ref) => {
+    const { toggleSidebar, open, isMobile, peeking } = useSidebar();
+    if (open || isMobile || peeking) return null;
 
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          ref={ref}
-          type="button"
-          aria-label="Open sidebar"
-          aria-expanded={false}
-          onClick={(event) => {
-            onClick?.(event);
-            toggleSidebar();
-          }}
-          className={cn(
-            "fixed left-3 top-3 z-30 inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-foreground/70 transition-opacity hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            className,
-          )}
-          {...props}
-        >
-          <PanelLeftOpen className="h-5 w-5" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="right">Show sidebar ({getModKey()} B)</TooltipContent>
-    </Tooltip>
-  );
-});
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            ref={ref}
+            type="button"
+            aria-label="Open sidebar"
+            aria-expanded={false}
+            onClick={(event) => {
+              onClick?.(event);
+              toggleSidebar();
+            }}
+            className={cn(
+              "text-foreground/70 hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring fixed left-3 top-3 z-30 inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent transition-opacity focus-visible:outline-none focus-visible:ring-2",
+              className,
+            )}
+            {...props}
+          >
+            <PanelLeftOpen className="h-5 w-5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Show sidebar ({getModKey()} B)</TooltipContent>
+      </Tooltip>
+    );
+  },
+);
 SidebarFloatingReopen.displayName = "SidebarFloatingReopen";
 
 /**

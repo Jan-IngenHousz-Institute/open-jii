@@ -3,12 +3,7 @@
 import * as React from "react";
 
 export type ActivityJobKind = "data_export" | "ambyte_processing" | "metadata_reprocess";
-export type ActivityJobStatus =
-  | "queued"
-  | "pending"
-  | "running"
-  | "succeeded"
-  | "failed";
+export type ActivityJobStatus = "queued" | "pending" | "running" | "succeeded" | "failed";
 
 export interface ActivityEntry {
   id: string;

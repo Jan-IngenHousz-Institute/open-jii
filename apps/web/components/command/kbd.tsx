@@ -14,7 +14,7 @@ export function Kbd({ className, children, ...rest }: KbdProps) {
   return (
     <kbd
       className={cn(
-        "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded px-1 font-mono text-[11px] font-medium text-muted-foreground",
+        "text-muted-foreground inline-flex h-[18px] min-w-[18px] items-center justify-center rounded px-1 font-mono text-[11px] font-medium",
         "bg-[hsl(180_12%_92%)] dark:bg-[hsl(180_15%_18%)]",
         className,
       )}
