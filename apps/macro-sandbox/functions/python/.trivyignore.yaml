@@ -56,6 +56,8 @@ vulnerabilities:
     statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
   - id: CVE-2026-42499
     statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-42504
+    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
 
   # glibc in Amazon Linux 2023 base image
   - id: CVE-2026-4046
