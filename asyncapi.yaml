@@ -144,41 +144,48 @@ components:
     DeviceScriptMessage:
       contentType: application/json
       name: DeviceScriptMessage
-      title: Device Script Delivery Message
-      summary: A behaviour script delivered from the cloud to a device.
+      title: Device Script Update Message
+      summary: A protocol measurement script delivered from the cloud to a device.
       payload:
         type: object
         properties:
-          scriptId:
+          type:
             type: string
-            description: Identifier of the script version (UUID recommended). Lets a device skip a script it has already applied.
-          script:
+            enum: ["script_update"]
+            description: >
+              Command discriminator. Lets the same topic carry future command
+              types alongside script_update.
+          id:
             type: string
             description: >
-              The script body. May be a raw string (legacy) or a gzip+base64
-              encoded string when _script_encoding is set.
-          _script_encoding:
+              Unique update identifier (e.g. upd-2026-06-08-001). Lets a device
+              skip an update it has already applied.
+          payload:
+            type: string
+            description: >
+              The protocol measurement script body (Lua source), sent inline.
+              May be a raw string or a gzip+base64 encoded string when
+              _payload_encoding is set.
+          _payload_encoding:
             type: string
             enum: ["gzip+base64"]
             description: >
-              When present, indicates that the `script` field has been compressed
-              (gzip) and base64-encoded to reduce payload size. Absent on legacy
-              (uncompressed) payloads.
+              When present, indicates that the `payload` field has been
+              compressed (gzip) and base64-encoded to reduce message size.
+              Absent on raw (uncompressed) payloads.
           checksum:
             type: string
             description: SHA-256 hex digest of the decoded script body, for integrity verification before applying.
-          issuedAt:
-            type: string
-            description: ISO 8601 timestamp with UTC offset marking when the script was issued (e.g. "2026-03-09T10:30:00.000Z").
         required:
-          - scriptId
-          - script
+          - type
+          - id
+          - payload
       examples:
         - payload:
-            scriptId: "9b2c1f7e-4d3a-4c8e-9f10-2a6b5c4d3e2f"
-            script: "{\"protocol\":\"pulse\",\"interval_ms\":500}"
+            type: "script_update"
+            id: "upd-2026-06-08-001"
+            payload: "-- Lua protocol script\nreturn { pulses = 100, interval_ms = 500 }"
             checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-            issuedAt: "2026-03-09T10:30:00.000Z"
 
   securitySchemes:
     sigv4:
