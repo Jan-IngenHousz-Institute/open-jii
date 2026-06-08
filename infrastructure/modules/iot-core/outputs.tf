@@ -8,10 +8,6 @@ output "iot_policy_name" {
   value       = one([for policy in aws_iot_policy.iot_policy : policy.name])
 }
 
-output "iot_policy_arns" {
-  description = "ARNs of the IoT policies"
-  value       = [for policy in aws_iot_policy.iot_policy : policy.arn]
-}
 
 output "iot_topic_rule_names" {
   description = "Names of the IoT Topic Rules"

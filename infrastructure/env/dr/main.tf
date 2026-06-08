@@ -493,7 +493,6 @@ module "backend_ecs" {
 
   enable_cognito_policy     = true
   cognito_identity_pool_arn = module.cognito.identity_pool_arn
-  iot_policy_arn            = module.iot_core.iot_policy_arns[0]
 
   secrets = [
     { name = "AUTH_GITHUB_ID", valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_ID::" },
