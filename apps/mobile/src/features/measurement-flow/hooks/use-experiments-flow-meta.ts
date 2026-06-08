@@ -4,9 +4,9 @@ import type {
   FlowEdge,
   FlowNode,
 } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
+import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
 import { tsr } from "~/shared/api/tsr";
-import { estimateFlowDuration } from "~/shared/utils/estimate-flow-duration";
-import { orderFlowNodes } from "~/shared/utils/order-flow-nodes";
 
 export interface ExperimentFlowMeta {
   requiresSensor: boolean;

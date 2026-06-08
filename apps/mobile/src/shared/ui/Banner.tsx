@@ -3,7 +3,7 @@ import { X } from "lucide-react-native";
 import React, { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Button } from "~/shared/ui/Button";
-import { cn } from "~/shared/utils/cn";
+import { cn } from "~/shared/ui/cn";
 
 export type BannerVariant = "yellow" | "mint" | "info";
 

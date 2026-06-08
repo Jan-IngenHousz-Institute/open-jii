@@ -1,7 +1,7 @@
 import type { BleError, Device } from "react-native-ble-plx";
 import { ScanMode } from "react-native-ble-plx";
-import { Emitter } from "~/shared/utils/emitter";
-import { createLogger } from "~/shared/utils/logger";
+import { Emitter } from "~/features/connection/utils/emitter";
+import { createLogger } from "~/shared/observability/logger";
 
 import { requestBluetoothPermission } from "../request-bluetooth-permissions";
 import { prepareBluetooth } from "./prepare-bluetooth";
