@@ -9,7 +9,6 @@ info:
     device-bound channels (the cloud publishes behaviour scripts that devices subscribe to).
   contact:
     name: openJII
-    email: ji-institute@info.nl
   license:
     name: GNU General Public License
     url: https://www.gnu.org/licenses/gpl-3.0.html
