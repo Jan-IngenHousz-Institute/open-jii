@@ -1,4 +1,4 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { SidebarProvider } from "@repo/ui/components/sidebar";
@@ -80,5 +80,14 @@ describe("AppSidebar", () => {
     expect(screen.getByText("Library")).toBeInTheDocument();
     expect(screen.getByText("Protocols")).toBeInTheDocument();
     expect(screen.getByText("Macros")).toBeInTheDocument();
+  });
+
+  it("opens the command palette from the sidebar search row", () => {
+    const handler = vi.fn();
+    window.addEventListener("openjii:open-command-palette", handler);
+    renderSidebar();
+    fireEvent.click(screen.getByLabelText("Open command palette"));
+    expect(handler).toHaveBeenCalledTimes(1);
+    window.removeEventListener("openjii:open-command-palette", handler);
   });
 });
