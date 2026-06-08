@@ -18,8 +18,11 @@ function mapStatus(s: ExportRecord["status"]): ActivityJobStatus {
   return s === "completed" ? "succeeded" : s;
 }
 
-function exportEntryId(record: ExportRecord, fallbackKey: string): string {
-  return record.exportId ?? `pending-${fallbackKey}-${record.createdAt}`;
+function exportEntryId(record: ExportRecord, tableKey: string): string {
+  // Stable across the export's lifecycle: `exportId` only appears after the
+  // first poll, so keying on it would orphan the pending entry (duplicate row,
+  // skipped transition toast). `tableKey` + `createdAt` is stable from creation.
+  return `export-${tableKey}-${record.createdAt}`;
 }
 
 /**

@@ -84,6 +84,33 @@ describe("useTrackExports", () => {
     expect(lastToastArg()?.description).toContain("ready to download");
   });
 
+  it("keeps a single entry when exportId appears after the first poll", () => {
+    const { result, rerender } = track([
+      {
+        status: "running",
+        format: "csv",
+        createdAt: "2026-02-01T00:00:00.000Z",
+        completedAt: null,
+      },
+    ]);
+    expect(result.current.entries).toHaveLength(1);
+    act(() =>
+      rerender({
+        exports: [
+          {
+            exportId: "x9",
+            status: "running",
+            format: "csv",
+            createdAt: "2026-02-01T00:00:00.000Z",
+            completedAt: null,
+          },
+        ],
+      }),
+    );
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.entries[0]?.resultUrl).toContain("/exports/x9/download");
+  });
+
   it("fires a destructive toast on the running → failed transition", () => {
     const { rerender } = track([
       {

@@ -1,6 +1,7 @@
 "use client";
 
 import { CommandKHint } from "@/components/command/kbd";
+import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,8 +11,6 @@ import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sideba
 
 import { NavItems } from "../nav-items/nav-items";
 import { iconMap } from "../navigation-config";
-
-const COMMAND_PALETTE_OPEN_EVENT = "openjii:open-command-palette";
 
 function openCommandPalette() {
   if (typeof window === "undefined") return;
@@ -131,5 +130,3 @@ export function AppSidebar({
     </Sidebar>
   );
 }
-
-export { COMMAND_PALETTE_OPEN_EVENT };

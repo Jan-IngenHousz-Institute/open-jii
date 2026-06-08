@@ -427,6 +427,7 @@ const SidebarRail = React.forwardRef<HTMLDivElement, SidebarRailProps>(
       startX: number;
       startWidth: number;
       moved: boolean;
+      dir: number;
     } | null>(null);
 
     const handlePointerDown = React.useCallback(
@@ -439,6 +440,9 @@ const SidebarRail = React.forwardRef<HTMLDivElement, SidebarRailProps>(
           startX: event.clientX,
           startWidth: width,
           moved: false,
+          // On a right-side sidebar the handle is on the left edge, so dragging
+          // right shrinks it — invert the delta.
+          dir: target.closest("[data-side]")?.getAttribute("data-side") === "right" ? -1 : 1,
         };
         setDragging(true);
         event.preventDefault();
@@ -450,7 +454,7 @@ const SidebarRail = React.forwardRef<HTMLDivElement, SidebarRailProps>(
       (event: React.PointerEvent<HTMLDivElement>) => {
         const state = dragStateRef.current;
         if (!state) return;
-        const delta = event.clientX - state.startX;
+        const delta = (event.clientX - state.startX) * state.dir;
         if (Math.abs(delta) > 2) state.moved = true;
         const next = state.startWidth + delta;
         if (next < SIDEBAR_COLLAPSE_THRESHOLD) {
@@ -487,12 +491,16 @@ const SidebarRail = React.forwardRef<HTMLDivElement, SidebarRailProps>(
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (!resizable) return;
+        const dir =
+          event.currentTarget.closest("[data-side]")?.getAttribute("data-side") === "right"
+            ? -1
+            : 1;
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          setWidth(width - SIDEBAR_WIDTH_KEYBOARD_STEP);
+          setWidth(width - SIDEBAR_WIDTH_KEYBOARD_STEP * dir);
         } else if (event.key === "ArrowRight") {
           event.preventDefault();
-          setWidth(width + SIDEBAR_WIDTH_KEYBOARD_STEP);
+          setWidth(width + SIDEBAR_WIDTH_KEYBOARD_STEP * dir);
         } else if (event.key === "Home") {
           event.preventDefault();
           setWidth(SIDEBAR_WIDTH_MIN);

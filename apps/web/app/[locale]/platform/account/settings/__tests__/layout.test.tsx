@@ -41,11 +41,8 @@ describe("AccountSettingsLayout", () => {
 
   it("marks settings tab as active via aria-selected", async () => {
     await renderLayout("/en-US/platform/account/settings");
-
-    const activeTab = screen
-      .getAllByRole("tab")
-      .find((el) => el.getAttribute("aria-selected") === "true");
-    expect(activeTab).toBeInTheDocument();
+    const settingsTab = screen.getByRole("tab", { name: "account:settings.title" });
+    expect(settingsTab).toHaveAttribute("aria-selected", "true");
   });
 
   it("renders disabled tabs without links", async () => {

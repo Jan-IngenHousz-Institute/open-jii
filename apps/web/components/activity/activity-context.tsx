@@ -40,7 +40,10 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
       if (
         existing.status === entry.status &&
         existing.updatedAt === entry.updatedAt &&
-        existing.title === entry.title
+        existing.title === entry.title &&
+        existing.resultUrl === entry.resultUrl &&
+        existing.format === entry.format &&
+        existing.experimentId === entry.experimentId
       ) {
         return prev;
       }

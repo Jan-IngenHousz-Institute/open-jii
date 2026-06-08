@@ -51,13 +51,13 @@ function Consumer() {
   );
 }
 
-function renderWithRail(props?: { defaultOpen?: boolean }) {
+function renderWithRail(props?: { defaultOpen?: boolean; side?: "left" | "right" }) {
   return render(
     <SidebarProvider defaultOpen={props?.defaultOpen ?? true}>
-      <Sidebar collapsible="hidden">
+      <Sidebar collapsible="hidden" side={props?.side}>
         <div>content</div>
+        <SidebarRail resizable />
       </Sidebar>
-      <SidebarRail resizable />
       <Consumer />
     </SidebarProvider>,
   );
@@ -204,6 +204,21 @@ describe("SidebarRail (resizable)", () => {
     expect(widthVal()).toBe(360);
     fireEvent.keyDown(rail, { key: "Enter" });
     expect(screen.getByTestId("state")).toHaveTextContent("collapsed");
+  });
+
+  it("inverts drag and keyboard direction for a right-side sidebar", () => {
+    renderWithRail({ side: "right" });
+    fireEvent.click(screen.getByTestId("set-300"));
+    const rail = screen.getByRole("separator", { name: "Resize sidebar" });
+    // Moving the left-edge handle right shrinks a right-anchored sidebar.
+    firePointer(rail, "pointerdown", { clientX: 300 });
+    firePointer(rail, "pointermove", { clientX: 350 });
+    expect(widthVal()).toBe(250);
+    firePointer(rail, "pointerup");
+    // ArrowRight shrinks on the right side too.
+    fireEvent.keyDown(rail, { key: "End" });
+    fireEvent.keyDown(rail, { key: "ArrowRight" });
+    expect(widthVal()).toBe(352);
   });
 
   it("toggles on click when not resizable", () => {

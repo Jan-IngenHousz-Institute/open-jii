@@ -20,11 +20,16 @@ function isInputTarget(target: EventTarget | null): boolean {
 // `C` create — map the current section to its create route. Returns null where
 // there is nothing to create (no-op rather than a dead navigation).
 function createPathFor(pathname: string, locale: string): string | null {
-  if (pathname.endsWith("/new")) return null;
+  // Match the section segment exactly so e.g. `experiments-archive` (read-only)
+  // doesn't get treated as `experiments`.
+  const segments = pathname.split("/").filter(Boolean);
+  const platformIdx = segments.indexOf("platform");
+  const section = platformIdx >= 0 ? segments[platformIdx + 1] : undefined;
+  if (!section || segments[segments.length - 1] === "new") return null;
   const base = `/${locale}/platform`;
-  if (pathname.includes("/platform/experiments")) return `${base}/experiments/new`;
-  if (pathname.includes("/platform/protocols")) return `${base}/protocols/new`;
-  if (pathname.includes("/platform/macros")) return `${base}/macros/new`;
+  if (section === "experiments") return `${base}/experiments/new`;
+  if (section === "protocols") return `${base}/protocols/new`;
+  if (section === "macros") return `${base}/macros/new`;
   return null;
 }
 
@@ -159,6 +164,9 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [enterGMode, exitGMode, goToShortcuts, router, pathname, locale]);
+
+  // Clear any pending g-mode timer/toast when the component unmounts.
+  React.useEffect(() => () => exitGMode(), [exitGMode]);
 
   return null;
 }
