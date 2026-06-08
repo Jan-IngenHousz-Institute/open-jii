@@ -82,14 +82,13 @@ export async function createSignedUrl(params: {
   return `wss://${params.endpoint}${canonicalUri}?${query}`;
 }
 
+const logger = createLogger("aws-iot-auth");
+
 // Developer-authenticated IoT credentials are valid for ~1h. Reuse the same
 // set across every MQTT publish in that window — kept in memory only (never on
 // disk: these *are* secrets). Refresh ~1 min before the reported expiration so
 // a publish in flight doesn't race expiry.
 const CREDENTIALS_SAFETY_MARGIN_MS = 60_000;
-// Fallback TTL if the backend doesn't populate expiration (defends against an
-// undefined slipping through to NaN math).
-const CREDENTIALS_FALLBACK_TTL_MS = 50 * 60_000;
 
 interface CachedCredentials {
   accessKeyId: string;
@@ -144,9 +143,13 @@ export async function getCredentials() {
       throw new Error("Missing one or more required AWS credential fields.");
     }
 
-    const expiresAt = expiration
-      ? new Date(expiration).getTime()
-      : Date.now() + CREDENTIALS_FALLBACK_TTL_MS;
+    const expiresAt = expiration ? new Date(expiration).getTime() : NaN;
+    if (!Number.isFinite(expiresAt)) {
+      // No silent long-lived fallback: a missing/invalid expiration is a
+      // backend contract breach we must surface, not paper over.
+      logger.error("IoT credentials missing or invalid expiration", { expiration });
+      throw new Error("IoT credentials missing or invalid expiration field.");
+    }
 
     const next: CachedCredentials = { accessKeyId, secretAccessKey, sessionToken, expiresAt };
     cachedCredentials = next;
