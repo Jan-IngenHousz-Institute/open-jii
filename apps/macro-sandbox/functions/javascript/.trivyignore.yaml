@@ -47,6 +47,23 @@ vulnerabilities:
       Sandbox has no outbound HTTP, no proxy config, and no IAM
       creds, so the redirect path is unreachable.
     expired_at: 2026-07-12
+  - id: CVE-2026-44487
+    statement: >-
+      Proxy-Authorization credential leak to the origin server on
+      an HTTP-to-HTTPS redirect. Sandbox has no outbound HTTP, no
+      proxy config, and no IAM creds.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44488
+    statement: >-
+      Unbounded resource allocation (no response throttling).
+      Sandbox has no outbound HTTP, so no attacker-controlled
+      response reaches axios.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44496
+    statement: >-
+      ReDoS via a crafted value. Sandbox has no outbound HTTP, so
+      no attacker-controlled response reaches axios.
+    expired_at: 2026-07-12
 
   # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
   # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
