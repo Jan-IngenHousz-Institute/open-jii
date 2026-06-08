@@ -1,7 +1,7 @@
 import * as Updates from "expo-updates";
 import { useEffect } from "react";
 import { toast } from "sonner-native";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("ota");
 

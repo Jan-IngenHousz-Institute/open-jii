@@ -2,7 +2,7 @@ import { Clock } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useMeasurementCounts } from "~/features/recent-measurements/hooks/use-all-measurements";
-import { cn } from "~/shared/utils/cn";
+import { cn } from "~/shared/ui/cn";
 
 export function RecentTabIcon({ color, size }: { color: string; size: number }) {
   const { unsyncedCount } = useMeasurementCounts();

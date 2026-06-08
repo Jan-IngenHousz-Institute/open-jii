@@ -7,11 +7,11 @@ import { Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
+import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { AnswerData } from "~/shared/utils/convert-cycle-answers-to-array";
-import { formatTimeAgo } from "~/shared/utils/format-time-ago";
 
 const answersValueStyle = cva("flex-1", {
   variants: {

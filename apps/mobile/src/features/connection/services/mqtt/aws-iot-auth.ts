@@ -6,8 +6,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
 import "react-native-get-random-values";
-import { createLogger } from "~/shared/utils/logger";
-import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/utils/time-sync";
+import { createLogger } from "~/shared/observability/logger";
+import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/time/time-sync";
 
 const log = createLogger("mqtt-conn");
 

@@ -120,6 +120,11 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
           "cognito-identity:GetCredentialsForIdentity"
         ]
         Resource = var.cognito_identity_pool_arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iot:AttachPolicy"]
+        Resource = var.iot_policy_arn != "" ? var.iot_policy_arn : "*"
       }
     ]
   })

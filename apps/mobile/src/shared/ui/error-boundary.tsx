@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("error-boundary");
 

@@ -8,9 +8,9 @@ import {
   markAsFailed,
   markAsSuccessful,
 } from "~/shared/db/measurements-storage";
-import { onAppForeground } from "~/shared/utils/app-lifecycle";
-import { createLogger } from "~/shared/utils/logger";
-import { getTrace, startTrace } from "~/shared/utils/trace";
+import { onAppForeground } from "~/shared/device/app-lifecycle";
+import { createLogger } from "~/shared/observability/logger";
+import { getTrace, startTrace } from "~/shared/observability/trace";
 
 import { UPLOAD_CONCURRENCY, UPLOAD_RETRY_BACKOFF_MS } from "./upload-constants";
 

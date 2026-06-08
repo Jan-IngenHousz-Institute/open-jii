@@ -209,8 +209,9 @@ resource "aws_s3_bucket_notification" "large_iot" {
   bucket = var.large_iot_bucket_name
 
   queue {
-    queue_arn = aws_sqs_queue.large_iot_notifications[0].arn
-    events    = ["s3:ObjectCreated:*"]
+    queue_arn     = aws_sqs_queue.large_iot_notifications[0].arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".json"
   }
 
   depends_on = [aws_sqs_queue_policy.large_iot_notifications]

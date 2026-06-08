@@ -1,6 +1,6 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 import mathLibResource from "./math.lib.js.txt";
 import { getPythonMacroRunner } from "./python-macro-runner";

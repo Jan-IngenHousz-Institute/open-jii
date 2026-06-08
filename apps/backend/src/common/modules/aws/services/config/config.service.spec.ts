@@ -42,6 +42,10 @@ describe("AwsConfigService", () => {
         process.env.AWS_COGNITO_DEVELOPER_PROVIDER_NAME,
       );
     });
+
+    it("should return the correct iotPolicyName", () => {
+      expect(service.iotPolicyName).toBe(process.env.AWS_IOT_POLICY_NAME);
+    });
   });
 
   describe("config validation", () => {

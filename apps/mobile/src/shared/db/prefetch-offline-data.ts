@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { tsr } from "~/shared/api/tsr";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 import { uniq } from "~/shared/utils/uniq";
 
 const log = createLogger("prefetch");

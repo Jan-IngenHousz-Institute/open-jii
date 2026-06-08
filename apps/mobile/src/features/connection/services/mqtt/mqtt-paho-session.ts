@@ -1,8 +1,8 @@
 import { Client, Message } from "paho-mqtt";
 import "react-native-get-random-values";
+import { generateRandomString } from "~/features/connection/utils/generate-random-string";
+import { createLogger } from "~/shared/observability/logger";
 import { getEnvVar } from "~/shared/stores/environment-store";
-import { generateRandomString } from "~/shared/utils/generate-random-string";
-import { createLogger } from "~/shared/utils/logger";
 
 import { createSignedUrl, getCredentials } from "./aws-iot-auth";
 import { MqttError } from "./mqtt-errors";

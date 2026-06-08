@@ -7,7 +7,7 @@ import {
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
 import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("auth");
 
