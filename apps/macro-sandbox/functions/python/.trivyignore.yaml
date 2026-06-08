@@ -56,6 +56,12 @@ vulnerabilities:
     statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
   - id: CVE-2026-42499
     statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-42504
+    statement: >-
+      Go std/mime MIME-header decode DoS (Go before 1.25.11 / 1.26.4).
+      Present only in the aws-lambda-rie binary, which is used for local
+      testing — production Lambda ignores it and runs the runtime interface
+      client instead.
 
   # glibc in Amazon Linux 2023 base image
   - id: CVE-2026-4046

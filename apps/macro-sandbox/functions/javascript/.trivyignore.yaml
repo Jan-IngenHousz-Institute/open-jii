@@ -41,6 +41,29 @@ vulnerabilities:
       Full MITM via prototype pollution in HTTP path. Sandbox
       has no outbound HTTP.
     expired_at: 2026-07-12
+  - id: CVE-2026-44486
+    statement: >-
+      Proxy-Authorization header leaks to the redirect target.
+      Sandbox has no outbound HTTP, no proxy config, and no IAM
+      creds, so the redirect path is unreachable.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44487
+    statement: >-
+      Proxy-Authorization credential leak to the origin server on
+      an HTTP-to-HTTPS redirect. Sandbox has no outbound HTTP, no
+      proxy config, and no IAM creds.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44488
+    statement: >-
+      Unbounded resource allocation (no response throttling).
+      Sandbox has no outbound HTTP, so no attacker-controlled
+      response reaches axios.
+    expired_at: 2026-07-12
+  - id: CVE-2026-44496
+    statement: >-
+      ReDoS via a crafted value. Sandbox has no outbound HTTP, so
+      no attacker-controlled response reaches axios.
+    expired_at: 2026-07-12
 
   # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
   # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
@@ -92,6 +115,12 @@ vulnerabilities:
     statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
   - id: CVE-2026-42499
     statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
+  - id: CVE-2026-42504
+    statement: >-
+      Go std/mime MIME-header decode DoS (Go before 1.25.11 / 1.26.4).
+      Present only in the aws-lambda-rie binary, which is used for local
+      testing — production Lambda ignores it and runs the runtime interface
+      client instead.
 
   # glibc in Amazon Linux 2023 base image
   - id: CVE-2026-4046

@@ -108,7 +108,8 @@ runs:
         token: ${{ inputs.codecov-token }}
         files: apps/*/coverage.json,tooling/*/coverage.json,packages/*/coverage.json
         flags: affected
-        fail_ci_if_error: true
+        # Non-blocking: a Codecov-side upload/verification hiccup must not fail PR CI
+        fail_ci_if_error: false
         verbose: true
         override_branch: ${{ github.head_ref }}
         override_commit: ${{ github.event.pull_request.head.sha }}
