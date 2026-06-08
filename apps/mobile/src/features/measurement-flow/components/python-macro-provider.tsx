@@ -4,7 +4,7 @@ import WebView from "react-native-webview";
 import { pythonMacroSandboxHtml } from "~/features/measurement-flow/services/python/python-macro-sandbox";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { registerPythonMacroRunner } from "~/features/measurement-flow/utils/process-scan/python-macro-runner";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("macro-py");
 

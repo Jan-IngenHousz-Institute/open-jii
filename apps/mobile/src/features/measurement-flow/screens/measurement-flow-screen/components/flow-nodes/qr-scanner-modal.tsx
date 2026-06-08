@@ -4,8 +4,8 @@ import { Info, X } from "lucide-react-native";
 import React, { useRef } from "react";
 import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "~/shared/i18n";
+import { createLogger } from "~/shared/observability/logger";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { createLogger } from "~/shared/utils/logger";
 
 import { CameraPermissionState, useCameraPermission } from "./camera-permission-state";
 

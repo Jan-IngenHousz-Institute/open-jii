@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ScrollView } from "react-native";
 import { toast } from "sonner-native";
 import { useTranslation } from "~/shared/i18n";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 import {
   CalibrationProtocol,

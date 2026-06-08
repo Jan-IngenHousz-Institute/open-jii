@@ -1,7 +1,7 @@
 import { Parity, UsbSerialManager } from "react-native-usb-serialport-for-android";
-import { delay } from "~/shared/utils/delay";
-import { Emitter } from "~/shared/utils/emitter";
-import { createLogger } from "~/shared/utils/logger";
+import { delay } from "~/features/connection/utils/delay";
+import { Emitter } from "~/features/connection/utils/emitter";
+import { createLogger } from "~/shared/observability/logger";
 
 import type { SerialPortEvents } from "./serial-port-events";
 

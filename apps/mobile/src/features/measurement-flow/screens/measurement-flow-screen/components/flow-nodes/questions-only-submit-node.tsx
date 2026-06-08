@@ -11,12 +11,12 @@ import { CommentModal } from "~/features/recent-measurements/components/comment-
 import { FlagTypeModal } from "~/features/recent-measurements/components/flag-type-modal";
 import { useQuestionsUpload } from "~/features/recent-measurements/hooks/use-questions-upload";
 import { useTranslation } from "~/shared/i18n";
+import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations";
+import { createLogger } from "~/shared/observability/logger";
+import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { convertCycleAnswersToArray } from "~/shared/utils/convert-cycle-answers-to-array";
-import { createLogger } from "~/shared/utils/logger";
-import { FLAG_TYPE_LABELS } from "~/shared/utils/measurement-annotations";
-import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/utils/time-sync";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 

@@ -1,5 +1,5 @@
 import { PermissionsAndroid, Platform } from "react-native";
-import { keepTruthy } from "~/shared/utils/keep-truthy";
+import { keepTruthy } from "~/features/connection/utils/keep-truthy";
 
 function getRequiredBluetoothPermissions() {
   const isAndroidPre12 =
