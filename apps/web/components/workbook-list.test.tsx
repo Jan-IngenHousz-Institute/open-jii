@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { WorkbookList } from "./workbook-list";
 
@@ -95,6 +96,21 @@ describe("WorkbookList row actions", () => {
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.body).toMatchObject({ name: "workbooks.duplicateName" });
+  });
+
+  it("shows an error toast when duplicate fails", async () => {
+    server.mount(contract.workbooks.createWorkbook, { status: 500 });
+    const user = userEvent.setup();
+    render(<WorkbookList workbooks={[unused]} />);
+
+    const row = screen.getByText("Source WB").closest("tr");
+    if (!row) throw new Error("row not found");
+    await user.click(within(row).getByLabelText("workbooks.actions.more"));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.duplicate" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
+    );
   });
 
   it("confirms then deletes a workbook", async () => {

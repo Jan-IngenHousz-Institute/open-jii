@@ -104,4 +104,19 @@ describe("EmptyWorkbookState", () => {
     await waitFor(() => expect(attachSpy.called).toBe(true));
     expect(attachSpy.body).toMatchObject({ workbookId: "wb-new" });
   });
+
+  it("shows error toast when workbook creation fails", async () => {
+    server.mount(contract.workbooks.createWorkbook, { status: 500 });
+    const user = userEvent.setup();
+    render(<EmptyWorkbookState experimentId="exp-1" experimentName="My Experiment" hasAccess />);
+
+    await user.click(screen.getByRole("button", { name: /flow\.createNew/ }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "flow.createFailed",
+        variant: "destructive",
+      }),
+    );
+  });
 });
