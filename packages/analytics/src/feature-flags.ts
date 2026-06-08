@@ -8,6 +8,7 @@ export const FEATURE_FLAGS = {
   PROTOCOL_DELETION: "protocol-deletion",
   EXPERIMENT_DELETION: "experiment-deletion",
   MACRO_DELETION: "macro-deletion",
+  WORKBOOK_DELETION: "workbook-deletion",
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
@@ -22,4 +23,5 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.PROTOCOL_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.EXPERIMENT_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.MACRO_DELETION]: false, // Default to disabled for safety
+  [FEATURE_FLAGS.WORKBOOK_DELETION]: false, // Default to disabled for safety
 };

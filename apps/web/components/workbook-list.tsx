@@ -8,8 +8,10 @@ import { formatDate } from "@/util/date";
 import { Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useMemo, useState } from "react";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -174,6 +176,12 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
   const author = workbook.createdByName ?? `${workbook.createdBy.slice(0, 8)}…`;
   const usedBy = workbook.experimentCount ?? 0;
 
+  // Deleting a workbook attached to experiments unlinks them and loses their
+  // measurement flow, so that path is gated behind a feature flag (same as
+  // experiment deletion). Unused workbooks stay freely deletable.
+  const workbookDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.WORKBOOK_DELETION);
+  const canDelete = usedBy === 0 || workbookDeletionEnabled === true;
+
   return (
     <>
       <TableRow
@@ -248,17 +256,21 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
                   <Copy className="mr-2 size-4" />
                   {t("workbooks.actions.duplicate")}
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setConfirmingDelete(true);
-                  }}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 size-4" />
-                  {t("workbooks.actions.delete")}
-                </DropdownMenuItem>
+                {canDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setConfirmingDelete(true);
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      {t("workbooks.actions.delete")}
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
