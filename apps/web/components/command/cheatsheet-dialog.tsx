@@ -5,12 +5,7 @@ import { CHEATSHEET_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { modifierLabel } from "@/lib/platform";
 import * as React from "react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
 
 interface Row {
   keys: string[];
@@ -34,25 +29,9 @@ function buildSections(mod: string): Section[] {
         { keys: ["G", "M"], label: "Macros" },
         { keys: ["G", "T"], label: "Transfer requests" },
         { keys: ["G", "S"], label: "Settings" },
+        { keys: ["G", "A"], label: "Account" },
+        { keys: ["G", "N"], label: "Notifications" },
         { keys: ["G", "R"], label: "What's new" },
-      ],
-    },
-    {
-      title: "Actions",
-      rows: [
-        { keys: ["C"], label: "Create new (route-aware)" },
-        { keys: ["E"], label: "Edit current item" },
-        { keys: ["/"], label: "Focus inline search" },
-        { keys: ["?"], label: "Open this cheatsheet" },
-        { keys: ["Esc"], label: "Close / cancel" },
-      ],
-    },
-    {
-      title: "Lists",
-      rows: [
-        { keys: ["J"], label: "Next item" },
-        { keys: ["K"], label: "Previous item" },
-        { keys: ["↵"], label: "Open focused item" },
       ],
     },
     {
@@ -60,6 +39,8 @@ function buildSections(mod: string): Section[] {
       rows: [
         { keys: [mod, "K"], label: "Command palette" },
         { keys: [mod, "B"], label: "Toggle sidebar" },
+        { keys: ["?"], label: "Open this cheatsheet" },
+        { keys: ["Esc"], label: "Close / cancel" },
       ],
     },
   ];
@@ -86,15 +67,12 @@ export function CheatsheetDialog() {
         <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
           {SECTIONS.map((section) => (
             <section key={section.title}>
-              <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wider">
                 {section.title}
               </h3>
               <ul className="space-y-2">
                 {section.rows.map((row) => (
-                  <li
-                    key={row.label}
-                    className="flex items-center justify-between gap-4 text-sm"
-                  >
+                  <li key={row.label} className="flex items-center justify-between gap-4 text-sm">
                     <span>{row.label}</span>
                     {row.keys.length === 1 ? (
                       <Kbd>{row.keys[0]}</Kbd>
