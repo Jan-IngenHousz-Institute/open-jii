@@ -15,9 +15,11 @@ vi.mock("paho-mqtt", () => ({ Client: vi.fn(), Message: vi.fn() }));
 vi.mock("react-native-get-random-values", () => ({}));
 vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: () => "stub" }));
 vi.mock("~/shared/time/time-sync", () => ({
-  ensureSynced: vi.fn(),
-  getSyncedUtcDateTime: vi.fn(),
-  getTimeSyncState: vi.fn(),
+  ensureSynced: vi.fn().mockResolvedValue(undefined),
+  // createSignedUrl calls .toFormat on the returned DateTime; return a stub that
+  // echoes the format so signing proceeds deterministically.
+  getSyncedUtcDateTime: vi.fn(() => ({ toFormat: (fmt: string) => fmt })),
+  getTimeSyncState: vi.fn(() => ({ timezone: "UTC" })),
 }));
 vi.mock("~/features/connection/utils/emitter", () => ({ Emitter: vi.fn() }));
 vi.mock("~/features/connection/utils/generate-random-string", () => ({
