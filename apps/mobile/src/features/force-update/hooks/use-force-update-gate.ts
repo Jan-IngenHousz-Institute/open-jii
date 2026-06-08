@@ -3,8 +3,8 @@ import * as Application from "expo-application";
 import { useEffect, useMemo, useState } from "react";
 import { fetchForceUpdate } from "~/features/force-update/services/fetch-force-update";
 import { isVersionBelow } from "~/features/force-update/utils/compare-version";
+import { onAppForeground } from "~/shared/device/app-lifecycle";
 import { useEnvironmentStore } from "~/shared/stores/environment-store";
-import { onAppForeground } from "~/shared/utils/app-lifecycle";
 
 import type { PageForceUpdateFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 

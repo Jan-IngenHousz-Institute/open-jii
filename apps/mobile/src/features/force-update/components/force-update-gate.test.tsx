@@ -35,6 +35,11 @@ vi.mock("~/shared/ui/ctf-rich-text", () => ({
 
 vi.mock("lucide-react-native", () => ({
   ArrowUpCircle: () => null,
+  ArrowRight: () => null,
+}));
+
+vi.mock("expo-application", () => ({
+  nativeApplicationVersion: "1.0.0",
 }));
 
 vi.mock("react-native-safe-area-context", () => ({

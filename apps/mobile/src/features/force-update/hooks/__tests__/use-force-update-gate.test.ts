@@ -45,7 +45,7 @@ vi.mock("~/shared/stores/environment-store", () => ({
     selector({ isLoaded: mockEnvLoaded.value }),
 }));
 
-vi.mock("~/shared/utils/app-lifecycle", () => ({
+vi.mock("~/shared/device/app-lifecycle", () => ({
   onAppForeground: (listener: () => void) => {
     foregroundListeners.add(listener);
     return () => foregroundListeners.delete(listener);
