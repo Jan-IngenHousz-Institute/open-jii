@@ -1,7 +1,6 @@
 "use client";
 
 import { CommandKHint } from "@/components/command/kbd";
-import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -113,7 +112,7 @@ export function AppSidebar({
             type="button"
             onClick={openCommandPalette}
             aria-label="Open command palette"
-            className="flex h-9 w-full items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            className="focus-visible:ring-sidebar-ring flex h-9 w-full items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2"
           >
             <Search className="size-4 shrink-0" />
             <span className="flex-1 truncate">Search…</span>
@@ -126,10 +125,6 @@ export function AppSidebar({
           <NavItems items={processedNavExperiments} />
           <NavItems items={processedNavWorkbooks} />
           <NavItems items={processedNavLibrary} />
-        </div>
-
-        <div className="flex flex-col gap-1 border-t border-white/10 px-4 py-3">
-          <WhatsNewFooterItem label="What's new" />
         </div>
       </div>
       <SidebarRail resizable />

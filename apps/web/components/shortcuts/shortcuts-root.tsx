@@ -1,8 +1,7 @@
 "use client";
 
 import { NOTIFICATION_BELL_TOGGLE_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
-import { useWhatsNew } from "@/components/whats-new/whats-new-context";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { useToast } from "@repo/ui/hooks/use-toast";
@@ -18,6 +17,27 @@ function isInputTarget(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
+// `C` create — map the current section to its create route. Returns null where
+// there is nothing to create (no-op rather than a dead navigation).
+function createPathFor(pathname: string, locale: string): string | null {
+  if (pathname.endsWith("/new")) return null;
+  const base = `/${locale}/platform`;
+  if (pathname.includes("/platform/experiments")) return `${base}/experiments/new`;
+  if (pathname.includes("/platform/protocols")) return `${base}/protocols/new`;
+  if (pathname.includes("/platform/macros")) return `${base}/macros/new`;
+  return null;
+}
+
+// `/` focus — the page's inline search box, if it has one.
+function focusInlineSearch(): boolean {
+  const input = document.querySelector<HTMLInputElement>(
+    'input[type="search"], input[placeholder*="earch"]',
+  );
+  if (!input) return false;
+  input.focus();
+  return true;
+}
+
 interface GoToShortcut {
   key: string;
   label: string;
@@ -27,7 +47,7 @@ interface GoToShortcut {
 
 export function ShortcutsRoot({ locale }: { locale: string }) {
   const router = useRouter();
-  const { setOpen: setWhatsNewOpen } = useWhatsNew();
+  const pathname = usePathname();
   const { toast, dismiss } = useToast();
   const gModeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const inGMode = React.useRef(false);
@@ -43,23 +63,17 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       { key: "t", label: "Transfer requests", path: `/${locale}/platform/transfer-request` },
       { key: "s", label: "Settings", path: `/${locale}/platform/account/settings` },
       {
-        key: "r",
-        label: "What's new",
-        action: () => setWhatsNewOpen(true),
-      },
-      {
         key: "n",
         label: "Notifications",
-        action: () =>
-          window.dispatchEvent(new Event(NOTIFICATION_BELL_TOGGLE_EVENT)),
+        action: () => window.dispatchEvent(new Event(NOTIFICATION_BELL_TOGGLE_EVENT)),
       },
       {
         key: "a",
-        label: "Account / activity",
+        label: "Account",
         path: `/${locale}/platform/account/settings`,
       },
     ],
-    [locale, setWhatsNewOpen],
+    [locale],
   );
 
   const exitGMode = React.useCallback(() => {
@@ -113,14 +127,6 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
         return;
       }
 
-      if (event.key === "Escape") {
-        if (inGMode.current) {
-          exitGMode();
-          event.preventDefault();
-        }
-        return;
-      }
-
       if (event.key === "g") {
         event.preventDefault();
         enterGMode();
@@ -132,11 +138,27 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
         window.dispatchEvent(new Event(CHEATSHEET_OPEN_EVENT));
         return;
       }
+
+      // C — create new, route-aware.
+      if (event.key === "c") {
+        const createPath = createPathFor(pathname, locale);
+        if (createPath) {
+          event.preventDefault();
+          router.push(createPath);
+        }
+        return;
+      }
+
+      // / — focus the page's inline search, if present.
+      if (event.key === "/") {
+        if (focusInlineSearch()) event.preventDefault();
+        return;
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enterGMode, exitGMode, goToShortcuts, router]);
+  }, [enterGMode, exitGMode, goToShortcuts, router, pathname, locale]);
 
   return null;
 }

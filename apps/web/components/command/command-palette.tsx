@@ -1,9 +1,11 @@
 "use client";
 
 import { iconMap } from "@/components/navigation/navigation-config";
-import { CHEATSHEET_OPEN_EVENT, COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
-import { useWhatsNew } from "@/components/whats-new/whats-new-context";
-import { HelpCircle, Keyboard, Send, Sparkles } from "lucide-react";
+import {
+  CHEATSHEET_OPEN_EVENT,
+  COMMAND_PALETTE_OPEN_EVENT,
+} from "@/components/shortcuts/shortcuts-root";
+import { HelpCircle, Keyboard, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -31,7 +33,6 @@ interface PaletteEntry {
 export function CommandPalette({ locale }: { locale: string }) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
-  const { setOpen: setWhatsNewOpen } = useWhatsNew();
 
   React.useEffect(() => {
     const onOpen = () => setOpen(true);
@@ -113,17 +114,6 @@ export function CommandPalette({ locale }: { locale: string }) {
         run: () => navigate(`/${locale}/platform/experiments/new`),
       },
       {
-        id: "action.whats-new",
-        label: "Open What's new",
-        group: "Actions",
-        icon: Sparkles,
-        shortcut: "G R",
-        run: () => {
-          setOpen(false);
-          setWhatsNewOpen(true);
-        },
-      },
-      {
         id: "action.cheatsheet",
         label: "Show keyboard shortcuts",
         group: "Actions",
@@ -145,7 +135,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         },
       },
     ],
-    [locale, navigate, setWhatsNewOpen],
+    [locale, navigate],
   );
 
   const pages = entries.filter((e) => e.group === "Pages");
@@ -154,7 +144,7 @@ export function CommandPalette({ locale }: { locale: string }) {
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, experiments, actions…" />
+        <CommandInput placeholder="Search pages and actions…" />
         <CommandList>
           <CommandEmpty>No results.</CommandEmpty>
           <CommandGroup heading="Pages">
@@ -163,7 +153,7 @@ export function CommandPalette({ locale }: { locale: string }) {
                 {entry.icon && <entry.icon className="mr-2 h-4 w-4" />}
                 {entry.label}
                 {entry.shortcut && (
-                  <span className="ml-auto text-xs tracking-widest text-muted-foreground">
+                  <span className="text-muted-foreground ml-auto text-xs tracking-widest">
                     {entry.shortcut}
                   </span>
                 )}
@@ -177,7 +167,7 @@ export function CommandPalette({ locale }: { locale: string }) {
                 {entry.icon && <entry.icon className="mr-2 h-4 w-4" />}
                 {entry.label}
                 {entry.shortcut && (
-                  <span className="ml-auto text-xs tracking-widest text-muted-foreground">
+                  <span className="text-muted-foreground ml-auto text-xs tracking-widest">
                     {entry.shortcut}
                   </span>
                 )}

@@ -1,4 +1,3 @@
-import { WhatsNewProvider } from "@/components/whats-new/whats-new-context";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
@@ -55,9 +54,7 @@ const translations = {
 function renderSidebar() {
   return render(
     <SidebarProvider>
-      <WhatsNewProvider>
-        <AppSidebar locale="en" navigationData={navigationData} translations={translations} />
-      </WhatsNewProvider>
+      <AppSidebar locale="en" navigationData={navigationData} translations={translations} />
     </SidebarProvider>,
   );
 }

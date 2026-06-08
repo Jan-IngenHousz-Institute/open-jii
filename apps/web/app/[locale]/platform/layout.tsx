@@ -3,8 +3,6 @@ import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { PageContainer } from "@/components/page-container";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
-import { WhatsNewProvider } from "@/components/whats-new/whats-new-context";
-import { WhatsNewSheet } from "@/components/whats-new/whats-new-sheet";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
@@ -57,24 +55,21 @@ export default async function AppLayout({
   return (
     <SidebarProvider>
       <ActivityProvider>
-       <WhatsNewProvider>
         <NavigationSidebarWrapper locale={locale} />
         <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>
           <NavigationTopbar locale={locale} user={session.user} />
-            <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
-              <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
-                <Breadcrumbs locale={locale} />
-                <Suspense>{children}</Suspense>
-              </PageContainer>
-            </div>
+          <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
+            <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
+              <Breadcrumbs locale={locale} />
+              <Suspense>{children}</Suspense>
+            </PageContainer>
+          </div>
         </SidebarInset>
         <ShortcutsRoot locale={locale} />
         <CommandPalette locale={locale} />
-        <WhatsNewSheet />
         <Toaster />
-       </WhatsNewProvider>
       </ActivityProvider>
     </SidebarProvider>
   );

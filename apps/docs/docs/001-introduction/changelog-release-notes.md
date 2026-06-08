@@ -8,7 +8,7 @@ If you have suggestions, feel free to do a [feature request](../data-platform/re
 
 ## Platform Chrome Refresh (in review)
 
-A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, resizable sidebar, a command palette, Linear-style keyboard shortcuts, an activity hub in the topbar, and a "What's new" panel. The walkthrough below shows every piece end to end.
+A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, resizable sidebar, a command palette, Linear-style keyboard shortcuts, and an activity hub in the topbar. The walkthrough below shows every piece end to end.
 
 <video controls width="100%" poster="/img/chrome-refresh/poster.jpg">
   <source src="/img/chrome-refresh/walkthrough.webm" type="video/webm" />
@@ -25,7 +25,7 @@ A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, re
 
   ![Command palette](/img/chrome-refresh/command-palette.jpg)
 
-- **Keyboard shortcuts** — press `G` then a letter to jump (`G` `E` → Experiments). `?` opens the cheatsheet; the modifier glyph adapts to your OS (`⌘` on macOS, `Ctrl` elsewhere).
+- **Keyboard shortcuts** — press `G` then a letter to jump (`G` `E` → Experiments), `C` to create in the current section, `/` to focus search. `?` opens the cheatsheet; the modifier glyph adapts to your OS (`⌘` on macOS, `Ctrl` elsewhere).
 
   ![Keyboard shortcuts cheatsheet](/img/chrome-refresh/cheatsheet.jpg)
 
@@ -33,17 +33,13 @@ A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, re
 
   ![Activity hub in the topbar](/img/chrome-refresh/activity-bell.jpg)
 
-- **What's new panel** — release notes in the sidebar footer (`G` `R`).
-
-  ![What's new panel](/img/chrome-refresh/whats-new.jpg)
-
 - **Responsive settings tabs** — a shared underline-style tab bar on desktop that collapses into a dropdown on mobile.
 
   ![Settings nav tabs on desktop](/img/chrome-refresh/settings-navtabs.jpg)
   ![Settings tabs collapse to a dropdown on mobile](/img/chrome-refresh/mobile-dropdown.jpg)
 
 :::note
-This is a preview of work still in review. Some content is placeholder pending follow-up wiring: the "What's new" entries are hardcoded until they are fed from the CMS (`OJD-1507`), and the activity feed is in-memory until the backend activity table lands (`OJD-1506`).
+This is a preview of work still in review. The topbar activity hub currently tracks data exports in-memory; the persisted backend feed and additional job types land with `OJD-1506`.
 :::
 
 ---

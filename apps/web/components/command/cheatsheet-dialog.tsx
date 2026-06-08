@@ -31,7 +31,13 @@ function buildSections(mod: string): Section[] {
         { keys: ["G", "S"], label: "Settings" },
         { keys: ["G", "A"], label: "Account" },
         { keys: ["G", "N"], label: "Notifications" },
-        { keys: ["G", "R"], label: "What's new" },
+      ],
+    },
+    {
+      title: "Actions",
+      rows: [
+        { keys: ["C"], label: "Create new" },
+        { keys: ["/"], label: "Focus search" },
       ],
     },
     {
