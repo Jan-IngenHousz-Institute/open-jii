@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "~/features/auth/hooks/use-session";
-import { createLogger } from "~/shared/utils/logger";
+import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("logout");
 

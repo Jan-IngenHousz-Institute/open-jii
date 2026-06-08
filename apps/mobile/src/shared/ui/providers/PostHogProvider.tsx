@@ -1,7 +1,7 @@
 import { PostHogProvider as RNPostHogProvider } from "posthog-react-native";
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { getPostHogClient } from "~/shared/utils/posthog";
+import { getPostHogClient } from "~/shared/observability/posthog";
 
 export function PostHogProvider({ children }: { children: ReactNode }) {
   const client = useRef<ReturnType<typeof getPostHogClient> | null>(null);

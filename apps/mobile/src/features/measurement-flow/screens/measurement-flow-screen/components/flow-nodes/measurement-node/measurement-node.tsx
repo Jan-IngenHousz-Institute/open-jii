@@ -8,11 +8,11 @@ import { useScanner } from "~/features/connection/hooks/use-scan-manager";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
+import { createLogger } from "~/shared/observability/logger";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { createLogger } from "~/shared/utils/logger";
-import { playSound } from "~/shared/utils/play-sound";
 
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";

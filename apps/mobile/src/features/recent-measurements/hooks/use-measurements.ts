@@ -12,7 +12,7 @@ import type { Measurement, MeasurementStatus } from "~/shared/db/measurements-st
 import {
   buildAnnotations,
   getFlagTypeFromMeasurementResult,
-} from "~/shared/utils/measurement-annotations";
+} from "~/shared/measurements/measurement-annotations";
 
 export function useMeasurements() {
   const queryClient = useQueryClient();
