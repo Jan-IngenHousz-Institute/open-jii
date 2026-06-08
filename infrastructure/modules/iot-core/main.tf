@@ -209,8 +209,9 @@ resource "aws_s3_bucket_notification" "large_iot" {
   bucket = var.large_iot_bucket_name
 
   queue {
-    queue_arn = aws_sqs_queue.large_iot_notifications[0].arn
-    events    = ["s3:ObjectCreated:*"]
+    queue_arn     = aws_sqs_queue.large_iot_notifications[0].arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".json"
   }
 
   depends_on = [aws_sqs_queue_policy.large_iot_notifications]
@@ -225,7 +226,7 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+        Action   = ["s3:GetObject", "s3:ListBucket"]
         Resource = [var.large_iot_bucket_arn, "${var.large_iot_bucket_arn}/*"]
       },
       {

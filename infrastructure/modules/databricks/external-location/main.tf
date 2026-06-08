@@ -16,6 +16,7 @@ resource "databricks_external_location" "this" {
   url             = "s3://${var.bucket_name}/${var.external_location_path}"
   credential_name = var.storage_credential_name
   isolation_mode  = var.isolation_mode
+  read_only       = var.read_only
   comment         = var.comment != "" ? var.comment : "Managed by Terraform - ${var.environment} external location"
 }
 
