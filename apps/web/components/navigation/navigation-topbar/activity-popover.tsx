@@ -131,7 +131,7 @@ export function ActivityPopover({ className }: { className?: string }) {
         <ScrollArea className="max-h-[400px]">
           {sorted.length === 0 ? (
             <div className="text-muted-foreground px-4 py-8 text-center text-sm">
-              Nothing to show yet. Long-running data exports will appear here.
+              Nothing to show yet. Long-running tasks like exports and uploads will appear here.
             </div>
           ) : (
             <ul className="divide-y">
