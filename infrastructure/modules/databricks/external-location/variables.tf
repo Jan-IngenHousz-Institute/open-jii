@@ -36,6 +36,12 @@ variable "isolation_mode" {
   default     = "ISOLATION_MODE_ISOLATED"
 }
 
+variable "read_only" {
+  description = "When true, Databricks validates the credential with a read-only probe (GetObject/ListBucket) instead of write+delete. Use for external locations that are never written to by Databricks."
+  type        = bool
+  default     = false
+}
+
 variable "grants" {
   description = "Map of grants to create on the external location. Each grant should specify a principal (application ID) and a list of privileges."
   type = map(object({

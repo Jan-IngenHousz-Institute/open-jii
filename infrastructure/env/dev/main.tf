@@ -456,6 +456,7 @@ module "large_iot_external_location" {
   environment             = var.environment
   comment                 = "External location for large IoT payloads (>128 KB) uploaded via pre-signed URL"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
+  read_only               = true
 
   grants = {
     node_service_principal = {
