@@ -1793,6 +1793,10 @@ module "backend_ecs" {
       value = module.cognito.developer_provider_name
     },
     {
+      name  = "AWS_IOT_POLICY_NAME"
+      value = module.iot_core.iot_policy_name
+    },
+    {
       name  = "EMAIL_BASE_URL"
       value = "https://${module.route53.environment_domain}"
     },

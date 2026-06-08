@@ -239,3 +239,4 @@ variable "cognito_identity_pool_arn" {
   type        = string
   default     = ""
 }
+
