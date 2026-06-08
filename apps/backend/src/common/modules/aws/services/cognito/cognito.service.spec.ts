@@ -7,7 +7,8 @@ import { IoTClient, AttachPolicyCommand } from "@aws-sdk/client-iot";
 import { mockClient } from "aws-sdk-client-mock";
 
 import { TestHarness } from "../../../../../test/test-harness";
-import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
+import { ErrorCodes } from "../../../../utils/error-codes";
+import { AppError, assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { CognitoService } from "./cognito.service";
 
 const cognitoMock = mockClient(CognitoIdentityClient);
@@ -246,6 +247,18 @@ describe("CognitoService", () => {
 
       assertFailure(result);
       expect(result.error.message).toBe("IoT API error");
+    });
+
+    it("should propagate AppError when IoT API throws one", async () => {
+      const identityId = "eu-central-1:identity-id-123";
+      const appError = AppError.internal("already an AppError", ErrorCodes.AWS_IOT_ATTACH_POLICY_FAILED);
+
+      iotMock.on(AttachPolicyCommand).rejects(appError);
+
+      const result = await service.attachIotPolicy(identityId);
+
+      assertFailure(result);
+      expect(result.error).toBe(appError);
     });
   });
 });
