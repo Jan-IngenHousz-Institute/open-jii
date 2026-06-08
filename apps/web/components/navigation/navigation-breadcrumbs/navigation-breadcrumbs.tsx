@@ -50,6 +50,17 @@ function getTranslatedTitle(segment: string, t: (key: string) => string): string
   return segment.charAt(0).toUpperCase() + segment.slice(1);
 }
 
+// Breadcrumb targets are always internal platform paths derived from the
+// current URL. Guard against any value that could escape the origin — a
+// protocol-relative (`//host`), backslash (`/\host`), or absolute URL — before
+// using it as a navigation target.
+function toInternalHref(href: string): string {
+  if (href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/\\")) {
+    return href;
+  }
+  return "/";
+}
+
 export function Breadcrumbs({ locale }: BreadcrumbsProps) {
   const { t } = useTranslation("common");
   const { data: segments } = useBreadcrumbs(locale);
@@ -82,7 +93,7 @@ export function Breadcrumbs({ locale }: BreadcrumbsProps) {
                     </span>
                   ) : (
                     <Link
-                      href={item.href}
+                      href={toInternalHref(item.href)}
                       className={cn(
                         "hover:text-foreground transition-colors",
                         "focus-visible:ring-ring focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
