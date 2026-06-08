@@ -1035,6 +1035,7 @@ resource "grafana_rule_group" "large_iot_alerts" {
         statistic  = "Maximum"
         period     = "60"
         dimensions = { QueueName = var.large_iot_notification_queue_name }
+        expression = "FILL(m1, 0)"
         id         = "m1"
       })
 
@@ -1182,6 +1183,7 @@ EOT
         statistic  = "Maximum"
         period     = "60"
         dimensions = { QueueName = var.large_iot_notification_queue_name }
+        expression = "FILL(m1, 0)"
         id         = "m1"
       })
 
