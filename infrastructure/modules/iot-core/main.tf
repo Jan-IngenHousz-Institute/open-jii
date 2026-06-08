@@ -225,7 +225,7 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:ListBucket"]
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
         Resource = [var.large_iot_bucket_arn, "${var.large_iot_bucket_arn}/*"]
       },
       {
