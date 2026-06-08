@@ -251,7 +251,10 @@ describe("CognitoService", () => {
 
     it("should propagate AppError when IoT API throws one", async () => {
       const identityId = "eu-central-1:identity-id-123";
-      const appError = AppError.internal("already an AppError", ErrorCodes.AWS_IOT_ATTACH_POLICY_FAILED);
+      const appError = AppError.internal(
+        "already an AppError",
+        ErrorCodes.AWS_IOT_ATTACH_POLICY_FAILED,
+      );
 
       iotMock.on(AttachPolicyCommand).rejects(appError);
 
