@@ -93,7 +93,8 @@
       "description": "This label will become a column in your data analysis:",
       "defaultColumnName": "question_name"
     },
-    "untitledNode": "(Untitled)"
+    "untitledNode": "(Untitled)",
+    "createFailed": "Failed to create workbook"
   },
   "overview": "Overview",
   "data": "Data",

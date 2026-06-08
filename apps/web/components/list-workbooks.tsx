@@ -41,6 +41,7 @@ export function ListWorkbooks() {
   });
 
   const handleCreate = () => {
+    if (isCreating) return;
     const name = newName.trim();
     if (!name) return;
     createWorkbook({ body: { name } });

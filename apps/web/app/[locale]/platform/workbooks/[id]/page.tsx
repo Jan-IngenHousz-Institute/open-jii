@@ -66,15 +66,19 @@ function WorkbookEditorWithAutosave({
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
   const [title, setTitle] = useState(name);
+  const renameRequestRef = useRef(0);
 
   const handleRename = useCallback(
     async (next: string) => {
+      const requestId = ++renameRequestRef.current;
       const previous = title;
       setTitle(next);
       try {
         await updateWorkbook({ params: { id }, body: { name: next } });
       } catch (err) {
-        setTitle(previous);
+        // Only roll back if this is still the latest rename, so a slow failure
+        // can't clobber a newer successful rename.
+        if (renameRequestRef.current === requestId) setTitle(previous);
         const message = parseApiError(err)?.message;
         toast({ description: message ?? t("workbooks.renameError"), variant: "destructive" });
       }

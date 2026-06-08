@@ -50,6 +50,18 @@
       "deleteConfirm": "Permanently delete “{{name}}”? This cannot be undone.",
       "deleteInUseConfirm_one": "“{{name}}” is attached to {{count}} experiment. Deleting it will unlink that experiment, which will lose its measurement flow. This cannot be undone.",
       "deleteInUseConfirm_other": "“{{name}}” is attached to {{count}} experiments. Deleting it will unlink those experiments, which will lose their measurement flow. This cannot be undone."
+    },
+    "cellSummary": {
+      "protocol_one": "{{count}} Protocol",
+      "protocol_other": "{{count}} Protocols",
+      "macro_one": "{{count}} Macro",
+      "macro_other": "{{count}} Macros",
+      "question_one": "{{count}} Question",
+      "question_other": "{{count}} Questions",
+      "branch_one": "{{count}} Branch",
+      "branch_other": "{{count}} Branches",
+      "markdown_one": "{{count}} Note",
+      "markdown_other": "{{count}} Notes"
     }
   },
   "output": {

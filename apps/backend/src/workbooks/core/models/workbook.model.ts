@@ -23,7 +23,7 @@ export const selectWorkbookSchema = createSelectSchema(workbooks).extend({
   metadata: z.record(z.string(), z.unknown()),
   createdByName: z.string().optional(),
   isUpgradable: z.boolean().optional(),
-  experimentCount: z.number().optional(),
+  experimentCount: z.number().int().nonnegative().optional(),
 });
 
 export type CreateWorkbookDto = z.infer<typeof createWorkbookSchema>;

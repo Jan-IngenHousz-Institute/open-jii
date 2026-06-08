@@ -51,6 +51,7 @@ export function EmptyWorkbookState({
         },
       );
     },
+    onError: () => toast({ description: t("flow.createFailed"), variant: "destructive" }),
   });
 
   const isCreating = createWorkbook.isPending || attachWorkbook.isPending;

@@ -69,10 +69,11 @@ describe("ExperimentLinkedWorkbook", () => {
 
     render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
 
+    // t() returns the key in tests; the count drives i18next plural selection at runtime.
     await waitFor(() => {
-      expect(screen.getByText(/1 Protocol/)).toBeInTheDocument();
+      expect(screen.getByText("workbooks.cellSummary.protocol")).toBeInTheDocument();
     });
-    expect(screen.getByText(/2 Macros/)).toBeInTheDocument();
+    expect(screen.getByText("workbooks.cellSummary.macro")).toBeInTheDocument();
   });
 
   it("shows empty cells message when workbook has no cells", async () => {

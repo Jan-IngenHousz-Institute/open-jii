@@ -50,6 +50,18 @@
       "deleteConfirm": "„{{name}}“ endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
       "deleteInUseConfirm_one": "„{{name}}“ ist mit {{count}} Experiment verknüpft. Beim Löschen wird die Verknüpfung aufgehoben und dieses Experiment verliert seinen Messablauf. Dies kann nicht rückgängig gemacht werden.",
       "deleteInUseConfirm_other": "„{{name}}“ ist mit {{count}} Experimenten verknüpft. Beim Löschen wird die Verknüpfung aufgehoben und diese Experimente verlieren ihren Messablauf. Dies kann nicht rückgängig gemacht werden."
+    },
+    "cellSummary": {
+      "protocol_one": "{{count}} Protokoll",
+      "protocol_other": "{{count}} Protokolle",
+      "macro_one": "{{count}} Makro",
+      "macro_other": "{{count}} Makros",
+      "question_one": "{{count}} Frage",
+      "question_other": "{{count}} Fragen",
+      "branch_one": "{{count}} Verzweigung",
+      "branch_other": "{{count}} Verzweigungen",
+      "markdown_one": "{{count}} Notiz",
+      "markdown_other": "{{count}} Notizen"
     }
   },
   "output": {

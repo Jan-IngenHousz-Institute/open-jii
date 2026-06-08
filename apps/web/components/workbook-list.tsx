@@ -162,14 +162,19 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
   };
 
   const handleDuplicate = () => {
-    createWorkbook({
-      body: {
-        name: t("workbooks.duplicateName", { name: workbook.name }),
-        description: workbook.description ?? undefined,
-        cells: workbook.cells,
-        metadata: workbook.metadata,
+    createWorkbook(
+      {
+        body: {
+          name: t("workbooks.duplicateName", { name: workbook.name }),
+          description: workbook.description ?? undefined,
+          cells: workbook.cells,
+          metadata: workbook.metadata,
+        },
       },
-    });
+      {
+        onError: () => toast({ title: t("workbooks.createError"), variant: "destructive" }),
+      },
+    );
   };
 
   const viewHref = `/${locale}/platform/workbooks/${workbook.id}`;
