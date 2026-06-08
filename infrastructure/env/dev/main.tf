@@ -1838,6 +1838,7 @@ module "backend_ecs" {
     module.location_service.iam_policy_arn,
     module.macro_sandbox.invoke_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
+    module.iot_core.backend_iot_publish_policy_arn,
   ]
 
   tags = {

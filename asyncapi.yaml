@@ -4,8 +4,9 @@ info:
   version: "1.0.0"
   description: >
     This AsyncAPI specification defines the MQTT topics and message schemas for AWS IoT Core.
-    It details channels for device status updates and sensor data, allowing devices to publish
-    their state and sensor readings securely.
+    It is the single source of truth consumed by the Terraform iot-core module to generate IoT
+    policies and topic rules. It covers cloud-bound channels (devices publish sensor data) and
+    device-bound channels (the cloud publishes behaviour scripts that devices subscribe to).
   contact:
     name: openJII
     email: ji-institute@info.nl
@@ -15,9 +16,13 @@ info:
 
 servers:
   production:
-    url: a123456789.iot.us-east-1.amazonaws.com
-    protocol: mqtt
-    description: AWS IoT Core production endpoint
+    url: a3xxxxxxxxxxxx-ats.iot.eu-central-1.amazonaws.com
+    protocol: secure-mqtt
+    description: >
+      AWS IoT Core production ATS endpoint. Clients connect over MQTT on WebSocket
+      Secure (wss://.../mqtt), authenticated with AWS Signature Version 4.
+    security:
+      - sigv4: []
 
 channels:
   experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}:
@@ -57,6 +62,39 @@ channels:
       summary: Ingest experiment sensor data.
       message:
         $ref: "#/components/messages/ExperimentDataMessage"
+
+  device/scripts/v1/{sensorType}/{sensorVersion}/{identityId}:
+    description: |
+      Channel for delivering behaviour scripts to a device. The cloud publishes and
+      the device subscribes, then applies the script to its attached sensor. Messages
+      are published retained at QoS 1, so a device that reconnects immediately receives
+      the current script for its topic.
+      The path parameters represent:
+      <ul>
+        <li><strong>sensorType:</strong> The target sensor family (e.g., MultispeQ, Ambit...).</li>
+        <li><strong>sensorVersion:</strong> Target firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
+        <li><strong>identityId:</strong> Cognito identity id of the target device. The generated IoT
+          policy binds this segment to ${cognito-identity.amazonaws.com:sub}, so a device can only
+          subscribe to and receive its own scripts.</li>
+      </ul>
+    parameters:
+      sensorType:
+        description: The target sensor family (e.g., MultispeQ, Ambit...).
+        schema:
+          type: string
+      sensorVersion:
+        description: Target firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).
+        schema:
+          type: string
+      identityId:
+        description: Cognito identity id of the target device (e.g., eu-central-1:uuid).
+        schema:
+          type: string
+    publish:
+      operationId: deliverDeviceScript
+      summary: Deliver a behaviour script to a device.
+      message:
+        $ref: "#/components/messages/DeviceScriptMessage"
 
 components:
   messages:
@@ -103,6 +141,45 @@ components:
             data:
               moisture: 30.5
               temperature: 22.1
+
+    DeviceScriptMessage:
+      contentType: application/json
+      name: DeviceScriptMessage
+      title: Device Script Delivery Message
+      summary: A behaviour script delivered from the cloud to a device.
+      payload:
+        type: object
+        properties:
+          scriptId:
+            type: string
+            description: Identifier of the script version (UUID recommended). Lets a device skip a script it has already applied.
+          script:
+            type: string
+            description: >
+              The script body. May be a raw string (legacy) or a gzip+base64
+              encoded string when _script_encoding is set.
+          _script_encoding:
+            type: string
+            enum: ["gzip+base64"]
+            description: >
+              When present, indicates that the `script` field has been compressed
+              (gzip) and base64-encoded to reduce payload size. Absent on legacy
+              (uncompressed) payloads.
+          checksum:
+            type: string
+            description: SHA-256 hex digest of the decoded script body, for integrity verification before applying.
+          issuedAt:
+            type: string
+            description: ISO 8601 timestamp with UTC offset marking when the script was issued (e.g. "2026-03-09T10:30:00.000Z").
+        required:
+          - scriptId
+          - script
+      examples:
+        - payload:
+            scriptId: "9b2c1f7e-4d3a-4c8e-9f10-2a6b5c4d3e2f"
+            script: "{\"protocol\":\"pulse\",\"interval_ms\":500}"
+            checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            issuedAt: "2026-03-09T10:30:00.000Z"
 
   securitySchemes:
     sigv4:
