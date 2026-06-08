@@ -124,7 +124,7 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
       {
         Effect   = "Allow"
         Action   = ["iot:AttachPolicy"]
-        Resource = "*"
+        Resource = var.iot_policy_arn != "" ? var.iot_policy_arn : "*"
       }
     ]
   })

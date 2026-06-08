@@ -3,6 +3,16 @@ output "iot_policy_names" {
   value       = [for policy in aws_iot_policy.iot_policy : policy.name]
 }
 
+output "iot_policy_name" {
+  description = "Name of the IoT policy for Cognito identity attachment (single channel)"
+  value       = one([for policy in aws_iot_policy.iot_policy : policy.name])
+}
+
+output "iot_policy_arns" {
+  description = "ARNs of the IoT policies"
+  value       = [for policy in aws_iot_policy.iot_policy : policy.arn]
+}
+
 output "iot_topic_rule_names" {
   description = "Names of the IoT Topic Rules"
   value       = [for rule in aws_iot_topic_rule.iot_rules : rule.name]

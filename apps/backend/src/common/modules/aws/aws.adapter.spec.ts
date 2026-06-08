@@ -150,7 +150,7 @@ describe("AwsAdapter", () => {
       };
 
       vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(success(mockTokenResult));
-      vi.spyOn(cognitoService, "attachIotPolicy").mockResolvedValue();
+      vi.spyOn(cognitoService, "attachIotPolicy").mockResolvedValue(success(undefined));
       vi.spyOn(cognitoService, "getCredentialsForIdentity").mockResolvedValue(
         success(mockCredentials),
       );
@@ -194,7 +194,7 @@ describe("AwsAdapter", () => {
       );
 
       vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(success(mockTokenResult));
-      vi.spyOn(cognitoService, "attachIotPolicy").mockResolvedValue();
+      vi.spyOn(cognitoService, "attachIotPolicy").mockResolvedValue(success(undefined));
       vi.spyOn(cognitoService, "getCredentialsForIdentity").mockResolvedValue(failure(error));
 
       const result = await awsAdapter.getIotCredentials(userId);

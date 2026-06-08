@@ -226,8 +226,9 @@ describe("CognitoService", () => {
 
       iotMock.on(AttachPolicyCommand).resolves({});
 
-      await expect(service.attachIotPolicy(identityId)).resolves.toBeUndefined();
+      const result = await service.attachIotPolicy(identityId);
 
+      assertSuccess(result);
       const calls = iotMock.commandCalls(AttachPolicyCommand);
       expect(calls).toHaveLength(1);
       expect(calls[0].args[0].input).toMatchObject({
@@ -236,12 +237,15 @@ describe("CognitoService", () => {
       });
     });
 
-    it("should throw when IoT API call fails", async () => {
+    it("should return failure when IoT API call fails", async () => {
       const identityId = "eu-central-1:identity-id-123";
 
       iotMock.on(AttachPolicyCommand).rejects(new Error("IoT API error"));
 
-      await expect(service.attachIotPolicy(identityId)).rejects.toThrow("IoT API error");
+      const result = await service.attachIotPolicy(identityId);
+
+      assertFailure(result);
+      expect(result.error.message).toBe("IoT API error");
     });
   });
 });

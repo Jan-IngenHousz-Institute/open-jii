@@ -23,12 +23,23 @@ export class CognitoService {
     this.iotClient = new IoTClient({ region: this.awsConfig.region });
   }
 
-  async attachIotPolicy(identityId: string): Promise<void> {
-    await this.iotClient.send(
-      new AttachPolicyCommand({
-        policyName: this.awsConfig.iotPolicyName,
-        target: identityId,
-      }),
+  async attachIotPolicy(identityId: string): Promise<Result<void>> {
+    return tryCatch(
+      async () => {
+        await this.iotClient.send(
+          new AttachPolicyCommand({
+            policyName: this.awsConfig.iotPolicyName,
+            target: identityId,
+          }),
+        );
+      },
+      (error) => {
+        if (error instanceof AppError) {
+          return error;
+        }
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return AppError.internal(errorMessage, ErrorCodes.AWS_IOT_ATTACH_POLICY_FAILED);
+      },
     );
   }
 
