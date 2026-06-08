@@ -1,10 +1,10 @@
 "use client";
 
-import {
-  type ActivityEntry,
-  type ActivityJobKind,
-  type ActivityJobStatus,
-  useActivity,
+import { useActivity } from "@/components/activity/activity-context";
+import type {
+  ActivityEntry,
+  ActivityJobKind,
+  ActivityJobStatus,
 } from "@/components/activity/activity-context";
 import {
   Bell,
@@ -18,11 +18,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@repo/ui/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -64,14 +60,14 @@ function StatusPill({ status }: { status: ActivityJobStatus }) {
   }
   if (status === "failed") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+      <span className="text-destructive inline-flex items-center gap-1 text-xs font-medium">
         <XCircle className="size-3" />
         Failed
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+    <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
       <Clock className="size-3" />
       Queued
     </span>
@@ -108,7 +104,7 @@ export function ActivityPopover({ className }: { className?: string }) {
           type="button"
           aria-label={`Activity${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
           className={cn(
-            "relative inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "text-foreground/70 hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring relative inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2",
             className,
           )}
         >
@@ -127,48 +123,56 @@ export function ActivityPopover({ className }: { className?: string }) {
           <button
             type="button"
             onClick={markAllRead}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground text-xs"
           >
             Mark all read
           </button>
         </div>
         <ScrollArea className="max-h-[400px]">
           {sorted.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              Nothing to show. Long-running tasks like exports and uploads will appear here.
+            <div className="text-muted-foreground px-4 py-8 text-center text-sm">
+              Nothing to show yet. Long-running data exports will appear here.
             </div>
           ) : (
             <ul className="divide-y">
               {sorted.map((job) => {
                 const Icon = kindIcon(job.kind);
+                const rowClass = "flex items-start gap-3 px-4 py-3 transition-colors";
+                const inner = (
+                  <>
+                    <Icon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{job.title}</p>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <StatusPill status={job.status} />
+                        <span className="text-muted-foreground text-xs">
+                          · {relativeTime(job.updatedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
                 return (
                   <li key={job.id}>
-                    <a
-                      href={job.resultUrl ?? "#"}
-                      className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:bg-muted/50"
-                    >
-                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{job.title}</p>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <StatusPill status={job.status} />
-                          <span className="text-xs text-muted-foreground">
-                            · {relativeTime(job.updatedAt)}
-                          </span>
-                        </div>
-                      </div>
-                    </a>
+                    {job.resultUrl ? (
+                      <a
+                        href={job.resultUrl}
+                        className={cn(
+                          rowClass,
+                          "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none",
+                        )}
+                      >
+                        {inner}
+                      </a>
+                    ) : (
+                      <div className={rowClass}>{inner}</div>
+                    )}
                   </li>
                 );
               })}
             </ul>
           )}
         </ScrollArea>
-        <div className="border-t bg-muted/30 px-4 py-2">
-          <a href="#" className="text-xs font-medium text-primary hover:underline">
-            Open all activity →
-          </a>
-        </div>
       </PopoverContent>
     </Popover>
   );
