@@ -1,7 +1,9 @@
-import { render, screen, userEvent, within } from "@/test/test-utils";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { contract } from "@repo/api/contract";
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
 
 import { WorkbookList } from "./workbook-list";
@@ -63,5 +65,52 @@ describe("WorkbookList delete gating (workbook-deletion flag)", () => {
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[inUse]} />);
     expect(await deleteAvailableFor(user, "Attached WB")).toBe(true);
+  });
+});
+
+describe("WorkbookList row actions", () => {
+  const unused = makeWorkbook({
+    id: "33333333-3333-3333-3333-333333333333",
+    name: "Source WB",
+    description: "desc",
+    experimentCount: 0,
+  });
+
+  beforeEach(() => {
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+  });
+
+  it("duplicates a workbook from the row menu", async () => {
+    const spy = server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: makeWorkbook({ id: "99999999-9999-9999-9999-999999999999", name: "Copy of Source WB" }),
+    });
+    const user = userEvent.setup();
+    render(<WorkbookList workbooks={[unused]} />);
+
+    const row = screen.getByText("Source WB").closest("tr");
+    if (!row) throw new Error("row not found");
+    await user.click(within(row).getByLabelText("workbooks.actions.more"));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.duplicate" }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({ name: "workbooks.duplicateName" });
+  });
+
+  it("confirms then deletes a workbook", async () => {
+    const spy = server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
+    const user = userEvent.setup();
+    render(<WorkbookList workbooks={[unused]} />);
+
+    const row = screen.getByText("Source WB").closest("tr");
+    if (!row) throw new Error("row not found");
+    await user.click(within(row).getByLabelText("workbooks.actions.more"));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.delete" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "workbooks.actions.delete" }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.params).toMatchObject({ id: unused.id });
   });
 });
