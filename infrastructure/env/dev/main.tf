@@ -1629,6 +1629,7 @@ module "backend_ecs" {
 
   enable_cognito_policy     = true
   cognito_identity_pool_arn = module.cognito.identity_pool_arn
+  iot_policy_arn            = module.iot_core.iot_policy_arns[0]
 
   # Secrets configuration
   secrets = [
@@ -1791,6 +1792,10 @@ module "backend_ecs" {
     {
       name  = "AWS_COGNITO_DEVELOPER_PROVIDER_NAME"
       value = module.cognito.developer_provider_name
+    },
+    {
+      name  = "AWS_IOT_POLICY_NAME"
+      value = module.iot_core.iot_policy_name
     },
     {
       name  = "EMAIL_BASE_URL"

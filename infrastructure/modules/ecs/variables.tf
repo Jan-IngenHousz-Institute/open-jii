@@ -239,3 +239,9 @@ variable "cognito_identity_pool_arn" {
   type        = string
   default     = ""
 }
+
+variable "iot_policy_arn" {
+  description = "IoT policy ARN to scope the iot:AttachPolicy permission"
+  type        = string
+  default     = ""
+}
