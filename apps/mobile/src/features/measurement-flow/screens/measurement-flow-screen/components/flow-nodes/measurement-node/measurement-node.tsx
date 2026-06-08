@@ -31,7 +31,7 @@ interface MeasurementNodeProps {
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const { protocol } = useProtocol(content.protocolId);
+  const { protocol, isLoading: protocolLoading } = useProtocol(content.protocolId);
   const {
     executeScan,
     isScanning,
@@ -80,13 +80,21 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
       return;
     }
+    // The protocol is fetched offline-first; if it never made it into the cache
+    // (offline + not previously downloaded) it's undefined here. Surface that
+    // distinctly instead of the generic scan error so the user — and telemetry —
+    // see the real cause.
+    if (!protocol) {
+      log.warn("protocol unavailable", {
+        protocolId: content.protocolId,
+        loading: protocolLoading,
+      });
+      toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
+      return;
+    }
 
     resetScan();
     try {
-      if (!protocol) {
-        throw new Error("No protocol");
-      }
-
       const result = await executeScan(protocol);
       setScanResult(result);
       // Play system notification sound when measurement completes
@@ -157,6 +165,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <Button
             title={t("measurementFlow:measurementNode.startMeasurement")}
             onPress={handleStartScan}
+            isDisabled={protocolLoading}
             style={{ height: 44 }}
           />
         </View>
