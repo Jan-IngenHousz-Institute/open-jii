@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity": "catalog:aws-sdk",
+    "@aws-sdk/client-iot": "catalog:aws-sdk",
     "@aws-sdk/client-lambda": "catalog:aws-sdk",
     "@aws-sdk/client-location": "catalog:aws-sdk",
     "@aws-sdk/client-s3": "catalog:aws-sdk",

@@ -23,20 +23,56 @@ locals {
     }
   }
 
-  # Map each channel's operations to IoT actions.
-  actions_by_channel = {
+  # Channel parameters whose topic segment is bound to the connecting Cognito
+  # identity. In IoT policies these render as the
+  # ${cognito-identity.amazonaws.com:sub} variable so a device can only
+  # subscribe to / receive on its own topic, never another device's.
+  identity_param_names = ["identityId"]
+
+  # AsyncAPI operations are described from the server's perspective, so a
+  # "subscribe" op means devices publish (cloud-bound) and "publish" means the
+  # cloud publishes and devices receive. Subscribe/Receive resolve against
+  # different IoT resource ARN types (topicfilter vs topic), so they are split.
+  topic_actions_by_channel = {
     for channel, details in local.asyncapi.channels : channel =>
     concat(
       contains(keys(details), "subscribe") ? ["iot:Publish"] : [],
-      contains(keys(details), "publish") ? ["iot:Subscribe", "iot:Receive"] : []
+      contains(keys(details), "publish") ? ["iot:Receive"] : []
     )
   }
 
-  # Compute a friendly name for each IoT policy based on the static portion of the channel.
-  iot_policy_names = {
-    for channel in local.all_channels : channel =>
-    "open_jii_${var.environment}_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+  topicfilter_actions_by_channel = {
+    for channel, details in local.asyncapi.channels : channel =>
+    contains(keys(details), "publish") ? ["iot:Subscribe"] : []
   }
+
+  # All channels are consolidated into a single IoT policy per environment. An
+  # authenticated Cognito identity is attached to this one policy (dual-auth),
+  # which must grant every topic it may use: publishing ingest data and
+  # subscribing to its own scripts.
+  iot_policy_name = "open_jii_${var.environment}_iot_policy"
+
+  # Per-channel policy statements, split by IoT resource ARN type (Subscribe
+  # resolves against topicfilter/, Publish and Receive against topic/), merged
+  # into the single policy below.
+  iot_policy_statements = flatten([
+    for channel in local.all_channels : concat(
+      length(local.topic_actions_by_channel[channel]) > 0 ? [
+        {
+          Effect   = "Allow",
+          Action   = local.topic_actions_by_channel[channel],
+          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${local.iot_policy_topics[channel]}"
+        }
+      ] : [],
+      length(local.topicfilter_actions_by_channel[channel]) > 0 ? [
+        {
+          Effect   = "Allow",
+          Action   = local.topicfilter_actions_by_channel[channel],
+          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/${local.iot_policy_topics[channel]}"
+        }
+      ] : []
+    )
+  ])
 
   # Compute a friendly name for each IoT topic rule based on the static portion of the channel.
   iot_rule_names = {
@@ -52,6 +88,35 @@ locals {
       (startswith(segment, "{") && endswith(segment, "}")) ? "+" : segment
     ])
   }
+
+  # Topic used in IoT policy resource ARNs. Identity-bound parameters become the
+  # Cognito sub policy variable; every other parameter becomes a "*" wildcard.
+  iot_policy_topics = {
+    for channel in local.all_channels : channel =>
+    join("/", [
+      for segment in split("/", channel) :
+      (startswith(segment, "{") && endswith(segment, "}")) ? (
+        contains(local.identity_param_names, substr(segment, 1, length(segment) - 2))
+        ? "$${cognito-identity.amazonaws.com:sub}"
+        : "*"
+      ) : segment
+    ])
+  }
+
+  # Only cloud-bound (device-publish) channels are routed to Kinesis/S3. Outbound
+  # channels (e.g. script delivery) must not be ingested back into the data lake.
+  ingest_channels = {
+    for channel, details in local.asyncapi.channels : channel => details
+    if contains(keys(details), "subscribe")
+  }
+
+  # Topics the cloud publishes to devices; the backend task role needs
+  # iot:Publish on these to deliver scripts/commands.
+  outbound_topic_arns = [
+    for channel, details in local.asyncapi.channels :
+    "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${replace(local.iot_topic_filters[channel], "+", "*")}"
+    if contains(keys(details), "publish")
+  ]
 }
 
 # Configure IoT Core logging - Use the role from cloudwatch module
@@ -64,23 +129,19 @@ resource "aws_iot_logging_options" "iot_core_logging" {
 # AWS IoT Policies
 # -----------------
 resource "aws_iot_policy" "iot_policy" {
-  for_each = local.asyncapi.channels
-
-  name = local.iot_policy_names[each.key]
+  name = local.iot_policy_name
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Action   = "iot:Connect",
-        Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:client/$${iot:ClientId}"
-      },
-      {
-        Effect   = "Allow",
-        Action   = distinct(local.actions_by_channel[each.key]),
-        Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${replace(local.iot_topic_filters[each.key], "+", "*")}"
-      }
-    ]
+    Statement = concat(
+      [
+        {
+          Effect   = "Allow",
+          Action   = "iot:Connect",
+          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:client/$${iot:ClientId}"
+        }
+      ],
+      local.iot_policy_statements
+    )
   })
 }
 
@@ -149,6 +210,27 @@ resource "aws_iam_policy" "iot_s3_policy" {
 resource "aws_iam_role_policy_attachment" "iot_s3_attach" {
   role       = aws_iam_role.iot_s3_role.name
   policy_arn = aws_iam_policy.iot_s3_policy.arn
+}
+
+# IAM policy that allows the ECS backend task role to publish device scripts /
+# commands to the outbound IoT topics (cloud -> device channels).
+resource "aws_iam_policy" "backend_iot_publish" {
+  name = "open_jii_${var.environment}_backend_iot_publish"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "iot:Publish"
+        Resource = local.outbound_topic_arns
+      },
+      {
+        Effect   = "Allow"
+        Action   = "iot:DescribeEndpoint"
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 # IAM policy that allows the ECS backend task role to generate pre-signed
@@ -247,7 +329,7 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
 # IoT Topic Rules
 # ----------------
 resource "aws_iot_topic_rule" "iot_rules" {
-  for_each = local.asyncapi.channels
+  for_each = local.ingest_channels
 
   name        = local.iot_rule_names[each.key]
   enabled     = true

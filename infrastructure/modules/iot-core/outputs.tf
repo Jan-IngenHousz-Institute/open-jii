@@ -1,3 +1,14 @@
+output "iot_policy_names" {
+  description = "Names of the IoT policies"
+  value       = [aws_iot_policy.iot_policy.name]
+}
+
+output "iot_policy_name" {
+  description = "Name of the IoT policy attached to authenticated Cognito identities"
+  value       = aws_iot_policy.iot_policy.name
+}
+
+
 output "iot_topic_rule_names" {
   description = "Names of the IoT Topic Rules"
   value       = [for rule in aws_iot_topic_rule.iot_rules : rule.name]
@@ -6,6 +17,11 @@ output "iot_topic_rule_names" {
 output "iot_kinesis_role_arn" {
   description = "ARN of the IoT Kinesis IAM Role"
   value       = aws_iam_role.iot_kinesis_role.arn
+}
+
+output "backend_iot_publish_policy_arn" {
+  description = "ARN of the IAM policy that allows the backend ECS task role to publish device scripts/commands to the outbound IoT topics"
+  value       = aws_iam_policy.backend_iot_publish.arn
 }
 
 output "backend_s3_presign_policy_arn" {
