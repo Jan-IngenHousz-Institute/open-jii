@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
-import { Text } from "react-native";
+import { Linking, Text } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PageForceUpdateFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -25,25 +25,8 @@ vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("~/shared/ui/hooks/use-theme-colors", () => ({
-  useThemeColors: () => ({ brand: "#006adc" }),
-}));
-
-vi.mock("~/shared/ui/ctf-rich-text", () => ({
-  CtfRichText: () => null,
-}));
-
-vi.mock("lucide-react-native", () => ({
-  ArrowUpCircle: () => null,
-  ArrowRight: () => null,
-}));
-
 vi.mock("expo-application", () => ({
   nativeApplicationVersion: "1.0.0",
-}));
-
-vi.mock("react-native-safe-area-context", () => ({
-  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 function makeGate(): PageForceUpdateFieldsFragment {
@@ -110,5 +93,47 @@ describe("ForceUpdateGate", () => {
 
     expect(screen.queryByText("App content")).toBeNull();
     expect(screen.getByText("Please update")).toBeTruthy();
+  });
+
+  it("opens the CTA url when the update button is pressed", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+    mockGateResult.value = {
+      status: "gated",
+      gated: true,
+      gate: {
+        ...makeGate(),
+        body: { json: { nodeType: "document", data: {}, content: [] } },
+        updateCta: {
+          __typename: "ComponentButton",
+          sys: { __typename: "Sys", id: "btn-1" },
+          label: "Update now",
+          url: "https://play.google.com/store/apps/details?id=com.openjii.app",
+        },
+      } as PageForceUpdateFieldsFragment,
+    };
+
+    render(
+      <ForceUpdateGate>
+        <Text>App content</Text>
+      </ForceUpdateGate>,
+    );
+
+    fireEvent.press(screen.getByText("Update now"));
+
+    expect(openURL).toHaveBeenCalledWith(
+      "https://play.google.com/store/apps/details?id=com.openjii.app",
+    );
+  });
+
+  it("reports the status to onStatusChange", () => {
+    const onStatusChange = vi.fn();
+
+    render(
+      <ForceUpdateGate onStatusChange={onStatusChange}>
+        <Text>App content</Text>
+      </ForceUpdateGate>,
+    );
+
+    expect(onStatusChange).toHaveBeenCalledWith("allowed");
   });
 });
