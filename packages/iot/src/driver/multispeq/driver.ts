@@ -37,6 +37,9 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   /** Base response timeout (ms) used for short console commands. */
   private readonly defaultTimeout: number;
 
+  /** Aborts the in-flight waitForResponse(), if any. Set while a command waits. */
+  private pendingAbort?: () => void;
+
   constructor(logger?: Logger, config?: Pick<MultispeqTransportConfig, "timeout">) {
     super(logger);
     this.defaultTimeout = config?.timeout ?? MULTISPEQ_FRAMING.DEFAULT_TIMEOUT;
@@ -162,32 +165,68 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
 
   private waitForResponse(timeoutMs: number): Promise<MultispeqCommandResult> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
+      const cleanup = () => {
+        clearTimeout(timeout);
         this.emitter.off("receivedReplyFromDevice", handler);
+        this.pendingAbort = undefined;
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
         // On timeout the device may still be running a long protocol. Without
         // an explicit cancel it keeps the actinic light on and eventually
         // drops the connection (OJD-1565). Best-effort abort so it returns to
         // idle; we still reject this command as timed out.
-        if (this.transport) {
-          void this.transport
-            .send(addLineEnding(MULTISPEQ_CONSOLE.CANCEL, MULTISPEQ_FRAMING.LINE_ENDING))
-            .catch(() => undefined);
-        }
+        this.sendCancel();
         reject(new Error("Command timeout"));
       }, timeoutMs);
 
       const handler = (payload: MultispeqCommandResult) => {
-        clearTimeout(timeout);
+        cleanup();
         resolve(payload);
+      };
+
+      // Let cancel() abort this wait. The device-side abort (`-1+`) is sent by
+      // cancel() itself so it reaches the device immediately, bypassing the
+      // command queue.
+      this.pendingAbort = () => {
+        cleanup();
+        reject(new Error("Command cancelled"));
       };
 
       this.emitter.once("receivedReplyFromDevice", handler);
     });
   }
 
+  /** Best-effort `-1+` cancel switch to the device. */
+  private sendCancel(): void {
+    if (this.transport) {
+      void this.transport
+        .send(addLineEnding(MULTISPEQ_CONSOLE.CANCEL, MULTISPEQ_FRAMING.LINE_ENDING))
+        .catch(() => undefined);
+    }
+  }
+
+  /**
+   * Abort the in-flight command: send `-1+` to the device immediately
+   * (bypassing the command queue so it reaches a long-running protocol) and
+   * reject the pending execute() with "Command cancelled". No-op when idle —
+   * importantly, this avoids emitting a stray `-1+` whose ack could be
+   * mismatched to a later command.
+   */
+  async cancel(): Promise<void> {
+    const abort = this.pendingAbort;
+    if (!abort) return;
+    this.pendingAbort = undefined;
+    this.sendCancel();
+    abort();
+    await Promise.resolve();
+  }
+
   async destroy(): Promise<void> {
     this.dataBuffer = [];
     this.bufferLength = 0;
+    this.pendingAbort = undefined;
     await super.destroy();
   }
 }

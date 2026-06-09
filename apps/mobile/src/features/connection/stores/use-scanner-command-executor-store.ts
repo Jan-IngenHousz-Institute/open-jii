@@ -1,10 +1,8 @@
 import { create } from "zustand";
-import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/multispeq-command-executor";
+import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
 import { createMultispeqCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor";
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
-
-import { MULTISPEQ_CONSOLE } from "@repo/iot";
 
 const log = createLogger("scanner-executor");
 
@@ -125,7 +123,10 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       return;
     }
     try {
-      await commandExecutor.execute(MULTISPEQ_CONSOLE.CANCEL);
+      // Preemptively abort the in-flight command on the driver. This sends the
+      // `-1+` cancel switch to the device and rejects the running execute() —
+      // the in-flight executeCommand() then surfaces "Measurement cancelled".
+      await commandExecutor.cancel();
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       log.error("Failed to send cancel command", { err: error.message });

@@ -287,6 +287,49 @@ describe("MultispeqDriver", () => {
     });
   });
 
+  describe("cancel", () => {
+    it("aborts an in-flight command, sends -1+, and rejects as cancelled", async () => {
+      driver.initialize(transport);
+
+      // Start a long protocol but never reply, so it stays in-flight.
+      const resultPromise = driver.execute(LONG_PROTOCOL);
+      // Let the queued task run far enough to register the response wait.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      await driver.cancel();
+
+      const result = await resultPromise;
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("Command cancelled");
+      expect(transport.send).toHaveBeenCalledWith(CANCEL_FRAME);
+    });
+
+    it("is a no-op when idle (no stray -1+ that could mismatch a later command)", async () => {
+      driver.initialize(transport);
+
+      await driver.cancel();
+
+      expect(transport.send).not.toHaveBeenCalledWith(CANCEL_FRAME);
+    });
+
+    it("does not abort a command that already completed", async () => {
+      driver.initialize(transport);
+
+      vi.mocked(transport.send).mockImplementation(() => {
+        setTimeout(() => transport.simulateData('{"done":true}ABCD1234\n'), 0);
+        return Promise.resolve();
+      });
+      const result = await driver.execute("cmd");
+      expect(result.success).toBe(true);
+
+      // Cancelling after completion must not send a cancel switch.
+      vi.mocked(transport.send).mockClear();
+      await driver.cancel();
+      expect(transport.send).not.toHaveBeenCalledWith(CANCEL_FRAME);
+    });
+  });
+
   describe("dynamic protocol timeout", () => {
     it("does not time out a long protocol at the 60s base timeout", async () => {
       vi.useFakeTimers();
