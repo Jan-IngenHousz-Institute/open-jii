@@ -7,22 +7,6 @@ locals {
   # Get all channel keys.
   all_channels = keys(local.asyncapi.channels)
 
-  # Compute, for each channel, a mapping of parameter name to its topic index.
-  # Inline computation without "let":  
-  # For each channel, we first filter out the parameter segments and remove the braces.
-  # Then, the topic index for each parameter is: static_count + its index in the filtered list + 1.
-  iot_parameter_to_topic_index = {
-    for channel in local.all_channels : channel =>
-    { for idx, name in [
-      for seg in split("/", channel) :
-      substr(seg, 1, length(seg) - 2) if startswith(seg, "{") && endswith(seg, "}")
-      ] : name => (length([
-        for seg in split("/", channel) : seg
-        if !(startswith(seg, "{") && endswith(seg, "}"))
-      ]) + idx + 1)
-    }
-  }
-
   # Channel parameters bound to the connecting Cognito identity. In the policy
   # these render as the ${cognito-identity.amazonaws.com:sub} variable so a device
   # can only subscribe to / receive on its own topic, never another device's.
