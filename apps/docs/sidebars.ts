@@ -269,9 +269,9 @@ const sidebars: SidebarsConfig = {
           label: "Extending the Platform",
           link: { type: "generated-index" },
           items: [
-            "for-developers/developers-guide/extending-the-platform/cms/transactional-emails",
-            "for-developers/developers-guide/extending-the-platform/cms/alert-banners",
-            "for-developers/developers-guide/extending-the-platform/cms/force-update-gate",
+            "for-developers/developers-guide/extending-the-platform/transactional-emails",
+            "for-developers/developers-guide/extending-the-platform/alert-banners",
+            "for-developers/developers-guide/extending-the-platform/force-update-gate",
           ],
         },
       ],
