@@ -29,7 +29,8 @@ export class AwsConfigService {
       cognitoDeveloperProviderName: this.configService.getOrThrow<string>(
         "aws.cognito.developerProviderName",
       ),
-      iotPolicyNames: (this.configService.getOrThrow<string>("aws.iot.policyNames") ?? "")
+      // get() (not getOrThrow): a missing value parses to [] and is rejected by the schema below.
+      iotPolicyNames: (this.configService.get<string>("aws.iot.policyNames") ?? "")
         .split(",")
         .map((name) => name.trim())
         .filter(Boolean),
