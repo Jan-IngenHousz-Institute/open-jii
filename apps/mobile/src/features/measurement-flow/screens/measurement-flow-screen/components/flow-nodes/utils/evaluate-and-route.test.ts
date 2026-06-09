@@ -16,6 +16,7 @@ const mockSetCurrentFlowStep = vi.fn();
 const mockNextStep = vi.fn();
 const mockSetLastMatchedPath = vi.fn();
 const mockIncrementBranchVisit = vi.fn();
+const mockRecordBranchJump = vi.fn();
 const mockGetAnswer = vi.fn((_c: number, _id: string): string | undefined => undefined);
 
 interface MockFlowState {
@@ -30,6 +31,7 @@ interface MockFlowState {
   nextStep: typeof mockNextStep;
   setLastMatchedPath: typeof mockSetLastMatchedPath;
   incrementBranchVisit: typeof mockIncrementBranchVisit;
+  recordBranchJump: typeof mockRecordBranchJump;
 }
 
 const flowState: MockFlowState = {
@@ -44,6 +46,7 @@ const flowState: MockFlowState = {
   nextStep: mockNextStep,
   setLastMatchedPath: mockSetLastMatchedPath,
   incrementBranchVisit: mockIncrementBranchVisit,
+  recordBranchJump: mockRecordBranchJump,
 };
 
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
@@ -125,6 +128,11 @@ describe("evaluateAndRoute", () => {
 
     expect(mockIncrementBranchVisit).toHaveBeenCalledWith("b1");
     expect(mockSetLastMatchedPath).toHaveBeenCalledWith({ label: "PA", color: "#abcdef" });
+    // Records the jump (for Back unwinding) before routing to the target.
+    expect(mockRecordBranchJump).toHaveBeenCalledWith(2);
+    expect(mockRecordBranchJump.mock.invocationCallOrder[0]).toBeLessThan(
+      mockSetCurrentFlowStep.mock.invocationCallOrder[0],
+    );
     expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2); // index of "tgt"
     expect(mockNextStep).not.toHaveBeenCalled();
   });
@@ -143,6 +151,8 @@ describe("evaluateAndRoute", () => {
     expect(mockSetLastMatchedPath).toHaveBeenCalledWith({ label: "PDEF", color: "#abcdef" });
     // default path has no gotoCellId → sequential (index 1), not the goto target (index 2)
     expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+    // Sequential fall-through is linear, so no jump is recorded.
+    expect(mockRecordBranchJump).not.toHaveBeenCalled();
   });
 
   it("requires all conditions in a path (implicit AND), incl. measurement output", () => {

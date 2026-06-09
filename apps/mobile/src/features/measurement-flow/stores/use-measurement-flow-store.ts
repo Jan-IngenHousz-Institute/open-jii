@@ -15,6 +15,12 @@ export interface MatchedPath {
   color: string;
 }
 
+/** A branch jump: its landing node index and the step Back should return to. */
+export interface BranchReturn {
+  landing: number;
+  step: number;
+}
+
 interface MeasurementFlowStore {
   experimentId?: string;
   experimentLabel?: string;
@@ -36,6 +42,9 @@ interface MeasurementFlowStore {
   lastMatchedPath?: MatchedPath;
   // Per-node visit counter that caps branch goto-loops (mirrors web's MAX_VISITS_PER_CELL).
   branchVisitCounts: Record<string, number>;
+  // Stack of branch jumps so Back unwinds non-linear routing instead of
+  // stepping into nodes the matched path skipped.
+  branchReturnStack: BranchReturn[];
 
   setExperimentId: (experimentId: string, experimentLabel?: string) => void;
   setProtocolId: (protocolId: string) => void;
@@ -49,6 +58,7 @@ interface MeasurementFlowStore {
   setFlowGraph: (nodes: FlowNode[], edges: FlowEdge[], cells: WorkbookCell[]) => void;
   setLastMatchedPath: (path: MatchedPath | undefined) => void;
   incrementBranchVisit: (nodeId: string) => void;
+  recordBranchJump: (landing: number) => void;
   resetFlow: () => void;
   startNewIteration: () => void;
   retryCurrentIteration: () => void;
@@ -83,6 +93,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       edges: [],
       lastMatchedPath: undefined,
       branchVisitCounts: {},
+      branchReturnStack: [],
 
       setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
       setProtocolId: (protocolId) => set({ protocolId }),
@@ -113,6 +124,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                 iterationCount: state.iterationCount + 1,
                 branchVisitCounts: {},
                 lastMatchedPath: undefined,
+                branchReturnStack: [],
               };
             }
             return { currentFlowStep: nextFlowStep };
@@ -135,7 +147,18 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                 currentFlowStep: state.flowNodes.length - 1,
               };
             }
-            if (state.currentFlowStep > 0) {
+            // If we arrived here via a branch jump, unwind the jump (return to
+            // the step before the branch) rather than stepping linearly into a
+            // node the matched path skipped.
+            const branchReturn = state.branchReturnStack[state.branchReturnStack.length - 1];
+            const isBranchReturn = !!branchReturn && branchReturn.landing === state.currentFlowStep;
+            if (isBranchReturn && branchReturn.step >= 0) {
+              return {
+                currentFlowStep: branchReturn.step,
+                branchReturnStack: state.branchReturnStack.slice(0, -1),
+              };
+            }
+            if (state.currentFlowStep > 0 && !isBranchReturn) {
               return { currentFlowStep: state.currentFlowStep - 1 };
             } else {
               return {
@@ -153,6 +176,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                 edges: [],
                 branchVisitCounts: {},
                 lastMatchedPath: undefined,
+                branchReturnStack: [],
               };
             }
           }
@@ -171,6 +195,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           edges: [],
           branchVisitCounts: {},
           lastMatchedPath: undefined,
+          branchReturnStack: [],
         }),
 
       setFlowGraph: (nodes, edges, cells) =>
@@ -181,6 +206,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
+          branchReturnStack: [],
         }),
 
       setLastMatchedPath: (path) => set({ lastMatchedPath: path }),
@@ -192,6 +218,24 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
             [nodeId]: (state.branchVisitCounts[nodeId] ?? 0) + 1,
           },
         })),
+
+      // Records where Back should land after a branch jumps to `landing`. Called
+      // with currentFlowStep still on the branch node. A branch reached via a
+      // prior jump (a transparent chained branch) inherits that jump's return
+      // and replaces it; otherwise Back returns to the step before this branch.
+      recordBranchJump: (landing) =>
+        set((state) => {
+          const stack = state.branchReturnStack;
+          const top = stack[stack.length - 1];
+          if (top && top.landing === state.currentFlowStep) {
+            return {
+              branchReturnStack: [...stack.slice(0, -1), { landing, step: top.step }],
+            };
+          }
+          return {
+            branchReturnStack: [...stack, { landing, step: state.currentFlowStep - 1 }],
+          };
+        }),
 
       resetFlow: () =>
         set({
@@ -210,6 +254,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           edges: [],
           branchVisitCounts: {},
           lastMatchedPath: undefined,
+          branchReturnStack: [],
         }),
 
       startNewIteration: () =>
@@ -221,6 +266,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isFromOverview: false,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
+          branchReturnStack: [],
         })),
 
       retryCurrentIteration: () =>
@@ -231,6 +277,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isFromOverview: false,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
+          branchReturnStack: [],
         })),
 
       finishFlow: () =>
@@ -251,6 +298,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           scanResult: undefined,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
+          branchReturnStack: [],
         })),
 
       navigateToQuestionFromOverview: (questionIndex) =>
@@ -258,6 +306,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           currentFlowStep: questionIndex,
           isFromOverview: true,
           isQuestionsSubmitPending: false,
+          branchReturnStack: [],
         }),
 
       returnToOverview: () =>
@@ -266,11 +315,13 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
             return {
               isQuestionsSubmitPending: true,
               isFromOverview: false,
+              branchReturnStack: [],
             };
           }
           return {
             currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
             isFromOverview: false,
+            branchReturnStack: [],
           };
         }),
     }),
@@ -293,6 +344,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         edges: state.edges,
         branchVisitCounts: state.branchVisitCounts,
         lastMatchedPath: state.lastMatchedPath,
+        branchReturnStack: state.branchReturnStack,
       }),
     },
   ),

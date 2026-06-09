@@ -64,6 +64,9 @@ export function evaluateAndRoute(node: FlowNode): void {
     const idx = flow.flowNodes.findIndex((n) => n.id === matched.gotoCellId);
     // Ignore a no-op self-jump (would stall on the branch); fall through instead.
     if (idx >= 0 && idx !== flow.currentFlowStep) {
+      // Record the jump first so Back unwinds it instead of stepping into a
+      // node this matched path skipped over.
+      flow.recordBranchJump(idx);
       flow.setCurrentFlowStep(idx);
       return;
     }

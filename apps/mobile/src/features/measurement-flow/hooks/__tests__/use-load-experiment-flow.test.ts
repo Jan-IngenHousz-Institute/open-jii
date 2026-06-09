@@ -4,7 +4,7 @@ import type {
   FlowEdge,
   FlowNode,
 } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
-import { orderFlowNodes } from "~/shared/utils/order-flow-nodes";
+import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
