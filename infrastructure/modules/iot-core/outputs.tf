@@ -1,11 +1,6 @@
 output "iot_policy_names" {
-  description = "Names of the IoT policies"
+  description = "Names of the IoT policies attached to each authenticated Cognito identity (one per channel)"
   value       = [for policy in aws_iot_policy.iot_policy : policy.name]
-}
-
-output "iot_policy_name" {
-  description = "Name of the IoT policy attached to authenticated Cognito identities"
-  value       = one([for policy in aws_iot_policy.iot_policy : policy.name])
 }
 
 

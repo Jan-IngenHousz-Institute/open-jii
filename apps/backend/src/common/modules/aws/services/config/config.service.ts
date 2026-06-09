@@ -29,7 +29,11 @@ export class AwsConfigService {
       cognitoDeveloperProviderName: this.configService.getOrThrow<string>(
         "aws.cognito.developerProviderName",
       ),
-      iotPolicyName: this.configService.getOrThrow<string>("aws.iot.policyName"),
+      // get() (not getOrThrow): a missing value parses to [] and is rejected by the schema below.
+      iotPolicyNames: (this.configService.get<string>("aws.iot.policyNames") ?? "")
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean),
       lambda: {
         macroSandboxPythonFunctionName: this.configService.getOrThrow<string>(
           "aws.lambda.macroSandboxPythonFunctionName",
@@ -100,8 +104,8 @@ export class AwsConfigService {
     return this.config.cognitoDeveloperProviderName;
   }
 
-  get iotPolicyName(): string {
-    return this.config.iotPolicyName;
+  get iotPolicyNames(): string[] {
+    return this.config.iotPolicyNames;
   }
 
   /**

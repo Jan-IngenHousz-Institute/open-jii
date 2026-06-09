@@ -13,7 +13,7 @@ export default registerAs("aws", () => ({
     developerProviderName: process.env.AWS_COGNITO_DEVELOPER_PROVIDER_NAME,
   },
   iot: {
-    policyName: process.env.AWS_IOT_POLICY_NAME,
+    policyNames: process.env.AWS_IOT_POLICY_NAMES,
   },
   lambda: {
     macroSandboxPythonFunctionName: process.env.AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME,

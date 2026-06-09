@@ -26,12 +26,14 @@ export class CognitoService {
   async attachIotPolicy(identityId: string): Promise<Result<void>> {
     return tryCatch(
       async () => {
-        await this.iotClient.send(
-          new AttachPolicyCommand({
-            policyName: this.awsConfig.iotPolicyName,
-            target: identityId,
-          }),
-        );
+        for (const policyName of this.awsConfig.iotPolicyNames) {
+          await this.iotClient.send(
+            new AttachPolicyCommand({
+              policyName,
+              target: identityId,
+            }),
+          );
+        }
       },
       (error) => {
         if (error instanceof AppError) {
