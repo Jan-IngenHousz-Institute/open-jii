@@ -271,6 +271,7 @@ const sidebars: SidebarsConfig = {
           items: [
             "for-developers/developers-guide/extending-the-platform/cms/transactional-emails",
             "for-developers/developers-guide/extending-the-platform/cms/alert-banners",
+            "for-developers/developers-guide/extending-the-platform/cms/force-update-gate",
           ],
         },
       ],
