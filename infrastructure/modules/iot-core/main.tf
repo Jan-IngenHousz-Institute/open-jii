@@ -102,11 +102,13 @@ locals {
     )
   ])
 
-  # The single IoT policy the backend attaches (at runtime) to every authenticated
-  # Cognito identity. It keeps the original ingest-policy name so its document is
-  # updated in place: a rename would force-replace the live policy and break MQTT
-  # auth for already-connected devices.
-  iot_policy_name = "open_jii_${var.environment}_iot_policy_experiment_data_ingest_v1"
+  # Friendly name per channel. The policy is keyed by the ingest channel and keeps
+  # this derived name so the existing live policy is updated in place rather than
+  # renamed/replaced (a rename would break MQTT auth for connected devices).
+  iot_policy_names = {
+    for channel in local.all_channels : channel =>
+    "open_jii_${var.environment}_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+  }
 }
 
 # Configure IoT Core logging - Use the role from cloudwatch module
@@ -118,16 +120,14 @@ resource "aws_iot_logging_options" "iot_core_logging" {
 # -----------------
 # AWS IoT Policies
 # -----------------
-# The per-channel policy is collapsed into one env-wide policy. The moved block
-# re-homes the existing ingest policy to this address (name unchanged), so OpenTofu
-# updates the document in place instead of replacing the attached policy.
-moved {
-  from = aws_iot_policy.iot_policy["experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}"]
-  to   = aws_iot_policy.iot_policy
-}
-
+# One IoT policy, keyed by the ingest channel so it keeps its existing resource
+# address and name (no replace of the live, attached policy). Its document grants
+# every channel's permissions, so the single policy the backend attaches to each
+# Cognito identity covers both ingest and script delivery.
 resource "aws_iot_policy" "iot_policy" {
-  name = local.iot_policy_name
+  for_each = local.ingest_channels
+
+  name = local.iot_policy_names[each.key]
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = concat(
