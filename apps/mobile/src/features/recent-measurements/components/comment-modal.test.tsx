@@ -119,6 +119,36 @@ describe("CommentModal", () => {
     expect(onSave).toHaveBeenCalledWith("Updated note");
   });
 
+  // OJD-1562: a controlled `value` made RNGH's TextInput reset the Android cursor
+  // to the start on every keystroke. The field must stay uncontrolled (seeded by
+  // defaultValue, read via onChangeText) so the native input owns its cursor.
+  it("keeps the comment input uncontrolled so the native cursor is preserved", () => {
+    render(<CommentModal {...defaultProps} initialText="Existing note" />);
+
+    const input = screen.getByPlaceholderText("Enter your comment here...");
+    expect(input.props.value).toBeUndefined();
+    expect(input.props.defaultValue).toBe("Existing note");
+
+    // Editing in place must not start driving `value` or change defaultValue
+    // (which would force a remount), either of which resets the cursor.
+    fireEvent.changeText(input, "Existing notes");
+    const inputAfterEdit = screen.getByPlaceholderText("Enter your comment here...");
+    expect(inputAfterEdit.props.value).toBeUndefined();
+    expect(inputAfterEdit.props.defaultValue).toBe("Existing note");
+  });
+
+  it("saves the latest text after correcting an existing comment", () => {
+    const onSave = vi.fn();
+    render(<CommentModal {...defaultProps} initialText="" onSave={onSave} />);
+
+    const input = screen.getByPlaceholderText("Enter your comment here...");
+    fireEvent.changeText(input, "50% of the plot covered by another plot");
+    fireEvent.changeText(input, "25% of the plot covered by another plot");
+    fireEvent.press(screen.getByText("Save comment"));
+
+    expect(onSave).toHaveBeenCalledWith("25% of the plot covered by another plot");
+  });
+
   it("resets the input when the initial text changes while visible", () => {
     const { rerender } = render(<CommentModal {...defaultProps} initialText="First note" />);
 
