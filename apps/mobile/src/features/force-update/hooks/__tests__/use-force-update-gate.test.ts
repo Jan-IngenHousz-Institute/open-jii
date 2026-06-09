@@ -19,7 +19,7 @@ const {
   mockEnvLoaded: { value: true },
   mockFetchForceUpdate: vi.fn(),
   mockIsRestoring: { value: false },
-  mockNativeVersion: { value: "1.0.0" },
+  mockNativeVersion: { value: "1.0.0" as string | null },
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
@@ -225,5 +225,15 @@ describe("useForceUpdateGate", () => {
 
     fetch.resolve(makeGate({ minVersion: "2.0.0" }));
     await waitFor(() => expect(result.current.status).toBe("gated"));
+  });
+
+  it("does not gate when the native version is unavailable", async () => {
+    mockNativeVersion.value = null;
+    setCachedGate(makeGate({ minVersion: "1.0.0" }));
+
+    const { result } = renderHook(() => useForceUpdateGate(), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe("allowed"));
+    expect(result.current.gated).toBe(false);
   });
 });

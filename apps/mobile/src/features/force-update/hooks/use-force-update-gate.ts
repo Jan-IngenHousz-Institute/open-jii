@@ -65,7 +65,7 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
   }, [envLoaded, fetchStatus, initialCheckReady, isRestoring]);
 
   const gate = data ?? null;
-  const running = Application.nativeApplicationVersion ?? "0.0.0";
+  const running = Application.nativeApplicationVersion ?? "";
   const active = gate?.active === true;
   const effective = !gate?.effectiveAt || new Date(gate.effectiveAt) <= new Date();
   const below = gate?.minVersion ? isVersionBelow(running, gate.minVersion) : false;
