@@ -8,7 +8,7 @@ import { useEnvironmentStore } from "~/shared/stores/environment-store";
 
 import type { PageForceUpdateFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
-const FIVE_MINUTES = 1000;
+const FIVE_MINUTES = 5 * 60 * 1000;
 
 export type ForceUpdateGateStatus = "checking" | "allowed" | "gated";
 

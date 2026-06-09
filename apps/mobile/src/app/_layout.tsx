@@ -34,10 +34,7 @@ import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 import { useI18nReady } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
-import {
-  ConfiguredQueryClientProvider,
-  ConnectivityWatcher,
-} from "~/shared/ui/configured-query-client-provider";
+import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
 import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
 import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-boundary";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -204,7 +201,6 @@ function AllowedAppServices({ children }: { children: React.ReactNode }) {
   return (
     <PostHogProvider>
       <TimeSyncProvider>
-        <ConnectivityWatcher />
         <OutboxBootstrap />
         {__DEV__ && <EventLoopLagMonitor />}
         <PythonMacroProvider>{children}</PythonMacroProvider>
