@@ -43,13 +43,17 @@ export function CommentModal({
 }: CommentModalProps) {
   const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
-  const [text, setText] = useState(initialText);
+  // Uncontrolled: a controlled `value` makes RNGH's TextInput reset the Android
+  // cursor to the start on every keystroke (OJD-1562).
+  const textRef = useRef(initialText);
+  const [inputKey, setInputKey] = useState(0);
   const sheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
-      setText(initialText);
+      textRef.current = initialText;
+      setInputKey((key) => key + 1); // remount so defaultValue re-applies
       sheetRef.current?.present();
     } else {
       sheetRef.current?.dismiss();
@@ -57,7 +61,7 @@ export function CommentModal({
   }, [visible, initialText]);
 
   const handleSave = () => {
-    onSave(text);
+    onSave(textRef.current);
   };
 
   const renderBackdrop = useCallback(
@@ -147,9 +151,12 @@ export function CommentModal({
           )}
         </View>
         <Input
+          key={inputKey}
           asBottomSheet
-          value={text}
-          onChangeText={setText}
+          defaultValue={initialText}
+          onChangeText={(value) => {
+            textRef.current = value;
+          }}
           placeholder={t("recentMeasurements:commentModal.placeholder")}
           multiline
           numberOfLines={4}

@@ -101,7 +101,7 @@ describe("CommentModal", () => {
 
     expect(bottomSheetState.present).toHaveBeenCalled();
     expect(screen.getByText("Add comment")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Enter your comment here...").props.value).toBe(
+    expect(screen.getByPlaceholderText("Enter your comment here...").props.defaultValue).toBe(
       "Existing note",
     );
     expect(screen.getByText("Sunny | 23C")).toBeTruthy();
@@ -125,7 +125,7 @@ describe("CommentModal", () => {
     fireEvent.changeText(screen.getByPlaceholderText("Enter your comment here..."), "Draft");
     rerender(<CommentModal {...defaultProps} initialText="Second note" />);
 
-    expect(screen.getByPlaceholderText("Enter your comment here...").props.value).toBe(
+    expect(screen.getByPlaceholderText("Enter your comment here...").props.defaultValue).toBe(
       "Second note",
     );
   });
