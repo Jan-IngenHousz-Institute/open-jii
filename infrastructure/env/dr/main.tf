@@ -547,6 +547,7 @@ module "backend_ecs" {
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
+    module.iot_core.backend_iot_publish_policy_arn,
   ]
 
   tags = {
