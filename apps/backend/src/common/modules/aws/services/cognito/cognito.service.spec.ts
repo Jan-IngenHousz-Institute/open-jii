@@ -224,7 +224,10 @@ describe("CognitoService", () => {
   describe("attachIotPolicy", () => {
     it("should attach every configured IoT policy to the given identity", async () => {
       const identityId = "eu-central-1:identity-id-123";
-      const policyNames = process.env.AWS_IOT_POLICY_NAMES?.split(",") ?? [];
+      const policyNames =
+        process.env.AWS_IOT_POLICY_NAMES?.split(",")
+          .map((name) => name.trim())
+          .filter(Boolean) ?? [];
 
       iotMock.on(AttachPolicyCommand).resolves({});
 
