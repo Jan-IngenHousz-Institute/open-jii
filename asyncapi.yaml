@@ -4,24 +4,20 @@ info:
   version: "1.0.0"
   description: >
     This AsyncAPI specification defines the MQTT topics and message schemas for AWS IoT Core.
-    It is the single source of truth consumed by the Terraform iot-core module to generate IoT
-    policies and topic rules. It covers cloud-bound channels (devices publish sensor data) and
-    device-bound channels (the cloud publishes behaviour scripts that devices subscribe to).
+    It details channels for device status updates and sensor data, allowing devices to publish
+    their state and sensor readings securely.
   contact:
     name: openJII
+    email: ji-institute@info.nl
   license:
     name: GNU General Public License
     url: https://www.gnu.org/licenses/gpl-3.0.html
 
 servers:
   production:
-    url: a3xxxxxxxxxxxx-ats.iot.eu-central-1.amazonaws.com
-    protocol: secure-mqtt
-    description: >
-      AWS IoT Core production ATS endpoint. Clients connect over MQTT on WebSocket
-      Secure (wss://.../mqtt), authenticated with AWS Signature Version 4.
-    security:
-      - sigv4: []
+    url: a123456789.iot.us-east-1.amazonaws.com
+    protocol: mqtt
+    description: AWS IoT Core production endpoint
 
 channels:
   experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}:
@@ -66,15 +62,14 @@ channels:
     description: |
       Channel for delivering behaviour scripts to a device. The cloud publishes and
       the device subscribes, then applies the script to its attached sensor. Messages
-      are published retained at QoS 1, so a device that reconnects immediately receives
+      are published retained at QoS 1 so a device that reconnects immediately receives
       the current script for its topic.
       The path parameters represent:
       <ul>
         <li><strong>sensorType:</strong> The target sensor family (e.g., MultispeQ, Ambit...).</li>
         <li><strong>sensorVersion:</strong> Target firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
-        <li><strong>identityId:</strong> Cognito identity id of the target device. The generated IoT
-          policy binds this segment to ${cognito-identity.amazonaws.com:sub}, so a device can only
-          subscribe to and receive its own scripts.</li>
+        <li><strong>identityId:</strong> Cognito identity id of the target device. The IoT policy binds this
+          segment to ${cognito-identity.amazonaws.com:sub}, so a device can only subscribe to and receive its own scripts.</li>
       </ul>
     parameters:
       sensorType:
@@ -152,27 +147,21 @@ components:
           type:
             type: string
             enum: ["script_update"]
-            description: >
-              Command discriminator. Lets the same topic carry future command
-              types alongside script_update.
+            description: Command discriminator, so the same topic can carry future command types.
           id:
             type: string
-            description: >
-              Unique update identifier (e.g. upd-2026-06-08-001). Lets a device
-              skip an update it has already applied.
+            description: Unique update identifier (e.g. upd-2026-06-08-001). Lets a device skip an update it has already applied.
           payload:
             type: string
             description: >
-              The protocol measurement script body (Lua source), sent inline.
-              May be a raw string or a gzip+base64 encoded string when
-              _payload_encoding is set.
+              The protocol measurement script body (Lua source), sent inline. May be a
+              raw string or a gzip+base64 encoded string when _payload_encoding is set.
           _payload_encoding:
             type: string
             enum: ["gzip+base64"]
             description: >
-              When present, indicates that the `payload` field has been
-              compressed (gzip) and base64-encoded to reduce message size.
-              Absent on raw (uncompressed) payloads.
+              When present, indicates that the `payload` field has been compressed
+              (gzip) and base64-encoded. Absent on raw (uncompressed) payloads.
           checksum:
             type: string
             description: SHA-256 hex digest of the decoded script body, for integrity verification before applying.
@@ -180,7 +169,6 @@ components:
           - type
           - id
           - payload
-          - checksum
       examples:
         - payload:
             type: "script_update"
