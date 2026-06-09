@@ -29,8 +29,7 @@ export class AwsConfigService {
       cognitoDeveloperProviderName: this.configService.getOrThrow<string>(
         "aws.cognito.developerProviderName",
       ),
-      iotPolicyNames: this.configService
-        .getOrThrow<string>("aws.iot.policyNames")
+      iotPolicyNames: (this.configService.getOrThrow<string>("aws.iot.policyNames") ?? "")
         .split(",")
         .map((name) => name.trim())
         .filter(Boolean),
