@@ -1,8 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ITransportAdapter } from "../../transport/interface";
+import { MULTISPEQ_CONSOLE } from "./commands";
 import { MULTISPEQ_FRAMING } from "./config";
 import { MultispeqDriver } from "./driver";
+
+/**
+ * Minimal protocol whose estimated runtime exceeds the 60 s base timeout.
+ * 100 pulses × 1000 µs = 100 ms train, × 1000 protocol_repeats = 100_000 ms.
+ * computeScanTimeoutMs → 100_000 × 2 + 10_000 = 210_000 ms.
+ */
+const LONG_PROTOCOL = [
+  {
+    v_arrays: [],
+    set_repeats: 1,
+    _protocol_set_: [{ pulses: [100], pulse_distance: [1000], protocol_repeats: 1000 }],
+  },
+];
+const LONG_PROTOCOL_TIMEOUT_MS = 210_000;
+const CANCEL_FRAME = `${MULTISPEQ_CONSOLE.CANCEL}${MULTISPEQ_FRAMING.LINE_ENDING}`;
 
 function createMockTransport(): ITransportAdapter & {
   simulateData: (data: string) => void;
@@ -247,6 +263,90 @@ describe("MultispeqDriver", () => {
       const resultPromise = driver.execute("cmd");
 
       await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+
+      const result = await resultPromise;
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("Command timeout");
+
+      vi.useRealTimers();
+    });
+
+    it("should send the cancel switch (-1+) when a command times out", async () => {
+      // Long-running protocols leave the device mid-measurement; without a
+      // cancel it keeps the actinic light on and drops the link
+      vi.useFakeTimers();
+      driver.initialize(transport);
+
+      const resultPromise = driver.execute("cmd");
+      await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+      await resultPromise;
+
+      expect(transport.send).toHaveBeenCalledWith(CANCEL_FRAME);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe("dynamic protocol timeout", () => {
+    it("does not time out a long protocol at the 60s base timeout", async () => {
+      vi.useFakeTimers();
+      driver.initialize(transport);
+
+      const resultPromise = driver.execute(LONG_PROTOCOL);
+
+      // Past the base 60 s timeout — a long protocol must still be waiting.
+      await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+      transport.simulateData('{"ok":1}ABCD1234\n');
+
+      const result = await resultPromise;
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({ ok: 1 });
+      expect(transport.send).not.toHaveBeenCalledWith(CANCEL_FRAME);
+
+      vi.useRealTimers();
+    });
+
+    it("times out a long protocol at its computed budget and cancels", async () => {
+      vi.useFakeTimers();
+      driver.initialize(transport);
+
+      const resultPromise = driver.execute(LONG_PROTOCOL);
+
+      // Just before the computed budget: still pending.
+      await vi.advanceTimersByTimeAsync(LONG_PROTOCOL_TIMEOUT_MS - 1);
+      expect(transport.send).not.toHaveBeenCalledWith(CANCEL_FRAME);
+
+      // Crossing the budget: rejects as timeout and cancels the device.
+      await vi.advanceTimersByTimeAsync(2);
+      const result = await resultPromise;
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("Command timeout");
+      expect(transport.send).toHaveBeenCalledWith(CANCEL_FRAME);
+
+      vi.useRealTimers();
+    });
+
+    it("honours an explicit per-call timeoutMs override", async () => {
+      vi.useFakeTimers();
+      driver.initialize(transport);
+
+      const resultPromise = driver.execute("cmd", { timeoutMs: 5_000 });
+      await vi.advanceTimersByTimeAsync(5_001);
+
+      const result = await resultPromise;
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("Command timeout");
+
+      vi.useRealTimers();
+    });
+
+    it("uses the constructor config timeout as the base for string commands", async () => {
+      vi.useFakeTimers();
+      const configured = new MultispeqDriver(undefined, { timeout: 5_000 });
+      configured.initialize(transport);
+
+      const resultPromise = configured.execute("cmd");
+      await vi.advanceTimersByTimeAsync(5_001);
 
       const result = await resultPromise;
       expect(result.success).toBe(false);

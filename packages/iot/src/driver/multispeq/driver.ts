@@ -15,9 +15,11 @@ import {
 } from "../../utils/framing/framing";
 import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
-import type { CommandResult } from "../driver-base";
-import { MULTISPEQ_COMMANDS } from "./commands";
+import type { CommandResult, ExecuteOptions } from "../driver-base";
+import { MULTISPEQ_COMMANDS, MULTISPEQ_CONSOLE } from "./commands";
+import type { MultispeqTransportConfig } from "./config";
 import { MULTISPEQ_FRAMING } from "./config";
+import { resolveCommandTimeoutMs } from "./estimate-protocol-duration";
 import type {
   MultispeqStreamEvents,
   MultispeqCommandResult,
@@ -32,8 +34,12 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   private dataBuffer: string[] = [];
   private bufferLength = 0;
 
-  constructor(logger?: Logger) {
+  /** Base response timeout (ms) used for short console commands. */
+  private readonly defaultTimeout: number;
+
+  constructor(logger?: Logger, config?: Pick<MultispeqTransportConfig, "timeout">) {
     super(logger);
+    this.defaultTimeout = config?.timeout ?? MULTISPEQ_FRAMING.DEFAULT_TIMEOUT;
   }
 
   initialize(transport: ITransportAdapter): void {
@@ -87,8 +93,13 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     });
   }
 
-  async execute<T = unknown>(command: string | object): Promise<CommandResult<T>> {
+  async execute<T = unknown>(
+    command: string | object,
+    options?: ExecuteOptions,
+  ): Promise<CommandResult<T>> {
     this.ensureInitialized();
+
+    const timeoutMs = options?.timeoutMs ?? resolveCommandTimeoutMs(command, this.defaultTimeout);
 
     // Serialize commands so responses are never mismatched
     return this.commandQueue.enqueue(async () => {
@@ -104,7 +115,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
         await this.transport.send(commandWithEnding);
 
         // Wait for response
-        const response = await this.waitForResponse();
+        const response = await this.waitForResponse(timeoutMs);
 
         return {
           success: true,
@@ -149,12 +160,21 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     return info;
   }
 
-  private waitForResponse(): Promise<MultispeqCommandResult> {
+  private waitForResponse(timeoutMs: number): Promise<MultispeqCommandResult> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.emitter.off("receivedReplyFromDevice", handler);
+        // On timeout the device may still be running a long protocol. Without
+        // an explicit cancel it keeps the actinic light on and eventually
+        // drops the connection (OJD-1565). Best-effort abort so it returns to
+        // idle; we still reject this command as timed out.
+        if (this.transport) {
+          void this.transport
+            .send(addLineEnding(MULTISPEQ_CONSOLE.CANCEL, MULTISPEQ_FRAMING.LINE_ENDING))
+            .catch(() => undefined);
+        }
         reject(new Error("Command timeout"));
-      }, MULTISPEQ_FRAMING.DEFAULT_TIMEOUT);
+      }, timeoutMs);
 
       const handler = (payload: MultispeqCommandResult) => {
         clearTimeout(timeout);

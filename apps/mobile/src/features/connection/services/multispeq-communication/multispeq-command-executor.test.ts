@@ -1,8 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Emitter } from "~/features/connection/utils/emitter";
 
+import { MULTISPEQ_CONSOLE, MULTISPEQ_FRAMING } from "@repo/iot";
+
 import { MultispeqCommandExecutor } from "./multispeq-command-executor";
 import type { MultispeqStreamEvents } from "./multispeq-stream-events";
+
+/**
+ * Protocol whose estimated runtime exceeds the 60 s base timeout
+ * (100 pulses × 1000 µs × 1000 repeats = 100_000 ms).
+ */
+const LONG_PROTOCOL = [
+  {
+    v_arrays: [],
+    set_repeats: 1,
+    _protocol_set_: [{ pulses: [100], pulse_distance: [1000], protocol_repeats: 1000 }],
+  },
+];
 
 /**
  * Wrap an Emitter as a fake device: every command sent via "sendCommandToDevice"
@@ -166,6 +180,62 @@ describe("MultispeqCommandExecutor", () => {
 
       const exec = new MultispeqCommandExecutor(failing);
       await expect(exec.execute("hello")).rejects.toThrow("BT write failed");
+    });
+  });
+
+  describe("response timeout", () => {
+    it("times out a string command at the base 60s timeout and cancels the device", async () => {
+      vi.useFakeTimers();
+      const settled = executor.execute("hello").catch((e: Error) => e);
+
+      await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+
+      const err = await settled;
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toBe("Command timeout");
+      // The device is aborted so the actinic light turns off and the link stays up.
+      expect(device.sentCommands).toContain(MULTISPEQ_CONSOLE.CANCEL);
+
+      vi.useRealTimers();
+    });
+
+    it("does not time out a long protocol at the base 60s timeout", async () => {
+      vi.useFakeTimers();
+      const pending = executor.execute(LONG_PROTOCOL);
+
+      await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+      await device.reply({ ok: true });
+
+      await expect(pending).resolves.toEqual({ ok: true });
+      expect(device.sentCommands).not.toContain(MULTISPEQ_CONSOLE.CANCEL);
+
+      vi.useRealTimers();
+    });
+
+    it("honours a per-call timeoutMs override", async () => {
+      vi.useFakeTimers();
+      const settled = executor.execute("hello", { timeoutMs: 5_000 }).catch((e: Error) => e);
+
+      await vi.advanceTimersByTimeAsync(5_001);
+
+      const err = await settled;
+      expect((err as Error).message).toBe("Command timeout");
+
+      vi.useRealTimers();
+    });
+
+    it("clears the timeout once the reply arrives (no late cancel)", async () => {
+      vi.useFakeTimers();
+      const pending = executor.execute("hello", { timeoutMs: 5_000 });
+
+      await device.reply({ ok: true });
+      await expect(pending).resolves.toEqual({ ok: true });
+
+      // Advancing past the original timeout must not fire a stray cancel.
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(device.sentCommands).not.toContain(MULTISPEQ_CONSOLE.CANCEL);
+
+      vi.useRealTimers();
     });
   });
 });
