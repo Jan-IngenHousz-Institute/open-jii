@@ -38,11 +38,12 @@ export function MultipleChoiceQuestion({
   }, [content.options, searchTerm]);
 
   const numOptions = filteredOptions.length;
-  const { columns, buttonHeight, buttonWidth } = useMemo(
-    () => calculateGridLayout(numOptions),
-    [numOptions],
+  const { layout, columns, buttonHeight, buttonWidth } = useMemo(
+    () => calculateGridLayout(filteredOptions),
+    [filteredOptions],
   );
-  const fontSize = numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12;
+  const isList = layout === "list";
+  const fontSize = isList ? 16 : numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12;
 
   const handleOptionSelect = useCallback(
     (value: string) => {
@@ -62,8 +63,11 @@ export function MultipleChoiceQuestion({
         <Button
           title={option}
           variant={isSelected ? "tertiary" : "light"}
-          style={{ width: buttonWidth, height: buttonHeight }}
+          style={{ width: buttonWidth, minHeight: buttonHeight }}
           textStyle={{ fontSize }}
+          multiline
+          numberOfLines={isList ? undefined : 2}
+          ellipsizeMode="tail"
           onPress={() => handleOptionSelect(option)}
           isDisabled={isDisabled}
           icon={isSelected ? <Check size={16} color="#005E5E" strokeWidth={3} /> : undefined}
@@ -71,7 +75,15 @@ export function MultipleChoiceQuestion({
         />
       );
     },
-    [buttonHeight, buttonWidth, disabledOptions, fontSize, handleOptionSelect, selectedValue],
+    [
+      buttonHeight,
+      buttonWidth,
+      disabledOptions,
+      fontSize,
+      handleOptionSelect,
+      isList,
+      selectedValue,
+    ],
   );
 
   return (
