@@ -119,4 +119,71 @@ describe("CtfRichText", () => {
 
     expect(screen.getByText("inline copy")).toBeTruthy();
   });
+
+  it("renders the full inline node set", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+
+    render(
+      <CtfRichText
+        inline
+        json={doc(
+          block(BLOCKS.HEADING_1, text("inline h1")),
+          block(BLOCKS.HEADING_2, text("inline h2")),
+          block(BLOCKS.HEADING_3, text("inline h3")),
+          block(BLOCKS.HEADING_4, text("inline h4")),
+          block(BLOCKS.HEADING_5, text("inline h5")),
+          block(BLOCKS.HEADING_6, text("inline h6")),
+          block(
+            BLOCKS.PARAGRAPH,
+            text("b", [MARKS.BOLD]),
+            text("i", [MARKS.ITALIC]),
+            text("u", [MARKS.UNDERLINE]),
+            text("c", [MARKS.CODE]),
+            hyperlink("https://inline.test", text("inline link")),
+          ),
+          block(BLOCKS.UL_LIST, block(BLOCKS.LIST_ITEM, block(BLOCKS.PARAGRAPH, text("ul item")))),
+          block(BLOCKS.OL_LIST, block(BLOCKS.LIST_ITEM, block(BLOCKS.PARAGRAPH, text("ol item")))),
+          block(BLOCKS.QUOTE, block(BLOCKS.PARAGRAPH, text("inline quote"))),
+          block(BLOCKS.HR),
+        )}
+      />,
+    );
+
+    expect(screen.getByText("inline h1")).toBeTruthy();
+    expect(screen.getByText("inline h6")).toBeTruthy();
+    expect(screen.getByText("ul item")).toBeTruthy();
+    expect(screen.getByText("ol item")).toBeTruthy();
+    expect(screen.getByText("inline quote")).toBeTruthy();
+
+    fireEvent.press(screen.getByText("inline link"));
+    expect(openURL).toHaveBeenCalledWith("https://inline.test");
+  });
+
+  it("renders headings, a table, and a divider", () => {
+    render(
+      <CtfRichText
+        json={doc(
+          block(BLOCKS.HEADING_2, text("Heading 2")),
+          block(BLOCKS.HEADING_3, text("Heading 3")),
+          block(BLOCKS.HEADING_4, text("Heading 4")),
+          block(BLOCKS.HEADING_5, text("Heading 5")),
+          block(BLOCKS.HEADING_6, text("Heading 6")),
+          block(BLOCKS.HR),
+          block(
+            BLOCKS.TABLE,
+            block(
+              BLOCKS.TABLE_ROW,
+              block(BLOCKS.TABLE_HEADER_CELL, block(BLOCKS.PARAGRAPH, text("Header cell"))),
+              block(BLOCKS.TABLE_CELL, block(BLOCKS.PARAGRAPH, text("Body cell"))),
+            ),
+          ),
+        )}
+      />,
+    );
+
+    expect(screen.getByText("Heading 2")).toBeTruthy();
+    expect(screen.getByText("Heading 6")).toBeTruthy();
+    expect(screen.getByText("Header cell")).toBeTruthy();
+    expect(screen.getByText("Body cell")).toBeTruthy();
+  });
 });
