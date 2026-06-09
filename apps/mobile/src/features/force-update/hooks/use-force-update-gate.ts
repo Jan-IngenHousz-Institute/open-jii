@@ -38,7 +38,7 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
     staleTime: FIVE_MINUTES,
     gcTime: Infinity, // keep the last-known gate persisted for offline checks
     refetchOnMount: true,
-    networkMode: "always",
+    networkMode: "offlineFirst",
     meta: { suppressToast: true },
   });
 
@@ -51,7 +51,7 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
         queryFn: () => fetchForceUpdate(locale),
         staleTime: FIVE_MINUTES,
         gcTime: Infinity,
-        networkMode: "always",
+        networkMode: "offlineFirst",
         meta: { suppressToast: true },
       });
     });
