@@ -150,6 +150,7 @@ describe("AwsAdapter", () => {
       };
 
       vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(success(mockTokenResult));
+      vi.spyOn(cognitoService, "attachIotPolicy").mockResolvedValue(success(undefined));
       vi.spyOn(cognitoService, "getCredentialsForIdentity").mockResolvedValue(
         success(mockCredentials),
       );
@@ -165,6 +166,23 @@ describe("AwsAdapter", () => {
         mockTokenResult.identityId,
         mockTokenResult.token,
       );
+    });
+
+    it("should return failure when attachIotPolicy fails", async () => {
+      const userId = "test-user-123";
+      const mockTokenResult = {
+        identityId: "eu-central-1:identity-id-123",
+        token: "mock-openid-token",
+      };
+      const error = AppError.internal("IoT attach failed", ErrorCodes.AWS_IOT_ATTACH_POLICY_FAILED);
+
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(success(mockTokenResult));
+      vi.spyOn(cognitoService, "attachIotPolicy").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.getIotCredentials(userId);
+
+      assertFailure(result);
+      expect(result.error.message).toBe("IoT attach failed");
     });
 
     it("should return failure when getOpenIdToken fails", async () => {
@@ -193,6 +211,7 @@ describe("AwsAdapter", () => {
       );
 
       vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(success(mockTokenResult));
+      vi.spyOn(cognitoService, "attachIotPolicy").mockResolvedValue(success(undefined));
       vi.spyOn(cognitoService, "getCredentialsForIdentity").mockResolvedValue(failure(error));
 
       const result = await awsAdapter.getIotCredentials(userId);
