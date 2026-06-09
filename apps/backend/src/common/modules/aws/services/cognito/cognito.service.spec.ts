@@ -222,8 +222,9 @@ describe("CognitoService", () => {
   });
 
   describe("attachIotPolicy", () => {
-    it("should attach the IoT policy to the given identity", async () => {
+    it("should attach every configured IoT policy to the given identity", async () => {
       const identityId = "eu-central-1:identity-id-123";
+      const policyNames = process.env.AWS_IOT_POLICY_NAMES?.split(",") ?? [];
 
       iotMock.on(AttachPolicyCommand).resolves({});
 
@@ -231,11 +232,10 @@ describe("CognitoService", () => {
 
       assertSuccess(result);
       const calls = iotMock.commandCalls(AttachPolicyCommand);
-      expect(calls).toHaveLength(1);
-      expect(calls[0].args[0].input).toMatchObject({
-        policyName: process.env.AWS_IOT_POLICY_NAME,
-        target: identityId,
-      });
+      expect(calls).toHaveLength(policyNames.length);
+      expect(calls.map((call) => call.args[0].input)).toEqual(
+        policyNames.map((policyName) => ({ policyName, target: identityId })),
+      );
     });
 
     it("should return failure when IoT API call fails", async () => {

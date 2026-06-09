@@ -81,30 +81,7 @@ locals {
     if contains(keys(details), "subscribe")
   }
 
-  # Statements for the single env-wide IoT policy: every channel's permissions,
-  # split by the resource ARN type each action requires.
-  iot_policy_statements = flatten([
-    for channel in local.all_channels : concat(
-      length(local.topic_actions_by_channel[channel]) > 0 ? [
-        {
-          Effect   = "Allow",
-          Action   = local.topic_actions_by_channel[channel],
-          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${local.iot_policy_topics[channel]}"
-        }
-      ] : [],
-      length(local.topicfilter_actions_by_channel[channel]) > 0 ? [
-        {
-          Effect   = "Allow",
-          Action   = local.topicfilter_actions_by_channel[channel],
-          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/${local.iot_policy_topics[channel]}"
-        }
-      ] : []
-    )
-  ])
-
-  # Friendly name per channel. The policy is keyed by the ingest channel and keeps
-  # this derived name so the existing live policy is updated in place rather than
-  # renamed/replaced (a rename would break MQTT auth for connected devices).
+  # Friendly name per channel, derived from the channel's static prefix.
   iot_policy_names = {
     for channel in local.all_channels : channel =>
     "open_jii_${var.environment}_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
@@ -120,12 +97,11 @@ resource "aws_iot_logging_options" "iot_core_logging" {
 # -----------------
 # AWS IoT Policies
 # -----------------
-# One IoT policy, keyed by the ingest channel so it keeps its existing resource
-# address and name (no replace of the live, attached policy). Its document grants
-# every channel's permissions, so the single policy the backend attaches to each
-# Cognito identity covers both ingest and script delivery.
+# One IoT policy per channel. The backend attaches every policy to each
+# authenticated Cognito identity, so adding a channel is additive: existing
+# policies keep their name and address and are never replaced.
 resource "aws_iot_policy" "iot_policy" {
-  for_each = local.ingest_channels
+  for_each = local.asyncapi.channels
 
   name = local.iot_policy_names[each.key]
   policy = jsonencode({
@@ -138,7 +114,20 @@ resource "aws_iot_policy" "iot_policy" {
           Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:client/$${iot:ClientId}"
         }
       ],
-      local.iot_policy_statements
+      length(local.topic_actions_by_channel[each.key]) > 0 ? [
+        {
+          Effect   = "Allow",
+          Action   = local.topic_actions_by_channel[each.key],
+          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${local.iot_policy_topics[each.key]}"
+        }
+      ] : [],
+      length(local.topicfilter_actions_by_channel[each.key]) > 0 ? [
+        {
+          Effect   = "Allow",
+          Action   = local.topicfilter_actions_by_channel[each.key],
+          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/${local.iot_policy_topics[each.key]}"
+        }
+      ] : []
     )
   })
 }

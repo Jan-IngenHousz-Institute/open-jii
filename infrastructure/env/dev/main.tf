@@ -1793,8 +1793,8 @@ module "backend_ecs" {
       value = module.cognito.developer_provider_name
     },
     {
-      name  = "AWS_IOT_POLICY_NAME"
-      value = module.iot_core.iot_policy_name
+      name  = "AWS_IOT_POLICY_NAMES"
+      value = join(",", module.iot_core.iot_policy_names)
     },
     {
       name  = "EMAIL_BASE_URL"
