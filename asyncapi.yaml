@@ -180,12 +180,13 @@ components:
           - type
           - id
           - payload
+          - checksum
       examples:
         - payload:
             type: "script_update"
             id: "upd-2026-06-08-001"
             payload: "-- Lua protocol script\nreturn { pulses = 100, interval_ms = 500 }"
-            checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            checksum: "adaeff5386f5e9dcaef58c0cc39f69f2d62a98bedae07195d02bdc82595a90ad"
 
   securitySchemes:
     sigv4:

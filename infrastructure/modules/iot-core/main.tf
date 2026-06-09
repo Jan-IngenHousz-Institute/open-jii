@@ -46,11 +46,33 @@ locals {
     contains(keys(details), "publish") ? ["iot:Subscribe"] : []
   }
 
-  # Compute a friendly name for each IoT policy based on the static portion of the channel.
-  iot_policy_names = {
-    for channel in local.all_channels : channel =>
-    "open_jii_${var.environment}_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
-  }
+  # All channels are consolidated into a single IoT policy per environment. An
+  # authenticated Cognito identity is attached to this one policy (dual-auth),
+  # which must grant every topic it may use: publishing ingest data and
+  # subscribing to its own scripts.
+  iot_policy_name = "open_jii_${var.environment}_iot_policy"
+
+  # Per-channel policy statements, split by IoT resource ARN type (Subscribe
+  # resolves against topicfilter/, Publish and Receive against topic/), merged
+  # into the single policy below.
+  iot_policy_statements = flatten([
+    for channel in local.all_channels : concat(
+      length(local.topic_actions_by_channel[channel]) > 0 ? [
+        {
+          Effect   = "Allow",
+          Action   = local.topic_actions_by_channel[channel],
+          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${local.iot_policy_topics[channel]}"
+        }
+      ] : [],
+      length(local.topicfilter_actions_by_channel[channel]) > 0 ? [
+        {
+          Effect   = "Allow",
+          Action   = local.topicfilter_actions_by_channel[channel],
+          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/${local.iot_policy_topics[channel]}"
+        }
+      ] : []
+    )
+  ])
 
   # Compute a friendly name for each IoT topic rule based on the static portion of the channel.
   iot_rule_names = {
@@ -107,9 +129,7 @@ resource "aws_iot_logging_options" "iot_core_logging" {
 # AWS IoT Policies
 # -----------------
 resource "aws_iot_policy" "iot_policy" {
-  for_each = local.asyncapi.channels
-
-  name = local.iot_policy_names[each.key]
+  name = local.iot_policy_name
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = concat(
@@ -120,20 +140,7 @@ resource "aws_iot_policy" "iot_policy" {
           Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:client/$${iot:ClientId}"
         }
       ],
-      length(local.topic_actions_by_channel[each.key]) > 0 ? [
-        {
-          Effect   = "Allow",
-          Action   = local.topic_actions_by_channel[each.key],
-          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${local.iot_policy_topics[each.key]}"
-        }
-      ] : [],
-      length(local.topicfilter_actions_by_channel[each.key]) > 0 ? [
-        {
-          Effect   = "Allow",
-          Action   = local.topicfilter_actions_by_channel[each.key],
-          Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/${local.iot_policy_topics[each.key]}"
-        }
-      ] : []
+      local.iot_policy_statements
     )
   })
 }
