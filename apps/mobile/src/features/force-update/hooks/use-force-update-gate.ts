@@ -8,15 +8,13 @@ import { useEnvironmentStore } from "~/shared/stores/environment-store";
 
 import type { PageForceUpdateFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
-const FIVE_MINUTES = 5 * 60 * 1000;
+const FIVE_MINUTES = 1000;
 
 export type ForceUpdateGateStatus = "checking" | "allowed" | "gated";
 
 export interface ForceUpdateGateResult {
-  /** `checking` until the first decision is safe to render. */
   status: ForceUpdateGateStatus;
   gated: boolean;
-  /** Cached-or-fresh gate config, or `null` when none applies. */
   gate: PageForceUpdateFieldsFragment | null;
 }
 
@@ -72,11 +70,15 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
   const effective = !gate?.effectiveAt || new Date(gate.effectiveAt) <= new Date();
   const below = gate?.minVersion ? isVersionBelow(running, gate.minVersion) : false;
   const gated = Boolean(active && effective && below);
-  const status: ForceUpdateGateStatus = initialCheckReady
-    ? gated
-      ? "gated"
-      : "allowed"
-    : "checking";
+  // Never gate local dev builds (they report the unsynced placeholder app.json version).
+  const isDev = typeof __DEV__ !== "undefined" && __DEV__;
+  const status: ForceUpdateGateStatus = isDev
+    ? "allowed"
+    : initialCheckReady
+      ? gated
+        ? "gated"
+        : "allowed"
+      : "checking";
 
   return { status, gated: status === "gated", gate };
 }
