@@ -1,0 +1,50 @@
+name: Linear ref check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  linear-ref:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title || "";
+            const branch = pr.head?.ref || "";
+            const body = pr.body || "";
+            const author = (pr.user?.login || "").toLowerCase();
+            const labels = (pr.labels || []).map(l => l.name.toLowerCase());
+
+            if (/ojd-\d+/i.test(title) || /ojd-\d+/i.test(branch) || /ojd-\d+/i.test(body)) {
+              core.info("Linear reference found ✓");
+              return;
+            }
+
+            const isBot = author.endsWith("[bot]")
+              || ["dependabot", "renovate", "github-actions"].some(b => author.includes(b));
+            const optedOut = labels.includes("no-linear") || labels.includes("dependencies");
+            const isDepOrBump = /^(chore|build|fix)\(deps\)/i.test(title) || /\bbump\b/i.test(title);
+
+            if (isBot || optedOut || isDepOrBump) {
+              core.info(`No Linear ref, but exempt (bot=${isBot}, label=${optedOut}, depBump=${isDepOrBump}).`);
+              return;
+            }
+
+            core.setFailed([
+              "No Linear issue reference found in the PR title, branch, or description.",
+              "",
+              "Add an OJD-#### reference anywhere, e.g.:",
+              "  title:       feat(web): add filters shelf (OJD-1541)",
+              "  branch:      ojd-1541-filters-shelf",
+              "  description: Closes OJD-1541",
+              "",
+              "This lets the prod release automation track what ships.",
+              "If this PR intentionally has no ticket (quick fix, security/dep bump, tooling),",
+              "add the `no-linear` label and re-run.",
+            ].join("\n"));

@@ -63,6 +63,28 @@ jobs:
       deploy_app: ${{ inputs.deploy_app || '' }}
     secrets: inherit
 
+  sync-linear-release:
+    name: Sync Linear Release
+    needs: deploy-environment
+    if: ${{ !failure() && !cancelled() && (needs.deploy-environment.result == 'success' || needs.deploy-environment.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync Linear release
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          command: sync
+          version: ${{ inputs.ref || github.ref_name }}
+          stage: production
+          include_paths: "apps/web/**,apps/backend/**,apps/data/**,infra/**"
+          dry_run: ${{ inputs.dry_run }}
+
   label-deployed-prs:
     name: Label Deployed PRs
     needs: deploy-environment

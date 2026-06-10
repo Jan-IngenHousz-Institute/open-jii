@@ -14,6 +14,11 @@ on:
         description: "Version to promote (e.g., 1.2.0). If empty, uses latest mobile release tag."
         required: false
         type: string
+      dry_run:
+        description: "Skip Linear sync and only log what would be updated (for testing)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -88,6 +93,18 @@ jobs:
             --branch ${{ inputs.track }} \
             --message "promote v${VERSION} to ${{ inputs.track }}" \
             --non-interactive
+
+      - name: Sync Linear release (production only)
+        if: inputs.track == 'production'
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          command: sync
+          version: "mobile-v${{ steps.version.outputs.version }}"
+          stage: production
+          include_paths: "apps/mobile/**"
+          dry_run: ${{ inputs.dry_run }}
 
       - name: Job summary
         run: |
