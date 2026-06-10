@@ -208,11 +208,11 @@ jobs:
           fi
 
           # Create the label if it doesn't exist
-          if ! gh label list --repo "$REPO" --json name --jq '.[].name' | grep -qx "$LABEL_NAME"; then
+          if ! gh label list --repo "$REPO" --limit 500 --json name --jq '.[].name' | grep -qx "$LABEL_NAME"; then
             gh label create "$LABEL_NAME" \
               --color "0075ca" \
               --description "Deployed to production on ${RELEASE_DATE:0:2}/${RELEASE_DATE:2:2}/${RELEASE_DATE:4:4}" \
-              --repo "$REPO"
+              --repo "$REPO" || echo "Label already exists, continuing."
             echo "Created label: $LABEL_NAME"
           fi
 
