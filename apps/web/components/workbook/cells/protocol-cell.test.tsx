@@ -356,4 +356,118 @@ describe("ProtocolCellComponent", () => {
       expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true");
     });
   });
+
+  describe("save status indicator", () => {
+    function mountOwnedProtocol() {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+    }
+
+    it("shows no status before the owner edits", async () => {
+      mountOwnedProtocol();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      expect(screen.queryByTestId("protocol-save-status")).not.toBeInTheDocument();
+    });
+
+    it("shows 'Unsaved changes' immediately after a valid edit, before the debounce", async () => {
+      mountOwnedProtocol();
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      await user.click(screen.getByTestId("simulate-change"));
+
+      const status = await screen.findByTestId("protocol-save-status");
+      expect(status).toHaveAttribute("data-status", "unsaved");
+      expect(status).toHaveTextContent(/unsaved/i);
+    });
+
+    it("transitions to 'Saved' once the debounced save persists", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      mountOwnedProtocol();
+      const updateSpy = server.mount(contract.protocols.updateProtocol, {
+        body: createProtocol({ id: "p1" }),
+      });
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      await user.click(screen.getByTestId("simulate-change"));
+
+      await vi.advanceTimersByTimeAsync(1100);
+      await waitFor(() => expect(updateSpy.called).toBe(true));
+      await waitFor(() =>
+        expect(screen.getByTestId("protocol-save-status")).toHaveAttribute("data-status", "saved"),
+      );
+      vi.useRealTimers();
+    });
+
+    it("shows 'Invalid JSON' when the edit cannot be parsed", async () => {
+      mountOwnedProtocol();
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-invalid")).toBeInTheDocument());
+      await user.click(screen.getByTestId("simulate-invalid"));
+
+      const status = await screen.findByTestId("protocol-save-status");
+      expect(status).toHaveAttribute("data-status", "invalid");
+      expect(status).toHaveTextContent(/invalid/i);
+    });
+
+    it("shows 'Save failed' when persistence errors", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      mountOwnedProtocol();
+      server.mount(contract.protocols.updateProtocol, { status: 500, body: undefined });
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      await user.click(screen.getByTestId("simulate-change"));
+
+      await vi.advanceTimersByTimeAsync(1100);
+      await waitFor(() =>
+        expect(screen.getByTestId("protocol-save-status")).toHaveAttribute("data-status", "error"),
+      );
+      vi.useRealTimers();
+    });
+
+    it("does not show a save status for non-owners", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true"),
+      );
+      expect(screen.queryByTestId("protocol-save-status")).not.toBeInTheDocument();
+    });
+  });
 });

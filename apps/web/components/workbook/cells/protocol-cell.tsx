@@ -5,7 +5,16 @@ import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtoco
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { registerProtocolFlush } from "@/lib/protocol-save-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CircleCheck,
+  Copy,
+  ExternalLink,
+  Loader2,
+  Microscope,
+  Pencil,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -15,6 +24,55 @@ import { Button } from "@repo/ui/components/button";
 
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
+
+// "idle" = in sync with the server (nothing to show). The others surface the
+// fate of the owner's edits so a pending/skipped save is never invisible.
+type SaveStatus = "idle" | "unsaved" | "saving" | "saved" | "invalid" | "error";
+
+function SaveStatusIndicator({ status }: { status: SaveStatus }) {
+  if (status === "idle") return null;
+
+  const content = {
+    unsaved: {
+      icon: <Pencil className="h-3 w-3" />,
+      label: "Unsaved changes",
+      className: "text-[#68737B]",
+    },
+    saving: {
+      icon: <Loader2 className="h-3 w-3 animate-spin" />,
+      label: "Saving…",
+      className: "text-[#68737B]",
+    },
+    saved: {
+      icon: <CircleCheck className="h-3 w-3" />,
+      label: "Saved",
+      className: "text-emerald-600",
+    },
+    invalid: {
+      icon: <AlertTriangle className="h-3 w-3" />,
+      label: "Invalid JSON — not saved",
+      className: "text-amber-600",
+    },
+    error: {
+      icon: <AlertTriangle className="h-3 w-3" />,
+      label: "Save failed",
+      className: "text-red-600",
+    },
+  }[status];
+
+  return (
+    <span
+      data-testid="protocol-save-status"
+      data-status={status}
+      role="status"
+      aria-live="polite"
+      className={`flex items-center gap-1 text-xs ${content.className}`}
+    >
+      {content.icon}
+      {content.label}
+    </span>
+  );
+}
 
 interface ProtocolCellProps {
   cell: ProtocolCellType;
@@ -53,11 +111,20 @@ export function ProtocolCellComponent({
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
 
   const [localCode, setLocalCode] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedKeyRef = useRef<string>("");
   // Holds a valid, parsed edit that has not been persisted yet. Lets us flush
   // the debounced save on demand (e.g. just before a run) or on unmount.
   const pendingRef = useRef<{ key: string; code: Record<string, unknown>[] } | null>(null);
+  // Avoid setting status after unmount (the unmount handler flushes).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (protocolCode != null && localCode == null) {
@@ -74,12 +141,15 @@ export function ProtocolCellComponent({
     }
     const pending = pendingRef.current;
     if (!pending) return;
+    if (mountedRef.current) setSaveStatus("saving");
     try {
       await saveProtocol({ params: { id: protocolId }, body: { code: pending.code } });
       savedKeyRef.current = pending.key;
       pendingRef.current = null;
+      if (mountedRef.current) setSaveStatus("saved");
     } catch {
       // Leave the edit pending so a later flush or edit retries it.
+      if (mountedRef.current) setSaveStatus("error");
     }
   }, [protocolId, saveProtocol]);
 
@@ -105,6 +175,7 @@ export function ProtocolCellComponent({
           clearTimeout(saveTimeoutRef.current);
           saveTimeoutRef.current = null;
         }
+        setSaveStatus("idle");
         return;
       }
 
@@ -113,11 +184,16 @@ export function ProtocolCellComponent({
       try {
         parsed = JSON.parse(code);
       } catch {
+        setSaveStatus("invalid");
         return;
       }
-      if (!Array.isArray(parsed)) return;
+      if (!Array.isArray(parsed)) {
+        setSaveStatus("invalid");
+        return;
+      }
 
       pendingRef.current = { key: code, code: parsed as Record<string, unknown>[] };
+      setSaveStatus("unsaved");
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         saveTimeoutRef.current = null;
@@ -132,6 +208,7 @@ export function ProtocolCellComponent({
   };
 
   const displayName = cell.payload.name ?? protocolName ?? "Protocol";
+  const isEditable = isOwner && !readOnly;
 
   return (
     <CellWrapper
@@ -146,10 +223,15 @@ export function ProtocolCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        protocolFamily ? (
-          <span className="text-xs capitalize text-[#68737B]">
-            {getSensorFamilyLabel(protocolFamily)}
-          </span>
+        protocolFamily || isEditable ? (
+          <div className="flex items-center gap-2">
+            {protocolFamily ? (
+              <span className="text-xs capitalize text-[#68737B]">
+                {getSensorFamilyLabel(protocolFamily)}
+              </span>
+            ) : null}
+            {isEditable ? <SaveStatusIndicator status={saveStatus} /> : null}
+          </div>
         ) : undefined
       }
       headerActions={
@@ -188,10 +270,10 @@ export function ProtocolCellComponent({
       ) : localCode != null || protocolCode != null ? (
         <WorkbookCodeEditor
           value={localCode ?? protocolCode ?? ""}
-          onChange={isOwner && !readOnly ? handleCodeChange : undefined}
+          onChange={isEditable ? handleCodeChange : undefined}
           language="json"
-          minHeight={isOwner && !readOnly ? "120px" : "80px"}
-          maxHeight={isOwner && !readOnly ? "500px" : "400px"}
+          minHeight={isEditable ? "120px" : "80px"}
+          maxHeight={isEditable ? "500px" : "400px"}
           readOnly={readOnly ?? !isOwner}
         />
       ) : (
