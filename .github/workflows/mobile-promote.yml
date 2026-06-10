@@ -15,7 +15,7 @@ on:
         required: false
         type: string
       dry_run:
-        description: "Skip Linear sync and only log what would be updated (for testing)"
+        description: "Dry run: skip EAS build/OTA and log which Linear tickets would be completed (for testing)"
         required: false
         type: boolean
         default: false
@@ -74,7 +74,7 @@ jobs:
           profile: ${{ inputs.track }}
 
       - name: Build and submit AAB
-        if: steps.decide.outputs.mode == 'build'
+        if: steps.decide.outputs.mode == 'build' && !inputs.dry_run
         working-directory: apps/mobile
         run: |
           eas build \
@@ -84,7 +84,7 @@ jobs:
             --auto-submit
 
       - name: Publish OTA
-        if: steps.decide.outputs.mode == 'ota'
+        if: steps.decide.outputs.mode == 'ota' && !inputs.dry_run
         working-directory: apps/mobile
         env:
           VERSION: ${{ steps.version.outputs.version }}
