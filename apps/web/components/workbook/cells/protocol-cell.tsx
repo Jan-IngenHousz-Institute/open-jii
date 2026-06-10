@@ -3,6 +3,7 @@
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { registerProtocolFlush } from "@/lib/protocol-save-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
@@ -49,11 +50,14 @@ export function ProtocolCellComponent({
   const protocolFamily = protocolData?.body.family;
   const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
 
-  const { mutate: saveProtocol } = useProtocolUpdate(protocolId);
+  const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
 
   const [localCode, setLocalCode] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedKeyRef = useRef<string>("");
+  // Holds a valid, parsed edit that has not been persisted yet. Lets us flush
+  // the debounced save on demand (e.g. just before a run) or on unmount.
+  const pendingRef = useRef<{ key: string; code: Record<string, unknown>[] } | null>(null);
 
   useEffect(() => {
     if (protocolCode != null && localCode == null) {
@@ -62,17 +66,47 @@ export function ProtocolCellComponent({
     }
   }, [protocolCode, localCode]);
 
+  // Persist any pending edit immediately, resolving once the save completes.
+  const flushSave = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    const pending = pendingRef.current;
+    if (!pending) return;
+    try {
+      await saveProtocol({ params: { id: protocolId }, body: { code: pending.code } });
+      savedKeyRef.current = pending.key;
+      pendingRef.current = null;
+    } catch {
+      // Leave the edit pending so a later flush or edit retries it.
+    }
+  }, [protocolId, saveProtocol]);
+
+  // Expose the flush to the run flow, and flush once more on unmount so an edit
+  // made within the debounce window is never silently dropped.
   useEffect(() => {
+    const unregister = registerProtocolFlush(protocolId, flushSave);
     return () => {
+      unregister();
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      void flushSave();
     };
-  }, []);
+  }, [protocolId, flushSave]);
 
   const handleCodeChange = useCallback(
     (code: string) => {
       setLocalCode(code);
 
-      if (code === savedKeyRef.current) return;
+      if (code === savedKeyRef.current) {
+        // Edit reverted back to the saved state — drop any pending save.
+        pendingRef.current = null;
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        return;
+      }
 
       // Protocol code is a JSON array; only persist when the editor contents parse successfully.
       let parsed: unknown;
@@ -83,22 +117,14 @@ export function ProtocolCellComponent({
       }
       if (!Array.isArray(parsed)) return;
 
+      pendingRef.current = { key: code, code: parsed as Record<string, unknown>[] };
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
-        saveProtocol(
-          {
-            params: { id: protocolId },
-            body: { code: parsed as Record<string, unknown>[] },
-          },
-          {
-            onSuccess: () => {
-              savedKeyRef.current = code;
-            },
-          },
-        );
+        saveTimeoutRef.current = null;
+        void flushSave();
       }, 1000);
     },
-    [protocolId, saveProtocol],
+    [flushSave],
   );
 
   const handleCopy = () => {

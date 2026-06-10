@@ -10,6 +10,7 @@ import {
 import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { __resetProtocolSaveRegistry, registerProtocolFlush } from "~/lib/protocol-save-registry";
 
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -69,6 +70,7 @@ describe("useWorkbookExecution", () => {
     mockExecuteProtocol.mockReset();
     mockConnect.mockReset();
     mockDisconnect.mockReset();
+    __resetProtocolSaveRegistry();
   });
 
   it("clearOutputs removes all output cells", () => {
@@ -143,6 +145,38 @@ describe("useWorkbookExecution", () => {
       const outputCell = findOutput(updated);
       expect(outputCell?.data).toEqual({ measurement: 42 });
       expect(outputCell?.producedBy).toBe(proto.id);
+    });
+
+    it("flushes pending editor edits before running so the device gets the latest code", async () => {
+      // Reproduces the stale-protocol bug: the editor holds a debounced,
+      // not-yet-persisted edit when the user hits Run. Running must flush that
+      // pending save first, otherwise the device executes the previously saved
+      // (old) version of the protocol.
+      const proto = createProtocolCell();
+      const oldCode = [{ _protocol_set_: [{ label: "old" }] }];
+      const newCode = [{ _protocol_set_: [{ label: "new" }] }];
+
+      // The server starts out holding the OLD protocol code.
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: proto.payload.protocolId, code: oldCode }),
+      });
+      mockIsConnected = true;
+      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+
+      // Simulate the editor's pending save: flushing persists the NEW code so a
+      // subsequent fetch returns it.
+      registerProtocolFlush(proto.payload.protocolId, () => {
+        server.mount(contract.protocols.getProtocol, {
+          body: createProtocol({ id: proto.payload.protocolId, code: newCode }),
+        });
+        return Promise.resolve();
+      });
+
+      const { result } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      expect(mockExecuteProtocol).toHaveBeenCalledWith(newCode);
     });
 
     it("captures protocol execution errors", async () => {

@@ -1,6 +1,7 @@
+import { __resetProtocolSaveRegistry, flushProtocolSave } from "@/lib/protocol-save-registry";
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -68,6 +69,7 @@ const protocol = createProtocol({
 describe("ProtocolCellComponent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetProtocolSaveRegistry();
     mockedUseSession.mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession
     >);
@@ -282,6 +284,39 @@ describe("ProtocolCellComponent", () => {
 
     expect(updateSpy.called).toBe(false);
     vi.useRealTimers();
+  });
+
+  it("persists a pending edit immediately when the run flow flushes before the debounce fires", async () => {
+    // Reproduces the stale-protocol race at the component seam: the user edits
+    // and the save is debounced. If the run flow can flush the registered save,
+    // the latest code is persisted without waiting out the debounce window.
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-change"));
+
+    // The 1000ms debounce has NOT fired yet — nothing persisted on its own.
+    expect(updateSpy.called).toBe(false);
+
+    // The run flow flushes the registered pending save for this protocol.
+    await act(() => flushProtocolSave("p1"));
+
+    await waitFor(() => expect(updateSpy.called).toBe(true));
+    expect(updateSpy.body).toEqual({ code: [{ measurement: "new", duration: 10 }] });
   });
 
   it("forwards CellWrapper collapse toggles through onUpdate", async () => {

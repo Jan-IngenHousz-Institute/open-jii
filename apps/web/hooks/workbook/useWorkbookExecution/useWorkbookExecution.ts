@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
+import { flushProtocolSave } from "~/lib/protocol-save-registry";
 import { tsr } from "~/lib/tsr";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
@@ -37,6 +38,10 @@ function resolveSensorFamily(_cells: WorkbookCell[]): SensorFamily {
 
 async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unknown>[] | null> {
   try {
+    // Persist any pending (debounced) editor edit before reading the protocol
+    // back, so the device runs the code currently shown in the editor rather
+    // than the last auto-saved snapshot.
+    await flushProtocolSave(cell.payload.protocolId);
     const result = await tsr.protocols.getProtocol.query({
       params: { id: cell.payload.protocolId },
     });
