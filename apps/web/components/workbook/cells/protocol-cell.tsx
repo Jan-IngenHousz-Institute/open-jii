@@ -1,16 +1,21 @@
 "use client";
 
+import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
@@ -48,57 +53,71 @@ export function ProtocolCellComponent({
 
   const protocolFamily = protocolData?.body.family;
   const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
+  const isEditable = isOwner && !readOnly;
 
-  const { mutate: saveProtocol } = useProtocolUpdate(protocolId);
+  const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
 
   const [localCode, setLocalCode] = useState<string | null>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedKeyRef = useRef<string>("");
 
   useEffect(() => {
     if (protocolCode != null && localCode == null) {
       setLocalCode(protocolCode);
-      savedKeyRef.current = protocolCode;
     }
   }, [protocolCode, localCode]);
 
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
-
-  const handleCodeChange = useCallback(
-    (code: string) => {
-      setLocalCode(code);
-
-      if (code === savedKeyRef.current) return;
-
-      // Protocol code is a JSON array; only persist when the editor contents parse successfully.
-      let parsed: unknown;
+  // Mirror the standalone protocol/macro editors: persist via the shared
+  // `useAutosave` hook so debounce, status and flush behave identically across
+  // all three editors. Protocol code is a JSON array; `isValid` skips saves
+  // while the editor is mid-keystroke with text that does not yet parse.
+  const save = useCallback(
+    async (code: string) => {
       try {
-        parsed = JSON.parse(code);
-      } catch {
-        return;
+        await saveProtocol({
+          params: { id: protocolId },
+          body: { code: JSON.parse(code) as Record<string, unknown>[] },
+        });
+      } catch (err) {
+        toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        throw err;
       }
-      if (!Array.isArray(parsed)) return;
-
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        saveProtocol(
-          {
-            params: { id: protocolId },
-            body: { code: parsed as Record<string, unknown>[] },
-          },
-          {
-            onSuccess: () => {
-              savedKeyRef.current = code;
-            },
-          },
-        );
-      }, 1000);
     },
     [protocolId, saveProtocol],
+  );
+
+  const isValidCode = useCallback((code: string) => {
+    try {
+      return Array.isArray(JSON.parse(code));
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const autosave = useAutosave<string>({
+    value: localCode ?? "",
+    toKey: (code) => code,
+    isValid: isValidCode,
+    save,
+    enabled: isEditable && localCode != null,
+  });
+
+  // Expose the live editor code to the run flow so the device runs exactly what
+  // is on screen — no backend round-trip — while autosave persists in the
+  // background. Reads a ref so the source stays stable across keystrokes.
+  const localCodeRef = useRef(localCode);
+  localCodeRef.current = localCode;
+  const getCurrentCode = useCallback((): Record<string, unknown>[] | null => {
+    const code = localCodeRef.current;
+    if (code == null) return null;
+    try {
+      const parsed: unknown = JSON.parse(code);
+      return Array.isArray(parsed) ? (parsed as Record<string, unknown>[]) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+  useEffect(
+    () => registerProtocolCodeSource(protocolId, getCurrentCode),
+    [protocolId, getCurrentCode],
   );
 
   const handleCopy = () => {
@@ -120,10 +139,17 @@ export function ProtocolCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        protocolFamily ? (
-          <span className="text-xs capitalize text-[#68737B]">
-            {getSensorFamilyLabel(protocolFamily)}
-          </span>
+        protocolFamily || (isEditable && localCode != null) ? (
+          <div className="flex items-center gap-2">
+            {protocolFamily ? (
+              <span className="text-xs capitalize text-[#68737B]">
+                {getSensorFamilyLabel(protocolFamily)}
+              </span>
+            ) : null}
+            {isEditable && localCode != null ? (
+              <AutosaveIndicator status={autosave.status} variant="compact" />
+            ) : null}
+          </div>
         ) : undefined
       }
       headerActions={
@@ -162,10 +188,10 @@ export function ProtocolCellComponent({
       ) : localCode != null || protocolCode != null ? (
         <WorkbookCodeEditor
           value={localCode ?? protocolCode ?? ""}
-          onChange={isOwner && !readOnly ? handleCodeChange : undefined}
+          onChange={isEditable ? setLocalCode : undefined}
           language="json"
-          minHeight={isOwner && !readOnly ? "120px" : "80px"}
-          maxHeight={isOwner && !readOnly ? "500px" : "400px"}
+          minHeight={isEditable ? "120px" : "80px"}
+          maxHeight={isEditable ? "500px" : "400px"}
           readOnly={readOnly ?? !isOwner}
         />
       ) : (

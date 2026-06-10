@@ -10,6 +10,10 @@ import {
 import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  __resetProtocolCodeRegistry,
+  registerProtocolCodeSource,
+} from "~/lib/protocol-code-registry";
 
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -69,6 +73,7 @@ describe("useWorkbookExecution", () => {
     mockExecuteProtocol.mockReset();
     mockConnect.mockReset();
     mockDisconnect.mockReset();
+    __resetProtocolCodeRegistry();
   });
 
   it("clearOutputs removes all output cells", () => {
@@ -143,6 +148,50 @@ describe("useWorkbookExecution", () => {
       const outputCell = findOutput(updated);
       expect(outputCell?.data).toEqual({ measurement: 42 });
       expect(outputCell?.producedBy).toBe(proto.id);
+    });
+
+    it("runs the live editor code directly, without re-fetching from the server", async () => {
+      // Fixes the stale-protocol bug at the source: the device runs exactly the
+      // code currently in the editor, with no backend round-trip — so a debounced,
+      // not-yet-saved edit is never bypassed in favour of an older saved version.
+      const proto = createProtocolCell();
+      const liveCode = [{ _protocol_set_: [{ label: "live" }] }];
+
+      // The server holds a different (older) version that must NOT be read.
+      const getProtocolSpy = server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: proto.payload.protocolId,
+          code: [{ _protocol_set_: [{ label: "old" }] }],
+        }),
+      });
+      mockIsConnected = true;
+      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+
+      registerProtocolCodeSource(proto.payload.protocolId, () => liveCode);
+
+      const { result } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      expect(mockExecuteProtocol).toHaveBeenCalledWith(liveCode);
+      expect(getProtocolSpy.called).toBe(false);
+    });
+
+    it("falls back to fetching the saved protocol when no editor is mounted", async () => {
+      const proto = createProtocolCell();
+      const savedCode = [{ _protocol_set_: [{ label: "saved" }] }];
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: proto.payload.protocolId, code: savedCode }),
+      });
+      mockIsConnected = true;
+      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+
+      // No code source registered — e.g. the cell's editor is not mounted.
+      const { result } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      expect(mockExecuteProtocol).toHaveBeenCalledWith(savedCode);
     });
 
     it("captures protocol execution errors", async () => {
