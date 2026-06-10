@@ -116,6 +116,29 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledTimes(1);
     });
 
+    it("should store annotations on macro tables whose name is a UUID", async () => {
+      // Arrange: macro tables are identified by a UUID, not a static identifier
+      const macroTableAnnotation = {
+        ...createValidAnnotation(),
+        tableName: faker.string.uuid(),
+        type: "flag" as const,
+        contentText: null,
+        flagType: "outlier",
+      };
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
+
+      // Act
+      const result = await repository.storeAnnotations(mockExperimentId, [macroTableAnnotation]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
+        databricksPort.CENTRUM_SCHEMA_NAME,
+        expect.stringContaining(macroTableAnnotation.tableName),
+      );
+    });
+
     it("should return success with empty result when no annotations provided", async () => {
       // Act
       const result = await repository.storeAnnotations(mockExperimentId, []);
