@@ -98,7 +98,7 @@ jobs:
         if: inputs.track == 'production'
         uses: linear/linear-release-action@v0
         with:
-          access_key: ${{ secrets.LINEAR_API_KEY }}
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY_MOBILE }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           command: sync
           version: "mobile-v${{ steps.version.outputs.version }}"
