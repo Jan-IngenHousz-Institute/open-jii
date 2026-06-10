@@ -7,8 +7,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
-import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
+import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
 import { env } from "~/env";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
@@ -105,7 +105,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </Link>
         </div>
 
-        <DataUploadModal
+        <UploadDataModal
           experimentId={id}
           open={uploadModalOpen}
           onOpenChange={setUploadModalOpen}
@@ -150,7 +150,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         ))}
       </NavTabs>
 
-      <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
+      <UploadDataModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
     </div>
   );
 }
