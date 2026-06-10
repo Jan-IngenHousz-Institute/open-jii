@@ -536,7 +536,7 @@ module "backend_ecs" {
     { name = "AWS_REGION", value = var.aws_region },
     { name = "AWS_COGNITO_IDENTITY_POOL_ID", value = module.cognito.identity_pool_id },
     { name = "AWS_COGNITO_DEVELOPER_PROVIDER_NAME", value = module.cognito.developer_provider_name },
-    { name = "AWS_IOT_POLICY_NAME", value = module.iot_core.iot_policy_name },
+    { name = "AWS_IOT_POLICY_NAMES", value = join(",", module.iot_core.iot_policy_names) },
     { name = "POSTHOG_KEY", value = var.posthog_key },
     { name = "POSTHOG_HOST", value = var.posthog_host },
     { name = "NEXT_PUBLIC_BASE_URL", value = "https://${module.route53.environment_domain}" },
