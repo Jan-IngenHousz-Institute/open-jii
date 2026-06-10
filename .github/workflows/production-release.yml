@@ -74,6 +74,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref || github.ref_name }}
+          persist-credentials: false
 
       - name: Sync Linear release
         uses: linear/linear-release-action@v0
@@ -210,10 +211,17 @@ jobs:
 
           # Create the label if it doesn't exist
           if ! gh label list --repo "$REPO" --limit 500 --json name --jq '.[].name' | grep -qx "$LABEL_NAME"; then
-            gh label create "$LABEL_NAME" \
+            CREATE_OUTPUT=$(gh label create "$LABEL_NAME" \
               --color "0075ca" \
               --description "Deployed to production on ${RELEASE_DATE:0:2}/${RELEASE_DATE:2:2}/${RELEASE_DATE:4:4}" \
-              --repo "$REPO" || echo "Label already exists, continuing."
+              --repo "$REPO" 2>&1) || {
+              if echo "$CREATE_OUTPUT" | grep -qi "already exists"; then
+                echo "Label already exists, continuing."
+              else
+                echo "Failed to create label: $CREATE_OUTPUT" >&2
+                exit 1
+              fi
+            }
             echo "Created label: $LABEL_NAME"
           fi
 
