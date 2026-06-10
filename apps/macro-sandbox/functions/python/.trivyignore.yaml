@@ -72,3 +72,20 @@ vulnerabilities:
       call; sandbox builtins also block __import__, open, eval.
       Fix is in amzn2023.0.4; awaiting AWS base image republish.
     expired_at: 2026-11-05
+
+  # libsolv (dnf dependency solver) in Amazon Linux 2023 base image.
+  # All four are buffer overflows reachable only while a package manager parses
+  # crafted repo metadata, solv files, or PGP signatures. dnf is never invoked
+  # at runtime. Fix is in 0.7.22-1.amzn2023.0.4; awaiting AWS base image republish.
+  - id: CVE-2026-48863
+    statement: "libsolv EdDSA PGP signature overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-48864
+    statement: "libsolv repopagestore decompression overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-9149
+    statement: "libsolv repo_add_solv overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-9150
+    statement: "libsolv Debian metadata parser overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
