@@ -5,11 +5,11 @@ import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { registerProtocolFlush } from "@/lib/protocol-save-registry";
+import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
@@ -100,10 +100,25 @@ export function ProtocolCellComponent({
     enabled: isEditable && localCode != null,
   });
 
-  // Let the run flow flush a pending edit before it reads the protocol back, so
-  // the device runs the code currently in the editor and not the last save.
-  const { flush } = autosave;
-  useEffect(() => registerProtocolFlush(protocolId, flush), [protocolId, flush]);
+  // Expose the live editor code to the run flow so the device runs exactly what
+  // is on screen — no backend round-trip — while autosave persists in the
+  // background. Reads a ref so the source stays stable across keystrokes.
+  const localCodeRef = useRef(localCode);
+  localCodeRef.current = localCode;
+  const getCurrentCode = useCallback((): Record<string, unknown>[] | null => {
+    const code = localCodeRef.current;
+    if (code == null) return null;
+    try {
+      const parsed: unknown = JSON.parse(code);
+      return Array.isArray(parsed) ? (parsed as Record<string, unknown>[]) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+  useEffect(
+    () => registerProtocolCodeSource(protocolId, getCurrentCode),
+    [protocolId, getCurrentCode],
+  );
 
   const handleCopy = () => {
     void copy(localCode ?? protocolCode ?? "");

@@ -10,7 +10,10 @@ import {
 import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { __resetProtocolSaveRegistry, registerProtocolFlush } from "~/lib/protocol-save-registry";
+import {
+  __resetProtocolCodeRegistry,
+  registerProtocolCodeSource,
+} from "~/lib/protocol-code-registry";
 
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -70,7 +73,7 @@ describe("useWorkbookExecution", () => {
     mockExecuteProtocol.mockReset();
     mockConnect.mockReset();
     mockDisconnect.mockReset();
-    __resetProtocolSaveRegistry();
+    __resetProtocolCodeRegistry();
   });
 
   it("clearOutputs removes all output cells", () => {
@@ -147,36 +150,48 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.producedBy).toBe(proto.id);
     });
 
-    it("flushes pending editor edits before running so the device gets the latest code", async () => {
-      // Reproduces the stale-protocol bug: the editor holds a debounced,
-      // not-yet-persisted edit when the user hits Run. Running must flush that
-      // pending save first, otherwise the device executes the previously saved
-      // (old) version of the protocol.
+    it("runs the live editor code directly, without re-fetching from the server", async () => {
+      // Fixes the stale-protocol bug at the source: the device runs exactly the
+      // code currently in the editor, with no backend round-trip — so a debounced,
+      // not-yet-saved edit is never bypassed in favour of an older saved version.
       const proto = createProtocolCell();
-      const oldCode = [{ _protocol_set_: [{ label: "old" }] }];
-      const newCode = [{ _protocol_set_: [{ label: "new" }] }];
+      const liveCode = [{ _protocol_set_: [{ label: "live" }] }];
 
-      // The server starts out holding the OLD protocol code.
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: proto.payload.protocolId, code: oldCode }),
+      // The server holds a different (older) version that must NOT be read.
+      const getProtocolSpy = server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: proto.payload.protocolId,
+          code: [{ _protocol_set_: [{ label: "old" }] }],
+        }),
       });
       mockIsConnected = true;
       mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
 
-      // Simulate the editor's pending save: flushing persists the NEW code so a
-      // subsequent fetch returns it.
-      registerProtocolFlush(proto.payload.protocolId, () => {
-        server.mount(contract.protocols.getProtocol, {
-          body: createProtocol({ id: proto.payload.protocolId, code: newCode }),
-        });
-        return Promise.resolve();
-      });
+      registerProtocolCodeSource(proto.payload.protocolId, () => liveCode);
 
       const { result } = renderExecution([proto]);
 
       await act(() => result.current.runCell(proto.id));
 
-      expect(mockExecuteProtocol).toHaveBeenCalledWith(newCode);
+      expect(mockExecuteProtocol).toHaveBeenCalledWith(liveCode);
+      expect(getProtocolSpy.called).toBe(false);
+    });
+
+    it("falls back to fetching the saved protocol when no editor is mounted", async () => {
+      const proto = createProtocolCell();
+      const savedCode = [{ _protocol_set_: [{ label: "saved" }] }];
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: proto.payload.protocolId, code: savedCode }),
+      });
+      mockIsConnected = true;
+      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+
+      // No code source registered — e.g. the cell's editor is not mounted.
+      const { result } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      expect(mockExecuteProtocol).toHaveBeenCalledWith(savedCode);
     });
 
     it("captures protocol execution errors", async () => {

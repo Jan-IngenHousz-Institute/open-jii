@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
-import { flushProtocolSave } from "~/lib/protocol-save-registry";
+import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { tsr } from "~/lib/tsr";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
@@ -37,11 +37,13 @@ function resolveSensorFamily(_cells: WorkbookCell[]): SensorFamily {
 }
 
 async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unknown>[] | null> {
+  // Prefer the live editor code so the device runs exactly what is on screen,
+  // with no redundant backend round-trip. Fall back to the last saved version
+  // only when no editor is mounted for this protocol (or it holds invalid code).
+  const live = getLiveProtocolCode(cell.payload.protocolId);
+  if (live && live.length > 0) return live;
+
   try {
-    // Persist any pending (debounced) editor edit before reading the protocol
-    // back, so the device runs the code currently shown in the editor rather
-    // than the last auto-saved snapshot.
-    await flushProtocolSave(cell.payload.protocolId);
     const result = await tsr.protocols.getProtocol.query({
       params: { id: cell.payload.protocolId },
     });
