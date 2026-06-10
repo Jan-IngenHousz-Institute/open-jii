@@ -48,7 +48,11 @@ export type MountFn = <T extends ContractEndpoint>(
 
 /** Individual request captured by the spy. */
 export interface SpyCall {
-  /** Parsed JSON body (POST/PATCH/PUT). */
+  /**
+   * Parsed POST/PATCH/PUT body. JSON requests come back as the parsed object;
+   * multipart/form-data requests come back as a `FormData` instance so tests
+   * can `body.get("field")` and `body.getAll("files")`.
+   */
   body: unknown;
   /** Path params (e.g. `{ id: "exp-1" }`). */
   params: Record<string, string | readonly string[]>;
@@ -117,10 +121,15 @@ export function createMount(server: SetupServer): MountFn {
       });
 
       // ── Parse body ──────────────────────────────────────────
+      // Multipart endpoints (file uploads) need formData parsing; JSON
+      // endpoints get the regular object. The content-type header drives the
+      // branch so callers don't need a separate mount helper per shape.
       let body: unknown = null;
       if (["post", "patch", "put"].includes(method)) {
+        const contentType = request.headers.get("content-type") ?? "";
+        const isMultipart = contentType.includes("multipart/form-data");
         try {
-          body = await request.json();
+          body = isMultipart ? await request.formData() : await request.json();
         } catch {
           body = null;
         }

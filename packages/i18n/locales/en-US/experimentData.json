@@ -57,6 +57,96 @@
       "backToList": "Back to exports",
       "anonymizeContributors": "Anonymize contributors in the exported file",
       "overridingDefault": "overrides experiment default"
+    },
+    "uploadDataModal": {
+      "title": "Upload data",
+      "description": "Upload CSV, TSV, parquet, Excel, JSON, or NDJSON files into a new or existing user table. Schema is inferred from the file.",
+      "targetKind": {
+        "new": "Create new table",
+        "existing": "Append to existing"
+      },
+      "newTable": {
+        "label": "Table name",
+        "placeholder": "e.g. greenhouse_temps"
+      },
+      "existingTable": {
+        "label": "Existing table",
+        "placeholder": "Pick a table",
+        "rowCount_one": "{{count}} row",
+        "rowCount_other": "{{count}} rows"
+      },
+      "sourceKind": {
+        "label": "Data format"
+      },
+      "files": {
+        "label": "Data file(s) (CSV, TSV, parquet, Excel, JSON, NDJSON)",
+        "ambyteLabel": "Ambyte data folder"
+      },
+      "validation": {
+        "title": "Cannot upload",
+        "noTarget": "Pick or name a target table",
+        "invalidName": "Name must start with a letter; use letters, digits, or underscores (max 63)",
+        "noFiles": "Select at least one data file",
+        "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, Excel, JSON, NDJSON)",
+        "mixedFormats": "All files in a single upload must be the same format",
+        "oversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
+        "oversizedFiles_other": "{{count}} files exceed the maximum allowed size",
+        "tooManyFiles": "Too many files: select at most {{max}}",
+        "ambyteInvalidStructure": "The selected folder doesn't match the expected Ambyte_N layout",
+        "ambyteOversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
+        "ambyteOversizedFiles_other": "{{count}} files exceed the maximum allowed size"
+      },
+      "submitError": {
+        "title": "Upload failed",
+        "fallback": "Upload failed"
+      },
+      "status": {
+        "succeeded": {
+          "title": "Upload succeeded",
+          "description": "Rows are landing in '{{tableName}}'. The table will appear once the pipeline materialises it."
+        },
+        "failed": {
+          "title": "Upload failed",
+          "fallback": "The processing job failed."
+        },
+        "processing": {
+          "title": "Processing…",
+          "description": "Your file is uploaded; the processing job is running."
+        }
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "close": "Close",
+        "upload": "Upload"
+      },
+      "history": {
+        "title": "Recent uploads",
+        "empty": "No uploads yet.",
+        "loading": "Loading uploads…",
+        "uploadCount_one": "{{count}} recent upload",
+        "uploadCount_other": "{{count}} recent uploads",
+        "uploadTitle": "Upload #{{number}}",
+        "status": {
+          "pending": "Pending",
+          "running": "Processing",
+          "completed": "Completed",
+          "failed": "Failed"
+        },
+        "sourceKind": {
+          "ambyte": "Ambyte",
+          "csv": "CSV",
+          "tsv": "TSV",
+          "parquet": "Parquet",
+          "xlsx": "Excel",
+          "json": "JSON",
+          "ndjson": "NDJSON"
+        },
+        "rowCount_one": "{{count}} row",
+        "rowCount_other": "{{count}} rows",
+        "fileCount_one": "{{count}} file",
+        "fileCount_other": "{{count}} files",
+        "untargeted": "(no table)"
+      }
     }
   }
 }
