@@ -118,7 +118,7 @@ describe("CommentModal", () => {
 
     expect(onSave).toHaveBeenCalledWith("Updated note");
   });
-  
+
   it("keeps the comment input uncontrolled so the native cursor is preserved", () => {
     render(<CommentModal {...defaultProps} initialText="Existing note" />);
 
@@ -142,6 +142,23 @@ describe("CommentModal", () => {
     fireEvent.press(screen.getByText("Save comment"));
 
     expect(onSave).toHaveBeenCalledWith("25% of the plot covered by another plot");
+  });
+
+  it("discards an unsaved draft when reopened with the same initial text", () => {
+    const onSave = vi.fn();
+    const { rerender } = render(
+      <CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible />,
+    );
+
+    fireEvent.changeText(screen.getByPlaceholderText("Enter your comment here..."), "Stale draft");
+    rerender(
+      <CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible={false} />,
+    );
+    rerender(<CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible />);
+
+    fireEvent.press(screen.getByText("Save comment"));
+
+    expect(onSave).toHaveBeenCalledWith("Original");
   });
 
   it("resets the input when the initial text changes while visible", () => {

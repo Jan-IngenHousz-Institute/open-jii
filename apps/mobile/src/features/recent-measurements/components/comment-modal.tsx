@@ -51,11 +51,16 @@ export function CommentModal({
 
   useEffect(() => {
     if (visible) {
-      textRef.current = initialText;
-      setInputKey((key) => key + 1); // remount so defaultValue re-applies
       sheetRef.current?.present();
     } else {
       sheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible) {
+      textRef.current = initialText;
+      setInputKey((key) => key + 1);
     }
   }, [visible, initialText]);
 
