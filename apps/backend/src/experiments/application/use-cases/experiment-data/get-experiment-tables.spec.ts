@@ -177,6 +177,54 @@ describe("GetExperimentTablesUseCase", () => {
       expect(result.error.message).toContain("Failed to retrieve table metadata");
     });
 
+    it("maps upload tables using their displayName + UPLOAD_TABLE_CONFIG defaults", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Upload Experiment",
+        userId: testUserId,
+      });
+      const uploadId = faker.string.uuid();
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            identifier: uploadId,
+            tableType: "upload" as const,
+            displayName: "leaf_traits",
+            rowCount: 42,
+          },
+        ]),
+      );
+
+      const result = await useCase.execute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          identifier: uploadId,
+          tableType: "upload",
+          displayName: "leaf_traits",
+          totalRows: 42,
+          defaultSortColumn: "uploaded_at",
+          errorColumn: undefined,
+        },
+      ]);
+    });
+
+    it("falls back to the identifier when an upload table has no displayName", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Upload Experiment 2",
+        userId: testUserId,
+      });
+      const uploadId = faker.string.uuid();
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([{ identifier: uploadId, tableType: "upload" as const, rowCount: 7 }]),
+      );
+
+      const result = await useCase.execute(experiment.id, testUserId);
+      assertSuccess(result);
+      expect(result.value[0].displayName).toBe(uploadId);
+    });
+
     it("should return empty array when no tables are available", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",

@@ -18,15 +18,15 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () => ({
-  DataUploadModal: ({
+vi.mock("~/components/experiment-data/upload-data-modal/upload-data-modal", () => ({
+  UploadDataModal: ({
     open,
     onOpenChange,
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
   }) => (
-    <div data-testid="data-upload-modal" data-open={open}>
+    <div data-testid="upload-data-modal" data-open={open}>
       <button onClick={() => onOpenChange(false)}>Close Modal</button>
     </div>
   ),
@@ -348,14 +348,14 @@ describe("ExperimentDataPage", () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByText("experimentData.uploadSensorData")).toBeInTheDocument();
+      expect(screen.getByText("experimentData.uploadData")).toBeInTheDocument();
     });
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await user.click(screen.getByText("experimentData.uploadSensorData").closest("button")!);
+    await user.click(screen.getByText("experimentData.uploadData").closest("button")!);
 
     await waitFor(() => {
-      expect(screen.getByTestId("data-upload-modal")).toHaveAttribute("data-open", "true");
+      expect(screen.getByTestId("upload-data-modal")).toHaveAttribute("data-open", "true");
     });
   });
 
@@ -409,14 +409,14 @@ describe("ExperimentDataPage", () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByText("experimentData.uploadSensorData")).toBeInTheDocument();
+      expect(screen.getByText("experimentData.uploadData")).toBeInTheDocument();
     });
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await user.click(screen.getByText("experimentData.uploadSensorData").closest("button")!);
+    await user.click(screen.getByText("experimentData.uploadData").closest("button")!);
 
     await waitFor(() => {
-      expect(screen.getByTestId("data-upload-modal")).toHaveAttribute("data-open", "true");
+      expect(screen.getByTestId("upload-data-modal")).toHaveAttribute("data-open", "true");
     });
   });
 });

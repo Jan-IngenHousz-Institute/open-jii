@@ -21,8 +21,10 @@ import {
   zDistinctValuesResponse,
   zExperimentTablesMetadataList,
   zExperimentAccess,
-  zUploadExperimentDataBody,
-  zUploadExperimentDataResponse,
+  zUploadDataBody,
+  zUploadDataResponse,
+  zListUploadsQuery,
+  zListUploadsResponse,
   zInitiateExportBody,
   zInitiateExportResponse,
   zListExportsQuery,
@@ -433,20 +435,37 @@ export const experimentContract = c.router({
       "Publishes the latest workbook cells as a new version (or reuses the latest if unchanged) and updates the experiment to reference it.",
   },
 
-  uploadExperimentData: {
+  uploadData: {
     method: "POST",
-    path: "/api/v1/experiments/:id/data/upload",
+    path: "/api/v1/experiments/:id/uploads",
     pathParams: zIdPathParam,
     contentType: "multipart/form-data",
-    body: zUploadExperimentDataBody,
+    body: zUploadDataBody,
     responses: {
-      201: zUploadExperimentDataResponse,
+      201: zUploadDataResponse,
       400: zErrorResponse,
       403: zErrorResponse,
       404: zErrorResponse,
+      409: zErrorResponse,
     },
-    summary: "Upload experiment data",
-    description: "Uploads experiment data files to Databricks",
+    summary: "Upload generic tabular or structured data",
+    description:
+      "Uploads tabular or structured data (CSV, TSV, parquet, Excel, JSON, NDJSON) into a user-defined table in the experiment. Either creates a new upload table or appends to an existing one.",
+  },
+
+  listUploads: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/uploads",
+    pathParams: zIdPathParam,
+    query: zListUploadsQuery,
+    responses: {
+      200: zListUploadsResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List experiment uploads",
+    description:
+      "Returns the merged upload history for an experiment: completed uploads from the Delta history table plus active and failed runs from the Databricks job-runs API. Optionally filtered by upload table name.",
   },
 
   initiateExport: {

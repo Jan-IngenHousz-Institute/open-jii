@@ -6,7 +6,7 @@
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType, IntegerType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType
 import requests
 import pandas as pd
 from datetime import datetime
@@ -91,9 +91,10 @@ EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
-RAW_AMBYTE_TABLE = "raw_ambyte_data"
-ENRICHED_RAW_AMBYTE_DATA_VIEW = "enriched_raw_ambyte_data"
 RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
+RAW_UPLOADED_DATA_TABLE = "raw_uploaded_data"
+EXPERIMENT_UPLOADED_DATA_TABLE = "experiment_uploaded_data"
+ENRICHED_UPLOADED_DATA_VIEW = "enriched_experiment_uploaded_data"
 ANNOTATIONS_SOURCE_TABLE = "experiment_annotations_source"
 METADATA_SOURCE_TABLE = "experiment_metadata_source"
 
@@ -844,13 +845,15 @@ def experiment_table_metadata():
             F.col("experiment_id"),
             F.col("macro_id").alias("identifier"),
             F.lit("macro").alias("table_type"),
+            F.lit(None).cast("string").alias("display_name"),
             F.col("row_count"),
             F.col("macro_schema"),
             F.col("questions_schema"),
             F.col("custom_metadata_schema"),
+            F.lit(None).cast("string").alias("upload_schema"),
         )
     )
-    
+
     raw_data_metadata = (
         dlt.read(EXPERIMENT_RAW_DATA_TABLE)
         .groupBy("experiment_id")
@@ -863,13 +866,15 @@ def experiment_table_metadata():
             F.col("experiment_id"),
             F.lit("raw_data").alias("identifier"),
             F.lit("static").alias("table_type"),
+            F.lit(None).cast("string").alias("display_name"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
             F.col("questions_schema"),
             F.col("custom_metadata_schema"),
+            F.lit(None).cast("string").alias("upload_schema"),
         )
     )
-    
+
     device_metadata = (
         dlt.read(EXPERIMENT_DEVICE_DATA_TABLE)
         .groupBy("experiment_id")
@@ -878,33 +883,44 @@ def experiment_table_metadata():
             F.col("experiment_id"),
             F.lit("device").alias("identifier"),
             F.lit("static").alias("table_type"),
+            F.lit(None).cast("string").alias("display_name"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
             F.lit(None).cast("string").alias("questions_schema"),
             F.lit(None).cast("string").alias("custom_metadata_schema"),
+            F.lit(None).cast("string").alias("upload_schema"),
         )
     )
-    
-    ambyte_metadata = (
-        dlt.read(RAW_AMBYTE_TABLE)
-        .groupBy("experiment_id")
-        .agg(F.count("*").alias("row_count"))
+
+    upload_metadata = (
+        dlt.read(EXPERIMENT_UPLOADED_DATA_TABLE)
+        .filter("uploaded_data IS NOT NULL")
+        .groupBy("experiment_id", "upload_table_id")
+        .agg(
+            F.count("*").alias("row_count"),
+            # Latest user-chosen label for this logical upload table — picked by
+            # the most recent uploaded_at so renames take effect deterministically.
+            F.max(F.struct(F.col("uploaded_at"), F.col("upload_table_name"))).getField("upload_table_name").alias("display_name"),
+            F.expr("nullif(schema_of_variant_agg(uploaded_data), 'VOID')").alias("upload_schema")
+        )
         .select(
             F.col("experiment_id"),
-            F.lit("raw_ambyte_data").alias("identifier"),
-            F.lit("static").alias("table_type"),
+            F.col("upload_table_id").alias("identifier"),
+            F.lit("upload").alias("table_type"),
+            F.col("display_name"),
             F.col("row_count"),
             F.lit(None).cast("string").alias("macro_schema"),
             F.lit(None).cast("string").alias("questions_schema"),
             F.lit(None).cast("string").alias("custom_metadata_schema"),
+            F.col("upload_schema"),
         )
     )
-    
+
     return (
         macro_metadata
         .unionByName(raw_data_metadata)
         .unionByName(device_metadata)
-        .unionByName(ambyte_metadata)
+        .unionByName(upload_metadata)
     )
 
 # COMMAND ----------
@@ -1036,28 +1052,6 @@ def enriched_experiment_raw_data():
     
     return add_custom_metadata_column(enriched, metadata_source)
 
-# COMMAND ----------
-
-# DBTITLE 1,Gold Layer - Enriched Raw Ambyte Data
-@dlt.table(
-    name=ENRICHED_RAW_AMBYTE_DATA_VIEW,
-    comment="Enriched materialized view: Raw ambyte data with annotations. Qualified for incremental refresh.",
-    table_properties={
-        "quality": "gold",
-        "delta.enableRowTracking": "true",
-        "delta.enableChangeDataFeed": "true",
-        "delta.enableDeletionVectors": "true",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
-    }
-)
-def enriched_raw_ambyte_data():
-    """Enriched ambyte data with annotations."""
-    raw_ambyte = dlt.read(RAW_AMBYTE_TABLE).drop("_rescued_data")
-    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
-    
-    return add_annotation_column(raw_ambyte, annotations_source)
 
 # COMMAND ----------
 
@@ -1191,79 +1185,139 @@ def raw_imported_data():
 
 # COMMAND ----------
 
-# DBTITLE 1,Raw Ambyte Data - Streaming Table
+# DBTITLE 1,Raw Uploaded Data - Streaming Table
 @dlt.table(
-    name=RAW_AMBYTE_TABLE,
-    comment="Streaming table: Pre-processed Ambyte trace data from parquet files, partitioned by experiment_id",
+    name=RAW_UPLOADED_DATA_TABLE,
+    comment="Streaming table: User-uploaded data with variant-encoded row payloads, partitioned by experiment_id",
     table_properties={
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
-        "delta.enableRowTracking": "true",
-        "delta.enableChangeDataFeed": "true",
+        "delta.feature.variantType-preview": "supported",
     },
     partition_cols=["experiment_id"]
 )
-def raw_ambyte_data():
-    """Streaming ingestion of pre-processed Ambyte trace data."""
-    processed_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/processed-ambyte"
-    
-    from pyspark.sql.types import FloatType, BooleanType, LongType
+def raw_uploaded_data():
+    """Bronze: streaming ingestion of user-uploaded tabular data from parquet files in the data-imports volume.
 
-    ambyte_data_schema = StructType([
-        StructField("Time", TimestampType(), True),
-        StructField("Actinic", IntegerType(), True),
-        StructField("BoardT", FloatType(), True),
-        StructField("Count", IntegerType(), True),
-        StructField("Full", BooleanType(), True),
-        StructField("Leaf", IntegerType(), True),
-        StructField("PAR", FloatType(), True),
-        StructField("PTS", IntegerType(), True),
-        StructField("Ref7", DoubleType(), True),
-        StructField("RefF", LongType(), True),
-        StructField("Res", IntegerType(), True),
-        StructField("Sig7", DoubleType(), True),
-        StructField("SigF", LongType(), True),
-        StructField("Sun", IntegerType(), True),
-        StructField("Temp", FloatType(), True),
-        StructField("Type", StringType(), True),
-        StructField("raw", FloatType(), True),
-        StructField("spec", ArrayType(LongType()), True),
-        StructField("meta_Actinic", FloatType(), True),
-        StructField("meta_Dark", IntegerType(), True),
-        StructField("ambyte_folder", StringType(), True),
-        StructField("ambit_index", IntegerType(), True),
-        StructField("processed_at", TimestampType(), True),
+    The Python upload task writes uploaded_data as a JSON string in parquet, plus the stable upload_table_id
+    that anchors a logical upload table across batches. Here we parse uploaded_data into VARIANT so downstream
+    gold derivation and metadata aggregation can infer per-table schemas via schema_of_variant_agg.
+    Peer of raw_imported_data."""
+    uploaded_path = f"/Volumes/{CATALOG_NAME}/centrum/data-imports/*/processed-uploads"
+
+    uploaded_data_schema = StructType([
         StructField("experiment_id", StringType(), True),
-        StructField("id", IntegerType(), True),
+        StructField("upload_table_id", StringType(), True),
+        StructField("upload_table_name", StringType(), True),
+        StructField("upload_id", StringType(), True),
+        StructField("created_by", StringType(), True),
+        StructField("uploaded_at", TimestampType(), True),
+        StructField("uploaded_data", StringType(), True),
     ])
-    
-    df = (
+
+    return (
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "parquet")
         .option("recursiveFileLookup", "true")
-        .schema(ambyte_data_schema)
-        .load(processed_path)
-    )
-    
-    path_experiment_id = F.regexp_extract(
-        F.col("_metadata.file_path"), r"data-imports/([^/]+)/processed-ambyte", 1
+        .option("ignoreMissingFiles", "true")
+        .schema(uploaded_data_schema)
+        .load(uploaded_path)
+        .withColumn("uploaded_data", F.expr("try_parse_json(uploaded_data)"))
     )
 
-    if "experiment_id" in df.columns:
-        df = df.withColumn("experiment_id", F.coalesce(F.col("experiment_id"), path_experiment_id))
-    else:
-        df = df.withColumn("experiment_id", path_experiment_id)
-    
+# COMMAND ----------
+
+# DBTITLE 1,Experiment Uploaded Data - Gold
+@dlt.table(
+    name=EXPERIMENT_UPLOADED_DATA_TABLE,
+    comment="Gold layer: User-uploaded tabular data with VARIANT row payloads. Peer of experiment_macro_data; anchored by stable upload_table_id.",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.feature.variantType-preview": "supported",
+    },
+)
+def experiment_uploaded_data():
+    """Gold: rows from raw_uploaded_data with a per-row id, ready for the enriched view.
+
+    `id` mixes upload_id with monotonically_increasing_id to keep rows in the same
+    batch distinct — annotations join on this id and would collide otherwise.
+    """
     return (
-        df
+        dlt.read_stream(RAW_UPLOADED_DATA_TABLE)
         .withColumn(
             "id",
-            F.abs(F.hash(*[F.col(c) for c in df.columns]))
+            F.concat_ws(
+                ":",
+                F.col("upload_id"),
+                F.monotonically_increasing_id().cast("string"),
+            ),
+        )
+        .select(
+            F.col("id"),
+            F.col("experiment_id"),
+            F.col("upload_table_id"),
+            F.col("upload_table_name"),
+            F.col("upload_id"),
+            F.col("created_by"),
+            F.col("uploaded_at"),
+            F.col("uploaded_data"),
         )
     )
+
+# COMMAND ----------
+
+# DBTITLE 1,Enriched Experiment Uploaded Data
+@dlt.table(
+    name=ENRICHED_UPLOADED_DATA_VIEW,
+    comment="Enriched view: uploaded rows joined with contributors, annotations, and experiment metadata. Mirrors enriched_experiment_macro_data.",
+    table_properties={
+        "quality": "gold",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+        "delta.enableDeletionVectors": "true",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.feature.variantType-preview": "supported",
+    },
+)
+def enriched_experiment_uploaded_data():
+    uploaded = dlt.read(EXPERIMENT_UPLOADED_DATA_TABLE)
+    contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
+    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
+
+    enriched = (
+        uploaded
+        .join(
+            contributors,
+            (uploaded.experiment_id == contributors.experiment_id)
+            & (uploaded.created_by == contributors.user_id),
+            "left",
+        )
+        .select(
+            uploaded.id,
+            uploaded.experiment_id,
+            uploaded.upload_table_id,
+            uploaded.upload_table_name,
+            uploaded.upload_id,
+            uploaded.uploaded_at,
+            uploaded.uploaded_data,
+            contributors.user.alias("contributor"),
+        )
+    )
+
+    enriched = add_annotation_column(enriched, annotations_source)
+
+    return add_custom_metadata_column(enriched, metadata_source)
 
 # COMMAND ----------
 

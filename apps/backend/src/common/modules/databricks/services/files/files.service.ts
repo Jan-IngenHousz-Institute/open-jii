@@ -15,6 +15,10 @@ export class DatabricksFilesService {
 
   public static readonly FILES_ENDPOINT = "/api/2.0/fs/files";
 
+  // Hard cap enforced by the Databricks Files API: per-file uploads max out at 5 GiB.
+  // https://docs.databricks.com/api/workspace/files/upload
+  public static readonly MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: DatabricksConfigService,
@@ -25,13 +29,27 @@ export class DatabricksFilesService {
    * Upload a file to a specified path in Databricks workspace.
    * The caller is responsible for constructing the full path.
    *
+   * Accepts either a Buffer (uses Content-Length) or a Readable stream
+   * (uses chunked transfer encoding). Streaming avoids buffering the whole
+   * file in memory and is preferred for any upload originating from an HTTP
+   * request body.
+   *
    * @param filePath - The full destination path for the file in Databricks.
-   * @param fileBuffer - File contents as a buffer.
+   * @param body - File contents as a Buffer or Readable stream.
    * @returns Result containing file ID and path.
    */
-  async upload(filePath: string, fileBuffer: Buffer): Promise<Result<UploadFileResponse>> {
+  async upload(
+    filePath: string,
+    body: Buffer | NodeJS.ReadableStream,
+  ): Promise<Result<UploadFileResponse>> {
     return await tryCatch(
       async () => {
+        if (Buffer.isBuffer(body) && body.length > DatabricksFilesService.MAX_UPLOAD_BYTES) {
+          throw new Error(
+            `File exceeds Databricks per-file limit of ${DatabricksFilesService.MAX_UPLOAD_BYTES} bytes`,
+          );
+        }
+
         const tokenResult = await this.authService.getAccessToken();
         if (tokenResult.isFailure()) {
           throw tokenResult.error;
@@ -45,11 +63,12 @@ export class DatabricksFilesService {
           msg: "Uploading file to Databricks",
           operation: "uploadFile",
           filePath,
+          mode: Buffer.isBuffer(body) ? "buffer" : "stream",
         });
 
         const fullPath = `${apiUrl}${filePath}`;
 
-        await this.httpService.axiosRef.put(fullPath, fileBuffer, {
+        await this.httpService.axiosRef.put(fullPath, body, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/octet-stream",
@@ -57,7 +76,10 @@ export class DatabricksFilesService {
           params: {
             overwrite: false,
           },
+          // Streams advance only as bytes flow; allow longer for large uploads.
           timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
         });
 
         this.logger.log({
