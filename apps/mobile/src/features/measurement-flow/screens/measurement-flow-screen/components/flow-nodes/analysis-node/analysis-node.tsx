@@ -8,15 +8,16 @@ import { useMacro } from "~/features/measurement-flow/hooks/use-macro";
 import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
-import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
+import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { createLogger } from "~/shared/observability/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { CommentModal } from "~/shared/ui/measurement/comment-modal";
+import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
 
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
@@ -57,6 +58,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
+  const { updateMeasurementComment } = useMeasurements();
   const { protocol } = useProtocol(protocolId);
 
   const cycleAnswers = getCycleAnswers(iterationCount);
@@ -186,6 +188,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         visible={questionsModalVisible}
         measurement={currentMeasurement}
         onClose={() => setQuestionsModalVisible(false)}
+        onSaveComment={(text) =>
+          updateMeasurementComment(currentMeasurement.id, currentMeasurement.data, text)
+        }
       />
 
       <CommentModal

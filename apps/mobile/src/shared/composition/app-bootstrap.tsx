@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { mountConnectionLifecycle } from "~/features/connection/services/connection-lifecycle";
 import { installFlowRehydrationGuard } from "~/features/measurement-flow/stores/flow-rehydration-guard";
 import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
+// Side effect: registers the auth feature on the shared fetcher's 401 seam.
+import "~/shared/composition/auth-wiring";
 import { db } from "~/shared/db/client";
 import { createLogger } from "~/shared/observability/logger";
 

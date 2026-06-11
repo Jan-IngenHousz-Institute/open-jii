@@ -1,11 +1,11 @@
 import { Trash2, UploadCloud } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { DeviceChip } from "~/features/connection/components/device-chip";
 import { useMeasurementCounts } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useOutboxSnapshot } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-import { DeviceChip } from "~/shared/ui/widgets/device-chip";
 
 interface Props {
   onSyncAll: (unsyncedCount: number) => void;

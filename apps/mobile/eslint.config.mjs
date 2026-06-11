@@ -13,20 +13,16 @@ const FEATURES = [
   "recent-measurements",
 ];
 
-// Boundary ratchet: files below predate the boundary rules and are being
-// migrated (see plan stages). Shrink this list; never add to it.
+// Boundary ratchet: files below are accepted exceptions. Shrink this list;
+// never add to it.
+// - measurements-header-actions renders connection's DeviceChip in the
+//   Recent header. Until the team decides how features publish widgets,
+//   this one cross-feature component import stays baselined.
 const LEGACY_CROSS_FEATURE_FILES = [
-  "src/features/experiments/screens/experiments-screen/components/table-detail-modal.tsx",
-  "src/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/analysis-node/analysis-node.tsx",
-  "src/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/questions-only-submit-node.tsx",
-  "src/features/profile/screens/profile-screen/profile-screen.tsx",
+  "src/features/recent-measurements/components/measurements-header-actions.tsx",
 ];
 
-const LEGACY_SHARED_TO_FEATURE_FILES = [
-  "src/shared/api/fetcher.ts",
-  "src/shared/ui/widgets/device-chip.tsx",
-  "src/shared/ui/widgets/dev-indicator.tsx",
-];
+const LEGACY_SHARED_TO_FEATURE_FILES = [];
 
 // A feature's public surface is its hooks/stores/services/utils/types;
 // screens and components are private. Shared UI belongs in shared/ui.
@@ -84,10 +80,18 @@ const sharedToFeatureRule = (severity) => ({
 const sharedBoundaryBlocks = [
   {
     files: ["src/shared/**"],
-    ignores: ["src/shared/composition/**", ...LEGACY_SHARED_TO_FEATURE_FILES],
+    // composition/ is the sanctioned wiring layer; tests wire features the
+    // same way composition does.
+    ignores: [
+      "src/shared/composition/**",
+      "src/shared/**/*.test.*",
+      ...LEGACY_SHARED_TO_FEATURE_FILES,
+    ],
     rules: sharedToFeatureRule("error"),
   },
-  { files: LEGACY_SHARED_TO_FEATURE_FILES, rules: sharedToFeatureRule("warn") },
+  ...(LEGACY_SHARED_TO_FEATURE_FILES.length
+    ? [{ files: LEGACY_SHARED_TO_FEATURE_FILES, rules: sharedToFeatureRule("warn") }]
+    : []),
 ];
 
 /** @type {import('typescript-eslint').Config} */

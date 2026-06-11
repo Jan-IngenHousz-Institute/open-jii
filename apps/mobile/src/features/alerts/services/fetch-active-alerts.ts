@@ -8,6 +8,12 @@ type ContentfulSdk = ReturnType<typeof createContentfulClient>["client"];
 let cachedSdk: ContentfulSdk | null = null;
 let cachedKey = "";
 
+// Same convention as aws-iot-auth's _reset*ForTests.
+export function _resetContentfulClientForTests(): void {
+  cachedSdk = null;
+  cachedKey = "";
+}
+
 function getClient(): ContentfulSdk | null {
   let spaceId: string;
   let accessToken: string;

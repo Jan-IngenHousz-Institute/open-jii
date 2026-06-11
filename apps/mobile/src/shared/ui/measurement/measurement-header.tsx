@@ -2,8 +2,8 @@ import { clsx } from "clsx";
 import { Calendar, FlaskConical, X } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { formatIsoDateString } from "~/features/measurement-flow/utils/format-iso-date-string";
 import { useTranslation } from "~/shared/i18n";
+import { formatIsoDateString } from "~/shared/time/format-iso-date-string";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface MeasurementHeaderProps {

@@ -1,7 +1,5 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
-import { refreshSession } from "~/features/auth/api/refresh.api";
-import { getAuthClient } from "~/features/auth/services/auth";
 import { getEnvVar } from "~/shared/stores/environment-store";
 
 // Without this, fetch hangs at the platform default whenever the backend is
@@ -9,6 +7,20 @@ import { getEnvVar } from "~/shared/stores/environment-store";
 // hung promises cascade across mounted queries and the UI lags for tens of
 // seconds offline. 10s is generous for any real call and fails fast otherwise.
 const FETCH_TIMEOUT_MS = 10_000;
+
+// Auth seam, injected by shared/composition/auth-wiring.ts at module load so
+// shared/api carries no dependency on the auth feature.
+export interface AuthRefreshHandler {
+  getCookie(): string | null | undefined;
+  refreshSession(): Promise<boolean>;
+  signOut(): Promise<void>;
+}
+
+let authHandler: AuthRefreshHandler | null = null;
+
+export function configureAuthRefresh(handler: AuthRefreshHandler): void {
+  authHandler = handler;
+}
 
 function removeTrailingSlashes(value: string) {
   return value.replace(/\/+$/, "");
@@ -19,7 +31,7 @@ function removeLeadingSlashes(value: string) {
 }
 
 export const customApiFetcher = async (args: ApiFetcherArgs) => {
-  const authClient = getAuthClient();
+  const auth = authHandler;
 
   const base = removeTrailingSlashes(getEnvVar("BACKEND_URI"));
   const path = removeLeadingSlashes(args.path);
@@ -34,13 +46,14 @@ export const customApiFetcher = async (args: ApiFetcherArgs) => {
       if (upstream.aborted) controller.abort();
       else upstream.addEventListener("abort", () => controller.abort(), { once: true });
     }
+    const cookie = auth?.getCookie();
     return tsRestFetchApi({
       ...args,
       path: fullPath,
       signal: controller.signal,
       headers: {
         ...args.headers,
-        ...(authClient.getCookie() ? { Cookie: authClient.getCookie() } : {}),
+        ...(cookie ? { Cookie: cookie } : {}),
       },
     }).finally(() => clearTimeout(timeoutId));
   };
@@ -50,13 +63,13 @@ export const customApiFetcher = async (args: ApiFetcherArgs) => {
   // On 401, try a single-flight session re-validation before giving up.
   // If the session is still valid on the server, the cookie store gets
   // refreshed and the retry succeeds without a visible sign-out.
-  if (result?.status === 401) {
-    const refreshed = await refreshSession();
+  if (result?.status === 401 && auth) {
+    const refreshed = await auth.refreshSession();
     if (refreshed) {
       result = await send();
     }
     if (result?.status === 401) {
-      await authClient.signOut();
+      await auth.signOut();
     }
   }
 

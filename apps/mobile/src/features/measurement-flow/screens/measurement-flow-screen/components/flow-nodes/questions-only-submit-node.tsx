@@ -7,8 +7,6 @@ import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { useFinishFlow } from "~/features/measurement-flow/hooks/use-finish-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
-import { FlagTypeModal } from "~/features/recent-measurements/components/flag-type-modal";
 import { useQuestionsUpload } from "~/features/recent-measurements/hooks/use-questions-upload";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
@@ -17,6 +15,8 @@ import { createLogger } from "~/shared/observability/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { CommentModal } from "~/shared/ui/measurement/comment-modal";
+import { FlagTypeModal } from "~/shared/ui/measurement/flag-type-modal";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
 
