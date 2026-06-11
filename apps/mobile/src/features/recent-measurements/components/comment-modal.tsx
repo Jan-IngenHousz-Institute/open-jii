@@ -43,21 +43,29 @@ export function CommentModal({
 }: CommentModalProps) {
   const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
-  const [text, setText] = useState(initialText);
+
+  const textRef = useRef(initialText);
+  const [inputKey, setInputKey] = useState(0);
   const sheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
-      setText(initialText);
       sheetRef.current?.present();
     } else {
       sheetRef.current?.dismiss();
     }
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible) {
+      textRef.current = initialText;
+      setInputKey((key) => key + 1);
+    }
   }, [visible, initialText]);
 
   const handleSave = () => {
-    onSave(text);
+    onSave(textRef.current);
   };
 
   const renderBackdrop = useCallback(
@@ -147,9 +155,12 @@ export function CommentModal({
           )}
         </View>
         <Input
+          key={inputKey}
           asBottomSheet
-          value={text}
-          onChangeText={setText}
+          defaultValue={initialText}
+          onChangeText={(value) => {
+            textRef.current = value;
+          }}
           placeholder={t("recentMeasurements:commentModal.placeholder")}
           multiline
           numberOfLines={4}

@@ -101,7 +101,7 @@ describe("CommentModal", () => {
 
     expect(bottomSheetState.present).toHaveBeenCalled();
     expect(screen.getByText("Add comment")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Enter your comment here...").props.value).toBe(
+    expect(screen.getByPlaceholderText("Enter your comment here...").props.defaultValue).toBe(
       "Existing note",
     );
     expect(screen.getByText("Sunny | 23C")).toBeTruthy();
@@ -119,13 +119,55 @@ describe("CommentModal", () => {
     expect(onSave).toHaveBeenCalledWith("Updated note");
   });
 
+  it("keeps the comment input uncontrolled so the native cursor is preserved", () => {
+    render(<CommentModal {...defaultProps} initialText="Existing note" />);
+
+    const input = screen.getByPlaceholderText("Enter your comment here...");
+    expect(input.props.value).toBeUndefined();
+    expect(input.props.defaultValue).toBe("Existing note");
+
+    fireEvent.changeText(input, "Existing notes");
+    const inputAfterEdit = screen.getByPlaceholderText("Enter your comment here...");
+    expect(inputAfterEdit.props.value).toBeUndefined();
+    expect(inputAfterEdit.props.defaultValue).toBe("Existing note");
+  });
+
+  it("saves the latest text after correcting an existing comment", () => {
+    const onSave = vi.fn();
+    render(<CommentModal {...defaultProps} initialText="" onSave={onSave} />);
+
+    const input = screen.getByPlaceholderText("Enter your comment here...");
+    fireEvent.changeText(input, "50% of the plot covered by another plot");
+    fireEvent.changeText(input, "25% of the plot covered by another plot");
+    fireEvent.press(screen.getByText("Save comment"));
+
+    expect(onSave).toHaveBeenCalledWith("25% of the plot covered by another plot");
+  });
+
+  it("discards an unsaved draft when reopened with the same initial text", () => {
+    const onSave = vi.fn();
+    const { rerender } = render(
+      <CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible />,
+    );
+
+    fireEvent.changeText(screen.getByPlaceholderText("Enter your comment here..."), "Stale draft");
+    rerender(
+      <CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible={false} />,
+    );
+    rerender(<CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible />);
+
+    fireEvent.press(screen.getByText("Save comment"));
+
+    expect(onSave).toHaveBeenCalledWith("Original");
+  });
+
   it("resets the input when the initial text changes while visible", () => {
     const { rerender } = render(<CommentModal {...defaultProps} initialText="First note" />);
 
     fireEvent.changeText(screen.getByPlaceholderText("Enter your comment here..."), "Draft");
     rerender(<CommentModal {...defaultProps} initialText="Second note" />);
 
-    expect(screen.getByPlaceholderText("Enter your comment here...").props.value).toBe(
+    expect(screen.getByPlaceholderText("Enter your comment here...").props.defaultValue).toBe(
       "Second note",
     );
   });
