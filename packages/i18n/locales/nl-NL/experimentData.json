@@ -57,6 +57,96 @@
       "backToList": "Terug naar exports",
       "anonymizeContributors": "Bijdragers anonimiseren in het geëxporteerde bestand",
       "overridingDefault": "overschrijft experimentstandaard"
+    },
+    "uploadDataModal": {
+      "title": "Gegevens uploaden",
+      "description": "Upload CSV-, TSV-, parquet-, Excel-, JSON- of NDJSON-bestanden naar een nieuwe of bestaande gebruikerstabel. Het schema wordt afgeleid uit het bestand.",
+      "targetKind": {
+        "new": "Nieuwe tabel aanmaken",
+        "existing": "Toevoegen aan bestaande"
+      },
+      "newTable": {
+        "label": "Tabelnaam",
+        "placeholder": "bijv. greenhouse_temps"
+      },
+      "existingTable": {
+        "label": "Bestaande tabel",
+        "placeholder": "Kies een tabel",
+        "rowCount_one": "{{count}} rij",
+        "rowCount_other": "{{count}} rijen"
+      },
+      "sourceKind": {
+        "label": "Gegevensformaat"
+      },
+      "files": {
+        "label": "Gegevensbestand(en) (CSV, TSV, parquet, Excel, JSON, NDJSON)",
+        "ambyteLabel": "Ambyte-gegevensmap"
+      },
+      "validation": {
+        "title": "Uploaden niet mogelijk",
+        "noTarget": "Kies of benoem een doeltabel",
+        "invalidName": "Naam moet beginnen met een letter; gebruik letters, cijfers of underscores (max. 63)",
+        "noFiles": "Selecteer ten minste één gegevensbestand",
+        "unsupportedFormat": "'{{fileName}}' is geen ondersteund bestandsformaat (CSV, TSV, parquet, Excel, JSON, NDJSON)",
+        "mixedFormats": "Alle bestanden in één upload moeten hetzelfde formaat hebben",
+        "oversizedFiles_one": "{{count}} bestand overschrijdt de maximaal toegestane grootte",
+        "oversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte",
+        "tooManyFiles": "Te veel bestanden: selecteer er maximaal {{max}}",
+        "ambyteInvalidStructure": "De geselecteerde map voldoet niet aan de verwachte Ambyte_N-structuur",
+        "ambyteOversizedFiles_one": "{{count}} bestand overschrijdt de maximaal toegestane grootte",
+        "ambyteOversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte"
+      },
+      "submitError": {
+        "title": "Upload mislukt",
+        "fallback": "Upload mislukt"
+      },
+      "status": {
+        "succeeded": {
+          "title": "Upload geslaagd",
+          "description": "Rijen worden geschreven naar '{{tableName}}'. De tabel verschijnt zodra de pipeline deze materialiseert."
+        },
+        "failed": {
+          "title": "Upload mislukt",
+          "fallback": "De verwerkingstaak is mislukt."
+        },
+        "processing": {
+          "title": "Verwerken…",
+          "description": "Uw bestand is geüpload; de verwerkingstaak loopt."
+        }
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "close": "Sluiten",
+        "upload": "Uploaden"
+      },
+      "history": {
+        "title": "Recente uploads",
+        "empty": "Nog geen uploads.",
+        "loading": "Uploads laden…",
+        "uploadCount_one": "{{count}} recente upload",
+        "uploadCount_other": "{{count}} recente uploads",
+        "uploadTitle": "Upload #{{number}}",
+        "status": {
+          "pending": "In behandeling",
+          "running": "Verwerken",
+          "completed": "Voltooid",
+          "failed": "Mislukt"
+        },
+        "sourceKind": {
+          "ambyte": "Ambyte",
+          "csv": "CSV",
+          "tsv": "TSV",
+          "parquet": "Parquet",
+          "xlsx": "Excel",
+          "json": "JSON",
+          "ndjson": "NDJSON"
+        },
+        "rowCount_one": "{{count}} rij",
+        "rowCount_other": "{{count}} rijen",
+        "fileCount_one": "{{count}} bestand",
+        "fileCount_other": "{{count}} bestanden",
+        "untargeted": "(geen tabel)"
+      }
     }
   }
 }

@@ -642,16 +642,16 @@ module "centrum_backup_job" {
   depends_on = [module.centrum_pipeline]
 }
 
-module "ambyte_processing_job" {
+module "data_upload_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Ambyte-Processing-Job-PROD"
-  description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
+  name        = "Data-Upload-Job-PROD"
+  description = "Dispatches user-initiated data uploads (CSV, ambyte, …) to the right processor and writes parquet into the data-imports volume for the centrum pipeline to ingest"
 
-  max_concurrent_runs           = 1
+  max_concurrent_runs           = 5
   use_serverless                = true
   continuous                    = false
-  serverless_performance_target = "STANDARD"
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
 
   # Enable job queueing
   queue = {
@@ -665,7 +665,7 @@ module "ambyte_processing_job" {
   # Environment configuration for serverless compute dependencies
   environments = [
     {
-      environment_key = "ambyte_processing"
+      environment_key = "data_upload"
       spec = {
         environment_version = "4"
         dependencies = [
@@ -684,16 +684,21 @@ module "ambyte_processing_job" {
 
   tasks = [
     {
-      key           = "process_ambyte_data"
+      key           = "process_upload"
       task_type     = "notebook"
       compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/ambyte_processing_task"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/data_upload_task"
 
       parameters = {
+        SOURCE_KIND       = "{{SOURCE_KIND}}"
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
+        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
+        UPLOAD_TABLE_ID   = "{{UPLOAD_TABLE_ID}}"
+        UPLOAD_TABLE_NAME = "{{UPLOAD_TABLE_NAME}}"
+        UPLOAD_ID         = "{{UPLOAD_ID}}"
+        USER_ID           = "{{USER_ID}}"
         EXPERIMENT_NAME   = "{{EXPERIMENT_NAME}}"
         EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
-        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
         YEAR_PREFIX       = "{{YEAR_PREFIX}}"
         CATALOG_NAME      = module.databricks_catalog.catalog_name
         ENVIRONMENT       = upper(var.environment)
@@ -888,6 +893,44 @@ module "experiment_export_metadata_table" {
     { name = "created_by", type = "STRING" },
     { name = "created_at", type = "TIMESTAMP" },
     { name = "completed_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "experiment_upload_metadata_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "experiment_upload_metadata"
+  table_type   = "MANAGED"
+  comment      = "Completion history for experiment data uploads (CSV, ambyte, …). Mirrors experiment_export_metadata in shape; in-flight runs are tracked via the job-runs API and joined on upload_id."
+
+  columns = [
+    { name = "upload_id", type = "STRING" },
+    { name = "experiment_id", type = "STRING" },
+    { name = "upload_table_id", type = "STRING" },
+    { name = "upload_table_name", type = "STRING" },
+    { name = "source_kind", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "file_count", type = "INT" },
+    { name = "row_count", type = "INT" },
+    { name = "created_by", type = "STRING" },
+    { name = "created_at", type = "TIMESTAMP" },
+    { name = "completed_at", type = "TIMESTAMP" },
+    { name = "error_message", type = "STRING" },
   ]
 
   grants = {
@@ -1200,15 +1243,15 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST                     = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID                = module.node_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET            = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_AMBYTE_PROCESSING_JOB_ID = module.ambyte_processing_job.job_id
-    DATABRICKS_DATA_EXPORT_JOB_ID       = module.data_export_job.job_id
-    DATABRICKS_WAREHOUSE_ID             = var.backend_databricks_warehouse_id
-    DATABRICKS_WEBHOOK_API_KEY_ID       = var.backend_webhook_api_key_id
-    DATABRICKS_WEBHOOK_SECRET           = var.backend_webhook_secret
-    DATABRICKS_WEBHOOK_API_KEY          = var.backend_webhook_api_key
+    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_DATA_UPLOAD_JOB_ID = module.data_upload_job.job_id
+    DATABRICKS_DATA_EXPORT_JOB_ID = module.data_export_job.job_id
+    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
   })
 
   tags = {
@@ -1588,7 +1631,6 @@ module "backend_ecs" {
 
   enable_cognito_policy     = true
   cognito_identity_pool_arn = module.cognito.identity_pool_arn
-  iot_policy_arn            = module.iot_core.iot_policy_arns[0]
 
   # Secrets configuration
   secrets = [
@@ -1633,8 +1675,8 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
     },
     {
-      name      = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
+      name      = "DATABRICKS_DATA_UPLOAD_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_ID::"
     },
     {
       name      = "DATABRICKS_DATA_EXPORT_JOB_ID"
@@ -1697,12 +1739,12 @@ module "backend_ecs" {
       value = "experiment_device_data"
     },
     {
-      name  = "DATABRICKS_RAW_AMBYTE_DATA_TABLE_NAME"
-      value = "enriched_raw_ambyte_data"
-    },
-    {
       name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
       value = "enriched_experiment_macro_data"
+    },
+    {
+      name  = "DATABRICKS_UPLOADED_DATA_TABLE_NAME"
+      value = "enriched_experiment_uploaded_data"
     },
     {
       name  = "DB_HOST"
@@ -1757,8 +1799,8 @@ module "backend_ecs" {
       value = module.cognito.developer_provider_name
     },
     {
-      name  = "AWS_IOT_POLICY_NAME"
-      value = module.iot_core.iot_policy_name
+      name  = "AWS_IOT_POLICY_NAMES"
+      value = join(",", module.iot_core.iot_policy_names)
     },
     {
       name  = "POSTHOG_KEY"

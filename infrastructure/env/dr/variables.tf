@@ -69,8 +69,8 @@ variable "databricks_service_principal_client_secret" {
   sensitive   = true
 }
 
-variable "databricks_ambyte_processing_job_id" {
-  description = "Databricks Ambyte Processing Job ID (from prod workspace). Used by the backend to trigger the job."
+variable "databricks_data_upload_job_id" {
+  description = "Databricks Data Upload Job ID (from prod workspace). Used by the backend to trigger user-initiated data uploads (CSV, ambyte, …)."
   type        = string
   sensitive   = true
 }

@@ -43,8 +43,12 @@ describe("AwsConfigService", () => {
       );
     });
 
-    it("should return the correct iotPolicyName", () => {
-      expect(service.iotPolicyName).toBe(process.env.AWS_IOT_POLICY_NAME);
+    it("should return the correct iotPolicyNames", () => {
+      expect(service.iotPolicyNames).toEqual(
+        process.env.AWS_IOT_POLICY_NAMES?.split(",")
+          .map((name) => name.trim())
+          .filter(Boolean),
+      );
     });
   });
 
