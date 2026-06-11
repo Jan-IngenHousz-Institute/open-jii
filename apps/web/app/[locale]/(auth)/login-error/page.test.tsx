@@ -8,10 +8,10 @@ import LoginErrorPage from "./page";
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
 }));
-vi.mock("~/components/auth/auth-hero-section", () => ({
+vi.mock("@/features/auth/components/auth-hero-section", () => ({
   AuthHeroSection: () => <section aria-label="auth hero" />,
 }));
-vi.mock("~/components/auth/error-content", () => ({
+vi.mock("@/features/auth/components/error-content", () => ({
   ErrorContent: ({ error }: { error?: string }) => (
     <section aria-label="error content">{error}</section>
   ),

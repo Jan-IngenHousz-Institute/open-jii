@@ -1,6 +1,6 @@
 "use client";
 
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useProtocolUpdate } from "@/features/protocols/hooks/useProtocolUpdate/useProtocolUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { InlineEditableTitle } from "@/shared/ui/inline-editable-title";
 

@@ -1,12 +1,15 @@
 "use client";
 
+import { useIotBrowserSupport } from "@/features/iot/hooks/useIotBrowserSupport";
+import { IotProtocolRunner } from "@/features/protocols/components/iot-protocol-runner";
+import ProtocolCodeEditor from "@/features/protocols/components/protocol-code-editor";
+import { useProtocolUpdate } from "@/features/protocols/hooks/useProtocolUpdate/useProtocolUpdate";
 import { editProtocolFormSchema } from "@/shared/utils/schema";
 import { SENSOR_FAMILY_OPTIONS } from "@/shared/utils/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronsUpDown, MonitorX } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
@@ -40,10 +43,6 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
-
-import { useProtocolUpdate } from "../../hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { IotProtocolRunner } from "../iot/iot-protocol-runner";
-import ProtocolCodeEditor from "../protocol-code-editor";
 
 interface ProtocolDetailsCardProps {
   protocolId: string;

@@ -1,10 +1,9 @@
+import { MacroSearchWithDropdown } from "@/shared/ui/macro-search-with-dropdown";
 import { createMacro } from "@/test/factories";
 import { act, render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
-
-import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 // Mocks
 
@@ -20,7 +19,7 @@ interface PopoverPropsCaptured {
 }
 let lastPopoverProps: PopoverPropsCaptured | null = null;
 
-vi.mock("../macro-search-popover", () => ({
+vi.mock("@/shared/ui/macro-search-popover", () => ({
   MacroSearchPopover: (props: PopoverPropsCaptured) => {
     lastPopoverProps = props;
     return (

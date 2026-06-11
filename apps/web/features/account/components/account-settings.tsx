@@ -1,11 +1,11 @@
 "use client";
 
+import { useCreateUserProfile } from "@/features/account/hooks/useCreateUserProfile/useCreateUserProfile";
+import { useGetUserProfile } from "@/features/account/hooks/useGetUserProfile/useGetUserProfile";
 import { ErrorDisplay } from "@/shared/ui/error-display";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
-import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import { zCreateUserProfileBody } from "@repo/api/schemas/user.schema";
 import type { CreateUserProfileBody, User } from "@repo/api/schemas/user.schema";

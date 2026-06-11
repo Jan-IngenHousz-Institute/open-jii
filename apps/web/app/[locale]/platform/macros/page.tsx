@@ -1,4 +1,4 @@
-import { ListMacros } from "@/components/list-macros";
+import { ListMacros } from "@/features/macros/components/list-macros";
 import type { Metadata } from "next";
 import Link from "next/link";
 

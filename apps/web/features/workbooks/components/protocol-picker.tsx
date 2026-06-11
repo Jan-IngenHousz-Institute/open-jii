@@ -1,7 +1,7 @@
 "use client";
 
-import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useProtocols } from "@/hooks/protocol/useProtocols/useProtocols";
+import { useProtocolCreate } from "@/features/protocols/hooks/useProtocolCreate/useProtocolCreate";
+import { useProtocols } from "@/features/protocols/hooks/useProtocols/useProtocols";
 import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";

@@ -1,10 +1,10 @@
 "use client";
 
+import { useMacro } from "@/features/macros/hooks/useMacro/useMacro";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
 
-import { useMacro } from "../../hooks/macro/useMacro/useMacro";
 import { MacroCompatibleProtocolsCard } from "./macro-compatible-protocols-card";
 import { MacroDetailsCard } from "./macro-details-card";
 import { MacroInfoCard } from "./macro-info-card";

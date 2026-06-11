@@ -1,6 +1,8 @@
 "use client";
 
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useProtocolCompatibleMacros } from "@/features/protocols/hooks/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
+import { useProtocolDelete } from "@/features/protocols/hooks/useProtocolDelete/useProtocolDelete";
+import { useProtocolUpdate } from "@/features/protocols/hooks/useProtocolUpdate/useProtocolUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { DetailsSidebarCard } from "@/shared/ui/details-sidebar-card";
@@ -33,8 +35,6 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
-import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
 import { ProtocolCompatibleMacrosCard } from "../protocol-settings/protocol-compatible-macros-card";
 
 interface ProtocolDetailsSidebarProps {

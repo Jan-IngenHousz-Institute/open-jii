@@ -28,7 +28,7 @@ const mockBrowserSupport = {
   bluetoothReason: null as string | null,
   serialReason: null as string | null,
 };
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+vi.mock("@/features/iot/hooks/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
 }));
 

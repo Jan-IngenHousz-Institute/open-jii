@@ -9,13 +9,13 @@ import RegisterPage from "./page";
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
 }));
-vi.mock("~/components/auth/auth-hero-section", () => ({
+vi.mock("@/features/auth/components/auth-hero-section", () => ({
   AuthHeroSection: () => <section aria-label="auth hero" />,
 }));
-vi.mock("~/components/auth/registration-form", () => ({
+vi.mock("@/features/auth/components/registration-form", () => ({
   RegistrationForm: () => <form aria-label="registration" />,
 }));
-vi.mock("~/components/auth/terms-and-conditions-dialog", () => ({
+vi.mock("@/features/auth/components/terms-and-conditions-dialog", () => ({
   TermsAndConditionsDialog: () => Promise.resolve({ terms: [] }),
 }));
 

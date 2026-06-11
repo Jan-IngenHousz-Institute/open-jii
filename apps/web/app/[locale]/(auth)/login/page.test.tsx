@@ -8,15 +8,15 @@ import LoginPage from "./page";
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
 }));
-vi.mock("~/components/auth/auth-hero-section", () => ({
+vi.mock("@/features/auth/components/auth-hero-section", () => ({
   AuthHeroSection: () => <section aria-label="auth hero" />,
 }));
-vi.mock("~/components/auth/login-form", () => ({
+vi.mock("@/features/auth/components/login-form", () => ({
   LoginForm: ({ callbackUrl }: { callbackUrl?: string }) => (
     <form aria-label="login">{callbackUrl && <span>callback:{callbackUrl}</span>}</form>
   ),
 }));
-vi.mock("~/components/auth/terms-and-conditions-dialog", () => ({
+vi.mock("@/features/auth/components/terms-and-conditions-dialog", () => ({
   TermsAndConditionsDialog: () => Promise.resolve({ terms: [] }),
 }));
 

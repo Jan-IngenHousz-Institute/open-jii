@@ -1,7 +1,8 @@
 "use client";
 
-import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
-import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useMacroCompatibleProtocols } from "@/features/macros/hooks/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
+import { useMacroDelete } from "@/features/macros/hooks/useMacroDelete/useMacroDelete";
+import { useMacroUpdate } from "@/features/macros/hooks/useMacroUpdate/useMacroUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { DetailsSidebarCard } from "@/shared/ui/details-sidebar-card";
@@ -33,7 +34,6 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { MacroCompatibleProtocolsCard } from "../macro-settings/macro-compatible-protocols-card";
 
 interface MacroDetailsSidebarProps {

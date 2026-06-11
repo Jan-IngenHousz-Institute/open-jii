@@ -1,8 +1,8 @@
 "use client";
 
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
+import { registerProtocolCodeSource } from "@/features/protocols/domain/protocol-code-registry";
+import { useProtocol } from "@/features/protocols/hooks/useProtocol/useProtocol";
+import { useProtocolUpdate } from "@/features/protocols/hooks/useProtocolUpdate/useProtocolUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useAutosave } from "@/shared/hooks/useAutosave";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";

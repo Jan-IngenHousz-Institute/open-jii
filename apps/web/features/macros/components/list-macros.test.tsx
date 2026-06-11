@@ -7,7 +7,7 @@ import { contract } from "@repo/api/contract";
 
 import { ListMacros } from "./list-macros";
 
-vi.mock("~/components/macro-overview-cards", () => ({
+vi.mock("@/features/macros/components/macro-overview-cards", () => ({
   MacroOverviewCards: (props: { macros?: unknown[]; isLoading: boolean }) => (
     <div data-testid="macro-cards" data-loading={props.isLoading}>
       {props.macros?.length ?? 0} macros

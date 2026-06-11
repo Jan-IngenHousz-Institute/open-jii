@@ -1,10 +1,10 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { AuthHeroSection } from "@/features/auth/components/auth-hero-section";
 import { auth } from "@/shared/api/auth";
 import type { SearchParamsType } from "@/shared/utils/searchParams";
 import { MailCheck } from "lucide-react";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 
 import initTranslations from "@repo/i18n/server";
 

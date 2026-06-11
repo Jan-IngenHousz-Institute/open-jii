@@ -1,5 +1,6 @@
 "use client";
 
+import { useMacroUpdate } from "@/features/macros/hooks/useMacroUpdate/useMacroUpdate";
 import { decodeBase64, encodeBase64 } from "@/shared/utils/base64";
 import { editMacroFormSchema } from "@/shared/utils/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,7 +36,6 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useMacroUpdate } from "../../hooks/macro/useMacroUpdate/useMacroUpdate";
 import MacroCodeEditor from "../macro-code-editor";
 
 interface MacroDetailsCardProps {

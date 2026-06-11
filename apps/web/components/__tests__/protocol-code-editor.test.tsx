@@ -1,7 +1,6 @@
+import ProtocolCodeEditor from "@/features/protocols/components/protocol-code-editor";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import ProtocolCodeEditor from "../protocol-code-editor";
 
 // Mock useDebounce to return value immediately for testing
 vi.mock("@/shared/hooks/useDebounce", () => ({

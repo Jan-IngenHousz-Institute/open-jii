@@ -1,5 +1,5 @@
+import { AccountSettings } from "@/features/account/components/account-settings";
 import { auth } from "@/shared/api/auth";
-import { AccountSettings } from "~/components/account-settings/account-settings";
 
 export default async function AccountSettingsPage() {
   const session = await auth();

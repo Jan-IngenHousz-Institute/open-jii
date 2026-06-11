@@ -1,12 +1,14 @@
 "use client";
 
-import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
-import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
+import { useIotBrowserSupport } from "@/features/iot/hooks/useIotBrowserSupport";
+import { IotProtocolRunner } from "@/features/protocols/components/iot-protocol-runner";
+import ProtocolCodeEditor from "@/features/protocols/components/protocol-code-editor";
+import { useAddCompatibleMacro } from "@/features/protocols/hooks/useAddCompatibleMacro/useAddCompatibleMacro";
+import { useProtocolCreate } from "@/features/protocols/hooks/useProtocolCreate/useProtocolCreate";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
@@ -23,8 +25,6 @@ import {
 import { WizardForm } from "@repo/ui/components/wizard-form";
 import type { WizardStep, WizardStepProps } from "@repo/ui/components/wizard-form";
 
-import { IotProtocolRunner } from "../iot/iot-protocol-runner";
-import ProtocolCodeEditor from "../protocol-code-editor";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 import { CodeTestStep, codeSchema } from "./steps/code-test-step";
 import { DetailsStep, detailsSchema } from "./steps/details-step";

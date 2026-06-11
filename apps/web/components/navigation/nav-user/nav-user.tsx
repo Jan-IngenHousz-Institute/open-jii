@@ -1,5 +1,7 @@
 "use client";
 
+import { useGetUserProfile } from "@/features/account/hooks/useGetUserProfile/useGetUserProfile";
+import { useSignOut } from "@/features/auth/hooks/useSignOut/useSignOut";
 import {
   ChevronDown,
   ChevronUp,
@@ -13,8 +15,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { env } from "~/env";
-import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
-import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";

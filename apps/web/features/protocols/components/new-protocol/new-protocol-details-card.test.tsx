@@ -10,7 +10,7 @@ import { Form } from "@repo/ui/components/form";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 
 // Mock MacroSearchWithDropdown
-vi.mock("../macro-search-with-dropdown", () => ({
+vi.mock("@/shared/ui/macro-search-with-dropdown", () => ({
   MacroSearchWithDropdown: () => <div data-testid="macro-search-dropdown" />,
 }));
 

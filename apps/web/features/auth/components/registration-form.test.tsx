@@ -1,14 +1,13 @@
+import { RegistrationForm } from "@/features/auth/components/registration-form";
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
 const pushMock = vi.fn();
 
 const mockUpdateUserMutate = vi.fn();
-vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
+vi.mock("@/features/auth/hooks/useUpdateUser/useUpdateUser", () => ({
   useUpdateUser: () => ({
     mutateAsync: mockUpdateUserMutate,
   }),
@@ -16,15 +15,15 @@ vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
 
 const mockSendOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
-vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
+vi.mock("@/features/auth/hooks/useSignInEmail/useSignInEmail", () => ({
   useSignInEmail: () => ({ mutateAsync: mockSendOtpMutate }),
 }));
-vi.mock("~/hooks/auth/useVerifyEmail/useVerifyEmail", () => ({
+vi.mock("@/features/auth/hooks/useVerifyEmail/useVerifyEmail", () => ({
   useVerifyEmail: () => ({ mutateAsync: mockVerifyOtpMutate }),
 }));
 
 const createUserProfileMock = vi.fn();
-vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
+vi.mock("@/features/account/hooks/useCreateUserProfile/useCreateUserProfile", () => ({
   useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
     mutateAsync: async (args: unknown) => {
       const result = createUserProfileMock(args) as unknown;

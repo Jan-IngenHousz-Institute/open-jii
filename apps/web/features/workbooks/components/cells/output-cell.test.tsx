@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OutputCellComponent } from "./output-cell";
 
 const useProtocolMock = vi.hoisted(() => vi.fn());
-vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
+vi.mock("@/features/protocols/hooks/useProtocol/useProtocol", () => ({
   useProtocol: useProtocolMock,
 }));
 

@@ -1,7 +1,7 @@
 "use client";
 
+import type { TransportUnavailableReason } from "@/features/iot/hooks/useIotBrowserSupport";
 import { Bluetooth, Usb } from "lucide-react";
-import type { TransportUnavailableReason } from "~/hooks/iot/useIotBrowserSupport";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

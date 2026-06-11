@@ -1,4 +1,8 @@
 import {
+  __resetProtocolCodeRegistry,
+  registerProtocolCodeSource,
+} from "@/features/protocols/domain/protocol-code-registry";
+import {
   createBranchCell,
   createMacroCell,
   createMarkdownCell,
@@ -10,10 +14,6 @@ import {
 import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  __resetProtocolCodeRegistry,
-  registerProtocolCodeSource,
-} from "~/lib/protocol-code-registry";
 
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -26,7 +26,7 @@ const mockDisconnect = vi.fn();
 
 let mockIsConnected = false;
 
-vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
+vi.mock("@/features/iot/hooks/useIotCommunication/useIotCommunication", () => ({
   useIotCommunication: () => ({
     isConnected: mockIsConnected,
     isConnecting: false,
@@ -38,7 +38,7 @@ vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
   }),
 }));
 
-vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
+vi.mock("@/features/iot/hooks/useIotProtocolExecution/useIotProtocolExecution", () => ({
   useIotProtocolExecution: () => ({
     executeProtocol: mockExecuteProtocol,
   }),

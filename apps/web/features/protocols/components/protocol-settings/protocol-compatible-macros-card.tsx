@@ -1,8 +1,12 @@
 "use client";
 
+import { useAddCompatibleMacro } from "@/features/protocols/hooks/useAddCompatibleMacro/useAddCompatibleMacro";
+import { useProtocolCompatibleMacros } from "@/features/protocols/hooks/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
+import { useRemoveCompatibleMacro } from "@/features/protocols/hooks/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
 import { tsr } from "@/shared/api/tsr";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useLocale } from "@/shared/i18n/useLocale";
+import { MacroSearchWithDropdown } from "@/shared/ui/macro-search-with-dropdown";
 import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -18,11 +22,6 @@ import {
   CardDescription,
   CardContent,
 } from "@repo/ui/components/card";
-
-import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
-import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
-import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
-import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 const getLanguageDisplay = (language: string) => {
   switch (language) {

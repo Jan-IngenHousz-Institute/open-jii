@@ -1,5 +1,6 @@
 "use client";
 
+import { useProtocolDelete } from "@/features/protocols/hooks/useProtocolDelete/useProtocolDelete";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { formatDate } from "@/shared/utils/date";
 import { useRouter } from "next/navigation";
@@ -26,8 +27,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@repo/ui/components/dialog";
-
-import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
 
 interface ProtocolInfoCardProps {
   protocolId: string;

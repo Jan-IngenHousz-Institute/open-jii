@@ -23,7 +23,7 @@ interface DropdownPropsCaptured {
 }
 let lastDropdownProps: DropdownPropsCaptured | null = null;
 
-vi.mock("../../macro-search-with-dropdown", () => ({
+vi.mock("@/shared/ui/macro-search-with-dropdown", () => ({
   MacroSearchWithDropdown: (props: DropdownPropsCaptured) => {
     lastDropdownProps = props;
     return <div data-testid="macro-search-dropdown" />;
@@ -41,7 +41,7 @@ vi.mock("@repo/ui/hooks/use-mobile", () => ({
 }));
 
 // Mock ProtocolCodeEditor
-vi.mock("../../protocol-code-editor", () => ({
+vi.mock("@/features/protocols/components/protocol-code-editor", () => ({
   default: ({
     value,
     onChange,
@@ -73,12 +73,12 @@ vi.mock("../../protocol-code-editor", () => ({
 }));
 
 // Mock IotProtocolRunner
-vi.mock("../../iot/iot-protocol-runner", () => ({
+vi.mock("@/features/protocols/components/iot-protocol-runner", () => ({
   IotProtocolRunner: () => <div data-testid="iot-protocol-runner">Protocol Runner</div>,
 }));
 
 // Mock useIotBrowserSupport
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+vi.mock("@/features/iot/hooks/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => ({
     bluetooth: true,
     serial: true,

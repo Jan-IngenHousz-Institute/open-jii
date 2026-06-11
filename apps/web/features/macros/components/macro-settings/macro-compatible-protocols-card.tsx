@@ -1,7 +1,12 @@
 "use client";
 
+import { useAddCompatibleProtocol } from "@/features/macros/hooks/useAddCompatibleProtocol/useAddCompatibleProtocol";
+import { useMacroCompatibleProtocols } from "@/features/macros/hooks/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
+import { useRemoveCompatibleProtocol } from "@/features/macros/hooks/useRemoveCompatibleProtocol/useRemoveCompatibleProtocol";
+import { useProtocolSearch } from "@/features/protocols/hooks/useProtocolSearch/useProtocolSearch";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useLocale } from "@/shared/i18n/useLocale";
+import { ProtocolSearchWithDropdown } from "@/shared/ui/protocol-search-with-dropdown";
 import { ExternalLink, FileJson2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -18,12 +23,6 @@ import {
   CardDescription,
   CardContent,
 } from "@repo/ui/components/card";
-
-import { useAddCompatibleProtocol } from "../../hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol";
-import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
-import { useRemoveCompatibleProtocol } from "../../hooks/macro/useRemoveCompatibleProtocol/useRemoveCompatibleProtocol";
-import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
-import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
 const getFamilyColor = (family: string) => {
   switch (family) {

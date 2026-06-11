@@ -1,10 +1,9 @@
+import { ProtocolSearchWithDropdown } from "@/shared/ui/protocol-search-with-dropdown";
 import { createProtocol } from "@/test/factories";
 import { act, render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
-
-import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
 // Mocks
 
@@ -19,7 +18,7 @@ interface PopoverPropsCaptured {
 }
 let lastPopoverProps: PopoverPropsCaptured | null = null;
 
-vi.mock("../protocol-search-popover", () => ({
+vi.mock("@/shared/ui/protocol-search-popover", () => ({
   ProtocolSearchPopover: (props: PopoverPropsCaptured) => {
     lastPopoverProps = props;
     return (

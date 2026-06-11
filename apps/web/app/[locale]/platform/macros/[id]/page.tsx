@@ -1,10 +1,10 @@
 "use client";
 
-import MacroCodeEditor from "@/components/macro-code-editor";
-import MacroCodeViewer from "@/components/macro-code-viewer";
-import { MacroDetailsSidebar } from "@/components/macro-overview/macro-details-sidebar";
-import { useMacro } from "@/hooks/macro/useMacro/useMacro";
-import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import MacroCodeEditor from "@/features/macros/components/macro-code-editor";
+import MacroCodeViewer from "@/features/macros/components/macro-code-viewer";
+import { MacroDetailsSidebar } from "@/features/macros/components/macro-overview/macro-details-sidebar";
+import { useMacro } from "@/features/macros/hooks/useMacro/useMacro";
+import { useMacroUpdate } from "@/features/macros/hooks/useMacroUpdate/useMacroUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useAutosave } from "@/shared/hooks/useAutosave";
 import { CodeEditorHeaderActions } from "@/shared/ui/code-editor-header-actions";

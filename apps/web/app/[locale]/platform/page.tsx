@@ -1,8 +1,8 @@
-import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
-import { DashboardSection } from "@/components/dashboard/dashboard-section";
-import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
+import { BlogPostsSection } from "@/features/dashboard/components/blog-posts-section";
+import { DashboardBanner } from "@/features/dashboard/components/dashboard-banner";
+import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
+import { UserExperimentsSection } from "@/features/dashboard/components/user-experiments-section";
 import type { Metadata } from "next";
-import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 import { env } from "~/env";
 
 import initTranslations from "@repo/i18n/server";

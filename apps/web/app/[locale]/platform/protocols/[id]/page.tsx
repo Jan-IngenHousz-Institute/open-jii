@@ -1,14 +1,14 @@
 "use client";
 
-import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-details-sidebar";
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { ProtocolCodePanel } from "@/features/protocols/components/protocol-code-panel";
+import type { ProtocolCode } from "@/features/protocols/components/protocol-code-panel";
+import { ProtocolDetailsSidebar } from "@/features/protocols/components/protocol-overview/protocol-details-sidebar";
+import { useProtocol } from "@/features/protocols/hooks/useProtocol/useProtocol";
+import { useProtocolUpdate } from "@/features/protocols/hooks/useProtocolUpdate/useProtocolUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useAutosave } from "@/shared/hooks/useAutosave";
 import { ErrorDisplay } from "@/shared/ui/error-display";
 import { InlineEditableDescription } from "@/shared/ui/inline-editable-description";
-import { ProtocolCodePanel } from "@/shared/ui/protocol-code-panel";
-import type { ProtocolCode } from "@/shared/ui/protocol-code-panel";
 import { use, useCallback, useState } from "react";
 
 import { useSession } from "@repo/auth/client";

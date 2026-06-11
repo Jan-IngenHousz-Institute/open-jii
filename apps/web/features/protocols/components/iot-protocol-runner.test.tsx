@@ -16,11 +16,11 @@ let mockDeviceInfo: Record<string, unknown> | null = null;
 let mockProtocol: Record<string, unknown> | null = null;
 let mockBrowserSupport = { bluetooth: true, serial: true, any: true };
 
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+vi.mock("@/features/iot/hooks/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
 }));
 
-vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
+vi.mock("@/features/iot/hooks/useIotCommunication/useIotCommunication", () => ({
   useIotCommunication: () => ({
     isConnected: mockIsConnected,
     isConnecting: mockIsConnecting,
@@ -32,7 +32,7 @@ vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
   }),
 }));
 
-vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
+vi.mock("@/features/iot/hooks/useIotProtocolExecution/useIotProtocolExecution", () => ({
   useIotProtocolExecution: () => ({
     executeProtocol: mockExecuteProtocol,
   }),

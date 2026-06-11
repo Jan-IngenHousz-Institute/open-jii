@@ -1,4 +1,4 @@
-import { ListProtocols } from "@/components/list-protocols";
+import { ListProtocols } from "@/features/protocols/components/list-protocols";
 import type { Metadata } from "next";
 import Link from "next/link";
 

@@ -1,4 +1,4 @@
-import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
+import { useMacroCompatibleProtocols } from "@/features/macros/hooks/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";

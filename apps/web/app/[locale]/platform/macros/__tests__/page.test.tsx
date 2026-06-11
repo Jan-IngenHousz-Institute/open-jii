@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import Page from "../page";
 
-vi.mock("@/components/list-macros", () => ({
+vi.mock("@/features/macros/components/list-macros", () => ({
   ListMacros: () => <div data-testid="list-macros" />,
 }));
 

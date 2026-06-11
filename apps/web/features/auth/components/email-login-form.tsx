@@ -1,5 +1,7 @@
 "use client";
 
+import { useSignInEmail } from "@/features/auth/hooks/useSignInEmail/useSignInEmail";
+import { useVerifyEmail } from "@/features/auth/hooks/useVerifyEmail/useVerifyEmail";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,9 +21,6 @@ import {
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@repo/ui/components/input-otp";
-
-import { useSignInEmail } from "../../hooks/auth/useSignInEmail/useSignInEmail";
-import { useVerifyEmail } from "../../hooks/auth/useVerifyEmail/useVerifyEmail";
 
 const REGEXP_ONLY_DIGITS_PATTERN = "^[0-9]+$";
 const RESEND_COOLDOWN_SECONDS = 30;

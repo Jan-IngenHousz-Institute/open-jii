@@ -28,7 +28,7 @@ vi.mock("@/shared/ui/error-display", () => ({
   ),
 }));
 
-vi.mock("@/components/macro-overview/macro-details-sidebar", () => ({
+vi.mock("@/features/macros/components/macro-overview/macro-details-sidebar", () => ({
   MacroDetailsSidebar: ({
     macroId,
     macro,
@@ -75,7 +75,7 @@ vi.mock("@/shared/ui/inline-editable-description", () => ({
   ),
 }));
 
-vi.mock("@/components/macro-code-viewer", () => ({
+vi.mock("@/features/macros/components/macro-code-viewer", () => ({
   default: ({
     value,
     language,
@@ -103,7 +103,7 @@ vi.mock("@/components/macro-code-viewer", () => ({
   ),
 }));
 
-vi.mock("@/components/macro-code-editor", () => ({
+vi.mock("@/features/macros/components/macro-code-editor", () => ({
   default: ({
     value,
     onChange,

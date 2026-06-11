@@ -20,7 +20,7 @@ let mockBrowserSupport = {
   bluetoothReason: null,
   serialReason: null,
 };
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+vi.mock("@/features/iot/hooks/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
 }));
 
@@ -29,7 +29,7 @@ let mockSession: { user: { id: string } } | null = null;
 // Captured to drive the autosave path without the real CodeMirror pipeline.
 let capturedOnChange: ((value: Record<string, unknown>[] | string | undefined) => void) | null =
   null;
-vi.mock("../../protocol-code-editor", () => ({
+vi.mock("@/features/protocols/components/protocol-code-editor", () => ({
   __esModule: true,
   default: ({
     headerActions,
@@ -43,7 +43,7 @@ vi.mock("../../protocol-code-editor", () => ({
   },
 }));
 
-vi.mock("@/shared/ui/json-code-viewer", () => ({
+vi.mock("@/features/protocols/components/json-code-viewer", () => ({
   JsonCodeViewer: ({
     onEditStart,
   }: {
@@ -61,7 +61,7 @@ vi.mock("@/shared/ui/code-editor-header-actions", () => ({
   CodeEditorHeaderActions: () => <div data-testid="editor-header-actions" />,
 }));
 
-vi.mock("../../iot/iot-protocol-runner", () => ({
+vi.mock("@/features/protocols/components/iot-protocol-runner", () => ({
   IotProtocolRunner: () => <div data-testid="iot-runner" />,
 }));
 

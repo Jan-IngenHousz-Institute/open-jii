@@ -21,7 +21,7 @@ vi.mock("@/shared/ui/error-display", () => ({
   ),
 }));
 
-vi.mock("@/shared/ui/json-code-viewer", () => ({
+vi.mock("@/features/protocols/components/json-code-viewer", () => ({
   JsonCodeViewer: ({
     value,
     title,
@@ -48,7 +48,7 @@ vi.mock("@/shared/ui/json-code-viewer", () => ({
   ),
 }));
 
-vi.mock("@/components/protocol-code-editor", () => ({
+vi.mock("@/features/protocols/components/protocol-code-editor", () => ({
   default: ({
     value,
     title,
@@ -80,7 +80,7 @@ vi.mock("@/components/protocol-code-editor", () => ({
   ),
 }));
 
-vi.mock("@/components/protocol-overview/protocol-details-sidebar", () => ({
+vi.mock("@/features/protocols/components/protocol-overview/protocol-details-sidebar", () => ({
   ProtocolDetailsSidebar: ({
     protocolId,
     protocol,

@@ -33,7 +33,7 @@ interface DropdownPropsCaptured {
 }
 let lastDropdownProps: DropdownPropsCaptured | null = null;
 
-vi.mock("../../macro-search-with-dropdown", () => ({
+vi.mock("@/shared/ui/macro-search-with-dropdown", () => ({
   MacroSearchWithDropdown: (props: DropdownPropsCaptured) => {
     lastDropdownProps = props;
     return <div data-testid="macro-dropdown" />;

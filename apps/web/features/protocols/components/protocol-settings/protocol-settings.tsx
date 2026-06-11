@@ -1,8 +1,9 @@
 "use client";
 
+import { useProtocol } from "@/features/protocols/hooks/useProtocol/useProtocol";
+
 import { useTranslation } from "@repo/i18n";
 
-import { useProtocol } from "../../hooks/protocol/useProtocol/useProtocol";
 import { ProtocolCompatibleMacrosCard } from "./protocol-compatible-macros-card";
 import { ProtocolDetailsCard } from "./protocol-details-card";
 import { ProtocolInfoCard } from "./protocol-info-card";

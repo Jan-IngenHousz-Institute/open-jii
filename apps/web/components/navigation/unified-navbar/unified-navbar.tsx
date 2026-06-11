@@ -1,5 +1,7 @@
 "use client";
 
+import { useGetUserProfile } from "@/features/account/hooks/useGetUserProfile/useGetUserProfile";
+import { useSignOut } from "@/features/auth/hooks/useSignOut/useSignOut";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 import {
   User,
@@ -15,8 +17,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
-import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
-import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";

@@ -1,15 +1,15 @@
 "use client";
 
+import { useCreateUserProfile } from "@/features/account/hooks/useCreateUserProfile/useCreateUserProfile";
+import { useSignInEmail } from "@/features/auth/hooks/useSignInEmail/useSignInEmail";
+import { useUpdateUser } from "@/features/auth/hooks/useUpdateUser/useUpdateUser";
+import { useVerifyEmail } from "@/features/auth/hooks/useVerifyEmail/useVerifyEmail";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
-import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
-import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
-import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";

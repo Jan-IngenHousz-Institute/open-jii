@@ -2,6 +2,7 @@
 
 import { tsr } from "@/shared/api/tsr";
 import { useDebounce } from "@/shared/hooks/useDebounce";
+import { MacroSearchWithDropdown } from "@/shared/ui/macro-search-with-dropdown";
 import { SENSOR_FAMILY_OPTIONS } from "@/shared/utils/sensor-family";
 import { X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -28,8 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-
-import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface NewProtocolDetailsCardProps {
   form: UseFormReturn<CreateProtocolRequestBody>;

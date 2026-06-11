@@ -1,17 +1,16 @@
 "use client";
 
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
+import { useProtocol } from "@/features/protocols/hooks/useProtocol/useProtocol";
+import { useProtocolCompatibleMacros } from "@/features/protocols/hooks/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { tsr } from "@/shared/api/tsr";
 import { useDebounce } from "@/shared/hooks/useDebounce";
+import { MacroSearchWithDropdown } from "@/shared/ui/macro-search-with-dropdown";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
-
-import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface AnalysisPanelProps {
   selectedMacroId?: string;

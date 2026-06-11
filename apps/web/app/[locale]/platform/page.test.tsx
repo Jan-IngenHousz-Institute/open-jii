@@ -3,18 +3,18 @@ import { describe, it, expect, vi } from "vitest";
 
 import Page from "./page";
 
-vi.mock("@/components/dashboard/dashboard-banner", () => ({
+vi.mock("@/features/dashboard/components/dashboard-banner", () => ({
   DashboardBanner: () => <section aria-label="banner" />,
 }));
-vi.mock("@/components/dashboard/dashboard-section", () => ({
+vi.mock("@/features/dashboard/components/dashboard-section", () => ({
   DashboardSection: ({ title, children }: { title: string; children: React.ReactNode }) => (
     <section aria-label={title}>{children}</section>
   ),
 }));
-vi.mock("@/components/dashboard/user-experiments-section", () => ({
+vi.mock("@/features/dashboard/components/user-experiments-section", () => ({
   UserExperimentsSection: () => <div>Experiments</div>,
 }));
-vi.mock("~/components/dashboard/blog-posts-section", () => ({
+vi.mock("@/features/dashboard/components/blog-posts-section", () => ({
   BlogPostsSection: () => <div>Blog Posts</div>,
 }));
 

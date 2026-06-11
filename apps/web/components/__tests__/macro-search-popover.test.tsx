@@ -1,11 +1,10 @@
+import { MacroSearchPopover } from "@/shared/ui/macro-search-popover";
 import { createMacro } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import { Popover } from "@repo/ui/components/popover";
-
-import { MacroSearchPopover } from "../macro-search-popover";
 
 // Test data & helpers
 const macros: Macro[] = [

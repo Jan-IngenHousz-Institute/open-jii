@@ -1,7 +1,7 @@
 "use client";
 
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { isMultispeqOutput } from "@/lib/multispeq/detect";
+import { isMultispeqOutput } from "@/features/iot/domain/multispeq/detect";
+import { useProtocol } from "@/features/protocols/hooks/useProtocol/useProtocol";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import {
   AlertCircle,

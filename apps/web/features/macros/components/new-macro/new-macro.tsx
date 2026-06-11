@@ -1,16 +1,18 @@
 "use client";
 
-import { useAddCompatibleProtocol } from "@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol";
-import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
+import { useGetUserProfile } from "@/features/account/hooks/useGetUserProfile/useGetUserProfile";
+import { useAddCompatibleProtocol } from "@/features/macros/hooks/useAddCompatibleProtocol/useAddCompatibleProtocol";
+import { useMacroCreate } from "@/features/macros/hooks/useMacroCreate/useMacroCreate";
+import { useProtocolSearch } from "@/features/protocols/hooks/useProtocolSearch/useProtocolSearch";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useLocale } from "@/shared/i18n/useLocale";
+import { ProtocolSearchWithDropdown } from "@/shared/ui/protocol-search-with-dropdown";
 import { encodeBase64 } from "@/shared/utils/base64";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import type { CreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
 import { zCreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
@@ -28,9 +30,7 @@ import {
 } from "@repo/ui/components/select";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
-import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";
-import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 import { NewMacroDetailsCard } from "./new-macro-details-card";
 
 export function NewMacroForm() {

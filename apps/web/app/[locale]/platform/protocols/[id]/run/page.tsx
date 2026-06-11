@@ -1,6 +1,6 @@
 "use client";
 
-import { ProtocolRunContent } from "@/components/protocol-run/protocol-run-content";
+import { ProtocolRunContent } from "@/features/protocols/components/protocol-run/protocol-run-content";
 import { use } from "react";
 
 interface ProtocolRunPageProps {

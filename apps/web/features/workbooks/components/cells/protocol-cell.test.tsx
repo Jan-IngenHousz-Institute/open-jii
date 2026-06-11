@@ -1,4 +1,7 @@
-import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol-code-registry";
+import {
+  __resetProtocolCodeRegistry,
+  getLiveProtocolCode,
+} from "@/features/protocols/domain/protocol-code-registry";
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";

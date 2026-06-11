@@ -25,7 +25,7 @@ interface DropdownPropsCaptured {
 }
 let lastDropdownProps: DropdownPropsCaptured | null = null;
 
-vi.mock("../../protocol-search-with-dropdown", () => ({
+vi.mock("@/shared/ui/protocol-search-with-dropdown", () => ({
   ProtocolSearchWithDropdown: (props: DropdownPropsCaptured) => {
     lastDropdownProps = props;
     return <div data-testid="protocol-dropdown" />;

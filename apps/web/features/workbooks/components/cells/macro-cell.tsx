@@ -1,7 +1,7 @@
 "use client";
 
-import { useMacro } from "@/hooks/macro/useMacro/useMacro";
-import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useMacro } from "@/features/macros/hooks/useMacro/useMacro";
+import { useMacroUpdate } from "@/features/macros/hooks/useMacroUpdate/useMacroUpdate";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/shared/utils/base64";
 import { Check, Code, Copy, ExternalLink, Loader2 } from "lucide-react";

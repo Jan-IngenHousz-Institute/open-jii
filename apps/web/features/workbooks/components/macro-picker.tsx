@@ -1,7 +1,7 @@
 "use client";
 
-import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
-import { useMacros } from "@/hooks/macro/useMacros/useMacros";
+import { useMacroCreate } from "@/features/macros/hooks/useMacroCreate/useMacroCreate";
+import { useMacros } from "@/features/macros/hooks/useMacros/useMacros";
 import { encodeBase64 } from "@/shared/utils/base64";
 import { Code, Loader2, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";

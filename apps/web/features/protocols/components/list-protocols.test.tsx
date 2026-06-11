@@ -7,7 +7,7 @@ import { contract } from "@repo/api/contract";
 
 import { ListProtocols } from "./list-protocols";
 
-vi.mock("~/components/protocol-overview-cards", () => ({
+vi.mock("@/features/protocols/components/protocol-overview-cards", () => ({
   ProtocolOverviewCards: (props: { protocols?: unknown[]; isLoading: boolean }) => (
     <div data-testid="protocol-overview-cards" data-loading={props.isLoading}>
       {props.protocols === undefined ? "Loading..." : `${props.protocols.length} protocols`}

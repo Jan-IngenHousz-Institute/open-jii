@@ -12,12 +12,12 @@ import { ProtocolDetailsCard } from "./protocol-details-card";
 const useIotBrowserSupportMock = vi.hoisted(() => vi.fn());
 
 // Mock useIotBrowserSupport
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+vi.mock("@/features/iot/hooks/useIotBrowserSupport", () => ({
   useIotBrowserSupport: useIotBrowserSupportMock,
 }));
 
 // Mock IotProtocolRunner
-vi.mock("../iot/iot-protocol-runner", () => ({
+vi.mock("@/features/protocols/components/iot-protocol-runner", () => ({
   IotProtocolRunner: (props: Record<string, unknown>) => (
     <div data-testid="iot-protocol-runner" data-layout={props.layout}>
       IotProtocolRunner
@@ -61,7 +61,7 @@ vi.mock("@repo/ui/components/resizable", async () => {
 });
 
 // Mock ProtocolCodeEditor
-vi.mock("../protocol-code-editor", () => ({
+vi.mock("@/features/protocols/components/protocol-code-editor", () => ({
   default: ({
     value,
     onChange,

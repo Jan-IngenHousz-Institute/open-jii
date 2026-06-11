@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import AccountSettingsPage from "./page";
 
-vi.mock("~/components/account-settings/account-settings", () => ({
+vi.mock("@/features/account/components/account-settings", () => ({
   AccountSettings: ({ session }: { session: unknown }) => (
     <div data-testid="account-settings">
       Account Settings - {session ? "with session" : "no session"}

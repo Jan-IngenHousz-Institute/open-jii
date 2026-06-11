@@ -1,10 +1,10 @@
 "use client";
 
+import { useIotBrowserSupport } from "@/features/iot/hooks/useIotBrowserSupport";
+import { useIotCommunication } from "@/features/iot/hooks/useIotCommunication/useIotCommunication";
+import { useIotProtocolExecution } from "@/features/iot/hooks/useIotProtocolExecution/useIotProtocolExecution";
 import { Loader2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
-import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
-import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useMacroUpdate } from "@/features/macros/hooks/useMacroUpdate/useMacroUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { InlineEditableTitle } from "@/shared/ui/inline-editable-title";
 

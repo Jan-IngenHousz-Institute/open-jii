@@ -16,7 +16,7 @@ import { contract } from "@repo/api/contract";
 
 import { WorkbookHeader } from "./workbook-header";
 
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+vi.mock("@/features/iot/hooks/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => ({
     bluetooth: true,
     serial: true,

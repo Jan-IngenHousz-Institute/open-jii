@@ -1,14 +1,13 @@
 "use client";
 
+import { useProtocolSearch } from "@/features/protocols/hooks/useProtocolSearch/useProtocolSearch";
 import { useDebounce } from "@/shared/hooks/useDebounce";
+import { ProtocolSearchWithDropdown } from "@/shared/ui/protocol-search-with-dropdown";
 import { useState } from "react";
-import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
-
-import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
 interface MeasurementPanelProps {
   selectedProtocolId?: string;

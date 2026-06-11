@@ -1,9 +1,9 @@
 "use client";
 
+import { ProtocolOverviewCards } from "@/features/protocols/components/protocol-overview-cards";
+import { useProtocols } from "@/features/protocols/hooks/useProtocols/useProtocols";
 import { X } from "lucide-react";
 import React from "react";
-import { ProtocolOverviewCards } from "~/components/protocol-overview-cards";
-import { useProtocols } from "~/hooks/protocol/useProtocols/useProtocols";
 
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";

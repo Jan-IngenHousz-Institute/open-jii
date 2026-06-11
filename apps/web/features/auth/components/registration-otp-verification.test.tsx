@@ -9,7 +9,7 @@ import type { Registration } from "./registration-form";
 import { RegistrationOtpVerification } from "./registration-otp-verification";
 
 const mockSignInEmailMutate = vi.fn();
-vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
+vi.mock("@/features/auth/hooks/useSignInEmail/useSignInEmail", () => ({
   useSignInEmail: () => ({
     mutateAsync: mockSignInEmailMutate,
   }),

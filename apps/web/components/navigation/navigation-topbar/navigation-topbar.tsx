@@ -2,6 +2,7 @@
 
 import { mainNavigation, userNavigation, iconMap } from "@/components/navigation/navigation-config";
 import { NavigationMobileNavItem } from "@/components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item";
+import { useSignOut } from "@/features/auth/hooks/useSignOut/useSignOut";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 import { Bell, Menu, Search, X } from "lucide-react";
 import Image from "next/image";
@@ -9,7 +10,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
-import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { User } from "@repo/auth/types";

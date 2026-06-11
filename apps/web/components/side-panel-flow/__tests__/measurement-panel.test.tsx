@@ -12,7 +12,7 @@ vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 
-vi.mock("../../protocol-search-with-dropdown", () => ({
+vi.mock("@/shared/ui/protocol-search-with-dropdown", () => ({
   ProtocolSearchWithDropdown: ({
     availableProtocols,
     placeholder,

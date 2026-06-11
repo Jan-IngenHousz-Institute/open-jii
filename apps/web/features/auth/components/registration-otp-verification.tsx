@@ -1,9 +1,9 @@
 "use client";
 
+import { useSignInEmail } from "@/features/auth/hooks/useSignInEmail/useSignInEmail";
 import { Pencil } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
 
 import { useTranslation } from "@repo/i18n";
 import { FormField, FormItem, FormControl, FormMessage } from "@repo/ui/components/form";

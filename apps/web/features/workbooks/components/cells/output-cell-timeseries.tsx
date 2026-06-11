@@ -1,8 +1,16 @@
 "use client";
 
-import { extractMeasurement } from "@/lib/multispeq/detect";
-import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
-import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
+import { extractMeasurement } from "@/features/iot/domain/multispeq/detect";
+import type {
+  InputRecord,
+  OutputRecord,
+  ProtocolJson,
+} from "@/features/iot/domain/multispeq/pipeline";
+import {
+  LED_COLORS,
+  LED_NAMES,
+  measurementToTimeseries,
+} from "@/features/iot/domain/multispeq/pipeline";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
