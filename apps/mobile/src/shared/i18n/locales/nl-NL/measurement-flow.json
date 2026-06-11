@@ -120,6 +120,11 @@
       "answers": "Antwoorden: ",
       "date": "Datum: ",
       "noQuestionsAnswered": "Geen vragen beantwoord"
+    },
+    "bundle": {
+      "toggleLabel": "Uploaden als bundel",
+      "toggleHint": "Markeer deze {{count}} metingen met een gedeeld bundel-ID",
+      "deviceHeading": "Apparaat {{index}}: {{name}}"
     }
   },
   "measurementNode": {
@@ -152,7 +157,15 @@
     "cancelMeasurement": "Meting annuleren",
     "startMeasurement": "Meting starten",
     "retryMeasurement": "Meting opnieuw proberen",
-    "connectToDevice": "Verbinden met apparaat"
+    "connectToDevice": "Verbinden met apparaat",
+    "multiScan": {
+      "scanningOnCount": "Meten op {{count}} apparaten",
+      "deviceDone": "Klaar",
+      "deviceFailed": "Mislukt",
+      "partialTitle": "{{failed}} van {{total}} apparaten mislukt",
+      "continueWithSuccessful": "Doorgaan met {{count}}",
+      "retryFailed": "Mislukte apparaten opnieuw"
+    }
   },
   "questionNode": {
     "autoProceeded": {

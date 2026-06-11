@@ -120,6 +120,11 @@
       "answers": "Answers: ",
       "date": "Date: ",
       "noQuestionsAnswered": "No questions answered"
+    },
+    "bundle": {
+      "toggleLabel": "Upload as bundle",
+      "toggleHint": "Tag these {{count}} measurements with a shared bundle ID",
+      "deviceHeading": "Device {{index}}: {{name}}"
     }
   },
   "measurementNode": {
@@ -152,7 +157,15 @@
     "cancelMeasurement": "Cancel Measurement",
     "startMeasurement": "Start measurement",
     "retryMeasurement": "Retry measurement",
-    "connectToDevice": "Connect to device"
+    "connectToDevice": "Connect to device",
+    "multiScan": {
+      "scanningOnCount": "Measuring on {{count}} devices",
+      "deviceDone": "Done",
+      "deviceFailed": "Failed",
+      "partialTitle": "{{failed}} of {{total}} devices failed",
+      "continueWithSuccessful": "Continue with {{count}}",
+      "retryFailed": "Retry failed devices"
+    }
   },
   "questionNode": {
     "autoProceeded": {

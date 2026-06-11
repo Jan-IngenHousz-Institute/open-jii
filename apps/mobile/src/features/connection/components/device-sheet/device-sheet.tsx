@@ -9,7 +9,7 @@ import { toast } from "sonner-native";
 import {
   useAllDevices,
   useConnectToDevice,
-  useConnectedDevice,
+  useConnectedDevices,
 } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
@@ -24,6 +24,7 @@ import type { Device } from "~/shared/types/device";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
+import { ConnectedDeviceRow } from "./connected-device-row";
 import { IconSync } from "./icon-sync";
 import { NearbyDeviceRow } from "./nearby-device-row";
 
@@ -35,7 +36,7 @@ export function DeviceSheet() {
   const { t } = useTranslation("connection");
   const sheetRef = useRef<BottomSheetModal>(null);
 
-  const { data: connectedDevice } = useConnectedDevice();
+  const { data: connectedDevices = [] } = useConnectedDevices();
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
   const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
   const { data: nearbyDevices = [], refetch: refreshDevices, isFetching } = useAllDevices();
@@ -50,7 +51,13 @@ export function DeviceSheet() {
       networkMode: "always",
     },
   );
-  const { named, unnamed } = useMemo(() => partitionDevices(nearbyDevices), [nearbyDevices]);
+  // Already-connected devices are shown in the connected list above, not as
+  // pairable nearby rows.
+  const availableDevices = useMemo(() => {
+    const connectedIds = new Set(connectedDevices.map((d) => d.id));
+    return nearbyDevices.filter((d) => !connectedIds.has(d.id));
+  }, [nearbyDevices, connectedDevices]);
+  const { named, unnamed } = useMemo(() => partitionDevices(availableDevices), [availableDevices]);
   // When nothing has a friendly name (common: MultispeQs advertise as a MAC),
   // show every device directly instead of an empty list above "See more".
   const collapseUnnamed = named.length > 0 && !showAllDevices;
@@ -96,7 +103,8 @@ export function DeviceSheet() {
     }
   };
 
-  const hasConnected = !!connectedDevice;
+  const hasConnected = connectedDevices.length > 0;
+  const primaryIsWired = hasConnected && connectedDevices[0].type !== "bluetooth-classic";
 
   return (
     <BottomSheetModal
@@ -118,89 +126,79 @@ export function DeviceSheet() {
           </Pressable>
         </View>
 
-        {/* Current device card */}
-        <View
-          className={
-            hasConnected
-              ? "bg-jii-mint-light border-jii-mint rounded-2xl border p-3.5"
-              : "bg-card border-border rounded-2xl border p-3.5"
-          }
-        >
-          <View className="flex-row items-center gap-3">
-            <View
-              className="h-12 w-12 items-center justify-center"
-              style={{
-                borderRadius: 14,
-                backgroundColor: hasConnected ? colors.jii.mint : "rgba(0,0,0,0.04)",
-              }}
-            >
-              <Bluetooth
-                size={22}
-                color={hasConnected ? colors.jii.darkGreen : themeColors.inactive}
+        {/* Connected devices */}
+        {hasConnected ? (
+          <View className="gap-2">
+            {connectedDevices.length > 1 ? (
+              <Text
+                className="text-on-surface"
+                style={{ fontFamily: "Poppins-Bold", fontSize: 14 }}
+              >
+                {t("deviceSheet.connectedCount", { count: connectedDevices.length })}
+              </Text>
+            ) : null}
+            {connectedDevices.map((d, i) => (
+              <ConnectedDeviceRow
+                key={d.id}
+                device={d}
+                batteryLevel={i === 0 ? (batteryLevel ?? undefined) : undefined}
+                onDisconnect={(dev) => void handleDisconnect(dev)}
               />
-            </View>
-            <View className="min-w-0 flex-1">
-              {hasConnected ? (
-                <>
-                  <Text
-                    className="text-on-surface"
-                    style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {connectedDevice.name}
-                  </Text>
-                  <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
-                    {batteryLevel != null
-                      ? t("deviceSheet.currentSubMultispeQNoFirmware", { battery: batteryLevel })
-                      : "MultispeQ"}
-                  </Text>
-                </>
-              ) : lastConnectedDevice ? (
-                <>
-                  <Text
-                    className="text-on-surface"
-                    style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {t("deviceSheet.reconnectTitle", { name: lastConnectedDevice.name })}
-                  </Text>
-                  <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
-                    {t("deviceSheet.reconnectSub")}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text
-                    className="text-on-surface"
-                    style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {t("deviceSheet.noDeviceTitle")}
-                  </Text>
-                  <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={2}>
-                    {t("deviceSheet.noDeviceSub")}
-                  </Text>
-                </>
-              )}
-            </View>
-            {hasConnected ? (
-              <Button
-                title={t("deviceSheet.disconnect")}
-                variant="ghost"
-                size="sm"
-                onPress={() => void handleDisconnect(connectedDevice)}
-              />
-            ) : lastConnectedDevice ? (
-              <Button
-                title={t("deviceSheet.reconnect")}
-                variant="primary"
-                size="sm"
-                onPress={() => void handleConnect(lastConnectedDevice)}
-                isLoading={connectingDeviceId === lastConnectedDevice.id}
-              />
+            ))}
+            {primaryIsWired ? (
+              <Text className="text-muted-body text-[12px]">{t("deviceSheet.addAnotherHint")}</Text>
             ) : null}
           </View>
-        </View>
+        ) : (
+          <View className="bg-card border-border rounded-2xl border p-3.5">
+            <View className="flex-row items-center gap-3">
+              <View
+                className="h-12 w-12 items-center justify-center"
+                style={{ borderRadius: 14, backgroundColor: "rgba(0,0,0,0.04)" }}
+              >
+                <Bluetooth size={22} color={themeColors.inactive} />
+              </View>
+              <View className="min-w-0 flex-1">
+                {lastConnectedDevice ? (
+                  <>
+                    <Text
+                      className="text-on-surface"
+                      style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
+                      numberOfLines={1}
+                    >
+                      {t("deviceSheet.reconnectTitle", { name: lastConnectedDevice.name })}
+                    </Text>
+                    <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
+                      {t("deviceSheet.reconnectSub")}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text
+                      className="text-on-surface"
+                      style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
+                      numberOfLines={1}
+                    >
+                      {t("deviceSheet.noDeviceTitle")}
+                    </Text>
+                    <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={2}>
+                      {t("deviceSheet.noDeviceSub")}
+                    </Text>
+                  </>
+                )}
+              </View>
+              {lastConnectedDevice ? (
+                <Button
+                  title={t("deviceSheet.reconnect")}
+                  variant="primary"
+                  size="sm"
+                  onPress={() => void handleConnect(lastConnectedDevice)}
+                  isLoading={connectingDeviceId === lastConnectedDevice.id}
+                />
+              ) : null}
+            </View>
+          </View>
+        )}
 
         {/* Nearby devices section */}
         <View className="mt-2 flex-row items-center justify-between">
@@ -251,7 +249,7 @@ export function DeviceSheet() {
         ) : null}
 
         <View className="border-divider bg-card rounded-2xl border px-3.5">
-          {nearbyDevices.length === 0 ? (
+          {availableDevices.length === 0 ? (
             <Text className="text-muted-body py-3 text-[13px]">{t("deviceList.empty")}</Text>
           ) : (
             <ScrollView style={{ maxHeight: 280 }}>

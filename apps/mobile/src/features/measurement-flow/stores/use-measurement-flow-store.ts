@@ -5,6 +5,7 @@ import {
   FlowNode,
   isQuestionsOnlyFlow,
 } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { Device } from "~/shared/types/device";
 
 interface MeasurementFlowStore {
   experimentId?: string;
@@ -16,6 +17,10 @@ interface MeasurementFlowStore {
   iterationCount: number;
   isFlowFinished: boolean;
   isQuestionsSubmitPending: boolean;
+  // Per-device results from the last Multi-scan round (see CONTEXT.md).
+  // scanResult mirrors scanResults[0]?.result for legacy consumers and
+  // pre-migration persisted snapshots.
+  scanResults?: { device?: Device; result: any }[];
   scanResult?: any;
   isFromOverview: boolean;
 
@@ -31,7 +36,9 @@ interface MeasurementFlowStore {
   resetFlow: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
+  /** @deprecated use setScanResults — kept for legacy single-result callers. */
   setScanResult: (result: any) => void;
+  setScanResults: (results: { device?: Device; result: any }[]) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
@@ -53,6 +60,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       iterationCount: 0,
       isFlowFinished: false,
       isQuestionsSubmitPending: false,
+      scanResults: undefined,
       scanResult: undefined,
       isFromOverview: false,
 
@@ -117,6 +125,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                 iterationCount: 0,
                 isFlowFinished: false,
                 isQuestionsSubmitPending: false,
+                scanResults: undefined,
                 scanResult: undefined,
                 protocolId: undefined,
               };
@@ -141,6 +150,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           iterationCount: 0,
           isFlowFinished: false,
           isQuestionsSubmitPending: false,
+          scanResults: undefined,
           scanResult: undefined,
           protocolId: undefined,
           isFromOverview: false,
@@ -150,6 +160,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         set(() => ({
           currentFlowStep: 0,
           isQuestionsSubmitPending: false,
+          scanResults: undefined,
           scanResult: undefined,
           isFromOverview: false,
         })),
@@ -162,13 +173,20 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isFromOverview: false,
         })),
 
-      setScanResult: (result) => set({ scanResult: result }),
+      setScanResult: (result) =>
+        set({
+          scanResult: result,
+          scanResults: result === undefined ? undefined : [{ result }],
+        }),
+
+      setScanResults: (results) => set({ scanResults: results, scanResult: results[0]?.result }),
 
       dismissQuestionsSubmit: () =>
         set((state) => ({
           isQuestionsSubmitPending: false,
           currentFlowStep: 0,
           iterationCount: state.iterationCount + 1,
+          scanResults: undefined,
           scanResult: undefined,
         })),
 
@@ -206,6 +224,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         iterationCount: state.iterationCount,
         isFlowFinished: state.isFlowFinished,
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
+        scanResults: state.scanResults,
         scanResult: state.scanResult,
         isFromOverview: state.isFromOverview,
       }),

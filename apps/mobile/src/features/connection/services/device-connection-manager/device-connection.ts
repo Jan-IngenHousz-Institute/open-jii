@@ -1,7 +1,12 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
+import {
+  closeMockDevice,
+  openMockDevice,
+} from "~/features/connection/services/multispeq-communication/mock-device/mock-device-registry";
+import { mockDevicesEnabled } from "~/features/connection/services/multispeq-communication/mock-device/mock-devices-enabled";
 import type { Device } from "~/shared/types/device";
 
-import { setSerialPortConnection } from "./serial-port-connection";
+import { closeSerialPort, openSerialPort } from "./serial-port-connection";
 
 export async function connectToDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
@@ -23,7 +28,12 @@ export async function connectToDevice(device: Device) {
   }
 
   if (device.type === "usb") {
-    await setSerialPortConnection(device);
+    await openSerialPort(device);
+    return;
+  }
+
+  if (device.type === "mock-device" && mockDevicesEnabled) {
+    openMockDevice(device);
     return;
   }
 
@@ -40,7 +50,11 @@ export async function disconnectFromDevice(device: Device) {
     return;
   }
   if (device.type === "usb") {
-    await setSerialPortConnection(undefined);
+    await closeSerialPort(device.id);
+    return;
+  }
+  if (device.type === "mock-device") {
+    closeMockDevice(device.id);
   }
 }
 

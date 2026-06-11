@@ -34,16 +34,27 @@ export async function listSerialPortDevices() {
   return await UsbSerialManager.list();
 }
 
-export async function openSerialPortConnection(deviceId: number) {
+async function waitForPermission(deviceId: number) {
   while (true) {
     if (await UsbSerialManager.hasPermission(deviceId)) {
-      break;
+      return;
     }
     if (await UsbSerialManager.tryRequestPermission(deviceId)) {
-      break;
+      return;
     }
     await delay(2000);
   }
+}
+
+// Android shows one USB permission dialog at a time; a tryRequestPermission
+// issued while another device's dialog is up auto-denies, and the retry loop
+// then spams dialogs. Serialize permission acquisition across devices.
+let permissionGate: Promise<void> = Promise.resolve();
+
+export async function openSerialPortConnection(deviceId: number) {
+  const acquired = permissionGate.then(() => waitForPermission(deviceId));
+  permissionGate = acquired.catch(() => undefined);
+  await acquired;
 
   const usbSerialPort = await UsbSerialManager.open(deviceId, {
     baudRate: 115200,

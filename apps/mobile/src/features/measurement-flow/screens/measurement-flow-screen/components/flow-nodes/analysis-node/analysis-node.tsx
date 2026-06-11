@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { CircleCheckBig } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View, Text, ScrollView, Switch } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { useMacro } from "~/features/measurement-flow/hooks/use-macro";
@@ -32,10 +32,11 @@ interface AnalysisNodeProps {
 }
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
-  const { classes } = useTheme();
+  const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { macro, isLoading } = useMacro(content.macroId);
   const {
+    scanResults,
     scanResult,
     previousStep,
     nextStep,
@@ -47,6 +48,15 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { experiments } = useExperiments();
   const { session } = useSession();
 
+  // Multi-scan results; falls back to the legacy single scanResult for
+  // pre-migration persisted flow snapshots.
+  const results = useMemo(
+    () => scanResults ?? (scanResult ? [{ device: undefined, result: scanResult }] : []),
+    [scanResults, scanResult],
+  );
+  const isMultiDevice = results.length > 1;
+  const [bundleEnabled, setBundleEnabled] = useState(true);
+
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ??
     t("measurementFlow:analysis.node.defaultExperimentName");
@@ -56,7 +66,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
 
-  const { isUploading, uploadMeasurement } = useMeasurementUpload();
+  const { isUploading, uploadMeasurements } = useMeasurementUpload();
   const { protocol } = useProtocol(protocolId);
 
   const cycleAnswers = getCycleAnswers(iterationCount);
@@ -87,7 +97,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   );
 
   const handleUploadMeasurement = async () => {
-    if (!scanResult) {
+    if (results.length === 0) {
       return;
     }
 
@@ -112,8 +122,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
 
-    await uploadMeasurement({
-      rawMeasurement: scanResult,
+    await uploadMeasurements({
+      results: results.map(({ device, result }) => ({ rawMeasurement: result, device })),
+      bundle: bundleEnabled && isMultiDevice,
       timestamp,
       timezone,
       experimentName,
@@ -161,14 +172,52 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
           onPress={() => setQuestionsModalVisible(true)}
         />
 
-        <AnalysisMacroResult
-          macro={macro}
-          isLoading={isLoading}
-          macroId={content.macroId}
-          scanResult={scanResult}
-          onCommentPress={() => setCommentModalVisible(true)}
-        />
+        {isMultiDevice ? (
+          results.map(({ device, result }, index) => (
+            <View key={device?.id ?? index}>
+              <Text className={clsx("mt-3 text-sm font-bold", classes.text)}>
+                {t("measurementFlow:analysis.bundle.deviceHeading", {
+                  index: index + 1,
+                  name: device?.name ?? `#${index + 1}`,
+                })}
+              </Text>
+              <AnalysisMacroResult
+                macro={macro}
+                isLoading={isLoading}
+                macroId={content.macroId}
+                scanResult={result}
+                onCommentPress={() => setCommentModalVisible(true)}
+              />
+            </View>
+          ))
+        ) : (
+          <AnalysisMacroResult
+            macro={macro}
+            isLoading={isLoading}
+            macroId={content.macroId}
+            scanResult={scanResult}
+            onCommentPress={() => setCommentModalVisible(true)}
+          />
+        )}
       </ScrollView>
+
+      {isMultiDevice ? (
+        <View className="border-divider bg-card mb-2 flex-row items-center gap-3 rounded-xl border px-3.5 py-2.5">
+          <View className="min-w-0 flex-1">
+            <Text className={clsx("text-sm font-semibold", classes.text)}>
+              {t("measurementFlow:analysis.bundle.toggleLabel")}
+            </Text>
+            <Text className={clsx("text-xs", classes.textMuted)}>
+              {t("measurementFlow:analysis.bundle.toggleHint", { count: results.length })}
+            </Text>
+          </View>
+          <Switch
+            value={bundleEnabled}
+            onValueChange={setBundleEnabled}
+            trackColor={{ true: colors.brand }}
+          />
+        </View>
+      ) : null}
 
       <AnalysisActionBar
         hasScrolled={hasScrolled}
