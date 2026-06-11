@@ -1,68 +1,186 @@
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { useExperimentDataUpload } from "./useExperimentDataUpload";
 
-describe("useExperimentDataUpload", () => {
-  it("should send an upload request", async () => {
-    const spy = server.mount(contract.experiments.uploadExperimentData, {
-      body: {
-        uploadId: "upload-1",
-        files: [{ fileName: "data.csv", filePath: "/uploads/data.csv" }],
-      },
+// ── helpers ─────────────────────────────────────────────────────
+
+function buildFormData() {
+  const fd = new FormData();
+  fd.append("sourceKind", "csv");
+  fd.append("targetKind", "new");
+  fd.append("targetName", "leaf_traits");
+  fd.append("files", new File(["x"], "data.csv", { type: "text/csv" }));
+  return fd;
+}
+
+function makeFile(name: string, options?: { relativePath?: string; size?: number }): File {
+  const file = new File(["x"], name, { type: "text/csv" });
+  // jsdom's File doesn't expose webkitRelativePath; production reads it always.
+  Object.defineProperty(file, "webkitRelativePath", { value: options?.relativePath ?? "" });
+  if (options?.size !== undefined) {
+    Object.defineProperty(file, "size", { value: options.size });
+  }
+  return file;
+}
+
+function makeFileList(files: File[]): FileList {
+  return Object.assign(files, {
+    item: (i: number) => files[i] ?? null,
+  }) as unknown as FileList;
+}
+
+// ── hook + mutation ────────────────────────────────────────────
+
+describe("useExperimentDataUpload (mutation)", () => {
+  it("posts a multipart upload to the generic uploads endpoint", async () => {
+    const spy = server.mount(contract.experiments.uploadData, {
+      body: { uploadId: "u-1", files: [{ fileName: "data.csv", filePath: "/Volumes/x/y" }] },
       status: 201,
     });
 
     const { result } = renderHook(() => useExperimentDataUpload());
 
     act(() => {
-      result.current.mutate({
-        params: { id: "experiment-123" },
-        body: { fileName: "data.csv", content: "csv-content" },
-      });
+      result.current.mutate({ params: { id: "exp-1" }, body: buildFormData() });
     });
 
-    await waitFor(() => expect(spy.called).toBe(true), { timeout: 3000 });
-    expect(spy.calls[0].params).toEqual({ id: "experiment-123" });
-  });
-
-  it("should return mutation state (isPending, error)", () => {
-    server.mount(contract.experiments.uploadExperimentData, {
-      body: {
-        uploadId: "upload-1",
-        files: [{ fileName: "data.csv", filePath: "/uploads/data.csv" }],
-      },
-      status: 201,
+    await waitFor(() => {
+      expect(spy.called).toBe(true);
     });
-
-    const { result } = renderHook(() => useExperimentDataUpload());
-
-    // Initially idle
-    expect(result.current.isPending).toBe(false);
-    expect(result.current.error).toBeNull();
   });
 
-  it("should handle server error", async () => {
-    server.mount(contract.experiments.uploadExperimentData, { status: 500 });
+  it("surfaces a failed response on the mutation result", async () => {
+    server.mount(contract.experiments.uploadData, { status: 500 });
 
     const { result } = renderHook(() => useExperimentDataUpload());
 
     act(() => {
-      result.current.mutate({
-        params: { id: "experiment-123" },
-        body: { fileName: "data.csv", content: "csv-content" },
-      });
+      result.current.mutate({ params: { id: "exp-1" }, body: buildFormData() });
     });
 
-    await waitFor(
-      () => {
-        expect(result.current.isPending).toBe(false);
-        expect(result.current.error).not.toBeNull();
-      },
-      { timeout: 3000 },
-    );
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
+
+  it("returns a mutation result with a mutate function", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    expect(typeof result.current.mutate).toBe("function");
+  });
+});
+
+// ── stripExcluded ──────────────────────────────────────────────
+
+describe("useExperimentDataUpload (stripExcluded)", () => {
+  it("filters .DS_Store and keeps the rest", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile(".DS_Store"), makeFile("data.csv")]);
+    const kept = result.current.stripExcluded(files);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].name).toBe("data.csv");
+  });
+});
+
+// ── validate (tabular) ─────────────────────────────────────────
+
+describe("useExperimentDataUpload (validate tabular)", () => {
+  it("returns the expected kind when all files match", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("a.csv"), makeFile("b.csv")]);
+    expect(result.current.validate(files, "csv")).toEqual({ sourceKind: "csv" });
+  });
+
+  it("returns mixedFormats when one file is a different kind", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("a.csv"), makeFile("b.tsv")]);
+    expect(result.current.validate(files, "csv")).toEqual({ code: "mixedFormats" });
+  });
+
+  it("returns unsupportedFormat for unknown extensions", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("readme.md")]);
+    expect(result.current.validate(files, "csv")).toEqual({
+      code: "unsupportedFormat",
+      fileName: "readme.md",
+    });
+  });
+
+  it("treats an ambyte-shaped file as a mixed format when expecting tabular", () => {
+    // .txt is an ambyte extension; in the tabular flow we surface it as a
+    // mixed-formats error since it inferred a kind the picker didn't ask for.
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("trace.txt")]);
+    expect(result.current.validate(files, "csv")).toEqual({ code: "mixedFormats" });
+  });
+
+  it("returns noFiles when all files are excluded", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile(".DS_Store")]);
+    expect(result.current.validate(files, "csv")).toEqual({ code: "noFiles" });
+  });
+
+  it("returns oversizedFiles when a file exceeds the per-kind cap", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("big.csv", { size: 100 * 1024 * 1024 })]);
+    expect(result.current.validate(files, "csv")).toEqual({ code: "oversizedFiles", count: 1 });
+  });
+
+  it("returns tooManyFiles when the count exceeds the per-kind cap", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList(Array.from({ length: 101 }, (_, i) => makeFile(`row-${i}.csv`)));
+    expect(result.current.validate(files, "csv")).toEqual({ code: "tooManyFiles", max: 100 });
+  });
+});
+
+// ── validate (ambyte) ──────────────────────────────────────────
+
+describe("useExperimentDataUpload (validate ambyte)", () => {
+  it("accepts a root-level Ambyte_<n> folder", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("trace.txt", { relativePath: "Ambyte_1/trace.txt" })]);
+    expect(result.current.validate(files, "ambyte")).toEqual({ sourceKind: "ambyte" });
+  });
+
+  it("accepts an outer folder containing Ambyte_<n> subdirs", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([
+      makeFile("trace.txt", { relativePath: "Experiment/Ambyte_5/trace.txt" }),
+    ]);
+    expect(result.current.validate(files, "ambyte")).toEqual({ sourceKind: "ambyte" });
+  });
+
+  it("returns ambyteInvalidStructure when no Ambyte_<n> folder is found", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([
+      makeFile("trace.txt", { relativePath: "Experiment/random/trace.txt" }),
+    ]);
+    expect(result.current.validate(files, "ambyte")).toEqual({ code: "ambyteInvalidStructure" });
+  });
+
+  it("returns ambyteInvalidStructure when files have no webkitRelativePath (flat picker)", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile("trace.txt")]);
+    expect(result.current.validate(files, "ambyte")).toEqual({ code: "ambyteInvalidStructure" });
+  });
+
+  it("returns ambyteOversizedFiles when a file exceeds the per-kind cap", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([
+      makeFile("trace.txt", { relativePath: "Ambyte_1/trace.txt", size: 100 * 1024 * 1024 }),
+    ]);
+    expect(result.current.validate(files, "ambyte")).toMatchObject({
+      code: "ambyteOversizedFiles",
+      count: 1,
+    });
+  });
+
+  it("returns noFiles when all files are excluded", () => {
+    const { result } = renderHook(() => useExperimentDataUpload());
+    const files = makeFileList([makeFile(".DS_Store", { relativePath: "Ambyte_1/.DS_Store" })]);
+    expect(result.current.validate(files, "ambyte")).toEqual({ code: "noFiles" });
   });
 });

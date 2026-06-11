@@ -109,6 +109,21 @@ describe("DatabricksFilesService", () => {
       assertFailure(result);
       expect(result.error.message).toContain("Failed to upload file to Databricks");
     });
+
+    it("rejects a Buffer body that exceeds the Databricks per-file cap", async () => {
+      // Spy on the actual cap so the test stays in sync if it ever changes.
+      const cap = DatabricksFilesService.MAX_UPLOAD_BYTES;
+      // Allocate a 1-byte buffer and lie about its `length` so we don't actually
+      // allocate 5 GiB just to exercise the size-cap branch.
+      const fakeOversized = Buffer.alloc(1);
+      Object.defineProperty(fakeOversized, "length", { value: cap + 1, configurable: true });
+
+      const result = await filesService.upload("/Volumes/x/y/z/big.csv", fakeOversized);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("exceeds Databricks per-file limit");
+    });
   });
 
   describe("download", () => {

@@ -465,11 +465,11 @@ describe("ExperimentDataRepository", () => {
     const experimentId = faker.string.uuid();
 
     it("should handle exceptColumns being empty", async () => {
-      // Test case where all variant columns have schemas, resulting in empty exceptColumns
       const mockMetadata: ExperimentTableMetadata[] = [
         {
-          identifier: "raw_ambyte_data",
+          identifier: "device",
           tableType: "static",
+          displayName: null,
           rowCount: 10,
           macroSchema: null,
           questionsSchema: null,
@@ -477,7 +477,7 @@ describe("ExperimentDataRepository", () => {
         },
       ];
 
-      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.RAW_AMBYTE_DATA_TABLE_NAME}`;
+      const mockQuery = `SELECT * FROM ${databricksPort.CENTRUM_SCHEMA_NAME}.${databricksPort.DEVICE_DATA_TABLE_NAME}`;
       const mockSchemaData = {
         columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
         rows: [["1"]],
@@ -494,11 +494,10 @@ describe("ExperimentDataRepository", () => {
       const result = await repository.getTableData({
         experimentId,
         experiment: mockExperiment,
-        tableName: "raw_ambyte_data",
+        tableName: "device",
       });
 
       expect(result.isSuccess()).toBe(true);
-      // Verify that exceptColumns is passed (even if it contains only the default experiment_id)
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           tableType: "static",

@@ -5,6 +5,9 @@ import { useTranslation } from "@repo/i18n";
 import { BulkAddOptionsDialog } from "../bulk-add-options-dialog/bulk-add-options-dialog";
 import { DeleteAllOptionsDialog } from "../delete-all-options-dialog/delete-all-options-dialog";
 
+// Keep in sync with the option length limit in zQuestionMultiChoice (packages/api).
+const OPTION_MAX_LENGTH = 64;
+
 interface SelectOptionsEditorProps {
   options?: string[];
   onAddOption?: () => void;
@@ -73,8 +76,12 @@ export function SelectOptionsEditor({
                   onChange={(e) => onUpdateOption?.(optionIndex, e.target.value)}
                   placeholder={t("questionCard.answerOptionPlaceholder")}
                   disabled={disabled}
+                  maxLength={OPTION_MAX_LENGTH}
                   className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
                 />
+                <span className="w-12 shrink-0 text-right text-xs tabular-nums text-gray-400">
+                  {option.length}/{OPTION_MAX_LENGTH}
+                </span>
                 <button
                   type="button"
                   onClick={() => onDeleteOption?.(optionIndex)}

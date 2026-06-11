@@ -5,10 +5,14 @@ import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import {
-  STATIC_TABLE_CONFIG,
   MACRO_TABLE_CONFIG,
+  STATIC_TABLE_CONFIG,
+  UPLOAD_TABLE_CONFIG,
 } from "../../../core/models/experiment-data.model";
-import type { ExperimentTableMetadata } from "../../../core/models/experiment-data.model";
+import type {
+  ExperimentTableMetadata,
+  ExperimentTableType,
+} from "../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -16,7 +20,7 @@ import { ExperimentRepository } from "../../../core/repositories/experiment.repo
 
 export interface TableMetadataDto {
   identifier: string;
-  tableType: "static" | "macro";
+  tableType: ExperimentTableType;
   displayName: string;
   totalRows: number;
   defaultSortColumn?: string;
@@ -93,12 +97,14 @@ export class GetExperimentTablesUseCase {
 
         const staticMetadata = metadataResult.value.filter((m) => m.tableType === "static");
         const macroMetadata = metadataResult.value.filter((m) => m.tableType === "macro");
+        const uploadMetadata = metadataResult.value.filter((m) => m.tableType === "upload");
 
         const macroNamesMap = await this.resolveMacroNames(experimentId, macroMetadata);
 
         const tables = [
           ...staticMetadata.map((m) => this.mapStaticTable(m)),
           ...macroMetadata.map((m) => this.mapMacroTable(m, macroNamesMap)),
+          ...uploadMetadata.map((m) => this.mapUploadTable(m)),
         ];
 
         return success(tables);
@@ -138,6 +144,22 @@ export class GetExperimentTablesUseCase {
       totalRows: rowCount,
       defaultSortColumn: MACRO_TABLE_CONFIG.defaultSortColumn,
       errorColumn: MACRO_TABLE_CONFIG.errorColumn,
+    };
+  }
+
+  private mapUploadTable({
+    identifier,
+    tableType,
+    displayName,
+    rowCount,
+  }: ExperimentTableMetadata): TableMetadataDto {
+    return {
+      identifier,
+      tableType,
+      displayName: displayName ?? identifier,
+      totalRows: rowCount,
+      defaultSortColumn: UPLOAD_TABLE_CONFIG.defaultSortColumn,
+      errorColumn: UPLOAD_TABLE_CONFIG.errorColumn,
     };
   }
 
