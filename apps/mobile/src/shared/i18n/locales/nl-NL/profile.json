@@ -32,6 +32,14 @@
     "subtitle": "Verwijdert een eventuele lopende meting"
   },
   "footer": "openJII Mobile · v{{version}} ({{build}})",
+  "ota": {
+    "updateAvailableTitle": "Update beschikbaar",
+    "updateAvailableBody": "Downloaden…",
+    "updateReadyTitle": "Update gereed",
+    "updateReadyBody": "De app start opnieuw op om de update toe te passen.",
+    "restartFailedTitle": "Herstarten mislukt",
+    "restartFailedBody": "Start de app handmatig opnieuw om de update toe te passen."
+  },
   "appSettingsSheet": {
     "title": "App-instellingen",
     "themeLabel": "Thema",

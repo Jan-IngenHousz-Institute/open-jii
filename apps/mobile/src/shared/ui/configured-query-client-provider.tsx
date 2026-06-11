@@ -12,6 +12,7 @@ import React, { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
 import { isOnline } from "~/shared/device/is-online";
+import { i18n } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("query-client");
@@ -79,8 +80,14 @@ export function ConfiguredQueryClientProvider({ children }) {
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
       onError: (error: any, query) => {
-        const message = error?.body?.message ?? error?.message ?? "Something went wrong";
-        log.warn("query error", { message, status: error?.status });
+        const bodyMessage = error?.body?.message;
+        // Always log the raw error so observability sees it even when the
+        // API's own message is what the user gets toasted.
+        log.warn("query error", {
+          message: error?.message,
+          body_message: bodyMessage,
+          status: error?.status,
+        });
         // Don't toast connection failures. A network/timeout error never got an
         // HTTP response, so it has no status; that's the reliable signal because
         // onlineManager lags a fast wifi-off. The cached UI stays usable.
@@ -88,7 +95,7 @@ export function ConfiguredQueryClientProvider({ children }) {
         // Queries that gracefully fall back (e.g. user profile) opt out of the
         // global toast via meta.suppressToast so a 404 doesn't blare at the user.
         if (query.meta?.suppressToast) return;
-        toast.error(message);
+        toast.error(bodyMessage ?? i18n.t("common:errorGeneric"));
       },
     });
 

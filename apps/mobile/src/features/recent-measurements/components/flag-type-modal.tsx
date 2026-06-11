@@ -1,12 +1,12 @@
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { clsx } from "clsx";
 import { Check, X } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef } from "react";
+import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
 import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations";
+import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
@@ -23,36 +23,8 @@ interface FlagTypeModalProps {
 export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTypeModalProps) {
   const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
-  const sheetRef = useRef<BottomSheetModal>(null);
+  const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (visible) {
-      sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
-    }
-  }, [visible]);
-
-  const renderBackdrop = useCallback(
-    (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-    ),
-    [],
-  );
-
-  useEffect(() => {
-    const onBackPress = () => {
-      if (visible) {
-        sheetRef.current?.dismiss();
-        return true;
-      }
-      return false;
-    };
-
-    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-    return () => subscription.remove();
-  }, [visible]);
 
   return (
     <BottomSheetModal

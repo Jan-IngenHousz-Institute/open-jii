@@ -1,16 +1,16 @@
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import { X } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Keyboard, Text, TouchableOpacity, View } from "react-native";
-import { BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
+import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 const answersValueStyle = cva("flex-1", {
@@ -46,16 +46,8 @@ export function CommentModal({
 
   const textRef = useRef(initialText);
   const [inputKey, setInputKey] = useState(0);
-  const sheetRef = useRef<BottomSheetModal>(null);
+  const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (visible) {
-      sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
-    }
-  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -67,27 +59,6 @@ export function CommentModal({
   const handleSave = () => {
     onSave(textRef.current);
   };
-
-  const renderBackdrop = useCallback(
-    (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-    ),
-    [],
-  );
-
-  useEffect(() => {
-    const onBackPress = () => {
-      if (visible) {
-        sheetRef.current?.dismiss();
-        return true; // prevent default navigation
-      }
-      return false;
-    };
-
-    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-
-    return () => subscription.remove();
-  }, [visible]);
 
   return (
     <BottomSheetModal
