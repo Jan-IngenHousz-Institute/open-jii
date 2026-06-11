@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
 import { uniq } from "~/shared/utils/uniq";
 
@@ -27,7 +28,7 @@ async function precacheExperimentMacrosFn(
   await Promise.all(
     uniqueMacroIds.map((macroId: string) =>
       queryClient.prefetchQuery({
-        queryKey: ["macro", macroId],
+        queryKey: contentKeys.macro(macroId),
         queryFn: async () => {
           const response = await tsr.macros.getMacro.query({
             params: { id: macroId },
@@ -65,7 +66,7 @@ async function precacheExperimentProtocolsFn(
   await Promise.all(
     uniqueProtocolIds.map((protocolId: string) =>
       queryClient.prefetchQuery({
-        queryKey: ["protocol", protocolId],
+        queryKey: contentKeys.protocol(protocolId),
         queryFn: async () => {
           const response = await tsr.protocols.getProtocol.query({
             params: { id: protocolId },

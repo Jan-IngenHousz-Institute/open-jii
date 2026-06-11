@@ -1,7 +1,7 @@
-import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { getOutbox } from "~/shared/composition/upload";
 import { saveMeasurement } from "~/shared/db/measurements-storage";
 import type { Measurement } from "~/shared/db/measurements-storage";
+import { getMultispeqMqttTopic } from "~/shared/measurements/measurement-topic";
 
 // __DEV__-only seeding. Generates N fake measurements straight into the DB
 // as "pending" and enqueues them, so the Outbox + Transport + retry paths

@@ -1,7 +1,8 @@
-// Characterization tests for prepareMeasurementForUpload — pins today's
-// payload construction (including quirks) so refactors can prove equivalence.
+// Characterization tests for buildUploadPayload — pins the payload
+// construction (including quirks) so refactors can prove equivalence.
+// Pure since Stage 1: input mutation assertions flipped deliberately.
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { __testing_prepareMeasurementForUpload as prepareMeasurementForUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
+import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 
 // Deterministic compression stand-in; records exactly what was compressed.
 const mockCompressSample = vi.fn((sample: unknown) => `compressed:${JSON.stringify(sample)}`);
@@ -9,21 +10,6 @@ const mockCompressSample = vi.fn((sample: unknown) => `compressed:${JSON.stringi
 vi.mock("~/features/recent-measurements/utils/compress-sample", () => ({
   compressSample: (sample: unknown) => mockCompressSample(sample),
 }));
-
-// The module's other imports wrap native/env code that can't load in jsdom.
-vi.mock("sonner-native", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock("~/features/connection/utils/get-multispeq-mqtt-topic", () => ({
-  getMultispeqMqttTopic: vi.fn(() => "topic"),
-}));
-vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
-  useMeasurements: vi.fn(),
-}));
-vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
-  exportSingleMeasurementToFile: vi.fn(),
-}));
-vi.mock("~/shared/composition/upload", () => ({ getOutbox: vi.fn() }));
-vi.mock("~/shared/i18n", () => ({ useTranslation: vi.fn() }));
-vi.mock("~/shared/ui/AlertDialog", () => ({ showAlert: vi.fn() }));
 
 const MACRO = { id: "m-1", name: "Macro One", filename: "macro_one.js" };
 const QUESTIONS = [{ question_label: "q1", question_text: "Q?", question_answer: "A" }];
@@ -41,14 +27,14 @@ beforeEach(() => {
   mockCompressSample.mockClear();
 });
 
-describe("prepareMeasurementForUpload payload construction", () => {
+describe("buildUploadPayload payload construction", () => {
   it("builds the full payload: user_id, timestamp/timezone, macros, sample injection + compression markers, annotations", () => {
     const rawMeasurement = {
       device_id: "d-1",
       sample: [{ v: 1 }, { v: 2 }],
     };
 
-    const payload = prepareMeasurementForUpload({
+    const payload = buildUploadPayload({
       ...baseArgs,
       rawMeasurement,
       commentText: "hello",
@@ -65,42 +51,47 @@ describe("prepareMeasurementForUpload payload construction", () => {
       _sample_encoding: "gzip+base64",
       annotations: [{ type: "comment", content: { text: "hello", flagType: null } }],
     });
-    // Macro filenames are injected BEFORE compression; the compressed input is
-    // the caller's own (mutated) sample array.
+    // Macro filenames are injected into CLONED entries before compression;
+    // the caller's array is never the compression input.
     expect(mockCompressSample).toHaveBeenCalledTimes(1);
-    expect(mockCompressSample).toHaveBeenCalledWith(rawMeasurement.sample);
+    expect(mockCompressSample).toHaveBeenCalledWith([
+      { v: 1, macros: ["macro_one.js"] },
+      { v: 2, macros: ["macro_one.js"] },
+    ]);
+    expect(rawMeasurement.sample).toStrictEqual([{ v: 1 }, { v: 2 }]);
     expect(payload.questions).toBe(QUESTIONS);
   });
 
   it("wraps a single (non-array) sample object for macro injection but compresses it unwrapped", () => {
     const sample = { v: 1 };
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement: { sample } });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample } });
 
-    expect(sample).toStrictEqual({ v: 1, macros: ["macro_one.js"] });
+    expect(sample).toStrictEqual({ v: 1 });
     expect(payload.sample).toBe('compressed:{"v":1,"macros":["macro_one.js"]}');
     expect(payload._sample_encoding).toBe("gzip+base64");
   });
 
   it("null macro injects empty macros lists and an empty top-level macros array", () => {
     const rawMeasurement = { sample: [{ v: 1 }] };
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement, macro: null });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement, macro: null });
 
     expect(payload.macros).toStrictEqual([]);
-    expect(rawMeasurement.sample[0]).toStrictEqual({ v: 1, macros: [] });
+    expect(rawMeasurement.sample[0]).toStrictEqual({ v: 1 });
     expect(payload.sample).toBe('compressed:[{"v":1,"macros":[]}]');
   });
 
   it("macro with empty filename still appears in top-level macros but injects [] into samples", () => {
     const macro = { id: "m-2", name: "No File", filename: "" };
     const rawMeasurement = { sample: [{ v: 1 }] as { v: number; macros?: string[] }[] };
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement, macro });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement, macro });
 
     expect(payload.macros).toStrictEqual([macro]);
-    expect(rawMeasurement.sample[0].macros).toStrictEqual([]);
+    expect(rawMeasurement.sample[0].macros).toBeUndefined();
+    expect(mockCompressSample).toHaveBeenCalledWith([{ v: 1, macros: [] }]);
   });
 
   it("no sample key: no compression, no _sample_encoding marker", () => {
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement: { device_id: "d" } });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { device_id: "d" } });
 
     expect(mockCompressSample).not.toHaveBeenCalled();
     expect("sample" in payload).toBe(false);
@@ -108,7 +99,7 @@ describe("prepareMeasurementForUpload payload construction", () => {
   });
 
   it("null sample survives untouched: no injection, no compression, no marker", () => {
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement: { sample: null } });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample: null } });
 
     expect(payload.sample).toBeNull();
     expect("_sample_encoding" in payload).toBe(false);
@@ -121,7 +112,7 @@ describe("prepareMeasurementForUpload payload construction", () => {
     [0, "compressed:0"],
     ["", 'compressed:""'],
   ])("falsy sample %j skips macro injection but is still compressed", (sample, compressed) => {
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement: { sample } });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample } });
 
     expect(payload.sample).toBe(compressed);
     expect(payload._sample_encoding).toBe("gzip+base64");
@@ -136,7 +127,7 @@ describe("annotations", () => {
     ["", []],
     [undefined, []],
   ])("commentText %j -> %j", (commentText, expected) => {
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement: {}, commentText });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: {}, commentText });
 
     expect(payload.annotations).toStrictEqual(expected);
   });
@@ -144,7 +135,7 @@ describe("annotations", () => {
   // No flag input exists on this path: buildAnnotations supports flags but
   // only commentText is forwarded, so a flag annotation can never be emitted.
   it("never emits a flag annotation", () => {
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement: {}, commentText: "c" });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: {}, commentText: "c" });
 
     expect(payload.annotations.every((a: { type: string }) => a.type === "comment")).toBe(true);
   });
@@ -162,7 +153,7 @@ describe("...rawMeasurement spread-order semantics", () => {
       user_id: "impostor",
     };
 
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement });
 
     expect(payload.questions).toBe(rawMeasurement.questions);
     expect(payload.macros).toBe(rawMeasurement.macros);
@@ -180,7 +171,7 @@ describe("...rawMeasurement spread-order semantics", () => {
       _sample_encoding: "caller-says-plaintext",
     };
 
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement, commentText: "fresh" });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement, commentText: "fresh" });
 
     expect(payload.annotations).toStrictEqual([
       { type: "comment", content: { text: "fresh", flagType: null } },
@@ -189,7 +180,7 @@ describe("...rawMeasurement spread-order semantics", () => {
   });
 
   it("caller _sample_encoding DOES survive when there is no sample to compress", () => {
-    const payload = prepareMeasurementForUpload({
+    const payload = buildUploadPayload({
       ...baseArgs,
       rawMeasurement: { _sample_encoding: "caller-says-plaintext" },
     });
@@ -198,28 +189,31 @@ describe("...rawMeasurement spread-order semantics", () => {
   });
 });
 
-describe("in-place input mutation (current behavior)", () => {
-  // Stage 1 will make prepareMeasurementForUpload pure; flip these
-  // assertions deliberately when it lands.
-  it("mutates the caller's sample entries by injecting macros", () => {
+describe("input purity", () => {
+  it("never mutates the caller's sample entries; payload entries get macros overwritten, not merged", () => {
     const entryA = { v: 1 };
     const entryB = { v: 2, macros: ["pre-existing"] };
     const rawMeasurement = { sample: [entryA, entryB] };
 
-    prepareMeasurementForUpload({ ...baseArgs, rawMeasurement });
+    buildUploadPayload({ ...baseArgs, rawMeasurement });
 
-    expect(entryA).toStrictEqual({ v: 1, macros: ["macro_one.js"] });
-    // Pre-existing macros on a sample entry are overwritten, not merged.
-    expect(entryB).toStrictEqual({ v: 2, macros: ["macro_one.js"] });
+    expect(entryA).toStrictEqual({ v: 1 });
+    expect(entryB).toStrictEqual({ v: 2, macros: ["pre-existing"] });
+    // Pre-existing macros on a sample entry are overwritten in the payload.
+    expect(mockCompressSample).toHaveBeenCalledWith([
+      { v: 1, macros: ["macro_one.js"] },
+      { v: 2, macros: ["macro_one.js"] },
+    ]);
   });
 
-  it("leaves rawMeasurement itself unmutated: sample stays the original (mutated-entry) array, not the compressed string", () => {
+  it("leaves rawMeasurement itself unmutated: sample stays the original array, payload gets the compressed string", () => {
     const sampleArray = [{ v: 1 }];
     const rawMeasurement = { device_id: "d-1", sample: sampleArray };
 
-    const payload = prepareMeasurementForUpload({ ...baseArgs, rawMeasurement });
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement });
 
     expect(rawMeasurement.sample).toBe(sampleArray);
+    expect(sampleArray[0]).toStrictEqual({ v: 1 });
     expect(payload.sample).not.toBe(rawMeasurement.sample);
     expect(Object.keys(rawMeasurement)).toStrictEqual(["device_id", "sample"]);
   });

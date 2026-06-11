@@ -1,77 +1,18 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
-import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
-import { compressSample } from "~/features/recent-measurements/utils/compress-sample";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
-import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
+import { getMultispeqMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
 const log = createLogger("measurement-upload");
 
 type TFn = ReturnType<typeof useTranslation>["t"];
-
-interface MacroInfo {
-  id: string;
-  name: string;
-  filename: string;
-}
-
-interface PrepareMeasurementArgs {
-  rawMeasurement: any;
-  userId: string;
-  macro: MacroInfo | null;
-  timestamp: string;
-  timezone: string;
-  questions: AnswerData[];
-  commentText?: string;
-}
-
-function prepareMeasurementForUpload({
-  rawMeasurement,
-  userId,
-  macro,
-  timestamp,
-  timezone,
-  questions,
-  commentText,
-}: PrepareMeasurementArgs) {
-  if ("sample" in rawMeasurement && rawMeasurement.sample) {
-    const samples = Array.isArray(rawMeasurement.sample)
-      ? rawMeasurement.sample
-      : [rawMeasurement.sample];
-
-    for (const sample of samples) {
-      sample.macros = macro?.filename ? [macro.filename] : [];
-    }
-  }
-
-  const macros: MacroInfo[] = macro ? [macro] : [];
-  const annotations = buildAnnotations(commentText);
-
-  const payload = {
-    questions,
-    macros,
-    timestamp,
-    timezone,
-    user_id: userId,
-    ...rawMeasurement,
-    annotations,
-  };
-
-  // Compress the (large) sample field to reduce MQTT payload size.
-  // The outer JSON envelope stays valid for AWS IoT Core SQL parsing.
-  if (payload.sample != null) {
-    payload.sample = compressSample(payload.sample);
-    payload._sample_encoding = "gzip+base64";
-  }
-
-  return payload;
-}
 
 function promptMeasurementFileSave(
   t: TFn,
@@ -137,7 +78,7 @@ export function useMeasurementUpload() {
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
       // null === "object"` would otherwise slip a null through to
-      // prepareMeasurementForUpload() and crash on `"sample" in null`, and a
+      // buildUploadPayload() and crash on `"sample" in null`, and a
       // silent success would let the flow advance with nothing saved.
       if (rawMeasurement === null || typeof rawMeasurement !== "object") {
         throw new Error(
@@ -145,7 +86,7 @@ export function useMeasurementUpload() {
         );
       }
 
-      const measurementData = prepareMeasurementForUpload({
+      const measurementData = buildUploadPayload({
         rawMeasurement,
         userId,
         macro,
@@ -182,5 +123,3 @@ export function useMeasurementUpload() {
 
   return { isUploading: mutation.isPending, uploadMeasurement: mutation.mutateAsync };
 }
-
-export { prepareMeasurementForUpload as __testing_prepareMeasurementForUpload };

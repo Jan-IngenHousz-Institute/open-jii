@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
 import { createLogger } from "~/shared/observability/logger";
 import { uniq } from "~/shared/utils/uniq";
@@ -29,7 +30,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
   const profilePromise = userId
     ? queryClient
         .prefetchQuery({
-          queryKey: ["userProfile", userId],
+          queryKey: contentKeys.userProfile(userId),
           queryFn: () => tsr.users.getUserProfile.query({ params: { id: userId } }),
           staleTime: 0,
           meta: { suppressToast: true },
@@ -43,7 +44,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
 
   // 1. Fetch all user experiments
   const experimentsResponse = await queryClient.fetchQuery({
-    queryKey: ["experiments"],
+    queryKey: contentKeys.experiments,
     queryFn: async () => {
       const response = await tsr.experiments.listExperiments.query({
         query: { filter: "member" },
@@ -63,7 +64,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     experiments.map(async (experiment: { id: string }) => {
       try {
         const flowResponse: any = await queryClient.fetchQuery({
-          queryKey: ["experiment-flow", experiment.id],
+          queryKey: contentKeys.experimentFlow(experiment.id),
           queryFn: async () => {
             const response = await tsr.experiments.getFlow.query({
               params: { id: experiment.id },
@@ -111,7 +112,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
   const assetResults = await Promise.allSettled([
     ...uniqueProtocolIds.map((protocolId) =>
       queryClient.prefetchQuery({
-        queryKey: ["protocol", protocolId],
+        queryKey: contentKeys.protocol(protocolId),
         queryFn: async () => {
           const response = await tsr.protocols.getProtocol.query({
             params: { id: protocolId },
@@ -123,7 +124,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     ),
     ...uniqueMacroIds.map((macroId) =>
       queryClient.prefetchQuery({
-        queryKey: ["macro", macroId],
+        queryKey: contentKeys.macro(macroId),
         queryFn: async () => {
           const response = await tsr.macros.getMacro.query({
             params: { id: macroId },

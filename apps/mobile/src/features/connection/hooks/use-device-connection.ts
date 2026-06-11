@@ -91,7 +91,7 @@ export function useConnectToDevice() {
         // reconnect button if the connection is lost during a session.
         setLastConnectedDevice(device);
         await client.invalidateQueries({
-          queryKey: ["connected-device"],
+          queryKey: CONNECTED_DEVICE_KEY,
         });
       } finally {
         setConnectingDeviceId(undefined);
@@ -101,14 +101,14 @@ export function useConnectToDevice() {
       await disconnectFromDevice(device);
       await setDevice(undefined);
       await client.invalidateQueries({
-        queryKey: ["connected-device"],
+        queryKey: CONNECTED_DEVICE_KEY,
       });
     },
     async unpairDevice(device: Device) {
       await unpairDevice(device);
 
       await client.invalidateQueries({
-        queryKey: ["connected-device"],
+        queryKey: CONNECTED_DEVICE_KEY,
       });
 
       // Update scanner command executor store based on current connected device state

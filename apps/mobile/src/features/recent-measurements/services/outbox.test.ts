@@ -22,6 +22,7 @@ vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurements: mockGetMeasurements,
   markAsSuccessful: mockMarkAsSuccessful,
   markAsFailed: mockMarkAsFailed,
+  UNSYNCED_STATUSES: ["pending", "failed"],
 }));
 
 vi.mock("expo-network", () => ({

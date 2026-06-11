@@ -1,10 +1,11 @@
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
 import { ellipsize } from "~/shared/utils/ellipsize";
 import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 
 export function useExperiments() {
   const { data, isLoading, error } = tsr.experiments.listExperiments.useQuery({
-    queryKey: ["experiments"],
+    queryKey: contentKeys.experiments,
     queryData: {
       query: {
         filter: "member",
