@@ -43,8 +43,7 @@ export function CommentModal({
 }: CommentModalProps) {
   const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
-  // Uncontrolled: a controlled `value` makes RNGH's TextInput reset the Android
-  // cursor to the start on every keystroke (OJD-1562).
+
   const textRef = useRef(initialText);
   const [inputKey, setInputKey] = useState(0);
   const sheetRef = useRef<BottomSheetModal>(null);
