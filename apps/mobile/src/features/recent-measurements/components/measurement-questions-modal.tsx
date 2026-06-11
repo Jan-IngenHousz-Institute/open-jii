@@ -1,7 +1,7 @@
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { Clock, Flag, FlaskConical, MessageCircleMore, X } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
@@ -13,6 +13,7 @@ import {
   getCommentFromMeasurementResult,
   getFlagTypeFromMeasurementResult,
 } from "~/shared/measurements/measurement-annotations";
+import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 interface MeasurementQuestionsModalProps {
@@ -31,29 +32,7 @@ export function MeasurementQuestionsModal({
   const insets = useSafeAreaInsets();
   const { updateMeasurementComment } = useMeasurements();
   const [commentModalVisible, setCommentModalVisible] = useState(false);
-  const sheetRef = useRef<BottomSheetModal>(null);
-
-  useEffect(() => {
-    if (visible) {
-      sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    const onBackPress = () => {
-      if (visible) {
-        sheetRef.current?.dismiss();
-        return true; // prevent default navigation
-      }
-      return false;
-    };
-
-    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-
-    return () => subscription.remove();
-  }, [visible]);
+  const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
 
   const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
   const questions = parseQuestions(measurement.data.measurementResult);
@@ -72,13 +51,6 @@ export function MeasurementQuestionsModal({
     setCurrentComment(text);
     setCommentModalVisible(false);
   };
-
-  const renderBackdrop = useCallback(
-    (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-    ),
-    [],
-  );
 
   return (
     <>

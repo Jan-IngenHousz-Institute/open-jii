@@ -32,6 +32,14 @@
     "subtitle": "Clears any in-progress measurement"
   },
   "footer": "openJII Mobile · v{{version}} ({{build}})",
+  "ota": {
+    "updateAvailableTitle": "Update available",
+    "updateAvailableBody": "Downloading…",
+    "updateReadyTitle": "Update ready",
+    "updateReadyBody": "Restarting to apply.",
+    "restartFailedTitle": "Restart failed",
+    "restartFailedBody": "Please restart the app manually to apply the update."
+  },
   "appSettingsSheet": {
     "title": "App settings",
     "themeLabel": "Theme"

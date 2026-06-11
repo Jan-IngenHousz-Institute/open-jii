@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner-native";
 import {
   sendEmailLoginOtp,
   signInWithGitHub,
@@ -7,11 +8,13 @@ import {
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
 import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
+import { useTranslation } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("auth");
 
 export function useLoginFlow() {
+  const { t } = useTranslation("auth");
   const queryClient = useQueryClient();
 
   const prefetch = async () => {
@@ -26,18 +29,27 @@ export function useLoginFlow() {
   const github = useMutation({
     mutationFn: signInWithGitHub,
     onSuccess: prefetch,
-    onError: (error) => log.error("GitHub login error", { err: error?.message }),
+    onError: (error) => {
+      log.error("GitHub login error", { err: error?.message });
+      toast.error(t("errors.loginFailed"));
+    },
   });
 
   const orcid = useMutation({
     mutationFn: signInWithOrcid,
     onSuccess: prefetch,
-    onError: (error) => log.error("ORCID login error", { err: error?.message }),
+    onError: (error) => {
+      log.error("ORCID login error", { err: error?.message });
+      toast.error(t("errors.loginFailed"));
+    },
   });
 
   const sendOtp = useMutation({
     mutationFn: sendEmailLoginOtp,
-    onError: (error) => log.error("Email OTP send error", { err: error?.message }),
+    onError: (error) => {
+      log.error("Email OTP send error", { err: error?.message });
+      toast.error(t("errors.sendFailed"));
+    },
   });
 
   const verifyOtp = useMutation({
@@ -47,7 +59,10 @@ export function useLoginFlow() {
     onSuccess: (result) => {
       if (!result?.error) prefetch();
     },
-    onError: (error) => log.error("Email OTP verify error", { err: error?.message }),
+    onError: (error) => {
+      log.error("Email OTP verify error", { err: error?.message });
+      toast.error(t("errors.verifyFailed"));
+    },
   });
 
   return {

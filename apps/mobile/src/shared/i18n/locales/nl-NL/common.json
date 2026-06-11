@@ -15,6 +15,7 @@
   "offline": "Je bent offline. Maak verbinding met internet om in te loggen.",
   "errorGeneric": "Er ging iets mis",
   "errorTitle": "Fout",
+  "timeSyncUnavailable": "Tijdsynchronisatie niet beschikbaar. Controleer je verbinding en probeer het opnieuw.",
   "notFoundTitle": "Dit scherm bestaat niet.",
   "notFoundCta": "Ga naar het startscherm!",
   "modalTitle": "Modaal",
