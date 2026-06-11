@@ -1,15 +1,15 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-details-sidebar";
-import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
-import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
-import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { useAutosave } from "@/hooks/useAutosave";
+import { parseApiError } from "@/shared/api/apiError";
+import { useAutosave } from "@/shared/hooks/useAutosave";
+import { ErrorDisplay } from "@/shared/ui/error-display";
+import { InlineEditableDescription } from "@/shared/ui/inline-editable-description";
+import { ProtocolCodePanel } from "@/shared/ui/protocol-code-panel";
+import type { ProtocolCode } from "@/shared/ui/protocol-code-panel";
 import { use, useCallback, useState } from "react";
-import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";

@@ -1,6 +1,6 @@
+import { formatDate } from "@/shared/utils/date";
 import { createExperiment, createLocation } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
-import { formatDate } from "@/util/date";
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 

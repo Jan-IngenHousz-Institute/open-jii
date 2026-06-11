@@ -1,9 +1,9 @@
 "use client";
 
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { CodeEditor } from "@/shared/ui/code-editor";
 import { Check, Copy, Pencil } from "lucide-react";
 import type { FC } from "react";
-import { CodeEditor } from "~/components/shared/code-editor";
 
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";

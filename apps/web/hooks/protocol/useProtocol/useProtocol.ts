@@ -1,6 +1,5 @@
-import { shouldRetryQuery } from "@/util/query-retry";
-
-import { tsr } from "../../../lib/tsr";
+import { shouldRetryQuery } from "@/shared/api/query-retry";
+import { tsr } from "@/shared/api/tsr";
 
 /**
  * Hook to fetch a single protocol by ID

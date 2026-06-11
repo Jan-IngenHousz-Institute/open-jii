@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 
 import DataLayout from "../layout";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
     <div data-testid="error-display">
       <h2>{title}</h2>

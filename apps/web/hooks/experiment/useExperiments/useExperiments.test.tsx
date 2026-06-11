@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 
 import { useExperiments } from "./useExperiments";
 
-vi.mock("../../useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: vi.fn((v: string) => [v]),
 }));
 

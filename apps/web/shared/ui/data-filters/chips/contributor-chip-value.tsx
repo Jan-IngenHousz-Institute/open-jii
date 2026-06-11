@@ -1,10 +1,11 @@
 "use client";
 
+import { ContributorIdentity } from "~/components/contributor/contributor-identity";
+import { useExperimentDistinctValues } from "~/hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
+
 import type { DataFilter } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
-import { useExperimentDistinctValues } from "../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
-import { ContributorIdentity } from "../../contributor/contributor-identity";
 import { useContributorIdMap } from "../use-distinct-options";
 
 const NO_VALUE = "-";

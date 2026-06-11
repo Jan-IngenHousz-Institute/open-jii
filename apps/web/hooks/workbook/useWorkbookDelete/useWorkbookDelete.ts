@@ -1,6 +1,6 @@
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import { tsr } from "@/shared/api/tsr";
 
-import { tsr } from "../../../lib/tsr";
+import type { Workbook } from "@repo/api/schemas/workbook.schema";
 
 export const useWorkbookDelete = () => {
   const queryClient = tsr.useQueryClient();

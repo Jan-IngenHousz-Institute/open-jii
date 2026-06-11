@@ -1,6 +1,6 @@
 "use client";
 
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import React from "react";
 

@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 
 import { MeasurementPanel } from "../measurement-panel";
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 

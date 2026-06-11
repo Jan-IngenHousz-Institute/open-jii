@@ -11,7 +11,7 @@ import { useSession } from "@repo/auth/client";
 
 import { ProtocolDetailsSidebar } from "../protocol-details-sidebar";
 
-vi.mock("@/util/date", () => ({
+vi.mock("@/shared/utils/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
 }));
 
@@ -21,7 +21,7 @@ vi.mock("@repo/analytics", () => ({
   },
 }));
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("@/shared/api/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
@@ -153,7 +153,7 @@ vi.mock("../../protocol-settings/protocol-compatible-macros-card", () => ({
   ),
 }));
 
-vi.mock("../../shared/details-sidebar-card", () => ({
+vi.mock("@/shared/ui/details-sidebar-card", () => ({
   DetailsSidebarCard: ({
     title,
     collapsedSummary,

@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 export const useGetUserProfile = (userId: string, enabled = true) => {
   return tsr.users.getUserProfile.useQuery({

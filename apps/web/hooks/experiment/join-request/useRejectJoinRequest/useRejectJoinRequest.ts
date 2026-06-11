@@ -1,6 +1,6 @@
-import { getContractError, tsr } from "@/lib/tsr";
-import type { TsRestMutationOptions, TsrRoute } from "@/lib/tsr";
-import { parseApiError } from "@/util/apiError";
+import { parseApiError } from "@/shared/api/apiError";
+import { getContractError, tsr } from "@/shared/api/tsr";
+import type { TsRestMutationOptions, TsrRoute } from "@/shared/api/tsr";
 
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";

@@ -1,8 +1,8 @@
+import { PostHogProvider } from "@/shared/providers/PostHogProvider";
+import { CookieBanner } from "@/shared/ui/cookie-banner";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { CookieBanner } from "../components/cookie-banner";
-import { PostHogProvider } from "../providers/PostHogProvider";
 import "./globals.css";
 
 // Global fallback metadata used when a page does not define its own (via CMS or locally).

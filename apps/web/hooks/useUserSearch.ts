@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 /**
  * Hook to search users by name or email

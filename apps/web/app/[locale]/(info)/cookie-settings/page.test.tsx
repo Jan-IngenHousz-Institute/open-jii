@@ -1,15 +1,15 @@
+import { setConsentStatus } from "@/shared/analytics/cookie-consent";
 import { render, screen, userEvent } from "@/test/test-utils";
 import type { PostHog } from "posthog-js";
 import { usePostHog } from "posthog-js/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { setConsentStatus } from "~/lib/cookie-consent";
 
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import CookieSettingsPage from "./page";
 
 let mockConsentStatus = "pending";
-vi.mock("~/lib/cookie-consent", () => ({
+vi.mock("@/shared/analytics/cookie-consent", () => ({
   getConsentStatus: () => mockConsentStatus,
   setConsentStatus: vi.fn((s: string) => {
     mockConsentStatus = s;

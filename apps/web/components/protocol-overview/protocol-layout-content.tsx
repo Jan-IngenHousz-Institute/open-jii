@@ -1,8 +1,8 @@
 "use client";
 
-import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { parseApiError } from "~/util/apiError";
+import { parseApiError } from "@/shared/api/apiError";
+import { InlineEditableTitle } from "@/shared/ui/inline-editable-title";
 
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useSession } from "@repo/auth/client";

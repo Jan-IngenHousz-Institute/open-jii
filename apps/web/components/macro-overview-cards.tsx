@@ -1,5 +1,5 @@
 import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";

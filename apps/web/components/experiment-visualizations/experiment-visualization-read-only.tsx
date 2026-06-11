@@ -1,14 +1,14 @@
 "use client";
 
+import { useLocale } from "@/shared/i18n/useLocale";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useLocale } from "~/hooks/useLocale";
+import { useExperimentVisualization } from "~/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 
-import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 
 interface Props {

@@ -1,3 +1,4 @@
+import { UserAvatar } from "@/shared/ui/user-avatar";
 import { Mail } from "lucide-react";
 
 import type { UserProfile } from "@repo/api/schemas/user.schema";
@@ -9,8 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-
-import { UserAvatar } from "../user-avatar";
 
 interface MemberItemProps {
   member: {

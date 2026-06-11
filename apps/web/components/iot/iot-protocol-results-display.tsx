@@ -1,6 +1,6 @@
 "use client";
 
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { AlertCircle, Check, CheckCircle2, Copy, Play } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";

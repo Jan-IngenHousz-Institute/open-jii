@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 import { useState } from "react";
 
 import type { ChartFamily } from "@repo/api/schemas/experiment.schema";

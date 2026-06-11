@@ -1,3 +1,5 @@
+import { env } from "~/env";
+
 import {
   FEATURE_FLAGS,
   FEATURE_FLAG_DEFAULTS,
@@ -5,8 +7,6 @@ import {
   createPostHogServerConfig,
 } from "@repo/analytics";
 import type { FeatureFlagKey } from "@repo/analytics";
-
-import { env } from "../env";
 
 /**
  * Re-export feature flags for backward compatibility

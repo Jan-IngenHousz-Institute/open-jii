@@ -1,6 +1,6 @@
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import { tsr } from "@/shared/api/tsr";
 
-import { tsr } from "../../../lib/tsr";
+import type { Protocol } from "@repo/api/schemas/protocol.schema";
 
 interface ProtocolUpdateProps {
   onSuccess?: (protocol: Protocol) => void;

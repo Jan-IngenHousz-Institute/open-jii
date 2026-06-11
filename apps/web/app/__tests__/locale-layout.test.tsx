@@ -1,7 +1,7 @@
+import * as posthogServer from "@/shared/analytics/posthog-server";
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
-import * as posthogServer from "~/lib/posthog-server";
 
 import Layout from "../[locale]/layout";
 
@@ -12,7 +12,7 @@ vi.mock("next/font/google", () => ({
   Noto_Sans: () => ({ variable: "--font-noto-sans" }),
 }));
 
-vi.mock("~/lib/posthog-server", () => ({
+vi.mock("@/shared/analytics/posthog-server", () => ({
   isFeatureFlagEnabled: vi.fn().mockResolvedValue(true),
 }));
 
@@ -20,19 +20,19 @@ vi.mock("@repo/cms/contentful", () => ({
   ContentfulPreviewProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/translations-provider", () => ({
+vi.mock("@/shared/i18n/translations-provider", () => ({
   TranslationsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("../../hooks/usePostHogAuth", () => ({
+vi.mock("@/shared/analytics/usePostHogAuth", () => ({
   PostHogIdentifier: () => null,
 }));
 
-vi.mock("../../providers/QueryProvider", () => ({
+vi.mock("@/shared/providers/QueryProvider", () => ({
   QueryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("../../components/alerts-bar", () => ({
+vi.mock("@/shared/ui/alerts-bar", () => ({
   AlertsBar: () => null,
 }));
 

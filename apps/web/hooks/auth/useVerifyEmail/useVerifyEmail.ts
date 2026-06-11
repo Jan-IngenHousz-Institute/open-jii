@@ -1,7 +1,7 @@
 "use client";
 
+import { revalidateAuth } from "@/shared/api/revalidate";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { revalidateAuth } from "~/app/actions/revalidate";
 
 import { authClient } from "@repo/auth/client";
 

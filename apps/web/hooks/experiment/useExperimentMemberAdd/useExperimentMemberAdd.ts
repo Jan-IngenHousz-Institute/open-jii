@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
 

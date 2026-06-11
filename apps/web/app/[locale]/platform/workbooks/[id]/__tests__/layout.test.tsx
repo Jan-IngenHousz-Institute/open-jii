@@ -13,11 +13,11 @@ vi.mock("@/components/workbook-overview/workbook-layout-content", () => ({
   ),
 }));
 
-vi.mock("@/components/shared/autosave/autosave-status-context", () => ({
+vi.mock("@/shared/ui/autosave/autosave-status-context", () => ({
   AutosaveStatusProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
     <div data-testid="error-display">{String(error)}</div>
   ),

@@ -1,6 +1,6 @@
 "use client";
 
-import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { getSensorFamilyLabel } from "@/shared/utils/sensor-family";
 import * as z from "zod";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";

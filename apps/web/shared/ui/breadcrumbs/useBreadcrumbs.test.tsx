@@ -1,11 +1,11 @@
+import { enrichPathSegments } from "@/shared/api/breadcrumbs";
 import { renderHook } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { enrichPathSegments } from "~/app/actions/breadcrumbs";
 
 import { useBreadcrumbs } from "./useBreadcrumbs";
 
-vi.mock("~/app/actions/breadcrumbs", () => ({
+vi.mock("@/shared/api/breadcrumbs", () => ({
   enrichPathSegments: vi.fn(),
 }));
 

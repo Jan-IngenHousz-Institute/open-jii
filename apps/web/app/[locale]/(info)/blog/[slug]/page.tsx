@@ -1,8 +1,8 @@
+import { getContentfulClients } from "@/shared/cms/contentful";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";

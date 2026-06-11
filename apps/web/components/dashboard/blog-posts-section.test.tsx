@@ -14,7 +14,7 @@ const { mockGqlClient, mockGetContentfulClients } = vi.hoisted(() => {
   };
 });
 
-vi.mock("~/lib/contentful", () => ({
+vi.mock("@/shared/cms/contentful", () => ({
   getContentfulClients: mockGetContentfulClients,
 }));
 

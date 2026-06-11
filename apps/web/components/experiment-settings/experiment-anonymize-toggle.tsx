@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useExperimentUpdate } from "~/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 import { useTranslation } from "@repo/i18n";
 import { Switch } from "@repo/ui/components/switch";
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 interface ExperimentAnonymizeToggleProps {
   experimentId: string;

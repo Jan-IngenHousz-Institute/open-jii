@@ -2,9 +2,9 @@
 
 import { useAddCompatibleProtocol } from "@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
-import { useDebounce } from "@/hooks/useDebounce";
-import { useLocale } from "@/hooks/useLocale";
-import { encodeBase64 } from "@/util/base64";
+import { useDebounce } from "@/shared/hooks/useDebounce";
+import { useLocale } from "@/shared/i18n/useLocale";
+import { encodeBase64 } from "@/shared/utils/base64";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";

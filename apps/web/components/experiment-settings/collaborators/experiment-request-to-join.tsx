@@ -3,6 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useCancelMyJoinRequest } from "~/hooks/experiment/join-request/useCancelMyJoinRequest/useCancelMyJoinRequest";
+import { useMyJoinRequest } from "~/hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
+import { useRequestJoinExperiment } from "~/hooks/experiment/join-request/useRequestJoinExperiment/useRequestJoinExperiment";
 
 import type { CreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
 import { zCreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
@@ -19,10 +22,6 @@ import {
 } from "@repo/ui/components/dialog";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@repo/ui/components/form";
 import { Textarea } from "@repo/ui/components/textarea";
-
-import { useCancelMyJoinRequest } from "../../../hooks/experiment/join-request/useCancelMyJoinRequest/useCancelMyJoinRequest";
-import { useMyJoinRequest } from "../../../hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
-import { useRequestJoinExperiment } from "../../../hooks/experiment/join-request/useRequestJoinExperiment/useRequestJoinExperiment";
 
 interface ExperimentRequestToJoinProps {
   experimentId: string;

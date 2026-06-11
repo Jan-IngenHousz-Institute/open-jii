@@ -1,13 +1,12 @@
 "use client";
 
+import { getConsentStatus } from "@/shared/analytics/cookie-consent";
+import { POSTHOG_CLIENT_CONFIG } from "@/shared/analytics/posthog-config";
 import posthog from "posthog-js";
 import { PostHogProvider as PostHogProviderBase } from "posthog-js/react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-
-import { env } from "../env";
-import { getConsentStatus } from "../lib/cookie-consent";
-import { POSTHOG_CLIENT_CONFIG } from "../lib/posthog-config";
+import { env } from "~/env";
 
 /**
  * PostHog provider component that initializes the PostHog client

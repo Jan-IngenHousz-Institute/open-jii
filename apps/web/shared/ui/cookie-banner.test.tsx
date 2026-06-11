@@ -1,11 +1,11 @@
+import { setConsentStatus } from "@/shared/analytics/cookie-consent";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { setConsentStatus } from "~/lib/cookie-consent";
 
 import { CookieBanner } from "./cookie-banner";
 
 let mockConsentStatus = "pending";
-vi.mock("~/lib/cookie-consent", () => ({
+vi.mock("@/shared/analytics/cookie-consent", () => ({
   getConsentStatus: () => mockConsentStatus,
   setConsentStatus: vi.fn((s: string) => {
     mockConsentStatus = s;

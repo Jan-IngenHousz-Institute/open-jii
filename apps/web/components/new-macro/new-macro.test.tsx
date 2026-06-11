@@ -1,7 +1,7 @@
+import * as base64Utils from "@/shared/utils/base64";
 import { createMacro, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
-import * as base64Utils from "@/util/base64";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -14,7 +14,7 @@ vi.mock("@hookform/resolvers/zod", () => ({
   zodResolver: () => (values: Record<string, unknown>) => ({ values, errors: {} }),
 }));
 
-vi.mock("@/util/base64", () => ({
+vi.mock("@/shared/utils/base64", () => ({
   encodeBase64: vi.fn((s: string) => Buffer.from(s).toString("base64")),
 }));
 

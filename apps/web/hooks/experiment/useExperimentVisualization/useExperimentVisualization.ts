@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 export const useExperimentVisualization = (visualizationId: string, experimentId: string) => {
   return tsr.experiments.getExperimentVisualization.useQuery({

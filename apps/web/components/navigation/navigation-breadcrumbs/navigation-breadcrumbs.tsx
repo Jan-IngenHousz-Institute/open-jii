@@ -1,6 +1,6 @@
 "use client";
 
-import { useBreadcrumbs } from "@/hooks/breadcrumbs/useBreadcrumbs";
+import { useBreadcrumbs } from "@/shared/ui/breadcrumbs/useBreadcrumbs";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";

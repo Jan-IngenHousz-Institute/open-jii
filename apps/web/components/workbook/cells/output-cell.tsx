@@ -1,8 +1,8 @@
 "use client";
 
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { isMultispeqOutput } from "@/lib/multispeq/detect";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import {
   AlertCircle,
   Check,

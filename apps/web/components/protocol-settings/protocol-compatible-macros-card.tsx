@@ -1,7 +1,8 @@
 "use client";
 
-import { useDebounce } from "@/hooks/useDebounce";
-import { useLocale } from "@/hooks/useLocale";
+import { tsr } from "@/shared/api/tsr";
+import { useDebounce } from "@/shared/hooks/useDebounce";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -21,7 +22,6 @@ import {
 import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
-import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 const getLanguageDisplay = (language: string) => {

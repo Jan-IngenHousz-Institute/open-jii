@@ -1,9 +1,9 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { auth } from "@/shared/api/auth";
+import { getContentfulClients } from "@/shared/cms/contentful";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
-import { auth } from "~/app/actions/auth";
-import { getContentfulClients } from "~/lib/contentful";
 
 import {
   HomeHero as HomeHeroComponent,

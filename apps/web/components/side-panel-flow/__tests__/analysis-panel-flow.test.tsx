@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnalysisPanel } from "../analysis-panel";
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
 }));
 

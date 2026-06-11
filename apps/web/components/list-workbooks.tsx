@@ -1,7 +1,7 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";

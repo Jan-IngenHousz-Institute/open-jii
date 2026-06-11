@@ -11,11 +11,11 @@ import { useSession } from "@repo/auth/client";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";
 
-vi.mock("@/util/date", () => ({
+vi.mock("@/shared/utils/date", () => ({
   formatDate: (d: string) => `formatted:${d}`,
 }));
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("@/shared/api/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: `parsed:${String(err)}` }),
 }));
 
@@ -45,7 +45,7 @@ vi.mock("../../macro-settings/macro-compatible-protocols-card", () => ({
 }));
 
 // Mock DetailsSidebarCard - render children directly with the title
-vi.mock("../../shared/details-sidebar-card", () => ({
+vi.mock("@/shared/ui/details-sidebar-card", () => ({
   DetailsSidebarCard: ({
     title,
     collapsedSummary,

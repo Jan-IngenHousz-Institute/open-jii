@@ -1,16 +1,16 @@
 "use client";
 
-import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { useAutosave } from "@/hooks/useAutosave";
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
-import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { parseApiError } from "@/shared/api/apiError";
+import { useAutosave } from "@/shared/hooks/useAutosave";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { AutosaveIndicator } from "@/shared/ui/autosave/autosave-indicator";
+import { getSensorFamilyLabel } from "@/shared/utils/sensor-family";
 import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseApiError } from "~/util/apiError";
 
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";

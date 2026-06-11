@@ -1,10 +1,11 @@
 "use client";
 
+import { formatYmdHm } from "@/shared/utils/date";
+
 import type { DataFilter } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
-import { formatYmdHm } from "../../../util/date";
 import { ContributorChipValue } from "./contributor-chip-value";
 
 const NO_VALUE = "—";

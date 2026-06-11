@@ -1,6 +1,6 @@
 "use client";
 
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useState } from "react";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 

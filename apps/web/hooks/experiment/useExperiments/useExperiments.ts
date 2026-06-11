@@ -1,10 +1,9 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
 import type { ExperimentStatus } from "@repo/api/schemas/experiment.schema";
-
-import { useDebounce } from "../../useDebounce";
 
 export type ExperimentFilter = "member" | "all";
 

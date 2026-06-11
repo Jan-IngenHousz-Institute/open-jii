@@ -1,15 +1,15 @@
 "use client";
 
 import { IotProtocolRunner } from "@/components/iot/iot-protocol-runner";
-import { CodeTesterLayout } from "@/components/shared/code-tester-layout";
-import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
-import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { useAutosave } from "@/hooks/useAutosave";
+import { parseApiError } from "@/shared/api/apiError";
+import { useAutosave } from "@/shared/hooks/useAutosave";
+import { CodeTesterLayout } from "@/shared/ui/code-tester-layout";
+import { ProtocolCodePanel } from "@/shared/ui/protocol-code-panel";
+import type { ProtocolCode } from "@/shared/ui/protocol-code-panel";
 import { useCallback, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
-import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useSession } from "@repo/auth/client";

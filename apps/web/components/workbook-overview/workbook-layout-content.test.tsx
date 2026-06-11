@@ -1,4 +1,4 @@
-import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
+import { AutosaveStatusProvider } from "@/shared/ui/autosave/autosave-status-context";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";

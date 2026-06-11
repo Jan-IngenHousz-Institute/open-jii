@@ -7,7 +7,7 @@ import { contract } from "@repo/api/contract";
 
 import { NewProtocolForm } from "../new-protocol";
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
 }));
 

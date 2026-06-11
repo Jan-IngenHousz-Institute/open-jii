@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 import { UPLOAD_KIND_CONSTANTS, inferUploadSourceKind } from "@repo/api/schemas/experiment.schema";
 import type { UploadSourceKind } from "@repo/api/schemas/experiment.schema";

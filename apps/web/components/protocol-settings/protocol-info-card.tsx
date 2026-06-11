@@ -1,7 +1,7 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
+import { useLocale } from "@/shared/i18n/useLocale";
+import { formatDate } from "@/shared/utils/date";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";

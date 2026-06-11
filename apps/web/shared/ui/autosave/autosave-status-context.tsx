@@ -1,6 +1,6 @@
 "use client";
 
-import type { AutosaveStatus } from "@/hooks/useAutosave";
+import type { AutosaveStatus } from "@/shared/hooks/useAutosave";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 

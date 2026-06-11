@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 
 import { MacroCompatibleProtocolsCard } from "../macro-compatible-protocols-card";
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
 }));
 

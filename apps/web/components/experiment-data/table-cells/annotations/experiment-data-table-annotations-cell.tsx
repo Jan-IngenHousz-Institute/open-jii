@@ -1,8 +1,8 @@
 "use client";
 
+import { formatDate } from "@/shared/utils/date";
 import { MessageSquare, Trash2, Flag } from "lucide-react";
 import React from "react";
-import { formatDate } from "~/util/date";
 
 import type {
   Annotation,

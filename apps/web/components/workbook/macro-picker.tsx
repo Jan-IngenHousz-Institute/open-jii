@@ -2,7 +2,7 @@
 
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useMacros } from "@/hooks/macro/useMacros/useMacros";
-import { encodeBase64 } from "@/util/base64";
+import { encodeBase64 } from "@/shared/utils/base64";
 import { Code, Loader2, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";

@@ -4,7 +4,7 @@ import { lineChartType } from "@/components/experiment-visualizations/charts/bas
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { Loader2, PlusCircle } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";

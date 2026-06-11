@@ -1,12 +1,12 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { ExperimentInviteModal } from "@/components/experiment-settings/collaborators/experiment-invite-modal";
 import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
 import { ExperimentMembersPanel } from "@/components/experiment-settings/collaborators/experiment-members-panel";
 import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { Search, UserPlus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use, useMemo, useState } from "react";

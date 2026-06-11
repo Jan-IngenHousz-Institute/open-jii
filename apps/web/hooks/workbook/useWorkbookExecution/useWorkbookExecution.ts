@@ -1,10 +1,10 @@
 "use client";
 
+import { tsr } from "@/shared/api/tsr";
 import { useCallback, useRef, useState } from "react";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
-import { tsr } from "~/lib/tsr";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type {

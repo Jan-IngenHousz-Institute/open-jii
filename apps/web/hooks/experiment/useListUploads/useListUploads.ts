@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 /**
  * Lists the upload history for an experiment (active + failed + completed,

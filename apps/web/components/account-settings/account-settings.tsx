@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -14,7 +15,6 @@ import { Button } from "@repo/ui/components/button";
 import { Form } from "@repo/ui/components/form";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { ErrorDisplay } from "../error-display";
 import { DangerZoneCard } from "./danger-zone-card";
 import { ProfileCard } from "./profile-card";
 import { ProfilePictureCard } from "./profile-picture-card";

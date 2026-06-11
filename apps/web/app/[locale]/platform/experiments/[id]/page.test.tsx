@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentOverviewPage from "./page";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
 }));
 vi.mock("~/components/experiment-overview/experiment-description", () => ({

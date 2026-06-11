@@ -1,8 +1,8 @@
 "use client";
 
 import { ProtocolLayoutContent } from "@/components/protocol-overview/protocol-layout-content";
-import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { EntityLayoutShell } from "@/shared/ui/entity-layout-shell";
 import { ArrowLeft, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";

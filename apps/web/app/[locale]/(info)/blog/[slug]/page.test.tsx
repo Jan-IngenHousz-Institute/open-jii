@@ -1,7 +1,7 @@
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getContentfulClients } from "~/lib/contentful";
 
 import Page, { generateMetadata } from "./page";
 

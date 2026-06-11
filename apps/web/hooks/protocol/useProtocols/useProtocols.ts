@@ -1,8 +1,7 @@
+import { tsr } from "@/shared/api/tsr";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
-
-import { tsr } from "../../../lib/tsr";
-import { useDebounce } from "../../useDebounce";
 
 export type ProtocolFilter = "my" | "all";
 

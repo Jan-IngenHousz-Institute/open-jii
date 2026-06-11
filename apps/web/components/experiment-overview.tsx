@@ -1,10 +1,9 @@
 "use client";
 
-import { formatDate } from "@/util/date";
+import { formatDate } from "@/shared/utils/date";
+import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 
 import { useTranslation } from "@repo/i18n";
-
-import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 
 interface ExperimentOverviewProps {
   experimentId: string;

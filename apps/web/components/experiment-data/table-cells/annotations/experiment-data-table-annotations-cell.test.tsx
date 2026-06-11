@@ -1,7 +1,7 @@
+import { formatDate } from "@/shared/utils/date";
 import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { formatDate } from "~/util/date";
 
 import type { Annotation } from "@repo/api/schemas/experiment.schema";
 

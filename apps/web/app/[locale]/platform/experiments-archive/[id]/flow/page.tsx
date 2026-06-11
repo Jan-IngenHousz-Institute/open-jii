@@ -1,11 +1,11 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { FlowEditor } from "@/components/flow-editor/flow-editor";
 import type { FlowEditorHandle } from "@/components/flow-editor/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 

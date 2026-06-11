@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useExperimentMemberRemove } from "~/hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
 
 import type { ExperimentMember, ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useExperimentMemberRemove } from "../../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
 import { MemberList } from "../../current-members-list/current-members-list";
 
 interface ExperimentMembersPanelProps {

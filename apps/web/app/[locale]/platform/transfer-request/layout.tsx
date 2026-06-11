@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 

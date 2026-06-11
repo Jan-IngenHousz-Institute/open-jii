@@ -1,6 +1,6 @@
-import type { Macro } from "@repo/api/schemas/macro.schema";
+import { tsr } from "@/shared/api/tsr";
 
-import { tsr } from "../../../lib/tsr";
+import type { Macro } from "@repo/api/schemas/macro.schema";
 
 interface MacroUpdateProps {
   onSuccess?: (macro: Macro) => void;

@@ -1,6 +1,6 @@
 "use server";
 
-import { contract } from "@/lib/tsr";
+import { contract } from "@/shared/api/tsr";
 import { initClient } from "@ts-rest/core";
 import { headers } from "next/headers";
 import { env } from "~/env";

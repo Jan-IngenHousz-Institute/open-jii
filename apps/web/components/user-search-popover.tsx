@@ -1,5 +1,6 @@
 "use client";
 
+import { UserAvatar } from "@/shared/ui/user-avatar";
 import { Mail, Search, X } from "lucide-react";
 import React, { useState } from "react";
 import { z } from "zod";
@@ -16,8 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-
-import { UserAvatar } from "./user-avatar";
 
 const emailSchema = z.string().email();
 

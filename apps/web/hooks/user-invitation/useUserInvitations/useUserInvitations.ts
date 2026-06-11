@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 import type { InvitationResourceType } from "@repo/api/schemas/user.schema";
 

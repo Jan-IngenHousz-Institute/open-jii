@@ -1,7 +1,7 @@
 "use client";
 
-import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
-import type { AutosaveStatus } from "@/hooks/useAutosave";
+import type { AutosaveStatus } from "@/shared/hooks/useAutosave";
+import { AutosaveIndicator } from "@/shared/ui/autosave/autosave-indicator";
 import { X } from "lucide-react";
 
 import { Button } from "@repo/ui/components/button";

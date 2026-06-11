@@ -9,7 +9,7 @@ const { mockClient, mockPreviewClient } = vi.hoisted(() => ({
   mockPreviewClient: { pageTermsAndConditions: vi.fn() },
 }));
 
-vi.mock("~/lib/contentful", () => ({
+vi.mock("@/shared/cms/contentful", () => ({
   getContentfulClients: vi.fn().mockResolvedValue({
     client: mockClient,
     previewClient: mockPreviewClient,

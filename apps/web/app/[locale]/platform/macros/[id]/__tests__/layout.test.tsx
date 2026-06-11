@@ -10,13 +10,13 @@ import { useSession } from "@repo/auth/client";
 
 import MacroLayout from "../layout";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
     <div data-testid="error-display">{String(error)}</div>
   ),
 }));
 
-vi.mock("@/components/shared/inline-editable-title", () => ({
+vi.mock("@/shared/ui/inline-editable-title", () => ({
   InlineEditableTitle: ({
     name,
     hasAccess,
@@ -42,7 +42,7 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
   ),
 }));
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("@/shared/api/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 

@@ -1,8 +1,8 @@
+import { tsr } from "@/shared/api/tsr";
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
 import { useMemo } from "react";
-import { tsr } from "~/lib/tsr";
 
 import type {
   ExperimentData,

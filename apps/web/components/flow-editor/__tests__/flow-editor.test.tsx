@@ -7,7 +7,7 @@ import * as nodeUtils from "../../react-flow/node-utils";
 import { FlowEditor } from "../flow-editor";
 import type { FlowEditorHandle } from "../flow-editor";
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
 

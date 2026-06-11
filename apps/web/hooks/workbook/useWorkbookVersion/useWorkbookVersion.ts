@@ -1,4 +1,4 @@
-import { tsr } from "@/lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 /**
  * Hook to fetch a specific published workbook version (with full cell data).

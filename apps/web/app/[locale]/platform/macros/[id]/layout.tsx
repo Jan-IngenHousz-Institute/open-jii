@@ -1,8 +1,8 @@
 "use client";
 
 import { MacroLayoutContent } from "@/components/macro-overview/macro-layout-content";
-import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
+import { EntityLayoutShell } from "@/shared/ui/entity-layout-shell";
 import { useParams } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";

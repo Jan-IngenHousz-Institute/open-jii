@@ -1,9 +1,9 @@
+import { getContractError, tsr } from "@/shared/api/tsr";
+import type { TsRestMutationOptions, TsrRoute } from "@/shared/api/tsr";
+
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { getContractError, tsr } from "../../../lib/tsr";
-import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
 
 const route = tsr.protocols.createProtocol;
 

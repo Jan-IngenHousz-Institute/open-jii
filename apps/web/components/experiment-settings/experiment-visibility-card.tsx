@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useExperimentUpdate } from "~/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 import type { ExperimentVisibility } from "@repo/api/schemas/experiment.schema";
 import { visibilitySchema } from "@repo/api/schemas/experiment.schema";
@@ -19,7 +20,6 @@ import {
 } from "@repo/ui/components/dialog";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { localCalendarDateToIsoEndOfDay } from "../new-experiment/embargo-utils";
 import { ExperimentAnonymizeToggle } from "./experiment-anonymize-toggle";
 import { ExperimentVisibilityForm } from "./experiment-visibility-form";

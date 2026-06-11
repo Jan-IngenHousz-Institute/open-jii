@@ -1,11 +1,11 @@
 "use client";
 
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { CodeEditor } from "@/shared/ui/code-editor";
+import type { CodeLanguage } from "@/shared/ui/code-editor";
 import { Check, Copy } from "lucide-react";
 import React from "react";
 import type { FC } from "react";
-import { CodeEditor } from "~/components/shared/code-editor";
-import type { CodeLanguage } from "~/components/shared/code-editor";
 
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";

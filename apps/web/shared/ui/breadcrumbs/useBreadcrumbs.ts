@@ -1,6 +1,6 @@
+import { enrichPathSegments } from "@/shared/api/breadcrumbs";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
-import { enrichPathSegments } from "~/app/actions/breadcrumbs";
 
 export function useBreadcrumbs(locale: string) {
   const pathname = usePathname();

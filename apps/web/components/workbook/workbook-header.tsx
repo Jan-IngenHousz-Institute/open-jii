@@ -1,8 +1,8 @@
 "use client";
 
-import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
-import { tsr } from "@/lib/tsr";
-import { decodeBase64 } from "@/util/base64";
+import { tsr } from "@/shared/api/tsr";
+import { AutosaveIndicator } from "@/shared/ui/autosave/autosave-indicator";
+import { decodeBase64 } from "@/shared/utils/base64";
 import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
 import { useCallback } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";

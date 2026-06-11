@@ -2,7 +2,7 @@
 
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 

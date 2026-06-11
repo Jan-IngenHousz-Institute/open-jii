@@ -43,7 +43,7 @@ vi.mock("../../protocol-code-editor", () => ({
   },
 }));
 
-vi.mock("../../json-code-viewer", () => ({
+vi.mock("@/shared/ui/json-code-viewer", () => ({
   JsonCodeViewer: ({
     onEditStart,
   }: {
@@ -57,7 +57,7 @@ vi.mock("../../json-code-viewer", () => ({
   ),
 }));
 
-vi.mock("../../shared/code-editor-header-actions", () => ({
+vi.mock("@/shared/ui/code-editor-header-actions", () => ({
   CodeEditorHeaderActions: () => <div data-testid="editor-header-actions" />,
 }));
 

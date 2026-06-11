@@ -1,5 +1,7 @@
 "use client";
 
+import { UserAvatar } from "@/shared/ui/user-avatar";
+
 import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -7,7 +9,6 @@ import { Button } from "@repo/ui/components/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import { cva } from "@repo/ui/lib/utils";
 
-import { UserAvatar } from "../../../user-avatar";
 import { embargoUntilHelperString } from "../../embargo-utils";
 
 interface MembersVisibilitySectionProps {

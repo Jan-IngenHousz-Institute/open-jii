@@ -1,9 +1,9 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";

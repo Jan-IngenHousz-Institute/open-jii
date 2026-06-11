@@ -13,7 +13,7 @@ vi.mock("./danger-zone-card", () => ({
   DangerZoneCard: () => <div data-testid="danger-zone-card" />,
 }));
 
-vi.mock("../error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div data-testid="error-display">{title}</div>,
 }));
 

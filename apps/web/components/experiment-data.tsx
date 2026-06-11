@@ -1,9 +1,9 @@
 "use client";
 
-import { useTranslation } from "@repo/i18n";
+import { ErrorDisplay } from "@/shared/ui/error-display";
+import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 
-import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
-import { ErrorDisplay } from "./error-display";
+import { useTranslation } from "@repo/i18n";
 
 interface ExperimentDataProps {
   experimentId: string;

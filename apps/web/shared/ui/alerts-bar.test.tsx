@@ -1,7 +1,7 @@
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { render, screen, assertExists } from "@/test/test-utils";
 import { draftMode } from "next/headers";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getContentfulClients } from "~/lib/contentful";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms";
 

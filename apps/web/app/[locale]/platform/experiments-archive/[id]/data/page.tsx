@@ -1,7 +1,7 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { BarChart3, Upload } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";

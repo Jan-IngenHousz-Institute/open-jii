@@ -1,7 +1,7 @@
 "use client";
 
-import { useDebounce } from "@/hooks/useDebounce";
-import { useLocale } from "@/hooks/useLocale";
+import { useDebounce } from "@/shared/hooks/useDebounce";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { ExternalLink, FileJson2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";

@@ -1,6 +1,6 @@
 "use client";
 
-import type { AutosaveStatus } from "@/hooks/useAutosave";
+import type { AutosaveStatus } from "@/shared/hooks/useAutosave";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";

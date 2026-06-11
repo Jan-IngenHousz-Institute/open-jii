@@ -1,11 +1,11 @@
 "use client";
 
-import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
-import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
-import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
-import { formatDate } from "@/util/date";
-import { parseApiError } from "~/util/apiError";
+import { parseApiError } from "@/shared/api/apiError";
+import { AutosaveIndicator } from "@/shared/ui/autosave/autosave-indicator";
+import { useAutosaveStatus } from "@/shared/ui/autosave/autosave-status-context";
+import { InlineEditableTitle } from "@/shared/ui/inline-editable-title";
+import { formatDate } from "@/shared/utils/date";
 
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
 import { useSession } from "@repo/auth/client";

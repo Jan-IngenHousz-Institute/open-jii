@@ -10,7 +10,7 @@ import { authClient } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";
 
-vi.mock("@/components/language-switcher", () => ({
+vi.mock("@/shared/i18n/language-switcher", () => ({
   LanguageSwitcher: ({ locale }: { locale: string }) => (
     <div data-testid="language-switcher">{locale}</div>
   ),

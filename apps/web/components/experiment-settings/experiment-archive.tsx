@@ -1,9 +1,10 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
+import { parseApiError } from "@/shared/api/apiError";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { parseApiError } from "~/util/apiError";
+import { useExperimentUpdate } from "~/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -17,8 +18,6 @@ import {
   DialogFooter,
 } from "@repo/ui/components/dialog";
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 interface ExperimentArchiveProps {
   experimentId: string;

@@ -1,11 +1,10 @@
 "use client";
 
+import { UserAvatar } from "@/shared/ui/user-avatar";
 import Link from "next/link";
 
 import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-
-import { UserAvatar } from "../user-avatar";
 
 interface ExperimentMembersTrailProps {
   members: ExperimentMember[];

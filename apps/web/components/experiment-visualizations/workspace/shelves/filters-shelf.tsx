@@ -1,5 +1,6 @@
 "use client";
 
+import { FilterChipList } from "@/shared/ui/data-filters/chips/filter-chip-list";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
@@ -14,7 +15,6 @@ import {
 } from "@repo/ui/components/collapsible";
 import { cn } from "@repo/ui/lib/utils";
 
-import { FilterChipList } from "../../../data-filters/chips/filter-chip-list";
 import type { ChartFormValues } from "../../charts/chart-config";
 
 interface FiltersShelfProps {

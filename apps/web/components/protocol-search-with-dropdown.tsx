@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";

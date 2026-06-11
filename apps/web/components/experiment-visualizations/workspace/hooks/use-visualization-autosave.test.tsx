@@ -1,3 +1,4 @@
+import { AutosaveStatusProvider } from "@/shared/ui/autosave/autosave-status-context";
 import { createVisualization } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render } from "@/test/test-utils";
@@ -7,7 +8,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { AutosaveStatusProvider } from "../../../shared/autosave/autosave-status-context";
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { useVisualizationAutosave } from "./use-visualization-autosave";

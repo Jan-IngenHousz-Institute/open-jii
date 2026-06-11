@@ -27,7 +27,7 @@ vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
   useExperimentTables: (args: unknown) => useExperimentTablesSpy(args),
 }));
 
-vi.mock("~/util/date", () => ({
+vi.mock("@/shared/utils/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
 }));
 

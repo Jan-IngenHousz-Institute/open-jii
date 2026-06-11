@@ -6,7 +6,7 @@ import PoliciesPage, { generateMetadata } from "./page";
 
 const mockPagePolicies = vi.fn();
 
-vi.mock("~/lib/contentful", () => ({
+vi.mock("@/shared/cms/contentful", () => ({
   getContentfulClients: vi.fn(() =>
     Promise.resolve({
       client: {

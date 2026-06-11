@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import ProtocolCodeEditor from "../protocol-code-editor";
 
 // Mock useDebounce to return value immediately for testing
-vi.mock("~/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, false],
 }));
 

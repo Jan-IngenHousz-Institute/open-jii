@@ -1,8 +1,8 @@
 "use client";
 
-import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
-import { parseApiError } from "~/util/apiError";
+import { parseApiError } from "@/shared/api/apiError";
+import { InlineEditableTitle } from "@/shared/ui/inline-editable-title";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import { useSession } from "@repo/auth/client";

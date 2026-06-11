@@ -1,6 +1,8 @@
 "use client";
 
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { useDebounce } from "@/shared/hooks/useDebounce";
+import { CodeEditor } from "@/shared/ui/code-editor";
 import { forceLinting } from "@codemirror/lint";
 import type { Diagnostic } from "@codemirror/lint";
 import type { EditorView } from "@codemirror/view";
@@ -8,8 +10,6 @@ import { Check, Copy } from "lucide-react";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
-import { CodeEditor } from "~/components/shared/code-editor";
-import { useDebounce } from "~/hooks/useDebounce";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import {

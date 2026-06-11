@@ -2,12 +2,13 @@
 
 import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
-import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
+import { parseApiError } from "@/shared/api/apiError";
+import { useLocale } from "@/shared/i18n/useLocale";
+import { DetailsSidebarCard } from "@/shared/ui/details-sidebar-card";
+import { formatDate } from "@/shared/utils/date";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
-import { parseApiError } from "~/util/apiError";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Macro, MacroLanguage } from "@repo/api/schemas/macro.schema";
@@ -34,7 +35,6 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { MacroCompatibleProtocolsCard } from "../macro-settings/macro-compatible-protocols-card";
-import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 
 interface MacroDetailsSidebarProps {
   macroId: string;

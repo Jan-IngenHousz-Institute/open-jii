@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { BarChart3, FileSpreadsheet, Pencil, Upload } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";

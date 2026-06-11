@@ -1,6 +1,5 @@
-import { shouldRetryQuery } from "@/util/query-retry";
-
-import { tsr } from "../../../lib/tsr";
+import { shouldRetryQuery } from "@/shared/api/query-retry";
+import { tsr } from "@/shared/api/tsr";
 
 export function useWorkbook(id: string, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? !!id;

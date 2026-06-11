@@ -11,13 +11,13 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import ProtocolLayout from "../layout";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
     <div data-testid="error-display">{String(error)}</div>
   ),
 }));
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("@/shared/api/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
@@ -32,7 +32,7 @@ vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
 }));
 
-vi.mock("@/components/shared/inline-editable-title", () => ({
+vi.mock("@/shared/ui/inline-editable-title", () => ({
   InlineEditableTitle: ({
     name,
     hasAccess,

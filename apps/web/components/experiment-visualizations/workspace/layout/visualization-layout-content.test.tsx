@@ -1,3 +1,7 @@
+import {
+  AutosaveStatusProvider,
+  useReportAutosaveStatus,
+} from "@/shared/ui/autosave/autosave-status-context";
 import { createVisualization } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -8,10 +12,6 @@ import { contract } from "@repo/api/contract";
 import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useSession } from "@repo/auth/client";
 
-import {
-  AutosaveStatusProvider,
-  useReportAutosaveStatus,
-} from "../../../shared/autosave/autosave-status-context";
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { VisualizationLayoutContent } from "./visualization-layout-content";

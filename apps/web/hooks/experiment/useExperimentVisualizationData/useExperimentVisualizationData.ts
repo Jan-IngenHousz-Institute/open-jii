@@ -1,6 +1,6 @@
-import { shouldRetryQuery } from "@/util/query-retry";
+import { shouldRetryQuery } from "@/shared/api/query-retry";
+import { tsr } from "@/shared/api/tsr";
 import { useMemo } from "react";
-import { tsr } from "~/lib/tsr";
 
 import type { DataAggregation, DataFilter } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";

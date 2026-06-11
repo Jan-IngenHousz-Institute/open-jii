@@ -1,7 +1,7 @@
 "use client";
 
-import { editProtocolFormSchema } from "@/util/schema";
-import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import { editProtocolFormSchema } from "@/shared/utils/schema";
+import { SENSOR_FAMILY_OPTIONS } from "@/shared/utils/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronsUpDown, MonitorX } from "lucide-react";
 import { useState } from "react";

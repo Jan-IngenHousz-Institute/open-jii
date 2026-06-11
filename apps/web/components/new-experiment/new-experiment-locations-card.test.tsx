@@ -10,7 +10,7 @@ import type { LocationPoint } from "@repo/ui/components/map";
 
 import { NewExperimentLocationsCard } from "./new-experiment-locations-card";
 
-vi.mock("../../hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: vi.fn((v: string) => [v, false]),
 }));
 

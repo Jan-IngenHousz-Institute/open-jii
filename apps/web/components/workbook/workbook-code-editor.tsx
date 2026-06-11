@@ -1,12 +1,12 @@
 "use client";
 
+import { CodeEditor } from "@/shared/ui/code-editor";
+import type { CodeLanguage, LintSource } from "@/shared/ui/code-editor";
 import type { Diagnostic } from "@codemirror/lint";
 import type { Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import { useEffect, useMemo, useState } from "react";
-import { CodeEditor } from "~/components/shared/code-editor";
-import type { CodeLanguage, LintSource } from "~/components/shared/code-editor";
 
 export type EditorLanguage = CodeLanguage;
 export type { Diagnostic, LintSource };

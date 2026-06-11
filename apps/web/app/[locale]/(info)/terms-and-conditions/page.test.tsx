@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import TermsAndConditionsPageRoute, { generateMetadata } from "./page";
 
 const mockPageTerms = vi.fn();
-vi.mock("~/lib/contentful", () => ({
+vi.mock("@/shared/cms/contentful", () => ({
   getContentfulClients: () =>
     Promise.resolve({
       client: { pageTermsAndConditions: mockPageTerms },

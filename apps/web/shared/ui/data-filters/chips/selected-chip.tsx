@@ -1,11 +1,10 @@
 "use client";
 
 import { X } from "lucide-react";
+import { ContributorIdentity } from "~/components/contributor/contributor-identity";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
-
-import { ContributorIdentity } from "../../contributor/contributor-identity";
 
 export interface SelectedChipProps {
   chipKey: string;

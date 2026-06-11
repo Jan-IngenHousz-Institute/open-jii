@@ -1,8 +1,9 @@
-import { useLocale } from "@/hooks/useLocale";
+import { parseApiError } from "@/shared/api/apiError";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { parseApiError } from "~/util/apiError";
+import { useExperimentMemberRoleUpdate } from "~/hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
 
 import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import type { UserProfile } from "@repo/api/schemas/user.schema";
@@ -10,7 +11,6 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useExperimentMemberRoleUpdate } from "../../hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
 import { MemberDialogs } from "./member-dialogs";
 import { MemberItem } from "./member-item";
 

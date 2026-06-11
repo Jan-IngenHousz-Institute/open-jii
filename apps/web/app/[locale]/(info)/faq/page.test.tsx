@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import FaqPage, { generateMetadata } from "./page";
 
 const mockPageFaq = vi.fn();
-vi.mock("~/lib/contentful", () => ({
+vi.mock("@/shared/cms/contentful", () => ({
   getContentfulClients: () =>
     Promise.resolve({
       client: { pageFaq: mockPageFaq },

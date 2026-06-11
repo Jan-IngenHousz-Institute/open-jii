@@ -1,14 +1,14 @@
 "use client";
 
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
-import { useAutosave } from "@/hooks/useAutosave";
+import { useAutosave } from "@/shared/hooks/useAutosave";
+import { useReportAutosaveStatus } from "@/shared/ui/autosave/autosave-status-context";
 import { useCallback } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
 import type { UpdateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
 
-import { useReportAutosaveStatus } from "../../../shared/autosave/autosave-status-context";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { sanitizeDataConfigForSave } from "../../charts/data/aggregation";
 

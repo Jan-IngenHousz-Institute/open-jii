@@ -1,7 +1,7 @@
+import { stripHtml } from "@/shared/utils/strip-html";
 import type { Node, Edge } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import type { z } from "zod";
-import { stripHtml } from "~/util/strip-html";
 
 import type { Flow, UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
 import {

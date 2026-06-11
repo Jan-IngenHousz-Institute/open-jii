@@ -1,5 +1,6 @@
 "use client";
 
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useMemo, useState, useCallback, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -16,7 +17,6 @@ import type { LocationPoint } from "@repo/ui/components/map";
 
 import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";
 import { useLocationSearch } from "../../hooks/locations/useLocationSearch";
-import { useDebounce } from "../../hooks/useDebounce";
 import { Map } from "../map";
 
 interface NewExperimentLocationsCardProps {

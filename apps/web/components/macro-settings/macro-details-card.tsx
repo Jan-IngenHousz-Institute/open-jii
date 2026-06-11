@@ -1,7 +1,7 @@
 "use client";
 
-import { decodeBase64, encodeBase64 } from "@/util/base64";
-import { editMacroFormSchema } from "@/util/schema";
+import { decodeBase64, encodeBase64 } from "@/shared/utils/base64";
+import { editMacroFormSchema } from "@/shared/utils/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React from "react";
 import { useForm } from "react-hook-form";

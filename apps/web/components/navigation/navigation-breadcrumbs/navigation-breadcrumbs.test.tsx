@@ -7,7 +7,7 @@ const { enrichPathSegmentsMock } = vi.hoisted(() => ({
   enrichPathSegmentsMock: vi.fn(),
 }));
 
-vi.mock("~/app/actions/breadcrumbs", () => ({
+vi.mock("@/shared/api/breadcrumbs", () => ({
   enrichPathSegments: enrichPathSegmentsMock,
 }));
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
-import { useLocale } from "@/hooks/useLocale";
-import { parseApiError } from "@/util/apiError";
+import { parseApiError } from "@/shared/api/apiError";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { ChevronDown, Eraser, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

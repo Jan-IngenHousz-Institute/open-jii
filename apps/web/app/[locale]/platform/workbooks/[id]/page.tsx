@@ -1,15 +1,15 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
-import { useReportAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { EditableWorkbookTitle } from "@/components/workbook/editable-workbook-title";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
-import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
+import { parseApiError } from "@/shared/api/apiError";
+import { useAutosave } from "@/shared/hooks/useAutosave";
+import { useReportAutosaveStatus } from "@/shared/ui/autosave/autosave-status-context";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { use, useCallback, useRef, useState } from "react";
-import { parseApiError } from "~/util/apiError";
 
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";

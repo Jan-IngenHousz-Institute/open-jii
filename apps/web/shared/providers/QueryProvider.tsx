@@ -1,7 +1,7 @@
 "use client";
 
-import { tsr } from "@/lib/tsr";
-import { parseApiError } from "@/util/apiError";
+import { parseApiError } from "@/shared/api/apiError";
+import { tsr } from "@/shared/api/tsr";
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { env } from "~/env";

@@ -1,4 +1,4 @@
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { render, screen } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";

@@ -1,3 +1,4 @@
+import { AutosaveStatusProvider } from "@/shared/ui/autosave/autosave-status-context";
 import {
   createMacro,
   createMarkdownCell,
@@ -13,7 +14,6 @@ import type { MockInstance } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { WorkbookHeader } from "./workbook-header";
 
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({

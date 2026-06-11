@@ -1,7 +1,7 @@
+import { auth } from "@/shared/api/auth";
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
-import { auth } from "~/app/actions/auth";
 
 import AccountSettingsPage from "./page";
 

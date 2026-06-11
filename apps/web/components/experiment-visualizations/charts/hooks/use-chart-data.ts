@@ -1,8 +1,9 @@
 "use client";
 
+import { useExperimentVisualizationData } from "~/hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+
 import type { DataFilter, ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 
-import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { dataSourcesByRole } from "../data/data-sources";
 
 export interface UseChartDataResult {

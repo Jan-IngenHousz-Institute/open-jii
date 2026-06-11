@@ -5,10 +5,10 @@ import {
   WorkbookCellSummary,
 } from "@/components/workbook/workbook-cell-summary";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
-import { useLocale } from "@/hooks/useLocale";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
-import { formatDate } from "@/util/date";
+import { useLocale } from "@/shared/i18n/useLocale";
+import { formatDate } from "@/shared/utils/date";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
 

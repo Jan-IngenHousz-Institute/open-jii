@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { notFound } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";

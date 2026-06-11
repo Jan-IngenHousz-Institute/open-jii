@@ -1,6 +1,5 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-state";
 import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
 import { FlowEditor } from "@/components/flow-editor/flow-editor";
@@ -8,6 +7,7 @@ import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { GitBranch, List } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use, useMemo } from "react";

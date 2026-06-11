@@ -1,4 +1,4 @@
-import { tsr } from "../../../lib/tsr";
+import { tsr } from "@/shared/api/tsr";
 
 export function useWorkbookList() {
   const query = tsr.workbooks.listWorkbooks.useQuery({

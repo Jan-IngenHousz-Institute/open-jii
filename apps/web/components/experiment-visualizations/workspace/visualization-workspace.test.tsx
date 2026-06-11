@@ -1,3 +1,4 @@
+import { AutosaveStatusProvider } from "@/shared/ui/autosave/autosave-status-context";
 import { createExperimentDataTable, createExperimentTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -6,7 +7,6 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
 import { lineChartType } from "../charts/basic/line";
 import { scatterChartType } from "../charts/basic/scatter";
 import type { ChartFormValues } from "../charts/chart-config";

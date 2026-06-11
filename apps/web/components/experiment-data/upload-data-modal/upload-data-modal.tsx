@@ -2,12 +2,12 @@
 
 import { useExperimentDataUpload } from "@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload";
 import type { UploadValidationError } from "@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload";
+import { parseApiError } from "@/shared/api/apiError";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload } from "lucide-react";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
-import { parseApiError } from "~/util/apiError";
 
 import {
   AMBYTE_UPLOAD_TABLE_NAME,

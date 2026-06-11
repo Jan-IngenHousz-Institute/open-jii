@@ -1,6 +1,6 @@
 "use client";
 
-import { CodeTesterLayout } from "@/components/shared/code-tester-layout";
+import { CodeTesterLayout } from "@/shared/ui/code-tester-layout";
 import type { ComponentType } from "react";
 
 import type { CreateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";

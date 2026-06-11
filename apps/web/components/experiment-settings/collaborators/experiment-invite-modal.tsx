@@ -1,6 +1,8 @@
 "use client";
 
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useEffect, useMemo, useState } from "react";
+import { useExperimentMemberAdd } from "~/hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
 
 import type { ExperimentMember, ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
@@ -16,8 +18,6 @@ import {
 } from "@repo/ui/components/dialog";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useExperimentMemberAdd } from "../../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
-import { useDebounce } from "../../../hooks/useDebounce";
 import { useUserSearch } from "../../../hooks/useUserSearch";
 import { useUserInvitationCreate } from "../../../hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate";
 import { UserSearchPopover } from "../../user-search-popover";

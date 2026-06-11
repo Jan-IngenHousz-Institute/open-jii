@@ -1,10 +1,11 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
+import { parseApiError } from "@/shared/api/apiError";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
-import { parseApiError } from "~/util/apiError";
+import { useExperimentDelete } from "~/hooks/experiment/useExperimentDelete/useExperimentDelete";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";
@@ -19,8 +20,6 @@ import {
   DialogFooter,
 } from "@repo/ui/components/dialog";
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { useExperimentDelete } from "../../hooks/experiment/useExperimentDelete/useExperimentDelete";
 
 interface ExperimentDeleteProps {
   experimentId: string;

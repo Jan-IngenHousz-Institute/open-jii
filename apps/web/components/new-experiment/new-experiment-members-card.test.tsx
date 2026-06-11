@@ -16,7 +16,7 @@ beforeEach(() => {
   } as ReturnType<typeof useSession>);
 });
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 

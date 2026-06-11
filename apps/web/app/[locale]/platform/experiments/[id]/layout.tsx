@@ -1,8 +1,8 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";

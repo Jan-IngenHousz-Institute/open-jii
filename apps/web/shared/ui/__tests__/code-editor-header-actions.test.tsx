@@ -1,4 +1,4 @@
-import type { AutosaveStatus } from "@/hooks/useAutosave";
+import type { AutosaveStatus } from "@/shared/hooks/useAutosave";
 import { render, screen, userEvent, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 

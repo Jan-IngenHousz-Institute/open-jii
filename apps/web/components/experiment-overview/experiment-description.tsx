@@ -1,12 +1,11 @@
 "use client";
 
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
-import { parseApiError } from "~/util/apiError";
+import { parseApiError } from "@/shared/api/apiError";
+import { InlineEditableDescription } from "@/shared/ui/inline-editable-description";
 
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { InlineEditableDescription } from "../shared/inline-editable-description";
 
 interface ExperimentDescriptionProps {
   experimentId: string;

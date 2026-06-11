@@ -15,7 +15,7 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentFlowPage from "./page";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">
       {title}: {String(error)}

@@ -1,8 +1,8 @@
+import { auth } from "@/shared/api/auth";
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { auth } from "~/app/actions/auth";
-import { getContentfulClients } from "~/lib/contentful";
 
 import Layout from "./layout";
 

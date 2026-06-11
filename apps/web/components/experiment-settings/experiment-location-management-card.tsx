@@ -1,17 +1,17 @@
 "use client";
 
+import { parseApiError } from "@/shared/api/apiError";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { parseApiError } from "~/util/apiError";
+import { useExperimentLocations } from "~/hooks/experiment/useExperimentLocations/useExperimentLocations";
+import { useExperimentLocationsUpdate } from "~/hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
 
 import { useTranslation } from "@repo/i18n";
 import type { LocationPoint } from "@repo/ui/components/map";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useExperimentLocations } from "../../hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentLocationsUpdate } from "../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
 import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";
 import { useLocationSearch } from "../../hooks/locations/useLocationSearch";
-import { useDebounce } from "../../hooks/useDebounce";
 import { Map } from "../map";
 
 interface ExperimentLocationManagementProps {

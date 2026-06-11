@@ -1,5 +1,5 @@
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { draftMode } from "next/headers";
-import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleTileGrid } from "@repo/cms/article";
 import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";

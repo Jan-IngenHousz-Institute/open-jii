@@ -1,5 +1,6 @@
 "use client";
 
+import { stripHtml } from "@/shared/utils/strip-html";
 import {
   DndContext,
   KeyboardSensor,
@@ -19,7 +20,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Asterisk, GripVertical, List, PanelRightClose } from "lucide-react";
 import { useCallback } from "react";
-import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";

@@ -6,7 +6,7 @@ import { EntityLayoutShell } from "../entity-layout-shell";
 
 const mockNotFound = vi.mocked(notFound);
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title?: string }) => (
     <div data-testid="error-display" data-title={title}>
       {JSON.stringify(error)}

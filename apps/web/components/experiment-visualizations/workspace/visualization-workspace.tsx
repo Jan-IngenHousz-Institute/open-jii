@@ -3,6 +3,8 @@
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import type { ChartType } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
@@ -20,8 +22,6 @@ import {
 } from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
 
-import { useExperimentData } from "../../../hooks/experiment/useExperimentData/useExperimentData";
-import { useExperimentTables } from "../../../hooks/experiment/useExperimentTables/useExperimentTables";
 import type { ChartFormValues } from "../charts/chart-config";
 import { getChartTypeDef } from "../charts/chart-registry";
 import { ChartTypePicker } from "./chart-type-picker";

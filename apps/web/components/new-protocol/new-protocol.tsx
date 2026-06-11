@@ -2,7 +2,7 @@
 
 import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";

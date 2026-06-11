@@ -2,6 +2,7 @@
 
 import { ChevronsUpDown, Loader2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
+import { ContributorIdentity } from "~/components/contributor/contributor-identity";
 
 import type { DataColumn, DataFilterValue } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -16,7 +17,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import { cn } from "@repo/ui/lib/utils";
 
-import { ContributorIdentity } from "../../contributor/contributor-identity";
 import { chipValueForOption, useDistinctOptions } from "../use-distinct-options";
 import { CategoricalOption } from "./categorical-option";
 

@@ -9,7 +9,7 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentOverviewPage from "./page";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
     <div data-testid="error-display">
       <div data-testid="error-title">{title}</div>

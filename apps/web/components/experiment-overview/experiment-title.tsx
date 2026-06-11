@@ -1,14 +1,13 @@
 "use client";
 
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { parseApiError } from "@/shared/api/apiError";
+import { InlineEditableTitle } from "@/shared/ui/inline-editable-title";
 import { Eye, EyeOff } from "lucide-react";
-import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { InlineEditableTitle } from "../shared/inline-editable-title";
 
 interface ExperimentTitleProps {
   experimentId: string;

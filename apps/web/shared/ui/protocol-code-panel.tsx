@@ -1,9 +1,9 @@
 "use client";
 
-import { JsonCodeViewer } from "@/components/json-code-viewer";
 import ProtocolCodeEditor from "@/components/protocol-code-editor";
-import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
-import type { AutosaveStatus } from "@/hooks/useAutosave";
+import type { AutosaveStatus } from "@/shared/hooks/useAutosave";
+import { CodeEditorHeaderActions } from "@/shared/ui/code-editor-header-actions";
+import { JsonCodeViewer } from "@/shared/ui/json-code-viewer";
 
 export type ProtocolCode = Record<string, unknown>[] | string | undefined;
 

@@ -1,5 +1,5 @@
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { draftMode } from "next/headers";
-import { getContentfulClients } from "~/lib/contentful";
 
 import { TermsAndConditionsContent, TermsAndConditionsTitle } from "@repo/cms";
 import type { PageTermsAndConditionsFieldsFragment } from "@repo/cms/lib/__generated/sdk";

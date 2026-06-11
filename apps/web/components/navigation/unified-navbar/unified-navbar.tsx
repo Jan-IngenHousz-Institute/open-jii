@@ -1,6 +1,6 @@
 "use client";
 
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 import {
   User,
   Home,

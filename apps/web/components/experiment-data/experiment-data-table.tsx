@@ -5,6 +5,8 @@ import type {
   TableMetadata,
 } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { useUrlDataFilters } from "@/shared/hooks/useUrlDataFilters";
+import { FilterChipBar } from "@/shared/ui/data-filters/filter-chip-bar";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
@@ -20,7 +22,6 @@ import {
   formatValue,
   LoadingRows,
 } from "~/components/experiment-data/experiment-data-utils";
-import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -45,7 +46,6 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { Table, TableBody } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
-import { FilterChipBar } from "../data-filters/filter-chip-bar";
 import { DataExportModal } from "./data-export-modal/data-export-modal";
 import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 

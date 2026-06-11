@@ -15,7 +15,7 @@ vi.mock("../macro-search-with-dropdown", () => ({
 }));
 
 // Mock useDebounce
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
 }));
 

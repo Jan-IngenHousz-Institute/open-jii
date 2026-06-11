@@ -1,13 +1,14 @@
 "use client";
 
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
+import { parseApiError } from "@/shared/api/apiError";
+import { useLocale } from "@/shared/i18n/useLocale";
+import { DetailsSidebarCard } from "@/shared/ui/details-sidebar-card";
+import { formatDate } from "@/shared/utils/date";
+import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "@/shared/utils/sensor-family";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
-import { parseApiError } from "~/util/apiError";
-import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Protocol, SensorFamily } from "@repo/api/schemas/protocol.schema";
@@ -35,7 +36,6 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
 import { ProtocolCompatibleMacrosCard } from "../protocol-settings/protocol-compatible-macros-card";
-import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 
 interface ProtocolDetailsSidebarProps {
   protocolId: string;

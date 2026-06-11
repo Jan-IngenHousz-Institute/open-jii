@@ -10,7 +10,7 @@ import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
 import ExperimentDataPage from "./page";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">
       {title}: {String(error)}
