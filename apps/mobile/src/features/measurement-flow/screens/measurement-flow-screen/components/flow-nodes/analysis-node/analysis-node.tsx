@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
-import type { AnalysisContent } from "~/shared/measurements/flow-node";
+import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
@@ -12,6 +12,7 @@ import { useMeasurements } from "~/features/recent-measurements/hooks/use-measur
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
+import type { AnalysisContent } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
@@ -33,15 +34,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): cell metadata + derived filename.
   const macro = content.macro;
-  const {
-    scanResult,
-    previousStep,
-    nextStep,
-    experimentId,
-    protocolId,
-    iterationCount,
-    flowNodes,
-  } = useMeasurementFlowStore();
+  const { scanResult, previousStep, nextStep, experimentId, iterationCount, flowNodes } =
+    useMeasurementFlowStore();
+  const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
   const { session } = useSession();
 

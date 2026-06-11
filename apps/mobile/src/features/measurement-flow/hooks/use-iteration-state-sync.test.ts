@@ -63,7 +63,6 @@ const actVoid = (fn: () => unknown) =>
 beforeEach(() => {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
-    protocolId: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,

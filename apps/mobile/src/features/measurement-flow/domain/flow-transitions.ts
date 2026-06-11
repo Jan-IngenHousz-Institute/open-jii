@@ -25,7 +25,6 @@ export interface BranchReturn {
 export interface FlowState {
   experimentId?: string;
   experimentLabel?: string;
-  protocolId?: string;
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number;
@@ -46,7 +45,6 @@ export interface FlowState {
 export const initialFlowState: FlowState = {
   experimentId: undefined,
   experimentLabel: undefined,
-  protocolId: undefined,
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
@@ -84,6 +82,14 @@ export function flowMode(state: FlowState): FlowMode {
 
 function firstMeasurementStep(flowNodes: FlowNode[]): number {
   return flowNodes.findIndex((n) => n.type === "measurement");
+}
+
+// The flow's protocol comes from its measurement node (the flow model
+// assumes at most one). Derived from the persisted flowNodes, so it
+// survives pause/resume and can never go stale across flows.
+export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
+  const node = flowNodes.find((n) => n.type === "measurement");
+  return (node?.content as { protocolId?: string } | undefined)?.protocolId;
 }
 
 export function nextStepState(state: FlowState): Partial<FlowState> {
@@ -141,7 +147,6 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       isFlowFinished: false,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
-      protocolId: undefined,
       cells: [],
       edges: [],
       ...clearedBranchIteration,

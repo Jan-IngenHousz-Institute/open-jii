@@ -32,13 +32,8 @@ export function useMeasurementCapture(content: MeasurementContent) {
     estimatedMs,
   } = useScanner();
   const { data: device, refetch: refetchConnectedDevice } = useConnectedDevice();
-  const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
-    useMeasurementFlowStore();
+  const { nextStep, setScanResult, navigateToQuestionFromOverview } = useMeasurementFlowStore();
   const openDeviceSheet = useDeviceSheetStore((s) => s.open);
-
-  useEffect(() => {
-    setProtocolId(content.protocolId);
-  }, [setProtocolId, content.protocolId]);
 
   // Keep stable refs so the disconnect-cleanup effect below doesn't need to
   // list these as dependencies (avoids any memoisation concerns).

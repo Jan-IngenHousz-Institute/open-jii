@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { FlowState } from "./flow-transitions";
-import { flowMode, initialFlowState, nextStepState, previousStepState } from "./flow-transitions";
+import {
+  flowMode,
+  flowProtocolId,
+  initialFlowState,
+  nextStepState,
+  previousStepState,
+} from "./flow-transitions";
 
 // Edge transitions the store suite doesn't reach, plus the flowMode table.
 // The bulk of the transition behavior is covered through the store wrapper
@@ -19,6 +25,16 @@ const inFlow = (overrides: Partial<FlowState> = {}): FlowState => ({
   experimentId: "exp-1",
   flowNodes: [makeQuestion("q1"), makeMeasurement("m1")],
   ...overrides,
+});
+
+describe("flowProtocolId", () => {
+  it("derives the protocol from the flow's measurement node", () => {
+    expect(flowProtocolId([makeQuestion("q1"), makeMeasurement("m1")])).toBe("p");
+  });
+
+  it("is undefined for questions-only flows", () => {
+    expect(flowProtocolId([makeQuestion("q1"), makeQuestion("q2")])).toBeUndefined();
+  });
 });
 
 describe("flowMode", () => {

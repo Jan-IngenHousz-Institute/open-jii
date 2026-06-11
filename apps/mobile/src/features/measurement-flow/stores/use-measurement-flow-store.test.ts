@@ -25,7 +25,6 @@ const makeBranch = (id: string): FlowNode =>
 function resetStore() {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
-    protocolId: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,
@@ -51,7 +50,6 @@ describe("useMeasurementFlowStore", () => {
     it("exposes the correct default values", () => {
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.flowNodes).toEqual([]);
       expect(state.currentFlowStep).toBe(0);
@@ -67,11 +65,6 @@ describe("useMeasurementFlowStore", () => {
     it("setExperimentId updates experimentId", () => {
       useMeasurementFlowStore.getState().setExperimentId("exp-1");
       expect(useMeasurementFlowStore.getState().experimentId).toBe("exp-1");
-    });
-
-    it("setProtocolId updates protocolId", () => {
-      useMeasurementFlowStore.getState().setProtocolId("proto-1");
-      expect(useMeasurementFlowStore.getState().protocolId).toBe("proto-1");
     });
 
     it("setCurrentStep updates currentStep", () => {
@@ -222,7 +215,6 @@ describe("useMeasurementFlowStore", () => {
     it("resets to experiment selection when at first step", () => {
       useMeasurementFlowStore.setState({
         experimentId: "exp-1",
-        protocolId: "p-1",
         flowNodes: [makeQuestion("q1")],
         currentFlowStep: 0,
         iterationCount: 3,
@@ -230,7 +222,6 @@ describe("useMeasurementFlowStore", () => {
       useMeasurementFlowStore.getState().previousStep();
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.flowNodes).toEqual([]);
       expect(state.currentFlowStep).toBe(0);
       expect(state.iterationCount).toBe(0);
@@ -253,17 +244,15 @@ describe("useMeasurementFlowStore", () => {
   });
 
   describe("reset", () => {
-    it("clears experimentId, protocolId, currentStep and isFromOverview", () => {
+    it("clears experimentId, currentStep and isFromOverview", () => {
       useMeasurementFlowStore.setState({
         experimentId: "exp-1",
-        protocolId: "p-1",
         currentStep: 5,
         isFromOverview: true,
       });
       useMeasurementFlowStore.getState().reset();
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.isFromOverview).toBe(false);
     });
@@ -273,7 +262,6 @@ describe("useMeasurementFlowStore", () => {
     it("fully resets the flow state", () => {
       useMeasurementFlowStore.setState({
         experimentId: "exp-1",
-        protocolId: "p-1",
         currentStep: 2,
         flowNodes: [makeQuestion("q1")],
         currentFlowStep: 3,
@@ -286,7 +274,6 @@ describe("useMeasurementFlowStore", () => {
       useMeasurementFlowStore.getState().resetFlow();
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.flowNodes).toEqual([]);
       expect(state.currentFlowStep).toBe(0);

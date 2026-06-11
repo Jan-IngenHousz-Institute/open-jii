@@ -79,7 +79,6 @@ const makeQuestion = (id: string, text = `${id} text`): FlowNode =>
 beforeEach(() => {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
-    protocolId: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,

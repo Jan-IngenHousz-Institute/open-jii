@@ -5,9 +5,9 @@ import { useFlowAnswersStore } from "./use-flow-answers-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
 // Characterization of the AsyncStorage wire format of both persisted flow
-// stores. Neither declares version/migrate, so the envelope is implicitly
-// version 0 and any silent shape change wipes a field researcher's paused
-// flow on rehydrate. Update fixtures ONLY with a deliberate, migrated change.
+// stores (pinned at version 0). A silent shape change wipes a field
+// researcher's paused flow on rehydrate. Update fixtures ONLY with a
+// deliberate change (additive/removal) or a version bump + migrate.
 
 const MEASUREMENT_KEY = "measurement-flow-storage";
 const ANSWERS_KEY = "flow-answers-storage";
@@ -86,6 +86,14 @@ const ANSWERS_FIXTURE = `{
 
 const MEASUREMENT_STATE = (JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<string, unknown> })
   .state;
+
+// Dropped from the persisted slice (protocolId is now derived from flowNodes
+// via flowProtocolId). The fixture keeps it so we prove legacy payloads
+// still rehydrate; the app neither reads nor re-writes it.
+const LEGACY_ONLY_KEYS = ["protocolId"];
+const EXPECTED_WRITTEN_STATE = Object.fromEntries(
+  Object.entries(MEASUREMENT_STATE).filter(([key]) => !LEGACY_ONLY_KEYS.includes(key)),
+);
 const ANSWERS_STATE = (JSON.parse(ANSWERS_FIXTURE) as { state: Record<string, unknown> }).state;
 
 async function readEnvelope(key: string): Promise<Record<string, unknown>> {
@@ -104,9 +112,16 @@ describe("measurement-flow-storage v0 wire format", () => {
     await useMeasurementFlowStore.persist.rehydrate();
   });
 
-  it.each(Object.keys(MEASUREMENT_STATE))("rehydrates persisted field %s", (key) => {
+  it.each(Object.keys(EXPECTED_WRITTEN_STATE))("rehydrates persisted field %s", (key) => {
     const state = useMeasurementFlowStore.getState() as unknown as Record<string, unknown>;
     expect(state[key]).toEqual(MEASUREMENT_STATE[key]);
+  });
+
+  it("tolerates legacy payloads carrying the removed protocolId key", () => {
+    // Rehydration of the fixture above (which includes protocolId) must not
+    // throw or disturb the managed fields; the key is simply ignored.
+    const state = useMeasurementFlowStore.getState() as unknown as Record<string, unknown>;
+    expect(state.experimentId).toBe("exp-42");
   });
 
   it("round-trips the envelope unchanged through partialize", async () => {
@@ -115,7 +130,7 @@ describe("measurement-flow-storage v0 wire format", () => {
     const envelope = await readEnvelope(MEASUREMENT_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
     expect(envelope.version).toBe(0);
-    expect(envelope.state).toEqual(MEASUREMENT_STATE);
+    expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
   });
 
   it("persists exactly the known field set", () => {
@@ -138,7 +153,6 @@ describe("measurement-flow-storage v0 wire format", () => {
       "isQuestionsSubmitPending",
       "iterationCount",
       "lastMatchedPath",
-      "protocolId",
       "scanResult",
     ]);
   });

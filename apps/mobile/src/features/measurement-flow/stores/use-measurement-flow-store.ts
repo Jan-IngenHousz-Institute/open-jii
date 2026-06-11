@@ -30,7 +30,6 @@ interface MeasurementFlowStore extends FlowState {
   iterationAnchor?: { iteration: number; nodeId?: string };
 
   setExperimentId: (experimentId: string, experimentLabel?: string) => void;
-  setProtocolId: (protocolId: string) => void;
   setCurrentStep: (step: number) => void;
   setCurrentFlowStep: (step: number) => void;
   nextStep: () => void;
@@ -64,7 +63,6 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       iterationAnchor: undefined,
 
       setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
-      setProtocolId: (protocolId) => set({ protocolId }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
@@ -136,10 +134,12 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       // researcher's paused flow.
       version: 0,
       migrate: (persisted) => persisted as MeasurementFlowStore,
+      // protocolId was dropped from the persisted slice (now derived from
+      // flowNodes via flowProtocolId); legacy payloads carrying it merge in
+      // as an ignored extra key.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
-        protocolId: state.protocolId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,

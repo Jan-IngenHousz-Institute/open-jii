@@ -24,7 +24,6 @@ interface MockFlowState {
   currentFlowStep: number;
   iterationCount: number;
   scanResult?: unknown;
-  protocolId?: string;
   cells: WorkbookCell[];
   branchVisitCounts: Record<string, number>;
   setCurrentFlowStep: typeof mockSetCurrentFlowStep;
@@ -39,7 +38,6 @@ const flowState: MockFlowState = {
   currentFlowStep: 0,
   iterationCount: 0,
   scanResult: undefined,
-  protocolId: undefined,
   cells: [],
   branchVisitCounts: {},
   setCurrentFlowStep: mockSetCurrentFlowStep,
@@ -60,6 +58,9 @@ const branchFlowNode = (id: string): FlowNode =>
   ({ id, type: "branch", name: "Branch", content: {}, isStart: false }) as FlowNode;
 const plainFlowNode = (id: string): FlowNode =>
   ({ id, type: "question", name: id, content: {}, isStart: false }) as FlowNode;
+// The active protocol is derived from the flow's measurement node (flowProtocolId).
+const measurementFlowNode = (id: string, protocolId: string): FlowNode =>
+  ({ id, type: "measurement", name: id, content: { protocolId }, isStart: false }) as FlowNode;
 
 const qCell = (id: string): QuestionCell => ({
   id,
@@ -109,7 +110,6 @@ beforeEach(() => {
   flowState.currentFlowStep = 0;
   flowState.iterationCount = 0;
   flowState.scanResult = undefined;
-  flowState.protocolId = undefined;
   flowState.cells = [];
   flowState.branchVisitCounts = {};
 });
@@ -199,7 +199,6 @@ describe("evaluateAndRoute", () => {
 
   it("requires all conditions in a path (implicit AND), incl. measurement output", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
-    flowState.protocolId = "proto-1";
     flowState.scanResult = { sample: [{ phi2: 0.8 }] };
     flowState.cells = [
       qCell("q1"),
@@ -213,7 +212,11 @@ describe("evaluateAndRoute", () => {
         "pdef",
       ),
     ];
-    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("y"), plainFlowNode("tgt")];
+    flowState.flowNodes = [
+      branchFlowNode("b1"),
+      measurementFlowNode("y", "proto-1"),
+      plainFlowNode("tgt"),
+    ];
     flowState.currentFlowStep = 0;
 
     evaluateAndRoute(branchFlowNode("b1"));
@@ -224,7 +227,6 @@ describe("evaluateAndRoute", () => {
 
   it("does not match a path when one AND condition fails", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
-    flowState.protocolId = "proto-1";
     flowState.scanResult = { sample: [{ phi2: 0.3 }] }; // fails the > 0.5 check
     flowState.cells = [
       qCell("q1"),
@@ -238,7 +240,11 @@ describe("evaluateAndRoute", () => {
         "pdef",
       ),
     ];
-    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("y"), plainFlowNode("tgt")];
+    flowState.flowNodes = [
+      branchFlowNode("b1"),
+      measurementFlowNode("y", "proto-1"),
+      plainFlowNode("tgt"),
+    ];
     flowState.currentFlowStep = 0;
 
     evaluateAndRoute(branchFlowNode("b1"));
