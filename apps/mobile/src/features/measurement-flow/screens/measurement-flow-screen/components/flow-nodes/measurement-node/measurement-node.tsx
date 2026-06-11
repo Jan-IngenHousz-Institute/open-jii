@@ -80,7 +80,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     resetScan();
   };
 
-  const completeWithSuccesses = async () => {
+  const completeWithSuccesses = () => {
     // Order results by connect order so device_index is stable for upload.
     const orderOf = (id: string) => {
       const i = devices.findIndex((d) => d.id === id);
@@ -91,8 +91,13 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     );
     successesRef.current = [];
     setScanResults(ordered);
-    // Play system notification sound when measurement completes
-    await playSound();
+    // Single-node flows wrap nextStep() straight back to this same mounted
+    // node — clear the finished round first so it renders Ready again
+    // instead of a stale scanning screen with a dead Cancel button.
+    resetScan();
+    // Play system notification sound when measurement completes. Never block
+    // flow advance on audio.
+    playSound().catch((e) => log.warn("playSound failed", { err: (e as Error)?.message }));
     nextStep();
   };
 
@@ -115,7 +120,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       (d) => !successesRef.current.some((s) => s.device.id === d.id),
     );
     if (pendingDevices.length === 0) {
-      await completeWithSuccesses();
+      completeWithSuccesses();
       return;
     }
 
@@ -133,7 +138,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
         return;
       }
       if (round.failures.length === 0) {
-        await completeWithSuccesses();
+        completeWithSuccesses();
       }
       // Mixed round: the partial-failure state below offers continue/retry.
     } catch (error) {
@@ -197,7 +202,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
               title={t("measurementFlow:measurementNode.multiScan.continueWithSuccessful", {
                 count: succeededCount,
               })}
-              onPress={() => void completeWithSuccesses()}
+              onPress={completeWithSuccesses}
               style={{ height: 44, flex: 1 }}
             />
           </View>
