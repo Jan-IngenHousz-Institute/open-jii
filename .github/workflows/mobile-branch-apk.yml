@@ -1,0 +1,66 @@
+name: Mobile Branch APK
+
+# Builds an installable preview APK from ANY branch via EAS — for testing
+# feature branches on physical devices before merge. Dispatch with the ref
+# set to the branch you want built; the APK download URL lands in the job
+# summary and step output.
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Build message shown in EAS"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-branch-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: EAS preview APK from branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup mobile CI environment
+        uses: ./.github/actions/setup-mobile-ci
+        with:
+          expo-token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build preview APK on EAS
+        id: build
+        working-directory: apps/mobile
+        env:
+          MSG: ${{ inputs.message || github.ref_name }}
+        run: |
+          eas build \
+            --platform android \
+            --profile preview \
+            --message "$MSG" \
+            --non-interactive \
+            --json > build.json
+          BUILD_ID=$(jq -r '.[0].id // empty' build.json)
+          APK_URL=$(jq -r '.[0].artifacts.buildUrl // empty' build.json)
+          echo "build-id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "apk-url=$APK_URL" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Branch APK"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| EAS build id | \`$BUILD_ID\` |"
+            echo "| APK download | $APK_URL |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "APK_URL=$APK_URL"
