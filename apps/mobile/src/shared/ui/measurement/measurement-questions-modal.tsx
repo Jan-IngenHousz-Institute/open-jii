@@ -3,8 +3,6 @@ import { Clock, Flag, FlaskConical, MessageCircleMore, X } from "lucide-react-na
 import React, { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
-import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { isUnsynced as isUnsyncedStatus } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
@@ -15,22 +13,25 @@ import {
 } from "~/shared/measurements/measurement-annotations";
 import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 
 interface MeasurementQuestionsModalProps {
   visible: boolean;
   measurement: StoredMeasurement;
   onClose: () => void;
+  /** Persists an edited comment; the caller owns where it is stored. */
+  onSaveComment: (text: string) => Promise<void>;
 }
 
 export function MeasurementQuestionsModal({
   visible,
   measurement,
   onClose,
+  onSaveComment,
 }: MeasurementQuestionsModalProps) {
   const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
   const insets = useSafeAreaInsets();
-  const { updateMeasurementComment } = useMeasurements();
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
 
@@ -47,7 +48,7 @@ export function MeasurementQuestionsModal({
   const currentFlagType = getFlagTypeFromMeasurementResult(measurementResult);
 
   const handleSaveComment = async (text: string) => {
-    await updateMeasurementComment(measurement.id, measurement.data, text);
+    await onSaveComment(text);
     setCurrentComment(text);
     setCommentModalVisible(false);
   };

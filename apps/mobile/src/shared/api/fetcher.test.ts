@@ -1,6 +1,7 @@
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { customApiFetcher } from "~/shared/api/fetcher";
+import { refreshSession } from "~/features/auth/api/refresh.api";
+import { configureAuthRefresh, customApiFetcher } from "~/shared/api/fetcher";
 
 const { mockTsRestFetch, mockGetSession, mockSignOut, mockGetCookie } = vi.hoisted(() => ({
   mockTsRestFetch: vi.fn(),
@@ -32,6 +33,14 @@ describe("customApiFetcher", () => {
     mockSignOut.mockReset();
     mockGetCookie.mockReset();
     mockGetCookie.mockReturnValue("sessionToken=cookie");
+    // Same wiring as shared/composition/auth-wiring.ts, with the mocked client.
+    configureAuthRefresh({
+      getCookie: () => mockGetCookie(),
+      refreshSession,
+      signOut: async () => {
+        await mockSignOut();
+      },
+    });
   });
 
   const args = {

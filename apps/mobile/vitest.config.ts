@@ -39,10 +39,11 @@ export default defineConfig({
         functions: 35,
         // Per-layer floors are set just under today's measured coverage so a
         // future regression in a critical area trips CI long before the global
-        // average moves. Today's services/ floor is dragged down by 22/26 files
-        // having no tests yet — ratchet upward as tests are added.
-        "src/features/**/services/**": { lines: 50, statements: 50, branches: 40, functions: 50 },
-        "src/features/**/hooks/**": { lines: 60, statements: 60, branches: 40, functions: 50 },
+        // average moves. Ratchet upward as tests are added (raised after the
+        // DDD finishing pass added domain/services/hooks suites).
+        "src/features/**/domain/**": { lines: 85, statements: 85, branches: 75, functions: 80 },
+        "src/features/**/services/**": { lines: 65, statements: 65, branches: 55, functions: 65 },
+        "src/features/**/hooks/**": { lines: 70, statements: 70, branches: 50, functions: 60 },
         "src/shared/db/**": { lines: 75, statements: 75, branches: 65, functions: 75 },
         "src/shared/api/**": { lines: 70, statements: 70, branches: 60, functions: 70 },
       },

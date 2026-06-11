@@ -90,6 +90,34 @@ Constructor takes a `transportFactory` so tests inject a fake instead of mocking
 
 ---
 
+## Architecture conventions
+
+### Boundaries
+
+Feature folders (`features/<f>/`) expose their `hooks/`, `stores/`, `services/`, `utils/` and types; `screens/` and `components/` are private to the feature. `shared/` may never import from `features/` — except `shared/composition/`, the sanctioned wiring layer (and test files, which wire features the way composition does). Enforced by `no-restricted-imports` blocks in `eslint.config.mjs`; the legacy lists there only shrink.
+
+### Domain modules
+
+Pure rules live in `features/<f>/domain/` as per-transition functions returning `Partial<State>` plus derivation predicates; zustand stores are thin wrappers whose actions delegate (`nextStep: () => set(nextStepState)`). Reference implementations: `measurement-flow/domain/flow-transitions.ts` + `domain/iteration.ts`, `calibration/domain/calibration-transitions.ts`. Imperative multi-store orchestration goes in a feature service (`measurement-flow/services/flow-actions.ts`: `advanceWithAnswer`, `teardownFlow`) — components never run logic over `getState()`.
+
+### Flow session persistence
+
+The two flow stores (`measurement-flow-storage`, `flow-answers-storage`) are pinned at persist `version: 0`; their `partialize` output is the wire format, locked by `flow-store-persistence.test.ts`. Renaming/removing a persisted field without a version bump + real `migrate` silently wipes a paused field flow. Cross-store consistency after hydration is enforced by `stores/flow-rehydration-guard.ts`, mounted at boot.
+
+### Device ops
+
+`connection/services/device-connection-manager/device-connection.ts` holds the single `Record<DeviceType, ops>` decision table over transports (connect/disconnect/unpair/createExecutor). Nothing else switches on `device.type`. Frame parsing is one shared `parseMultispeqFrame` for every transport. Disconnect detection (native event + query-cache subscriber) is `mountConnectionLifecycle`, mounted once at boot like the Outbox bridge. Battery is the react-query cache via `useBatteryLevel` — no store mirror.
+
+### Composition root
+
+`shared/composition/` is where singletons are built and features are wired together: `upload.ts` (Transport→Outbox), `app-providers.tsx` (provider pyramid), `app-bootstrap.tsx` (boot effects: outbox bridge, connection lifecycle, rehydration guard, auth-wiring side effect), `auth-wiring.ts` (fetcher 401 seam), `prefetch-offline-data.ts`. The expo-router layer stays thin.
+
+### User-facing strings
+
+No hardcoded user-visible English. Toasts/alerts resolve through i18n (`useTranslation` in hooks/components, `i18n.t` in services) with keys in BOTH `en-US` and `nl-NL`. Error feedback lives in hooks/mutation callbacks, not component bodies; the global `QueryCache.onError` shows `error.body.message` when the API provided copy and a translated generic otherwise.
+
+---
+
 ## External systems referenced
 
 ### AWS IoT Core
