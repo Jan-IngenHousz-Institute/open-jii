@@ -118,10 +118,7 @@ describe("CommentModal", () => {
 
     expect(onSave).toHaveBeenCalledWith("Updated note");
   });
-
-  // OJD-1562: a controlled `value` made RNGH's TextInput reset the Android cursor
-  // to the start on every keystroke. The field must stay uncontrolled (seeded by
-  // defaultValue, read via onChangeText) so the native input owns its cursor.
+  
   it("keeps the comment input uncontrolled so the native cursor is preserved", () => {
     render(<CommentModal {...defaultProps} initialText="Existing note" />);
 
@@ -129,8 +126,6 @@ describe("CommentModal", () => {
     expect(input.props.value).toBeUndefined();
     expect(input.props.defaultValue).toBe("Existing note");
 
-    // Editing in place must not start driving `value` or change defaultValue
-    // (which would force a remount), either of which resets the cursor.
     fireEvent.changeText(input, "Existing notes");
     const inputAfterEdit = screen.getByPlaceholderText("Enter your comment here...");
     expect(inputAfterEdit.props.value).toBeUndefined();
