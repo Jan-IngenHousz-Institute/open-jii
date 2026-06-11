@@ -13,14 +13,9 @@ const FEATURES = [
   "recent-measurements",
 ];
 
-// Boundary ratchet: files below are accepted exceptions. Shrink this list;
-// never add to it.
-// - measurements-header-actions renders connection's DeviceChip in the
-//   Recent header. Until the team decides how features publish widgets,
-//   this one cross-feature component import stays baselined.
-const LEGACY_CROSS_FEATURE_FILES = [
-  "src/features/recent-measurements/components/measurements-header-actions.tsx",
-];
+// Boundary ratchet: accepted exceptions only. Both lists are empty — keep
+// them that way; new violations are hard errors.
+const LEGACY_CROSS_FEATURE_FILES = [];
 
 const LEGACY_SHARED_TO_FEATURE_FILES = [];
 
