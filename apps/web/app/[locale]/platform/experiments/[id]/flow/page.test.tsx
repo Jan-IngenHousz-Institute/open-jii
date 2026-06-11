@@ -42,7 +42,7 @@ vi.mock("@/components/flow-editor/flow-editor", () => ({
   ),
 }));
 
-vi.mock("@/components/workbook/workbook-editor", () => ({
+vi.mock("@/features/workbooks/components/workbook-editor", () => ({
   WorkbookEditor: ({ cells, readOnly }: { cells: unknown[]; readOnly?: boolean }) => (
     <div data-testid="workbook-editor" data-readonly={readOnly ? "true" : "false"}>
       Workbook Editor ({cells.length} cells)

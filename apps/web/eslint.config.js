@@ -23,7 +23,18 @@ const LEGACY_SHARED_TO_FEATURE_FILES = [];
 
 // Migration-only: features may still import legacy layer dirs while those
 // dirs are dissolved into features/ and shared/. Must end empty.
-const LEGACY_FEATURE_TO_LEGACY_DIR_FILES = [];
+const LEGACY_FEATURE_TO_LEGACY_DIR_FILES = [
+  "features/workbooks/components/cells/macro-cell.tsx",
+  "features/workbooks/components/cells/output-cell-timeseries.tsx",
+  "features/workbooks/components/cells/output-cell.tsx",
+  "features/workbooks/components/cells/protocol-cell.test.tsx",
+  "features/workbooks/components/cells/protocol-cell.tsx",
+  "features/workbooks/components/macro-picker.tsx",
+  "features/workbooks/components/protocol-picker.tsx",
+  "features/workbooks/components/workbook-header.tsx",
+  "features/workbooks/hooks/useWorkbookExecution/useWorkbookExecution.test.ts",
+  "features/workbooks/hooks/useWorkbookExecution/useWorkbookExecution.ts",
+];
 
 // restrictEnvAccess also configures no-restricted-imports; flat config
 // replaces rather than merges, so every composite below re-includes it.

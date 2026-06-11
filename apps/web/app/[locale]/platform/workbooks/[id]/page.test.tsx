@@ -10,7 +10,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import WorkbookOverviewPage from "./page";
 
-vi.mock("@/components/workbook/workbook-code-editor", () => ({
+vi.mock("@/features/workbooks/components/workbook-code-editor", () => ({
   WorkbookCodeEditor: ({ value }: { value: string }) => (
     <pre data-testid="code-editor">{value}</pre>
   ),

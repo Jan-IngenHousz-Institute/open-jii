@@ -3,11 +3,11 @@
 import {
   getWorkbookCellSummary,
   WorkbookCellSummary,
-} from "@/components/workbook/workbook-cell-summary";
-import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
-import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
+} from "@/features/workbooks/components/workbook-cell-summary";
+import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
+import { useWorkbookVersions } from "@/features/workbooks/hooks/useWorkbookVersions/useWorkbookVersions";
 import { useLocale } from "@/shared/i18n/useLocale";
+import { WorkbookVersionBadge } from "@/shared/ui/workbook-version-badge";
 import { formatDate } from "@/shared/utils/date";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";

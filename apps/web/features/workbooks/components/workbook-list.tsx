@@ -1,8 +1,8 @@
 "use client";
 
-import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
-import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
-import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkbookDelete";
+import { WorkbookCellSummary } from "@/features/workbooks/components/workbook-cell-summary";
+import { useWorkbookCreate } from "@/features/workbooks/hooks/useWorkbookCreate/useWorkbookCreate";
+import { useWorkbookDelete } from "@/features/workbooks/hooks/useWorkbookDelete/useWorkbookDelete";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { formatDate } from "@/shared/utils/date";
 import { Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";

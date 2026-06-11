@@ -1,6 +1,6 @@
 "use client";
 
-import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
+import { useWorkbookUpdate } from "@/features/workbooks/hooks/useWorkbookUpdate/useWorkbookUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { AutosaveIndicator } from "@/shared/ui/autosave/autosave-indicator";
 import { useAutosaveStatus } from "@/shared/ui/autosave/autosave-status-context";

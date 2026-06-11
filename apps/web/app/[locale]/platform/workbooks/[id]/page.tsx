@@ -1,10 +1,10 @@
 "use client";
 
-import { EditableWorkbookTitle } from "@/components/workbook/editable-workbook-title";
-import { WorkbookEditor } from "@/components/workbook/workbook-editor";
-import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
-import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
+import { EditableWorkbookTitle } from "@/features/workbooks/components/editable-workbook-title";
+import { WorkbookEditor } from "@/features/workbooks/components/workbook-editor";
+import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
+import { useWorkbookExecution } from "@/features/workbooks/hooks/useWorkbookExecution/useWorkbookExecution";
+import { useWorkbookUpdate } from "@/features/workbooks/hooks/useWorkbookUpdate/useWorkbookUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useAutosave } from "@/shared/hooks/useAutosave";
 import { useReportAutosaveStatus } from "@/shared/ui/autosave/autosave-status-context";

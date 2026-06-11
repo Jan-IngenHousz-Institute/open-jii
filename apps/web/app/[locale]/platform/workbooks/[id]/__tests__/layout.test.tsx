@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import WorkbookLayout from "../layout";
 
-vi.mock("@/components/workbook-overview/workbook-layout-content", () => ({
+vi.mock("@/features/workbooks/components/workbook-overview/workbook-layout-content", () => ({
   WorkbookLayoutContent: ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div data-testid="workbook-layout-content" data-id={id}>
       {children}
@@ -24,7 +24,7 @@ vi.mock("@/shared/ui/error-display", () => ({
 }));
 
 const mockUseWorkbook = vi.fn();
-vi.mock("@/hooks/workbook/useWorkbook/useWorkbook", () => ({
+vi.mock("@/features/workbooks/hooks/useWorkbook/useWorkbook", () => ({
   useWorkbook: (...args: unknown[]): unknown => mockUseWorkbook(...args),
 }));
 

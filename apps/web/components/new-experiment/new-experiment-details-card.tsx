@@ -1,3 +1,4 @@
+import { useWorkbookList } from "@/features/workbooks/hooks/useWorkbookList/useWorkbookList";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
@@ -19,8 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-
-import { useWorkbookList } from "../../hooks/workbook/useWorkbookList/useWorkbookList";
 
 interface NewExperimentDetailsCardProps {
   form: UseFormReturn<CreateExperimentBody>;

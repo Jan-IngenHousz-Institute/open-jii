@@ -1,12 +1,12 @@
 "use client";
 
+import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
+
 import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
-
-import { useWorkbook } from "../../../../hooks/workbook/useWorkbook/useWorkbook";
 
 interface DetailsSectionProps {
   formData: CreateExperimentBody;

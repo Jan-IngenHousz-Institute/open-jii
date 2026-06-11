@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 import { ListWorkbooks } from "./list-workbooks";
 
 // Mock WorkbookList to keep test focused
-vi.mock("~/components/workbook-list", () => ({
+vi.mock("@/features/workbooks/components/workbook-list", () => ({
   WorkbookList: ({
     workbooks,
     isLoading,

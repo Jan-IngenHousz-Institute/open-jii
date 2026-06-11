@@ -1,12 +1,12 @@
 "use client";
 
-import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
+import { WorkbookList } from "@/features/workbooks/components/workbook-list";
+import { useWorkbookCreate } from "@/features/workbooks/hooks/useWorkbookCreate/useWorkbookCreate";
+import { useWorkbooks } from "@/features/workbooks/hooks/useWorkbooks/useWorkbooks";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { WorkbookList } from "~/components/workbook-list";
-import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
