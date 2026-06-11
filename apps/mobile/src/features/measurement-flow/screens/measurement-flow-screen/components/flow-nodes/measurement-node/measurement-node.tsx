@@ -1,16 +1,9 @@
 import { clsx } from "clsx";
 import { Info } from "lucide-react-native";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { View, Text } from "react-native";
-import { toast } from "sonner-native";
-import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
-import { useScanner } from "~/features/connection/hooks/use-scan-manager";
-import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
-import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { playSound } from "~/features/measurement-flow/utils/play-sound";
+import { useMeasurementCapture } from "~/features/measurement-flow/hooks/use-measurement-capture";
 import { useTranslation } from "~/shared/i18n";
-import { createLogger } from "~/shared/observability/logger";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -18,8 +11,6 @@ import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
 import { ReadyState } from "./components/ready-state";
 import { ScanningState } from "./components/scanning-state";
-
-const log = createLogger("measurement-node");
 
 interface MeasurementNodeProps {
   content: {
@@ -31,72 +22,17 @@ interface MeasurementNodeProps {
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const { protocol } = useProtocol(content.protocolId);
   const {
-    executeScan,
+    device,
+    protocol,
     isScanning,
-    reset: resetScan,
-    result: scanResult,
-    error: scanError,
-    cancelCommand,
-  } = useScanner();
-  const { data: device } = useConnectedDevice();
-  const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
-    useMeasurementFlowStore();
-  const openDeviceSheet = useDeviceSheetStore((s) => s.open);
-  useEffect(() => {
-    setProtocolId(content.protocolId);
-  }, [setProtocolId, content.protocolId]);
-
-  // Keep a stable ref to resetScan so the disconnect-cleanup effect below
-  // doesn't need to list it as a dependency (avoids any memoisation concerns).
-  const resetScanRef = useRef(resetScan);
-  resetScanRef.current = resetScan;
-
-  // When the device unexpectedly disconnects while a scan is in progress,
-  // reset the scan so the user can reconnect and retry cleanly rather than
-  // being stuck on the scanning screen.
-  useEffect(() => {
-    if (!device && isScanning) {
-      resetScanRef.current();
-    }
-  }, [device, isScanning]);
-
-  const handleCardPress = (flowStepIndex: number) => {
-    navigateToQuestionFromOverview(flowStepIndex);
-  };
-
-  const handleCancelMeasurement = () => {
-    void cancelCommand();
-    resetScan();
-  };
-
-  const handleStartScan = async () => {
-    if (!device) {
-      toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
-      return;
-    }
-    if (!content.protocolId) {
-      toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
-      return;
-    }
-    if (!protocol) {
-      toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
-      return;
-    }
-
-    resetScan();
-    try {
-      const result = await executeScan(protocol);
-      setScanResult(result);
-      // Play system notification sound when measurement completes
-      await playSound();
-      nextStep();
-    } catch (error) {
-      log.error("scan error", { err: (error as Error)?.message });
-      toast.error(t("measurementFlow:measurementNode.toast.scanError"));
-    }
-  };
+    scanResult,
+    scanError,
+    startScan,
+    cancelScan,
+    openDeviceSheet,
+    navigateToQuestionFromOverview,
+  } = useMeasurementCapture(content);
 
   const renderState = () => {
     if (!device) {
@@ -112,7 +48,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <View className="flex-row gap-4 px-4 py-3">
             <Button
               title={t("measurementFlow:measurementNode.retryMeasurement")}
-              onPress={handleStartScan}
+              onPress={startScan}
               variant="tertiary"
               style={{ flex: 1, height: 44, borderColor: "transparent" }}
             />
@@ -142,7 +78,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
             <Button
               title={t("measurementFlow:measurementNode.cancelMeasurement")}
-              onPress={handleCancelMeasurement}
+              onPress={cancelScan}
               style={{ height: 44 }}
             />
           </View>
@@ -152,11 +88,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
     return (
       <View className="flex-1">
-        <ReadyState onCardPress={handleCardPress} />
+        <ReadyState onCardPress={navigateToQuestionFromOverview} />
         <View className="px-4 py-3">
           <Button
             title={t("measurementFlow:measurementNode.startMeasurement")}
-            onPress={handleStartScan}
+            onPress={startScan}
             style={{ height: 44 }}
           />
         </View>

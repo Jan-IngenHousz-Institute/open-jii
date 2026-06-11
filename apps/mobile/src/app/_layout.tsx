@@ -23,6 +23,7 @@ import { Toaster } from "sonner-native";
 import { AlertsBar } from "~/features/alerts/components/alerts-container";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
+import { installFlowRehydrationGuard } from "~/features/measurement-flow/stores/flow-rehydration-guard";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
 import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
 import { getOutbox } from "~/shared/composition/upload";
@@ -191,8 +192,12 @@ function OutboxBootstrap() {
   const queryClient = useQueryClient();
   useEffect(() => {
     const outbox = getOutbox();
-    const unmount = mountOutboxBridge({ outbox, queryClient });
-    return unmount;
+    const unmountBridge = mountOutboxBridge({ outbox, queryClient });
+    const unmountGuard = installFlowRehydrationGuard();
+    return () => {
+      unmountBridge();
+      unmountGuard();
+    };
   }, [queryClient]);
   return null;
 }

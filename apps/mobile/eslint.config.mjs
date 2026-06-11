@@ -16,7 +16,6 @@ const FEATURES = [
 // Boundary ratchet: files below predate the boundary rules and are being
 // migrated (see plan stages). Shrink this list; never add to it.
 const LEGACY_CROSS_FEATURE_FILES = [
-  "src/features/experiments/hooks/use-precached-experiment-data.ts",
   "src/features/experiments/screens/experiments-screen/components/table-detail-modal.tsx",
   "src/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/analysis-node/analysis-node.tsx",
   "src/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/questions-only-submit-node.tsx",
@@ -25,9 +24,6 @@ const LEGACY_CROSS_FEATURE_FILES = [
 
 const LEGACY_SHARED_TO_FEATURE_FILES = [
   "src/shared/api/fetcher.ts",
-  "src/shared/db/prefetch-offline-data.ts",
-  "src/shared/measurements/convert-cycle-answers-to-array.ts",
-  "src/shared/measurements/convert-cycle-answers-to-array.test.ts",
   "src/shared/ui/widgets/device-chip.tsx",
   "src/shared/ui/widgets/dev-indicator.tsx",
 ];

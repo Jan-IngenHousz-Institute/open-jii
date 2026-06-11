@@ -2,9 +2,8 @@ import { clsx } from "clsx";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTranslation } from "~/shared/i18n";
+import { QuestionContent } from "~/shared/measurements/flow-node";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-
-import { QuestionContent } from "../../../../types";
 
 export interface SingleChoiceQuestionProps {
   content: QuestionContent;

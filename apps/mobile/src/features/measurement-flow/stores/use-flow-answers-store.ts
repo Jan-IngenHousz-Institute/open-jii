@@ -65,6 +65,12 @@ export const useFlowAnswersStore = create<FlowAnswersStore>()(
     {
       name: "flow-answers-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      // The persisted shape is the v0 wire format, pinned by
+      // flow-store-persistence.test.ts. NEVER rename/remove a field here
+      // without bumping `version` and writing a real `migrate` — zustand
+      // silently DROPS persisted state on version mismatch.
+      version: 0,
+      migrate: (persisted) => persisted as FlowAnswersStore,
       partialize: (state) => ({
         answersHistory: state.answersHistory,
         autoincrementSettings: state.autoincrementSettings,

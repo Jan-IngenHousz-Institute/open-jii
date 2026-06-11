@@ -11,7 +11,7 @@ interface AnalysisMacroResultProps {
   macro: Macro | undefined;
   isLoading: boolean;
   macroId: string;
-  scanResult: object;
+  scanResult: object | undefined;
   onCommentPress: () => void;
 }
 

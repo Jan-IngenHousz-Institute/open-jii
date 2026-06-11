@@ -2,12 +2,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useIterationStateSync } from "~/features/measurement-flow/hooks/use-iteration-state-sync";
-import type {
-  FlowNode,
-  QuestionContent,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import type { FlowNode, QuestionContent } from "~/shared/measurements/flow-node";
 
 // The jsdom project has no setup file, so stub the native storage both stores persist to.
 vi.mock("@react-native-async-storage/async-storage", () => ({

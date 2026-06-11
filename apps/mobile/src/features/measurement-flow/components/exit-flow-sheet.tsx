@@ -4,11 +4,9 @@ import { ChevronRight, Pause, Trash2 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef } from "react";
 import { Keyboard, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
+import { teardownFlow } from "~/features/measurement-flow/services/flow-actions";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
-import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -55,9 +53,7 @@ export function ExitFlowSheet() {
   };
 
   const handleDiscard = () => {
-    useMeasurementFlowStore.getState().resetFlow();
-    useFlowAnswersStore.getState().clearHistory();
-    useExperimentSelectionStore.getState().setSelectedExperimentId(undefined);
+    teardownFlow();
     close();
     dismissFlow();
   };

@@ -1,23 +1,25 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { FlowState, ScanResult } from "~/features/measurement-flow/domain/flow-transitions";
 import {
-  FlowNode,
-  isQuestionsOnlyFlow,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+  dismissQuestionsSubmitState,
+  finishFlowState,
+  initialFlowState,
+  navigateToQuestionFromOverviewState,
+  nextStepState,
+  previousStepState,
+  resetFlowState,
+  retryIterationState,
+  returnToOverviewState,
+} from "~/features/measurement-flow/domain/flow-transitions";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
-interface MeasurementFlowStore {
-  experimentId?: string;
-  experimentLabel?: string;
-  protocolId?: string;
-  currentStep: number;
-  flowNodes: FlowNode[];
-  currentFlowStep: number;
-  iterationCount: number;
-  isFlowFinished: boolean;
-  isQuestionsSubmitPending: boolean;
-  scanResult?: any;
-  isFromOverview: boolean;
+interface MeasurementFlowStore extends FlowState {
+  // AutoProceededSummary anchor: first manual question at the start of the
+  // current iteration (set by useIterationStateSync). Deliberately NOT
+  // persisted — on relaunch it is recomputed by the resume-path sync.
+  iterationAnchor?: { iteration: number; nodeId?: string };
 
   setExperimentId: (experimentId: string, experimentLabel?: string) => void;
   setProtocolId: (protocolId: string) => void;
@@ -31,7 +33,8 @@ interface MeasurementFlowStore {
   resetFlow: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
-  setScanResult: (result: any) => void;
+  setScanResult: (result: ScanResult | undefined) => void;
+  setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
@@ -41,20 +44,14 @@ interface MeasurementFlowStore {
 // is itself the "pause": the next launch rehydrates the same active flow
 // and the home screen renders the resume card based on whether experimentId
 // is set. No separate snapshot store needed.
+//
+// All progression rules live in ../domain/flow-transitions.ts as pure
+// functions; the actions here are one-line delegations.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
-      experimentId: undefined,
-      experimentLabel: undefined,
-      protocolId: undefined,
-      currentStep: 0,
-      flowNodes: [],
-      currentFlowStep: 0,
-      iterationCount: 0,
-      isFlowFinished: false,
-      isQuestionsSubmitPending: false,
-      scanResult: undefined,
-      isFromOverview: false,
+      ...initialFlowState,
+      iterationAnchor: undefined,
 
       setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
       setProtocolId: (protocolId) => set({ protocolId }),
@@ -62,68 +59,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
 
-      nextStep: () =>
-        set((state) => {
-          if (state.isFromOverview) {
-            return {
-              currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-              isFromOverview: false,
-            };
-          }
-          if (state.experimentId && state.flowNodes.length > 0) {
-            const nextFlowStep = state.currentFlowStep + 1;
-            const isCompleted = nextFlowStep >= state.flowNodes.length;
-            if (isCompleted) {
-              if (isQuestionsOnlyFlow(state.flowNodes)) {
-                return {
-                  isQuestionsSubmitPending: true,
-                  currentFlowStep: state.flowNodes.length,
-                };
-              }
-              return {
-                currentFlowStep: 0,
-                iterationCount: state.iterationCount + 1,
-              };
-            }
-            return { currentFlowStep: nextFlowStep };
-          }
-          return { currentStep: state.currentStep + 1 };
-        }),
-
-      previousStep: () =>
-        set((state) => {
-          if (state.isFromOverview) {
-            return {
-              currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-              isFromOverview: false,
-            };
-          }
-          if (state.experimentId && state.flowNodes.length > 0) {
-            if (state.isQuestionsSubmitPending) {
-              return {
-                isQuestionsSubmitPending: false,
-                currentFlowStep: state.flowNodes.length - 1,
-              };
-            }
-            if (state.currentFlowStep > 0) {
-              return { currentFlowStep: state.currentFlowStep - 1 };
-            } else {
-              return {
-                experimentId: undefined,
-                experimentLabel: undefined,
-                currentStep: 0,
-                flowNodes: [],
-                currentFlowStep: 0,
-                iterationCount: 0,
-                isFlowFinished: false,
-                isQuestionsSubmitPending: false,
-                scanResult: undefined,
-                protocolId: undefined,
-              };
-            }
-          }
-          return { currentStep: Math.max(0, state.currentStep - 1) };
-        }),
+      nextStep: () => set(nextStepState),
+      previousStep: () => set(previousStepState),
 
       // Route through resetFlow so the persisted slice (flowNodes,
       // currentFlowStep, iterationCount, scanResult, …) is cleared too.
@@ -131,71 +68,32 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0 }),
 
-      resetFlow: () =>
-        set({
-          experimentId: undefined,
-          experimentLabel: undefined,
-          currentStep: 0,
-          flowNodes: [],
-          currentFlowStep: 0,
-          iterationCount: 0,
-          isFlowFinished: false,
-          isQuestionsSubmitPending: false,
-          scanResult: undefined,
-          protocolId: undefined,
-          isFromOverview: false,
-        }),
+      resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
 
-      retryCurrentIteration: () =>
-        set(() => ({
-          currentFlowStep: 0,
-          isQuestionsSubmitPending: false,
-          scanResult: undefined,
-          isFromOverview: false,
-        })),
+      retryCurrentIteration: () => set(retryIterationState()),
 
-      finishFlow: () =>
-        set((state) => ({
-          currentFlowStep: state.flowNodes.length,
-          isFlowFinished: true,
-          isQuestionsSubmitPending: false,
-          isFromOverview: false,
-        })),
+      finishFlow: () => set(finishFlowState),
 
       setScanResult: (result) => set({ scanResult: result }),
+      setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
-      dismissQuestionsSubmit: () =>
-        set((state) => ({
-          isQuestionsSubmitPending: false,
-          currentFlowStep: 0,
-          iterationCount: state.iterationCount + 1,
-          scanResult: undefined,
-        })),
+      dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
 
       navigateToQuestionFromOverview: (questionIndex) =>
-        set({
-          currentFlowStep: questionIndex,
-          isFromOverview: true,
-          isQuestionsSubmitPending: false,
-        }),
+        set(navigateToQuestionFromOverviewState(questionIndex)),
 
-      returnToOverview: () =>
-        set((state) => {
-          if (isQuestionsOnlyFlow(state.flowNodes)) {
-            return {
-              isQuestionsSubmitPending: true,
-              isFromOverview: false,
-            };
-          }
-          return {
-            currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-            isFromOverview: false,
-          };
-        }),
+      returnToOverview: () => set(returnToOverviewState),
     }),
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      // The persisted shape is the v0 wire format, pinned by
+      // flow-store-persistence.test.ts. NEVER rename/remove a field here
+      // without bumping `version` and writing a real `migrate` — zustand
+      // silently DROPS persisted state on version mismatch, wiping a field
+      // researcher's paused flow.
+      version: 0,
+      migrate: (persisted) => persisted as MeasurementFlowStore,
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,

@@ -1,9 +1,6 @@
-import { isQuestionsOnlyFlow } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
-import type {
-  FlowNode,
-  FlowNodeType,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
+import type { FlowNode, FlowNodeType } from "~/shared/measurements/flow-node";
 
 export type StepTypeKey =
   | "instruction"
