@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
-import { FlowNode } from "../../../types";
+import { FlowNode } from "~/shared/measurements/flow-node";
 import { evaluateAndRoute } from "../utils/evaluate-and-route";
 
 interface BranchNodeProps {

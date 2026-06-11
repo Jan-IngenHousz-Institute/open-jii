@@ -4,7 +4,7 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import type { BranchCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { evaluateBranch } from "@repo/api/utils/evaluate-branch";
 
-import { FlowNode } from "../../../types";
+import { FlowNode } from "~/shared/measurements/flow-node";
 import { hydrateCells } from "./hydrate-cells";
 
 // Caps branch goto-loops; mirrors web's useWorkbookExecution MAX_VISITS_PER_CELL.

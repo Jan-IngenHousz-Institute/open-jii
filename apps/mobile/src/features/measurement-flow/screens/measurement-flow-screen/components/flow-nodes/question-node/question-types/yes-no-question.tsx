@@ -2,9 +2,8 @@ import { Check, X } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useTranslation } from "~/shared/i18n";
+import { QuestionContent } from "~/shared/measurements/flow-node";
 import { Button } from "~/shared/ui/Button";
-
-import { QuestionContent } from "../../../../types";
 
 export interface YesNoQuestionProps {
   content: QuestionContent;

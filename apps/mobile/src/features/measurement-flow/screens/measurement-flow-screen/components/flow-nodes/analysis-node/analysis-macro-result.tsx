@@ -2,15 +2,15 @@ import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
 import { MeasurementResult } from "~/features/measurement-flow/components/measurement-result/measurement-result";
-import type { ResolvedMacro } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useTranslation } from "~/shared/i18n";
+import type { ResolvedMacro } from "~/shared/measurements/flow-node";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface AnalysisMacroResultProps {
   macro: ResolvedMacro | undefined;
   isLoading: boolean;
   macroId: string;
-  scanResult: object;
+  scanResult: object | undefined;
   onCommentPress: () => void;
 }
 

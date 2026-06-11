@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { __testing_deriveStepInfo as deriveStepInfo } from "../use-flow-step-info";
 

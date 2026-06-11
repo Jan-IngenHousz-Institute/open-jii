@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type {
   BranchCell,

@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
-import type { AnalysisContent } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { AnalysisContent } from "~/shared/measurements/flow-node";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
