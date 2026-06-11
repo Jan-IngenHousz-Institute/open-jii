@@ -6,7 +6,7 @@
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, ArrayType, LongType
 import requests
 import pandas as pd
 from datetime import datetime
@@ -1215,6 +1215,7 @@ def raw_uploaded_data():
         StructField("created_by", StringType(), True),
         StructField("uploaded_at", TimestampType(), True),
         StructField("uploaded_data", StringType(), True),
+        StructField("row_index", LongType(), True),
     ])
 
     return (
@@ -1247,8 +1248,9 @@ def raw_uploaded_data():
 def experiment_uploaded_data():
     """Gold: rows from raw_uploaded_data with a per-row id, ready for the enriched view.
 
-    `id` mixes upload_id with monotonically_increasing_id to keep rows in the same
-    batch distinct — annotations join on this id and would collide otherwise.
+    id is upload_id plus the upload task's row_index, kept distinct so annotations
+    join uniquely. row_index is used instead of monotonically_increasing_id, which is
+    unsupported on streaming DataFrames.
     """
     return (
         dlt.read_stream(RAW_UPLOADED_DATA_TABLE)
@@ -1257,7 +1259,7 @@ def experiment_uploaded_data():
             F.concat_ws(
                 ":",
                 F.col("upload_id"),
-                F.monotonically_increasing_id().cast("string"),
+                F.col("row_index").cast("string"),
             ),
         )
         .select(
