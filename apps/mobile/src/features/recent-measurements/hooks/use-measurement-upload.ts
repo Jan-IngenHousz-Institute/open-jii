@@ -182,3 +182,5 @@ export function useMeasurementUpload() {
 
   return { isUploading: mutation.isPending, uploadMeasurement: mutation.mutateAsync };
 }
+
+export { prepareMeasurementForUpload as __testing_prepareMeasurementForUpload };
