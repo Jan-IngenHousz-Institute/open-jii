@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
+import { v4 as uuidv4 } from "uuid";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
@@ -43,6 +44,19 @@ function promptMeasurementFileSave(
   );
 }
 
+interface SharedUploadArgs {
+  timestamp: string;
+  timezone: string;
+  experimentName: string;
+  experimentId: string;
+  protocolId: string;
+  protocolName: string;
+  userId: string;
+  macro: { id: string; name: string; filename: string } | null;
+  questions: AnswerData[];
+  commentText?: string;
+}
+
 export function useMeasurementUpload() {
   const { saveMeasurement } = useMeasurements();
   const { t } = useTranslation(["common", "recentMeasurements"]);
@@ -52,7 +66,8 @@ export function useMeasurementUpload() {
     // there's no reason to pause the mutation off-network.
     networkMode: "always",
     mutationFn: async ({
-      rawMeasurement,
+      results,
+      bundle,
       timestamp,
       timezone,
       experimentName,
@@ -63,63 +78,91 @@ export function useMeasurementUpload() {
       macro,
       questions,
       commentText,
-    }: {
-      rawMeasurement: any;
-      timestamp: string;
-      timezone: string;
-      experimentName: string;
-      experimentId: string;
-      protocolId: string;
-      protocolName: string;
-      userId: string;
-      macro: { id: string; name: string; filename: string } | null;
-      questions: AnswerData[];
-      commentText?: string;
+    }: SharedUploadArgs & {
+      results: { rawMeasurement: any; device?: { id: string; name: string } }[];
+      bundle: boolean;
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
       // null === "object"` would otherwise slip a null through to
       // buildUploadPayload() and crash on `"sample" in null`, and a
       // silent success would let the flow advance with nothing saved.
-      if (rawMeasurement === null || typeof rawMeasurement !== "object") {
-        throw new Error(
-          `Invalid rawMeasurement: expected object, got ${rawMeasurement === null ? "null" : typeof rawMeasurement}`,
-        );
+      for (const { rawMeasurement } of results) {
+        if (rawMeasurement === null || typeof rawMeasurement !== "object") {
+          throw new Error(
+            `Invalid rawMeasurement: expected object, got ${rawMeasurement === null ? "null" : typeof rawMeasurement}`,
+          );
+        }
       }
-
-      const measurementData = buildUploadPayload({
-        rawMeasurement,
-        userId,
-        macro,
-        timestamp,
-        timezone,
-        questions,
-        commentText,
-      });
+      if (results.length === 0) {
+        throw new Error("No measurements to upload");
+      }
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });
-      const measurement = {
-        topic,
-        measurementResult: measurementData,
-        metadata: { experimentName, protocolName, timestamp: measurementData.timestamp },
-      };
+      // One bundle_id per multi-scan round; each row is still its own MQTT
+      // message in the ordinary envelope (see CONTEXT.md: Bundle).
+      const bundleId = bundle && results.length > 1 ? uuidv4() : undefined;
 
-      let savedId: string;
-      try {
-        savedId = await saveMeasurement(measurement, "pending");
-      } catch (storageError) {
-        log.error("Failed to save measurement to local storage", {
-          err: (storageError as Error)?.message,
+      const savedIds: string[] = [];
+      let lastStorageError: unknown;
+
+      for (let index = 0; index < results.length; index++) {
+        const { rawMeasurement, device } = results[index];
+        const measurementData = buildUploadPayload({
+          rawMeasurement,
+          userId,
+          macro,
+          timestamp,
+          timezone,
+          questions,
+          commentText,
+          bundle: bundleId
+            ? { bundle_id: bundleId, bundle_size: results.length, device_index: index }
+            : undefined,
+          fallbackDeviceId: device?.id,
         });
-        promptMeasurementFileSave(t, measurement);
-        // Rethrow so callers awaiting uploadMeasurement(...) can distinguish a
-        // failed local save from success and avoid advancing the flow with
-        // nothing persisted.
-        throw storageError;
+
+        const measurement = {
+          topic,
+          measurementResult: measurementData,
+          metadata: { experimentName, protocolName, timestamp: measurementData.timestamp },
+        };
+
+        try {
+          savedIds.push(await saveMeasurement(measurement, "pending"));
+        } catch (storageError) {
+          log.error("Failed to save measurement to local storage", {
+            err: (storageError as Error)?.message,
+          });
+          lastStorageError = storageError;
+          promptMeasurementFileSave(t, measurement);
+          // Keep saving the remaining devices' measurements; one bad row
+          // shouldn't discard the rest of the round.
+        }
       }
 
-      getOutbox().enqueue(savedId);
+      getOutbox().enqueueMany(savedIds);
+
+      // Rethrow when nothing persisted so callers awaiting the upload can
+      // distinguish a failed local save from success and avoid advancing the
+      // flow with nothing saved.
+      if (savedIds.length === 0) {
+        throw lastStorageError instanceof Error
+          ? lastStorageError
+          : new Error("Failed to save measurements");
+      }
     },
   });
 
-  return { isUploading: mutation.isPending, uploadMeasurement: mutation.mutateAsync };
+  return {
+    isUploading: mutation.isPending,
+    uploadMeasurements: mutation.mutateAsync,
+    uploadMeasurement: (args: SharedUploadArgs & { rawMeasurement: any }) => {
+      const { rawMeasurement, ...shared } = args;
+      return mutation.mutateAsync({
+        ...shared,
+        results: [{ rawMeasurement }],
+        bundle: false,
+      });
+    },
+  };
 }

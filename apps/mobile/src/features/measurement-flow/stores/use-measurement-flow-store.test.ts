@@ -31,6 +31,7 @@ function resetStore() {
     iterationCount: 0,
     isFlowFinished: false,
     isQuestionsSubmitPending: false,
+    scanResults: undefined,
     scanResult: undefined,
     isFromOverview: false,
     cells: [],
@@ -81,6 +82,18 @@ describe("useMeasurementFlowStore", () => {
       const payload = { foo: "bar" };
       useMeasurementFlowStore.getState().setScanResult(payload);
       expect(useMeasurementFlowStore.getState().scanResult).toBe(payload);
+    });
+
+    it("setScanResults stores per-device results and mirrors the first into scanResult", () => {
+      const device = { type: "usb", name: "MultispeQ A", id: "usb-a" } as const;
+      const results = [
+        { device, result: { from: "a" } },
+        { device: { ...device, id: "usb-b", name: "MultispeQ B" }, result: { from: "b" } },
+      ];
+      useMeasurementFlowStore.getState().setScanResults(results);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.scanResults).toBe(results);
+      expect(state.scanResult).toEqual({ from: "a" });
     });
 
     it("setFlowNodes resets currentFlowStep to 0", () => {
@@ -228,6 +241,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isFlowFinished).toBe(false);
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
     });
 
     it("decrements currentStep when no experiment is selected", () => {
@@ -268,6 +282,7 @@ describe("useMeasurementFlowStore", () => {
         iterationCount: 2,
         isFlowFinished: true,
         isQuestionsSubmitPending: true,
+        scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
         isFromOverview: true,
       });
@@ -281,6 +296,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isFlowFinished).toBe(false);
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
   });
@@ -291,6 +307,7 @@ describe("useMeasurementFlowStore", () => {
         currentFlowStep: 3,
         iterationCount: 2,
         isQuestionsSubmitPending: true,
+        scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
         isFromOverview: true,
       });
@@ -300,6 +317,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.iterationCount).toBe(2);
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
   });
@@ -327,6 +345,7 @@ describe("useMeasurementFlowStore", () => {
         currentFlowStep: 5,
         iterationCount: 1,
         isQuestionsSubmitPending: true,
+        scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
       });
       useMeasurementFlowStore.getState().dismissQuestionsSubmit();
@@ -335,6 +354,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.currentFlowStep).toBe(0);
       expect(state.iterationCount).toBe(2);
       expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
     });
   });
 

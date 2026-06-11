@@ -8,6 +8,14 @@ export interface MacroInfo {
   filename: string;
 }
 
+// Bundle correlation fields (see CONTEXT.md): embedded in each
+// otherwise-ordinary wire payload; no bundle entity exists anywhere.
+export interface BundleInfo {
+  bundle_id: string;
+  bundle_size: number;
+  device_index: number;
+}
+
 export interface BuildUploadPayloadArgs {
   rawMeasurement: any;
   userId: string;
@@ -16,6 +24,8 @@ export interface BuildUploadPayloadArgs {
   timezone: string;
   questions: AnswerData[];
   commentText?: string;
+  bundle?: BundleInfo;
+  fallbackDeviceId?: string;
 }
 
 // Pure: never mutates rawMeasurement or its sample entries. Macro filenames
@@ -28,6 +38,8 @@ export function buildUploadPayload({
   timezone,
   questions,
   commentText,
+  bundle,
+  fallbackDeviceId,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
 
@@ -49,6 +61,12 @@ export function buildUploadPayload({
     ...rawMeasurement,
     ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),
+    // The firmware-provided device_id wins; the local USB/BT id is a weak
+    // fallback (Android USB deviceIds are transient across replugs).
+    ...(rawMeasurement.device_id == null && fallbackDeviceId
+      ? { device_id: fallbackDeviceId }
+      : {}),
+    ...(bundle ?? {}),
   };
 
   // Compress the (large) sample field to reduce MQTT payload size.

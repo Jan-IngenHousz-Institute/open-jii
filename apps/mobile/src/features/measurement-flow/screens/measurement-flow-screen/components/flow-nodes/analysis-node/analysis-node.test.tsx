@@ -100,7 +100,11 @@ beforeEach(() => {
   actionBarProps.mockClear();
   useExperiments.mockReturnValue({ experiments: [{ value: "exp-1", label: "From Query" }] });
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
-  useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurement: vi.fn() });
+  useMeasurementUpload.mockReturnValue({
+    isUploading: false,
+    uploadMeasurement: vi.fn(),
+    uploadMeasurements: vi.fn(),
+  });
   useMeasurements.mockReturnValue({ updateMeasurementComment: vi.fn() });
   getSyncedUtcISO.mockReturnValue("2026-04-20T10:00:00.000Z");
   getSyncedLocalISO.mockReturnValue("2026-04-20T12:00:00.000+02:00");
@@ -177,8 +181,8 @@ describe("AnalysisNode upload with a command in the flow", () => {
   ] as unknown as FlowNode[];
 
   it("uploads the measurement even when a command node precedes the protocol", async () => {
-    const uploadMeasurement = vi.fn().mockResolvedValue(undefined);
-    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurement });
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
@@ -196,7 +200,11 @@ describe("AnalysisNode upload with a command in the flow", () => {
       await props?.onUpload();
     });
 
-    expect(uploadMeasurement).toHaveBeenCalledTimes(1);
-    expect(uploadMeasurement.mock.calls[0][0]).toMatchObject({ protocolId: "proto-1" });
+    expect(uploadMeasurements).toHaveBeenCalledTimes(1);
+    expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
+      protocolId: "proto-1",
+      bundle: false,
+      results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
+    });
   });
 });

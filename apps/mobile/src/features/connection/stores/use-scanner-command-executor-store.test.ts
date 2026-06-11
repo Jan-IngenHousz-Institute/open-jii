@@ -69,6 +69,8 @@ function createControllableExecutor(): ControllableExecutor {
 }
 
 const FAKE_DEVICE: Device = { type: "bluetooth-classic", name: "fake", id: "fake-id" };
+const USB_DEVICE_A: Device = { type: "usb", name: "MultispeQ A", id: "usb-a" };
+const USB_DEVICE_B: Device = { type: "usb", name: "MultispeQ B", id: "usb-b" };
 
 async function attachExecutor(): Promise<ControllableExecutor> {
   const exec = createControllableExecutor();
@@ -77,8 +79,16 @@ async function attachExecutor(): Promise<ControllableExecutor> {
   return exec;
 }
 
+async function addExecutorFor(device: Device): Promise<ControllableExecutor> {
+  const exec = createControllableExecutor();
+  createMultispeqCommandExecutor.mockResolvedValueOnce(exec);
+  await useScannerCommandExecutorStore.getState().addDevice(device);
+  return exec;
+}
+
 function resetStore() {
   useScannerCommandExecutorStore.setState({
+    executors: new Map(),
     commandExecutor: undefined,
     commandResponse: undefined,
     isExecuting: false,
@@ -158,13 +168,13 @@ describe("useScannerCommandExecutorStore", () => {
         .executeCommand("battery", { background: true });
 
       // A background command (battery poll) must not flip any measurement-facing
-      // state — otherwise it resets the elapsed timer / estimate mid-scan.
+      // state, otherwise it resets the elapsed timer / estimate mid-scan.
       const mid = useScannerCommandExecutorStore.getState();
       expect(mid.isExecuting).toBe(false);
       expect(mid.scanStartedAt).toBeUndefined();
       expect(mid.estimatedMs).toBeUndefined();
 
-      // No progress subscription either — emissions are ignored.
+      // No progress subscription either; emissions are ignored.
       exec.emitProgress({ phase: "receiving", chunks: 1, bytes: 4, elapsedMs: 1, lastEventAt: 1 });
       expect(useScannerCommandExecutorStore.getState().progress).toBeUndefined();
 
@@ -228,7 +238,7 @@ describe("useScannerCommandExecutorStore", () => {
       expect(stateMidCancel.isCancelled).toBe(true);
       expect(stateMidCancel.isExecuting).toBe(false);
 
-      // cancel() is a dedicated method — no second execute() is issued.
+      // cancel() is a dedicated method; no second execute() is issued.
       expect(exec.cancelCalls()).toBe(1);
       expect(exec.calls).toHaveLength(1);
       expect(exec.calls[0]?.command).toBe("protocol");
@@ -268,6 +278,129 @@ describe("useScannerCommandExecutorStore", () => {
       );
 
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe("multi-device", () => {
+    it("addDevice keeps existing entries (add, not replace)", async () => {
+      await addExecutorFor(USB_DEVICE_A);
+      await addExecutorFor(USB_DEVICE_B);
+
+      const { executors } = useScannerCommandExecutorStore.getState();
+      expect(Array.from(executors.keys())).toEqual(["usb-a", "usb-b"]);
+    });
+
+    it("legacy mirrors track the primary (first) device", async () => {
+      const execA = await addExecutorFor(USB_DEVICE_A);
+      await addExecutorFor(USB_DEVICE_B);
+
+      const pendingA = useScannerCommandExecutorStore
+        .getState()
+        .executeCommandOn("usb-a", "protocol");
+      execA.calls[0].resolve({ from: "a" });
+      await pendingA;
+
+      const state = useScannerCommandExecutorStore.getState();
+      expect(state.commandExecutor).toBe(execA);
+      expect(state.commandResponse).toEqual({ from: "a" });
+    });
+
+    it("executeOnAll settles devices independently (one rejects, one resolves)", async () => {
+      const execA = await addExecutorFor(USB_DEVICE_A);
+      const execB = await addExecutorFor(USB_DEVICE_B);
+
+      const pending = useScannerCommandExecutorStore.getState().executeOnAll("protocol");
+      execA.calls[0].reject(new Error("device A unplugged"));
+      execB.calls[0].resolve({ from: "b" });
+
+      const outcomes = await pending;
+      expect(outcomes).toHaveLength(2);
+      expect(outcomes[0]).toMatchObject({
+        device: USB_DEVICE_A,
+        status: "rejected",
+        error: new Error("device A unplugged"),
+      });
+      expect(outcomes[1]).toMatchObject({
+        device: USB_DEVICE_B,
+        status: "fulfilled",
+        result: { from: "b" },
+      });
+
+      // Per-device state: only A carries the error.
+      const { executors } = useScannerCommandExecutorStore.getState();
+      expect(executors.get("usb-a")?.error?.message).toBe("device A unplugged");
+      expect(executors.get("usb-b")?.error).toBeUndefined();
+      expect(executors.get("usb-b")?.commandResponse).toEqual({ from: "b" });
+    });
+
+    it("removeDevice mid-execute rejects only that device and destroys its executor", async () => {
+      const execA = await addExecutorFor(USB_DEVICE_A);
+      const execB = await addExecutorFor(USB_DEVICE_B);
+
+      const pendingA = useScannerCommandExecutorStore
+        .getState()
+        .executeCommandOn("usb-a", "protocol");
+      const pendingB = useScannerCommandExecutorStore
+        .getState()
+        .executeCommandOn("usb-b", "protocol");
+
+      await useScannerCommandExecutorStore.getState().removeDevice("usb-a");
+      expect(execA.destroyCalls()).toBe(1);
+      // Removal deletes the entry; the in-flight call surfaces the executor's
+      // rejection (the real MultispeqCommandExecutor rejects on destroy()).
+      execA.calls[0].reject(new Error("Executor destroyed"));
+      await expect(pendingA).rejects.toThrow("Executor destroyed");
+
+      execB.calls[0].resolve({ from: "b" });
+      await expect(pendingB).resolves.toEqual({ from: "b" });
+
+      const { executors } = useScannerCommandExecutorStore.getState();
+      expect(executors.has("usb-a")).toBe(false);
+      expect(executors.get("usb-b")?.commandResponse).toEqual({ from: "b" });
+    });
+
+    it("cancelAll cancels every in-flight device", async () => {
+      const execA = await addExecutorFor(USB_DEVICE_A);
+      const execB = await addExecutorFor(USB_DEVICE_B);
+
+      // Attach handlers immediately: the driver-level cancel() rejects the
+      // in-flight execute synchronously, which vitest would otherwise flag
+      // as an unhandled rejection before the assertions below run.
+      const pendingA = useScannerCommandExecutorStore
+        .getState()
+        .executeCommandOn("usb-a", "protocol")
+        .catch((e: Error) => e);
+      const pendingB = useScannerCommandExecutorStore
+        .getState()
+        .executeCommandOn("usb-b", "protocol")
+        .catch((e: Error) => e);
+
+      await useScannerCommandExecutorStore.getState().cancelAll();
+
+      // Cancel goes through the driver's preemptive cancel(), not an extra
+      // device write; the in-flight execute rejects and surfaces as a
+      // coherent cancellation.
+      expect(execA.cancelCalls()).toBe(1);
+      expect(execB.cancelCalls()).toBe(1);
+      expect(execA.calls.map((c) => c.command)).toEqual(["protocol"]);
+      expect(execB.calls.map((c) => c.command)).toEqual(["protocol"]);
+
+      await expect(pendingA).resolves.toMatchObject({ message: "Measurement cancelled" });
+      await expect(pendingB).resolves.toMatchObject({ message: "Measurement cancelled" });
+    });
+
+    it("legacy setDevice replaces all entries (Bluetooth replace-all semantics)", async () => {
+      const execA = await addExecutorFor(USB_DEVICE_A);
+      const execB = await addExecutorFor(USB_DEVICE_B);
+
+      const execBt = createControllableExecutor();
+      createMultispeqCommandExecutor.mockResolvedValueOnce(execBt);
+      await useScannerCommandExecutorStore.getState().setDevice(FAKE_DEVICE);
+
+      expect(execA.destroyCalls()).toBe(1);
+      expect(execB.destroyCalls()).toBe(1);
+      const { executors } = useScannerCommandExecutorStore.getState();
+      expect(Array.from(executors.keys())).toEqual(["fake-id"]);
     });
   });
 });

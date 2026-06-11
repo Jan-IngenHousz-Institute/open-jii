@@ -7,48 +7,55 @@ import { MeasurementNode } from "./measurement-node";
 // Only the network/native boundaries and deep state children are mocked; the
 // start-scan guards run unmocked, and the protocol is passed via content.
 const {
-  executeScan,
+  executeScanAll,
   resetScan,
-  cancelCommand,
-  useConnectedDevice,
-  refetchConnectedDevice,
+  cancelAll,
+  useConnectedDevices,
+  refetchConnectedDevices,
   nextStep,
-  setScanResult,
-  setProtocolId,
+  setScanResults,
   navigateToQuestionFromOverview,
   openDeviceSheet,
   toastError,
   playSound,
   scanState,
 } = vi.hoisted(() => ({
-  executeScan: vi.fn(),
+  executeScanAll: vi.fn(),
   resetScan: vi.fn(),
-  cancelCommand: vi.fn(),
-  useConnectedDevice: vi.fn(),
-  refetchConnectedDevice: vi.fn(),
+  cancelAll: vi.fn(),
+  useConnectedDevices: vi.fn(),
+  refetchConnectedDevices: vi.fn(),
   nextStep: vi.fn(),
-  setScanResult: vi.fn(),
-  setProtocolId: vi.fn(),
+  setScanResults: vi.fn(),
   navigateToQuestionFromOverview: vi.fn(),
   openDeviceSheet: vi.fn(),
   toastError: vi.fn(),
   playSound: vi.fn(),
-  scanState: { isScanning: false },
+  scanState: {
+    isScanning: false,
+    lastRound: undefined as { successes: unknown[]; failures: unknown[] } | undefined,
+  },
 }));
 
-vi.mock("~/features/connection/hooks/use-scan-manager", () => ({
-  useScanner: () => ({
-    executeScan,
+vi.mock("~/features/connection/hooks/use-multi-scanner", () => ({
+  useMultiScanner: () => ({
+    executeScanAll,
     isScanning: scanState.isScanning,
+    deviceStates: [],
+    lastRound: scanState.lastRound,
     reset: resetScan,
-    result: undefined,
-    error: undefined,
-    cancelCommand,
+    cancelAll,
   }),
 }));
 
 vi.mock("~/features/connection/hooks/use-device-connection", () => ({
-  useConnectedDevice: () => useConnectedDevice(),
+  useConnectedDevices: () => useConnectedDevices(),
+}));
+
+// The capture hook reads the Primary device's live progress off the store.
+vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
+  useScannerCommandExecutorStore: (selector: (s: object) => unknown) =>
+    selector({ progress: undefined, scanStartedAt: undefined, estimatedMs: undefined }),
 }));
 
 vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
@@ -59,8 +66,7 @@ vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
   useMeasurementFlowStore: () => ({
     nextStep,
-    setScanResult,
-    setProtocolId,
+    setScanResults,
     navigateToQuestionFromOverview,
   }),
 }));
@@ -70,12 +76,15 @@ vi.mock("sonner-native", () => ({
 }));
 
 vi.mock("~/features/measurement-flow/utils/play-sound", () => ({
-  playSound: () => playSound(),
+  playSound: () => {
+    playSound();
+    return Promise.resolve();
+  },
 }));
 
 vi.mock("~/shared/ui/hooks/use-theme", () => ({
   useTheme: () => ({
-    classes: { textMuted: "" },
+    classes: { text: "", textMuted: "" },
     colors: { brand: "#000", onPrimary: "#fff", primary: { dark: "#000" } },
   }),
 }));
@@ -91,6 +100,9 @@ vi.mock("./components/ready-state", () => ({ ReadyState: () => null }));
 vi.mock("./components/error-state", () => ({ ErrorState: () => null }));
 vi.mock("./components/scanning-state", () => ({ ScanningState: () => null }));
 vi.mock("./components/no-device-state", () => ({ NoDeviceState: () => null }));
+vi.mock("./components/device-scan-progress-list", () => ({
+  DeviceScanProgressList: () => null,
+}));
 
 const PROTOCOL = { name: "Photosynthesis", code: [{ foo: 1 }] };
 const START_KEY = "measurementFlow:measurementNode.startMeasurement";
@@ -100,12 +112,19 @@ const DEVICE_DISCONNECTED_KEY = "measurementFlow:measurementNode.toast.deviceDis
 const SCAN_ERROR_KEY = "measurementFlow:measurementNode.toast.scanError";
 
 const content = { params: {}, protocolId: "proto-1", protocol: PROTOCOL };
+const DEVICE = { id: "dev-1", name: "MultispeQ #1", type: "usb" };
+const DEVICE_B = { id: "dev-2", name: "MultispeQ #2", type: "usb" };
+
+function round(successes: unknown[], failures: unknown[]) {
+  return { successes, failures };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
   scanState.isScanning = false;
-  useConnectedDevice.mockReturnValue({ data: { id: "dev-1" }, refetch: refetchConnectedDevice });
-  refetchConnectedDevice.mockResolvedValue({ data: { id: "dev-1" } });
+  scanState.lastRound = undefined;
+  useConnectedDevices.mockReturnValue({ data: [DEVICE], refetch: refetchConnectedDevices });
+  refetchConnectedDevices.mockResolvedValue({ data: [DEVICE] });
 });
 
 describe("MeasurementNode start-scan guards", () => {
@@ -114,7 +133,7 @@ describe("MeasurementNode start-scan guards", () => {
     fireEvent.press(screen.getByText(START_KEY));
 
     expect(toastError).toHaveBeenCalledWith(PROTOCOL_UNAVAILABLE_KEY);
-    expect(executeScan).not.toHaveBeenCalled();
+    expect(executeScanAll).not.toHaveBeenCalled();
   });
 
   it("shows the no-protocol toast when the node has no protocolId", () => {
@@ -122,33 +141,38 @@ describe("MeasurementNode start-scan guards", () => {
     fireEvent.press(screen.getByText(START_KEY));
 
     expect(toastError).toHaveBeenCalledWith("measurementFlow:measurementNode.toast.noProtocol");
-    expect(executeScan).not.toHaveBeenCalled();
+    expect(executeScanAll).not.toHaveBeenCalled();
   });
 
   it("blocks the scan and shows device-disconnected when the liveness probe finds no device", async () => {
-    refetchConnectedDevice.mockResolvedValue({ data: null });
+    refetchConnectedDevices.mockResolvedValue({ data: [] });
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(DEVICE_DISCONNECTED_KEY));
-    expect(executeScan).not.toHaveBeenCalled();
+    expect(executeScanAll).not.toHaveBeenCalled();
   });
 
   it("runs the scan and advances when the protocol and connection are available", async () => {
-    executeScan.mockResolvedValue({ result: 42 });
+    executeScanAll.mockResolvedValue(round([{ device: DEVICE, result: { result: 42 } }], []));
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
-    await waitFor(() => expect(executeScan).toHaveBeenCalledWith(PROTOCOL));
-    expect(setScanResult).toHaveBeenCalledWith({ result: 42 }, "m1");
+    await waitFor(() => expect(executeScanAll).toHaveBeenCalledWith(PROTOCOL, [DEVICE]));
+    expect(setScanResults).toHaveBeenCalledWith(
+      [{ device: { id: "dev-1", name: "MultispeQ #1" }, result: { result: 42 } }],
+      "m1",
+    );
     expect(nextStep).toHaveBeenCalled();
     expect(toastError).not.toHaveBeenCalled();
   });
 
-  it("maps a transport failure to the device-disconnected toast", async () => {
-    executeScan.mockRejectedValue(new Error("Failed to write to device"));
+  it("maps an all-failed transport round to the device-disconnected toast", async () => {
+    executeScanAll.mockResolvedValue(
+      round([], [{ device: DEVICE, error: new Error("Failed to write to device") }]),
+    );
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
@@ -158,8 +182,10 @@ describe("MeasurementNode start-scan guards", () => {
     expect(nextStep).not.toHaveBeenCalled();
   });
 
-  it("shows the generic scan-error toast when the scan itself fails", async () => {
-    executeScan.mockRejectedValue(new Error("Invalid result"));
+  it("shows the generic scan-error toast when every device fails the scan itself", async () => {
+    executeScanAll.mockResolvedValue(
+      round([], [{ device: DEVICE, error: new Error("Invalid result") }]),
+    );
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
@@ -169,18 +195,55 @@ describe("MeasurementNode start-scan guards", () => {
   });
 
   it("stays silent when the measurement was cancelled", async () => {
-    executeScan.mockRejectedValue(new Error("Measurement cancelled"));
+    executeScanAll.mockResolvedValue(
+      round([], [{ device: DEVICE, error: new Error("Measurement cancelled") }]),
+    );
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
-    await waitFor(() => expect(executeScan).toHaveBeenCalled());
+    await waitFor(() => expect(executeScanAll).toHaveBeenCalled());
     expect(toastError).not.toHaveBeenCalled();
     expect(nextStep).not.toHaveBeenCalled();
   });
 
+  it("advances with only the successful devices' results on a mixed round + continue", async () => {
+    useConnectedDevices.mockReturnValue({
+      data: [DEVICE, DEVICE_B],
+      refetch: refetchConnectedDevices,
+    });
+    refetchConnectedDevices.mockResolvedValue({ data: [DEVICE, DEVICE_B] });
+    const mixed = round(
+      [{ device: DEVICE, result: { result: 1 } }],
+      [{ device: DEVICE_B, error: new Error("Invalid result") }],
+    );
+    executeScanAll.mockResolvedValue(mixed);
+
+    const { rerender } = render(<MeasurementNode content={content} nodeId="m1" />);
+    fireEvent.press(screen.getByText(START_KEY));
+    await waitFor(() => expect(executeScanAll).toHaveBeenCalledTimes(1));
+    // Mixed round: no toast, no auto-advance; the partial-failure UI decides.
+    expect(nextStep).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+
+    // Same mounted instance (the successes accumulator is per-instance); the
+    // mocked scanner hook now reports the finished mixed round.
+    scanState.lastRound = mixed;
+    rerender(<MeasurementNode content={content} nodeId="m1" />);
+    fireEvent.press(
+      screen.getByText("measurementFlow:measurementNode.multiScan.continueWithSuccessful"),
+    );
+
+    await waitFor(() => expect(setScanResults).toHaveBeenCalled());
+    expect(setScanResults).toHaveBeenCalledWith(
+      [{ device: { id: "dev-1", name: "MultispeQ #1" }, result: { result: 1 } }],
+      "m1",
+    );
+    expect(nextStep).toHaveBeenCalled();
+  });
+
   it("hides the Start button entirely when no device is connected", () => {
-    useConnectedDevice.mockReturnValue({ data: undefined, refetch: refetchConnectedDevice });
+    useConnectedDevices.mockReturnValue({ data: [], refetch: refetchConnectedDevices });
 
     render(<MeasurementNode content={content} nodeId="m1" />);
 
@@ -189,7 +252,7 @@ describe("MeasurementNode start-scan guards", () => {
 
   it("ignores a second Start tap while the first scan is starting", async () => {
     let resolveScan: (value: unknown) => void = () => undefined;
-    executeScan.mockReturnValue(
+    executeScanAll.mockReturnValue(
       new Promise((resolve) => {
         resolveScan = resolve;
       }),
@@ -200,34 +263,34 @@ describe("MeasurementNode start-scan guards", () => {
     fireEvent.press(button);
     fireEvent.press(button);
 
-    await waitFor(() => expect(executeScan).toHaveBeenCalledTimes(1));
-    resolveScan({ result: 1 });
+    await waitFor(() => expect(executeScanAll).toHaveBeenCalledTimes(1));
+    resolveScan(round([{ device: DEVICE, result: { result: 1 } }], []));
   });
 });
 
 describe("MeasurementNode in-scan controls", () => {
   it("awaits cancel before resetting when the measurement is cancelled", async () => {
     scanState.isScanning = true;
-    cancelCommand.mockResolvedValue(undefined);
+    cancelAll.mockResolvedValue(undefined);
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(CANCEL_KEY));
 
-    await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
+    await waitFor(() => expect(cancelAll).toHaveBeenCalled());
     expect(resetScan).toHaveBeenCalled();
   });
 
-  it("aborts and resets the scan when the device drops mid-measurement", async () => {
+  it("aborts and resets the scan when every device drops mid-measurement", async () => {
     scanState.isScanning = true;
-    cancelCommand.mockResolvedValue(undefined);
+    cancelAll.mockResolvedValue(undefined);
 
     const { rerender } = render(<MeasurementNode content={content} nodeId="m1" />);
-    expect(cancelCommand).not.toHaveBeenCalled();
+    expect(cancelAll).not.toHaveBeenCalled();
 
-    useConnectedDevice.mockReturnValue({ data: undefined, refetch: refetchConnectedDevice });
+    useConnectedDevices.mockReturnValue({ data: [], refetch: refetchConnectedDevices });
     rerender(<MeasurementNode content={content} nodeId="m1" />);
 
-    await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
+    await waitFor(() => expect(cancelAll).toHaveBeenCalled());
     expect(resetScan).toHaveBeenCalled();
   });
 });

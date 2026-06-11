@@ -1,76 +1,123 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Emitter } from "~/features/connection/utils/emitter";
 import type { Device } from "~/shared/types/device";
 
 import {
-  getConnectedSerialPortDevice,
-  setSerialPortConnection,
-  verifyConnectedSerialPortDevice,
+  closeAllSerialPorts,
+  closeSerialPort,
+  getConnectedSerialPortDevices,
+  getSerialPortConnection,
+  openSerialPort,
+  pruneSerialPorts,
 } from "./serial-port-connection";
 
-const { mockList, mockOpen } = vi.hoisted(() => ({
-  mockList: vi.fn(),
-  mockOpen: vi.fn(),
-}));
-
+const openSerialPortConnection = vi.fn();
 vi.mock(
   "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection",
   () => ({
-    listSerialPortDevices: (...a: unknown[]) => mockList(...a),
-    openSerialPortConnection: (...a: unknown[]) => mockOpen(...a),
+    openSerialPortConnection: (deviceId: number) => openSerialPortConnection(deviceId),
   }),
 );
 
-const device = { id: "1002", type: "usb", name: "1a86:55d4" } as Device;
+const usbDevice = (id: string): Device => ({ id, type: "usb", name: `MultispeQ #${id}` });
 
-beforeEach(async () => {
-  vi.clearAllMocks();
-  mockOpen.mockResolvedValue({ emit: vi.fn() });
-  await setSerialPortConnection(undefined); // reset module state
-});
+function makeConnection() {
+  const emitter = new Emitter<{ destroy: void }>();
+  const destroyed = vi.fn();
+  emitter.on("destroy", destroyed);
+  return { emitter, destroyed };
+}
 
-describe("verifyConnectedSerialPortDevice", () => {
-  it("keeps the connection while the device is still enumerated", async () => {
-    await setSerialPortConnection(device);
-    mockList.mockResolvedValue([{ deviceId: 1002 }]);
-
-    await verifyConnectedSerialPortDevice();
-
-    expect(getConnectedSerialPortDevice()).toBeDefined();
+describe("serial port registry", () => {
+  beforeEach(async () => {
+    openSerialPortConnection.mockReset();
+    // Module state persists across tests; drain the registry.
+    openSerialPortConnection.mockResolvedValue(makeConnection().emitter);
+    await closeAllSerialPorts();
   });
 
-  it("drops the connection when the device is no longer enumerated (unplug)", async () => {
-    await setSerialPortConnection(device);
-    mockList.mockResolvedValue([{ deviceId: 9999 }]);
+  it("opens one connection per device and lists them in connect order", async () => {
+    const a = makeConnection();
+    const b = makeConnection();
+    openSerialPortConnection.mockResolvedValueOnce(a.emitter).mockResolvedValueOnce(b.emitter);
 
-    await verifyConnectedSerialPortDevice();
+    await openSerialPort(usbDevice("11"));
+    await openSerialPort(usbDevice("22"));
 
-    expect(getConnectedSerialPortDevice()).toBeUndefined();
+    expect(openSerialPortConnection).toHaveBeenCalledWith(11);
+    expect(openSerialPortConnection).toHaveBeenCalledWith(22);
+    expect(getConnectedSerialPortDevices().map((d) => d.id)).toEqual(["11", "22"]);
+    expect(getSerialPortConnection("11")).toBe(a.emitter);
+    expect(getSerialPortConnection("22")).toBe(b.emitter);
   });
 
-  it("keeps the connection if the device list can't be read", async () => {
-    await setSerialPortConnection(device);
-    mockList.mockRejectedValue(new Error("usb manager unavailable"));
+  it("tears down the previous connection before reopening the same device (replug)", async () => {
+    const stale = makeConnection();
+    const fresh = makeConnection();
+    openSerialPortConnection
+      .mockResolvedValueOnce(stale.emitter)
+      .mockResolvedValueOnce(fresh.emitter);
 
-    await verifyConnectedSerialPortDevice();
+    await openSerialPort(usbDevice("11")); // open #1 (the leaked/stale one on replug)
+    await openSerialPort(usbDevice("11")); // reconnect
 
-    expect(getConnectedSerialPortDevice()).toBeDefined();
+    expect(stale.destroyed).toHaveBeenCalledTimes(1);
+    expect(getConnectedSerialPortDevices()).toHaveLength(1);
+    expect(getSerialPortConnection("11")).toBe(fresh.emitter);
   });
 
-  it("is a no-op when nothing is connected", async () => {
-    await verifyConnectedSerialPortDevice();
-    expect(mockList).not.toHaveBeenCalled();
+  it("closeSerialPort destroys only that device's connection", async () => {
+    const a = makeConnection();
+    const b = makeConnection();
+    openSerialPortConnection.mockResolvedValueOnce(a.emitter).mockResolvedValueOnce(b.emitter);
+    await openSerialPort(usbDevice("11"));
+    await openSerialPort(usbDevice("22"));
+
+    await closeSerialPort("11");
+
+    expect(a.destroyed).toHaveBeenCalledTimes(1);
+    expect(b.destroyed).not.toHaveBeenCalled();
+    expect(getConnectedSerialPortDevices().map((d) => d.id)).toEqual(["22"]);
+    expect(getSerialPortConnection("11")).toBeUndefined();
   });
-});
 
-describe("setSerialPortConnection reconnect", () => {
-  it("tears down the previous connection before opening a new one", async () => {
-    const firstEmit = vi.fn();
-    mockOpen.mockResolvedValueOnce({ emit: firstEmit });
+  it("pruneSerialPorts closes entries missing from the USB bus and returns their ids", async () => {
+    const a = makeConnection();
+    const b = makeConnection();
+    openSerialPortConnection.mockResolvedValueOnce(a.emitter).mockResolvedValueOnce(b.emitter);
+    await openSerialPort(usbDevice("11"));
+    await openSerialPort(usbDevice("22"));
 
-    await setSerialPortConnection(device); // open #1 (the leaked/stale one on replug)
-    await setSerialPortConnection({ ...device, id: "1003" }); // reconnect
+    const removed = pruneSerialPorts(new Set(["22"]));
 
-    expect(firstEmit).toHaveBeenCalledWith("destroy");
-    expect(getConnectedSerialPortDevice()?.id).toBe("1003");
+    expect(removed).toEqual(["11"]);
+    expect(a.destroyed).toHaveBeenCalledTimes(1);
+    expect(getConnectedSerialPortDevices().map((d) => d.id)).toEqual(["22"]);
+  });
+
+  it("keeps every entry when all devices are still on the bus", async () => {
+    const a = makeConnection();
+    openSerialPortConnection.mockResolvedValueOnce(a.emitter);
+    await openSerialPort(usbDevice("11"));
+
+    const removed = pruneSerialPorts(new Set(["11"]));
+
+    expect(removed).toEqual([]);
+    expect(a.destroyed).not.toHaveBeenCalled();
+    expect(getConnectedSerialPortDevices().map((d) => d.id)).toEqual(["11"]);
+  });
+
+  it("closeAllSerialPorts empties the registry", async () => {
+    const a = makeConnection();
+    const b = makeConnection();
+    openSerialPortConnection.mockResolvedValueOnce(a.emitter).mockResolvedValueOnce(b.emitter);
+    await openSerialPort(usbDevice("11"));
+    await openSerialPort(usbDevice("22"));
+
+    await closeAllSerialPorts();
+
+    expect(a.destroyed).toHaveBeenCalledTimes(1);
+    expect(b.destroyed).toHaveBeenCalledTimes(1);
+    expect(getConnectedSerialPortDevices()).toEqual([]);
   });
 });

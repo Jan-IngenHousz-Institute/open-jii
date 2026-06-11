@@ -25,7 +25,7 @@ export function useScanner() {
       // Scan replies embed the battery level; patch the battery cache so
       // consumers stay fresh without re-firing the battery command.
       const pct = (result as { device_battery?: unknown } | undefined)?.device_battery;
-      const device = client.getQueryData<Device | null>(connectionKeys.connectedDevice);
+      const device = client.getQueryData<Device[]>(connectionKeys.connectedDevices)?.[0];
       if (typeof pct === "number" && device) {
         client.setQueryData(connectionKeys.battery(device.id), pct);
       }

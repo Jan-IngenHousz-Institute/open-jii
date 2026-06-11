@@ -7,6 +7,12 @@ import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 // hands to macro evaluation / upload. Persisted, so keep it structural.
 export type ScanResult = Record<string, unknown>;
 
+/** One device's scan output; device is absent for legacy single-device results. */
+export interface ScanResultEntry {
+  device?: { id: string; name: string };
+  result: ScanResult;
+}
+
 /** The branch path the flow last routed through, surfaced inline in the hero. */
 export interface MatchedPath {
   label: string;
@@ -32,6 +38,10 @@ export interface FlowState {
   isFlowFinished: boolean;
   isQuestionsSubmitPending: boolean;
   scanResult?: ScanResult;
+  // Per-device results from the last Multi-scan round (see CONTEXT.md).
+  // scanResult mirrors scanResults[0]?.result so single-device consumers and
+  // branch evaluation keep reading the Primary device's result.
+  scanResults?: ScanResultEntry[];
   // Cell id of the producer (protocol or command) that yielded scanResult;
   // keys the synthetic output cell in hydrateCells for branch evaluation.
   producerCellId?: string;
@@ -55,6 +65,7 @@ export const initialFlowState: FlowState = {
   isFlowFinished: false,
   isQuestionsSubmitPending: false,
   scanResult: undefined,
+  scanResults: undefined,
   producerCellId: undefined,
   isFromOverview: false,
   cells: [],
@@ -157,6 +168,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       isFlowFinished: false,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
+      scanResults: undefined,
       producerCellId: undefined,
       cells: [],
       edges: [],
@@ -176,6 +188,7 @@ export function startNewIterationState(state: FlowState): Partial<FlowState> {
     iterationCount: state.iterationCount + 1,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
+    scanResults: undefined,
     producerCellId: undefined,
     isFromOverview: false,
     ...clearedBranchIteration,
@@ -187,6 +200,7 @@ export function retryIterationState(): Partial<FlowState> {
     currentFlowStep: 0,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
+    scanResults: undefined,
     producerCellId: undefined,
     isFromOverview: false,
     ...clearedBranchIteration,
@@ -208,6 +222,7 @@ export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState
     currentFlowStep: 0,
     iterationCount: state.iterationCount + 1,
     scanResult: undefined,
+    scanResults: undefined,
     producerCellId: undefined,
     ...clearedBranchIteration,
   };
