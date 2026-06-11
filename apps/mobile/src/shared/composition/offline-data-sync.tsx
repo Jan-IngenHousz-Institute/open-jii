@@ -1,7 +1,7 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useSession } from "~/features/auth/hooks/use-session";
-import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
+import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useAppState } from "~/shared/ui/hooks/use-app-state";
 
 /**

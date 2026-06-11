@@ -11,7 +11,7 @@ const { prefetchOfflineData, useSession, appStateHandler } = vi.hoisted(() => ({
   appStateHandler: { current: undefined as undefined | ((s: string) => void) },
 }));
 
-vi.mock("~/shared/db/prefetch-offline-data", () => ({
+vi.mock("~/shared/composition/prefetch-offline-data", () => ({
   prefetchOfflineData: (...a: unknown[]) => prefetchOfflineData(...a),
 }));
 vi.mock("~/features/auth/hooks/use-session", () => ({ useSession: () => useSession() }));

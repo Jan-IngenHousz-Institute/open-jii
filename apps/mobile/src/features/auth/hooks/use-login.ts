@@ -7,7 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
-import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
+import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useTranslation } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 

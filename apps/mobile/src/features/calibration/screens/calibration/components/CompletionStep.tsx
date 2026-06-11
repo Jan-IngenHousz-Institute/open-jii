@@ -4,7 +4,7 @@ import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
 
-import { ProcessedCalibrationOutput } from "../utils/calibration-protocol";
+import { ProcessedCalibrationOutput } from "../../../domain/calibration-protocol";
 
 interface CompletionStepProps {
   measurements: any[];
