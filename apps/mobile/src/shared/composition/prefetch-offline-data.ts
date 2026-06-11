@@ -63,16 +63,17 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
   const flowResults = await Promise.allSettled(
     experiments.map(async (experiment: { id: string }) => {
       try {
-        const flowResponse: any = await queryClient.fetchQuery({
-          queryKey: contentKeys.experimentFlow(experiment.id),
-          queryFn: async () => {
-            const response = await tsr.experiments.getFlow.query({
-              params: { id: experiment.id },
-            });
-            return response;
-          },
-          staleTime: 0,
-        });
+        const flowResponse: { body?: { graph?: { nodes?: FlowNode[] } } } | undefined =
+          await queryClient.fetchQuery({
+            queryKey: contentKeys.experimentFlow(experiment.id),
+            queryFn: async () => {
+              const response = await tsr.experiments.getFlow.query({
+                params: { id: experiment.id },
+              });
+              return response;
+            },
+            staleTime: 0,
+          });
 
         const nodes = flowResponse?.body?.graph?.nodes ?? [];
 

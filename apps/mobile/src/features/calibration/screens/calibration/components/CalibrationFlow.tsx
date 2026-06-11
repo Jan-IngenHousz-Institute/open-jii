@@ -1,16 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { ScrollView } from "react-native";
-import { toast } from "sonner-native";
-import { useTranslation } from "~/shared/i18n";
-import { createLogger } from "~/shared/observability/logger";
 
-import {
-  CalibrationProtocol,
-  MeasurementData,
-  ProcessedCalibrationOutput,
-  generateDeviceCommand,
-  simulateDataProcessing,
-} from "../utils/load-protocol";
+import type { CalibrationProtocol } from "../../../domain/calibration-protocol";
+import { useCalibrationFlow } from "../../../hooks/use-calibration-flow";
 import { CompletionStep } from "./CompletionStep";
 import { DemoDisclaimer } from "./DemoDisclaimer";
 import { GainCalibrationStep } from "./GainCalibrationStep";
@@ -18,160 +10,42 @@ import { MeasurementsStep } from "./MeasurementsStep";
 import { ProcessingStep } from "./ProcessingStep";
 import { SetupStep } from "./SetupStep";
 
-const log = createLogger("calibration");
-
-export type CalibrationStep = "setup" | "gain" | "measurements" | "processing" | "complete";
-
 interface CalibrationFlowProps {
   protocol: CalibrationProtocol;
 }
 
+// Pure render switch over the calibration view-model; state, side effects
+// and toasts live in useCalibrationFlow.
 export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
-  const { t } = useTranslation(["common", "calibration"]);
-  const [currentStep, setCurrentStep] = useState<CalibrationStep>("setup");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [measurements, setMeasurements] = useState<MeasurementData[]>([]);
-  const [currentMeasurementIndex, setCurrentMeasurementIndex] = useState(0);
-  const [currentUserInput, setCurrentUserInput] = useState("");
-  const [processedOutput, setProcessedOutput] = useState<ProcessedCalibrationOutput | null>(null);
-
-  // Extract steps from protocol
-  const measurementSteps = protocol._protocol_set_.filter((step) => step.label === "spad");
-  const gainStep = protocol._protocol_set_.find((step) => step.label === "gain");
-
-  const handleStartCalibration = () => {
-    log.info("start");
-    setCurrentStep("gain");
-    setMeasurements([]);
-    setCurrentMeasurementIndex(0);
-    setProcessedOutput(null);
-  };
-
-  const handleGainCalibration = async () => {
-    if (!gainStep) return;
-
-    log.info("gain calibration start", { auto_blank: gainStep.auto_blank });
-
-    const deviceCommand = generateDeviceCommand(gainStep);
-    log.debug("auto-blank command", { deviceCommand });
-
-    setIsProcessing(true);
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
-    setIsProcessing(false);
-
-    log.info("gain calibration done");
-    setCurrentStep("measurements");
-  };
-
-  const handleMeasurement = async (panelNumber: number) => {
-    const currentStepData = measurementSteps[currentMeasurementIndex];
-    if (!currentStepData) return;
-
-    log.info("measurement start", { panel: panelNumber, spad: currentStepData.spad });
-
-    const deviceCommand = generateDeviceCommand(currentStepData);
-    log.debug("measurement command", { deviceCommand });
-
-    // Simulate device processing time
-    setIsProcessing(true);
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), 1500));
-    setIsProcessing(false);
-
-    // Store measurement data
-    const measurementData: MeasurementData = {
-      stepIndex: currentMeasurementIndex,
-      userInput: currentUserInput,
-      measurementData: {
-        // Simulated measurement data
-        absorbance: [
-          [Math.random() * 1000, Math.random() * 1000],
-          [Math.random() * 1000, Math.random() * 1000],
-        ],
-        timestamp: new Date().toISOString(),
-      },
-      timestamp: new Date().toISOString(),
-    };
-
-    setMeasurements((prev) => [...prev, measurementData]);
-    setCurrentUserInput("");
-
-    log.info("measurement done", { panel: panelNumber });
-
-    if (currentMeasurementIndex < measurementSteps.length - 1) {
-      setCurrentMeasurementIndex((prev) => prev + 1);
-    } else {
-      setCurrentStep("processing");
-      handleDataProcessing();
-    }
-  };
-
-  const handleDataProcessing = async () => {
-    log.info("processing", { measurement_count: measurements.length });
-
-    setIsProcessing(true);
-
-    try {
-      const output = await simulateDataProcessing(measurements, protocol);
-      setProcessedOutput(output);
-
-      log.debug("processed output", { device_commands: output.toDevice });
-      await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-
-      setCurrentStep("complete");
-      toast.success(t("calibration:flow.toastComplete"));
-    } catch (error) {
-      log.error("processing failed", { err: (error as Error)?.message });
-      toast.error(t("calibration:flow.toastProcessingError"));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleReset = () => {
-    setCurrentStep("setup");
-    setMeasurements([]);
-    setCurrentMeasurementIndex(0);
-    setCurrentUserInput("");
-    setIsProcessing(false);
-    setProcessedOutput(null);
-  };
-
-  const getCurrentPanelNumber = () => {
-    const currentStepData = measurementSteps[currentMeasurementIndex];
-    return currentStepData?.prompt?.match(/#(\d+)/)?.[1];
-  };
-
-  const getProgressPercentage = () => {
-    return ((currentMeasurementIndex + 1) / measurementSteps.length) * 100;
-  };
+  const flow = useCalibrationFlow(protocol);
 
   const renderCurrentStep = () => {
-    switch (currentStep) {
+    switch (flow.currentStep) {
       case "setup":
-        return <SetupStep onStartCalibration={handleStartCalibration} />;
+        return <SetupStep onStartCalibration={flow.startCalibration} />;
 
       case "gain":
         return (
           <GainCalibrationStep
-            alertMessage={gainStep?.alert ?? ""}
-            isProcessing={isProcessing}
-            onStartGainCalibration={handleGainCalibration}
+            alertMessage={flow.gainAlertMessage}
+            isProcessing={flow.isProcessing}
+            onStartGainCalibration={flow.startGainCalibration}
           />
         );
 
       case "measurements":
         return (
           <MeasurementsStep
-            currentMeasurementIndex={currentMeasurementIndex}
-            totalMeasurements={measurementSteps.length}
-            currentPanelNumber={getCurrentPanelNumber()}
-            prompt={measurementSteps[currentMeasurementIndex]?.prompt ?? ""}
-            currentUserInput={currentUserInput}
-            isProcessing={isProcessing}
-            progressPercentage={getProgressPercentage()}
-            onUserInputChange={setCurrentUserInput}
-            onTakeMeasurement={handleMeasurement}
-            onCancelMeasurement={() => log.info("measurement cancelled")}
+            currentMeasurementIndex={flow.currentMeasurementIndex}
+            totalMeasurements={flow.totalMeasurements}
+            currentPanelNumber={flow.currentPanelNumber}
+            prompt={flow.currentPrompt}
+            currentUserInput={flow.currentUserInput}
+            isProcessing={flow.isProcessing}
+            progressPercentage={flow.progressPercentage}
+            onUserInputChange={flow.setUserInput}
+            onTakeMeasurement={flow.takeMeasurement}
+            onCancelMeasurement={flow.cancelMeasurement}
           />
         );
 
@@ -181,14 +55,14 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
       case "complete":
         return (
           <CompletionStep
-            measurements={measurements}
-            processedOutput={processedOutput}
-            onStartNewCalibration={handleReset}
+            measurements={flow.measurements}
+            processedOutput={flow.processedOutput}
+            onStartNewCalibration={flow.reset}
           />
         );
 
       default:
-        return <SetupStep onStartCalibration={handleStartCalibration} />;
+        return <SetupStep onStartCalibration={flow.startCalibration} />;
     }
   };
 

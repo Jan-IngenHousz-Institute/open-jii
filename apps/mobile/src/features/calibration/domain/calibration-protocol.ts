@@ -1,4 +1,5 @@
-// Protocol types and utilities
+// Calibration protocol types plus the demo-mode device command / processing
+// simulation (no real device IO yet — see DemoDisclaimer).
 
 export interface ProtocolStep {
   label: string;
@@ -30,7 +31,6 @@ export interface ProcessedCalibrationOutput {
   toDevice: string;
 }
 
-// Generate device commands
 export const generateDeviceCommand = (step: ProtocolStep): string => {
   switch (step.label) {
     case "gain":
@@ -52,26 +52,20 @@ export const generateDeviceCommand = (step: ProtocolStep): string => {
   }
 };
 
-// Simulate data processing (JavaScript macro simulation)
+// Simulated JavaScript macro processing (demo mode).
 export const simulateDataProcessing = async (
   measurements: MeasurementData[],
   _protocol: CalibrationProtocol,
 ): Promise<ProcessedCalibrationOutput> => {
-  // Simulate processing time
   await new Promise<void>((resolve) => setTimeout(() => resolve(), 3000));
 
-  // Extract user inputs
   const userInputs = measurements
     .filter((m) => m.userInput)
     .map((m) => parseFloat(m.userInput))
     .filter((val) => !isNaN(val));
 
-  // Simulate calibration calculation
-  const calibrationValues = userInputs.join(",");
-
-  // Simulate processed output
   return {
-    calibrationValues,
+    calibrationValues: userInputs.join(","),
     bestOffset: -50,
     maxR2: 0.98,
     spadSlope: 0.1234,

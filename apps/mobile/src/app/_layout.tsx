@@ -1,45 +1,30 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
-import { useQueryClient } from "@tanstack/react-query";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
-import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Toaster } from "sonner-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AlertsBar } from "~/features/alerts/components/alerts-container";
 import { useSession } from "~/features/auth/hooks/use-session";
-import { mountConnectionLifecycle } from "~/features/connection/services/connection-lifecycle";
-import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
-import { installFlowRehydrationGuard } from "~/features/measurement-flow/stores/flow-rehydration-guard";
 import { useOtaUpdate } from "~/features/profile/hooks/use-ota-update";
-import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
-import { getOutbox } from "~/shared/composition/upload";
+import { AppProviders } from "~/shared/composition/app-providers";
 import { db } from "~/shared/db/client";
 import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
 import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 import { useI18nReady } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
-import { AlertDialog } from "~/shared/ui/AlertDialog";
-import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
-import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
-import { ErrorBoundary, installGlobalErrorHandlers } from "~/shared/ui/error-boundary";
+import { installGlobalErrorHandlers } from "~/shared/ui/error-boundary";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-import { PostHogProvider } from "~/shared/ui/providers/PostHogProvider";
-import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
 
 import migrations from "../../drizzle/migrations";
 
@@ -47,11 +32,6 @@ const log = createLogger("root-layout");
 
 SplashScreen.preventAutoHideAsync();
 installGlobalErrorHandlers();
-
-function DrizzleDevTools() {
-  useDrizzleStudio(db.$client);
-  return null;
-}
 
 function RootLayoutNav() {
   const themeColors = useThemeColors();
@@ -174,55 +154,10 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   }
 
   return (
-    <ErrorBoundary>
-      <PostHogProvider>
-        <ThemeProvider>
-          <RootLayoutContent />
-        </ThemeProvider>
-      </PostHogProvider>
-    </ErrorBoundary>
+    <AppProviders>
+      <ThemedNavigation />
+    </AppProviders>
   );
-}
-
-function OutboxBootstrap() {
-  // Force the Outbox singleton to construct on app start so its network
-  // listener, AppState listener, and DB rehydration kick in even before
-  // the first user-initiated save. Also mount the bridge that drains
-  // Outbox settled events into the measurement list cache — always-on, so
-  // every consumer (Recent tab, Home preview) sees the same fresh cache.
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    const outbox = getOutbox();
-    const unmountBridge = mountOutboxBridge({ outbox, queryClient });
-    const unmountLifecycle = mountConnectionLifecycle({ queryClient });
-    const unmountGuard = installFlowRehydrationGuard();
-    return () => {
-      unmountBridge();
-      unmountLifecycle();
-      unmountGuard();
-    };
-  }, [queryClient]);
-  return null;
-}
-
-// [perf] App-wide event-loop lag probe. A frozen JS thread (e.g. a heavy
-// screen mount) delays this interval; the measured drift is the freeze
-// length.
-function EventLoopLagMonitor() {
-  useEffect(() => {
-    const lagLog = createLogger("event-loop");
-    const PERIOD_MS = 500;
-    const THRESHOLD_MS = 100;
-    let last = Date.now();
-    const id = setInterval(() => {
-      const now = Date.now();
-      const lag_ms = now - last - PERIOD_MS;
-      last = now;
-      if (lag_ms > THRESHOLD_MS) lagLog.info("stall", { lag_ms });
-    }, PERIOD_MS);
-    return () => clearInterval(id);
-  }, []);
-  return null;
 }
 
 // AlertsBar is rendered as an overlay above normal screens.
@@ -252,7 +187,7 @@ function AlertsAwareLayout() {
   );
 }
 
-function RootLayoutContent() {
+function ThemedNavigation() {
   const themeColors = useThemeColors();
   const { colorScheme } = useColorScheme();
 
@@ -274,26 +209,8 @@ function RootLayoutContent() {
   }, [themeColors.background]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <TimeSyncProvider>
-        <ConfiguredQueryClientProvider>
-          <OutboxBootstrap />
-          {__DEV__ && <EventLoopLagMonitor />}
-          <SafeAreaProvider>
-            <PythonMacroProvider>
-              <BottomSheetModalProvider>
-                <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-                {__DEV__ && <DrizzleDevTools />}
-                <NavigationThemeProvider value={navTheme}>
-                  <AlertsAwareLayout />
-                </NavigationThemeProvider>
-                <Toaster />
-                <AlertDialog />
-              </BottomSheetModalProvider>
-            </PythonMacroProvider>
-          </SafeAreaProvider>
-        </ConfiguredQueryClientProvider>
-      </TimeSyncProvider>
-    </GestureHandlerRootView>
+    <NavigationThemeProvider value={navTheme}>
+      <AlertsAwareLayout />
+    </NavigationThemeProvider>
   );
 }
