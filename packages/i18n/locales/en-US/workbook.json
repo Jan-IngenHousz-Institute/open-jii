@@ -3,6 +3,11 @@
     "title": "Workbooks",
     "workbook": "Workbook",
     "create": "Create Workbook",
+    "createDescription": "Give your workbook a name. You can rename it later.",
+    "namePlaceholder": "Workbook name",
+    "cancel": "Cancel",
+    "renameLabel": "Rename workbook",
+    "renameError": "Failed to rename workbook",
     "noWorkbooks": "No workbooks found",
     "workbookCreated": "Workbook created successfully",
     "workbookUpdated": "Workbook updated successfully",
@@ -23,7 +28,41 @@
     "viewWorkbook": "View Workbook",
     "required": "Required",
     "outputsCleared_one": "Cleared {{count}} output",
-    "outputsCleared_other": "Cleared {{count}} outputs"
+    "outputsCleared_other": "Cleared {{count}} outputs",
+    "notUsed": "Not used",
+    "usedByCount_one": "{{count}} experiment",
+    "usedByCount_other": "{{count}} experiments",
+    "duplicateName": "Copy of {{name}}",
+    "columns": {
+      "name": "Name",
+      "usedBy": "Used by",
+      "user": "User",
+      "updated": "Updated"
+    },
+    "actions": {
+      "open": "Open",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "more": "More actions"
+    },
+    "messages": {
+      "deleteSuccess": "Workbook deleted",
+      "deleteConfirm": "Permanently delete “{{name}}”? This cannot be undone.",
+      "deleteInUseConfirm_one": "“{{name}}” is attached to {{count}} experiment. Deleting it will unlink that experiment, which will lose its measurement flow. This cannot be undone.",
+      "deleteInUseConfirm_other": "“{{name}}” is attached to {{count}} experiments. Deleting it will unlink those experiments, which will lose their measurement flow. This cannot be undone."
+    },
+    "cellSummary": {
+      "protocol_one": "{{count}} Protocol",
+      "protocol_other": "{{count}} Protocols",
+      "macro_one": "{{count}} Macro",
+      "macro_other": "{{count}} Macros",
+      "question_one": "{{count}} Question",
+      "question_other": "{{count}} Questions",
+      "branch_one": "{{count}} Branch",
+      "branch_other": "{{count}} Branches",
+      "markdown_one": "{{count}} Note",
+      "markdown_other": "{{count}} Notes"
+    }
   },
   "output": {
     "label": "Output",

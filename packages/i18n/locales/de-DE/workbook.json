@@ -23,7 +23,46 @@
     "viewWorkbook": "Arbeitsmappe anzeigen",
     "required": "Erforderlich",
     "outputsCleared_one": "{{count}} Ausgabe gelöscht",
-    "outputsCleared_other": "{{count}} Ausgaben gelöscht"
+    "outputsCleared_other": "{{count}} Ausgaben gelöscht",
+    "createDescription": "Geben Sie Ihrer Arbeitsmappe einen Namen. Sie können ihn später ändern.",
+    "namePlaceholder": "Name der Arbeitsmappe",
+    "cancel": "Abbrechen",
+    "renameLabel": "Arbeitsmappe umbenennen",
+    "renameError": "Arbeitsmappe konnte nicht umbenannt werden",
+    "notUsed": "Nicht verwendet",
+    "usedByCount_one": "{{count}} Experiment",
+    "usedByCount_other": "{{count}} Experimente",
+    "duplicateName": "Kopie von {{name}}",
+    "columns": {
+      "name": "Name",
+      "usedBy": "Verwendet von",
+      "user": "Benutzer",
+      "updated": "Aktualisiert"
+    },
+    "actions": {
+      "open": "Öffnen",
+      "duplicate": "Duplizieren",
+      "delete": "Löschen",
+      "more": "Weitere Aktionen"
+    },
+    "messages": {
+      "deleteSuccess": "Arbeitsmappe gelöscht",
+      "deleteConfirm": "„{{name}}“ endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
+      "deleteInUseConfirm_one": "„{{name}}“ ist mit {{count}} Experiment verknüpft. Beim Löschen wird die Verknüpfung aufgehoben und dieses Experiment verliert seinen Messablauf. Dies kann nicht rückgängig gemacht werden.",
+      "deleteInUseConfirm_other": "„{{name}}“ ist mit {{count}} Experimenten verknüpft. Beim Löschen wird die Verknüpfung aufgehoben und diese Experimente verlieren ihren Messablauf. Dies kann nicht rückgängig gemacht werden."
+    },
+    "cellSummary": {
+      "protocol_one": "{{count}} Protokoll",
+      "protocol_other": "{{count}} Protokolle",
+      "macro_one": "{{count}} Makro",
+      "macro_other": "{{count}} Makros",
+      "question_one": "{{count}} Frage",
+      "question_other": "{{count}} Fragen",
+      "branch_one": "{{count}} Verzweigung",
+      "branch_other": "{{count}} Verzweigungen",
+      "markdown_one": "{{count}} Notiz",
+      "markdown_other": "{{count}} Notizen"
+    }
   },
   "output": {
     "label": "Ausgabe",
