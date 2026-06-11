@@ -1,19 +1,9 @@
-import { createBluetoothMultiseqCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-bluetooth-multiseq-command-executor";
-import { createSerialPortCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-serial-port-command-executor";
+import { createCommandExecutor } from "~/features/connection/services/device-connection-manager/device-connection";
 import { Device } from "~/shared/types/device";
 
 export async function createMultispeqCommandExecutor(device: Device | undefined) {
   if (!device) {
     return undefined;
   }
-
-  if (device.type === "bluetooth-classic") {
-    return createBluetoothMultiseqCommandExecutor(device);
-  }
-
-  if (device.type === "usb") {
-    return createSerialPortCommandExecutor();
-  }
-
-  throw new Error("Unsupported device type");
+  return createCommandExecutor(device);
 }

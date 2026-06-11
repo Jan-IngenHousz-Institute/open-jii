@@ -22,6 +22,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { Toaster } from "sonner-native";
 import { AlertsBar } from "~/features/alerts/components/alerts-container";
 import { useSession } from "~/features/auth/hooks/use-session";
+import { mountConnectionLifecycle } from "~/features/connection/services/connection-lifecycle";
 import { ForceUpdateGate } from "~/features/force-update/components/force-update-gate";
 import type { ForceUpdateGateStatus } from "~/features/force-update/hooks/use-force-update-gate";
 import { PythonMacroProvider } from "~/features/measurement-flow/components/python-macro-provider";
@@ -192,9 +193,11 @@ function OutboxBootstrap() {
   useEffect(() => {
     const outbox = getOutbox();
     const unmountBridge = mountOutboxBridge({ outbox, queryClient });
+    const unmountLifecycle = mountConnectionLifecycle({ queryClient });
     const unmountGuard = installFlowRehydrationGuard();
     return () => {
       unmountBridge();
+      unmountLifecycle();
       unmountGuard();
     };
   }, [queryClient]);

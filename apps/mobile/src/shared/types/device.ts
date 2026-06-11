@@ -1,4 +1,4 @@
-export type DeviceType = "bluetooth-classic" | "ble" | "usb" | "mock-device";
+export type DeviceType = "bluetooth-classic" | "usb" | "mock-device";
 
 export interface Device {
   type: DeviceType;

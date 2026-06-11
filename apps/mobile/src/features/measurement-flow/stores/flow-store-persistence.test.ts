@@ -12,11 +12,9 @@ import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 const MEASUREMENT_KEY = "measurement-flow-storage";
 const ANSWERS_KEY = "flow-answers-storage";
 
-// v0 envelope for a paused mid-flow session (iteration 4, parked on the
-// measurement node). Every value differs from the store default so a key
-// dropped from partialize fails its per-field assert instead of matching the
-// default — that's why all booleans are true, even though a live flow would
-// not set all three at once.
+// v0 envelope for a paused mid-flow session, parked on the measurement node.
+// Every value differs from the store default so a key dropped from partialize
+// fails its per-field assert instead of silently matching the default.
 const MEASUREMENT_FIXTURE = `{
   "state": {
     "experimentId": "exp-42",
@@ -62,7 +60,12 @@ const MEASUREMENT_FIXTURE = `{
     "isFlowFinished": true,
     "isQuestionsSubmitPending": true,
     "scanResult": { "device_name": "MultispeQ v2.0", "spad": [41.2, 39.8] },
-    "isFromOverview": true
+    "isFromOverview": true,
+    "cells": [{ "id": "cell-b1", "type": "branch", "name": "N branch" }],
+    "edges": [{ "id": "edge-1", "source": "node-q1", "target": "node-m1" }],
+    "lastMatchedPath": { "label": "High N", "color": "#22c55e" },
+    "branchVisitCounts": { "node-b1": 2 },
+    "branchReturnStack": [{ "landing": 3, "step": 1 }]
   },
   "version": 0
 }`;
@@ -121,8 +124,12 @@ describe("measurement-flow-storage v0 wire format", () => {
     const persisted = partialize(useMeasurementFlowStore.getState()) as Record<string, unknown>;
     // Adding a persisted field must update this list AND the fixture above.
     expect(Object.keys(persisted).sort()).toEqual([
+      "branchReturnStack",
+      "branchVisitCounts",
+      "cells",
       "currentFlowStep",
       "currentStep",
+      "edges",
       "experimentId",
       "experimentLabel",
       "flowNodes",
@@ -130,6 +137,7 @@ describe("measurement-flow-storage v0 wire format", () => {
       "isFromOverview",
       "isQuestionsSubmitPending",
       "iterationCount",
+      "lastMatchedPath",
       "protocolId",
       "scanResult",
     ]);

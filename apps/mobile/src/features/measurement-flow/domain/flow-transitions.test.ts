@@ -49,7 +49,13 @@ describe("edge transitions", () => {
 
   it("nextStep while finished still wraps the iteration", () => {
     const state = inFlow({ currentFlowStep: 2, isFlowFinished: true, iterationCount: 3 });
-    expect(nextStepState(state)).toEqual({ currentFlowStep: 0, iterationCount: 4 });
+    expect(nextStepState(state)).toEqual({
+      currentFlowStep: 0,
+      iterationCount: 4,
+      branchVisitCounts: {},
+      lastMatchedPath: undefined,
+      branchReturnStack: [],
+    });
   });
 
   it("previousStep from step 0 abandons the flow but leaves isFromOverview untouched", () => {

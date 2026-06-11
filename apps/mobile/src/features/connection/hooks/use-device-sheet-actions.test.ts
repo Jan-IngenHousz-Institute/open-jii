@@ -22,7 +22,7 @@ vi.mock("~/features/connection/hooks/use-device-connection", () => ({
   }),
 }));
 
-const device: Device = { type: "ble", id: "dev-1", name: "MultispeQ" };
+const device: Device = { type: "bluetooth-classic", id: "dev-1", name: "MultispeQ" };
 
 describe("useDeviceSheetActions", () => {
   beforeEach(() => {
