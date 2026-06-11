@@ -18,6 +18,7 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -29,10 +30,11 @@ import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data
 import { DownloadExportUseCase } from "./application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "./application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "./application/use-cases/experiment-data-exports/list-exports";
+import { ListUploadsUseCase } from "./application/use-cases/experiment-data-uploads/list-uploads";
+import { UploadDataUseCase } from "./application/use-cases/experiment-data-uploads/upload-data";
 import { GetDistinctColumnValuesUseCase } from "./application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
-import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { ApproveJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/approve-join-request";
 import { CancelJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/cancel-join-request";
 import { GetMyJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/get-my-join-request";
@@ -76,6 +78,7 @@ import { EMAIL_PORT } from "./core/ports/email.port";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
 import { ExperimentDataExportsRepository } from "./core/repositories/experiment-data-exports.repository";
+import { ExperimentDataUploadsRepository } from "./core/repositories/experiment-data-uploads.repository";
 // Repositories
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
@@ -89,6 +92,7 @@ import { ProjectTransferRequestsRepository } from "./core/repositories/project-t
 // Controllers
 import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
 import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
+import { ExperimentDataUploadsController } from "./presentation/experiment-data-uploads.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
@@ -123,6 +127,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentVisualizationsController,
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
+    ExperimentDataUploadsController,
     ProjectTransferRequestsController,
     ProjectTransferWebhookController,
   ],
@@ -154,6 +159,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentVisualizationRepository,
     ExperimentDataRepository,
     ExperimentDataExportsRepository,
+    ExperimentDataUploadsRepository,
     FlowRepository,
     LocationRepository,
     ProjectTransferRequestsRepository,
@@ -168,6 +174,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Services
     EmbargoProcessorService,
     ContributorAnonymizerService,
+    MultipartUploadService,
 
     // General experiment use cases
     CreateExperimentUseCase,
@@ -181,7 +188,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     GetExperimentDataUseCase,
     GetExperimentTablesUseCase,
     GetDistinctColumnValuesUseCase,
-    UploadAmbyteDataUseCase,
+    UploadDataUseCase,
+    ListUploadsUseCase,
     InitiateExportUseCase,
     ListExportsUseCase,
     DownloadExportUseCase,
