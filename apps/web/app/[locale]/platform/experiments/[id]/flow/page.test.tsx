@@ -23,7 +23,7 @@ vi.mock("@/shared/ui/error-display", () => ({
   ),
 }));
 
-vi.mock("@/components/flow-editor/flow-editor", () => ({
+vi.mock("@/features/experiment-flow/components/flow-editor/flow-editor", () => ({
   FlowEditor: ({
     initialFlow,
     isDisabled,

@@ -1,8 +1,8 @@
 "use client";
 
+import ExperimentVisualizationsList from "@/features/experiment-visualizations/components/list/experiment-visualizations-list";
 import { useExperimentVisualizations } from "@/features/experiments/hooks/useExperimentVisualizations/useExperimentVisualizations";
 import { useParams } from "next/navigation";
-import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";
 
 import { useTranslation } from "@repo/i18n";
 

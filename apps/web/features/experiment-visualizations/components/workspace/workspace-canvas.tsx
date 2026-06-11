@@ -5,11 +5,11 @@ import { BarChart3, Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
+import "~/styles/plotly-chart.css";
 
 import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
-import "../../../styles/plotly-chart.css";
 import type { ChartFormValues } from "../charts/chart-config";
 import { getChartTypeDef } from "../charts/chart-registry";
 import { dataSourcesByRole } from "../charts/data/data-sources";

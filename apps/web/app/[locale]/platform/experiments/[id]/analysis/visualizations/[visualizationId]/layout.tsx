@@ -1,11 +1,11 @@
 "use client";
 
-import type { ChartFormValues } from "@/components/experiment-visualizations/charts/chart-config";
-import { chartFormResolver } from "@/components/experiment-visualizations/charts/chart-config";
-import { getChartTypeDef } from "@/components/experiment-visualizations/charts/chart-registry";
-import { DataSourcesFieldArrayProvider } from "@/components/experiment-visualizations/workspace/context/data-sources-field-array-context";
-import { useVisualizationAutosave } from "@/components/experiment-visualizations/workspace/hooks/use-visualization-autosave";
-import { VisualizationLayoutContent } from "@/components/experiment-visualizations/workspace/layout/visualization-layout-content";
+import type { ChartFormValues } from "@/features/experiment-visualizations/components/charts/chart-config";
+import { chartFormResolver } from "@/features/experiment-visualizations/components/charts/chart-config";
+import { getChartTypeDef } from "@/features/experiment-visualizations/components/charts/chart-registry";
+import { DataSourcesFieldArrayProvider } from "@/features/experiment-visualizations/components/workspace/context/data-sources-field-array-context";
+import { useVisualizationAutosave } from "@/features/experiment-visualizations/components/workspace/hooks/use-visualization-autosave";
+import { VisualizationLayoutContent } from "@/features/experiment-visualizations/components/workspace/layout/visualization-layout-content";
 import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "@/features/experiments/hooks/useExperimentVisualization/useExperimentVisualization";
 import { AutosaveStatusProvider } from "@/shared/ui/autosave/autosave-status-context";

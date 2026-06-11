@@ -8,23 +8,26 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentVisualizationsPage from "./page";
 
-vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-list", () => ({
-  default: ({
-    visualizations,
-    experimentId,
-    isLoading,
-  }: {
-    visualizations: unknown[];
-    experimentId: string;
-    isLoading: boolean;
-  }) => (
-    <div data-testid="visualizations-list">
-      <div data-testid="experiment-id">{experimentId}</div>
-      <div data-testid="loading">{String(isLoading)}</div>
-      <div data-testid="count">{visualizations.length}</div>
-    </div>
-  ),
-}));
+vi.mock(
+  "@/features/experiment-visualizations/components/list/experiment-visualizations-list",
+  () => ({
+    default: ({
+      visualizations,
+      experimentId,
+      isLoading,
+    }: {
+      visualizations: unknown[];
+      experimentId: string;
+      isLoading: boolean;
+    }) => (
+      <div data-testid="visualizations-list">
+        <div data-testid="experiment-id">{experimentId}</div>
+        <div data-testid="loading">{String(isLoading)}</div>
+        <div data-testid="count">{visualizations.length}</div>
+      </div>
+    ),
+  }),
+);
 
 beforeEach(() => {
   vi.clearAllMocks();

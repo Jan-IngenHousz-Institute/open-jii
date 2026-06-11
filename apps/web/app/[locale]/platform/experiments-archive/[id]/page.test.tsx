@@ -30,9 +30,12 @@ vi.mock(
 vi.mock("@/features/experiments/components/experiment-overview/experiment-measurements", () => ({
   ExperimentMeasurements: () => <section aria-label="measurements" />,
 }));
-vi.mock("@/components/experiment-visualizations/experiment-visualizations-display", () => ({
-  default: () => <section aria-label="visualizations" />,
-}));
+vi.mock(
+  "@/features/experiment-visualizations/components/experiment-visualizations-display",
+  () => ({
+    default: () => <section aria-label="visualizations" />,
+  }),
+);
 vi.mock("@/features/experiments/components/experiment-overview/experiment-linked-workbook", () => ({
   ExperimentLinkedWorkbook: () => <section aria-label="workbook" />,
 }));

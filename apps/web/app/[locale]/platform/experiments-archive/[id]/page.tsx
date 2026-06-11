@@ -1,6 +1,6 @@
 "use client";
 
-import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/list/experiment-visualizations-display";
+import ExperimentVisualizationsDisplay from "@/features/experiment-visualizations/components/list/experiment-visualizations-display";
 import { ExperimentDescription } from "@/features/experiments/components/experiment-overview/experiment-description";
 import { ExperimentDetailsCard } from "@/features/experiments/components/experiment-overview/experiment-details/experiment-details-card";
 import { ExperimentLinkedWorkbook } from "@/features/experiments/components/experiment-overview/experiment-linked-workbook";

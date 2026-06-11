@@ -1,8 +1,9 @@
 "use client";
 
+import "~/styles/plotly-chart.css";
+
 import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 
-import "../../styles/plotly-chart.css";
 import { getChartTypeDef } from "./charts/chart-registry";
 
 interface ExperimentVisualizationRendererProps {

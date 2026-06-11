@@ -1,8 +1,8 @@
 "use client";
 
-import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-state";
-import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
-import { FlowEditor } from "@/components/flow-editor/flow-editor";
+import { EmptyWorkbookState } from "@/features/experiment-flow/components/experiment-flow/empty-workbook-state";
+import { LinkedWorkbookCard } from "@/features/experiment-flow/components/experiment-flow/linked-workbook-card";
+import { FlowEditor } from "@/features/experiment-flow/components/flow-editor/flow-editor";
 import { useExperiment } from "@/features/experiments/hooks/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
 import { WorkbookEditor } from "@/features/workbooks/components/workbook-editor";

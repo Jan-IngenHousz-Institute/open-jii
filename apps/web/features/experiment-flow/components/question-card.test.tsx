@@ -1,7 +1,6 @@
+import { QuestionCard } from "@/features/experiment-flow/components/question-card/question-card";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import { QuestionCard } from "../question-card/question-card";
 
 function renderCard(overrides: Partial<React.ComponentProps<typeof QuestionCard>> = {}) {
   const props: React.ComponentProps<typeof QuestionCard> = {

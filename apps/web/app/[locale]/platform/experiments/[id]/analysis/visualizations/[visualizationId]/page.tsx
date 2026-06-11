@@ -1,6 +1,6 @@
 "use client";
 
-import { VisualizationWorkspace } from "@/components/experiment-visualizations/workspace/visualization-workspace";
+import { VisualizationWorkspace } from "@/features/experiment-visualizations/components/workspace/visualization-workspace";
 import { useParams } from "next/navigation";
 
 export default function VisualizationEditorPage() {

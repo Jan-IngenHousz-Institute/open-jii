@@ -1,7 +1,7 @@
 "use client";
 
-import { FlowEditor } from "@/components/flow-editor/flow-editor";
-import type { FlowEditorHandle } from "@/components/flow-editor/flow-editor";
+import { FlowEditor } from "@/features/experiment-flow/components/flow-editor/flow-editor";
+import type { FlowEditorHandle } from "@/features/experiment-flow/components/flow-editor/flow-editor";
 import { useExperiment } from "@/features/experiments/hooks/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
 import { useExperimentFlow } from "@/features/experiments/hooks/useExperimentFlow/useExperimentFlow";

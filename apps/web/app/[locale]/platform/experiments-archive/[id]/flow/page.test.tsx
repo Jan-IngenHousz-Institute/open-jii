@@ -11,7 +11,7 @@ import ExperimentFlowPage from "./page";
 
 const mockGetFlowData = vi.fn(() => ({ nodes: [{ id: "n1" }] }));
 
-vi.mock("@/components/flow-editor", () => ({
+vi.mock("@/features/experiment-flow/components/flow-editor", () => ({
   FlowEditor: forwardRef<
     { getFlowData: () => { nodes: { id: string }[] } },
     {

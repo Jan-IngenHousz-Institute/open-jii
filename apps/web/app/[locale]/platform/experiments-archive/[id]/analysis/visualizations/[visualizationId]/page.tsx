@@ -1,4 +1,4 @@
-import ExperimentVisualizationReadOnly from "@/components/experiment-visualizations/experiment-visualization-read-only";
+import ExperimentVisualizationReadOnly from "@/features/experiment-visualizations/components/experiment-visualization-read-only";
 import { notFound } from "next/navigation";
 
 interface PageProps {
