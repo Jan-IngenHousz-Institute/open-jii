@@ -6,6 +6,12 @@ name: Mobile Branch APK
 # summary and step output.
 
 on:
+  # Temporary trigger for testing the multi-device prototype: dispatch-by-API
+  # only resolves workflows on the default branch, so while this file lives on
+  # the feature branch a scoped push trigger starts the build instead.
+  push:
+    branches:
+      - "claude/inspiring-cori-7n9rcj"
   workflow_dispatch:
     inputs:
       message:
