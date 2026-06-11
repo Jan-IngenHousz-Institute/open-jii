@@ -1,8 +1,8 @@
 "use client";
 
+import { ContributorIdentity } from "@/shared/ui/contributor/contributor-identity";
 import { ChevronsUpDown, Loader2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
-import { ContributorIdentity } from "~/components/contributor/contributor-identity";
 
 import type { DataColumn, DataFilterValue } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

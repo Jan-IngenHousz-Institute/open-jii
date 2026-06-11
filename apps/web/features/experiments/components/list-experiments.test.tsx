@@ -1,3 +1,4 @@
+import { ListExperiments } from "@/features/experiments/components/list-experiments";
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -5,9 +6,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { ListExperiments } from "../list-experiments";
-
-vi.mock("~/components/experiment-overview-cards", () => ({
+vi.mock("@/shared/ui/experiment-overview-cards", () => ({
   ExperimentOverviewCards: ({ experiments }: { experiments?: unknown[] }) => (
     <div data-testid="experiment-cards">{JSON.stringify(experiments)}</div>
   ),

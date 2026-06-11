@@ -1,10 +1,19 @@
 "use client";
 
+import { AddAnnotationDialog } from "@/features/experiments/components/experiment-data/annotations/add-annotation-dialog";
+import { BulkActionsBar } from "@/features/experiments/components/experiment-data/annotations/bulk-actions-bar";
+import { DeleteAnnotationsDialog } from "@/features/experiments/components/experiment-data/annotations/delete-annotations-dialog";
+import {
+  ExperimentDataRows,
+  ExperimentTableHeader,
+  formatValue,
+  LoadingRows,
+} from "@/features/experiments/components/experiment-data/experiment-data-utils";
 import type {
   DataRow,
   TableMetadata,
-} from "@/hooks/experiment/useExperimentData/useExperimentData";
-import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+} from "@/features/experiments/hooks/useExperimentData/useExperimentData";
+import { useExperimentData } from "@/features/experiments/hooks/useExperimentData/useExperimentData";
 import { useUrlDataFilters } from "@/shared/hooks/useUrlDataFilters";
 import { FilterChipBar } from "@/shared/ui/data-filters/filter-chip-bar";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,15 +22,6 @@ import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack
 import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
-import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
-import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
-import {
-  ExperimentDataRows,
-  ExperimentTableHeader,
-  formatValue,
-  LoadingRows,
-} from "~/components/experiment-data/experiment-data-utils";
 
 import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

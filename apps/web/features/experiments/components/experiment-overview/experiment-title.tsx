@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { useExperimentUpdate } from "@/features/experiments/hooks/useExperimentUpdate/useExperimentUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { InlineEditableTitle } from "@/shared/ui/inline-editable-title";
 import { Eye, EyeOff } from "lucide-react";

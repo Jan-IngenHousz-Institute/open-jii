@@ -19,11 +19,11 @@ const { useExperimentDataSpy, useExperimentTablesSpy } = vi.hoisted(() => {
   };
 });
 
-vi.mock("~/hooks/experiment/useExperimentData/useExperimentData", () => ({
+vi.mock("@/features/experiments/hooks/useExperimentData/useExperimentData", () => ({
   useExperimentData: (args: unknown) => useExperimentDataSpy(args),
 }));
 
-vi.mock("~/hooks/experiment/useExperimentTables/useExperimentTables", () => ({
+vi.mock("@/features/experiments/hooks/useExperimentTables/useExperimentTables", () => ({
   useExperimentTables: (args: unknown) => useExperimentTablesSpy(args),
 }));
 

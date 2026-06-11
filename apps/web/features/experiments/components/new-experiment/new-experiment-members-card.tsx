@@ -1,6 +1,6 @@
 "use client";
 
-import { useUserSearch } from "@/hooks/useUserSearch";
+import { useUserSearch } from "@/features/experiments/hooks/useUserSearch";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useMemo, useState } from "react";
 import { useFieldArray } from "react-hook-form";

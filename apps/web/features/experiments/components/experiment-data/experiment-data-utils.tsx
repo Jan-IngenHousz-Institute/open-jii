@@ -1,12 +1,12 @@
+import { ExperimentDataTableAnnotationsCell } from "@/features/experiments/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell";
+import type {
+  DataRow,
+  TableMetadata,
+} from "@/features/experiments/hooks/useExperimentData/useExperimentData";
 import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
-import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell";
-import type {
-  DataRow,
-  TableMetadata,
-} from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes, ColumnPrimitiveType } from "@repo/api/schemas/experiment.schema";

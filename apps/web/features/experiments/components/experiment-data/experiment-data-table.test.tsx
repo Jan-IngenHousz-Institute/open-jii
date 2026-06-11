@@ -5,19 +5,25 @@ import { describe, it, expect, vi } from "vitest";
 import { ExperimentDataTable } from "./experiment-data-table";
 
 const mockUseExperimentData = vi.fn();
-vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
+vi.mock("@/features/experiments/hooks/useExperimentData/useExperimentData", () => ({
   useExperimentData: (...args: unknown[]): unknown => mockUseExperimentData(...args),
 }));
 
-vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
+vi.mock("@/features/experiments/components/experiment-data/annotations/bulk-actions-bar", () => ({
   BulkActionsBar: () => <div>BulkActionsBar</div>,
 }));
-vi.mock("~/components/experiment-data/annotations/add-annotation-dialog", () => ({
-  AddAnnotationDialog: () => null,
-}));
-vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", () => ({
-  DeleteAnnotationsDialog: () => null,
-}));
+vi.mock(
+  "@/features/experiments/components/experiment-data/annotations/add-annotation-dialog",
+  () => ({
+    AddAnnotationDialog: () => null,
+  }),
+);
+vi.mock(
+  "@/features/experiments/components/experiment-data/annotations/delete-annotations-dialog",
+  () => ({
+    DeleteAnnotationsDialog: () => null,
+  }),
+);
 vi.mock("./data-export-modal/data-export-modal", () => ({
   DataExportModal: () => null,
 }));
@@ -25,7 +31,7 @@ vi.mock("./table-chart/experiment-data-table-chart", () => ({
   ExperimentDataTableChart: () => <div>Chart</div>,
 }));
 
-vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
+vi.mock("@/features/experiments/components/experiment-data/experiment-data-utils", () => ({
   ExperimentTableHeader: ({ headerGroups }: { headerGroups: unknown[] }) => (
     <thead>
       <tr>

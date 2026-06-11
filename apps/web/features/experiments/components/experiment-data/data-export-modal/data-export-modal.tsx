@@ -1,10 +1,10 @@
 "use client";
 
+import { useExperiment } from "@/features/experiments/hooks/useExperiment/useExperiment";
+import { useInitiateExport } from "@/features/experiments/hooks/useInitiateExport/useInitiateExport";
 import { parseApiError } from "@/shared/api/apiError";
 import { Download } from "lucide-react";
 import * as React from "react";
-import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
-import { useInitiateExport } from "~/hooks/experiment/useInitiateExport/useInitiateExport";
 
 import { useTranslation } from "@repo/i18n/client";
 import { Checkbox } from "@repo/ui/components/checkbox";

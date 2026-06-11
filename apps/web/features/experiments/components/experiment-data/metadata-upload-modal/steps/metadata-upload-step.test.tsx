@@ -12,7 +12,7 @@ const mockUpdateMutateAsync = vi.fn();
 const mockDeleteMutateAsync = vi.fn();
 let mockExistingMetadata: unknown[] = [];
 
-vi.mock("@/components/metadata-table/metadata-table", () => ({
+vi.mock("@/features/experiments/components/metadata-table/metadata-table", () => ({
   MetadataTable: (props: {
     columns: unknown[];
     rows: unknown[];
@@ -41,30 +41,39 @@ vi.mock("@/components/metadata-table/metadata-table", () => ({
   ),
 }));
 
-vi.mock("@/components/metadata-table/utils/parse-metadata-import", () => ({
+vi.mock("@/features/experiments/components/metadata-table/utils/parse-metadata-import", () => ({
   parseClipboard: (...args: unknown[]) => mockParseClipboard(...args) as unknown,
   parseClipboardText: (...args: unknown[]) => mockParseClipboardText(...args) as unknown,
   parseFile: (...args: unknown[]) => mockParseFile(...args) as unknown,
 }));
 
 let mockFlowData: unknown = null;
-vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
+vi.mock("@/features/experiments/hooks/useExperimentFlow/useExperimentFlow", () => ({
   useExperimentFlow: () => ({ data: mockFlowData, isLoading: false, error: null }),
 }));
 
-vi.mock("@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate", () => ({
-  useExperimentMetadataCreate: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
-}));
+vi.mock(
+  "@/features/experiments/hooks/useExperimentMetadataCreate/useExperimentMetadataCreate",
+  () => ({
+    useExperimentMetadataCreate: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
+  }),
+);
 
-vi.mock("@/hooks/experiment/useExperimentMetadataUpdate/useExperimentMetadataUpdate", () => ({
-  useExperimentMetadataUpdate: () => ({ mutateAsync: mockUpdateMutateAsync, isPending: false }),
-}));
+vi.mock(
+  "@/features/experiments/hooks/useExperimentMetadataUpdate/useExperimentMetadataUpdate",
+  () => ({
+    useExperimentMetadataUpdate: () => ({ mutateAsync: mockUpdateMutateAsync, isPending: false }),
+  }),
+);
 
-vi.mock("@/hooks/experiment/useExperimentMetadataDelete/useExperimentMetadataDelete", () => ({
-  useExperimentMetadataDelete: () => ({ mutateAsync: mockDeleteMutateAsync, isPending: false }),
-}));
+vi.mock(
+  "@/features/experiments/hooks/useExperimentMetadataDelete/useExperimentMetadataDelete",
+  () => ({
+    useExperimentMetadataDelete: () => ({ mutateAsync: mockDeleteMutateAsync, isPending: false }),
+  }),
+);
 
-vi.mock("@/hooks/experiment/useExperimentMetadata/useExperimentMetadata", () => ({
+vi.mock("@/features/experiments/hooks/useExperimentMetadata/useExperimentMetadata", () => ({
   useExperimentMetadata: () => ({
     data: { body: mockExistingMetadata },
     isLoading: false,

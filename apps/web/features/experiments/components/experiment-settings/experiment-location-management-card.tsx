@@ -1,10 +1,10 @@
 "use client";
 
+import { useExperimentLocations } from "@/features/experiments/hooks/useExperimentLocations/useExperimentLocations";
+import { useExperimentLocationsUpdate } from "@/features/experiments/hooks/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useExperimentLocations } from "~/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentLocationsUpdate } from "~/hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
 
 import { useTranslation } from "@repo/i18n";
 import type { LocationPoint } from "@repo/ui/components/map";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { useExperiment } from "@/features/experiments/hooks/useExperiment/useExperiment";
 import { ErrorDisplay } from "@/shared/ui/error-display";
 import { use } from "react";
 import * as React from "react";

@@ -1,10 +1,10 @@
 "use client";
 
+import { useExperimentData } from "@/features/experiments/hooks/useExperimentData/useExperimentData";
+import { useExperimentTables } from "@/features/experiments/hooks/useExperimentTables/useExperimentTables";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
-import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import type { ChartType } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";

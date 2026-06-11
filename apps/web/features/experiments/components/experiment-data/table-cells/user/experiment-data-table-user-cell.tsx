@@ -1,6 +1,6 @@
 "use client";
 
-import { ContributorIdentity } from "~/components/contributor/contributor-identity";
+import { ContributorIdentity } from "@/shared/ui/contributor/contributor-identity";
 
 interface ExperimentDataTableUserCellProps {
   data: string;

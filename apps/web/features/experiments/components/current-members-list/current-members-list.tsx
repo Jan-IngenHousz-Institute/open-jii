@@ -1,9 +1,9 @@
+import { useExperimentMemberRoleUpdate } from "@/features/experiments/hooks/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useExperimentMemberRoleUpdate } from "~/hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
 
 import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import type { UserProfile } from "@repo/api/schemas/user.schema";

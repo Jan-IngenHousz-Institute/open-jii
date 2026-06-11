@@ -1,8 +1,8 @@
 "use client";
 
+import { useExperiments } from "@/features/experiments/hooks/useExperiments/useExperiments";
+import { ExperimentOverviewCards } from "@/shared/ui/experiment-overview-cards";
 import { X } from "lucide-react";
-import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
-import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";

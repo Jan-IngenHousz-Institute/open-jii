@@ -1,11 +1,11 @@
 "use client";
 
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { ExperimentTitle } from "@/features/experiments/components/experiment-overview/experiment-title";
+import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { ErrorDisplay } from "@/shared/ui/error-display";
 import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
-import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";

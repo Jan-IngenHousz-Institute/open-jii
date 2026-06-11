@@ -1,11 +1,11 @@
 "use client";
 
+import { useApproveJoinRequest } from "@/features/experiments/hooks/join-request/useApproveJoinRequest/useApproveJoinRequest";
+import { useExperimentJoinRequests } from "@/features/experiments/hooks/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
+import { useRejectJoinRequest } from "@/features/experiments/hooks/join-request/useRejectJoinRequest/useRejectJoinRequest";
 import { UserAvatar } from "@/shared/ui/user-avatar";
 import { Check, ChevronDown, ChevronUp, Mail, UserRoundPlus, X } from "lucide-react";
 import { useState } from "react";
-import { useApproveJoinRequest } from "~/hooks/experiment/join-request/useApproveJoinRequest/useApproveJoinRequest";
-import { useExperimentJoinRequests } from "~/hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
-import { useRejectJoinRequest } from "~/hooks/experiment/join-request/useRejectJoinRequest/useRejectJoinRequest";
 
 import type { ExperimentJoinRequest } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

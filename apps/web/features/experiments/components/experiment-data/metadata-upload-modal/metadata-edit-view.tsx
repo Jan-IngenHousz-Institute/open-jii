@@ -1,7 +1,10 @@
-import { MetadataTable } from "@/components/metadata-table/metadata-table";
-import type { MetadataColumn, MetadataRow } from "@/components/metadata-table/types";
-import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
-import { useExperimentMetadataUpdate } from "@/hooks/experiment/useExperimentMetadataUpdate/useExperimentMetadataUpdate";
+import { MetadataTable } from "@/features/experiments/components/metadata-table/metadata-table";
+import type {
+  MetadataColumn,
+  MetadataRow,
+} from "@/features/experiments/components/metadata-table/types";
+import { useExperimentMetadataCreate } from "@/features/experiments/hooks/useExperimentMetadataCreate/useExperimentMetadataCreate";
+import { useExperimentMetadataUpdate } from "@/features/experiments/hooks/useExperimentMetadataUpdate/useExperimentMetadataUpdate";
 import {
   ArrowLeft,
   Check,

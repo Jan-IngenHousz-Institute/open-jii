@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import ExperimentArchivePage from "./page";
 
-vi.mock("@/components/list-experiments", () => ({
+vi.mock("@/features/experiments/components/list-experiments", () => ({
   ListExperiments: ({ archived }: { archived: boolean }) => (
     <div data-testid="list-experiments" data-archived={String(archived)} />
   ),

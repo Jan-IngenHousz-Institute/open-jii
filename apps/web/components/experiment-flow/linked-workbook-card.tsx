@@ -1,11 +1,11 @@
 "use client";
 
+import { useAttachWorkbook } from "@/features/experiments/hooks/useAttachWorkbook/useAttachWorkbook";
+import { useDetachWorkbook } from "@/features/experiments/hooks/useDetachWorkbook/useDetachWorkbook";
+import { useUpgradeWorkbookVersion } from "@/features/experiments/hooks/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
 import { useWorkbookList } from "@/features/workbooks/hooks/useWorkbookList/useWorkbookList";
 import { useWorkbookVersions } from "@/features/workbooks/hooks/useWorkbookVersions/useWorkbookVersions";
-import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
-import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetachWorkbook";
-import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { WorkbookVersionBadge } from "@/shared/ui/workbook-version-badge";
 import {
   ArrowUpCircle,

@@ -1,7 +1,7 @@
 "use client";
 
-import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
-import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
+import { useExperiments } from "@/features/experiments/hooks/useExperiments/useExperiments";
+import { ExperimentOverviewCards } from "@/shared/ui/experiment-overview-cards";
 
 import { Skeleton } from "@repo/ui/components/skeleton";
 

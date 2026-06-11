@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { useExperimentUpdate } from "@/features/experiments/hooks/useExperimentUpdate/useExperimentUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { InlineEditableDescription } from "@/shared/ui/inline-editable-description";
 

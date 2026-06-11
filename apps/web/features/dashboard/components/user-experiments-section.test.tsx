@@ -7,7 +7,7 @@ import { contract } from "@repo/api/contract";
 
 import { UserExperimentsSection } from "./user-experiments-section";
 
-vi.mock("~/components/experiment-overview-cards", () => ({
+vi.mock("@/shared/ui/experiment-overview-cards", () => ({
   ExperimentOverviewCards: (props: { experiments?: unknown[] }) => (
     <div data-testid="experiment-cards">{props.experiments?.length ?? 0} experiments</div>
   ),

@@ -1,8 +1,8 @@
 "use client";
 
+import type { ExperimentTableMetadata } from "@/features/experiments/hooks/useExperimentTables/useExperimentTables";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
-import type { ExperimentTableMetadata } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import type { UploadFormFields } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";

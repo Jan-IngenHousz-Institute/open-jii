@@ -1,11 +1,11 @@
 "use client";
 
+import { useTransferRequestCreate } from "@/features/experiments/hooks/useTransferRequestCreate/useTransferRequestCreate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useTransferRequestCreate } from "~/hooks/useTransferRequestCreate/useTransferRequestCreate";
 
 import { zCreateTransferRequestBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

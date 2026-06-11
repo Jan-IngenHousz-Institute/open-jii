@@ -9,7 +9,7 @@ import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
 import { ExportListStep } from "../steps/export-list-step";
 
 const mockDownloadExport = vi.fn();
-vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
+vi.mock("@/features/experiments/hooks/useDownloadExport/useDownloadExport", () => ({
   useDownloadExport: () => ({
     downloadExport: mockDownloadExport,
     isDownloading: false,

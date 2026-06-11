@@ -1,5 +1,5 @@
+import { useExperimentDistinctValues } from "@/shared/ui/data-filters/useExperimentDistinctValues/useExperimentDistinctValues";
 import { useMemo } from "react";
-import { useExperimentDistinctValues } from "~/hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 
 import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";

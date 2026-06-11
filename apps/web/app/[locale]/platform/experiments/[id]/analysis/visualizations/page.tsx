@@ -1,9 +1,9 @@
 "use client";
 
 import { lineChartType } from "@/components/experiment-visualizations/charts/basic/line";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
-import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
+import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
+import { useExperimentVisualizationCreate } from "@/features/experiments/hooks/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
+import { useExperimentVisualizations } from "@/features/experiments/hooks/useExperimentVisualizations/useExperimentVisualizations";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { Loader2, PlusCircle } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";

@@ -1,11 +1,11 @@
 "use client";
 
+import { useExperimentDelete } from "@/features/experiments/hooks/useExperimentDelete/useExperimentDelete";
 import { parseApiError } from "@/shared/api/apiError";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
-import { useExperimentDelete } from "~/hooks/experiment/useExperimentDelete/useExperimentDelete";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";

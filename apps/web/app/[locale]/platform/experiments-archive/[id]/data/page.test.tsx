@@ -10,7 +10,7 @@ import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
 import ExperimentDataPage from "./page";
 
-vi.mock("~/components/experiment-data/experiment-data-table", () => ({
+vi.mock("@/features/experiments/components/experiment-data/experiment-data-table", () => ({
   ExperimentDataTable: ({
     experimentId,
     tableName,
@@ -63,24 +63,27 @@ vi.mock("@repo/ui/components/skeleton", async () => {
   };
 });
 
-vi.mock("~/components/experiment-data/upload-data-modal/upload-data-modal", () => ({
-  UploadDataModal: ({
-    experimentId,
-    open,
-    onOpenChange,
-  }: {
-    experimentId: string;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }) => (
-    <div
-      data-testid="upload-data-modal"
-      data-experiment-id={experimentId}
-      data-open={open}
-      onClick={() => onOpenChange(!open)}
-    />
-  ),
-}));
+vi.mock(
+  "@/features/experiments/components/experiment-data/upload-data-modal/upload-data-modal",
+  () => ({
+    UploadDataModal: ({
+      experimentId,
+      open,
+      onOpenChange,
+    }: {
+      experimentId: string;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => (
+      <div
+        data-testid="upload-data-modal"
+        data-experiment-id={experimentId}
+        data-open={open}
+        onClick={() => onOpenChange(!open)}
+      />
+    ),
+  }),
+);
 
 const EXP_ID = "test-experiment-id";
 const PARAMS = Promise.resolve({ id: EXP_ID, locale: "en-US" });

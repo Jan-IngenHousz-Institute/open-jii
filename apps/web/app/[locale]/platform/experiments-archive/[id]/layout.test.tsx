@@ -9,7 +9,7 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentLayout from "./layout";
 
-vi.mock("~/components/experiment-overview/experiment-title", () => ({
+vi.mock("@/features/experiments/components/experiment-overview/experiment-title", () => ({
   ExperimentTitle: ({ name }: { name: string }) => <div data-testid="experiment-title">{name}</div>,
 }));
 

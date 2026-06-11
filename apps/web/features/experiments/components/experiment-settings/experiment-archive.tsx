@@ -1,10 +1,10 @@
 "use client";
 
+import { useExperimentUpdate } from "@/features/experiments/hooks/useExperimentUpdate/useExperimentUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useExperimentUpdate } from "~/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

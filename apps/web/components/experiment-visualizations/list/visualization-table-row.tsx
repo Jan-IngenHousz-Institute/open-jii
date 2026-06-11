@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
+import { useExperimentVisualizationDelete } from "@/features/experiments/hooks/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import { formatDate } from "@/shared/utils/date";
 import { initialsOf } from "@/shared/utils/initials";
 import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";

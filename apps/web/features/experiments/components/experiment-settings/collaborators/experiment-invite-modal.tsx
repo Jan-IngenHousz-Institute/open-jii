@@ -1,8 +1,8 @@
 "use client";
 
+import { useExperimentMemberAdd } from "@/features/experiments/hooks/useExperimentMemberAdd/useExperimentMemberAdd";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useEffect, useMemo, useState } from "react";
-import { useExperimentMemberAdd } from "~/hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
 
 import type { ExperimentMember, ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";

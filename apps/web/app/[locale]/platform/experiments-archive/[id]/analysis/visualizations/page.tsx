@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
+import { useExperimentVisualizations } from "@/features/experiments/hooks/useExperimentVisualizations/useExperimentVisualizations";
 import { useParams } from "next/navigation";
 import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";
 

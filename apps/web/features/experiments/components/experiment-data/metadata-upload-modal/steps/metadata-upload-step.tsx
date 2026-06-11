@@ -1,7 +1,7 @@
 "use client";
 
-import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
-import { useExperimentMetadata } from "@/hooks/experiment/useExperimentMetadata/useExperimentMetadata";
+import { useExperimentFlow } from "@/features/experiments/hooks/useExperimentFlow/useExperimentFlow";
+import { useExperimentMetadata } from "@/features/experiments/hooks/useExperimentMetadata/useExperimentMetadata";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";

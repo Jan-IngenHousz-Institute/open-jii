@@ -23,9 +23,7 @@ const LEGACY_SHARED_TO_FEATURE_FILES = [];
 
 // Migration-only: features may still import legacy layer dirs while those
 // dirs are dissolved into features/ and shared/. Must end empty.
-const LEGACY_FEATURE_TO_LEGACY_DIR_FILES = [
-  "features/dashboard/components/user-experiments-section.tsx",
-];
+const LEGACY_FEATURE_TO_LEGACY_DIR_FILES = [];
 
 // restrictEnvAccess also configures no-restricted-imports; flat config
 // replaces rather than merges, so every composite below re-includes it.

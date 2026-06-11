@@ -1,17 +1,17 @@
 "use client";
 
 import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/list/experiment-visualizations-display";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
-import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
+import { ExperimentDescription } from "@/features/experiments/components/experiment-overview/experiment-description";
+import { ExperimentDetailsCard } from "@/features/experiments/components/experiment-overview/experiment-details/experiment-details-card";
+import { ExperimentLinkedWorkbook } from "@/features/experiments/components/experiment-overview/experiment-linked-workbook";
+import { ExperimentMeasurements } from "@/features/experiments/components/experiment-overview/experiment-measurements";
+import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
+import { useExperimentLocations } from "@/features/experiments/hooks/useExperimentLocations/useExperimentLocations";
+import { useExperimentMembers } from "@/features/experiments/hooks/useExperimentMembers/useExperimentMembers";
+import { useExperimentVisualizations } from "@/features/experiments/hooks/useExperimentVisualizations/useExperimentVisualizations";
 import { ErrorDisplay } from "@/shared/ui/error-display";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
-import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
-import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
-import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
-import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
 import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

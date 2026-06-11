@@ -1,7 +1,7 @@
 "use client";
 
+import { useExperimentMemberRemove } from "@/features/experiments/hooks/useExperimentMemberRemove/useExperimentMemberRemove";
 import { useState } from "react";
-import { useExperimentMemberRemove } from "~/hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
 
 import type { ExperimentMember, ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

@@ -1,9 +1,9 @@
 "use client";
 
+import { useExperimentVisualization } from "@/features/experiments/hooks/useExperimentVisualization/useExperimentVisualization";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useExperimentVisualization } from "~/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

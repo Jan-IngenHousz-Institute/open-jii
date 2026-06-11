@@ -1,8 +1,8 @@
 "use client";
 
+import { useTransferRequests } from "@/features/experiments/hooks/useTransferRequests/useTransferRequests";
 import { formatDate } from "@/shared/utils/date";
 import { AlertCircle } from "lucide-react";
-import { useTransferRequests } from "~/hooks/useTransferRequests/useTransferRequests";
 
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";

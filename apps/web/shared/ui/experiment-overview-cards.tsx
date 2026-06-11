@@ -1,7 +1,7 @@
+import { ExperimentStatusBadge } from "@/shared/ui/ExperimentStatusBadge";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
-import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
 import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

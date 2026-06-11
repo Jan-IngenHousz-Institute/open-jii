@@ -1,7 +1,7 @@
 "use client";
 
+import { useExperimentUpdate } from "@/features/experiments/hooks/useExperimentUpdate/useExperimentUpdate";
 import { useState } from "react";
-import { useExperimentUpdate } from "~/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 import { useTranslation } from "@repo/i18n";
 import { Switch } from "@repo/ui/components/switch";

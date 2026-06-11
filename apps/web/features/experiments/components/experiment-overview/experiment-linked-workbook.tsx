@@ -1,12 +1,9 @@
 "use client";
 
-import {
-  getWorkbookCellSummary,
-  WorkbookCellSummary,
-} from "@/features/workbooks/components/workbook-cell-summary";
 import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
 import { useWorkbookVersions } from "@/features/workbooks/hooks/useWorkbookVersions/useWorkbookVersions";
 import { useLocale } from "@/shared/i18n/useLocale";
+import { getWorkbookCellSummary, WorkbookCellSummary } from "@/shared/ui/workbook-cell-summary";
 import { WorkbookVersionBadge } from "@/shared/ui/workbook-version-badge";
 import { formatDate } from "@/shared/utils/date";
 import { BookOpen } from "lucide-react";

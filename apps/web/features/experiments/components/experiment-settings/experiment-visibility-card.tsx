@@ -1,9 +1,9 @@
 "use client";
 
+import { useExperimentUpdate } from "@/features/experiments/hooks/useExperimentUpdate/useExperimentUpdate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useExperimentUpdate } from "~/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 import type { ExperimentVisibility } from "@repo/api/schemas/experiment.schema";
 import { visibilitySchema } from "@repo/api/schemas/experiment.schema";

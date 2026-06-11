@@ -1,7 +1,7 @@
 "use client";
 
+import { ContributorIdentity } from "@/shared/ui/contributor/contributor-identity";
 import { Check } from "lucide-react";
-import { ContributorIdentity } from "~/components/contributor/contributor-identity";
 
 import { CommandItem } from "@repo/ui/components/command";
 import { cn } from "@repo/ui/lib/utils";

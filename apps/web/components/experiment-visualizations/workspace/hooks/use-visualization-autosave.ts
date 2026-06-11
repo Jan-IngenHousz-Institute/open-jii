@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
+import { useExperimentVisualizationUpdate } from "@/features/experiments/hooks/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
 import { useAutosave } from "@/shared/hooks/useAutosave";
 import { useReportAutosaveStatus } from "@/shared/ui/autosave/autosave-status-context";
 import { useCallback } from "react";

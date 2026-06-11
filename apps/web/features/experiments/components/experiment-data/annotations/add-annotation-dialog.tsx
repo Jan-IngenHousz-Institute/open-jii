@@ -1,8 +1,8 @@
+import { useExperimentAnnotationAdd } from "@/features/experiments/hooks/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd";
+import { useExperimentAnnotationAddBulk } from "@/features/experiments/hooks/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useExperimentAnnotationAdd } from "~/hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd";
-import { useExperimentAnnotationAddBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk";
 
 import type { AnnotationContent, AnnotationType } from "@repo/api/schemas/experiment.schema";
 import { zAnnotationContent } from "@repo/api/schemas/experiment.schema";

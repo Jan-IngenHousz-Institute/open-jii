@@ -1,4 +1,4 @@
-import { ListExperiments } from "@/components/list-experiments";
+import { ListExperiments } from "@/features/experiments/components/list-experiments";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";

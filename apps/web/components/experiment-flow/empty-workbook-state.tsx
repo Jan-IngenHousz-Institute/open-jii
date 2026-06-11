@@ -1,8 +1,8 @@
 "use client";
 
+import { useAttachWorkbook } from "@/features/experiments/hooks/useAttachWorkbook/useAttachWorkbook";
 import { useWorkbookCreate } from "@/features/workbooks/hooks/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookList } from "@/features/workbooks/hooks/useWorkbookList/useWorkbookList";
-import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { BookOpen, LinkIcon, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";

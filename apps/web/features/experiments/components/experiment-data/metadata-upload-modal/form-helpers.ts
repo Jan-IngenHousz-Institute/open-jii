@@ -1,4 +1,4 @@
-import type { MetadataRow } from "@/components/metadata-table/types";
+import type { MetadataRow } from "@/features/experiments/components/metadata-table/types";
 
 import type {
   CustomMetadataPayload,

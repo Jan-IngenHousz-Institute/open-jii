@@ -1,4 +1,4 @@
-import { useExperimentMetadataDelete } from "@/hooks/experiment/useExperimentMetadataDelete/useExperimentMetadataDelete";
+import { useExperimentMetadataDelete } from "@/features/experiments/hooks/useExperimentMetadataDelete/useExperimentMetadataDelete";
 import { ArrowLeft, FileSpreadsheet, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 

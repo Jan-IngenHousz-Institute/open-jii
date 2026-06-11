@@ -1,7 +1,7 @@
 "use client";
 
-import { ContributorIdentity } from "~/components/contributor/contributor-identity";
-import { useExperimentDistinctValues } from "~/hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
+import { ContributorIdentity } from "@/shared/ui/contributor/contributor-identity";
+import { useExperimentDistinctValues } from "@/shared/ui/data-filters/useExperimentDistinctValues/useExperimentDistinctValues";
 
 import type { DataFilter } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

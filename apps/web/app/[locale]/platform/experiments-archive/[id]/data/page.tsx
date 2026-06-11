@@ -1,16 +1,16 @@
 "use client";
 
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { ExperimentDataTable } from "@/features/experiments/components/experiment-data/experiment-data-table";
+import { UploadDataModal } from "@/features/experiments/components/experiment-data/upload-data-modal/upload-data-modal";
+import { useExperiment } from "@/features/experiments/hooks/useExperiment/useExperiment";
+import { useExperimentTables } from "@/features/experiments/hooks/useExperimentTables/useExperimentTables";
 import { ErrorDisplay } from "@/shared/ui/error-display";
 import { BarChart3, Upload } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
-import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
-import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
 import { env } from "~/env";
-import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";

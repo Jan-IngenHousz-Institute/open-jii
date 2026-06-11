@@ -1,9 +1,9 @@
 "use client";
 
+import { useExperimentData } from "@/features/experiments/hooks/useExperimentData/useExperimentData";
+import { useExperimentTables } from "@/features/experiments/hooks/useExperimentTables/useExperimentTables";
 import { useLocale } from "@/shared/i18n/useLocale";
 import Link from "next/link";
-import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
-import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";

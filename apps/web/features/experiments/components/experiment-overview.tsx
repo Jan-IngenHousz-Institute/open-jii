@@ -1,7 +1,7 @@
 "use client";
 
+import { useExperiment } from "@/features/experiments/hooks/useExperiment/useExperiment";
 import { formatDate } from "@/shared/utils/date";
-import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 
 import { useTranslation } from "@repo/i18n";
 

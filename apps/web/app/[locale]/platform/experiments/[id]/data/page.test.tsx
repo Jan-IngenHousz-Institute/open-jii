@@ -18,21 +18,24 @@ vi.mock("@/shared/ui/error-display", () => ({
   ),
 }));
 
-vi.mock("~/components/experiment-data/upload-data-modal/upload-data-modal", () => ({
-  UploadDataModal: ({
-    open,
-    onOpenChange,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }) => (
-    <div data-testid="upload-data-modal" data-open={open}>
-      <button onClick={() => onOpenChange(false)}>Close Modal</button>
-    </div>
-  ),
-}));
+vi.mock(
+  "@/features/experiments/components/experiment-data/upload-data-modal/upload-data-modal",
+  () => ({
+    UploadDataModal: ({
+      open,
+      onOpenChange,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => (
+      <div data-testid="upload-data-modal" data-open={open}>
+        <button onClick={() => onOpenChange(false)}>Close Modal</button>
+      </div>
+    ),
+  }),
+);
 
-vi.mock("~/components/experiment-data/experiment-data-table", () => ({
+vi.mock("@/features/experiments/components/experiment-data/experiment-data-table", () => ({
   ExperimentDataTable: ({
     experimentId,
     tableName,
@@ -59,19 +62,22 @@ vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ),
 }));
 
-vi.mock("~/components/experiment-data/metadata-upload-modal/metadata-upload-modal", () => ({
-  MetadataUploadModal: ({
-    open,
-    onOpenChange,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }) => (
-    <div data-testid="metadata-upload-modal" data-open={open}>
-      <button onClick={() => onOpenChange(false)}>Close Metadata Modal</button>
-    </div>
-  ),
-}));
+vi.mock(
+  "@/features/experiments/components/experiment-data/metadata-upload-modal/metadata-upload-modal",
+  () => ({
+    MetadataUploadModal: ({
+      open,
+      onOpenChange,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => (
+      <div data-testid="metadata-upload-modal" data-open={open}>
+        <button onClick={() => onOpenChange(false)}>Close Metadata Modal</button>
+      </div>
+    ),
+  }),
+);
 
 describe("ExperimentDataPage", () => {
   const experimentId = "exp-123";

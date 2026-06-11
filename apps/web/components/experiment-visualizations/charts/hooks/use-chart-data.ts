@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentVisualizationData } from "~/hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import { useExperimentVisualizationData } from "@/features/experiments/hooks/useExperimentVisualizationData/useExperimentVisualizationData";
 
 import type { DataFilter, ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 

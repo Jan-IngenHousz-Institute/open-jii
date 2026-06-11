@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
+import { useExperimentVisualizationDelete } from "@/features/experiments/hooks/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import { parseApiError } from "@/shared/api/apiError";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { ChevronDown, Eraser, Trash2 } from "lucide-react";

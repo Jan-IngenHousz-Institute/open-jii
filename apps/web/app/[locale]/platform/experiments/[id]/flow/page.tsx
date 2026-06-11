@@ -3,10 +3,10 @@
 import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-state";
 import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
 import { FlowEditor } from "@/components/flow-editor/flow-editor";
+import { useExperiment } from "@/features/experiments/hooks/useExperiment/useExperiment";
+import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
 import { WorkbookEditor } from "@/features/workbooks/components/workbook-editor";
 import { useWorkbookVersion } from "@/features/workbooks/hooks/useWorkbookVersion/useWorkbookVersion";
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { ErrorDisplay } from "@/shared/ui/error-display";
 import { GitBranch, List } from "lucide-react";
 import { notFound } from "next/navigation";

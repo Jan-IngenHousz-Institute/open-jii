@@ -1,9 +1,12 @@
-import type { MetadataColumn, MetadataRow } from "@/components/metadata-table/types";
+import type {
+  MetadataColumn,
+  MetadataRow,
+} from "@/features/experiments/components/metadata-table/types";
 import {
   parseClipboard,
   parseClipboardText,
   parseFile,
-} from "@/components/metadata-table/utils/parse-metadata-import";
+} from "@/features/experiments/components/metadata-table/utils/parse-metadata-import";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ImportedData {

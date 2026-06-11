@@ -1,11 +1,11 @@
 "use client";
 
+import { useCancelMyJoinRequest } from "@/features/experiments/hooks/join-request/useCancelMyJoinRequest/useCancelMyJoinRequest";
+import { useMyJoinRequest } from "@/features/experiments/hooks/join-request/useMyJoinRequest/useMyJoinRequest";
+import { useRequestJoinExperiment } from "@/features/experiments/hooks/join-request/useRequestJoinExperiment/useRequestJoinExperiment";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useCancelMyJoinRequest } from "~/hooks/experiment/join-request/useCancelMyJoinRequest/useCancelMyJoinRequest";
-import { useMyJoinRequest } from "~/hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
-import { useRequestJoinExperiment } from "~/hooks/experiment/join-request/useRequestJoinExperiment/useRequestJoinExperiment";
 
 import type { CreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
 import { zCreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";

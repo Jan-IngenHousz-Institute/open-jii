@@ -1,6 +1,6 @@
 "use client";
 
-import { useListUploads } from "~/hooks/experiment/useListUploads/useListUploads";
+import { useListUploads } from "@/features/experiments/hooks/useListUploads/useListUploads";
 
 import { useTranslation } from "@repo/i18n/client";
 
