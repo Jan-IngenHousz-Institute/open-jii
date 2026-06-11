@@ -55,4 +55,81 @@ describe("ListWorkbooks", () => {
 
     expect(screen.getByLabelText("workbooks.clearSearch")).toBeInTheDocument();
   });
+
+  it("clears the search via the clear button", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    const searchInput = screen.getByPlaceholderText("workbooks.searchPlaceholder");
+    await user.type(searchInput, "wheat");
+    await user.click(screen.getByLabelText("workbooks.clearSearch"));
+
+    expect(searchInput).toHaveValue("");
+  });
+
+  it("closes the create dialog via the Cancel button", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    expect(await screen.findByText("workbooks.createDescription")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "workbooks.cancel" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("workbooks.createDescription")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("resets the name field when the dialog is dismissed", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    await user.type(await screen.findByPlaceholderText("workbooks.namePlaceholder"), "Draft");
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    expect(await screen.findByPlaceholderText("workbooks.namePlaceholder")).toHaveValue("");
+  });
+
+  it("creates a workbook with the entered name from the dialog", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    const spy = server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: createWorkbook({ id: "wb-new", name: "My New WB" }),
+    });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    const nameInput = await screen.findByPlaceholderText("workbooks.namePlaceholder");
+    await user.type(nameInput, "  My New WB  {Enter}");
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({ name: "My New WB" });
+  });
+
+  it("does not create a workbook when the name is blank", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    const spy = server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: createWorkbook({ id: "x" }),
+    });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    const nameInput = await screen.findByPlaceholderText("workbooks.namePlaceholder");
+    await user.type(nameInput, "   {Enter}");
+
+    expect(spy.called).toBe(false);
+  });
 });

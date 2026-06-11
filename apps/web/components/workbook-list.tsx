@@ -1,13 +1,17 @@
 "use client";
 
+import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
+import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkbookDelete";
 import { formatDate } from "@/util/date";
-import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useMemo, useState } from "react";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -25,6 +29,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -79,9 +84,10 @@ export function WorkbookList({ workbooks, isLoading }: WorkbookListProps) {
       <Table>
         <TableHeader>
           <TableRow className={cn("hover:bg-transparent", HEADER_BG, TABLE_BORDER)}>
-            <ColumnHead>{t("workbooks.columns.name", "Name")}</ColumnHead>
-            <ColumnHead>{t("workbooks.columns.user", "User")}</ColumnHead>
-            <ColumnHead>{t("workbooks.columns.updated", "Updated")}</ColumnHead>
+            <ColumnHead>{t("workbooks.columns.name")}</ColumnHead>
+            <ColumnHead>{t("workbooks.columns.usedBy")}</ColumnHead>
+            <ColumnHead>{t("workbooks.columns.user")}</ColumnHead>
+            <ColumnHead>{t("workbooks.columns.updated")}</ColumnHead>
             <TableHead aria-hidden className="w-12" />
           </TableRow>
         </TableHeader>
@@ -115,6 +121,9 @@ function SkeletonRow() {
         <Skeleton className="h-4 w-48" />
       </TableCell>
       <TableCell className="px-6 py-3">
+        <Skeleton className="h-4 w-20" />
+      </TableCell>
+      <TableCell className="px-6 py-3">
         <div className="flex items-center gap-2">
           <Skeleton className="size-6 rounded-full" />
           <Skeleton className="h-4 w-20" />
@@ -136,21 +145,47 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const { mutate: deleteWorkbook, isPending: isDeleting } = useWorkbookDelete();
+  const { mutate: createWorkbook, isPending: isDuplicating } = useWorkbookCreate({
+    onSuccess: (data) => router.push(`/${locale}/platform/workbooks/${data.body.id}`),
+  });
 
   const handleDelete = () => {
     deleteWorkbook(
       { params: { id: workbook.id } },
       {
         onSuccess: () => {
-          toast({ title: t("workbooks.messages.deleteSuccess", "Workbook deleted") });
+          toast({ title: t("workbooks.messages.deleteSuccess") });
           setConfirmingDelete(false);
         },
       },
     );
   };
 
+  const handleDuplicate = () => {
+    createWorkbook(
+      {
+        body: {
+          name: t("workbooks.duplicateName", { name: workbook.name }),
+          description: workbook.description ?? undefined,
+          cells: workbook.cells,
+          metadata: workbook.metadata,
+        },
+      },
+      {
+        onError: () => toast({ title: t("workbooks.createError"), variant: "destructive" }),
+      },
+    );
+  };
+
   const viewHref = `/${locale}/platform/workbooks/${workbook.id}`;
   const author = workbook.createdByName ?? `${workbook.createdBy.slice(0, 8)}…`;
+  const usedBy = workbook.experimentCount ?? 0;
+
+  // Deleting a workbook attached to experiments unlinks them and loses their
+  // measurement flow, so that path is gated behind a feature flag (same as
+  // experiment deletion). Unused workbooks stay freely deletable.
+  const workbookDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.WORKBOOK_DELETION);
+  const canDelete = usedBy === 0 || workbookDeletionEnabled === true;
 
   return (
     <>
@@ -161,14 +196,25 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
         )}
         onClick={() => router.push(viewHref)}
       >
-        <TableCell className={cn("px-6 py-3 text-[13px] font-semibold", TEXT_STRONG)}>
+        <TableCell className="px-6 py-3">
           <Link
             href={viewHref}
             onClick={(e) => e.stopPropagation()}
-            className="focus-visible:ring-primary/40 hover:underline focus-visible:outline-none focus-visible:ring-2"
+            className={cn(
+              "focus-visible:ring-primary/40 text-[13px] font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2",
+              TEXT_STRONG,
+            )}
           >
             {workbook.name}
           </Link>
+          <WorkbookCellSummary cells={workbook.cells} className="mt-1.5" />
+        </TableCell>
+        <TableCell className={cn("px-6 py-3 text-[13px]", TEXT_MUTED)}>
+          {usedBy > 0 ? (
+            <span className={TEXT_STRONG}>{t("workbooks.usedByCount", { count: usedBy })}</span>
+          ) : (
+            t("workbooks.notUsed")
+          )}
         </TableCell>
         <TableCell className="px-6 py-3">
           <div className="flex items-center gap-2">
@@ -189,7 +235,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  aria-label={t("workbooks.actions.edit", "Edit")}
+                  aria-label={t("workbooks.actions.more")}
                   className={cn(
                     "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
                     TEXT_MUTED,
@@ -202,19 +248,34 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
                 <DropdownMenuItem asChild>
                   <Link href={viewHref}>
                     <Pencil className="mr-2 size-4" />
-                    {t("workbooks.actions.edit", "Edit")}
+                    {t("workbooks.actions.open")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  disabled={isDuplicating}
                   onSelect={(e) => {
                     e.preventDefault();
-                    setConfirmingDelete(true);
+                    handleDuplicate();
                   }}
-                  className="text-destructive focus:text-destructive"
                 >
-                  <Trash2 className="mr-2 size-4" />
-                  {t("workbooks.actions.delete", "Delete")}
+                  <Copy className="mr-2 size-4" />
+                  {t("workbooks.actions.duplicate")}
                 </DropdownMenuItem>
+                {canDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setConfirmingDelete(true);
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      {t("workbooks.actions.delete")}
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -224,12 +285,11 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("workbooks.actions.delete", "Delete")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("workbooks.actions.delete")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("workbooks.messages.deleteConfirm", {
-                name: workbook.name,
-                defaultValue: `Permanently delete “${workbook.name}”? This cannot be undone.`,
-              })}
+              {usedBy > 0
+                ? t("workbooks.messages.deleteInUseConfirm", { name: workbook.name, count: usedBy })
+                : t("workbooks.messages.deleteConfirm", { name: workbook.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -245,7 +305,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
               {isDeleting ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                t("workbooks.actions.delete", "Delete")
+                t("workbooks.actions.delete")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -13,6 +13,7 @@ export const zWorkbook = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   isUpgradable: z.boolean().optional(),
+  experimentCount: z.number().int().nonnegative().optional(),
 });
 
 export const zWorkbookList = z.array(zWorkbook);

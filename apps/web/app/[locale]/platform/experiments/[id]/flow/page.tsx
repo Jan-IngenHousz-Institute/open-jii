@@ -93,7 +93,13 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   }
 
   if (!workbookId || !workbookVersionId) {
-    return <EmptyWorkbookState experimentId={id} hasAccess={hasAccess} />;
+    return (
+      <EmptyWorkbookState
+        experimentId={id}
+        experimentName={experimentData.name}
+        hasAccess={hasAccess}
+      />
+    );
   }
 
   return (

@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, asc, eq, ilike, profiles, workbooks } from "@repo/database";
+import { and, asc, eq, experiments, ilike, profiles, sql, workbooks } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -14,6 +14,14 @@ export interface WorkbookFilter {
   search?: string;
   filter?: "my";
   userId?: string;
+}
+
+// Number of experiments currently referencing a workbook. A correlated subquery
+// keeps findAll/findById single-query (no N+1).
+function experimentCountSql() {
+  return sql<number>`(select count(*)::int from ${experiments} where ${experiments.workbookId} = ${workbooks.id})`.mapWith(
+    Number,
+  );
 }
 
 @Injectable()
@@ -43,6 +51,7 @@ export class WorkbookRepository {
           workbooks,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
+          experimentCount: experimentCountSql(),
         })
         .from(workbooks)
         .innerJoin(profiles, eq(workbooks.createdBy, profiles.userId))
@@ -68,6 +77,7 @@ export class WorkbookRepository {
         const firstName = result.firstName;
         const lastName = result.lastName;
         augmented.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+        augmented.experimentCount = result.experimentCount;
         return augmented;
       });
     });
@@ -80,6 +90,7 @@ export class WorkbookRepository {
           workbooks,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
+          experimentCount: experimentCountSql(),
         })
         .from(workbooks)
         .innerJoin(profiles, eq(workbooks.createdBy, profiles.userId))
@@ -94,6 +105,7 @@ export class WorkbookRepository {
       const firstName = result[0].firstName;
       const lastName = result[0].lastName;
       augmented.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+      augmented.experimentCount = result[0].experimentCount;
       return augmented;
     });
   }
