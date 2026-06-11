@@ -24,6 +24,7 @@ import { Separator } from "@repo/ui/components/separator";
 
 import { getChartTypeDef } from "../../../../experiment-visualizations/charts/chart-registry";
 import { ChartTypePickerContent } from "../../../../experiment-visualizations/workspace/chart-type-picker";
+import { useDashboardEditor } from "../../context/dashboard-editor-context";
 import type { DashboardFormValues } from "../../../dashboard-form-shell";
 import type { StripOverflowItem } from "../strip-overflow-list";
 import { StripOverflowList } from "../strip-overflow-list";
@@ -34,6 +35,8 @@ interface VisualizationWidgetStripProps {
   widget: VisualizationWidget;
   widgetIndex: number;
   experimentId: string;
+  /** Fires after a successful inline create. Parent uses it to jump to the Data section. */
+  onAfterCreate?: () => void;
 }
 
 // Viz-widget Widget section: viz picker, display popover, open-in-editor link.
@@ -42,12 +45,14 @@ export function VisualizationWidgetStrip({
   widget,
   widgetIndex,
   experimentId,
+  onAfterCreate,
 }: VisualizationWidgetStripProps) {
   const { t } = useTranslation("experimentDashboards");
   const locale = useLocale();
   const form = useFormContext<DashboardFormValues>();
   const { data, isLoading } = useExperimentVisualizations({ experimentId });
   const visualizations = data?.body ?? [];
+  const { setDatasetOpen } = useDashboardEditor();
 
   const setConfig = (next: Partial<VisualizationWidget["config"]>) => {
     form.setValue(
@@ -62,6 +67,8 @@ export function VisualizationWidgetStrip({
     experimentId,
     onSuccess: (created) => {
       setConfig({ visualizationId: created.id });
+      setDatasetOpen(true);
+      onAfterCreate?.();
     },
   });
 
@@ -146,7 +153,7 @@ export function VisualizationWidgetStrip({
                   </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[440px] p-0" align="start" side="right" sideOffset={8}>
+              <PopoverContent className="w-[440px] p-0" align="center" side="top" sideOffset={8}>
                 <ChartTypePickerContent
                   value="line"
                   onPick={handleCreateWithType}

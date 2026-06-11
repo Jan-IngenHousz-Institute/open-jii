@@ -139,6 +139,7 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
                     widgetIndex={widgetIndex}
                     experimentId={experimentId}
                     section={activeSection}
+                    onAfterCreateVisualization={() => setActiveSection("data")}
                   />
                 </div>
                 <Separator orientation="vertical" className="mx-0.5 h-5" />
@@ -175,9 +176,16 @@ interface ActiveStripProps {
   widgetIndex: number;
   experimentId: string;
   section: InspectorSectionKey;
+  onAfterCreateVisualization: () => void;
 }
 
-function ActiveStrip({ widget, widgetIndex, experimentId, section }: ActiveStripProps) {
+function ActiveStrip({
+  widget,
+  widgetIndex,
+  experimentId,
+  section,
+  onAfterCreateVisualization,
+}: ActiveStripProps) {
   if (widget.type === "visualization") {
     if (section === "widget") {
       return (
@@ -185,6 +193,7 @@ function ActiveStrip({ widget, widgetIndex, experimentId, section }: ActiveStrip
           widget={widget}
           widgetIndex={widgetIndex}
           experimentId={experimentId}
+          onAfterCreate={onAfterCreateVisualization}
         />
       );
     }

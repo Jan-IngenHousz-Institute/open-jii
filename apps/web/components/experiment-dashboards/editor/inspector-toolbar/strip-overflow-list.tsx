@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/pop
 
 import { useStripOverflow } from "../hooks/use-strip-overflow";
 import type { StripOverflowItem } from "../hooks/use-strip-overflow";
+import { StripShadowProvider } from "./strip-shadow-context";
 
 export type { StripOverflowItem };
 
@@ -65,32 +66,37 @@ export function StripOverflowList({ items, trailingSafetyPx = 0 }: StripOverflow
         )}
       </div>
 
-      {/* Shadow row: identical render off-screen for width measurement only. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-[9999px] -top-[9999px] flex items-center gap-1 opacity-0"
-      >
-        <div ref={shadowItemsRef} className="flex items-center gap-1">
-          {items.map((item) => (
-            <div key={item.key} className="shrink-0">
-              {item.node}
-            </div>
-          ))}
-        </div>
-        <Button
-          ref={shadowMoreRef}
-          variant="ghost"
-          size="sm"
-          tabIndex={-1}
-          className="text-muted-foreground hover:text-foreground hover:bg-accent h-8 shrink-0 gap-1.5 rounded-full px-2.5 text-xs"
+      {/* Shadow row: identical render off-screen for width measurement only.
+          `StripShadowProvider` lets nested strip components skip stateful
+          machinery (popover state, controlled open, autofocus) that would
+          otherwise double up across the live + shadow trees. */}
+      <StripShadowProvider value={true}>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-[9999px] -top-[9999px] flex items-center gap-1 opacity-0"
         >
-          <Settings2 className="size-3.5" />
-          <span className="hidden font-medium md:inline">{moreButtonLabel}</span>
-          <span className="text-muted-foreground hidden font-normal md:inline">
-            +{items.length}
-          </span>
-        </Button>
-      </div>
+          <div ref={shadowItemsRef} className="flex items-center gap-1">
+            {items.map((item) => (
+              <div key={item.key} className="shrink-0">
+                {item.node}
+              </div>
+            ))}
+          </div>
+          <Button
+            ref={shadowMoreRef}
+            variant="ghost"
+            size="sm"
+            tabIndex={-1}
+            className="text-muted-foreground hover:text-foreground hover:bg-accent h-8 shrink-0 gap-1.5 rounded-full px-2.5 text-xs"
+          >
+            <Settings2 className="size-3.5" />
+            <span className="hidden font-medium md:inline">{moreButtonLabel}</span>
+            <span className="text-muted-foreground hidden font-normal md:inline">
+              +{items.length}
+            </span>
+          </Button>
+        </div>
+      </StripShadowProvider>
     </>
   );
 }

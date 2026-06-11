@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Columns3, Database, Filter as FilterIcon } from "lucide-react";
+import { AlertCircle, Columns3, Database, Filter as FilterIcon, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
@@ -19,6 +19,7 @@ import type { ChartFormValues } from "../../../../experiment-visualizations/char
 import { getChartTypeDef } from "../../../../experiment-visualizations/charts/chart-registry";
 import type { ShelfDef } from "../../../../experiment-visualizations/charts/types";
 import { FiltersShelf } from "../../../../experiment-visualizations/workspace/shelves/filters-shelf";
+import { useDashboardEditor } from "../../context/dashboard-editor-context";
 import type { StripOverflowItem } from "../strip-overflow-list";
 import { StripOverflowList } from "../strip-overflow-list";
 import { StripPopoverControl } from "../strip-popover-control";
@@ -66,6 +67,10 @@ export function VisualizationDataStrip({
   const filters = useWatch({ control: form.control, name: "dataConfig.filters" }) ?? [];
   const filtersSummary = filters.length > 0 ? String(filters.length) : undefined;
 
+  // Dataset popover open state lives in the editor context so the inline
+  // viz-create flow can request it open before this strip mounts.
+  const { datasetOpen, setDatasetOpen } = useDashboardEditor();
+
   const datasetItem: StripOverflowItem = {
     key: "dataset",
     node: (
@@ -73,14 +78,25 @@ export function VisualizationDataStrip({
         label={t("editor.vizDataStrip.dataset")}
         summary={tableLabel}
         icon={Database}
+        open={datasetOpen}
+        onOpenChange={setDatasetOpen}
       >
         <Select
           value={selectedTableName || undefined}
           onValueChange={onTableChange}
           disabled={isTablesLoading || tables.length === 0}
         >
-          <SelectTrigger className="h-8 w-full">
-            <SelectValue placeholder={tViz("workspace.inspector.selectTable")} />
+          <SelectTrigger className="h-8 w-full gap-1.5">
+            {isTablesLoading && <Loader2 className="text-muted-foreground size-3 animate-spin" />}
+            <SelectValue
+              placeholder={
+                isTablesLoading
+                  ? tViz("workspace.inspector.loadingTables")
+                  : tables.length === 0
+                    ? tViz("workspace.inspector.noTables")
+                    : tViz("workspace.inspector.selectTable")
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {tablesError ? (
