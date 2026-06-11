@@ -12,6 +12,8 @@
     "declarationMap": false,
     "paths": {
       "~/*": ["./*"],
+      "@/features/*": ["./features/*"],
+      "@/shared/*": ["./shared/*"],
       "@/components/*": ["./components/*"],
       "@/util/*": ["./util/*"],
       "@/hooks/*": ["./hooks/*"],

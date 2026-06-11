@@ -191,6 +191,10 @@ it("fetches locations", async () => {
 });
 ```
 
+## Domain module tests
+
+`features/<f>/domain/` modules are pure functions — test them as such. Plain `*.test.ts` colocated in `domain/`, importing the functions directly: no MSW, no `test-utils` render, no jsdom dependence. If a domain test needs a mock, the function isn't pure — fix the function, not the test.
+
 ## Running tests
 
 ```bash
