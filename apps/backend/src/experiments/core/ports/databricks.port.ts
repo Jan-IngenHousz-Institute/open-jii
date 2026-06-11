@@ -4,6 +4,7 @@ import type { UploadFileResponse } from "../../../common/modules/databricks/serv
 import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
+  DatabricksJobRunStatusResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type {
   AggregationSpec,
@@ -12,7 +13,22 @@ import type {
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportMetadata } from "../models/experiment-data-exports.model";
+import type { UploadMetadata } from "../models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
+
+// Semantic input for the data upload job trigger. The adapter maps these onto
+// SOURCE_KIND-specific widget keys; `experimentName` only feeds the ambyte
+// branch but is always carried since every callsite has it.
+export interface DataUploadJobInput {
+  sourceKind: "ambyte" | "csv" | "tsv" | "parquet" | "xlsx" | "json" | "ndjson";
+  experimentId: string;
+  experimentName: string;
+  uploadDirectory: string;
+  uploadId: string;
+  uploadTableId: string;
+  uploadTableName: string;
+  userId: string;
+}
 
 export const DATABRICKS_PORT = Symbol("DATABRICKS_PORT");
 
@@ -23,8 +39,8 @@ export interface DatabricksPort {
 
   readonly RAW_DATA_TABLE_NAME: string;
   readonly DEVICE_DATA_TABLE_NAME: string;
-  readonly RAW_AMBYTE_DATA_TABLE_NAME: string;
   readonly MACRO_DATA_TABLE_NAME: string;
+  readonly UPLOADED_DATA_TABLE_NAME: string;
 
   healthCheck(): Promise<Result<DatabricksHealthCheck>>;
 
@@ -43,7 +59,7 @@ export interface DatabricksPort {
   /** Build a SQL query for experiment data, dispatching by table type. */
   buildExperimentQuery(params: {
     tableName: string;
-    tableType: "static" | "macro";
+    tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
     variants?: { columnName: string; schema: string }[];
@@ -66,12 +82,17 @@ export interface DatabricksPort {
     sourceType: string,
     directoryName: string,
     fileName: string,
-    fileBuffer: Buffer,
+    body: Buffer | NodeJS.ReadableStream,
   ): Promise<Result<UploadFileResponse>>;
 
-  triggerAmbyteProcessingJob(
-    params: Record<string, string>,
-  ): Promise<Result<DatabricksJobRunResponse>>;
+  /**
+   * Trigger the data upload Databricks job (handles all upload source kinds via SOURCE_KIND dispatch).
+   * Pass semantic input; adapter maps to per-kind widget keys.
+   */
+  triggerDataUploadJob(input: DataUploadJobInput): Promise<Result<DatabricksJobRunResponse>>;
+
+  /** Run status for any Databricks job by runId. */
+  getJobRunStatus(runId: number): Promise<Result<DatabricksJobRunStatusResponse>>;
 
   /**
    * Trigger the data export job. `anonymizeContributors` is the resolved
@@ -106,4 +127,33 @@ export interface DatabricksPort {
     tableName: string,
     completedExportRunIds: Set<number>,
   ): Promise<Result<ExportMetadata[]>>;
+
+  /**
+   * Get completed upload metadata rows for an experiment from the Delta history table.
+   * Returns raw SchemaData; the repository maps it to UploadMetadata.
+   * Filters: required experiment_id, optional uploadTableId, optional uploadTableName.
+   */
+  getUploadMetadata(
+    experimentId: string,
+    options?: { uploadTableId?: string; uploadTableName?: string },
+  ): Promise<Result<SchemaData>>;
+
+  /**
+   * Get active (in-progress) uploads from the data upload job's runs.
+   * Filters by EXPERIMENT_ID widget (and optionally uploadTableId / uploadTableName).
+   */
+  getActiveUploads(
+    experimentId: string,
+    options?: { uploadTableId?: string; uploadTableName?: string },
+  ): Promise<Result<UploadMetadata[]>>;
+
+  /**
+   * Get failed uploads from completed job runs (terminated + non-SUCCESS),
+   * deduped against the set of upload_ids already in the Delta history table.
+   */
+  getFailedUploads(
+    experimentId: string,
+    completedUploadIds: Set<string>,
+    options?: { uploadTableId?: string; uploadTableName?: string },
+  ): Promise<Result<UploadMetadata[]>>;
 }

@@ -78,6 +78,21 @@ import {
   zDistinctValuesQuery,
   zDistinctValuesResponse,
   DISTINCT_VALUES_MAX_LIMIT,
+  // Upload schemas
+  zUploadSourceKind,
+  zUploadTableName,
+  zUploadTargetTable,
+  zCsvFilename,
+  zTsvFilename,
+  zParquetFilename,
+  zXlsxFilename,
+  zJsonFilename,
+  zNdjsonFilename,
+  zAmbyteFilename,
+  zUploadMetadata,
+  UPLOAD_KIND_CONSTANTS,
+  UPLOAD_FILENAME_SCHEMAS,
+  inferUploadSourceKind,
 } from "./experiment.schema";
 
 // -------- Helpers --------
@@ -1549,6 +1564,283 @@ describe("Experiment Schema", () => {
     it("zInitiateExportBody accepts the per-export override", () => {
       const body = { tableName: "t", format: "csv" as const, anonymizeContributors: true };
       expect(zInitiateExportBody.parse(body)).toEqual(body);
+    });
+  });
+  describe("Upload schemas", () => {
+    describe("zUploadSourceKind", () => {
+      it("accepts all supported kinds", () => {
+        expect(zUploadSourceKind.safeParse("ambyte").success).toBe(true);
+        expect(zUploadSourceKind.safeParse("csv").success).toBe(true);
+        expect(zUploadSourceKind.safeParse("tsv").success).toBe(true);
+        expect(zUploadSourceKind.safeParse("parquet").success).toBe(true);
+        expect(zUploadSourceKind.safeParse("xlsx").success).toBe(true);
+        expect(zUploadSourceKind.safeParse("json").success).toBe(true);
+        expect(zUploadSourceKind.safeParse("ndjson").success).toBe(true);
+      });
+
+      it("rejects unknown kinds", () => {
+        expect(zUploadSourceKind.safeParse("orc").success).toBe(false);
+        expect(zUploadSourceKind.safeParse("").success).toBe(false);
+      });
+    });
+
+    describe("zUploadTableName", () => {
+      it("accepts ASCII identifier shape", () => {
+        expect(zUploadTableName.safeParse("leaf_traits").success).toBe(true);
+        expect(zUploadTableName.safeParse("Table1").success).toBe(true);
+        expect(zUploadTableName.safeParse("a").success).toBe(true);
+      });
+
+      it("rejects names that don't start with a letter", () => {
+        expect(zUploadTableName.safeParse("1table").success).toBe(false);
+        expect(zUploadTableName.safeParse("_table").success).toBe(false);
+      });
+
+      it("rejects names with non-identifier characters", () => {
+        expect(zUploadTableName.safeParse("table-name").success).toBe(false);
+        expect(zUploadTableName.safeParse("table name").success).toBe(false);
+        expect(zUploadTableName.safeParse("table.name").success).toBe(false);
+      });
+
+      it("rejects names longer than 63 characters", () => {
+        expect(zUploadTableName.safeParse("a".repeat(63)).success).toBe(true);
+        expect(zUploadTableName.safeParse("a".repeat(64)).success).toBe(false);
+      });
+
+      it("rejects empty names", () => {
+        expect(zUploadTableName.safeParse("").success).toBe(false);
+      });
+    });
+
+    describe("zUploadTargetTable", () => {
+      it("accepts a 'new' target with a valid name", () => {
+        const result = zUploadTargetTable.safeParse({ kind: "new", name: "leaf_traits" });
+        expect(result.success).toBe(true);
+      });
+
+      it("accepts an 'existing' target with a valid uploadTableId UUID", () => {
+        const result = zUploadTargetTable.safeParse({
+          kind: "existing",
+          uploadTableId: "11111111-1111-1111-1111-111111111111",
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it("rejects an 'existing' target with a non-UUID uploadTableId", () => {
+        expect(
+          zUploadTargetTable.safeParse({ kind: "existing", uploadTableId: "leaf_traits" }).success,
+        ).toBe(false);
+      });
+
+      it("rejects an invalid kind", () => {
+        expect(zUploadTargetTable.safeParse({ kind: "other", name: "x" }).success).toBe(false);
+      });
+
+      it("rejects when name fails identifier validation", () => {
+        expect(zUploadTargetTable.safeParse({ kind: "new", name: "1bad" }).success).toBe(false);
+      });
+    });
+
+    describe("zCsvFilename", () => {
+      it("returns the basename for a path-prefixed CSV", () => {
+        const result = zCsvFilename.safeParse("some/dir/data.csv");
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data).toBe("data.csv");
+        }
+      });
+
+      it("accepts a bare CSV filename", () => {
+        const result = zCsvFilename.safeParse("data.csv");
+        expect(result.success).toBe(true);
+      });
+
+      it("rejects non-CSV extensions", () => {
+        expect(zCsvFilename.safeParse("data.txt").success).toBe(false);
+        expect(zCsvFilename.safeParse("data").success).toBe(false);
+      });
+
+      it("rejects oversize names", () => {
+        expect(zCsvFilename.safeParse("a".repeat(257) + ".csv").success).toBe(false);
+      });
+    });
+
+    describe("zTsvFilename", () => {
+      it("accepts a bare TSV filename", () => {
+        expect(zTsvFilename.safeParse("data.tsv").success).toBe(true);
+      });
+
+      it("rejects non-TSV extensions", () => {
+        expect(zTsvFilename.safeParse("data.csv").success).toBe(false);
+      });
+    });
+
+    describe("zParquetFilename", () => {
+      it("accepts a bare parquet filename", () => {
+        expect(zParquetFilename.safeParse("data.parquet").success).toBe(true);
+      });
+
+      it("rejects non-parquet extensions", () => {
+        expect(zParquetFilename.safeParse("data.csv").success).toBe(false);
+      });
+    });
+
+    describe("zXlsxFilename", () => {
+      it("accepts .xlsx and .xls", () => {
+        expect(zXlsxFilename.safeParse("data.xlsx").success).toBe(true);
+        expect(zXlsxFilename.safeParse("data.xls").success).toBe(true);
+      });
+
+      it("rejects non-Excel extensions", () => {
+        expect(zXlsxFilename.safeParse("data.csv").success).toBe(false);
+      });
+    });
+
+    describe("zJsonFilename", () => {
+      it("accepts a bare JSON filename", () => {
+        expect(zJsonFilename.safeParse("data.json").success).toBe(true);
+      });
+
+      it("rejects non-JSON extensions", () => {
+        expect(zJsonFilename.safeParse("data.ndjson").success).toBe(false);
+        expect(zJsonFilename.safeParse("data.csv").success).toBe(false);
+      });
+    });
+
+    describe("zNdjsonFilename", () => {
+      it("accepts .ndjson and .jsonl", () => {
+        expect(zNdjsonFilename.safeParse("data.ndjson").success).toBe(true);
+        expect(zNdjsonFilename.safeParse("data.jsonl").success).toBe(true);
+      });
+
+      it("rejects non-NDJSON extensions", () => {
+        expect(zNdjsonFilename.safeParse("data.json").success).toBe(false);
+        expect(zNdjsonFilename.safeParse("data.csv").success).toBe(false);
+      });
+    });
+
+    describe("inferUploadSourceKind", () => {
+      it.each([
+        ["a.csv", "csv"],
+        ["a.CSV", "csv"],
+        ["a.tsv", "tsv"],
+        ["a.parquet", "parquet"],
+        ["a.xlsx", "xlsx"],
+        ["a.xls", "xlsx"],
+        ["a.json", "json"],
+        ["a.ndjson", "ndjson"],
+        ["a.jsonl", "ndjson"],
+        ["a.txt", "ambyte"],
+      ] as const)("infers %s → %s", (filename, expected) => {
+        expect(inferUploadSourceKind(filename)).toBe(expected);
+      });
+
+      it("returns null for unsupported extensions", () => {
+        expect(inferUploadSourceKind("a.orc")).toBeNull();
+        expect(inferUploadSourceKind("a")).toBeNull();
+      });
+    });
+
+    describe("zAmbyteFilename", () => {
+      it("transforms a pathed Ambyte_N file to the trimmed tail", () => {
+        const result = zAmbyteFilename.safeParse("uploads/Ambyte_5/data.txt");
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data).toBe("Ambyte_5/data.txt");
+        }
+      });
+
+      it("transforms a pathed Ambyte_N/[1-4]/file.txt to the 3-segment tail", () => {
+        const result = zAmbyteFilename.safeParse("prefix/Ambyte_12/3/some.txt");
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data).toBe("Ambyte_12/3/some.txt");
+        }
+      });
+
+      it("buckets a bare timestamp filename under unknown_ambyte/unknown_ambit", () => {
+        const result = zAmbyteFilename.safeParse("20260101-120000_.txt");
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data).toBe("unknown_ambyte/unknown_ambit/20260101-120000_.txt");
+        }
+      });
+
+      it("buckets a generic bare .txt under unknown_ambyte", () => {
+        const result = zAmbyteFilename.safeParse("anything.txt");
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data).toBe("unknown_ambyte/anything.txt");
+        }
+      });
+
+      it("rejects non-.txt files", () => {
+        expect(zAmbyteFilename.safeParse("Ambyte_1/data.csv").success).toBe(false);
+      });
+
+      it("rejects pathed files that don't match the Ambyte_N tail shape", () => {
+        expect(zAmbyteFilename.safeParse("something/else/data.txt").success).toBe(false);
+      });
+    });
+
+    describe("UPLOAD_KIND_CONSTANTS + UPLOAD_FILENAME_SCHEMAS", () => {
+      const expectedKinds = ["ambyte", "csv", "json", "ndjson", "parquet", "tsv", "xlsx"];
+
+      it("has matching keys for every supported kind", () => {
+        expect(Object.keys(UPLOAD_KIND_CONSTANTS).sort()).toEqual(expectedKinds);
+        expect(Object.keys(UPLOAD_FILENAME_SCHEMAS).sort()).toEqual(expectedKinds);
+      });
+
+      it("every kind lands in the unified 'uploads' volume", () => {
+        for (const kind of expectedKinds as (keyof typeof UPLOAD_KIND_CONSTANTS)[]) {
+          expect(UPLOAD_KIND_CONSTANTS[kind].volumeSourceType).toBe("uploads");
+        }
+      });
+
+      it("respects the 5 GiB ceiling — every kind maxFileSize is well below", () => {
+        const fiveGib = 5 * 1024 * 1024 * 1024;
+        for (const kind of expectedKinds as (keyof typeof UPLOAD_KIND_CONSTANTS)[]) {
+          expect(UPLOAD_KIND_CONSTANTS[kind].maxFileSize).toBeLessThan(fiveGib);
+        }
+      });
+    });
+
+    describe("zUploadMetadata", () => {
+      const valid = {
+        uploadId: "upload-1",
+        experimentId: "exp-1",
+        uploadTableId: "11111111-1111-1111-1111-111111111111",
+        uploadTableName: "leaf_traits",
+        sourceKind: "csv" as const,
+        status: "completed" as const,
+        fileCount: 2,
+        rowCount: 100,
+        createdBy: "user-1",
+        createdAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-01T00:05:00Z",
+        errorMessage: null,
+      };
+
+      it("accepts a fully-populated completed record", () => {
+        expect(zUploadMetadata.safeParse(valid).success).toBe(true);
+      });
+
+      it("accepts null uploadTableId / uploadTableName / row counts / completedAt / errorMessage", () => {
+        const result = zUploadMetadata.safeParse({
+          ...valid,
+          uploadTableId: null,
+          uploadTableName: null,
+          fileCount: null,
+          rowCount: null,
+          completedAt: null,
+          errorMessage: null,
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it("rejects unknown status values", () => {
+        expect(zUploadMetadata.safeParse({ ...valid, status: "halfway" }).success).toBe(false);
+      });
     });
   });
 });

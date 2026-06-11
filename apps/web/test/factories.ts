@@ -21,6 +21,7 @@ import type {
   ExperimentVisualization,
   ExperimentTableMetadata,
   PlaceSearchResult,
+  UploadMetadata,
 } from "@repo/api/schemas/experiment.schema";
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
@@ -528,6 +529,29 @@ export function createWorkbookVersionSummary(
   };
 }
 
+// ── Upload Metadata ────────────────────────────────────────────
+
+let uploadSeq = 0;
+
+export function createUpload(overrides: Partial<UploadMetadata> = {}): UploadMetadata {
+  uploadSeq++;
+  return {
+    uploadId: `upload-${uploadSeq}`,
+    experimentId: `exp-${uploadSeq}`,
+    uploadTableId: `11111111-1111-1111-1111-${uploadSeq.toString().padStart(12, "0")}`,
+    uploadTableName: `upload_table_${uploadSeq}`,
+    sourceKind: "csv",
+    status: "completed",
+    fileCount: 1,
+    rowCount: 100,
+    createdBy: "user-1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    completedAt: "2026-01-01T00:05:00.000Z",
+    errorMessage: null,
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 /** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
@@ -547,4 +571,5 @@ export function resetFactories() {
   invitationSeq = 0;
   cellSeq = 0;
   versionSeq = 0;
+  uploadSeq = 0;
 }

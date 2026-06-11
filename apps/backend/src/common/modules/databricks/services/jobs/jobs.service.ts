@@ -4,11 +4,19 @@ import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
-import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
+import {
+  Result,
+  AppError,
+  tryCatch,
+  apiErrorMapper,
+  failure,
+  success,
+} from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
 import {
   DatabricksHealthCheck,
+  DatabricksJobRun,
   DatabricksJobRunResponse,
   DatabricksJobRunStatusResponse,
   DatabricksJobsListRequest,
@@ -16,6 +24,8 @@ import {
   DatabricksRunNowRequest,
   DatabricksRunsListRequest,
   DatabricksRunsListResponse,
+  JobLifecycleState,
+  JobResultState,
   PerformanceTarget,
 } from "./jobs.types";
 
@@ -277,5 +287,97 @@ export class DatabricksJobsService {
         return apiErrorMapper(`Failed to list job runs: ${getAxiosErrorMessage(error)}`);
       },
     );
+  }
+
+  /**
+   * List active runs paired with their job-parameter records and a normalized
+   * status. Skips runs whose lifecycle state isn't one of the four we expose.
+   */
+  async listActiveRunsWithParams(jobId: number): Promise<
+    Result<
+      {
+        run: DatabricksJobRun;
+        params: Record<string, string>;
+        status: "queued" | "pending" | "running" | "failed";
+      }[]
+    >
+  > {
+    const runsResult = await this.listRunsForJob(jobId, true);
+    if (runsResult.isFailure()) {
+      return failure(runsResult.error);
+    }
+    return success(
+      (runsResult.value.runs ?? []).reduce<
+        {
+          run: DatabricksJobRun;
+          params: Record<string, string>;
+          status: "queued" | "pending" | "running" | "failed";
+        }[]
+      >((acc, run) => {
+        const status = this.mapLifecycleToActiveStatus(run.state.life_cycle_state);
+        if (!status) {
+          return acc;
+        }
+        acc.push({ run, params: this.jobParamsToRecord(run), status });
+        return acc;
+      }, []),
+    );
+  }
+
+  /**
+   * List terminated + non-SUCCESS runs paired with their job-parameter records,
+   * with `excludeRunIds` filtered out so callers can dedup against the Delta
+   * history table.
+   */
+  async listFailedRunsWithParams(
+    jobId: number,
+    excludeRunIds: Set<number>,
+  ): Promise<Result<{ run: DatabricksJobRun; params: Record<string, string> }[]>> {
+    const runsResult = await this.listRunsForJob(jobId, false, 25, true);
+    if (runsResult.isFailure()) {
+      return failure(runsResult.error);
+    }
+    return success(
+      (runsResult.value.runs ?? []).reduce<
+        { run: DatabricksJobRun; params: Record<string, string> }[]
+      >((acc, run) => {
+        if (excludeRunIds.has(run.run_id)) {
+          return acc;
+        }
+        if (
+          run.state.life_cycle_state !== JobLifecycleState.TERMINATED ||
+          run.state.result_state === JobResultState.SUCCESS
+        ) {
+          return acc;
+        }
+        acc.push({ run, params: this.jobParamsToRecord(run) });
+        return acc;
+      }, []),
+    );
+  }
+
+  private jobParamsToRecord(run: DatabricksJobRun): Record<string, string> {
+    return (run.job_parameters ?? []).reduce<Record<string, string>>((p, kv) => {
+      p[kv.name] = kv.value;
+      return p;
+    }, {});
+  }
+
+  private mapLifecycleToActiveStatus(
+    state: JobLifecycleState,
+  ): "queued" | "pending" | "running" | "failed" | null {
+    switch (state) {
+      case JobLifecycleState.QUEUED:
+        return "queued";
+      case JobLifecycleState.PENDING:
+        return "pending";
+      case JobLifecycleState.RUNNING:
+      case JobLifecycleState.TERMINATING:
+        return "running";
+      case JobLifecycleState.INTERNAL_ERROR:
+        return "failed";
+      default:
+        return null;
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol-code-registry";
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -68,6 +69,7 @@ const protocol = createProtocol({
 describe("ProtocolCellComponent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetProtocolCodeRegistry();
     mockedUseSession.mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession
     >);
@@ -284,6 +286,31 @@ describe("ProtocolCellComponent", () => {
     vi.useRealTimers();
   });
 
+  it("exposes the latest edited code to the run flow immediately, before the debounce", async () => {
+    // The run flow reads the live editor code rather than re-fetching from the
+    // server, so an edit is runnable straight away — no waiting out the 1000ms
+    // autosave debounce, and never a stale saved version.
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+
+    const user = userEvent.setup();
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-change"));
+
+    // No timers advanced: the debounced save has not fired, yet the run flow can
+    // already read the freshly edited code from the editor.
+    expect(getLiveProtocolCode("p1")).toEqual([{ measurement: "new", duration: 10 }]);
+  });
+
   it("forwards CellWrapper collapse toggles through onUpdate", async () => {
     const user = userEvent.setup();
     const onUpdate = vi.fn();
@@ -319,6 +346,109 @@ describe("ProtocolCellComponent", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true");
+    });
+  });
+
+  // The cell reuses the shared `useAutosave` + `AutosaveIndicator` so its save
+  // status reads identically to the standalone protocol/macro editors. The
+  // compact indicator exposes its label as the `role="status"` aria-label, and
+  // i18n resolves to the raw key in tests (e.g. "autosave.saved").
+  describe("save status indicator", () => {
+    function mountOwnedProtocol() {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+    }
+
+    it("shows the saved state for the owner once the protocol loads", async () => {
+      mountOwnedProtocol();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saved");
+    });
+
+    it("shows the saving state immediately after a valid edit, before the debounce", async () => {
+      mountOwnedProtocol();
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      await user.click(screen.getByTestId("simulate-change"));
+
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saving"),
+      );
+    });
+
+    it("returns to the saved state once the debounced save persists", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      mountOwnedProtocol();
+      const updateSpy = server.mount(contract.protocols.updateProtocol, {
+        body: createProtocol({ id: "p1" }),
+      });
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      await user.click(screen.getByTestId("simulate-change"));
+
+      await vi.advanceTimersByTimeAsync(1100);
+      await waitFor(() => expect(updateSpy.called).toBe(true));
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saved"),
+      );
+      vi.useRealTimers();
+    });
+
+    it("shows the failed state when persistence errors", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      mountOwnedProtocol();
+      server.mount(contract.protocols.updateProtocol, { status: 500, body: undefined });
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+      await user.click(screen.getByTestId("simulate-change"));
+
+      await vi.advanceTimersByTimeAsync(1100);
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.failed"),
+      );
+      vi.useRealTimers();
+    });
+
+    it("does not show a save status for non-owners", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true"),
+      );
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
   });
 });
