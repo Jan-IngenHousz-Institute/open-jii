@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { UnifiedNavbar } from "@/features/navigation/components/unified-navbar/unified-navbar";
 import { auth } from "@/shared/api/auth";
 import { getContentfulClients } from "@/shared/cms/contentful";
 import { draftMode } from "next/headers";

@@ -1,4 +1,6 @@
-import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
+import { Breadcrumbs } from "@/features/navigation/components/navigation-breadcrumbs/navigation-breadcrumbs";
+import { NavigationSidebarWrapper } from "@/features/navigation/components/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
+import { NavigationTopbar } from "@/features/navigation/components/navigation-topbar/navigation-topbar";
 import { auth } from "@/shared/api/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,9 +9,6 @@ import { Suspense } from "react";
 
 import { SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
-
-import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
-import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
 
 const getCallbackUrl = async () => {
   // Get the current path from the 'x-current-path' header.

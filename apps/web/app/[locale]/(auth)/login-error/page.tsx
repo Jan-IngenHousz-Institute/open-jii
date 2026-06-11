@@ -1,6 +1,6 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import { AuthHeroSection } from "@/features/auth/components/auth-hero-section";
 import { ErrorContent } from "@/features/auth/components/error-content";
+import { UnifiedNavbar } from "@/features/navigation/components/unified-navbar/unified-navbar";
 import { auth } from "@/shared/api/auth";
 import Image from "next/image";
 import { notFound } from "next/navigation";

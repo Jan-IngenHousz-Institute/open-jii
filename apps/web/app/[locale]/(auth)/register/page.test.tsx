@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import RegisterPage from "./page";
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
+vi.mock("@/features/navigation/components/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: () => <nav aria-label="main navigation" />,
 }));
 vi.mock("@/features/auth/components/auth-hero-section", () => ({

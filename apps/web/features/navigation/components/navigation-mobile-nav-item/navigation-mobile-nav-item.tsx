@@ -1,4 +1,4 @@
-import type { userNavigation } from "@/components/navigation/navigation-config";
+import type { userNavigation } from "@/features/navigation/components/navigation-config";
 import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";

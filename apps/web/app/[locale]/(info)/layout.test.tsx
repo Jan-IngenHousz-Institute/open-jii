@@ -8,7 +8,7 @@ import Layout from "./layout";
 
 const mockFooter = vi.fn();
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
+vi.mock("@/features/navigation/components/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: ({ session }: { session: unknown }) => (
     <nav aria-label="main">{session ? "logged-in" : "guest"}</nav>
   ),

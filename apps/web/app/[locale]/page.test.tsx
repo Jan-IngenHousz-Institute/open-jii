@@ -15,7 +15,7 @@ vi.mock("@/shared/cms/contentful", () => ({
     }),
 }));
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
+vi.mock("@/features/navigation/components/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: ({ session }: { session: unknown }) => (
     <nav aria-label="main navigation">{session ? "Logged in" : "Not logged in"}</nav>
   ),

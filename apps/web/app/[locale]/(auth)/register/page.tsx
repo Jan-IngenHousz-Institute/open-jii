@@ -1,7 +1,7 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import { AuthHeroSection } from "@/features/auth/components/auth-hero-section";
 import { RegistrationForm } from "@/features/auth/components/registration-form";
 import { TermsAndConditionsDialog } from "@/features/auth/components/terms-and-conditions-dialog";
+import { UnifiedNavbar } from "@/features/navigation/components/unified-navbar/unified-navbar";
 import { auth } from "@/shared/api/auth";
 import type { SearchParamsType } from "@/shared/utils/searchParams";
 import { getFirstSearchParam } from "@/shared/utils/searchParams";

@@ -11,6 +11,7 @@ const FEATURES = [
   "experiments",
   "iot",
   "macros",
+  "navigation",
   "protocols",
   "workbooks",
 ];

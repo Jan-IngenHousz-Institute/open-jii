@@ -1,8 +1,12 @@
 "use client";
 
-import { mainNavigation, userNavigation, iconMap } from "@/components/navigation/navigation-config";
-import { NavigationMobileNavItem } from "@/components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item";
 import { useSignOut } from "@/features/auth/hooks/useSignOut/useSignOut";
+import {
+  mainNavigation,
+  userNavigation,
+  iconMap,
+} from "@/features/navigation/components/navigation-config";
+import { NavigationMobileNavItem } from "@/features/navigation/components/navigation-mobile-nav-item/navigation-mobile-nav-item";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 import { Bell, Menu, Search, X } from "lucide-react";
 import Image from "next/image";

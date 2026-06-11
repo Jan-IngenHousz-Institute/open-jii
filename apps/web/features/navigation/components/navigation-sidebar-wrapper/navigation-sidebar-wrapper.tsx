@@ -1,4 +1,4 @@
-import { mainNavigation } from "@/components/navigation/navigation-config";
+import { mainNavigation } from "@/features/navigation/components/navigation-config";
 import * as React from "react";
 
 import initTranslations from "@repo/i18n/server";
