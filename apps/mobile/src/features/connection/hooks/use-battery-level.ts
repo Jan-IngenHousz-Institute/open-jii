@@ -1,30 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
-import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useScannerCommandExecutor } from "~/features/connection/hooks/use-scanner-command-executor";
+import { connectionKeys } from "~/features/connection/services/connection-keys";
 
 /**
- * Polls the connected MultispeQ for its battery level on a slow cadence and
- * mirrors the value into the connection store so any consumer (header chip,
- * Home device card, Profile, etc.) can read it without re-firing the BLE
- * command.
+ * Battery level of the connected MultispeQ. The react-query cache is the
+ * single source — every consumer (header chip, Home device card, device
+ * sheet) mounts this hook and shares one fetch per device.
  */
-export function useBatteryPoller() {
+export function useBatteryLevel(): number | undefined {
   const { data: connectedDevice } = useConnectedDevice();
-  const setBatteryLevel = useDeviceConnectionStore((s) => s.setBatteryLevel);
   const { executeCommand } = useScannerCommandExecutor();
 
-  return useQuery({
-    queryKey: ["device", connectedDevice?.id, "battery"],
+  const { data } = useQuery({
+    queryKey: connectionKeys.battery(connectedDevice?.id),
     queryFn: async () => {
       if (!connectedDevice) return null;
       const response = await executeCommand("battery");
       if (typeof response !== "string") return null;
       const pct = parseInt(response.replace("battery:", ""));
       if (isNaN(pct)) return null;
-      setBatteryLevel(pct);
       return pct;
     },
     enabled: !!connectedDevice,
   });
+
+  return data ?? undefined;
 }

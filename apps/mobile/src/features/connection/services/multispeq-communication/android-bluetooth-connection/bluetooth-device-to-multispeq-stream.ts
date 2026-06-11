@@ -3,6 +3,7 @@ import { Emitter } from "~/features/connection/utils/emitter";
 import { stringifyIfObject } from "~/features/connection/utils/stringify-if-object";
 import { createLogger } from "~/shared/observability/logger";
 
+import { parseMultispeqFrame } from "../frame-parser";
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
 
 const log = createLogger("bt-classic");
@@ -16,27 +17,11 @@ export function bluetoothDeviceToMultispeqStream(connectedDevice: BluetoothDevic
       return;
     }
 
-    const checksum = event.data.slice(-8);
-    const jsonData = event.data.slice(0, -8);
-    try {
-      emitter
-        .emit("receivedReplyFromDevice", {
-          data: JSON.parse(jsonData),
-          checksum,
-        })
-        .catch((e) =>
-          log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }),
-        );
-    } catch {
-      emitter
-        .emit("receivedReplyFromDevice", {
-          data: event.data,
-          checksum: "",
-        })
-        .catch((e) =>
-          log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }),
-        );
-    }
+    emitter
+      .emit("receivedReplyFromDevice", parseMultispeqFrame(event.data))
+      .catch((e) =>
+        log.warn("receivedReplyFromDevice emit failed", { err: (e as Error)?.message }),
+      );
   });
 
   emitter.on("sendCommandToDevice", async (data: string | object) => {

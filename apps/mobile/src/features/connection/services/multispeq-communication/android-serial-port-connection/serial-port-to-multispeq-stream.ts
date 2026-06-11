@@ -1,6 +1,7 @@
 import { Emitter } from "~/features/connection/utils/emitter";
 import { stringifyIfObject } from "~/features/connection/utils/stringify-if-object";
 
+import { parseMultispeqFrame } from "../frame-parser";
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
 import type { SerialPortEvents } from "./serial-port-events";
 
@@ -17,20 +18,7 @@ export function serialPortToMultispeqStream(inputEmitter: Emitter<SerialPortEven
     const totalData = bufferedData.join("");
     bufferedData = [];
 
-    const jsonData = totalData.slice(0, -9);
-    const checksum = totalData.slice(-9, -1);
-
-    try {
-      await outputEmitter.emit("receivedReplyFromDevice", {
-        data: JSON.parse(jsonData),
-        checksum,
-      });
-    } catch {
-      await outputEmitter.emit("receivedReplyFromDevice", {
-        data: totalData.slice(0, -1), // skip the newline
-        checksum,
-      });
-    }
+    await outputEmitter.emit("receivedReplyFromDevice", parseMultispeqFrame(totalData));
   });
 
   outputEmitter.on("sendCommandToDevice", async (command: object | string) => {

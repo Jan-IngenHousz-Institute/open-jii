@@ -1,6 +1,7 @@
 import { Bluetooth, ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { useBatteryLevel } from "~/features/connection/hooks/use-battery-level";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
@@ -19,7 +20,7 @@ export function HomeDeviceCard() {
   const { t } = useTranslation("home");
   const themeColors = useThemeColors();
   const { data: connectedDevice } = useConnectedDevice();
-  const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
+  const batteryLevel = useBatteryLevel();
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
 
   const isConnected = !!connectedDevice;
@@ -30,7 +31,7 @@ export function HomeDeviceCard() {
   let subtitle: string;
   if (isConnected) {
     const trimmedName = connectedDevice?.name.trim() ?? "";
-    const isBt = connectedDevice?.type === "bluetooth-classic" || connectedDevice?.type === "ble";
+    const isBt = connectedDevice?.type === "bluetooth-classic";
     const name = trimmedName.length > 0 ? trimmedName : "MultispeQ";
     const mac = isBt && connectedDevice ? macTail(connectedDevice.id) : null;
     title = mac ? `${name} (${mac})` : name;

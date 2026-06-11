@@ -8,10 +8,12 @@ import { serialPortToMultispeqStream } from "./android-serial-port-connection/se
 import type { MultispeqStreamEvents } from "./multispeq-stream-events";
 
 /**
- * Characterization of the two MultispeQ frame parsers as they behave TODAY.
- * The Bluetooth adapter strips the last 8 chars as checksum (assumes no
- * trailing newline); the serial adapter strips 9 (8-char checksum + "\n").
- * A future unification must keep every expectation below byte-identical.
+ * Characterization of MultispeQ frame parsing. Both adapters now share
+ * parseMultispeqFrame (frame-parser.ts): strip one trailing newline if
+ * present, split the trailing 8 chars as checksum, JSON-parse the body,
+ * degrade non-JSON bodies to the raw payload (newline stripped) with
+ * checksum "". Edge expectations were updated DELIBERATELY when the
+ * historically divergent BT (strip 8) / serial (strip 9) parsers unified.
  */
 
 type Frame = MultispeqStreamEvents["receivedReplyFromDevice"];
@@ -58,7 +60,7 @@ function createSerialHarness() {
   return { frames, receive };
 }
 
-describe("bluetooth adapter: strips trailing 8 chars as checksum", () => {
+describe("bluetooth adapter", () => {
   it("parses a JSON body followed by an 8-char checksum (no newline)", async () => {
     const bt = createBluetoothHarness();
 
@@ -69,14 +71,15 @@ describe("bluetooth adapter: strips trailing 8 chars as checksum", () => {
     ]);
   });
 
-  it("a trailing newline shifts the 8-char window and degrades to the raw fallback", async () => {
+  it("a trailing newline is stripped before the checksum split, so the frame parses", async () => {
     const bt = createBluetoothHarness();
-    const raw = JSON_BODY + CHECKSUM + "\n";
 
-    await bt.receive(raw);
+    await bt.receive(JSON_BODY + CHECKSUM + "\n");
 
-    // slice(-8) eats "1B2C3D4\n", leaving body+"A" which fails JSON.parse.
-    expect(bt.frames).toEqual([{ data: raw, checksum: "" }]);
+    // Pre-unification BT degraded these frames to the raw fallback.
+    expect(bt.frames).toEqual([
+      { data: { device_name: "MultispeQ", sample: [1, 2, 3] }, checksum: CHECKSUM },
+    ]);
   });
 
   it("a non-JSON body falls back to the FULL raw payload (checksum included) with checksum ''", async () => {
@@ -115,7 +118,7 @@ describe("bluetooth adapter: strips trailing 8 chars as checksum", () => {
   });
 });
 
-describe("serial adapter: strips trailing 9 chars (8 checksum + newline)", () => {
+describe("serial adapter: buffers to newline, then shared parsing", () => {
   it("parses a JSON body + checksum + newline", async () => {
     const serial = createSerialHarness();
 
@@ -140,22 +143,21 @@ describe("serial adapter: strips trailing 9 chars (8 checksum + newline)", () =>
     ]);
   });
 
-  it("a non-JSON body keeps the parsed checksum AND leaves the checksum chars inside data", async () => {
+  it("a non-JSON body falls back to the raw payload (newline stripped) with checksum ''", async () => {
     const serial = createSerialHarness();
 
     await serial.receive("Warming up lamp..." + CHECKSUM + "\n");
 
-    // Unlike bluetooth, checksum survives the fallback; only the newline is dropped.
-    expect(serial.frames).toEqual([{ data: "Warming up lamp..." + CHECKSUM, checksum: CHECKSUM }]);
+    // Unified to the BT fallback semantics: fallback frames carry no checksum.
+    expect(serial.frames).toEqual([{ data: "Warming up lamp..." + CHECKSUM, checksum: "" }]);
   });
 
-  it("a degenerate short frame yields data === checksum", async () => {
+  it("a degenerate short frame degrades to the raw fallback", async () => {
     const serial = createSerialHarness();
 
     await serial.receive("ab\n");
 
-    // slice(0,-9)="" fails parse; slice(-9,-1)="ab" doubles as data via slice(0,-1).
-    expect(serial.frames).toEqual([{ data: "ab", checksum: "ab" }]);
+    expect(serial.frames).toEqual([{ data: "ab", checksum: "" }]);
   });
 });
 
@@ -172,7 +174,7 @@ describe("cross-adapter parity (gate for unification)", () => {
     expect(bt.frames).toEqual(serial.frames);
   });
 
-  it("the SAME newline-terminated raw string diverges: BT falls back raw, serial parses", async () => {
+  it("the SAME newline-terminated raw string yields IDENTICAL frames on both transports", async () => {
     const bt = createBluetoothHarness();
     const serial = createSerialHarness();
     const raw = JSON_BODY + CHECKSUM + "\n";
@@ -180,13 +182,13 @@ describe("cross-adapter parity (gate for unification)", () => {
     await bt.receive(raw);
     await serial.receive(raw);
 
-    expect(bt.frames).toEqual([{ data: raw, checksum: "" }]);
-    expect(serial.frames).toEqual([
+    expect(bt.frames).toEqual([
       { data: { device_name: "MultispeQ", sample: [1, 2, 3] }, checksum: CHECKSUM },
     ]);
+    expect(serial.frames).toEqual(bt.frames);
   });
 
-  it("non-JSON fallback diverges only in checksum: same data string, '' vs parsed checksum", async () => {
+  it("non-JSON fallback is identical on both transports", async () => {
     const bt = createBluetoothHarness();
     const serial = createSerialHarness();
     const body = "Warming up lamp..." + CHECKSUM;
@@ -195,7 +197,6 @@ describe("cross-adapter parity (gate for unification)", () => {
     await serial.receive(body + "\n");
 
     expect(bt.frames).toEqual([{ data: body, checksum: "" }]);
-    expect(serial.frames).toEqual([{ data: body, checksum: CHECKSUM }]);
-    expect(bt.frames[0].data).toEqual(serial.frames[0].data);
+    expect(serial.frames).toEqual(bt.frames);
   });
 });

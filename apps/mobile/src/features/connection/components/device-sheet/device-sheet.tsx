@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBatteryLevel } from "~/features/connection/hooks/use-battery-level";
 import {
   useAllDevices,
   useConnectedDevice,
@@ -36,7 +37,7 @@ export function DeviceSheet() {
 
   const { data: connectedDevice } = useConnectedDevice();
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
-  const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
+  const batteryLevel = useBatteryLevel();
   const { data: nearbyDevices = [], refetch: refreshDevices, isFetching } = useAllDevices();
   const { handleConnect, handleDisconnect, connectingDeviceId } = useDeviceSheetActions();
 

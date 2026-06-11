@@ -1,7 +1,7 @@
 import { Bluetooth, RotateCw } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { useBatteryPoller } from "~/features/connection/hooks/use-battery-poller";
+import { useBatteryLevel } from "~/features/connection/hooks/use-battery-level";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
@@ -10,11 +10,10 @@ import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function DeviceChip() {
   // Battery polling owns its own enabled-by-connectedDevice gate.
-  useBatteryPoller();
 
   const { data: connectedDevice } = useConnectedDevice();
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
-  const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
+  const batteryLevel = useBatteryLevel();
   const openSheet = useDeviceSheetStore((s) => s.open);
   const { t } = useTranslation("connection");
   const { warningFg } = useThemeColors();
