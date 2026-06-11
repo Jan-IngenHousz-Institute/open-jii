@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
 
 interface ExperimentRef {
@@ -12,7 +13,7 @@ function findExperimentRef(
   queryClient: ReturnType<typeof useQueryClient>,
   experimentId: string,
 ): ExperimentRef | undefined {
-  const cached = queryClient.getQueryData<{ body?: ExperimentRef[] }>(["experiments"]);
+  const cached = queryClient.getQueryData<{ body?: ExperimentRef[] }>(contentKeys.experiments);
   return cached?.body?.find((e) => e.id === experimentId);
 }
 
@@ -31,7 +32,7 @@ async function precacheExperimentWorkbookFn(
   let ref = findExperimentRef(queryClient, experimentId);
   if (!ref) {
     await queryClient.fetchQuery({
-      queryKey: ["experiments"],
+      queryKey: contentKeys.experiments,
       queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
       meta: { suppressToast: true },
     });

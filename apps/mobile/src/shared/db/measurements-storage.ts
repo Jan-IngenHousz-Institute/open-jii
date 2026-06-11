@@ -25,6 +25,14 @@ const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export type MeasurementStatus = "pending" | "failed" | "successful";
 
+// A measurement the cloud hasn't acknowledged yet: still editable
+// (comments/flags) and eligible for (re-)upload.
+export const UNSYNCED_STATUSES: readonly MeasurementStatus[] = ["pending", "failed"];
+
+export function isUnsynced(status: MeasurementStatus): boolean {
+  return UNSYNCED_STATUSES.includes(status);
+}
+
 export interface Measurement {
   topic: string;
   measurementResult: object;

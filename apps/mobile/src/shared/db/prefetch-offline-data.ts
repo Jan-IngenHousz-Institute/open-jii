@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
 import { createLogger } from "~/shared/observability/logger";
 
@@ -47,7 +48,7 @@ async function _prefetchOfflineData(
   const profilePromise = userId
     ? queryClient
         .prefetchQuery({
-          queryKey: ["userProfile", userId],
+          queryKey: contentKeys.userProfile(userId),
           queryFn: () => tsr.users.getUserProfile.query({ params: { id: userId } }),
           staleTime: 0,
           meta: { suppressToast: true },
@@ -60,7 +61,7 @@ async function _prefetchOfflineData(
     : Promise.resolve();
 
   const experimentsResponse = await queryClient.fetchQuery({
-    queryKey: ["experiments"],
+    queryKey: contentKeys.experiments,
     queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
     staleTime: 0,
     // Reachable from a background reconnect/foreground refetch; stay silent.

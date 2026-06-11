@@ -5,6 +5,7 @@ import type {
   MeasurementListRow,
   MeasurementStatus,
 } from "~/shared/db/measurements-storage";
+import { UNSYNCED_STATUSES } from "~/shared/db/measurements-storage";
 
 import type { SettledItem } from "./outbox";
 
@@ -26,11 +27,12 @@ export const queryKeys = {
   counts: ["measurements", "counts"] as const,
   top: (n: number) => ["measurements", "top", n] as const,
   topAll: ["measurements", "top"] as const,
+  experimentActivity: ["measurements", "experiment-activity"] as const,
 } as const;
 
 export function statusesForFilter(filter: MeasurementFilter): MeasurementStatus[] {
   if (filter === "synced") return ["successful"];
-  if (filter === "unsynced") return ["pending", "failed"];
+  if (filter === "unsynced") return [...UNSYNCED_STATUSES];
   return ["pending", "failed", "successful"];
 }
 

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
+import { isUnsynced as isUnsyncedStatus } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import {
@@ -59,7 +60,7 @@ export function MeasurementQuestionsModal({
   const experimentName = measurement.data.metadata.experimentName;
   const protocolName = measurement.data.metadata.protocolName;
   const timestamp = new Date(measurement.data.metadata.timestamp).toLocaleString();
-  const isUnsynced = measurement.status === "pending" || measurement.status === "failed";
+  const isUnsynced = isUnsyncedStatus(measurement.status);
 
   const [currentComment, setCurrentComment] = useState(() =>
     getCommentFromMeasurementResult(measurementResult),

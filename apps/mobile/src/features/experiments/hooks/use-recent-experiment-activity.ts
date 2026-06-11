@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "~/features/recent-measurements/services/measurement-list-cache";
 import { countRecentMeasurementsByExperiment } from "~/shared/db/measurements-storage";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -11,7 +12,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
  */
 export function useRecentExperimentActivity(): Record<string, number> {
   const { data } = useQuery({
-    queryKey: ["measurements", "experiment-activity"],
+    queryKey: queryKeys.experimentActivity,
     queryFn: () =>
       countRecentMeasurementsByExperiment(new Date(Date.now() - WEEK_MS).toISOString()),
     networkMode: "always",

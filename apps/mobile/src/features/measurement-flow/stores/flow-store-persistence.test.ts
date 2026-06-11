@@ -89,8 +89,8 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   // persist's write-back lands a microtask after setState; poll until it does.
   const raw = await vi.waitFor(async () => {
     const value = await AsyncStorage.getItem(key);
-    expect(value).not.toBeNull();
-    return value as string;
+    if (value === null) throw new Error("persist write-back has not landed yet");
+    return value;
   });
   return JSON.parse(raw) as Record<string, unknown>;
 }
@@ -117,7 +117,8 @@ describe("measurement-flow-storage v0 wire format", () => {
 
   it("persists exactly the known field set", () => {
     const { partialize } = useMeasurementFlowStore.persist.getOptions();
-    const persisted = partialize!(useMeasurementFlowStore.getState()) as Record<string, unknown>;
+    if (!partialize) throw new Error("store no longer configures partialize");
+    const persisted = partialize(useMeasurementFlowStore.getState()) as Record<string, unknown>;
     // Adding a persisted field must update this list AND the fixture above.
     expect(Object.keys(persisted).sort()).toEqual([
       "currentFlowStep",
@@ -157,7 +158,8 @@ describe("flow-answers-storage v0 wire format", () => {
 
   it("persists exactly the known field set", () => {
     const { partialize } = useFlowAnswersStore.persist.getOptions();
-    const persisted = partialize!(useFlowAnswersStore.getState()) as Record<string, unknown>;
+    if (!partialize) throw new Error("store no longer configures partialize");
+    const persisted = partialize(useFlowAnswersStore.getState()) as Record<string, unknown>;
     // Adding a persisted field must update this list AND the fixture above.
     expect(Object.keys(persisted).sort()).toEqual([
       "answersHistory",
