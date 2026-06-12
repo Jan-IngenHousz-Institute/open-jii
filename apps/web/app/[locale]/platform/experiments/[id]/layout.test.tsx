@@ -8,11 +8,11 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentLayout from "./layout";
 
-vi.mock("~/components/experiment-overview/experiment-title", () => ({
+vi.mock("@/features/experiments/components/experiment-overview/experiment-title", () => ({
   ExperimentTitle: ({ name }: { name: string }) => <h1>{name}</h1>,
 }));
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
 }));
 

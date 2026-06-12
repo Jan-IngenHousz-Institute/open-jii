@@ -1,20 +1,23 @@
+import { auth } from "@/shared/api/auth";
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { redirect } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { auth } from "~/app/actions/auth";
 
 import AppLayout from "./layout";
 
-vi.mock("@/components/navigation/navigation-breadcrumbs/navigation-breadcrumbs", () => ({
+vi.mock("@/features/navigation/components/navigation-breadcrumbs/navigation-breadcrumbs", () => ({
   Breadcrumbs: () => <nav aria-label="breadcrumbs">Breadcrumbs</nav>,
 }));
 
-vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper", () => ({
-  NavigationSidebarWrapper: () => <aside aria-label="sidebar">Sidebar</aside>,
-}));
+vi.mock(
+  "@/features/navigation/components/navigation-sidebar-wrapper/navigation-sidebar-wrapper",
+  () => ({
+    NavigationSidebarWrapper: () => <aside aria-label="sidebar">Sidebar</aside>,
+  }),
+);
 
-vi.mock("@/components/navigation/navigation-topbar/navigation-topbar", () => ({
+vi.mock("@/features/navigation/components/navigation-topbar/navigation-topbar", () => ({
   NavigationTopbar: () => <header aria-label="topbar">Topbar</header>,
 }));
 

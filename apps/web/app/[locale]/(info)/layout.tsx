@@ -1,8 +1,8 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { UnifiedNavbar } from "@/features/navigation/components/unified-navbar/unified-navbar";
+import { auth } from "@/shared/api/auth";
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { draftMode } from "next/headers";
 import React from "react";
-import { auth } from "~/app/actions/auth";
-import { getContentfulClients } from "~/lib/contentful";
 
 import { HomeFooter } from "@repo/cms";
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";

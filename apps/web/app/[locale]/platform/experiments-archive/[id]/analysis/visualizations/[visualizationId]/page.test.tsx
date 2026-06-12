@@ -5,7 +5,7 @@ import { vi, describe, it, expect } from "vitest";
 import ArchivedVisualizationDetailPage from "./page";
 
 vi.mock(
-  "../../../../../../../../components/experiment-visualizations/experiment-visualization-read-only",
+  "@/features/experiment-visualizations/components/experiment-visualization-read-only",
   () => ({
     default: ({
       experimentId,

@@ -8,7 +8,7 @@ import type { TransferRequestStatus } from "@repo/api/schemas/experiment.schema"
 
 import TransferRequestHistoryPage from "./page";
 
-vi.mock("~/util/date", () => ({
+vi.mock("@/shared/utils/date", () => ({
   formatDate: (date: string) => `formatted-${date}`,
 }));
 

@@ -1,10 +1,10 @@
-import { TranslationsProvider } from "@/components/translations-provider";
+import { getContentfulClients } from "@/shared/cms/contentful";
+import { TranslationsProvider } from "@/shared/i18n/translations-provider";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";

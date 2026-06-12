@@ -11,7 +11,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import MacroOverviewPage from "../page";
 
-vi.mock("@/util/base64", () => ({
+vi.mock("@/shared/utils/base64", () => ({
   decodeBase64: (s: string) => {
     try {
       return atob(s);
@@ -22,13 +22,13 @@ vi.mock("@/util/base64", () => ({
   encodeBase64: (s: string) => btoa(s),
 }));
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">{title}</div>
   ),
 }));
 
-vi.mock("@/components/macro-overview/macro-details-sidebar", () => ({
+vi.mock("@/features/macros/components/macro-overview/macro-details-sidebar", () => ({
   MacroDetailsSidebar: ({
     macroId,
     macro,
@@ -42,7 +42,7 @@ vi.mock("@/components/macro-overview/macro-details-sidebar", () => ({
   ),
 }));
 
-vi.mock("@/components/shared/inline-editable-description", () => ({
+vi.mock("@/shared/ui/inline-editable-description", () => ({
   InlineEditableDescription: ({
     description,
     title,
@@ -75,7 +75,7 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
   ),
 }));
 
-vi.mock("@/components/macro-code-viewer", () => ({
+vi.mock("@/features/macros/components/macro-code-viewer", () => ({
   default: ({
     value,
     language,
@@ -103,7 +103,7 @@ vi.mock("@/components/macro-code-viewer", () => ({
   ),
 }));
 
-vi.mock("@/components/macro-code-editor", () => ({
+vi.mock("@/features/macros/components/macro-code-editor", () => ({
   default: ({
     value,
     onChange,
@@ -130,7 +130,7 @@ vi.mock("@/components/macro-code-editor", () => ({
   ),
 }));
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("@/shared/api/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 

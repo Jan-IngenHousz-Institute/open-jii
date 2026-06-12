@@ -1,15 +1,14 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
-import { useReportAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
-import { EditableWorkbookTitle } from "@/components/workbook/editable-workbook-title";
-import { WorkbookEditor } from "@/components/workbook/workbook-editor";
-import { useAutosave } from "@/hooks/useAutosave";
-import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
-import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
+import { WorkbookEditor } from "@/features/workbooks/components/workbook-editor";
+import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
+import { useWorkbookExecution } from "@/features/workbooks/hooks/useWorkbookExecution/useWorkbookExecution";
+import { useWorkbookUpdate } from "@/features/workbooks/hooks/useWorkbookUpdate/useWorkbookUpdate";
+import { parseApiError } from "@/shared/api/apiError";
+import { useAutosave } from "@/shared/hooks/useAutosave";
+import { useReportAutosaveStatus } from "@/shared/ui/autosave/autosave-status-context";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { use, useCallback, useRef, useState } from "react";
-import { parseApiError } from "~/util/apiError";
 
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
@@ -65,26 +64,6 @@ function WorkbookEditorWithAutosave({
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
-  const [title, setTitle] = useState(name);
-  const renameRequestRef = useRef(0);
-
-  const handleRename = useCallback(
-    async (next: string) => {
-      const requestId = ++renameRequestRef.current;
-      const previous = title;
-      setTitle(next);
-      try {
-        await updateWorkbook({ params: { id }, body: { name: next } });
-      } catch (err) {
-        // Only roll back if this is still the latest rename, so a slow failure
-        // can't clobber a newer successful rename.
-        if (renameRequestRef.current === requestId) setTitle(previous);
-        const message = parseApiError(err)?.message;
-        toast({ description: message ?? t("workbooks.renameError"), variant: "destructive" });
-      }
-    },
-    [id, title, updateWorkbook, t],
-  );
 
   const [promptedQuestionId, setPromptedQuestionId] = useState<string | undefined>();
   const questionResolverRef = useRef<((answer: string | undefined) => void) | null>(null);
@@ -177,12 +156,11 @@ function WorkbookEditorWithAutosave({
 
   return (
     <div className="space-y-6">
-      <EditableWorkbookTitle name={title} onRename={handleRename} readOnly={!isCreator} />
       <WorkbookEditor
         cells={cells}
         onCellsChange={handleCellsChange}
         readOnly={!isCreator}
-        title={title}
+        title={name}
         executionStates={executionStates}
         isConnected={isConnected}
         isConnecting={isConnecting}

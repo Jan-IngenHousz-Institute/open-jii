@@ -1,4 +1,4 @@
-import { NewMacroForm } from "@/components/new-macro/new-macro";
+import { NewMacroForm } from "@/features/macros/components/new-macro/new-macro";
 import type { Metadata } from "next";
 import React from "react";
 

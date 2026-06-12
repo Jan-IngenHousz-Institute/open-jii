@@ -15,7 +15,7 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentFlowPage from "./page";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">
       {title}: {String(error)}
@@ -23,7 +23,7 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-vi.mock("@/components/flow-editor/flow-editor", () => ({
+vi.mock("@/features/experiment-flow/components/flow-editor/flow-editor", () => ({
   FlowEditor: ({
     initialFlow,
     isDisabled,
@@ -42,7 +42,7 @@ vi.mock("@/components/flow-editor/flow-editor", () => ({
   ),
 }));
 
-vi.mock("@/components/workbook/workbook-editor", () => ({
+vi.mock("@/features/workbooks/components/workbook-editor", () => ({
   WorkbookEditor: ({ cells, readOnly }: { cells: unknown[]; readOnly?: boolean }) => (
     <div data-testid="workbook-editor" data-readonly={readOnly ? "true" : "false"}>
       Workbook Editor ({cells.length} cells)

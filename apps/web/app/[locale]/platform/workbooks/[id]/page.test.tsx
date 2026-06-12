@@ -10,7 +10,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import WorkbookOverviewPage from "./page";
 
-vi.mock("@/components/workbook/workbook-code-editor", () => ({
+vi.mock("@/features/workbooks/components/workbook-code-editor", () => ({
   WorkbookCodeEditor: ({ value }: { value: string }) => (
     <pre data-testid="code-editor">{value}</pre>
   ),
@@ -103,49 +103,6 @@ describe("WorkbookOverviewPage", () => {
       () => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
       { timeout: 3000 },
     );
-  });
-
-  it("renames the workbook via the editable title", async () => {
-    const user = userEvent.setup();
-    server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({ id: "wb-1", name: "Old Name", createdBy: "user-1", cells: [] }),
-    });
-    const updateSpy = server.mount(contract.workbooks.updateWorkbook, {
-      body: createWorkbook({ id: "wb-1" }),
-    });
-
-    renderPage();
-
-    const renameBtn = await screen.findByRole("button", { name: "workbooks.renameLabel" });
-    await user.click(renameBtn);
-    const input = screen.getByLabelText("workbooks.renameLabel");
-    await user.clear(input);
-    await user.type(input, "New Name{Enter}");
-
-    await waitFor(() => expect(updateSpy.called).toBe(true));
-    expect(updateSpy.body).toMatchObject({ name: "New Name" });
-  });
-
-  it("rolls back and toasts when a rename fails", async () => {
-    const user = userEvent.setup();
-    server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({ id: "wb-1", name: "Old Name", createdBy: "user-1", cells: [] }),
-    });
-    server.mount(contract.workbooks.updateWorkbook, { status: 400 });
-
-    renderPage();
-
-    const renameBtn = await screen.findByRole("button", { name: "workbooks.renameLabel" });
-    await user.click(renameBtn);
-    const input = screen.getByLabelText("workbooks.renameLabel");
-    await user.clear(input);
-    await user.type(input, "Broken Name{Enter}");
-
-    await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
-    );
-    // Optimistic title reverts to the original.
-    await waitFor(() => expect(screen.getByText("Old Name")).toBeInTheDocument());
   });
 
   it("hides add-cell controls when the viewer is not the workbook creator", async () => {

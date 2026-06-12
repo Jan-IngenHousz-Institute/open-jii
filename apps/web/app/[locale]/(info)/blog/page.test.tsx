@@ -1,7 +1,7 @@
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { assertExists, render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getContentfulClients } from "~/lib/contentful";
 
 import Page, { generateMetadata } from "./page";
 
@@ -20,7 +20,7 @@ vi.mock("@repo/cms/container", () => ({
   Container: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("@/components/translations-provider", () => ({
+vi.mock("@/shared/i18n/translations-provider", () => ({
   TranslationsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import TransferRequestPage from "./page";
 
-vi.mock("~/components/transfer-request-form", () => ({
+vi.mock("@/features/experiments/components/transfer-request-form", () => ({
   TransferRequestForm: () => <div data-testid="transfer-request-form">Form Component</div>,
 }));
 

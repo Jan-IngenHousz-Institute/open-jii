@@ -1,18 +1,18 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
-import MacroCodeEditor from "@/components/macro-code-editor";
-import MacroCodeViewer from "@/components/macro-code-viewer";
-import { MacroDetailsSidebar } from "@/components/macro-overview/macro-details-sidebar";
-import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
-import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
-import { useMacro } from "@/hooks/macro/useMacro/useMacro";
-import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
-import { useAutosave } from "@/hooks/useAutosave";
-import { decodeBase64, encodeBase64 } from "@/util/base64";
+import MacroCodeEditor from "@/features/macros/components/macro-code-editor";
+import MacroCodeViewer from "@/features/macros/components/macro-code-viewer";
+import { MacroDetailsSidebar } from "@/features/macros/components/macro-overview/macro-details-sidebar";
+import { useMacro } from "@/features/macros/hooks/useMacro/useMacro";
+import { useMacroUpdate } from "@/features/macros/hooks/useMacroUpdate/useMacroUpdate";
+import { parseApiError } from "@/shared/api/apiError";
+import { useAutosave } from "@/shared/hooks/useAutosave";
+import { CodeEditorHeaderActions } from "@/shared/ui/code-editor-header-actions";
+import { ErrorDisplay } from "@/shared/ui/error-display";
+import { InlineEditableDescription } from "@/shared/ui/inline-editable-description";
+import { decodeBase64, encodeBase64 } from "@/shared/utils/base64";
 import { CodeIcon } from "lucide-react";
 import { use, useCallback, useState } from "react";
-import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";

@@ -1,9 +1,9 @@
 "use client";
 
-import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
-import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
-import { WorkbookLayoutContent } from "@/components/workbook-overview/workbook-layout-content";
-import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
+import { WorkbookLayoutContent } from "@/features/workbooks/components/workbook-overview/workbook-layout-content";
+import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
+import { AutosaveStatusProvider } from "@/shared/ui/autosave/autosave-status-context";
+import { EntityLayoutShell } from "@/shared/ui/entity-layout-shell";
 import { useParams } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";

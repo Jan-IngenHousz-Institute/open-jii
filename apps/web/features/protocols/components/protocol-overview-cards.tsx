@@ -1,0 +1,137 @@
+import { useProtocolCompatibleMacros } from "@/features/protocols/hooks/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
+import { useLocale } from "@/shared/i18n/useLocale";
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
+import React, { useMemo, useState } from "react";
+
+import type { Protocol, ProtocolMacroEntry } from "@repo/api/schemas/protocol.schema";
+import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
+import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { cva } from "@repo/ui/lib/utils";
+
+const getFamilyColor = (family: string) => {
+  switch (family) {
+    case "multispeq":
+      return "bg-badge-published";
+    case "ambit":
+      return "bg-badge-active";
+    default:
+      return "bg-badge-archived";
+  }
+};
+
+const cardVariants = cva(
+  "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
+  {
+    variants: {
+      featured: {
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm",
+        false: "border-gray-200 bg-white",
+      },
+    },
+    defaultVariants: {
+      featured: false,
+    },
+  },
+);
+
+function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; enabled: boolean }) {
+  const { data } = useProtocolCompatibleMacros(protocolId, enabled);
+  const macros: ProtocolMacroEntry[] = useMemo(
+    () => (data?.body as ProtocolMacroEntry[] | undefined) ?? [],
+    [data],
+  );
+
+  if (macros.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {macros.map((entry) => (
+        <span
+          key={entry.macro.id}
+          className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+        >
+          {entry.macro.name}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ProtocolCard({
+  protocol,
+  locale,
+  t,
+}: {
+  protocol: Protocol;
+  locale: string;
+  t: (key: string) => string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isPreferred = protocol.sortOrder !== null;
+
+  return (
+    <Link
+      href={`/${locale}/platform/protocols/${protocol.id}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div className={cardVariants({ featured: isPreferred })}>
+        <div className="inline-flex gap-1">
+          <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
+            {protocol.family}
+          </Badge>
+          {isPreferred && (
+            <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+          )}
+        </div>
+        <div className="mb-auto">
+          <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+            {protocol.name}
+          </h3>
+          <div className="overflow-hidden text-sm text-gray-500">
+            <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
+          </div>
+        </div>
+        <CompatibleMacrosList protocolId={protocol.id} enabled={hovered} />
+        <p className="text-xs text-gray-400">
+          {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
+        </p>
+        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
+      </div>
+    </Link>
+  );
+}
+
+export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | undefined }) {
+  const { t } = useTranslation("common");
+  const locale = useLocale();
+
+  if (!protocols) {
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-48" />
+        ))}
+      </div>
+    );
+  }
+
+  if (protocols.length === 0) {
+    return (
+      <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
+        {t("protocols.noProtocols")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {protocols.map((protocol) => (
+        <ProtocolCard key={protocol.id} protocol={protocol} locale={locale} t={t} />
+      ))}
+    </div>
+  );
+}

@@ -1,0 +1,32 @@
+"use client";
+
+import { useExperiments } from "@/features/experiments/hooks/useExperiments/useExperiments";
+import { ExperimentOverviewCards } from "@/shared/ui/experiment-overview-cards";
+
+import { Skeleton } from "@repo/ui/components/skeleton";
+
+export function UserExperimentsSection() {
+  // Get only user's experiments (member experiments) with a limit for dashboard view
+  const { data } = useExperiments({
+    initialFilter: "member",
+    initialStatus: undefined,
+    initialSearch: "",
+  });
+
+  // Show only first 3 experiments for dashboard
+  const limitedExperiments = data?.body ? data.body.slice(0, 3) : undefined;
+
+  return (
+    <div className="space-y-4">
+      {data?.body ? (
+        <ExperimentOverviewCards experiments={limitedExperiments} />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-32" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

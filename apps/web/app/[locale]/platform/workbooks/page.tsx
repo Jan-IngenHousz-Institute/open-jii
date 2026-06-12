@@ -1,4 +1,4 @@
-import { ListWorkbooks } from "@/components/list-workbooks";
+import { ListWorkbooks } from "@/features/workbooks/components/list-workbooks";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";

@@ -1,4 +1,4 @@
-import { useLocale } from "@/hooks/useLocale";
+import { useLocale } from "@/shared/i18n/useLocale";
 import { createExperimentAccess } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
@@ -9,11 +9,11 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentLayout from "./layout";
 
-vi.mock("~/components/experiment-overview/experiment-title", () => ({
+vi.mock("@/features/experiments/components/experiment-overview/experiment-title", () => ({
   ExperimentTitle: ({ name }: { name: string }) => <div data-testid="experiment-title">{name}</div>,
 }));
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
 }));
 

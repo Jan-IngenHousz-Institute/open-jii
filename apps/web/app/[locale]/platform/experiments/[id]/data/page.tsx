@@ -1,18 +1,18 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
+import { ExperimentDataTable } from "@/features/experiments/components/experiment-data/experiment-data-table";
+import { MetadataUploadModal } from "@/features/experiments/components/experiment-data/metadata-upload-modal/metadata-upload-modal";
+import { UploadDataModal } from "@/features/experiments/components/experiment-data/upload-data-modal/upload-data-modal";
+import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
+import { useExperimentMetadata } from "@/features/experiments/hooks/useExperimentMetadata/useExperimentMetadata";
+import { useExperimentTables } from "@/features/experiments/hooks/useExperimentTables/useExperimentTables";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { BarChart3, FileSpreadsheet, Pencil, Upload } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
-import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
-import { MetadataUploadModal } from "~/components/experiment-data/metadata-upload-modal/metadata-upload-modal";
-import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
 import { env } from "~/env";
-import { useExperimentAccess } from "~/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentMetadata } from "~/hooks/experiment/useExperimentMetadata/useExperimentMetadata";
-import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";

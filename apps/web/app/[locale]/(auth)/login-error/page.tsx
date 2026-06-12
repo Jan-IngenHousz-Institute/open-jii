@@ -1,9 +1,9 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { AuthHeroSection } from "@/features/auth/components/auth-hero-section";
+import { ErrorContent } from "@/features/auth/components/error-content";
+import { UnifiedNavbar } from "@/features/navigation/components/unified-navbar/unified-navbar";
+import { auth } from "@/shared/api/auth";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { auth } from "~/app/actions/auth";
-import { AuthHeroSection } from "~/components/auth/auth-hero-section";
-import { ErrorContent } from "~/components/auth/error-content";
 
 export default async function AuthErrorPage(props: {
   params: Promise<{ locale: string }>;

@@ -9,26 +9,29 @@ import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schem
 
 import VisualizationsPage from "./page";
 
-vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-list", () => ({
-  default: ({
-    experimentId,
-    visualizations,
-    isLoading,
-  }: {
-    experimentId: string;
-    visualizations: { id: string; name: string }[];
-    isLoading: boolean;
-  }) => (
-    <div data-testid="visualizations-list" data-loading={isLoading}>
-      <div>Experiment: {experimentId}</div>
-      {visualizations.map((viz) => (
-        <div key={viz.id} data-testid={`viz-${viz.id}`}>
-          {viz.name}
-        </div>
-      ))}
-    </div>
-  ),
-}));
+vi.mock(
+  "@/features/experiment-visualizations/components/list/experiment-visualizations-list",
+  () => ({
+    default: ({
+      experimentId,
+      visualizations,
+      isLoading,
+    }: {
+      experimentId: string;
+      visualizations: { id: string; name: string }[];
+      isLoading: boolean;
+    }) => (
+      <div data-testid="visualizations-list" data-loading={isLoading}>
+        <div>Experiment: {experimentId}</div>
+        {visualizations.map((viz) => (
+          <div key={viz.id} data-testid={`viz-${viz.id}`}>
+            {viz.name}
+          </div>
+        ))}
+      </div>
+    ),
+  }),
+);
 
 const accessPayload = createExperimentAccess({
   experiment: { id: "exp-123", status: "active" },

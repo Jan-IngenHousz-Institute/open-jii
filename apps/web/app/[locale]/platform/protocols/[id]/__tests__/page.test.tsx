@@ -11,17 +11,17 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import ProtocolOverviewPage from "../page";
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("@/shared/api/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ title }: { error: unknown; title: string }) => (
     <div data-testid="error-display">{title}</div>
   ),
 }));
 
-vi.mock("@/components/json-code-viewer", () => ({
+vi.mock("@/features/protocols/components/json-code-viewer", () => ({
   JsonCodeViewer: ({
     value,
     title,
@@ -48,7 +48,7 @@ vi.mock("@/components/json-code-viewer", () => ({
   ),
 }));
 
-vi.mock("@/components/protocol-code-editor", () => ({
+vi.mock("@/features/protocols/components/protocol-code-editor", () => ({
   default: ({
     value,
     title,
@@ -80,7 +80,7 @@ vi.mock("@/components/protocol-code-editor", () => ({
   ),
 }));
 
-vi.mock("@/components/protocol-overview/protocol-details-sidebar", () => ({
+vi.mock("@/features/protocols/components/protocol-overview/protocol-details-sidebar", () => ({
   ProtocolDetailsSidebar: ({
     protocolId,
     protocol,
@@ -95,7 +95,7 @@ vi.mock("@/components/protocol-overview/protocol-details-sidebar", () => ({
   ),
 }));
 
-vi.mock("@/components/shared/inline-editable-description", () => ({
+vi.mock("@/shared/ui/inline-editable-description", () => ({
   InlineEditableDescription: ({
     description,
     title,

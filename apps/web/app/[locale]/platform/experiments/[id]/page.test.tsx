@@ -8,19 +8,22 @@ import { contract } from "@repo/api/contract";
 
 import ExperimentOverviewPage from "./page";
 
-vi.mock("@/components/error-display", () => ({
+vi.mock("@/shared/ui/error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
 }));
-vi.mock("~/components/experiment-overview/experiment-description", () => ({
+vi.mock("@/features/experiments/components/experiment-overview/experiment-description", () => ({
   ExperimentDescription: () => <section aria-label="description" />,
 }));
-vi.mock("~/components/experiment-overview/experiment-details/experiment-details-card", () => ({
-  ExperimentDetailsCard: () => <section aria-label="details" />,
-}));
-vi.mock("~/components/experiment-overview/experiment-measurements", () => ({
+vi.mock(
+  "@/features/experiments/components/experiment-overview/experiment-details/experiment-details-card",
+  () => ({
+    ExperimentDetailsCard: () => <section aria-label="details" />,
+  }),
+);
+vi.mock("@/features/experiments/components/experiment-overview/experiment-measurements", () => ({
   ExperimentMeasurements: () => <section aria-label="measurements" />,
 }));
-vi.mock("~/components/experiment-overview/experiment-linked-workbook", () => ({
+vi.mock("@/features/experiments/components/experiment-overview/experiment-linked-workbook", () => ({
   ExperimentLinkedWorkbook: () => <section aria-label="workbook" />,
 }));
 

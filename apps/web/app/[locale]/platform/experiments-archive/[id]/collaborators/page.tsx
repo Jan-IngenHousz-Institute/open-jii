@@ -1,17 +1,17 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
-import { ExperimentInviteModal } from "@/components/experiment-settings/collaborators/experiment-invite-modal";
-import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
-import { ExperimentMembersPanel } from "@/components/experiment-settings/collaborators/experiment-members-panel";
-import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
+import { ExperimentInviteModal } from "@/features/experiments/components/experiment-settings/collaborators/experiment-invite-modal";
+import { ExperimentJoinRequestsPanel } from "@/features/experiments/components/experiment-settings/collaborators/experiment-join-requests-panel";
+import { ExperimentMembersPanel } from "@/features/experiments/components/experiment-settings/collaborators/experiment-members-panel";
+import { ExperimentPendingInvitationsPanel } from "@/features/experiments/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
+import { useExperimentJoinRequests } from "@/features/experiments/hooks/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
+import { useExperimentAccess } from "@/features/experiments/hooks/useExperimentAccess/useExperimentAccess";
+import { useExperimentMembers } from "@/features/experiments/hooks/useExperimentMembers/useExperimentMembers";
+import { useUserInvitations } from "@/features/experiments/hooks/user-invitation/useUserInvitations/useUserInvitations";
+import { ErrorDisplay } from "@/shared/ui/error-display";
 import { Search, UserPlus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use, useMemo, useState } from "react";
-import { useExperimentJoinRequests } from "~/hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
-import { useUserInvitations } from "~/hooks/user-invitation/useUserInvitations/useUserInvitations";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";

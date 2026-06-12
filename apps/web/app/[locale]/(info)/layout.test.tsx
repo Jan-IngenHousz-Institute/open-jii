@@ -1,14 +1,14 @@
+import { auth } from "@/shared/api/auth";
+import { getContentfulClients } from "@/shared/cms/contentful";
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { auth } from "~/app/actions/auth";
-import { getContentfulClients } from "~/lib/contentful";
 
 import Layout from "./layout";
 
 const mockFooter = vi.fn();
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
+vi.mock("@/features/navigation/components/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: ({ session }: { session: unknown }) => (
     <nav aria-label="main">{session ? "logged-in" : "guest"}</nav>
   ),

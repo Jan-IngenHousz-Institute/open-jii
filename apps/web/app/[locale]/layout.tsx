@@ -1,10 +1,13 @@
-import { TranslationsProvider } from "@/components/translations-provider";
+import { isFeatureFlagEnabled } from "@/shared/analytics/posthog-server";
+import { PostHogIdentifier } from "@/shared/analytics/usePostHogAuth";
+import { TranslationsProvider } from "@/shared/i18n/translations-provider";
+import { QueryProvider } from "@/shared/providers/QueryProvider";
+import { AlertsBar } from "@/shared/ui/alerts-bar";
 import { Poppins, Overpass, Inter, Noto_Sans } from "next/font/google";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
-import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
@@ -12,9 +15,6 @@ import { defaultLocale, isKnownLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
-import { AlertsBar } from "../../components/alerts-bar";
-import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
-import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
 
 const poppins = Poppins({

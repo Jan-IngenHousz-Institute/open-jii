@@ -1,0 +1,478 @@
+"use client";
+
+import { AddAnnotationDialog } from "@/features/experiments/components/experiment-data/annotations/add-annotation-dialog";
+import { BulkActionsBar } from "@/features/experiments/components/experiment-data/annotations/bulk-actions-bar";
+import { DeleteAnnotationsDialog } from "@/features/experiments/components/experiment-data/annotations/delete-annotations-dialog";
+import {
+  ExperimentDataRows,
+  ExperimentTableHeader,
+  formatValue,
+  LoadingRows,
+} from "@/features/experiments/components/experiment-data/experiment-data-utils";
+import type {
+  DataRow,
+  TableMetadata,
+} from "@/features/experiments/hooks/useExperimentData/useExperimentData";
+import { useExperimentData } from "@/features/experiments/hooks/useExperimentData/useExperimentData";
+import { useUrlDataFilters } from "@/shared/hooks/useUrlDataFilters";
+import { FilterChipBar } from "@/shared/ui/data-filters/filter-chip-bar";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { PaginationState, Updater } from "@tanstack/react-table";
+import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
+import React, { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import z from "zod";
+
+import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
+import { useTranslation } from "@repo/i18n";
+import { Checkbox } from "@repo/ui/components/checkbox";
+import { Form } from "@repo/ui/components/form";
+import { Label } from "@repo/ui/components/label";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@repo/ui/components/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { Table, TableBody } from "@repo/ui/components/table";
+import { cn } from "@repo/ui/lib/utils";
+
+import { DataExportModal } from "./data-export-modal/data-export-modal";
+import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
+
+function getSortColumnName(columnName: string, columnType?: string): string {
+  if (columnType === "USER") {
+    return "user_name";
+  }
+  return columnName;
+}
+
+const bulkSelectionFormSchema = z.object({
+  selectedRowIds: z.array(z.string()),
+});
+export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
+
+export function ExperimentDataTable({
+  experimentId,
+  tableName,
+  pageSize = 10,
+  displayName,
+  defaultSortColumn,
+  errorColumn,
+}: {
+  experimentId: string;
+  tableName: string;
+  pageSize: number;
+  displayName?: string;
+  defaultSortColumn?: string;
+  errorColumn?: string;
+}) {
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
+  const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string | undefined>(defaultSortColumn);
+  const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
+
+  const { filters, setFilters, completeFilters: activeFilters } = useUrlDataFilters(tableName);
+
+  const [addAnnotationDialogOpen, setAddAnnotationDialogOpen] = useState(false);
+  const [addAnnotationRowIds, setAddAnnotationRowIds] = useState<string[]>([]);
+  const [addAnnotationType, setAddAnnotationType] = useState<AnnotationType>("comment");
+  const [deleteAnnotationsDialogOpen, setDeleteAnnotationsDialogOpen] = useState(false);
+  const [deleteAnnotationRowIds, setDeleteAnnotationRowIds] = useState<string[]>([]);
+  const [deleteAnnotationType, setDeleteAnnotationType] = useState<AnnotationType>("comment");
+
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+
+  const selectionForm = useForm<BulkSelectionFormType>({
+    resolver: zodResolver(bulkSelectionFormSchema),
+    defaultValues: { selectedRowIds: [] },
+  });
+
+  const [chartDisplay, setChartDisplay] = useState<{
+    data: number[];
+    columnName: string;
+    isPinned: boolean;
+  } | null>(null);
+
+  const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
+    null,
+  );
+
+  const { t } = useTranslation();
+
+  const toggleChartPin = useCallback((data: number[], columnName: string) => {
+    setChartDisplay((prev) => {
+      if (prev?.isPinned && prev.columnName === columnName) {
+        return null;
+      }
+      return { data, columnName, isPinned: true };
+    });
+  }, []);
+
+  const closePinnedChart = useCallback(() => {
+    setChartDisplay(null);
+  }, []);
+
+  const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
+    setExpandedCell((prev) =>
+      prev?.rowId === rowId && prev.columnName === columnName ? null : { rowId, columnName },
+    );
+  }, []);
+
+  const isCellExpanded = useCallback(
+    (rowId: string, columnName: string) => {
+      return expandedCell?.rowId === rowId && expandedCell.columnName === columnName;
+    },
+    [expandedCell],
+  );
+
+  const openAddAnnotationDialog = useCallback(
+    (rowIds: string[], type: AnnotationType = "comment") => {
+      setAddAnnotationRowIds(rowIds);
+      setAddAnnotationType(type);
+      setAddAnnotationDialogOpen(true);
+    },
+    [],
+  );
+
+  const openDeleteAnnotationsDialog = useCallback(
+    (rowIds: string[], type: AnnotationType = "comment") => {
+      setDeleteAnnotationRowIds(rowIds);
+      setDeleteAnnotationType(type);
+      setDeleteAnnotationsDialogOpen(true);
+    },
+    [],
+  );
+
+  const handleSort = useCallback(
+    (columnName: string, columnType?: string) => {
+      const actualSortColumn = getSortColumnName(columnName, columnType);
+      if (sortColumn === actualSortColumn) {
+        setSortDirection((prev) => (prev === "ASC" ? "DESC" : "ASC"));
+      } else {
+        setSortColumn(actualSortColumn);
+        setSortDirection("ASC");
+      }
+    },
+    [sortColumn],
+  );
+
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
+    experimentId,
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
+    tableName,
+    orderBy: sortColumn,
+    orderDirection: sortDirection,
+    filters: activeFilters,
+    formatFunction: formatValue,
+    onChartClick: toggleChartPin,
+    onAddAnnotation: openAddAnnotationDialog,
+    onDeleteAnnotations: openDeleteAnnotationsDialog,
+    onToggleCellExpansion: toggleCellExpansion,
+    isCellExpanded,
+    errorColumn,
+  });
+
+  // Filters drop totalPages to 1; snap pageIndex back so the UI doesn't show "page 5 of 1".
+  // Selection is keyed by row id and would point at rows that no longer exist after a filter change.
+  const filtersKey = JSON.stringify(activeFilters);
+  useEffect(() => {
+    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    setRowSelection({});
+  }, [filtersKey]);
+
+  const onPaginationChange = useCallback(
+    (updaterOrValue: Updater<PaginationState>) => {
+      if (typeof updaterOrValue === "function") {
+        const newPagination = updaterOrValue(pagination);
+        setPagination(newPagination);
+      } else {
+        setPagination(updaterOrValue);
+      }
+      setRowSelection({});
+    },
+    [pagination],
+  );
+
+  function changePageSize(pageSize: number) {
+    const newPagination = { pageIndex: 0, pageSize };
+    setPagination(newPagination);
+  }
+
+  useEffect(() => {
+    if (tableMetadata) {
+      setPersistedMetaData(tableMetadata);
+    }
+  }, [tableMetadata]);
+
+  const columnCount = persistedMetaData?.columns.length ?? 0;
+  const totalPages = persistedMetaData?.totalPages ?? 0;
+  const totalRows = persistedMetaData?.totalRows ?? 0;
+
+  const columns = React.useMemo(() => {
+    if (!persistedMetaData?.columns) {
+      return [];
+    }
+
+    return [
+      {
+        id: "select",
+        size: 50,
+        header: ({
+          table,
+        }: {
+          table: {
+            getIsAllPageRowsSelected: () => boolean;
+            getIsSomePageRowsSelected: () => boolean;
+            toggleAllPageRowsSelected: (value: boolean) => void;
+          };
+        }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected()
+                ? true
+                : table.getIsSomePageRowsSelected()
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({
+          row,
+        }: {
+          row: { getIsSelected: () => boolean; toggleSelected: (value: boolean) => void };
+        }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      ...persistedMetaData.columns,
+    ];
+  }, [persistedMetaData?.columns]);
+
+  const table = useReactTable<DataRow>({
+    data: tableRows ?? [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    enableRowSelection: true,
+    getRowId: (row) => String(row.id),
+    onRowSelectionChange: setRowSelection,
+    onPaginationChange,
+    state: {
+      pagination,
+      rowSelection,
+    },
+    rowCount: totalRows,
+    defaultColumn: {
+      size: 180,
+    },
+  });
+
+  const selectedRowIds = Object.keys(rowSelection);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight" && table.getCanNextPage()) {
+        table.nextPage();
+      }
+
+      if (event.key === "ArrowLeft" && table.getCanPreviousPage()) {
+        table.previousPage();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [table]);
+
+  if (isLoading && !persistedMetaData) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-7 w-48" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full" />
+          {Array.from({ length: pageSize }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-64" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>{t("experimentDataTable.error")}</div>;
+  }
+
+  if (!tableRows && !isLoading) {
+    return <div>{t("experimentDataTable.noData")}</div>;
+  }
+
+  const loadingRowCount =
+    pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
+
+  return (
+    <Form {...selectionForm}>
+      <form className="grid max-w-full">
+        <h5 className="mb-3 text-base font-medium">{displayName}</h5>
+        {persistedMetaData?.rawColumns && persistedMetaData.rawColumns.length > 0 && (
+          <div className="mb-4">
+            <FilterChipBar
+              experimentId={experimentId}
+              tableName={tableName}
+              columns={persistedMetaData.rawColumns}
+              value={filters}
+              onChange={setFilters}
+            />
+          </div>
+        )}
+        <BulkActionsBar
+          rowIds={selectedRowIds}
+          tableRows={tableRows}
+          downloadTable={() => setDownloadModalOpen(true)}
+          onAddAnnotation={openAddAnnotationDialog}
+          onDeleteAnnotations={openDeleteAnnotationsDialog}
+        />
+        <div className="text-muted-foreground relative -mt-px overflow-x-auto rounded-b-lg border">
+          <Table className="w-max min-w-full">
+            <ExperimentTableHeader
+              headerGroups={table.getHeaderGroups()}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            />
+            <TableBody>
+              {isLoading && persistedMetaData && (
+                <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
+              )}
+              {!isLoading && (
+                <ExperimentDataRows
+                  rows={table.getRowModel().rows}
+                  columnCount={columnCount}
+                  expandedCell={expandedCell}
+                  tableRows={tableRows}
+                  columns={persistedMetaData?.rawColumns ?? []}
+                  errorColumn={errorColumn}
+                />
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
+          <div className="flex-1 whitespace-nowrap">
+            {t("experimentDataTable.totalRows")}: {totalRows}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label className="whitespace-nowrap">{t("experimentDataTable.rowsPerPage")}:</Label>
+            <Select
+              value={pagination.pageSize.toString()}
+              onValueChange={(rowsPerPage) => changePageSize(+rowsPerPage)}
+            >
+              <SelectTrigger className="w-[65px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Pagination className="max-w-72">
+            <PaginationContent className="w-full justify-between">
+              <PaginationItem>
+                <PaginationPrevious
+                  className={cn(
+                    "border",
+                    !table.getCanPreviousPage() &&
+                      "pointer-events-none cursor-not-allowed opacity-50",
+                  )}
+                  onClick={() => table.previousPage()}
+                  aria-disabled={!table.getCanPreviousPage()}
+                  title={t("experimentDataTable.previous")}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="">
+                  {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
+                  {t("experimentDataTable.pageOf")} {totalPages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  className={cn(
+                    "border",
+                    !table.getCanNextPage() && "pointer-events-none cursor-not-allowed opacity-50",
+                  )}
+                  onClick={() => table.nextPage()}
+                  aria-disabled={!table.getCanNextPage()}
+                  title={t("experimentDataTable.next")}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+        <DataExportModal
+          experimentId={experimentId}
+          tableName={tableName}
+          displayName={displayName}
+          open={downloadModalOpen}
+          onOpenChange={setDownloadModalOpen}
+        />
+        {chartDisplay && (
+          <div id="experiment-data-chart" className="mt-6">
+            <ExperimentDataTableChart
+              data={chartDisplay.data}
+              columnName={chartDisplay.columnName}
+              visible={true}
+              isClicked={chartDisplay.isPinned}
+              onClose={closePinnedChart}
+            />
+          </div>
+        )}
+      </form>
+      <AddAnnotationDialog
+        experimentId={experimentId}
+        tableName={tableName}
+        rowIds={addAnnotationRowIds}
+        type={addAnnotationType}
+        open={addAnnotationDialogOpen}
+        setOpen={setAddAnnotationDialogOpen}
+        clearSelection={() => setRowSelection({})}
+      />
+      <DeleteAnnotationsDialog
+        experimentId={experimentId}
+        tableName={tableName}
+        rowIds={deleteAnnotationRowIds}
+        type={deleteAnnotationType}
+        open={deleteAnnotationsDialogOpen}
+        setOpen={setDeleteAnnotationsDialogOpen}
+        clearSelection={() => setRowSelection({})}
+      />
+    </Form>
+  );
+}

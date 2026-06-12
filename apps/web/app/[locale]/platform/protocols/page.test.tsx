@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import Page from "./page";
 
-vi.mock("@/components/list-protocols", () => ({
+vi.mock("@/features/protocols/components/list-protocols", () => ({
   ListProtocols: () => <div data-testid="list-protocols" />,
 }));
 

@@ -10,7 +10,8 @@ export default {
     "../../packages/ui/src/**/*.{ts,tsx}",
     "../../packages/cms/src/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
+    "./features/**/*.{ts,tsx}",
+    "./shared/**/*.{ts,tsx}",
   ],
   presets: [baseConfig],
   theme: {

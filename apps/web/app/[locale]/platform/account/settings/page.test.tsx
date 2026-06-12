@@ -1,11 +1,11 @@
+import { auth } from "@/shared/api/auth";
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
-import { auth } from "~/app/actions/auth";
 
 import AccountSettingsPage from "./page";
 
-vi.mock("~/components/account-settings/account-settings", () => ({
+vi.mock("@/features/account/components/account-settings", () => ({
   AccountSettings: ({ session }: { session: unknown }) => (
     <div data-testid="account-settings">
       Account Settings - {session ? "with session" : "no session"}

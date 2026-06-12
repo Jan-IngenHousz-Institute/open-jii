@@ -1,7 +1,7 @@
+import { getContentfulClients } from "@/shared/cms/contentful";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
-import { getContentfulClients } from "~/lib/contentful";
 
 import { AboutContent } from "@repo/cms";
 import type { PageAboutFieldsFragment } from "@repo/cms/lib/__generated/sdk";

@@ -1,12 +1,12 @@
 "use client";
 
-import { ProtocolLayoutContent } from "@/components/protocol-overview/protocol-layout-content";
-import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { useIotBrowserSupport } from "@/features/iot/hooks/useIotBrowserSupport";
+import { ProtocolLayoutContent } from "@/features/protocols/components/protocol-overview/protocol-layout-content";
+import { useProtocol } from "@/features/protocols/hooks/useProtocol/useProtocol";
+import { EntityLayoutShell } from "@/shared/ui/entity-layout-shell";
 import { ArrowLeft, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

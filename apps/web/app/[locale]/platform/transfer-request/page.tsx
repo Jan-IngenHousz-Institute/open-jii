@@ -1,5 +1,5 @@
+import { TransferRequestForm } from "@/features/experiments/components/transfer-request-form";
 import type { Metadata } from "next";
-import { TransferRequestForm } from "~/components/transfer-request-form";
 
 import initTranslations from "@repo/i18n/server";
 

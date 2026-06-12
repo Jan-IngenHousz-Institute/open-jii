@@ -1,11 +1,11 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
-import type { SearchParamsType } from "@/util/searchParams";
-import { getFirstSearchParam } from "@/util/searchParams";
+import { AuthHeroSection } from "@/features/auth/components/auth-hero-section";
+import { LoginForm } from "@/features/auth/components/login-form";
+import { TermsAndConditionsDialog } from "@/features/auth/components/terms-and-conditions-dialog";
+import { UnifiedNavbar } from "@/features/navigation/components/unified-navbar/unified-navbar";
+import { auth } from "@/shared/api/auth";
+import type { SearchParamsType } from "@/shared/utils/searchParams";
+import { getFirstSearchParam } from "@/shared/utils/searchParams";
 import Image from "next/image";
-import { auth } from "~/app/actions/auth";
-import { AuthHeroSection } from "~/components/auth/auth-hero-section";
-import { LoginForm } from "~/components/auth/login-form";
-import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
 
 export default async function LoginPage(props: {
   params: Promise<{ locale: string }>;

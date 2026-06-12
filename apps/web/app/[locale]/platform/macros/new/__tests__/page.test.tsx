@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import Page from "../page";
 
-vi.mock("@/components/new-macro/new-macro", () => ({
+vi.mock("@/features/macros/components/new-macro/new-macro", () => ({
   NewMacroForm: () => <div data-testid="new-macro-form" />,
 }));
 

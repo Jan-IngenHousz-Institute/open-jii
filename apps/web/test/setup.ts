@@ -147,13 +147,13 @@ vi.mock("next/headers", () => ({
   draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
 }));
 
-vi.mock("~/app/actions/auth", () => ({
+vi.mock("@/shared/api/auth", () => ({
   auth: vi.fn().mockResolvedValue(null),
   providerMap: [],
   handleRegister: vi.fn(),
 }));
 
-vi.mock("~/app/actions/revalidate", () => ({
+vi.mock("@/shared/api/revalidate", () => ({
   revalidateAuth: vi.fn(),
 }));
 
@@ -208,14 +208,14 @@ vi.mock("@repo/ui/hooks/use-toast", () => ({
   useIsLgTablet: vi.fn(() => false),
 }));
 
-vi.mock("~/lib/contentful", () => ({
+vi.mock("@/shared/cms/contentful", () => ({
   getContentfulClients: vi.fn().mockResolvedValue({
     client: {},
     previewClient: {},
   }),
 }));
 
-vi.mock("@/hooks/useLocale", () => ({
+vi.mock("@/shared/i18n/useLocale", () => ({
   useLocale: vi.fn(() => "en-US"),
 }));
 
@@ -227,7 +227,7 @@ vi.mock("react", async () => {
 });
 
 // CodeMirror cannot run in jsdom (no getClientRects, etc.), so mock the wrapper.
-vi.mock("~/components/shared/code-editor", async () => {
+vi.mock("@/shared/ui/code-editor", async () => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const React = await vi.importActual<typeof import("react")>("react");
   return {

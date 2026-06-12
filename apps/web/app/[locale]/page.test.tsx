@@ -1,13 +1,13 @@
+import { auth } from "@/shared/api/auth";
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { auth } from "~/app/actions/auth";
 
 import Home, { generateMetadata } from "./page";
 
 const { mockPageHome } = vi.hoisted(() => ({
   mockPageHome: vi.fn(),
 }));
-vi.mock("~/lib/contentful", () => ({
+vi.mock("@/shared/cms/contentful", () => ({
   getContentfulClients: () =>
     Promise.resolve({
       client: { pageHome: mockPageHome },
@@ -15,7 +15,7 @@ vi.mock("~/lib/contentful", () => ({
     }),
 }));
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
+vi.mock("@/features/navigation/components/unified-navbar/unified-navbar", () => ({
   UnifiedNavbar: ({ session }: { session: unknown }) => (
     <nav aria-label="main navigation">{session ? "Logged in" : "Not logged in"}</nav>
   ),
