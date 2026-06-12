@@ -1,0 +1,30 @@
+fragment PageForceUpdateFields on PageForceUpdate {
+  __typename
+  sys {
+    id
+  }
+  internalName
+  title
+  body {
+    json
+  }
+  updateCta {
+    ...ButtonFields
+  }
+  minVersion
+  effectiveAt
+  active
+}
+
+query pageForceUpdate($preview: Boolean, $locale: String) {
+  pageForceUpdateCollection(
+    limit: 1
+    order: [sys_publishedAt_DESC]
+    preview: $preview
+    locale: $locale
+  ) {
+    items {
+      ...PageForceUpdateFields
+    }
+  }
+}

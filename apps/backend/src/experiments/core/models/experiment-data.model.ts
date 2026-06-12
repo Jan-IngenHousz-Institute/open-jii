@@ -1,6 +1,8 @@
 import { ExperimentTableName } from "@repo/api/schemas/experiment.schema";
 
-type VariantColumn = "macro_output" | "questions_data" | "custom_metadata";
+type VariantColumn = "macro_output" | "questions_data" | "custom_metadata" | "uploaded_data";
+
+export type ExperimentTableType = "static" | "macro" | "upload";
 
 export interface TableConfig {
   displayName: string;
@@ -24,12 +26,6 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
     exceptColumns: ["experiment_id"],
     variantColumns: [],
   },
-  [ExperimentTableName.RAW_AMBYTE_DATA]: {
-    displayName: "Ambyte Raw Data",
-    defaultSortColumn: "processed_at",
-    exceptColumns: ["experiment_id"],
-    variantColumns: [],
-  },
 };
 
 /** Full configuration for macro tables (display + query). */
@@ -41,17 +37,27 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
   variantColumns: ["macro_output", "questions_data", "custom_metadata"],
 };
 
+/** Full configuration for user-uploaded tables (display + query). */
+export const UPLOAD_TABLE_CONFIG: TableConfig = {
+  displayName: "Uploaded Data",
+  defaultSortColumn: "uploaded_at",
+  exceptColumns: ["experiment_id", "upload_table_name", "upload_id"],
+  variantColumns: ["uploaded_data"],
+};
+
 /**
  * Experiment table metadata returned from the Databricks metadata cache table.
  * Used across the adapter, port, and repository layers.
  */
 export interface ExperimentTableMetadata {
   identifier: string;
-  tableType: "static" | "macro";
+  tableType: ExperimentTableType;
+  displayName: string | null;
   rowCount: number;
   macroSchema?: string | null;
   questionsSchema?: string | null;
   customMetadataSchema?: string | null;
+  uploadSchema?: string | null;
 }
 
 /**

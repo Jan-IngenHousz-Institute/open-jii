@@ -1,4 +1,5 @@
 import { cva } from "class-variance-authority";
+import { clsx } from "clsx";
 import React from "react";
 import {
   TouchableOpacity,
@@ -6,6 +7,7 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  TextProps,
   TouchableOpacityProps,
   View,
 } from "react-native";
@@ -29,6 +31,10 @@ interface ButtonProps extends TouchableOpacityProps {
   textStyle?: TextStyle;
   icon?: React.ReactNode;
   iconPosition?: "left" | "right";
+  // Let the label wrap and fill the button width instead of sizing to content.
+  multiline?: boolean;
+  numberOfLines?: number;
+  ellipsizeMode?: TextProps["ellipsizeMode"];
 }
 
 const buttonVariants = cva("rounded-lg items-center justify-center", {
@@ -106,6 +112,9 @@ export function Button({
   textStyle,
   icon,
   iconPosition = "left",
+  multiline = false,
+  numberOfLines,
+  ellipsizeMode,
   ...props
 }: ButtonProps) {
   const { colors } = useTheme();
@@ -140,9 +149,17 @@ export function Button({
       ) : iconOnly ? (
         icon
       ) : (
-        <View className="flex-row items-center justify-center">
+        <View className={clsx("flex-row items-center justify-center", multiline && "w-full")}>
           {icon && iconPosition === "left" && <View className="mr-1">{icon}</View>}
-          <Text className={textVariants({ variant, size, disabled: isDisabled })} style={textStyle}>
+          <Text
+            className={clsx(
+              textVariants({ variant, size, disabled: isDisabled }),
+              multiline && "shrink",
+            )}
+            style={textStyle}
+            numberOfLines={numberOfLines}
+            ellipsizeMode={ellipsizeMode}
+          >
             {title}
           </Text>
           {icon && iconPosition === "right" && <View className="ml-1">{icon}</View>}

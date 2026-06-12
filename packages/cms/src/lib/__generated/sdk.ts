@@ -994,6 +994,8 @@ export type ComponentButtonLinkingCollections = {
   entryCursorCollection?: Maybe<EntryCursorCollection>;
   footerCollection?: Maybe<FooterCollection>;
   footerCursorCollection?: Maybe<FooterCursorCollection>;
+  pageForceUpdateCollection?: Maybe<PageForceUpdateCollection>;
+  pageForceUpdateCursorCollection?: Maybe<PageForceUpdateCursorCollection>;
   pageHomeHeroCollection?: Maybe<PageHomeHeroCollection>;
   pageHomeHeroCursorCollection?: Maybe<PageHomeHeroCursorCollection>;
 };
@@ -1052,6 +1054,29 @@ export type ComponentButtonLinkingCollectionsFooterCursorCollectionArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   order?: InputMaybe<
     Array<InputMaybe<ComponentButtonLinkingCollectionsFooterCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentButtonLinkingCollectionsPageForceUpdateCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsPageForceUpdateCollectionOrder>>
+  >;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentButtonLinkingCollectionsPageForceUpdateCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsPageForceUpdateCursorCollectionOrder>>
   >;
   pageNext?: InputMaybe<Scalars["String"]["input"]>;
   pagePrev?: InputMaybe<Scalars["String"]["input"]>;
@@ -1178,6 +1203,48 @@ export enum ComponentButtonLinkingCollectionsFooterCursorCollectionOrder {
   MenuTitleDesc = "menuTitle_DESC",
   SupportTitleAsc = "supportTitle_ASC",
   SupportTitleDesc = "supportTitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentButtonLinkingCollectionsPageForceUpdateCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  EffectiveAtAsc = "effectiveAt_ASC",
+  EffectiveAtDesc = "effectiveAt_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  MinVersionAsc = "minVersion_ASC",
+  MinVersionDesc = "minVersion_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentButtonLinkingCollectionsPageForceUpdateCursorCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  EffectiveAtAsc = "effectiveAt_ASC",
+  EffectiveAtDesc = "effectiveAt_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  MinVersionAsc = "minVersion_ASC",
+  MinVersionDesc = "minVersion_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -4327,6 +4394,224 @@ export enum PageFaqQuestionsCursorCollectionOrder {
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
 }
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdate = Entry &
+  _Node & {
+    __typename?: "PageForceUpdate";
+    _id: Scalars["ID"]["output"];
+    active?: Maybe<Scalars["Boolean"]["output"]>;
+    body?: Maybe<PageForceUpdateBody>;
+    contentfulMetadata: ContentfulMetadata;
+    effectiveAt?: Maybe<Scalars["DateTime"]["output"]>;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<PageForceUpdateLinkingCollections>;
+    minVersion?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+    updateCta?: Maybe<ComponentButton>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateActiveArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateBodyArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateEffectiveAtArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateMinVersionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate) */
+export type PageForceUpdateUpdateCtaArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+export type PageForceUpdateBody = {
+  __typename?: "PageForceUpdateBody";
+  json: Scalars["JSON"]["output"];
+  links: PageForceUpdateBodyLinks;
+};
+
+export type PageForceUpdateBodyAssets = {
+  __typename?: "PageForceUpdateBodyAssets";
+  block: Array<Maybe<Asset>>;
+  hyperlink: Array<Maybe<Asset>>;
+};
+
+export type PageForceUpdateBodyEntries = {
+  __typename?: "PageForceUpdateBodyEntries";
+  block: Array<Maybe<Entry>>;
+  hyperlink: Array<Maybe<Entry>>;
+  inline: Array<Maybe<Entry>>;
+};
+
+export type PageForceUpdateBodyLinks = {
+  __typename?: "PageForceUpdateBodyLinks";
+  assets: PageForceUpdateBodyAssets;
+  entries: PageForceUpdateBodyEntries;
+  resources: PageForceUpdateBodyResources;
+};
+
+export type PageForceUpdateBodyResources = {
+  __typename?: "PageForceUpdateBodyResources";
+  block: Array<PageForceUpdateBodyResourcesBlock>;
+  hyperlink: Array<PageForceUpdateBodyResourcesHyperlink>;
+  inline: Array<PageForceUpdateBodyResourcesInline>;
+};
+
+export type PageForceUpdateBodyResourcesBlock = ResourceLink & {
+  __typename?: "PageForceUpdateBodyResourcesBlock";
+  sys: ResourceSys;
+};
+
+export type PageForceUpdateBodyResourcesHyperlink = ResourceLink & {
+  __typename?: "PageForceUpdateBodyResourcesHyperlink";
+  sys: ResourceSys;
+};
+
+export type PageForceUpdateBodyResourcesInline = ResourceLink & {
+  __typename?: "PageForceUpdateBodyResourcesInline";
+  sys: ResourceSys;
+};
+
+export type PageForceUpdateCollection = {
+  __typename?: "PageForceUpdateCollection";
+  items: Array<Maybe<PageForceUpdate>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type PageForceUpdateCursorCollection = {
+  __typename?: "PageForceUpdateCursorCollection";
+  items: Array<Maybe<PageForceUpdate>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export type PageForceUpdateFilter = {
+  AND?: InputMaybe<Array<InputMaybe<PageForceUpdateFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<PageForceUpdateFilter>>>;
+  active?: InputMaybe<Scalars["Boolean"]["input"]>;
+  active_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  active_not?: InputMaybe<Scalars["Boolean"]["input"]>;
+  body_contains?: InputMaybe<Scalars["String"]["input"]>;
+  body_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  body_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  effectiveAt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  effectiveAt_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  effectiveAt_gt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  effectiveAt_gte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  effectiveAt_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  effectiveAt_lt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  effectiveAt_lte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  effectiveAt_not?: InputMaybe<Scalars["DateTime"]["input"]>;
+  effectiveAt_not_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  minVersion?: InputMaybe<Scalars["String"]["input"]>;
+  minVersion_contains?: InputMaybe<Scalars["String"]["input"]>;
+  minVersion_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  minVersion_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  minVersion_not?: InputMaybe<Scalars["String"]["input"]>;
+  minVersion_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  minVersion_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  updateCta?: InputMaybe<CfComponentButtonNestedFilter>;
+  updateCta_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageForceUpdateLinkingCollections = {
+  __typename?: "PageForceUpdateLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
+};
+
+export type PageForceUpdateLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type PageForceUpdateLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export enum PageForceUpdateOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  EffectiveAtAsc = "effectiveAt_ASC",
+  EffectiveAtDesc = "effectiveAt_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  MinVersionAsc = "minVersion_ASC",
+  MinVersionDesc = "minVersion_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
 export type PageHomeFeatures = Entry &
   _Node & {
@@ -5786,6 +6071,9 @@ export type Query = {
   pageFaq?: Maybe<PageFaq>;
   pageFaqCollection?: Maybe<PageFaqCollection>;
   pageFaqCursorCollection?: Maybe<PageFaqCursorCollection>;
+  pageForceUpdate?: Maybe<PageForceUpdate>;
+  pageForceUpdateCollection?: Maybe<PageForceUpdateCollection>;
+  pageForceUpdateCursorCollection?: Maybe<PageForceUpdateCursorCollection>;
   pageHomeFeatures?: Maybe<PageHomeFeatures>;
   pageHomeFeaturesCollection?: Maybe<PageHomeFeaturesCollection>;
   pageHomeFeaturesCursorCollection?: Maybe<PageHomeFeaturesCursorCollection>;
@@ -6318,6 +6606,34 @@ export type QueryPageFaqCursorCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<PageFaqFilter>;
+};
+
+export type QueryPageForceUpdateArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryPageForceUpdateCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageForceUpdateOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageForceUpdateFilter>;
+};
+
+export type QueryPageForceUpdateCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageForceUpdateOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<PageForceUpdateFilter>;
 };
 
 export type QueryPageHomeFeaturesArgs = {
@@ -7002,6 +7318,7 @@ export type PageAboutFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -7114,6 +7431,7 @@ export type PageBlogPostFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -7193,6 +7511,7 @@ export type PageCookiePolicyFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -7250,6 +7569,7 @@ export type ComponentEmailFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -7307,6 +7627,31 @@ export type PageFaqQuery = {
   pageFaqCollection?: {
     __typename?: "PageFaqCollection";
     items: Array<({ __typename?: "PageFaq" } & PageFaqFieldsFragment) | null>;
+  } | null;
+};
+
+export type PageForceUpdateFieldsFragment = {
+  __typename: "PageForceUpdate";
+  internalName?: string | null;
+  title?: string | null;
+  minVersion?: string | null;
+  effectiveAt?: any | null;
+  active?: boolean | null;
+  sys: { __typename?: "Sys"; id: string };
+  body?: { __typename?: "PageForceUpdateBody"; json: any } | null;
+  updateCta?: ({ __typename?: "ComponentButton" } & ButtonFieldsFragment) | null;
+};
+
+export type PageForceUpdateQueryVariables = Exact<{
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type PageForceUpdateQuery = {
+  __typename?: "Query";
+  pageForceUpdateCollection?: {
+    __typename?: "PageForceUpdateCollection";
+    items: Array<({ __typename?: "PageForceUpdate" } & PageForceUpdateFieldsFragment) | null>;
   } | null;
 };
 
@@ -7439,6 +7784,7 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -7475,6 +7821,7 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -7613,6 +7960,7 @@ export type PagePoliciesFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -7671,6 +8019,7 @@ export type PageTermsAndConditionsFieldsFragment = {
           | { __typename?: "PageCookiePolicy" }
           | { __typename?: "PageEmails" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
           | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
@@ -8059,6 +8408,26 @@ export const PageFaqFieldsFragmentDoc = gql`
     }
   }
   ${FaqQuestionFieldsFragmentDoc}
+`;
+export const PageForceUpdateFieldsFragmentDoc = gql`
+  fragment PageForceUpdateFields on PageForceUpdate {
+    __typename
+    sys {
+      id
+    }
+    internalName
+    title
+    body {
+      json
+    }
+    updateCta {
+      ...ButtonFields
+    }
+    minVersion
+    effectiveAt
+    active
+  }
+  ${ButtonFieldsFragmentDoc}
 `;
 export const FeatureFieldsFragmentDoc = gql`
   fragment FeatureFields on ComponentFeature {
@@ -8459,6 +8828,21 @@ export const PageFaqDocument = gql`
   }
   ${PageFaqFieldsFragmentDoc}
 `;
+export const PageForceUpdateDocument = gql`
+  query pageForceUpdate($preview: Boolean, $locale: String) {
+    pageForceUpdateCollection(
+      limit: 1
+      order: [sys_publishedAt_DESC]
+      preview: $preview
+      locale: $locale
+    ) {
+      items {
+        ...PageForceUpdateFields
+      }
+    }
+  }
+  ${PageForceUpdateFieldsFragmentDoc}
+`;
 export const PageHomeDocument = gql`
   query pageHome($locale: String, $preview: Boolean) {
     pageHomeHeroCollection(limit: 1, locale: $locale, preview: $preview) {
@@ -8792,6 +9176,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageFaq",
+        "query",
+        variables,
+      );
+    },
+    pageForceUpdate(
+      variables?: PageForceUpdateQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageForceUpdateQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageForceUpdateQuery>({
+            document: PageForceUpdateDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageForceUpdate",
         "query",
         variables,
       );
