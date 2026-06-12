@@ -33,7 +33,7 @@
       "bioPlaceholder": "Tell us about yourself",
       "emptyBio": "No bio added",
       "institution": "Institution/Organization",
-      "institutionPlaceholder": "Search or create organization",
+      "institutionPlaceholder": "Enter your institution or organization",
       "emptyInstitution": "No institution added"
     },
     "status": {

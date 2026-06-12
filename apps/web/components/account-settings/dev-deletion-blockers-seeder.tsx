@@ -44,22 +44,36 @@ export function DevDeletionBlockersSeeder() {
   };
 
   return (
-    <div className="border-muted-foreground/40 flex items-center justify-between gap-4 rounded-md border border-dashed p-4">
-      <div>
+    <div className="border-muted-foreground/40 flex flex-col gap-3 rounded-md border border-dashed p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+      <div className="min-w-0">
         <h3 className="text-muted-foreground flex items-center gap-1.5 text-sm font-medium">
-          <FlaskConical className="h-4 w-4" />
+          <FlaskConical className="h-4 w-4 shrink-0" />
           Dev tools — deletion blockers
         </h3>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground mt-1 text-xs">
           Local only. Seeds experiments (named with your user id) covering every delete-account
           case, using existing mock members.
         </p>
       </div>
-      <div className="flex shrink-0 gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={handleSeed} disabled={busy}>
+      <div className="grid w-full gap-2 sm:flex sm:w-auto sm:shrink-0">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleSeed}
+          disabled={busy}
+        >
           {isSeeding ? "Seeding…" : "Seed test experiments"}
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={handleClear} disabled={busy}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleClear}
+          disabled={busy}
+        >
           {isClearing ? "Clearing…" : "Clear test experiments"}
         </Button>
       </div>

@@ -33,7 +33,7 @@
       "bioPlaceholder": "Erzählen Sie uns etwas über sich",
       "emptyBio": "Keine Bio hinzugefügt",
       "institution": "Institution/Organisation",
-      "institutionPlaceholder": "Organisation suchen oder erstellen",
+      "institutionPlaceholder": "Institution oder Organisation eingeben",
       "emptyInstitution": "Keine Institution hinzugefügt"
     },
     "status": {

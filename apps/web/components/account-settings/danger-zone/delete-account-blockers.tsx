@@ -12,6 +12,7 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
+import { cn } from "@repo/ui/lib/utils";
 
 import { UserAvatar } from "../../user-avatar";
 import { UserSearchPopover } from "../../user-search-popover";
@@ -60,13 +61,19 @@ export function DeleteAccountBlockers({
   // Candidates who belong to every blocking experiment — the clean picks for "transfer all".
   const sharedCandidates = useMemo<UserMetadata[]>(() => {
     if (blockers.length === 0) return [];
-    return blockers.reduce<UserMetadata[]>(
-      (shared, blocker) =>
-        shared.filter((candidate) =>
-          blocker.candidates.some((other) => other.userId === candidate.userId),
-        ),
-      [...blockers[0].candidates],
+
+    const [firstBlocker, ...remainingBlockers] = blockers;
+
+    const remainingCandidateIds = remainingBlockers.map(
+      (blocker) => new Set(blocker.candidates.map((candidate) => candidate.userId)),
     );
+    const seen = new Set<string>();
+
+    return firstBlocker.candidates.filter((candidate) => {
+      if (seen.has(candidate.userId)) return false;
+      seen.add(candidate.userId);
+      return remainingCandidateIds.every((candidateIds) => candidateIds.has(candidate.userId));
+    });
   }, [blockers]);
 
   const setAssignment = (experimentId: string, user: UserProfile | null) => {
@@ -74,20 +81,48 @@ export function DeleteAccountBlockers({
   };
 
   const applyToAll = (user: UserProfile | null) => {
+    const previousApplyAllUserId = applyAllUser?.userId;
+
     setApplyAllUser(user);
     if (user) {
       setAssignments(Object.fromEntries(blockers.map((blocker) => [blocker.id, user])));
+      return;
     }
+
+    if (!previousApplyAllUserId) return;
+
+    setAssignments((prev) => {
+      const next = { ...prev };
+
+      for (const blocker of blockers) {
+        if (next[blocker.id]?.userId === previousApplyAllUserId) {
+          delete next[blocker.id];
+        }
+      }
+
+      return next;
+    });
   };
 
-  const transfers = blockers
-    .map((blocker) => ({ experimentId: blocker.id, targetUserId: assignments[blocker.id]?.userId }))
-    .filter((transfer): transfer is { experimentId: string; targetUserId: string } =>
-      Boolean(transfer.targetUserId),
-    );
+  const transfers = useMemo(
+    () =>
+      blockers
+        .map((blocker) => ({
+          experimentId: blocker.id,
+          targetUserId: assignments[blocker.id]?.userId,
+        }))
+        .filter((transfer): transfer is { experimentId: string; targetUserId: string } =>
+          Boolean(transfer.targetUserId),
+        ),
+    [assignments, blockers],
+  );
+
+  const selectedTransferCount = transfers.length;
+  const selectionProgress =
+    blockers.length === 0 ? 0 : Math.round((selectedTransferCount / blockers.length) * 100);
 
   const handleTransfer = async () => {
-    if (transfers.length === 0) return;
+    if (transfers.length === 0 || isPending) return;
     try {
       const response = await transferAdmin({ body: { transfers } });
       const failed = response.body.results.filter((result) => !result.success);
@@ -108,14 +143,38 @@ export function DeleteAccountBlockers({
   };
 
   return (
-    <div className="border-destructive/30 bg-muted flex min-h-0 flex-1 flex-col gap-3 rounded-md border p-3 text-sm">
-      <div className="flex items-start gap-2">
-        <AlertTriangle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
-        <div className="flex-1">
-          <p className="text-destructive font-medium">{t("dangerZone.delete.blockers.title")}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
+    <div className="border-destructive/30 bg-muted flex min-h-0 flex-1 flex-col gap-3 rounded-md border p-3 text-sm shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="bg-destructive/10 text-destructive flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
+          <AlertTriangle className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-destructive font-medium">{t("dangerZone.delete.blockers.title")}</p>
+            <Badge
+              variant="outline"
+              className="border-destructive/25 bg-background/80 text-destructive px-2 py-0.5 text-[11px] font-medium"
+            >
+              {selectedTransferCount}/{blockers.length}
+            </Badge>
+          </div>
+          <p className="text-muted-foreground text-xs leading-relaxed">
             {t("dangerZone.delete.blockers.description")}
           </p>
+          <div
+            aria-label={t("dangerZone.delete.blockers.title")}
+            aria-valuemax={blockers.length}
+            aria-valuemin={0}
+            aria-valuenow={selectedTransferCount}
+            aria-valuetext={`${selectedTransferCount}/${blockers.length}`}
+            className="bg-destructive/10 h-1.5 overflow-hidden rounded-full"
+            role="progressbar"
+          >
+            <div
+              className="bg-destructive h-full rounded-full transition-[width] duration-200"
+              style={{ width: `${selectionProgress}%` }}
+            />
+          </div>
         </div>
         {onToggleExpanded && (
           <Button
@@ -141,7 +200,7 @@ export function DeleteAccountBlockers({
       </div>
 
       {blockers.length > 1 && (
-        <div className="space-y-1.5">
+        <div className="border-border/70 bg-background/70 space-y-2 rounded-md border p-2.5">
           <p className="text-muted-foreground text-xs font-medium">
             {t("dangerZone.delete.blockers.applyToAllLabel")}
           </p>
@@ -156,54 +215,67 @@ export function DeleteAccountBlockers({
         </div>
       )}
 
-      <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-        {blockers.map((blocker) => (
-          <li
-            key={blocker.id}
-            className="border-border bg-background space-y-2 rounded-md border p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <span className="truncate font-medium">{blocker.name}</span>
-                <Badge className={`bg-badge-${blocker.status}`}>
-                  {t(`experiments:status.${blocker.status}`)}
-                </Badge>
+      <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+        {blockers.map((blocker) => {
+          const selectedUser = assignments[blocker.id] ?? null;
+
+          return (
+            <li
+              key={blocker.id}
+              className={cn(
+                "border-border bg-background space-y-2 rounded-md border p-3 shadow-sm transition-colors",
+                selectedUser && "border-primary/30 bg-quaternary/40",
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <Badge
+                    className={cn(
+                      `bg-badge-${blocker.status}`,
+                      "shrink-0 px-1.5 py-0.5 text-[11px] font-medium",
+                    )}
+                  >
+                    {t(`experiments:status.${blocker.status}`)}
+                  </Badge>
+                  <span className="min-w-0 truncate font-medium">{blocker.name}</span>
+                </div>
+                <a
+                  href={`/${locale}/platform/experiments/${blocker.id}/collaborators`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex h-7 min-w-0 max-w-[46%] shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors sm:max-w-none"
+                >
+                  <span className="truncate">{t("dangerZone.delete.blockers.manageLink")}</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
-              <a
-                href={`/${locale}/platform/experiments/${blocker.id}/collaborators`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 text-xs"
-              >
-                {t("dangerZone.delete.blockers.manageLink")}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
 
-            <TransferUserPicker
-              suggestions={blocker.candidates}
-              selectedUser={assignments[blocker.id] ?? null}
-              onSelect={(user) => setAssignment(blocker.id, user)}
-              placeholder={t("dangerZone.delete.blockers.rowPlaceholder")}
-              excludeUserId={currentUserId}
-              disabled={isPending}
-            />
+              <TransferUserPicker
+                suggestions={blocker.candidates}
+                selectedUser={selectedUser}
+                onSelect={(user) => setAssignment(blocker.id, user)}
+                placeholder={t("dangerZone.delete.blockers.rowPlaceholder")}
+                excludeUserId={currentUserId}
+                disabled={isPending}
+              />
 
-            {blocker.candidates.length === 0 && !assignments[blocker.id] && (
-              <p className="text-muted-foreground text-xs">
-                {t("dangerZone.delete.blockers.noCandidatesHint")}
-              </p>
-            )}
-          </li>
-        ))}
+              {blocker.candidates.length === 0 && !selectedUser && (
+                <p className="text-muted-foreground bg-muted/70 rounded-sm px-2 py-1.5 text-xs leading-relaxed">
+                  {t("dangerZone.delete.blockers.noCandidatesHint")}
+                </p>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       <Button
         type="button"
         variant="destructive"
         className="w-full"
+        isLoading={isPending}
         onClick={handleTransfer}
-        disabled={transfers.length === 0 || isPending}
+        disabled={selectedTransferCount === 0 || isPending}
       >
         {isPending
           ? t("dangerZone.delete.blockers.transferring")
@@ -245,9 +317,22 @@ function TransferUserPicker({
     return results.filter((user) => user.userId !== excludeUserId);
   }, [isSearching, data, excludeUserId]);
 
-  const selectableSuggestions = suggestions.filter(
-    (candidate) => candidate.userId !== excludeUserId && candidate.userId !== selectedUser?.userId,
-  );
+  const selectableSuggestions = useMemo(() => {
+    const seen = new Set<string>();
+
+    return suggestions.filter((candidate) => {
+      if (
+        candidate.userId === excludeUserId ||
+        candidate.userId === selectedUser?.userId ||
+        seen.has(candidate.userId)
+      ) {
+        return false;
+      }
+
+      seen.add(candidate.userId);
+      return true;
+    });
+  }, [excludeUserId, selectedUser?.userId, suggestions]);
 
   return (
     <div className="space-y-2">
@@ -272,13 +357,13 @@ function TransferUserPicker({
               type="button"
               disabled={disabled}
               onClick={() => onSelect(candidateToUserProfile(candidate))}
-              className="border-border hover:bg-surface inline-flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2.5 text-xs disabled:opacity-50"
+              className="border-border bg-background hover:border-primary/30 hover:bg-quaternary/60 inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50"
             >
               <UserAvatar
                 avatarUrl={candidate.avatarUrl}
                 firstName={candidate.firstName}
                 lastName={candidate.lastName}
-                className="h-5 w-5"
+                className="text-md h-6 w-6"
               />
               {candidate.firstName} {candidate.lastName}
             </button>

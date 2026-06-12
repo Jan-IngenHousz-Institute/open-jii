@@ -48,8 +48,8 @@ export function AccountIdentityCard({
   return (
     <Card className="border-primary/10 bg-card overflow-hidden rounded-md shadow-sm">
       <div className="from-primary via-secondary to-accent h-1.5 bg-gradient-to-r" />
-      <CardContent className="p-6">
-        <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex min-w-0 flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">
           <UserAvatar
             avatarUrl={previewAvatarUrl}
             firstName={profile.firstName}
@@ -57,42 +57,44 @@ export function AccountIdentityCard({
             className="border-card bg-surface ring-primary/15 h-24 w-24 shrink-0 border-4 text-2xl shadow-md ring-1"
           />
 
-          <div className="min-w-0 flex-1 space-y-3">
-            <InlineEditableTitle
-              name={displayName}
-              hasAccess
-              onSave={onSaveName}
-              isPending={isPending}
-              badges={
-                <Badge
-                  className={profile.activated === false ? "bg-badge-archived" : "bg-badge-active"}
-                >
-                  {profile.activated === false
-                    ? t("settings.status.deactivated")
-                    : t("settings.status.active")}
-                </Badge>
-              }
-            />
+          <div className="flex w-full min-w-0 flex-1 flex-col items-center gap-3 sm:w-auto sm:items-start">
+            <div className="flex w-full max-w-full sm:w-auto">
+              <InlineEditableTitle
+                name={displayName}
+                hasAccess
+                onSave={onSaveName}
+                isPending={isPending}
+                actionsInline
+                centerTitle
+              />
+            </div>
 
-            <div className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <div className="flex max-w-full flex-wrap justify-center gap-2 sm:justify-start">
               {email && (
-                <span className="inline-flex min-w-0 items-center gap-2">
-                  <Mail className="h-4 w-4 shrink-0" />
+                <span className="bg-surface text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
+                  <Mail className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{email}</span>
                 </span>
               )}
               {profile.organization && (
-                <span className="inline-flex min-w-0 items-center gap-2">
-                  <Building2 className="h-4 w-4 shrink-0" />
+                <span className="bg-surface text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
+                  <Building2 className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{profile.organization}</span>
                 </span>
               )}
+              <Badge
+                className={profile.activated === false ? "bg-badge-archived" : "bg-badge-active"}
+              >
+                {profile.activated === false
+                  ? t("settings.status.deactivated")
+                  : t("settings.status.active")}
+              </Badge>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 border-t pt-3">
-          <div className="text-muted-foreground mb-1 flex items-center gap-2 px-3 text-xs font-medium uppercase">
+        <div className="mt-5 border-t pt-4">
+          <div className="text-muted-foreground mb-1.5 flex items-center gap-2 px-3 text-xs font-medium uppercase tracking-wide">
             <Link2 className="h-3.5 w-3.5" />
             {t("settings.AccountIdentityCard.title")}
           </div>
