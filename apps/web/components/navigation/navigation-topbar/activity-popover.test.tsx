@@ -4,7 +4,7 @@ import { render, screen, userEvent, act } from "@/test/test-utils";
 import * as React from "react";
 import { describe, it, expect } from "vitest";
 
-import { ActivityPopover, NOTIFICATION_BELL_TOGGLE_EVENT } from "./activity-popover";
+import { ActivityPopover, NOTIFICATION_BELL_OPEN_EVENT } from "./activity-popover";
 
 function Seed({ entries }: { entries: ActivityEntry[] }) {
   const { upsert } = useActivity();
@@ -61,10 +61,19 @@ describe("ActivityPopover", () => {
     expect(screen.getByText("Running")).toBeInTheDocument();
   });
 
-  it("toggles open via the notification-bell event", async () => {
+  it("opens via the notification-bell event", async () => {
     renderPopover([exportEntry]);
     act(() => {
-      window.dispatchEvent(new Event(NOTIFICATION_BELL_TOGGLE_EVENT));
+      window.dispatchEvent(new Event(NOTIFICATION_BELL_OPEN_EVENT));
+    });
+    expect(await screen.findByText("Activity")).toBeInTheDocument();
+  });
+
+  it("opens idempotently — a second event keeps the hub open", async () => {
+    renderPopover([exportEntry]);
+    act(() => {
+      window.dispatchEvent(new Event(NOTIFICATION_BELL_OPEN_EVENT));
+      window.dispatchEvent(new Event(NOTIFICATION_BELL_OPEN_EVENT));
     });
     expect(await screen.findByText("Activity")).toBeInTheDocument();
   });
@@ -93,6 +102,15 @@ describe("ActivityPopover", () => {
       },
       {
         ...exportEntry,
+        id: "p",
+        kind: "data_export",
+        status: "pending",
+        title: "Pending job",
+        updatedAt: minsAgo(5),
+        resultUrl: undefined,
+      },
+      {
+        ...exportEntry,
         id: "c",
         kind: "metadata_reprocess",
         status: "failed",
@@ -112,6 +130,7 @@ describe("ActivityPopover", () => {
     ]);
     await user.click(screen.getByLabelText(/Activity/i));
     expect(await screen.findByText("Queued")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(screen.getByText("Running")).toBeInTheDocument();
     expect(screen.getByText("Failed")).toBeInTheDocument();
     expect(screen.getByText("Succeeded")).toBeInTheDocument();

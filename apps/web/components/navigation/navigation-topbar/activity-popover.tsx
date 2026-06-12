@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/pop
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { cn } from "@repo/ui/lib/utils";
 
-const NOTIFICATION_BELL_TOGGLE_EVENT = "openjii:toggle-notification-bell";
+const NOTIFICATION_BELL_OPEN_EVENT = "openjii:open-notification-bell";
 
 function kindIcon(kind: ActivityJobKind) {
   if (kind === "data_export") return Database;
@@ -66,6 +66,14 @@ function StatusPill({ status }: { status: ActivityJobStatus }) {
       </span>
     );
   }
+  if (status === "pending") {
+    return (
+      <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
+        <Clock className="size-3" />
+        Pending
+      </span>
+    );
+  }
   return (
     <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
       <Clock className="size-3" />
@@ -85,9 +93,10 @@ export function ActivityPopover({ className }: { className?: string }) {
   const { entries, unreadCount, markAllRead } = useActivity();
 
   React.useEffect(() => {
-    const onToggle = () => setOpen((o) => !o);
-    window.addEventListener(NOTIFICATION_BELL_TOGGLE_EVENT, onToggle);
-    return () => window.removeEventListener(NOTIFICATION_BELL_TOGGLE_EVENT, onToggle);
+    // Idempotent: programmatic entry points (G N) always open the hub.
+    const onOpenRequest = () => setOpen(true);
+    window.addEventListener(NOTIFICATION_BELL_OPEN_EVENT, onOpenRequest);
+    return () => window.removeEventListener(NOTIFICATION_BELL_OPEN_EVENT, onOpenRequest);
   }, []);
 
   // Clear unread count once the user has actually seen the list.
@@ -178,4 +187,4 @@ export function ActivityPopover({ className }: { className?: string }) {
   );
 }
 
-export { NOTIFICATION_BELL_TOGGLE_EVENT };
+export { NOTIFICATION_BELL_OPEN_EVENT };

@@ -36,8 +36,8 @@ describe("ExperimentTitle", () => {
   });
 
   it("does not render the active / public pills anymore", () => {
-    // Status + visibility badges were removed from the title; they live in the
-    // details card now.
+    // Status + visibility badges were removed from the title as part of the chrome refresh
+    // (ExperimentTitle still accepts the props but renders only InlineEditableTitle).
     renderComponent({ status: "active", visibility: "public" });
     expect(screen.queryByText("status.active")).not.toBeInTheDocument();
     expect(screen.queryByText("public")).not.toBeInTheDocument();

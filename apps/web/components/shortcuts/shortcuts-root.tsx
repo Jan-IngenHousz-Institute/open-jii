@@ -1,6 +1,6 @@
 "use client";
 
-import { NOTIFICATION_BELL_TOGGLE_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
+import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -12,6 +12,9 @@ const CHEATSHEET_OPEN_EVENT = "openjii:open-cheatsheet";
 
 function isInputTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
+  // A dialog owns focus — let it keep the keys so shortcuts don't act on the
+  // page behind the modal.
+  if (target.closest("[role='dialog']")) return true;
   if (target.isContentEditable) return true;
   const tag = target.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
@@ -70,7 +73,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       {
         key: "n",
         label: "Notifications",
-        action: () => window.dispatchEvent(new Event(NOTIFICATION_BELL_TOGGLE_EVENT)),
+        action: () => window.dispatchEvent(new Event(NOTIFICATION_BELL_OPEN_EVENT)),
       },
       {
         key: "a",

@@ -53,7 +53,8 @@ describe("useTrackExports", () => {
     const entry = result.current.entries[0];
     expect(entry.kind).toBe("data_export");
     expect(entry.title).toBe("Export of Light Response (CSV)");
-    expect(entry.resultUrl).toContain("/exports/x1/download");
+    expect(entry.resultUrl).toContain("/api/v1/experiments/");
+    expect(entry.resultUrl).toContain("/data/exports/x1");
   });
 
   it("fires a toast on the running → succeeded transition", () => {
@@ -108,7 +109,7 @@ describe("useTrackExports", () => {
       }),
     );
     expect(result.current.entries).toHaveLength(1);
-    expect(result.current.entries[0]?.resultUrl).toContain("/exports/x9/download");
+    expect(result.current.entries[0]?.resultUrl).toContain("/data/exports/x9");
   });
 
   it("fires a destructive toast on the running → failed transition", () => {

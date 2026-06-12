@@ -53,7 +53,7 @@ export function CommandPalette({ locale }: { locale: string }) {
     () => [
       {
         id: "page.dashboard",
-        label: "Dashboard",
+        label: "Home",
         group: "Pages",
         icon: iconMap.LayoutDashboard,
         shortcut: "G H",

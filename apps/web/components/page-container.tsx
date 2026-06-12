@@ -27,6 +27,6 @@ export function PageContainer({
 // needing to know about the parent wrapper.
 const widthClass: Record<PageContainerWidth, string> = {
   fluid: "page-fluid flex flex-1 flex-col",
-  wide: "3xl:max-w-screen-3xl 4xl:max-w-screen-4xl mx-auto w-full max-w-7xl has-[.page-fluid]:flex has-[.page-fluid]:max-w-none has-[.page-fluid]:flex-1 has-[.page-fluid]:flex-col",
+  wide: "3xl:max-w-[1680px] 4xl:max-w-[2200px] mx-auto w-full max-w-7xl has-[.page-fluid]:flex has-[.page-fluid]:max-w-none has-[.page-fluid]:flex-1 has-[.page-fluid]:flex-col",
   reading: "page-reading mx-auto w-full max-w-3xl",
 };

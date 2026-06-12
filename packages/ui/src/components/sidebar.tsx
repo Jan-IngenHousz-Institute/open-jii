@@ -522,14 +522,14 @@ const SidebarRail = React.forwardRef<HTMLDivElement, SidebarRailProps>(
       <div
         ref={ref}
         data-sidebar="rail"
-        role={resizable ? "separator" : undefined}
+        role={resizable ? "separator" : "button"}
         aria-orientation={resizable ? "vertical" : undefined}
         aria-valuenow={resizable ? width : undefined}
         aria-valuemin={resizable ? SIDEBAR_WIDTH_MIN : undefined}
         aria-valuemax={resizable ? SIDEBAR_WIDTH_MAX : undefined}
         aria-label={resizable ? "Resize sidebar" : "Toggle Sidebar"}
         aria-expanded={!resizable ? open : undefined}
-        tabIndex={resizable ? 0 : -1}
+        tabIndex={0}
         title={resizable ? "Drag to resize, double-click to toggle" : "Toggle Sidebar"}
         onClick={!resizable ? toggleSidebar : undefined}
         onPointerDown={handlePointerDown}
@@ -540,7 +540,14 @@ const SidebarRail = React.forwardRef<HTMLDivElement, SidebarRailProps>(
           onDoubleClick?.(event);
           toggleSidebar();
         }}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(event) => {
+          if (!resizable && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            toggleSidebar();
+            return;
+          }
+          handleKeyDown(event);
+        }}
         className={cn(
           "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
           "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",

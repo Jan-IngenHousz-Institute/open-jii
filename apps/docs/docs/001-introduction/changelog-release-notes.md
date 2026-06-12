@@ -8,7 +8,7 @@ If you have suggestions, feel free to do a [feature request](../data-platform/re
 
 ## Platform Chrome Refresh (in review)
 
-A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, resizable sidebar, a command palette, Linear-style keyboard shortcuts, and an activity hub in the topbar. The walkthrough below shows every piece end to end.
+A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, resizable sidebar, a command palette, Linear-style keyboard shortcuts, and an activity hub in the top bar. The walkthrough below shows every piece end to end.
 
 <video controls width="100%" poster="/img/chrome-refresh/poster.jpg">
   <source src="/img/chrome-refresh/walkthrough.webm" type="video/webm" />
@@ -29,9 +29,9 @@ A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, re
 
   ![Keyboard shortcuts cheatsheet](/img/chrome-refresh/cheatsheet.jpg)
 
-- **Activity hub** — long-running data exports surface in the topbar bell with a toast on completion.
+- **Activity hub** — long-running data exports surface in the top bar bell with a toast on completion.
 
-  ![Activity hub in the topbar](/img/chrome-refresh/activity-bell.jpg)
+  ![Activity hub in the top bar](/img/chrome-refresh/activity-bell.jpg)
 
 - **Responsive settings tabs** — a shared underline-style tab bar on desktop that collapses into a dropdown on mobile.
 
@@ -39,7 +39,7 @@ A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, re
   ![Settings tabs collapse to a dropdown on mobile](/img/chrome-refresh/mobile-dropdown.jpg)
 
 :::note
-This is a preview of work still in review. The topbar activity hub currently tracks data exports in-memory; the persisted backend feed and additional job types land with `OJD-1506`.
+This is a preview of work still in review. The top bar activity hub currently tracks data exports in-memory; the persisted backend feed and additional job types land with `OJD-1506`.
 :::
 
 ---

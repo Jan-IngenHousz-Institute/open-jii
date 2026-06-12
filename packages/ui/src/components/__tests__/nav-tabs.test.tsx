@@ -65,11 +65,13 @@ describe("NavTabs", () => {
 
       const list = screen.getByTestId("tabs-list");
       expect(list).toBeInTheDocument();
-      // Underline-style tabs: full-width row with bottom border.
-      expect(list.className).toContain("flex");
-      expect(list.className).toContain("w-full");
-      expect(list.className).toContain("border-b");
-      expect(list.className).toContain("gap-6");
+      // Underline-style tabs: inline-flex row, capped at max-w-full, bottom border.
+      // Assert exact class tokens so e.g. "flex" can't pass on "inline-flex".
+      const tokens = list.className.split(/\s+/);
+      expect(tokens).toContain("inline-flex");
+      expect(tokens).toContain("max-w-full");
+      expect(tokens).toContain("border-b");
+      expect(tokens).toContain("gap-6");
     });
 
     it("applies custom className to tabs list", () => {

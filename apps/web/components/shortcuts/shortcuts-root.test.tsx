@@ -1,4 +1,4 @@
-import { NOTIFICATION_BELL_TOGGLE_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
+import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
 import { render, fireEvent, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -47,15 +47,15 @@ describe("ShortcutsRoot", () => {
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments");
   });
 
-  it("g-then-n toggles the notification bell instead of navigating", () => {
+  it("g-then-n opens the notification bell instead of navigating", () => {
     const handler = vi.fn();
-    window.addEventListener(NOTIFICATION_BELL_TOGGLE_EVENT, handler);
+    window.addEventListener(NOTIFICATION_BELL_OPEN_EVENT, handler);
     const { router } = render(<ShortcutsRoot locale="en-US" />);
     key("g");
     key("n");
     expect(handler).toHaveBeenCalledTimes(1);
     expect(router.push).not.toHaveBeenCalled();
-    window.removeEventListener(NOTIFICATION_BELL_TOGGLE_EVENT, handler);
+    window.removeEventListener(NOTIFICATION_BELL_OPEN_EVENT, handler);
   });
 
   it("C creates route-aware (on /platform/experiments → new)", () => {

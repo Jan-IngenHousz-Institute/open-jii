@@ -61,7 +61,8 @@ interface WrapperProps {
 }
 
 function AllProviders({ children, queryClient }: WrapperProps) {
-  const client = queryClient ?? createTestQueryClient();
+  // Stable for the render's lifetime so rerenders don't reset React Query state.
+  const [client] = React.useState(() => queryClient ?? createTestQueryClient());
 
   return (
     <QueryClientProvider client={client}>

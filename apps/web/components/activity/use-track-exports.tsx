@@ -3,6 +3,7 @@
 import { useActivity } from "@/components/activity/activity-context";
 import type { ActivityEntry, ActivityJobStatus } from "@/components/activity/activity-context";
 import * as React from "react";
+import { env } from "~/env";
 
 import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -75,8 +76,10 @@ export function useTrackExports(args: {
         experimentId,
         createdAt: record.createdAt,
         updatedAt: derivedUpdatedAt,
+        // Same canonical URL that useDownloadExport hits, so the bell and the
+        // export modal resolve to one download route.
         resultUrl: record.exportId
-          ? `/api/experiments/${experimentId}/data/exports/${record.exportId}/download`
+          ? `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/${experimentId}/data/exports/${record.exportId}`
           : undefined,
       };
 

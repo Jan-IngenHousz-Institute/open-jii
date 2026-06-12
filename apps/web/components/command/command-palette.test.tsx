@@ -20,7 +20,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette locale="en-US" />);
     openPalette();
     expect(await screen.findByPlaceholderText("Search pages and actions…")).toBeInTheDocument();
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Create experiment")).toBeInTheDocument();
     expect(screen.getByText("Open documentation")).toBeInTheDocument();
     expect(screen.queryByText(/Open What's new/i)).not.toBeInTheDocument();
@@ -30,7 +30,7 @@ describe("CommandPalette", () => {
     const user = userEvent.setup();
     const { router } = render(<CommandPalette locale="en-US" />);
     const cases: [string, string][] = [
-      ["Dashboard", "/en-US/platform"],
+      ["Home", "/en-US/platform"],
       ["Experiments", "/en-US/platform/experiments"],
       ["Workbooks", "/en-US/platform/workbooks"],
       ["Protocols", "/en-US/platform/protocols"],
@@ -78,6 +78,6 @@ describe("CommandPalette", () => {
     const input = await screen.findByPlaceholderText("Search pages and actions…");
     await user.type(input, "macro");
     await waitFor(() => expect(screen.getByText("Macros")).toBeInTheDocument());
-    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+    expect(screen.queryByText("Home")).not.toBeInTheDocument();
   });
 });

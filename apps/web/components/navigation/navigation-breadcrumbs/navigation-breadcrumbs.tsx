@@ -64,6 +64,9 @@ function toInternalHref(href: string): string {
 export function Breadcrumbs({ locale }: BreadcrumbsProps) {
   const { t } = useTranslation("common");
   const { data: segments } = useBreadcrumbs(locale);
+  // The first crumb is usually "platform" (no section icon); attach the
+  // sidebar-matching icon to the first segment that actually has one.
+  const leadingIconSegment = segments?.find((item) => item.segment in SECTION_ICONS)?.segment;
 
   // Reserve a constant 28px row so navigating between routes never shifts
   // the content below — even the platform root (which has no breadcrumb)
@@ -79,7 +82,8 @@ export function Breadcrumbs({ locale }: BreadcrumbsProps) {
             const isLast = index === segments.length - 1;
             const title =
               item.title !== item.segment ? item.title : getTranslatedTitle(item.segment, t);
-            const Icon = index === 0 ? SECTION_ICONS[item.segment] : undefined;
+            const Icon =
+              item.segment === leadingIconSegment ? SECTION_ICONS[item.segment] : undefined;
 
             return (
               <React.Fragment key={item.href}>

@@ -38,28 +38,26 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (isLoading || isLoadingTables) {
     return (
-      <PageContainer width="fluid">
-        <div className="space-y-8">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-7 w-48" />
-              <Skeleton className="h-5 w-96" />
-            </div>
+      <PageContainer width="fluid" className="space-y-8">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
             <Skeleton className="h-10 w-32" />
           </div>
-
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-10 w-32" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-12 w-full" />
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
           </div>
         </div>
       </PageContainer>
@@ -88,69 +86,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (!tables || tables.length === 0) {
     return (
-      <PageContainer width="fluid">
-        <div className="space-y-8">
-          <div className="flex items-center justify-between gap-6">
-            <div>
-              <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
-              <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
-            </div>
-            <div className="flex shrink-0 gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setMetadataModalOpen(true)}
-                disabled={!hasAccess}
-              >
-                {hasMetadata ? (
-                  <Pencil className="mr-2 h-4 w-4" />
-                ) : (
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                )}
-                {hasMetadata
-                  ? t("experimentData.editMetadata")
-                  : t("experimentData.uploadMetadata")}
-              </Button>
-              <Button onClick={() => setUploadDataOpen(true)} disabled={!hasAccess}>
-                <Upload className="mr-2 h-4 w-4" />
-                {t("experimentData.uploadData")}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
-              <BarChart3 className="text-muted-foreground h-12 w-12" />
-            </div>
-            <p className="text-muted-foreground mb-4 text-center text-sm">
-              {t("experimentData.noData")}
-            </p>
-            <Link
-              href={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/mobile-app`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="muted">{t("experimentData.readMore")}</Button>
-            </Link>
-          </div>
-
-          <UploadDataModal
-            experimentId={id}
-            open={uploadDataOpen}
-            onOpenChange={setUploadDataOpen}
-          />
-          <MetadataUploadModal
-            experimentId={id}
-            open={metadataModalOpen}
-            onOpenChange={setMetadataModalOpen}
-          />
-        </div>
-      </PageContainer>
-    );
-  }
-
-  return (
-    <PageContainer width="fluid">
-      <div className="space-y-8">
+      <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-center justify-between gap-6">
           <div>
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
@@ -176,29 +112,21 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </div>
         </div>
 
-        <NavTabs defaultValue={tables[0].identifier} className="max-w-full">
-          <NavTabsList>
-            {tables.map((table) => (
-              <NavTabsTrigger key={table.identifier} value={table.identifier}>
-                <span className="truncate">
-                  {table.displayName} ({table.totalRows})
-                </span>
-              </NavTabsTrigger>
-            ))}
-          </NavTabsList>
-          {tables.map((table) => (
-            <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
-              <ExperimentDataTable
-                experimentId={id}
-                tableName={table.identifier}
-                displayName={table.displayName}
-                defaultSortColumn={table.defaultSortColumn}
-                errorColumn={table.errorColumn}
-                pageSize={10}
-              />
-            </NavTabsContent>
-          ))}
-        </NavTabs>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
+            <BarChart3 className="text-muted-foreground h-12 w-12" />
+          </div>
+          <p className="text-muted-foreground mb-4 text-center text-sm">
+            {t("experimentData.noData")}
+          </p>
+          <Link
+            href={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/mobile-app`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="muted">{t("experimentData.readMore")}</Button>
+          </Link>
+        </div>
 
         <UploadDataModal experimentId={id} open={uploadDataOpen} onOpenChange={setUploadDataOpen} />
         <MetadataUploadModal
@@ -206,7 +134,67 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           open={metadataModalOpen}
           onOpenChange={setMetadataModalOpen}
         />
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer width="fluid" className="space-y-8">
+      <div className="flex items-center justify-between gap-6">
+        <div>
+          <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
+          <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
+        </div>
+        <div className="flex shrink-0 gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setMetadataModalOpen(true)}
+            disabled={!hasAccess}
+          >
+            {hasMetadata ? (
+              <Pencil className="mr-2 h-4 w-4" />
+            ) : (
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+            )}
+            {hasMetadata ? t("experimentData.editMetadata") : t("experimentData.uploadMetadata")}
+          </Button>
+          <Button onClick={() => setUploadDataOpen(true)} disabled={!hasAccess}>
+            <Upload className="mr-2 h-4 w-4" />
+            {t("experimentData.uploadData")}
+          </Button>
+        </div>
       </div>
+
+      <NavTabs defaultValue={tables[0].identifier} className="max-w-full">
+        <NavTabsList>
+          {tables.map((table) => (
+            <NavTabsTrigger key={table.identifier} value={table.identifier}>
+              <span className="truncate">
+                {table.displayName} ({table.totalRows})
+              </span>
+            </NavTabsTrigger>
+          ))}
+        </NavTabsList>
+        {tables.map((table) => (
+          <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
+            <ExperimentDataTable
+              experimentId={id}
+              tableName={table.identifier}
+              displayName={table.displayName}
+              defaultSortColumn={table.defaultSortColumn}
+              errorColumn={table.errorColumn}
+              pageSize={10}
+            />
+          </NavTabsContent>
+        ))}
+      </NavTabs>
+
+      <UploadDataModal experimentId={id} open={uploadDataOpen} onOpenChange={setUploadDataOpen} />
+      <MetadataUploadModal
+        experimentId={id}
+        open={metadataModalOpen}
+        onOpenChange={setMetadataModalOpen}
+      />
     </PageContainer>
   );
 }
