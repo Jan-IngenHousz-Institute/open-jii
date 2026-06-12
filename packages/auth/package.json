@@ -45,7 +45,7 @@
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "expo-secure-store": "*"
+    "expo-secure-store": "~55.0.13"
   },
   "peerDependenciesMeta": {
     "expo-secure-store": {
