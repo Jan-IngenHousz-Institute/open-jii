@@ -2,7 +2,6 @@
 
 import { AlertTriangle, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 import { useTransferExperimentAdmin } from "~/hooks/experiment/useTransferExperimentAdmin/useTransferExperimentAdmin";
 import { useDebounce } from "~/hooks/useDebounce";
 import { useUserSearch } from "~/hooks/useUserSearch";
@@ -10,6 +9,7 @@ import { parseApiError } from "~/util/apiError";
 
 import type { DeletionBlocker, UserMetadata, UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -165,7 +165,7 @@ export function DeleteAccountBlockers({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-hidden">
                 <span className="truncate font-medium">{blocker.name}</span>
-                <ExperimentStatusBadge status={blocker.status} />
+                <Badge variant="secondary">{t(`experiments:status.${blocker.status}`)}</Badge>
               </div>
               <a
                 href={`/${locale}/platform/experiments/${blocker.id}/collaborators`}
