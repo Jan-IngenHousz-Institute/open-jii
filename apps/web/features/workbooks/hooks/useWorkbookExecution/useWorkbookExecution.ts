@@ -3,6 +3,23 @@
 import { useIotCommunication } from "@/features/iot/hooks/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "@/features/iot/hooks/useIotProtocolExecution/useIotProtocolExecution";
 import { getLiveProtocolCode } from "@/features/protocols/domain/protocol-code-registry";
+import type {
+  CellExecutionState,
+  ExecutionStates,
+} from "@/features/workbooks/domain/execution-state";
+import {
+  applyCellState,
+  evaluateBranchCell,
+  findPrecedingOutputData,
+  foldExecutionError,
+  foldExecutionSuccess,
+  foldQuestionAnswered,
+  hasQuestionText,
+  isRunnableCell,
+  recordVisit,
+  resolveBranchJump,
+  stampExecutionStart,
+} from "@/features/workbooks/domain/execution-state";
 import { tsr } from "@/shared/api/tsr";
 import { useCallback, useRef, useState } from "react";
 
@@ -10,21 +27,10 @@ import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type {
   BranchCell,
   MacroCell,
-  OutputCell,
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
-import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
-
-type CellExecutionStatus = "idle" | "running" | "completed" | "error";
-
-interface CellExecutionState {
-  status: CellExecutionStatus;
-  error?: string;
-  // Jupyter-style: each run appends the global counter value.
-  executionOrder?: number[];
-}
 
 interface UseWorkbookExecutionOptions {
   cells: WorkbookCell[];
@@ -58,55 +64,6 @@ async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unkno
   }
 }
 
-function findPrecedingOutputData(
-  cells: WorkbookCell[],
-  beforeIndex: number,
-): Record<string, unknown> | null {
-  for (let i = beforeIndex - 1; i >= 0; i--) {
-    const c = cells[i];
-    if (c.type === "output" && c.data) {
-      return c.data as Record<string, unknown>;
-    }
-  }
-  return null;
-}
-
-// Replaces any previous output produced by the same source cell.
-function insertOutputAfterCell(
-  currentCells: WorkbookCell[],
-  sourceCellId: string,
-  outputCell: OutputCell,
-): WorkbookCell[] {
-  const filtered = currentCells.filter(
-    (c) => !(c.type === "output" && c.producedBy === sourceCellId),
-  );
-  const idx = filtered.findIndex((c) => c.id === sourceCellId);
-  const updated = [...filtered];
-  updated.splice(idx + 1, 0, outputCell);
-  return updated;
-}
-
-function makeOutputCell(
-  producedBy: string,
-  data: Record<string, unknown> | undefined,
-  executionTime: number,
-  messages: string[],
-): OutputCell {
-  return {
-    id: crypto.randomUUID(),
-    type: "output",
-    isCollapsed: false,
-    producedBy,
-    data,
-    executionTime,
-    messages,
-  };
-}
-
-function makeErrorOutputCell(producedBy: string, error: string, executionTime = 0): OutputCell {
-  return makeOutputCell(producedBy, undefined, executionTime, [error]);
-}
-
 type ConnectionType = "bluetooth" | "serial";
 
 export function useWorkbookExecution({
@@ -114,7 +71,7 @@ export function useWorkbookExecution({
   onCellsChange,
   onPromptQuestion,
 }: UseWorkbookExecutionOptions) {
-  const [executionStates, setExecutionStates] = useState<Record<string, CellExecutionState>>({});
+  const [executionStates, setExecutionStates] = useState<ExecutionStates>({});
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>(() =>
     resolveSensorFamily(cells),
@@ -148,10 +105,7 @@ export function useWorkbookExecution({
 
   const setCellState = useCallback(
     (cellId: string, state: Omit<CellExecutionState, "executionOrder">) => {
-      setExecutionStates((prev) => {
-        const existing = prev[cellId];
-        return { ...prev, [cellId]: { ...state, executionOrder: existing.executionOrder } };
-      });
+      setExecutionStates((prev) => applyCellState(prev, cellId, state));
     },
     [],
   );
@@ -162,27 +116,22 @@ export function useWorkbookExecution({
     async (cell: ProtocolCell, currentCells: WorkbookCell[]) => {
       const protocolCode = await getProtocolCode(cell);
       if (!protocolCode) {
-        setCellState(cell.id, { status: "error", error: "Invalid or missing protocol code" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, "Invalid or missing protocol JSON"),
-        );
+        const fold = foldExecutionError(currentCells, cell.id, "Invalid or missing protocol code", {
+          outputMessage: "Invalid or missing protocol JSON",
+        });
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       }
 
       if (!isConnectedRef.current) {
         // The page-level Run handler short-circuits to connect() before this
         // path on direct Run clicks; this branch covers Run all + scripted
         // entry points where we still need a recorded error.
-        setCellState(cell.id, { status: "error", error: "No device connected" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(
-            cell.id,
-            "No device connected - connect a device to run this protocol",
-          ),
-        );
+        const fold = foldExecutionError(currentCells, cell.id, "No device connected", {
+          outputMessage: "No device connected - connect a device to run this protocol",
+        });
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       }
 
       setCellState(cell.id, { status: "running" });
@@ -190,22 +139,21 @@ export function useWorkbookExecution({
 
       try {
         const data = await executeProtocolRef.current(protocolCode);
-        const executionTime = performance.now() - startTime;
-        setCellState(cell.id, { status: "completed" });
-        return insertOutputAfterCell(
+        const fold = foldExecutionSuccess(
           currentCells,
           cell.id,
-          makeOutputCell(cell.id, data as Record<string, unknown>, executionTime, []),
+          data as Record<string, unknown>,
+          performance.now() - startTime,
         );
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       } catch (err) {
-        const executionTime = performance.now() - startTime;
         const message = err instanceof Error ? err.message : "Execution failed";
-        setCellState(cell.id, { status: "error", error: message });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, message, executionTime),
-        );
+        const fold = foldExecutionError(currentCells, cell.id, message, {
+          executionTime: performance.now() - startTime,
+        });
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       }
     },
     [setCellState],
@@ -215,12 +163,11 @@ export function useWorkbookExecution({
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const inputData = findPrecedingOutputData(currentCells, cellIndex);
       if (!inputData) {
-        setCellState(cell.id, { status: "error", error: "No input data available" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, "No measurement data available - run a protocol cell first"),
-        );
+        const fold = foldExecutionError(currentCells, cell.id, "No input data available", {
+          outputMessage: "No measurement data available - run a protocol cell first",
+        });
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       }
 
       setCellState(cell.id, { status: "running" });
@@ -235,30 +182,26 @@ export function useWorkbookExecution({
         const executionTime = performance.now() - startTime;
 
         if (!result.body.success) {
-          const error = result.body.error ?? "Macro execution failed";
-          setCellState(cell.id, { status: "error", error });
-          return insertOutputAfterCell(
+          const fold = foldExecutionError(
             currentCells,
             cell.id,
-            makeErrorOutputCell(cell.id, error, executionTime),
+            result.body.error ?? "Macro execution failed",
+            { executionTime },
           );
+          setCellState(cell.id, fold.state);
+          return fold.cells;
         }
 
-        setCellState(cell.id, { status: "completed" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, result.body.output, executionTime, []),
-        );
+        const fold = foldExecutionSuccess(currentCells, cell.id, result.body.output, executionTime);
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       } catch (err) {
-        const executionTime = performance.now() - startTime;
         const message = err instanceof Error ? err.message : "Macro execution failed";
-        setCellState(cell.id, { status: "error", error: message });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, message, executionTime),
-        );
+        const fold = foldExecutionError(currentCells, cell.id, message, {
+          executionTime: performance.now() - startTime,
+        });
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       }
     },
     [setCellState],
@@ -266,13 +209,12 @@ export function useWorkbookExecution({
 
   const runQuestionCell = useCallback(
     async (cell: QuestionCell, currentCells: WorkbookCell[]): Promise<WorkbookCell[]> => {
-      if (!cell.question.text.trim()) {
-        setCellState(cell.id, { status: "error", error: "Question text is required" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, "Question text is required — add a question before running"),
-        );
+      if (!hasQuestionText(cell)) {
+        const fold = foldExecutionError(currentCells, cell.id, "Question text is required", {
+          outputMessage: "Question text is required — add a question before running",
+        });
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       }
 
       const promptFn = onPromptQuestionRef.current;
@@ -287,11 +229,9 @@ export function useWorkbookExecution({
           return currentCells;
         }
 
-        setCellState(cell.id, { status: "completed" });
-        const updated = currentCells.map((c) =>
-          c.id === cell.id ? { ...cell, answer, isAnswered: true } : c,
-        );
-        return insertOutputAfterCell(updated, cell.id, makeOutputCell(cell.id, { answer }, 0, []));
+        const fold = foldQuestionAnswered(currentCells, cell, answer);
+        setCellState(cell.id, fold.state);
+        return fold.cells;
       } catch {
         setCellState(cell.id, { status: "error", error: "Question prompt failed" });
         return currentCells;
@@ -303,33 +243,9 @@ export function useWorkbookExecution({
   const runBranchCell = useCallback(
     (cell: BranchCell, currentCells: WorkbookCell[], pass?: number): WorkbookCell[] => {
       setCellState(cell.id, { status: "running" });
-
-      const configErrors = validateBranchCell(cell);
-      if (configErrors.length > 0) {
-        setCellState(cell.id, { status: "error", error: configErrors.join("; ") });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, undefined, 0, configErrors),
-        );
-      }
-
-      const matchedPath = evaluateBranch(cell, currentCells);
-      setCellState(cell.id, { status: "completed" });
-
-      const passLabel = pass != null ? ` (pass ${pass})` : "";
-      const messages = matchedPath
-        ? [`Matched: ${matchedPath.label || "Unnamed path"}${passLabel}`]
-        : [`No path matched${passLabel}`];
-
-      const updated = insertOutputAfterCell(
-        currentCells,
-        cell.id,
-        makeOutputCell(cell.id, undefined, 0, messages),
-      );
-      return updated.map((c) =>
-        c.id === cell.id ? { ...cell, evaluatedPathId: matchedPath?.id } : c,
-      );
+      const fold = evaluateBranchCell(cell, currentCells, pass);
+      setCellState(cell.id, fold.state);
+      return fold.cells;
     },
     [setCellState],
   );
@@ -343,18 +259,7 @@ export function useWorkbookExecution({
       const cellIndex = currentCells.findIndex((c) => c.id === cell.id);
 
       const order = ++execCounterRef.current;
-      setExecutionStates((prev) => {
-        const existing = prev[cell.id] as CellExecutionState | undefined;
-        const prevOrder = existing?.executionOrder ?? [];
-        return {
-          ...prev,
-          [cell.id]: {
-            ...existing,
-            status: "running" as const,
-            executionOrder: [...prevOrder, order],
-          },
-        };
-      });
+      setExecutionStates((prev) => stampExecutionStart(prev, cell.id, order));
 
       switch (cell.type) {
         case "protocol":
@@ -372,15 +277,6 @@ export function useWorkbookExecution({
     [runProtocolCell, runMacroCell, runQuestionCell, runBranchCell],
   );
 
-  // Returns the jump index into `currentCells`, or -1 if no jump.
-  const resolveBranchJump = (branchCellId: string, currentCells: WorkbookCell[]): number => {
-    const branch = currentCells.find((c) => c.id === branchCellId);
-    if (branch?.type !== "branch" || !branch.evaluatedPathId) return -1;
-    const matchedPath = branch.paths.find((p) => p.id === branch.evaluatedPathId);
-    if (!matchedPath?.gotoCellId) return -1;
-    return currentCells.findIndex((c) => c.id === matchedPath.gotoCellId);
-  };
-
   const runCell = useCallback(
     async (cellId: string) => {
       let currentCells = cellsRef.current;
@@ -393,18 +289,17 @@ export function useWorkbookExecution({
       if (cell.type === "branch") {
         const jumpIndex = resolveBranchJump(cell.id, currentCells);
         if (jumpIndex !== -1) {
-          const visitCounts = new Map<string, number>();
-          const MAX_VISITS = 100;
+          let visitCounts: Record<string, number> = {};
 
           for (let i = jumpIndex; i < currentCells.length; i++) {
             const c = currentCells[i];
-            if (c.type === "output" || c.type === "markdown") continue;
+            if (!isRunnableCell(c)) continue;
 
-            const count = visitCounts.get(c.id) ?? 0;
-            if (count >= MAX_VISITS) continue;
-            visitCounts.set(c.id, count + 1);
+            const visit = recordVisit(visitCounts, c.id);
+            if (visit.blocked) continue;
+            visitCounts = visit.counts;
 
-            currentCells = await dispatchCell(c, currentCells, count + 1);
+            currentCells = await dispatchCell(c, currentCells, visit.pass);
             onCellsChangeRef.current(currentCells);
 
             if (c.type === "branch") {
@@ -428,22 +323,20 @@ export function useWorkbookExecution({
     setExecutionStates({});
 
     let currentCells = [...cellsRef.current];
-    const visitCounts = new Map<string, number>();
-    const MAX_VISITS_PER_CELL = 100;
+    let visitCounts: Record<string, number> = {};
 
     for (let i = 0; i < currentCells.length; i++) {
       if (shouldAbort()) break;
 
       const cell = currentCells[i];
 
-      if (cell.type === "output" || cell.type === "markdown") continue;
+      if (!isRunnableCell(cell)) continue;
 
-      // Cap revisits to avoid infinite loops from branch jumps.
-      const count = visitCounts.get(cell.id) ?? 0;
-      if (count >= MAX_VISITS_PER_CELL) continue;
-      visitCounts.set(cell.id, count + 1);
+      const visit = recordVisit(visitCounts, cell.id);
+      if (visit.blocked) continue;
+      visitCounts = visit.counts;
 
-      currentCells = await dispatchCell(cell, currentCells, count + 1);
+      currentCells = await dispatchCell(cell, currentCells, visit.pass);
       onCellsChangeRef.current(currentCells);
 
       if (cell.type === "branch") {
