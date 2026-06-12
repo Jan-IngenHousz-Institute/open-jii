@@ -165,7 +165,9 @@ export function DeleteAccountBlockers({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-hidden">
                 <span className="truncate font-medium">{blocker.name}</span>
-                <Badge variant="secondary">{t(`experiments:status.${blocker.status}`)}</Badge>
+                <Badge className={`bg-badge-${blocker.status}`}>
+                  {t(`experiments:status.${blocker.status}`)}
+                </Badge>
               </div>
               <a
                 href={`/${locale}/platform/experiments/${blocker.id}/collaborators`}
