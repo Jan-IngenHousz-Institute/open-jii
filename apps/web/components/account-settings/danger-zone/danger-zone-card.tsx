@@ -2,10 +2,9 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
+import { env } from "~/env";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
-import { useDeleteUser } from "~/hooks/profile/useDeleteUser/useDeleteUser";
-import { parseApiError } from "~/util/apiError";
 
 import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
@@ -23,6 +22,9 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { DevDeletionBlockersSeeder } from "../dev-deletion-blockers-seeder";
+import { DeleteAccountDialog } from "./delete-account-dialog";
+
 interface DangerZoneCardProps {
   profile?: CreateUserProfileBody | null;
   userId: string;
@@ -30,7 +32,7 @@ interface DangerZoneCardProps {
 
 export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
   const { t } = useTranslation("account");
-  const [openModal, setOpenModal] = useState<"deactivate" | "delete" | null>(null);
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const signOut = useSignOut();
 
@@ -46,7 +48,7 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
   });
 
   const handleClose = () => {
-    setOpenModal(null);
+    setDeactivateOpen(false);
     setConfirmation("");
   };
 
@@ -58,49 +60,29 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
       bio: profile?.bio,
       organization: profile?.organization,
       activated: false,
+      avatarUrl: profile?.avatarUrl,
     };
     updateProfile({ body }, { onSuccess: () => handleClose() });
   };
 
   const isDeactivateConfirmed = confirmation === t("dangerZone.deactivate.confirmWord");
 
-  // Delete hook with improved success message for soft-delete
-  const { mutateAsync: deleteAccount, isPending: isDeleting } = useDeleteUser({
-    onSuccess: async () => {
-      toast({
-        description: t("dangerZone.delete.successMessage"),
-      });
-      handleClose();
-      // Sign out after successful deletion
-      await signOut.mutateAsync();
-      window.location.href = "/";
-    },
-  });
-
-  const handleDelete = async () => {
-    try {
-      await deleteAccount({ params: { id: userId } });
-    } catch (err) {
-      toast({ description: parseApiError(err)?.message, variant: "destructive" });
-    }
-  };
-
   const actionLabel = isPending
     ? t("dangerZone.deactivate.buttonSaving")
     : t("dangerZone.deactivate.buttonConfirm");
 
   return (
-    <Card className="border-destructive/40 mt-8 rounded-md">
-      <CardHeader>
+    <Card className="border-destructive/30 rounded-md shadow-sm">
+      <CardHeader className="pb-3">
         <CardTitle className="text-destructive text-lg font-semibold">
           {t("dangerZone.title")}
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Deactivate Section */}
-        <div className="border-destructive/30 flex items-center justify-between rounded-md border p-4">
-          <div>
+        <div className="border-destructive/25 bg-destructive/5 flex flex-col gap-4 rounded-md border p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
             <h3 className="text-destructive font-medium">{t("dangerZone.deactivate.title")}</h3>
             <p className="text-muted-foreground text-sm">
               {t("dangerZone.deactivate.description")}
@@ -108,12 +90,12 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
           </div>
 
           <Dialog
-            open={openModal === "deactivate"}
+            open={deactivateOpen}
             onOpenChange={(v) => {
               if (!v) handleClose();
               else {
                 setConfirmation("");
-                setOpenModal("deactivate");
+                setDeactivateOpen(true);
               }
             }}
           >
@@ -188,92 +170,10 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
         </div>
 
         {/* Delete Section */}
-        <div className="border-destructive/30 flex items-center justify-between rounded-md border p-4">
-          <div>
-            <h3 className="text-destructive font-medium">{t("dangerZone.delete.title")}</h3>
-            <p className="text-muted-foreground text-sm">{t("dangerZone.delete.description")}</p>
-          </div>
+        <DeleteAccountDialog userId={userId} />
 
-          <Dialog
-            open={openModal === "delete"}
-            onOpenChange={(v) => {
-              if (!v) handleClose();
-              else {
-                setConfirmation("");
-                setOpenModal("delete");
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button variant="destructive">{t("dangerZone.delete.button")}</Button>
-            </DialogTrigger>
-
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-destructive">
-                  {t("dangerZone.delete.dialogTitle")}
-                </DialogTitle>
-                <DialogDescription className="text-muted-foreground">
-                  {t("dangerZone.delete.dialogDescription")}
-                </DialogDescription>
-              </DialogHeader>
-
-              {/* Red warning box */}
-              <div className="border-destructive/30 bg-muted mt-3 rounded-md border p-3 text-sm">
-                <div className="mb-2 flex items-start gap-2">
-                  <AlertTriangle className="text-destructive mt-0.5 h-5 w-5" />
-                  <p className="text-destructive font-medium">
-                    {t("dangerZone.delete.warningEraseTitle")}
-                  </p>
-                </div>
-                <ul className="text-muted-foreground list-disc space-y-1 pl-6">
-                  <li>{t("dangerZone.delete.warningEraseList.profile")}</li>
-                  <li>{t("dangerZone.delete.warningEraseList.email")}</li>
-                  <li>{t("dangerZone.delete.warningEraseList.teams")}</li>
-                </ul>
-                <div className="mb-2 mt-3 flex items-start gap-2">
-                  <AlertTriangle className="text-jii-dark-green mt-0.5 h-5 w-5" />
-                  <p className="text-jii-dark-green font-medium">
-                    {t("dangerZone.delete.warningPreserveTitle")}
-                  </p>
-                </div>
-                <ul className="text-muted-foreground list-disc space-y-1 pl-6">
-                  <li>{t("dangerZone.delete.warningPreserveList.content")}</li>
-                </ul>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <p className="text-muted-foreground text-sm">
-                  {t("dangerZone.delete.confirmPrompt")}{" "}
-                  <span className="text-destructive font-semibold">
-                    "{t("dangerZone.delete.confirmWord")}"
-                  </span>{" "}
-                  {t("dangerZone.delete.confirmSuffix")}
-                </p>
-                <Input
-                  placeholder={t("dangerZone.delete.confirmPlaceholder")}
-                  value={confirmation}
-                  onChange={(e) => setConfirmation(e.target.value)}
-                />
-              </div>
-
-              <DialogFooter className="mt-4">
-                <Button variant="outline" onClick={handleClose}>
-                  {t("dangerZone.cancel")}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={confirmation !== t("dangerZone.delete.confirmWord") || isDeleting}
-                >
-                  {isDeleting
-                    ? t("dangerZone.delete.buttonDeleting")
-                    : t("dangerZone.delete.buttonConfirm")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+        {/* Dev-only: seed/clear experiments covering every delete-account case */}
+        {env.NODE_ENV === "development" && <DevDeletionBlockersSeeder />}
       </CardContent>
     </Card>
   );

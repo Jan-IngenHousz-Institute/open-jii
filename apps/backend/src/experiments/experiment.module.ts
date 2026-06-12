@@ -23,6 +23,7 @@ import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/a
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
 import { DetachWorkbookUseCase } from "./application/use-cases/detach-workbook/detach-workbook";
+import { SeedDeletionBlockersUseCase } from "./application/use-cases/dev/seed-deletion-blockers";
 import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
@@ -47,6 +48,7 @@ import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experi
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
+import { TransferExperimentAdminUseCase } from "./application/use-cases/experiment-members/transfer-experiment-admin";
 import { UpdateExperimentMemberRoleUseCase } from "./application/use-cases/experiment-members/update-experiment-member-role";
 import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
@@ -90,6 +92,7 @@ import { ProjectTransferRequestsRepository } from "./core/repositories/project-t
 import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
 import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
+import { ExperimentDevController } from "./presentation/experiment-dev.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
@@ -114,6 +117,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
   controllers: [
     ExperimentController,
     ExperimentDataController,
+    ExperimentDevController,
     ExperimentDataExportsController,
     ExperimentFlowsController,
     ExperimentWorkbooksController,
@@ -191,6 +195,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     AddExperimentMembersUseCase,
     RemoveExperimentMemberUseCase,
     UpdateExperimentMemberRoleUseCase,
+    TransferExperimentAdminUseCase,
+    SeedDeletionBlockersUseCase,
 
     // Experiment join request use cases
     RequestJoinExperimentUseCase,

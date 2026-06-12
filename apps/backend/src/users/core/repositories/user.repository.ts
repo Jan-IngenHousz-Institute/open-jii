@@ -5,6 +5,7 @@ import {
   ilike,
   or,
   and,
+  count,
   inArray,
   organizations,
   profiles,
@@ -12,6 +13,7 @@ import {
   accounts,
   sessions,
   // authenticators table removed - Better Auth uses accounts table
+  experiments,
   experimentMembers,
   sql,
   isNull,
@@ -35,6 +37,7 @@ import {
   UserProfileDto,
   CreateUserProfileDto,
   UserProfileMetadata,
+  SoleAdminExperiment,
 } from "../models/user.model";
 
 @Injectable()
@@ -147,37 +150,56 @@ export class UserRepository {
     );
   }
 
-  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
+  /**
+   * Returns the experiments where this user is the *only* admin. These block account deletion,
+   * since deleting the user would leave the experiment without an admin.
+   */
+  async findSoleAdminExperiments(userId: string): Promise<Result<SoleAdminExperiment[]>> {
     return tryCatch(async () => {
-      // Find all experiments where this user is an admin
-      const adminRows = await this.database
-        .select({ experimentId: experimentMembers.experimentId })
+      // 1. Find all experiments where this user is an admin
+      const adminExperiments = await this.database
+        .select({
+          id: experiments.id,
+          name: experiments.name,
+          status: experiments.status,
+        })
         .from(experimentMembers)
+        .innerJoin(experiments, eq(experiments.id, experimentMembers.experimentId))
         .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
 
-      if (adminRows.length === 0) {
-        return false;
+      if (adminExperiments.length === 0) {
+        return [];
       }
 
-      // For each experiment, check how many admins exist. If any has exactly 1 admin, return true.
-      for (const row of adminRows) {
-        const admins = await this.database
-          .select()
-          .from(experimentMembers)
-          .where(
-            and(
-              eq(experimentMembers.experimentId, row.experimentId),
-              eq(experimentMembers.role, "admin"),
-            ),
-          );
+      // 2. Admin count per experiment
+      const experimentIds = adminExperiments.map((e) => e.id);
+      const adminCounts = await this.database
+        .select({
+          experimentId: experimentMembers.experimentId,
+          total: count(),
+        })
+        .from(experimentMembers)
+        .where(
+          and(
+            inArray(experimentMembers.experimentId, experimentIds),
+            eq(experimentMembers.role, "admin"),
+          ),
+        )
+        .groupBy(experimentMembers.experimentId);
 
-        if (admins.length === 1) {
-          return true;
-        }
-      }
+      const soleAdminIds = new Set(
+        adminCounts.filter((c) => Number(c.total) === 1).map((c) => c.experimentId),
+      );
 
-      return false;
+      return adminExperiments.filter((e) => soleAdminIds.has(e.id));
     });
+  }
+
+  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
+    const result = await this.findSoleAdminExperiments(userId);
+    return result.map(
+      (soleAdminExperiments: SoleAdminExperiment[]) => soleAdminExperiments.length > 0,
+    );
   }
 
   async delete(id: string): Promise<Result<void>> {

@@ -19,6 +19,7 @@ import {
   zUpdateInvitationRoleBody,
   zInvitationIdPathParam,
   zListInvitationsQuery,
+  zDeletionBlockersResponse,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -84,6 +85,20 @@ export const userContract = c.router({
     },
     summary: "Delete a user",
     description: "Deletes a user by their ID if allowed",
+  },
+
+  getDeletionBlockers: {
+    method: "GET",
+    path: "/api/v1/users/:id/deletion-blockers",
+    pathParams: zUserIdPathParam,
+    responses: {
+      200: zDeletionBlockersResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List account-deletion blockers",
+    description:
+      "Returns the experiments where the user is the only admin (blocking account deletion), each with its other members as transfer candidates",
   },
 
   getUserMetadata: {

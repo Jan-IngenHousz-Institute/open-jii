@@ -1079,6 +1079,39 @@ export const zUpdateExperimentMemberRoleBody = z.object({
   role: zExperimentMemberRole.describe("New role to assign to the member"),
 });
 
+// Bulk hand-off of admin rights used by the account-deletion flow: each entry promotes (or adds)
+// the target user as an admin of one experiment the caller is currently sole admin of.
+export const zTransferExperimentAdminBody = z.object({
+  transfers: z
+    .array(
+      z.object({
+        experimentId: z.string().uuid().describe("Experiment to transfer admin rights on"),
+        targetUserId: z.string().uuid().describe("User to make an admin of the experiment"),
+      }),
+    )
+    .min(1)
+    .describe("Per-experiment admin assignments"),
+});
+
+export const zTransferExperimentAdminResult = z.object({
+  experimentId: z.string().uuid(),
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+
+export const zTransferExperimentAdminResponse = z.object({
+  results: z.array(zTransferExperimentAdminResult),
+});
+
+// Dev-only helpers for populating/tearing down account-deletion test data.
+export const zSeedDeletionBlockersResponse = z.object({
+  created: z.number().int(),
+});
+
+export const zClearDeletionBlockersResponse = z.object({
+  deleted: z.number().int(),
+});
+
 // --- Experiment Join Request Schemas ---
 export const zJoinRequestStatus = z.enum(["pending", "approved", "rejected", "cancelled"]);
 
@@ -1385,6 +1418,11 @@ export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMembersBody = z.infer<typeof zAddExperimentMembersBody>;
 export type UpdateExperimentMemberRoleBody = z.infer<typeof zUpdateExperimentMemberRoleBody>;
+export type TransferExperimentAdminBody = z.infer<typeof zTransferExperimentAdminBody>;
+export type TransferExperimentAdminResult = z.infer<typeof zTransferExperimentAdminResult>;
+export type TransferExperimentAdminResponse = z.infer<typeof zTransferExperimentAdminResponse>;
+export type SeedDeletionBlockersResponse = z.infer<typeof zSeedDeletionBlockersResponse>;
+export type ClearDeletionBlockersResponse = z.infer<typeof zClearDeletionBlockersResponse>;
 export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
