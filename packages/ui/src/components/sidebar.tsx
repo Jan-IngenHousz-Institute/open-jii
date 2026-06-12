@@ -360,6 +360,9 @@ const Sidebar = React.forwardRef<
             // topbar (z-40) and other chrome so it overlays without pushing
             // the page.
             "group-data-[peeking=true]:!left-0 group-data-[peeking=true]:!right-auto group-data-[peeking=true]:z-50 group-data-[peeking=true]:shadow-xl",
+            // Keep z-50 through the slide-out too (peeking flips off instantly,
+            // but `left` animates 200ms); parked off-screen, so it's harmless.
+            "group-data-[collapsible=hidden]:z-50",
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
