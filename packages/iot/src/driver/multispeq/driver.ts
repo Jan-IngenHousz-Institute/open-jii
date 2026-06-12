@@ -26,6 +26,12 @@ import type {
   MultispeqDeviceInfo,
 } from "./interface";
 
+/** Truncate long commands (e.g. full protocol JSON) so logs stay readable. */
+function summarizeCommand(commandStr: string, maxLength = 120): string {
+  if (commandStr.length <= maxLength) return commandStr;
+  return `${commandStr.slice(0, maxLength)}… (${commandStr.length} chars)`;
+}
+
 /**
  * MultispeQ device driver
  * Implements the MultispeQ device communication with checksums and JSON framing
@@ -55,6 +61,11 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   private handleDataReceived(data: string): void {
     // Buffer data until we receive a complete message (ends with newline)
     this.dataBuffer.push(data);
+
+    this.log.debug("rx chunk", {
+      chars: data.length,
+      buffered: this.bufferLength + data.length,
+    });
 
     // Guard against unbounded buffer growth from malformed/chatty devices
     this.bufferLength += data.length;
@@ -89,6 +100,8 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     const parsedData = hasChecksum ? parsed : tryParseJson(cleanData);
     const checksum = hasChecksum ? possibleChecksum : undefined;
 
+    this.log.debug("rx complete", { chars: cleanData.length, checksum: checksum ?? "none" });
+
     // Emit response event
     void this.emitter.emit("receivedReplyFromDevice", {
       data: parsedData,
@@ -106,6 +119,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
 
     // Serialize commands so responses are never mismatched
     return this.commandQueue.enqueue(async () => {
+      const startedAt = Date.now();
       try {
         // Send command
         const commandStr = stringifyIfObject(command);
@@ -115,17 +129,23 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
           throw new Error("Transport not initialized");
         }
 
+        this.log.debug("tx", { command: summarizeCommand(commandStr), timeoutMs });
         await this.transport.send(commandWithEnding);
 
         // Wait for response
         const response = await this.waitForResponse(timeoutMs);
 
+        this.log.debug("command completed", { elapsedMs: Date.now() - startedAt, timeoutMs });
         return {
           success: true,
           data: response.data as T,
           checksum: response.checksum,
         } as CommandResult<T>;
       } catch (error) {
+        this.log.warn("command failed", {
+          elapsedMs: Date.now() - startedAt,
+          err: error instanceof Error ? error.message : String(error),
+        });
         return {
           success: false,
           error: error instanceof Error ? error : new Error(String(error)),
@@ -173,6 +193,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
 
       const timeout = setTimeout(() => {
         cleanup();
+        this.log.warn("response timeout, sending cancel", { timeoutMs });
         // On timeout the device may still be running a long protocol. Without
         // an explicit cancel it keeps the actinic light on and eventually
         // drops the connection (OJD-1565). Best-effort abort so it returns to
@@ -215,6 +236,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   async cancel(): Promise<void> {
     const abort = this.pendingAbort;
     if (!abort) return;
+    this.log.debug("cancel: aborting in-flight command");
     this.pendingAbort = undefined;
     this.sendCancel();
     abort();
