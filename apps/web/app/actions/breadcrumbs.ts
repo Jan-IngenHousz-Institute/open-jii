@@ -123,8 +123,10 @@ export async function enrichPathSegments(
   // Remove locale and 'platform' prefix
   const segments = pathNames.slice(2);
 
-  // Do not return breadcrumbs for platform root or first-level routes
-  if (segments.length <= 1) {
+  // Only the platform root has no breadcrumb. Top-level sections (Experiments,
+  // Transfer requests, …) still get a one-segment breadcrumb so the layout
+  // height stays constant across the section instead of pop-in.
+  if (segments.length === 0) {
     return [];
   }
 

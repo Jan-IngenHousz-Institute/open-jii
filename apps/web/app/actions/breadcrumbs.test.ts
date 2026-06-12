@@ -23,9 +23,11 @@ describe("enrichPathSegments", () => {
     vi.mocked(initClient).mockReturnValue(mockClient as never);
   });
 
-  it("returns empty array for platform root and first-level routes", async () => {
+  it("returns empty array for platform root, one-segment breadcrumb for first-level routes", async () => {
     expect(await enrichPathSegments("/en/platform", "en")).toEqual([]);
-    expect(await enrichPathSegments("/en/platform/experiments", "en")).toEqual([]);
+    expect(await enrichPathSegments("/en/platform/experiments", "en")).toEqual([
+      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+    ]);
   });
 
   it("returns breadcrumbs for nested non-entity paths", async () => {

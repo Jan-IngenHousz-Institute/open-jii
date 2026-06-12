@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { PageContainer } from "@/components/page-container";
 import { BarChart3, Database, FileSpreadsheet, Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -45,7 +46,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (isLoading || isLoadingTables) {
     return (
-      <div className="space-y-8">
+      <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <Skeleton className="h-7 w-48" />
@@ -67,7 +68,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             ))}
           </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -93,7 +94,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (!tables || tables.length === 0) {
     return (
-      <div className="space-y-8">
+      <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-center justify-between gap-6">
           <div>
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
@@ -141,12 +142,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           open={metadataModalOpen}
           onOpenChange={setMetadataModalOpen}
         />
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <PageContainer width="fluid" className="space-y-8">
       <div className="flex items-center justify-between gap-6">
         <div>
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
@@ -198,6 +199,6 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         open={metadataModalOpen}
         onOpenChange={setMetadataModalOpen}
       />
-    </div>
+    </PageContainer>
   );
 }

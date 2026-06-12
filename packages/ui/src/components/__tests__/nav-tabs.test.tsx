@@ -65,10 +65,13 @@ describe("NavTabs", () => {
 
       const list = screen.getByTestId("tabs-list");
       expect(list).toBeInTheDocument();
-      expect(list.className).toContain("inline-flex");
-      expect(list.className).toContain("gap-6");
-      expect(list.className).toContain("border-b");
-      expect(list.className).toContain("overflow-x-auto");
+      // Underline-style tabs: inline-flex row, capped at max-w-full, bottom border.
+      // Assert exact class tokens so e.g. "flex" can't pass on "inline-flex".
+      const tokens = list.className.split(/\s+/);
+      expect(tokens).toContain("inline-flex");
+      expect(tokens).toContain("max-w-full");
+      expect(tokens).toContain("border-b");
+      expect(tokens).toContain("gap-6");
     });
 
     it("applies custom className to tabs list", () => {
@@ -131,10 +134,10 @@ describe("NavTabs", () => {
       expect(activeTrigger).toHaveAttribute("data-state", "active");
       expect(inactiveTrigger).toHaveAttribute("data-state", "inactive");
 
-      // Check for base classes that should be present
-      expect(activeTrigger.className).toContain("inline-flex");
-      expect(activeTrigger.className).toContain("px-1");
-      expect(activeTrigger.className).toContain("pb-3");
+      // Underline-style trigger: relative + bottom border + brand-teal active state.
+      expect(activeTrigger.className).toContain("border-b-2");
+      expect(activeTrigger.className).toContain("data-[state=active]:border-primary");
+      expect(activeTrigger.className).toContain("data-[state=active]:text-primary");
     });
 
     it("applies custom className to trigger", () => {

@@ -3,6 +3,7 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { FlowEditor } from "@/components/flow-editor/flow-editor";
 import type { FlowEditorHandle } from "@/components/flow-editor/flow-editor";
+import { PageContainer } from "@/components/page-container";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
@@ -50,7 +51,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   }
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="fluid" className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">{t("flow.title")}</h2>
@@ -63,6 +64,6 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
       </div>
 
       <FlowEditor ref={flowEditorRef} initialFlow={existingFlow?.body} isDisabled={true} />
-    </div>
+    </PageContainer>
   );
 }

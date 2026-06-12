@@ -137,6 +137,7 @@ export function DataExportModal({
         <ExportListStep
           experimentId={experimentId}
           tableName={tableName}
+          displayName={displayName}
           onCreateExport={handleCreateExport}
           onClose={handleClose}
           creationStatus={creationStatus}

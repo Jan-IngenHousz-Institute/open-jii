@@ -1,4 +1,5 @@
 import ExperimentVisualizationReadOnly from "@/components/experiment-visualizations/experiment-visualization-read-only";
+import { PageContainer } from "@/components/page-container";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -17,9 +18,11 @@ export default async function ArchivedVisualizationDetailPage({ params }: PagePr
   }
 
   return (
-    <ExperimentVisualizationReadOnly
-      experimentId={experimentId}
-      visualizationId={visualizationId}
-    />
+    <PageContainer width="fluid">
+      <ExperimentVisualizationReadOnly
+        experimentId={experimentId}
+        visualizationId={visualizationId}
+      />
+    </PageContainer>
   );
 }
