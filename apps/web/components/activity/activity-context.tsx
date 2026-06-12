@@ -47,9 +47,11 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
       ) {
         return prev;
       }
+      // Move the updated entry to the front so the list stays newest-first.
+      const merged = { ...existing, ...entry };
       const next = [...prev];
-      next[idx] = { ...existing, ...entry };
-      return next;
+      next.splice(idx, 1);
+      return [merged, ...next];
     });
   }, []);
 

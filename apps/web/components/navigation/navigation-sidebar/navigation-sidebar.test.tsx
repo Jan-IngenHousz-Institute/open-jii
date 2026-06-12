@@ -1,3 +1,4 @@
+import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { render, screen, fireEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
@@ -84,10 +85,10 @@ describe("AppSidebar", () => {
 
   it("opens the command palette from the sidebar search row", () => {
     const handler = vi.fn();
-    window.addEventListener("openjii:open-command-palette", handler);
+    window.addEventListener(COMMAND_PALETTE_OPEN_EVENT, handler);
     renderSidebar();
     fireEvent.click(screen.getByLabelText("Open command palette"));
     expect(handler).toHaveBeenCalledTimes(1);
-    window.removeEventListener("openjii:open-command-palette", handler);
+    window.removeEventListener(COMMAND_PALETTE_OPEN_EVENT, handler);
   });
 });

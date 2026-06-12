@@ -18,6 +18,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@repo/ui/components/command";
+import { DialogTitle } from "@repo/ui/components/dialog";
 
 import { CheatsheetDialog } from "./cheatsheet-dialog";
 
@@ -144,6 +145,7 @@ export function CommandPalette({ locale }: { locale: string }) {
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
+        <DialogTitle className="sr-only">Command palette</DialogTitle>
         <CommandInput placeholder="Search pages and actions…" />
         <CommandList>
           <CommandEmpty>No results.</CommandEmpty>

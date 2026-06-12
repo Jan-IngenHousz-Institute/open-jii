@@ -69,7 +69,10 @@ export function Breadcrumbs({ locale }: BreadcrumbsProps) {
   // the content below — even the platform root (which has no breadcrumb)
   // keeps the slot.
   return (
-    <nav aria-label="breadcrumb" className="text-muted-foreground flex h-7 items-center text-sm">
+    <nav
+      aria-label="breadcrumb"
+      className="text-muted-foreground flex min-h-7 items-center text-sm"
+    >
       {segments && segments.length > 0 ? (
         <ol className="flex flex-wrap items-center gap-1.5">
           {segments.map((item, index) => {

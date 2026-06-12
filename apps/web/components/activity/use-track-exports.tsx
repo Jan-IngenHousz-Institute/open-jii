@@ -43,6 +43,10 @@ export function useTrackExports(args: {
   // Remember the previous status per export so we can fire a single toast on
   // the running → succeeded / failed transition.
   const prevStatusRef = React.useRef<Map<string, ActivityJobStatus>>(new Map());
+  // Failed exports keep `completedAt: null`, so derive a stable "status changed
+  // at" timestamp on the terminal transition; otherwise the unread badge reuses
+  // `createdAt` and stays hidden after markAllRead.
+  const derivedUpdatedAtRef = React.useRef<Map<string, string>>(new Map());
 
   React.useEffect(() => {
     const seenIds = new Set<string>();
@@ -52,6 +56,14 @@ export function useTrackExports(args: {
       seenIds.add(id);
 
       const status = mapStatus(record.status);
+      const prev = prevStatusRef.current.get(id);
+      const previousDerivedUpdatedAt = derivedUpdatedAtRef.current.get(id);
+      const derivedUpdatedAt =
+        record.completedAt ??
+        (prev && prev !== status && status === "failed"
+          ? new Date().toISOString()
+          : (previousDerivedUpdatedAt ?? record.createdAt));
+
       const label = displayName ?? tableName;
       const format = FORMAT_LABELS[record.format] ?? record.format;
       const entry: ActivityEntry = {
@@ -62,13 +74,12 @@ export function useTrackExports(args: {
         format: record.format,
         experimentId,
         createdAt: record.createdAt,
-        updatedAt: record.completedAt ?? record.createdAt,
+        updatedAt: derivedUpdatedAt,
         resultUrl: record.exportId
           ? `/api/experiments/${experimentId}/data/exports/${record.exportId}/download`
           : undefined,
       };
 
-      const prev = prevStatusRef.current.get(id);
       if (prev && prev !== status && (status === "succeeded" || status === "failed")) {
         toast({
           description:
@@ -79,14 +90,18 @@ export function useTrackExports(args: {
         });
       }
       prevStatusRef.current.set(id, status);
+      derivedUpdatedAtRef.current.set(id, derivedUpdatedAt);
 
       upsert(entry);
     }
 
     // Drop any in-flight records the API no longer returns (rare, but keep
-    // the ref bounded so it doesn't grow forever in long sessions).
+    // the refs bounded so they don't grow forever in long sessions).
     for (const key of prevStatusRef.current.keys()) {
       if (!seenIds.has(key)) prevStatusRef.current.delete(key);
+    }
+    for (const key of derivedUpdatedAtRef.current.keys()) {
+      if (!seenIds.has(key)) derivedUpdatedAtRef.current.delete(key);
     }
   }, [exports, experimentId, tableName, displayName, upsert]);
 }

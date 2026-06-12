@@ -57,12 +57,19 @@ function createTestQueryClient() {
 
 interface WrapperProps {
   children: React.ReactNode;
+  queryClient?: QueryClient;
 }
 
-function AllProviders({ children }: WrapperProps) {
-  const queryClient = createTestQueryClient();
+function AllProviders({ children, queryClient }: WrapperProps) {
+  const client = queryClient ?? createTestQueryClient();
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <tsr.ReactQueryProvider>
+        <ActivityProvider>{children}</ActivityProvider>
+      </tsr.ReactQueryProvider>
+    </QueryClientProvider>
+  );
 }
 
 // ── Custom render ───────────────────────────────────────────────
@@ -85,14 +92,7 @@ function render(ui: ReactElement, options?: CustomRenderOptions): CustomRenderRe
   const { queryClient, ...renderOptions } = options ?? {};
 
   function Wrapper({ children }: WrapperProps) {
-    const client = queryClient ?? createTestQueryClient();
-    return (
-      <QueryClientProvider client={client}>
-        <tsr.ReactQueryProvider>
-          <ActivityProvider>{children}</ActivityProvider>
-        </tsr.ReactQueryProvider>
-      </QueryClientProvider>
-    );
+    return <AllProviders queryClient={queryClient}>{children}</AllProviders>;
   }
 
   const result = rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
@@ -117,14 +117,7 @@ function renderHook<TResult, TProps = undefined>(
   const { queryClient, initialProps } = options ?? {};
 
   function Wrapper({ children }: WrapperProps) {
-    const client = queryClient ?? createTestQueryClient();
-    return (
-      <QueryClientProvider client={client}>
-        <tsr.ReactQueryProvider>
-          <ActivityProvider>{children}</ActivityProvider>
-        </tsr.ReactQueryProvider>
-      </QueryClientProvider>
-    );
+    return <AllProviders queryClient={queryClient}>{children}</AllProviders>;
   }
 
   const hookResult = rtlRenderHook<TResult, TProps>(hook as (props: TProps) => TResult, {

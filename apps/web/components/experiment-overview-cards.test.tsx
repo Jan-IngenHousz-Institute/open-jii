@@ -26,7 +26,7 @@ describe("ExperimentOverviewCards", () => {
     render(<ExperimentOverviewCards experiments={[exp]} />);
     expect(screen.getByText("Photosynthesis Study")).toBeInTheDocument();
     expect(screen.getByText("Measuring chlorophyll")).toBeInTheDocument();
-    // Status pill was removed from the card; status lives in the detail page.
+    // Status pill/label was removed from the overview cards (name/description/last-updated only).
     expect(screen.queryByText("status.active")).not.toBeInTheDocument();
   });
 

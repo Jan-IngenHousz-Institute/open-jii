@@ -1,4 +1,4 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { headers } from "next/headers";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -52,5 +52,23 @@ describe("AccountSettingsLayout", () => {
     const overviewElements = screen.getAllByText("account:overview.title");
     const overviewInDesktop = overviewElements.find((el) => el.closest("a") === null);
     expect(overviewInDesktop).toBeDefined();
+  });
+
+  it("renders the mobile dropdown with active item and disabled entries", async () => {
+    const user = userEvent.setup();
+    await renderLayout("/en-US/platform/account/settings");
+
+    // Open the mobile (md:hidden) dropdown menu via its trigger.
+    await user.click(screen.getByRole("button", { name: "account:mobileNavAriaLabel" }));
+
+    // Active tab (settings) renders as a link marked aria-current="page".
+    const activeItem = await screen.findByRole("menuitem", { name: "account:settings.title" });
+    expect(activeItem).toHaveAttribute("aria-current", "page");
+    expect(activeItem.closest("a")).not.toBeNull();
+
+    // Disabled tabs render as non-clickable, dimmed entries (no link).
+    const overviewItem = screen.getByRole("menuitem", { name: "account:overview.title" });
+    expect(overviewItem.closest("a")).toBeNull();
+    expect(overviewItem).toHaveClass("cursor-not-allowed", "opacity-50");
   });
 });
