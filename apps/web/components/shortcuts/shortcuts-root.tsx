@@ -166,7 +166,9 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
   }, [enterGMode, exitGMode, goToShortcuts, router, pathname, locale]);
 
   // Clear any pending g-mode timer/toast when the component unmounts.
-  React.useEffect(() => () => exitGMode(), [exitGMode]);
+  const exitGModeRef = React.useRef(exitGMode);
+  exitGModeRef.current = exitGMode;
+  React.useEffect(() => () => exitGModeRef.current(), []);
 
   return null;
 }
