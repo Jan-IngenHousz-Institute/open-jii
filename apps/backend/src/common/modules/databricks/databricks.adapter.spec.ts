@@ -68,11 +68,17 @@ describe("DatabricksAdapter", () => {
     });
   });
 
-  describe("triggerAmbyteProcessingJob", () => {
-    it("should successfully trigger ambyte processing job", async () => {
+  describe("triggerDataUploadJob", () => {
+    it("should successfully trigger data upload job", async () => {
       const mockParams = {
-        EXPERIMENT_ID: "exp-123",
-        YEAR_PREFIX: "2025",
+        sourceKind: "ambyte" as const,
+        experimentId: "exp-123",
+        experimentName: "Test Experiment",
+        uploadDirectory: "upload_2026-01-01",
+        uploadId: "upload-1",
+        uploadTableId: "11111111-1111-1111-1111-111111111111",
+        uploadTableName: "ambyte_legacy",
+        userId: "user-1",
       };
 
       const mockResponse = {
@@ -92,6 +98,7 @@ describe("DatabricksAdapter", () => {
       });
 
       // Mock job run-now request - expect CATALOG_NAME to be added to params
+      const expectedYearPrefix = new Date().getUTCFullYear().toString();
       nock(databricksHost)
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
@@ -99,14 +106,14 @@ describe("DatabricksAdapter", () => {
             return (
               body.job_parameters?.CATALOG_NAME === "main" &&
               body.job_parameters.EXPERIMENT_ID === "exp-123" &&
-              body.job_parameters.YEAR_PREFIX === "2025"
+              body.job_parameters.SOURCE_KIND === "ambyte" &&
+              body.job_parameters.YEAR_PREFIX === expectedYearPrefix
             );
           },
         )
         .reply(200, mockResponse);
 
-      // Execute trigger ambyte processing job
-      const result = await databricksAdapter.triggerAmbyteProcessingJob(mockParams);
+      const result = await databricksAdapter.triggerDataUploadJob(mockParams);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -183,15 +190,26 @@ describe("DatabricksAdapter", () => {
         columns: [
           { name: "identifier", type_name: "string", type_text: "string" },
           { name: "table_type", type_name: "string", type_text: "string" },
+          { name: "display_name", type_name: "string", type_text: "string" },
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
           { name: "macro_schema", type_name: "string", type_text: "string" },
           { name: "questions_schema", type_name: "string", type_text: "string" },
           { name: "custom_metadata_schema", type_name: "string", type_text: "string" },
+          { name: "upload_schema", type_name: "string", type_text: "string" },
         ],
         rows: [
-          ["raw_data", "static", "100", null, null, null],
-          ["device", "static", "50", null, null, null],
-          ["some_macro_id", "macro", "25", '{"col1":"int"}', '{"q1":"text"}', '{"plot":"string"}'],
+          ["raw_data", "static", null, "100", null, null, null, null],
+          ["device", "static", null, "50", null, null, null, null],
+          [
+            "some_macro_id",
+            "macro",
+            null,
+            "25",
+            '{"col1":"int"}',
+            '{"q1":"text"}',
+            '{"plot":"string"}',
+            null,
+          ],
         ],
         totalRows: 3,
         truncated: false,
@@ -236,26 +254,32 @@ describe("DatabricksAdapter", () => {
         {
           identifier: "raw_data",
           tableType: "static",
+          displayName: null,
           rowCount: 100,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
+          uploadSchema: null,
         },
         {
           identifier: "device",
           tableType: "static",
+          displayName: null,
           rowCount: 50,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
+          uploadSchema: null,
         },
         {
           identifier: "some_macro_id",
           tableType: "macro",
+          displayName: null,
           rowCount: 25,
           macroSchema: '{"col1":"int"}',
           questionsSchema: '{"q1":"text"}',
           customMetadataSchema: '{"plot":"string"}',
+          uploadSchema: null,
         },
       ]);
     });
@@ -265,12 +289,14 @@ describe("DatabricksAdapter", () => {
         columns: [
           { name: "identifier", type_name: "string", type_text: "string" },
           { name: "table_type", type_name: "string", type_text: "string" },
+          { name: "display_name", type_name: "string", type_text: "string" },
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
           { name: "macro_schema", type_name: "string", type_text: "string" },
           { name: "questions_schema", type_name: "string", type_text: "string" },
           { name: "custom_metadata_schema", type_name: "string", type_text: "string" },
+          { name: "upload_schema", type_name: "string", type_text: "string" },
         ],
-        rows: [["device", "static", "50", null, null, null]],
+        rows: [["device", "static", null, "50", null, null, null, null]],
         totalRows: 1,
         truncated: false,
       };
@@ -316,10 +342,12 @@ describe("DatabricksAdapter", () => {
         {
           identifier: "device",
           tableType: "static",
+          displayName: null,
           rowCount: 50,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
+          uploadSchema: null,
         },
       ]);
     });
@@ -329,11 +357,12 @@ describe("DatabricksAdapter", () => {
         columns: [
           { name: "identifier", type_name: "string", type_text: "string" },
           { name: "table_type", type_name: "string", type_text: "string" },
+          { name: "display_name", type_name: "string", type_text: "string" },
           { name: "row_count", type_name: "bigint", type_text: "bigint" },
         ],
         rows: [
-          ["raw_data", "static", "100"],
-          ["device", "static", "50"],
+          ["raw_data", "static", null, "100"],
+          ["device", "static", null, "50"],
         ],
         totalRows: 2,
         truncated: false,
@@ -377,8 +406,8 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual([
-        { identifier: "raw_data", tableType: "static", rowCount: 100 },
-        { identifier: "device", tableType: "static", rowCount: 50 },
+        { identifier: "raw_data", tableType: "static", displayName: null, rowCount: 100 },
+        { identifier: "device", tableType: "static", displayName: null, rowCount: 50 },
       ]);
     });
 
@@ -418,7 +447,7 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("buildExperimentQuery", () => {
-    it("should build query for standard tables (raw_data, device, raw_ambyte_data)", () => {
+    it("should build query for standard tables (raw_data, device)", () => {
       const result = databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",
         tableType: "static",
@@ -1517,6 +1546,375 @@ describe("DatabricksAdapter", () => {
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
+    });
+  });
+
+  describe("getUploadMetadata", () => {
+    it("queries experiment_upload_metadata with filters and returns schema data", async () => {
+      const experimentId = "exp-up-1";
+      const uploadTableName = "leaf_traits";
+
+      const sqlService = testApp.module.get(DatabricksSqlService);
+      const querySpy = vi.spyOn(sqlService, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [{ name: "upload_id", type_name: "string", type_text: "STRING", position: 0 }],
+          rows: [["u1"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await databricksAdapter.getUploadMetadata(experimentId, { uploadTableName });
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.rows).toHaveLength(1);
+
+      expect(querySpy).toHaveBeenCalledOnce();
+      const [, sql] = querySpy.mock.calls[0];
+      expect(sql).toContain("experiment_upload_metadata");
+      expect(sql).toContain(`'${experimentId}'`);
+      expect(sql).toContain(`'${uploadTableName}'`);
+    });
+
+    it("omits upload_table_name filter when not provided", async () => {
+      const sqlService = testApp.module.get(DatabricksSqlService);
+      const querySpy = vi
+        .spyOn(sqlService, "executeSqlQuery")
+        .mockResolvedValue(success({ columns: [], rows: [], totalRows: 0, truncated: false }));
+
+      await databricksAdapter.getUploadMetadata("exp-up-2");
+
+      const [, sql] = querySpy.mock.calls[0];
+      expect(sql).toContain("experiment_upload_metadata");
+      expect(sql).not.toMatch(/where[\s\S]*upload_table_name\s*=/i);
+    });
+  });
+
+  describe("getActiveUploads", () => {
+    it("filters runs by experiment id and maps lifecycle states to upload statuses", async () => {
+      const experimentId = "exp-up-3";
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 1,
+              job_id: 77,
+              state: { life_cycle_state: "RUNNING" },
+              start_time: 1700_000_000_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_ID", value: "u-running" },
+                { name: "SOURCE_KIND", value: "csv" },
+                { name: "UPLOAD_TABLE_NAME", value: "leaf_traits" },
+                { name: "USER_ID", value: "user-1" },
+              ],
+            },
+            {
+              run_id: 2,
+              job_id: 77,
+              state: { life_cycle_state: "PENDING" },
+              start_time: 1700_000_001_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_ID", value: "u-pending" },
+                { name: "SOURCE_KIND", value: "tsv" },
+                { name: "USER_ID", value: "user-1" },
+              ],
+            },
+            {
+              run_id: 3,
+              job_id: 77,
+              state: { life_cycle_state: "RUNNING" },
+              start_time: 1700_000_002_000,
+              job_parameters: [{ name: "EXPERIMENT_ID", value: "other-exp" }],
+            },
+          ],
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getActiveUploads(experimentId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+      const byId = new Map(result.value.map((u) => [u.uploadId, u]));
+      expect(byId.get("u-running")?.status).toBe("running");
+      expect(byId.get("u-running")?.sourceKind).toBe("csv");
+      expect(byId.get("u-pending")?.status).toBe("pending");
+      expect(byId.get("u-pending")?.sourceKind).toBe("tsv");
+    });
+
+    it("further filters by upload table name when provided", async () => {
+      const experimentId = "exp-up-4";
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 1,
+              job_id: 77,
+              state: { life_cycle_state: "RUNNING" },
+              start_time: 1700_000_000_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_TABLE_NAME", value: "leaf_traits" },
+                { name: "UPLOAD_ID", value: "u-1" },
+                { name: "USER_ID", value: "user-1" },
+                { name: "SOURCE_KIND", value: "csv" },
+              ],
+            },
+            {
+              run_id: 2,
+              job_id: 77,
+              state: { life_cycle_state: "RUNNING" },
+              start_time: 1700_000_001_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_TABLE_NAME", value: "other" },
+                { name: "UPLOAD_ID", value: "u-2" },
+                { name: "USER_ID", value: "user-1" },
+                { name: "SOURCE_KIND", value: "csv" },
+              ],
+            },
+          ],
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getActiveUploads(experimentId, {
+        uploadTableName: "leaf_traits",
+      });
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0].uploadId).toBe("u-1");
+    });
+
+    it("propagates job-runs API failures", async () => {
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(500, { message: "boom" });
+
+      const result = await databricksAdapter.getActiveUploads("exp-up-5");
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+    });
+  });
+
+  describe("getActiveUploads filter branches", () => {
+    it("skips runs that are missing UPLOAD_ID or USER_ID widgets (not our runs)", async () => {
+      const experimentId = "exp-up-internal-err";
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 999,
+              job_id: 77,
+              state: { life_cycle_state: "INTERNAL_ERROR" },
+              start_time: 1700_000_100_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "SOURCE_KIND", value: "csv" },
+                // UPLOAD_ID + USER_ID deliberately omitted — run wasn't triggered by us.
+              ],
+            },
+          ],
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getActiveUploads(experimentId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("skips runs whose SOURCE_KIND widget isn't a known kind", async () => {
+      const experimentId = "exp-up-bad-kind";
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 1000,
+              job_id: 77,
+              state: { life_cycle_state: "RUNNING" },
+              start_time: 1700_000_150_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_ID", value: "u-bad" },
+                { name: "USER_ID", value: "user-1" },
+                { name: "SOURCE_KIND", value: "orc" },
+              ],
+            },
+          ],
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getActiveUploads(experimentId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("skips runs whose lifecycle state isn't queued/pending/running/terminating/internal_error", async () => {
+      const experimentId = "exp-up-skip";
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 1,
+              job_id: 77,
+              state: { life_cycle_state: "TERMINATED", result_state: "SUCCESS" },
+              start_time: 1700_000_200_000,
+              job_parameters: [{ name: "EXPERIMENT_ID", value: experimentId }],
+            },
+          ],
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getActiveUploads(experimentId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+  });
+
+  describe("getFailedUploads", () => {
+    it("returns only terminated non-SUCCESS runs and dedupes against completedUploadIds", async () => {
+      const experimentId = "exp-up-6";
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobIdAsNumber").mockReturnValue(77);
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/runs/list`)
+        .query(true)
+        .reply(200, {
+          runs: [
+            {
+              run_id: 10,
+              job_id: 77,
+              state: { life_cycle_state: "TERMINATED", result_state: "FAILED" },
+              start_time: 1700_000_010_000,
+              end_time: 1700_000_011_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_ID", value: "u-fail" },
+                { name: "USER_ID", value: "user-1" },
+                { name: "SOURCE_KIND", value: "csv" },
+              ],
+            },
+            {
+              run_id: 11,
+              job_id: 77,
+              state: { life_cycle_state: "TERMINATED", result_state: "SUCCESS" },
+              start_time: 1700_000_012_000,
+              end_time: 1700_000_013_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_ID", value: "u-ok" },
+                { name: "USER_ID", value: "user-1" },
+                { name: "SOURCE_KIND", value: "csv" },
+              ],
+            },
+            {
+              run_id: 12,
+              job_id: 77,
+              state: { life_cycle_state: "TERMINATED", result_state: "FAILED" },
+              start_time: 1700_000_014_000,
+              end_time: 1700_000_015_000,
+              job_parameters: [
+                { name: "EXPERIMENT_ID", value: experimentId },
+                { name: "UPLOAD_ID", value: "u-already-in-delta" },
+                { name: "USER_ID", value: "user-1" },
+                { name: "SOURCE_KIND", value: "csv" },
+              ],
+            },
+          ],
+          has_more: false,
+        });
+
+      const result = await databricksAdapter.getFailedUploads(
+        experimentId,
+        new Set(["u-already-in-delta"]),
+      );
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0].uploadId).toBe("u-fail");
+      expect(result.value[0].status).toBe("failed");
     });
   });
 });

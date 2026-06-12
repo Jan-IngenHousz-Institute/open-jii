@@ -1,4 +1,5 @@
 import { ListExperiments } from "@/components/list-experiments";
+import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -21,7 +22,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="fluid" className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         {/* Left: title, description and archive link */}
         <div>
@@ -47,6 +48,6 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
       </div>
 
       <ListExperiments />
-    </div>
+    </PageContainer>
   );
 }

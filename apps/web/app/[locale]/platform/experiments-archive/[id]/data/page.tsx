@@ -1,14 +1,15 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { PageContainer } from "@/components/page-container";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { BarChart3, Upload } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
-import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
+import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
 import { env } from "~/env";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
@@ -30,7 +31,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (isLoading || isLoadingTables) {
     return (
-      <div className="space-y-8">
+      <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <Skeleton className="h-7 w-48" />
@@ -52,7 +53,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             ))}
           </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -77,7 +78,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (!tables || tables.length === 0) {
     return (
-      <div className="space-y-8">
+      <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-start justify-between">
           <div>
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
@@ -105,17 +106,17 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </Link>
         </div>
 
-        <DataUploadModal
+        <UploadDataModal
           experimentId={id}
           open={uploadModalOpen}
           onOpenChange={setUploadModalOpen}
         />
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <PageContainer width="fluid" className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
@@ -150,7 +151,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         ))}
       </NavTabs>
 
-      <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
-    </div>
+      <UploadDataModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
+    </PageContainer>
   );
 }

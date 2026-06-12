@@ -4,6 +4,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-state";
 import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
 import { FlowEditor } from "@/components/flow-editor/flow-editor";
+import { PageContainer } from "@/components/page-container";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -15,8 +16,8 @@ import { use, useMemo } from "react";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 import { useTranslation } from "@repo/i18n/client";
+import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
 interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;
@@ -68,7 +69,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
   if (isLoading || accessLoading) {
     return (
-      <div className="space-y-8">
+      <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <Skeleton className="h-7 w-48" />
@@ -76,7 +77,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
           </div>
         </div>
         <Skeleton className="h-64 w-full" />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -93,11 +94,17 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   }
 
   if (!workbookId || !workbookVersionId) {
-    return <EmptyWorkbookState experimentId={id} hasAccess={hasAccess} />;
+    return (
+      <EmptyWorkbookState
+        experimentId={id}
+        experimentName={experimentData.name}
+        hasAccess={hasAccess}
+      />
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="fluid" className="space-y-6">
       <LinkedWorkbookCard
         experimentId={id}
         locale={locale}
@@ -106,26 +113,26 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         hasAccess={hasAccess}
       />
 
-      <Tabs defaultValue="list">
-        <TabsList>
-          <TabsTrigger value="list">
-            <List className="mr-1.5 h-4 w-4" />
+      <NavTabs defaultValue="list">
+        <NavTabsList>
+          <NavTabsTrigger value="list">
+            <List className="h-4 w-4" />
             {t("flow.viewList")}
-          </TabsTrigger>
-          <TabsTrigger value="graph">
-            <GitBranch className="mr-1.5 h-4 w-4" />
+          </NavTabsTrigger>
+          <NavTabsTrigger value="graph">
+            <GitBranch className="h-4 w-4" />
             {t("flow.viewGraph")}
-          </TabsTrigger>
-        </TabsList>
+          </NavTabsTrigger>
+        </NavTabsList>
 
-        <TabsContent value="list" className="mt-6">
+        <NavTabsContent value="list" className="mt-6">
           <WorkbookEditor cells={versionedCells} onCellsChange={() => undefined} readOnly />
-        </TabsContent>
+        </NavTabsContent>
 
-        <TabsContent value="graph" className="mt-6">
+        <NavTabsContent value="graph" className="mt-6">
           <FlowEditor initialFlow={derivedFlow} isDisabled />
-        </TabsContent>
-      </Tabs>
-    </div>
+        </NavTabsContent>
+      </NavTabs>
+    </PageContainer>
   );
 }

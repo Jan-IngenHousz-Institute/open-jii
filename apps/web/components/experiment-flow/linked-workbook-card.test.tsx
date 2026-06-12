@@ -141,6 +141,12 @@ describe("LinkedWorkbookCard", () => {
 
     await user.click(screen.getByRole("button", { name: /flow\.upgradeToLatest/ }));
 
+    const confirmBtn = screen
+      .getAllByText("flow.confirmUpgrade")
+      .find((el) => el.closest("[role='alertdialog']"));
+    expect(confirmBtn).toBeDefined();
+    if (confirmBtn) await user.click(confirmBtn);
+
     await waitFor(() => expect(spy.called).toBe(true));
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith({ description: "flow.versionUpgraded" }),
@@ -155,6 +161,11 @@ describe("LinkedWorkbookCard", () => {
     await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /flow\.upgradeToLatest/ }));
+
+    const confirmBtn = screen
+      .getAllByText("flow.confirmUpgrade")
+      .find((el) => el.closest("[role='alertdialog']"));
+    if (confirmBtn) await user.click(confirmBtn);
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith({

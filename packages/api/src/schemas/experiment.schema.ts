@@ -10,7 +10,6 @@ import { zSensorFamily } from "./protocol.schema";
 export const ExperimentTableName = {
   RAW_DATA: "raw_data",
   DEVICE: "device",
-  RAW_AMBYTE_DATA: "raw_ambyte_data",
 } as const;
 
 export type ExperimentTableNameType =
@@ -19,12 +18,17 @@ export type ExperimentTableNameType =
 /**
  * Zod enum for core table names
  */
-export const zExperimentTableName = z.enum(["raw_data", "device", "raw_ambyte_data"]);
+export const zExperimentTableName = z.enum(["raw_data", "device"]);
 
 /**
  * Union type: core table names OR string (for dynamic macro tables)
  */
 export const zTableNameInput = z.union([zExperimentTableName, z.string().min(1).max(256)]);
+
+// Fixed table name every ambyte upload lands in, shared by the FE picker and
+// the pipeline's UPLOAD_TABLE_NAME widget. Not a core table (only present once
+// ambyte data is uploaded), so kept out of ExperimentTableName.
+export const AMBYTE_UPLOAD_TABLE_NAME = "raw_ambyte_data";
 
 // --- Location Schemas ---
 export const zLocation = z.object({
@@ -1180,7 +1184,7 @@ export const zExperimentDataQuery = z.object({
   page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
   pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
   tableName: zTableNameInput.describe(
-    "Table name: 'raw_data', 'device', 'raw_ambyte_data', or macro filename",
+    "Table name: 'raw_data', 'device', macro UUID, or upload_table_id",
   ),
   columns: z
     .string()
@@ -1343,10 +1347,12 @@ export const zColumnInfo = z.object({
 });
 
 export const zExperimentTableMetadata = z.object({
-  identifier: z.string().describe("Stable identifier: static table name or macro UUID"),
+  identifier: z
+    .string()
+    .describe("Stable identifier: static table name, macro UUID, or upload table name"),
   tableType: z
-    .enum(["static", "macro"])
-    .describe("Whether this is a static table or a macro table"),
+    .enum(["static", "macro", "upload"])
+    .describe("Whether this is a static table, a macro table, or a user-uploaded table"),
   displayName: z.string().describe("Human-readable display name of the table for UI"),
   totalRows: z.number().int().describe("Total number of rows in the table"),
   defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
@@ -1355,20 +1361,316 @@ export const zExperimentTableMetadata = z.object({
 
 export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 
-// --- Data Upload Types ---
-export const zDataSourceType = z.enum(["ambyte"]).describe("Data source type for the upload");
+// --- Generic Upload (user-defined tabular tables) ---
+export const zUploadSourceKind = z
+  .enum(["ambyte", "csv", "tsv", "parquet", "xlsx", "json", "ndjson"])
+  .describe("Source format for the upload");
 
-// TODO - find a (good) way to validate form data
-export const zUploadExperimentDataBody = z.any();
+// Per-kind constants consumed by the backend (volume path, busboy limits, etc.)
+// and the frontend (upload wizard limits, file-picker `accept` attribute).
+// Kept in one place so adding a new kind is a single-entry change. All
+// user-table-bound kinds share volumeSourceType="uploads" so they land in the
+// same raw_uploaded_data table; the Python task dispatches by source_kind to
+// pick the right parser.
+export const UPLOAD_KIND_CONSTANTS = {
+  ambyte: {
+    volumeSourceType: "uploads",
+    maxFileSize: 10 * 1024 * 1024,
+    maxFileCount: 1000,
+    extensions: [".txt"],
+  },
+  csv: {
+    volumeSourceType: "uploads",
+    maxFileSize: 50 * 1024 * 1024,
+    maxFileCount: 100,
+    extensions: [".csv"],
+  },
+  tsv: {
+    volumeSourceType: "uploads",
+    maxFileSize: 50 * 1024 * 1024,
+    maxFileCount: 100,
+    extensions: [".tsv"],
+  },
+  parquet: {
+    volumeSourceType: "uploads",
+    maxFileSize: 200 * 1024 * 1024,
+    maxFileCount: 100,
+    extensions: [".parquet"],
+  },
+  xlsx: {
+    volumeSourceType: "uploads",
+    maxFileSize: 50 * 1024 * 1024,
+    maxFileCount: 100,
+    extensions: [".xlsx", ".xls"],
+  },
+  json: {
+    volumeSourceType: "uploads",
+    maxFileSize: 100 * 1024 * 1024,
+    maxFileCount: 100,
+    extensions: [".json"],
+  },
+  ndjson: {
+    volumeSourceType: "uploads",
+    maxFileSize: 100 * 1024 * 1024,
+    maxFileCount: 100,
+    extensions: [".ndjson", ".jsonl"],
+  },
+} as const satisfies Record<
+  z.infer<typeof zUploadSourceKind>,
+  {
+    volumeSourceType: string;
+    maxFileSize: number;
+    maxFileCount: number;
+    extensions: readonly string[];
+  }
+>;
 
-export const zUploadExperimentDataResponse = z.object({
-  uploadId: z.string().optional(),
+/**
+ * Infer the upload source kind from a filename's extension. Returns null when
+ * the extension isn't supported by any configured kind. Used by the upload
+ * modal to pick the source kind automatically and reject unknown formats.
+ */
+export function inferUploadSourceKind(filename: string): z.infer<typeof zUploadSourceKind> | null {
+  const lower = filename.toLowerCase();
+  for (const [kind, config] of Object.entries(UPLOAD_KIND_CONSTANTS)) {
+    for (const ext of config.extensions) {
+      if (lower.endsWith(ext)) {
+        return kind as z.infer<typeof zUploadSourceKind>;
+      }
+    }
+  }
+  return null;
+}
+
+// SQL identifier shape we enforce for user-defined upload table names:
+// first char letter, then [A-Za-z0-9_], max 63 chars.
+const isAsciiLetter = (c: string): boolean => (c >= "a" && c <= "z") || (c >= "A" && c <= "Z");
+const isAsciiDigit = (c: string): boolean => c >= "0" && c <= "9";
+
+export const zUploadTableName = z
+  .string()
+  .min(1)
+  .max(63)
+  .refine(
+    (name) => {
+      if (!isAsciiLetter(name[0])) {
+        return false;
+      }
+      for (let i = 1; i < name.length; i++) {
+        const c = name[i];
+        if (!isAsciiLetter(c) && !isAsciiDigit(c) && c !== "_") {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message:
+        "Table name must start with a letter and contain only letters, digits, or underscores (max 63 chars)",
+    },
+  )
+  .refine((name) => !name.startsWith("_"), {
+    message: "Table names cannot start with an underscore",
+  });
+
+export const zUploadTargetTable = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("new"), name: zUploadTableName }),
+  z.object({ kind: z.literal("existing"), uploadTableId: z.string().uuid() }),
+]);
+export type UploadTargetTable = z.infer<typeof zUploadTargetTable>;
+
+// Form fields shared across the multipart upload boundary. The FE binds this
+// schema to react-hook-form via zodResolver; the BE validates the same shape
+// on the busboy-parsed field map. Files are out of scope (multipart-streamed).
+export const zUploadFormFields = z.discriminatedUnion("targetKind", [
+  z.object({
+    targetKind: z.literal("new"),
+    sourceKind: zUploadSourceKind,
+    targetName: zUploadTableName,
+  }),
+  z.object({
+    targetKind: z.literal("existing"),
+    sourceKind: zUploadSourceKind,
+    uploadTableId: z.string().uuid(),
+  }),
+]);
+export type UploadFormFields = z.infer<typeof zUploadFormFields>;
+
+// --- Per-kind filename validation (validates + transforms to the safe upload-path) ---
+
+// Bare-basename filename schema for kinds where the file is "just the file" —
+// strip any leading path the client may have sent, enforce extension + length.
+function bareBasenameSchema(label: string, extensions: readonly string[]) {
+  return z
+    .string()
+    .min(1)
+    .max(256)
+    .transform((name, ctx) => {
+      const base = name.split(/[\\/]/).pop() ?? "";
+      if (!base || base.length > 256) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid file name" });
+        return z.NEVER;
+      }
+      const lower = base.toLowerCase();
+      if (!extensions.some((ext) => lower.endsWith(ext))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${base} is not a ${label} file`,
+        });
+        return z.NEVER;
+      }
+      return base;
+    });
+}
+
+export const zCsvFilename = bareBasenameSchema("CSV", UPLOAD_KIND_CONSTANTS.csv.extensions);
+export const zTsvFilename = bareBasenameSchema("TSV", UPLOAD_KIND_CONSTANTS.tsv.extensions);
+export const zParquetFilename = bareBasenameSchema(
+  "parquet",
+  UPLOAD_KIND_CONSTANTS.parquet.extensions,
+);
+export const zXlsxFilename = bareBasenameSchema("Excel", UPLOAD_KIND_CONSTANTS.xlsx.extensions);
+export const zJsonFilename = bareBasenameSchema("JSON", UPLOAD_KIND_CONSTANTS.json.extensions);
+export const zNdjsonFilename = bareBasenameSchema(
+  "NDJSON",
+  UPLOAD_KIND_CONSTANTS.ndjson.extensions,
+);
+
+// Ambyte path/filename rules.
+const AMBIT_SUBFOLDERS = new Set(["1", "2", "3", "4"]);
+const isAllAsciiDigits = (s: string): boolean => {
+  if (s.length === 0) {
+    return false;
+  }
+  for (const c of s) {
+    if (!isAsciiDigit(c)) {
+      return false;
+    }
+  }
+  return true;
+};
+const isAmbyteFolderName = (segment: string): boolean => {
+  if (segment.length < 8 || segment.length > 10) {
+    return false;
+  }
+  if (segment.slice(0, 7).toLowerCase() !== "ambyte_") {
+    return false;
+  }
+  return isAllAsciiDigits(segment.slice(7));
+};
+const isAmbyteTimestampFilename = (name: string): boolean => {
+  if (name.length !== 20) {
+    return false;
+  }
+  return (
+    isAllAsciiDigits(name.slice(0, 8)) &&
+    name[8] === "-" &&
+    isAllAsciiDigits(name.slice(9, 15)) &&
+    name[15] === "_" &&
+    name.slice(16).toLowerCase() === ".txt"
+  );
+};
+
+export const zAmbyteFilename = z
+  .string()
+  .min(1)
+  .max(256)
+  .transform((name, ctx) => {
+    if (!name.toLowerCase().endsWith(".txt")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Ambyte uploads must be .txt files",
+      });
+      return z.NEVER;
+    }
+    if (!name.includes("/")) {
+      if (isAmbyteTimestampFilename(name)) {
+        return `unknown_ambyte/unknown_ambit/${name}`;
+      }
+      return `unknown_ambyte/${name}`;
+    }
+    const parts = name.split("/").filter((p) => p.length > 0);
+    for (let i = parts.length - 2; i >= 0; i--) {
+      if (!isAmbyteFolderName(parts[i])) {
+        continue;
+      }
+      const tail = parts.slice(i);
+      if (tail.length === 2 && tail[1].toLowerCase().endsWith(".txt")) {
+        return tail.join("/");
+      }
+      if (
+        tail.length === 3 &&
+        AMBIT_SUBFOLDERS.has(tail[1]) &&
+        tail[2].toLowerCase().endsWith(".txt")
+      ) {
+        return tail.join("/");
+      }
+    }
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Path must end with "Ambyte_N/*.txt" or "Ambyte_N/[1-4]/*.txt"',
+    });
+    return z.NEVER;
+  });
+
+export const UPLOAD_FILENAME_SCHEMAS = {
+  ambyte: zAmbyteFilename,
+  csv: zCsvFilename,
+  tsv: zTsvFilename,
+  parquet: zParquetFilename,
+  xlsx: zXlsxFilename,
+  json: zJsonFilename,
+  ndjson: zNdjsonFilename,
+} as const satisfies Record<z.infer<typeof zUploadSourceKind>, z.ZodTypeAny>;
+
+// Multipart form data carries: targetKind, targetName, sourceKind, files[]
+export const zUploadDataBody = z.any();
+
+export const zUploadDataResponse = z.object({
+  uploadId: z.string().describe("UUID of this upload"),
+  uploadTableId: z
+    .string()
+    .optional()
+    .describe(
+      "Stable UUID of the logical upload table (assigned on first upload). Present for target-backed uploads.",
+    ),
+  uploadTableName: z
+    .string()
+    .optional()
+    .describe("User-chosen display name for the upload table. Present for target-backed uploads."),
+  runId: z.number().int().optional().describe("Databricks job run id for status polling"),
   files: z.array(
     z.object({
       fileName: z.string(),
       filePath: z.string(),
     }),
   ),
+});
+
+export const zUploadHistoryStatus = z.enum(["pending", "running", "completed", "failed"]);
+
+export const zUploadMetadata = z.object({
+  uploadId: z.string(),
+  experimentId: z.string(),
+  uploadTableId: z.string().nullable(),
+  uploadTableName: z.string().nullable(),
+  sourceKind: zUploadSourceKind,
+  status: zUploadHistoryStatus,
+  fileCount: z.number().int().nullable(),
+  rowCount: z.number().int().nullable(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  completedAt: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+});
+
+export const zListUploadsQuery = z.object({
+  uploadTableId: z.string().uuid().optional(),
+  uploadTableName: zUploadTableName.optional(),
+});
+
+export const zListUploadsResponse = z.object({
+  uploads: z.array(zUploadMetadata),
 });
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
@@ -1456,9 +1758,13 @@ export type ExperimentJoinRequest = z.infer<typeof zExperimentJoinRequest>;
 export type ExperimentJoinRequestList = z.infer<typeof zExperimentJoinRequestList>;
 export type CreateJoinRequestBody = z.infer<typeof zCreateJoinRequestBody>;
 export type JoinRequestPathParam = z.infer<typeof zJoinRequestPathParam>;
-export type DataSourceType = z.infer<typeof zDataSourceType>;
-export type UploadExperimentDataBody = z.infer<typeof zUploadExperimentDataBody>;
-export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataResponse>;
+export type UploadSourceKind = z.infer<typeof zUploadSourceKind>;
+export type UploadDataBody = z.infer<typeof zUploadDataBody>;
+export type UploadDataResponse = z.infer<typeof zUploadDataResponse>;
+export type UploadHistoryStatus = z.infer<typeof zUploadHistoryStatus>;
+export type UploadMetadata = z.infer<typeof zUploadMetadata>;
+export type ListUploadsQuery = z.infer<typeof zListUploadsQuery>;
+export type ListUploadsResponse = z.infer<typeof zListUploadsResponse>;
 
 // Visualization types
 export type ChartFamily = z.infer<typeof zChartFamily>;

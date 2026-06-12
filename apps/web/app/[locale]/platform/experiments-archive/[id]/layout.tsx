@@ -97,7 +97,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const activeTab = getActiveTab();
 
   return (
-    <div className="space-y-6">
+    <div className="page-fluid flex flex-1 flex-col space-y-6">
       <ExperimentTitle
         experimentId={id}
         name={experiment.name}

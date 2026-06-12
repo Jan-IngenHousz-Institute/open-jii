@@ -6,6 +6,7 @@ import { getChartTypeDef } from "@/components/experiment-visualizations/charts/c
 import { DataSourcesFieldArrayProvider } from "@/components/experiment-visualizations/workspace/context/data-sources-field-array-context";
 import { useVisualizationAutosave } from "@/components/experiment-visualizations/workspace/hooks/use-visualization-autosave";
 import { VisualizationLayoutContent } from "@/components/experiment-visualizations/workspace/layout/visualization-layout-content";
+import { PageContainer } from "@/components/page-container";
 import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -36,7 +37,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="visualization-page flex flex-1 flex-col">
+    <PageContainer width="fluid">
       <EntityLayoutShell
         isLoading={isLoading}
         error={error}
@@ -53,7 +54,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
           </VisualizationFormShell>
         )}
       </EntityLayoutShell>
-    </div>
+    </PageContainer>
   );
 }
 

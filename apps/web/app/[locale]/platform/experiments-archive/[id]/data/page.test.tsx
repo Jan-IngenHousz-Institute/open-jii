@@ -63,8 +63,8 @@ vi.mock("@repo/ui/components/skeleton", async () => {
   };
 });
 
-vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () => ({
-  DataUploadModal: ({
+vi.mock("~/components/experiment-data/upload-data-modal/upload-data-modal", () => ({
+  UploadDataModal: ({
     experimentId,
     open,
     onOpenChange,
@@ -74,7 +74,7 @@ vi.mock("~/components/experiment-data/data-upload-modal/data-upload-modal", () =
     onOpenChange: (open: boolean) => void;
   }) => (
     <div
-      data-testid="data-upload-modal"
+      data-testid="upload-data-modal"
       data-experiment-id={experimentId}
       data-open={open}
       onClick={() => onOpenChange(!open)}
@@ -231,10 +231,10 @@ describe("<ExperimentDataPage />", () => {
     render(<ExperimentDataPage params={PARAMS} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("data-upload-modal")).toBeInTheDocument();
+      expect(screen.getByTestId("upload-data-modal")).toBeInTheDocument();
     });
 
-    const modal = screen.getByTestId("data-upload-modal");
+    const modal = screen.getByTestId("upload-data-modal");
     expect(modal).toHaveAttribute("data-open", "false");
     expect(modal).toHaveAttribute("data-experiment-id", EXP_ID);
   });

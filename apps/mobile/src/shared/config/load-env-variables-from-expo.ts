@@ -11,10 +11,6 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
   return {
     prod: {
       REGION: required(process.env.EXPO_PUBLIC_PROD_REGION, "EXPO_PUBLIC_PROD_REGION"),
-      IDENTITY_POOL_ID: required(
-        process.env.EXPO_PUBLIC_PROD_IDENTITY_POOL_ID,
-        "EXPO_PUBLIC_PROD_IDENTITY_POOL_ID",
-      ),
       IOT_ENDPOINT: required(
         process.env.EXPO_PUBLIC_PROD_IOT_ENDPOINT,
         "EXPO_PUBLIC_PROD_IOT_ENDPOINT",
@@ -41,10 +37,6 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
 
     dev: {
       REGION: required(process.env.EXPO_PUBLIC_DEV_REGION, "EXPO_PUBLIC_DEV_REGION"),
-      IDENTITY_POOL_ID: required(
-        process.env.EXPO_PUBLIC_DEV_IDENTITY_POOL_ID,
-        "EXPO_PUBLIC_DEV_IDENTITY_POOL_ID",
-      ),
       IOT_ENDPOINT: required(
         process.env.EXPO_PUBLIC_DEV_IOT_ENDPOINT,
         "EXPO_PUBLIC_DEV_IOT_ENDPOINT",

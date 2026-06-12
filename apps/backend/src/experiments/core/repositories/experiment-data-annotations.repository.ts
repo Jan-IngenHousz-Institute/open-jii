@@ -47,6 +47,14 @@ export class ExperimentDataAnnotationsRepository {
       .string()
       .regex(/^[a-zA-Z0-9_]+$/)
       .max(64),
+    // Table name is either a static identifier (raw_data, device, ...) or a macro UUID
+    tableName: z.union([
+      z
+        .string()
+        .regex(/^[a-zA-Z0-9_]+$/)
+        .max(64),
+      z.string().uuid(),
+    ]),
     content: z.string().max(10000).nullable().optional(),
     flag: z.string().max(100).nullable().optional(),
     userName: z.string().max(255).nullable().optional(),
@@ -59,6 +67,7 @@ export class ExperimentDataAnnotationsRepository {
     uuid: (value: string) => this.schemas.uuid.safeParse(value),
     uuids: (values: string[]) => z.array(this.schemas.uuid).safeParse(values),
     identifier: (value: string) => this.schemas.identifier.safeParse(value),
+    tableName: (value: string) => this.schemas.tableName.safeParse(value),
     content: (value: string | null | undefined) => this.schemas.content.safeParse(value),
     flag: (value: string | null | undefined) => this.schemas.flag.safeParse(value),
     userName: (value: string | null | undefined) => this.schemas.userName.safeParse(value),
@@ -67,7 +76,7 @@ export class ExperimentDataAnnotationsRepository {
       const validations = [
         this.validate.uuid(annotation.id),
         this.validate.uuid(annotation.userId),
-        this.validate.identifier(annotation.tableName),
+        this.validate.tableName(annotation.tableName),
         this.validate.identifier(annotation.type),
         this.validate.content(annotation.contentText),
         this.validate.flag(annotation.flagType),
@@ -158,7 +167,7 @@ export class ExperimentDataAnnotationsRepository {
           '${experimentId}',
           '${annotation.userId}',
           ${this.formatSqlValue(annotation.userName)},
-          '${annotation.tableName}',
+          ${this.formatSqlValue(annotation.tableName)},
           '${annotation.rowId}',
           '${annotation.type}',
           ${this.formatSqlValue(annotation.contentText)},

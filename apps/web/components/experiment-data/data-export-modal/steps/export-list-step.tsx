@@ -1,5 +1,6 @@
 "use client";
 
+import { useTrackExports } from "@/components/activity/use-track-exports";
 import {
   FileText,
   Download,
@@ -43,6 +44,7 @@ import type { CreationStatus } from "../data-export-modal";
 interface ExportListStepProps {
   experimentId: string;
   tableName: string;
+  displayName?: string;
   onCreateExport: (format: string) => void;
   onClose: () => void;
   creationStatus?: CreationStatus;
@@ -242,6 +244,7 @@ const ExportCard = ({
 export function ExportListStep({
   experimentId,
   tableName,
+  displayName,
   onCreateExport,
   onClose,
   creationStatus = "idle",
@@ -249,6 +252,11 @@ export function ExportListStep({
   const { t } = useTranslation("experimentData");
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
   const { downloadExport, isDownloading, downloadingExportId } = useDownloadExport(experimentId);
+  const exports = data?.body.exports ?? [];
+
+  // Mirror every poll into the global activity context so the topbar bell
+  // shows export status without the user keeping this modal open.
+  useTrackExports({ experimentId, tableName, displayName, exports });
 
   if (error) {
     const errorMessage =
@@ -259,8 +267,6 @@ export function ExportListStep({
       </div>
     );
   }
-
-  const exports = data?.body.exports ?? [];
 
   return (
     <div className="flex flex-col gap-4 pt-4">

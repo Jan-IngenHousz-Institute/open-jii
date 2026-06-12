@@ -74,6 +74,6 @@ describe("WorkbookLayout", () => {
     mockUseWorkbook.mockReturnValue({ data: undefined, isLoading: false, error: null });
     const { container } = render(<WorkbookLayout>Child</WorkbookLayout>);
     expect(screen.queryByText("Child")).not.toBeInTheDocument();
-    expect(container.querySelector(".workbook-page")).toBeInTheDocument();
+    expect(container.querySelector(".page-fluid")).toBeInTheDocument();
   });
 });
