@@ -728,9 +728,8 @@ export function extendLayoutForFacets(
   // per-cell axis title so it doesn't render on top of the shared one.
   const sharedXTitleOn = options.sharedXTitle === true;
   const sharedYTitleOn = options.sharedYTitle === true;
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i];
-    if (!cell) continue;
+  const safeCells = cells.filter((cell): cell is (typeof cells)[number] => Boolean(cell));
+  for (const [i, cell] of safeCells.entries()) {
     const { isLastRow, isFirstColumn } = cellPosition(i, options.rows, options.columns);
     const isFirstCell = i === 0;
     // X axis: cell 0 is the master; subsequent cells match it when
@@ -772,7 +771,7 @@ export function extendLayoutForFacets(
   const existingAnnotations =
     (baseLayout.annotations as Array<Record<string, unknown>> | undefined) ?? [];
   const cellTitleFontSize = options.titleFontSize ?? 12;
-  const cellTitles = cells
+  const cellTitles = safeCells
     .filter((c) => c.title.length > 0)
     .map((cell) => ({
       text: cell.title,
