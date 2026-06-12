@@ -1,6 +1,5 @@
 "use client";
 
-import { EditableWorkbookTitle } from "@/features/workbooks/components/editable-workbook-title";
 import { WorkbookEditor } from "@/features/workbooks/components/workbook-editor";
 import { useWorkbook } from "@/features/workbooks/hooks/useWorkbook/useWorkbook";
 import { useWorkbookExecution } from "@/features/workbooks/hooks/useWorkbookExecution/useWorkbookExecution";
@@ -65,26 +64,6 @@ function WorkbookEditorWithAutosave({
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
-  const [title, setTitle] = useState(name);
-  const renameRequestRef = useRef(0);
-
-  const handleRename = useCallback(
-    async (next: string) => {
-      const requestId = ++renameRequestRef.current;
-      const previous = title;
-      setTitle(next);
-      try {
-        await updateWorkbook({ params: { id }, body: { name: next } });
-      } catch (err) {
-        // Only roll back if this is still the latest rename, so a slow failure
-        // can't clobber a newer successful rename.
-        if (renameRequestRef.current === requestId) setTitle(previous);
-        const message = parseApiError(err)?.message;
-        toast({ description: message ?? t("workbooks.renameError"), variant: "destructive" });
-      }
-    },
-    [id, title, updateWorkbook, t],
-  );
 
   const [promptedQuestionId, setPromptedQuestionId] = useState<string | undefined>();
   const questionResolverRef = useRef<((answer: string | undefined) => void) | null>(null);
@@ -177,12 +156,11 @@ function WorkbookEditorWithAutosave({
 
   return (
     <div className="space-y-6">
-      <EditableWorkbookTitle name={title} onRename={handleRename} readOnly={!isCreator} />
       <WorkbookEditor
         cells={cells}
         onCellsChange={handleCellsChange}
         readOnly={!isCreator}
-        title={title}
+        title={name}
         executionStates={executionStates}
         isConnected={isConnected}
         isConnecting={isConnecting}
