@@ -7,12 +7,11 @@ import React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
+import { db } from "~/shared/db/client";
 import { AlertDialog } from "~/shared/ui/AlertDialog";
 import { ConfiguredQueryClientProvider } from "~/shared/ui/configured-query-client-provider";
 import { ThemeProvider } from "~/shared/ui/context/ThemeContext";
 import { ErrorBoundary } from "~/shared/ui/error-boundary";
-
-import { db } from "~/shared/db/client";
 
 // Composition root for the ALWAYS-ON provider pyramid (theme, query client,
 // sheets, toasts) — everything the force-update gate itself needs to render.

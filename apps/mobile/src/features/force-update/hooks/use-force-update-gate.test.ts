@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PageForceUpdateFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 
-import { useForceUpdateGate } from "../use-force-update-gate";
+import { useForceUpdateGate } from "./use-force-update-gate";
 
 const {
   foregroundListeners,
