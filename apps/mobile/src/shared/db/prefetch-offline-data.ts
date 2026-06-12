@@ -75,21 +75,25 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
         if (experiment.workbookId && experiment.workbookVersionId) {
           const workbookId = experiment.workbookId;
           const workbookVersionId = experiment.workbookVersionId;
-          const versionResponse = await queryClient.fetchQuery({
-            queryKey: ["workbook-version", workbookId, workbookVersionId],
-            queryFn: async () =>
-              tsr.workbooks.getWorkbookVersion.query({
-                params: { id: workbookId, versionId: workbookVersionId },
-              }),
-            staleTime: 0,
-          });
+          try {
+            const versionResponse = await queryClient.fetchQuery({
+              queryKey: ["workbook-version", workbookId, workbookVersionId],
+              queryFn: async () =>
+                tsr.workbooks.getWorkbookVersion.query({
+                  params: { id: workbookId, versionId: workbookVersionId },
+                }),
+              staleTime: 0,
+            });
 
-          const cells =
-            (versionResponse as { body?: { cells?: WorkbookCell[] } })?.body?.cells ?? [];
-          const { protocolIds, macroIds } = extractAssetIdsFromCells(cells);
-          allProtocolIds.push(...protocolIds);
-          allMacroIds.push(...macroIds);
-          return;
+            const cells =
+              (versionResponse as { body?: { cells?: WorkbookCell[] } })?.body?.cells ?? [];
+            const { protocolIds, macroIds } = extractAssetIdsFromCells(cells);
+            allProtocolIds.push(...protocolIds);
+            allMacroIds.push(...macroIds);
+            return;
+          } catch {
+            // Fall through to legacy flow-graph resolution below.
+          }
         }
 
         const flowResponse: any = await queryClient.fetchQuery({

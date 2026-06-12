@@ -24,5 +24,6 @@ export function useWorkbookVersionQuery(
     queryKey: ["workbook-version", workbookId, workbookVersionId],
     queryData: { params: { id: workbookId ?? "", versionId: workbookVersionId ?? "" } },
     enabled: !!workbookId && !!workbookVersionId,
+    networkMode: "offlineFirst",
   });
 }
