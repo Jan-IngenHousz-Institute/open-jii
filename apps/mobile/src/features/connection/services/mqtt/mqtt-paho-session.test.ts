@@ -123,12 +123,11 @@ describe("createPahoSessionFactory", () => {
       for (let i = 0; i < 20 && FakePahoClient.instances.length === 0; i++) {
         await Promise.resolve();
       }
-      expect(mockGetCredentials).toHaveBeenCalledWith({
-        identityPoolId: "env-IDENTITY_POOL_ID",
-        region: "env-REGION",
-      });
+      // Credentials are now minted from the signed-in Cognito session server-side,
+      // so the client fetches them with no arguments.
+      expect(mockGetCredentials).toHaveBeenCalledWith();
       expect(mockCreateSignedUrl).toHaveBeenCalledWith({
-        clientId: "env-CLIENT_ID - rand-abc",
+        clientId: "env-CLIENT_ID_rand-abc",
         accessKeyId: "AKIA",
         secretAccessKey: "secret",
         sessionToken: "session",
