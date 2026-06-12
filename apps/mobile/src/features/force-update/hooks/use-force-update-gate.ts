@@ -44,7 +44,8 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
   useEffect(() => {
     if (!envLoaded) return;
     return onAppForeground(() => {
-      void queryClient.fetchQuery({
+      // prefetchQuery never rejects — a failed refresh keeps the cached decision.
+      void queryClient.prefetchQuery({
         queryKey,
         queryFn: () => fetchForceUpdate(locale),
         staleTime: FIVE_MINUTES,

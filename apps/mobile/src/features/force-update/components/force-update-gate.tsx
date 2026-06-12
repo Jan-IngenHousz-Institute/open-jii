@@ -1,7 +1,7 @@
 import * as Application from "expo-application";
 import { ArrowRight, ArrowUpCircle } from "lucide-react-native";
 import React from "react";
-import { Linking, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useForceUpdateGate } from "~/features/force-update/hooks/use-force-update-gate";
 import { useTranslation } from "~/shared/i18n";
@@ -100,7 +100,8 @@ function ForceUpdateScreen({ gate }: { gate: PageForceUpdateFieldsFragment }) {
         size="lg"
         isDisabled={!url}
         onPress={() => {
-          if (url) void Linking.openURL(url);
+          if (!url) return;
+          Linking.openURL(url).catch(() => Alert.alert(t("openLinkFailed"), url));
         }}
       />
     </View>

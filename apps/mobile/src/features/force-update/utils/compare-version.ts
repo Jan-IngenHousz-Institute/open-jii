@@ -11,8 +11,9 @@ function parseVersion(value: string): [number, number, number] | null {
   if (!core) return null;
   const segments = core.split(".");
   if (segments.length > 3) return null;
+  // Number("") is 0, so "1..2" or ".1" would otherwise parse as valid.
+  if (segments.some((s) => !/^\d+$/.test(s))) return null;
   const nums = segments.map((s) => Number(s));
-  if (nums.some((n) => !Number.isInteger(n) || n < 0)) return null;
   return [nums[0] ?? 0, nums[1] ?? 0, nums[2] ?? 0];
 }
 

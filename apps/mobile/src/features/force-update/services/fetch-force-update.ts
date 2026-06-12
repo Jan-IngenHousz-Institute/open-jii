@@ -23,7 +23,7 @@ function getClient(): ContentfulSdk | null {
   if (!spaceId || !accessToken) return null;
 
   // Re-create when env switches (dev ↔ prod) so we don't keep stale credentials.
-  const key = `${spaceId}:${environment}`;
+  const key = `${spaceId}:${environment}:${accessToken}`;
   if (cachedSdk && cachedKey === key) return cachedSdk;
 
   const { client } = createContentfulClient({

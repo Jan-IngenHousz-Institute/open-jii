@@ -8830,7 +8830,12 @@ export const PageFaqDocument = gql`
 `;
 export const PageForceUpdateDocument = gql`
   query pageForceUpdate($preview: Boolean, $locale: String) {
-    pageForceUpdateCollection(limit: 1, preview: $preview, locale: $locale) {
+    pageForceUpdateCollection(
+      limit: 1
+      order: [sys_publishedAt_DESC]
+      preview: $preview
+      locale: $locale
+    ) {
       items {
         ...PageForceUpdateFields
       }

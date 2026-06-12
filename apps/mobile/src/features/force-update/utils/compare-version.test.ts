@@ -36,4 +36,11 @@ describe("isVersionBelow", () => {
     expect(isVersionBelow("1.0.0", "x.y.z")).toBe(false);
     expect(isVersionBelow("1.0.0.0", "1.0.0")).toBe(false);
   });
+
+  it("fails safe on empty version segments", () => {
+    expect(isVersionBelow("1..2", "2.0.0")).toBe(false);
+    expect(isVersionBelow(".1", "1.0.0")).toBe(false);
+    expect(isVersionBelow("1.", "2.0.0")).toBe(false);
+    expect(isVersionBelow("1.0.0", "1..2")).toBe(false);
+  });
 });
