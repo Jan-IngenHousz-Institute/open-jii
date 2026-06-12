@@ -200,11 +200,9 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
 
   /** Best-effort `-1+` cancel switch to the device. */
   private sendCancel(): void {
-    if (this.transport) {
-      void this.transport
-        .send(addLineEnding(MULTISPEQ_CONSOLE.CANCEL, MULTISPEQ_FRAMING.LINE_ENDING))
-        .catch(() => undefined);
-    }
+    this.transport
+      ?.send(addLineEnding(MULTISPEQ_CONSOLE.CANCEL, MULTISPEQ_FRAMING.LINE_ENDING))
+      .catch(() => undefined);
   }
 
   /**
