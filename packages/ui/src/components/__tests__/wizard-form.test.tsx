@@ -104,7 +104,9 @@ const Step3 = ({
 );
 
 describe("WizardForm", () => {
-  let onSubmitMock: ReturnType<typeof vi.fn>;
+  let onSubmitMock: ReturnType<
+    typeof vi.fn<(data: { firstName: string; email: string; agreeTerms: boolean }) => void>
+  >;
   let user: ReturnType<typeof userEvent.setup>;
 
   const renderWizardForm = (options = {}) => {

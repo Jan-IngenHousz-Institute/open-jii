@@ -289,7 +289,7 @@ describe("ScatterChart", () => {
             colorscale: "Viridis",
             showscale: true,
             colorbar: {
-              title: "Values",
+              title: { text: "Values" },
               thickness: 15,
             },
           },

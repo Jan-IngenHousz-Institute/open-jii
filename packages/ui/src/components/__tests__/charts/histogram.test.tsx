@@ -1172,8 +1172,7 @@ describe("Histogram2D", () => {
           y: [2, 4, 6, 8, 10],
           name: "Test",
           colorbar: {
-            title: "Custom Title",
-            titleside: "top" as const,
+            title: { text: "Custom Title", side: "top" as const },
             thickness: 20,
             len: 0.8,
             x: 1.1,
@@ -1187,8 +1186,7 @@ describe("Histogram2D", () => {
       const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
 
       expect(chartData[0].colorbar).toEqual({
-        title: "Custom Title",
-        titleside: "top",
+        title: { text: "Custom Title", side: "top" },
         thickness: 20,
         len: 0.8,
         x: 1.1,

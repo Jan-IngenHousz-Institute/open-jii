@@ -587,8 +587,7 @@ describe("LineChart", () => {
             colorscale: "Viridis",
             showscale: true,
             colorbar: {
-              title: "Value",
-              titleside: "right",
+              title: { text: "Value", side: "right" },
             },
           },
         },

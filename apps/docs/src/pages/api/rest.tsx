@@ -5,7 +5,7 @@ import "swagger-ui-react/swagger-ui.css";
 
 import styles from "./api.module.css";
 
-export default function RestApiPage(): JSX.Element {
+export default function RestApiPage(): React.JSX.Element {
   return (
     <Layout title="REST API Documentation" description="openJII REST API Documentation">
       <Head>

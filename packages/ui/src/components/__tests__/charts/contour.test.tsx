@@ -191,8 +191,7 @@ describe("ContourPlot", () => {
         colorscale: "Hot",
         showscale: true,
         colorbar: {
-          title: "Temperature",
-          titleside: "top",
+          title: { text: "Temperature", side: "top" },
           thickness: 20,
           len: 0.8,
           x: 1.1,
@@ -208,8 +207,7 @@ describe("ContourPlot", () => {
       colorscale: "Hot",
       showscale: true,
       colorbar: {
-        title: "Temperature",
-        titleside: "top",
+        title: { text: "Temperature", side: "top" },
         thickness: 20,
         len: 0.8,
         x: 1.1,

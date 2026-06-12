@@ -10,7 +10,7 @@
     "clean": "git clean -xdf .cache .next .turbo node_modules .open-next",
     "start": "next start",
     "lint": "eslint",
-    "check-types": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",

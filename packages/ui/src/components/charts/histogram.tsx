@@ -222,6 +222,7 @@ export function Histogram({
   if (fitOverlay === "normal") {
     for (let i = 0; i < data.length; i++) {
       const series = data[i];
+      if (!series) continue;
       const seriesOrientation = series.orientation || orientation;
       const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
       if (!valuesForFit || valuesForFit.length === 0) continue;

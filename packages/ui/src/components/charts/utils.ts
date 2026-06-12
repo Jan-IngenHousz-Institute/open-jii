@@ -730,6 +730,7 @@ export function extendLayoutForFacets(
   const sharedYTitleOn = options.sharedYTitle === true;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
+    if (!cell) continue;
     const { isLastRow, isFirstColumn } = cellPosition(i, options.rows, options.columns);
     const isFirstCell = i === 0;
     // X axis: cell 0 is the master; subsequent cells match it when

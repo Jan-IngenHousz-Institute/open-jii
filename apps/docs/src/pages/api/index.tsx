@@ -2,11 +2,10 @@ import Head from "@docusaurus/Head";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
-import React from "react";
 
 import styles from "./api.module.css";
 
-export default function ApiIndexPage(): JSX.Element {
+export default function ApiIndexPage(): React.JSX.Element {
   const { siteConfig } = useDocusaurusContext();
 
   return (
