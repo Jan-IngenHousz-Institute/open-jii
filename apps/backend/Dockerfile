@@ -11,6 +11,8 @@ ENV TURBO_TELEMETRY_DISABLED=1
 FROM alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+# Non-interactive pnpm: auto-confirm prompts like the v11 modules-purge check
+ENV CI=true
 RUN corepack enable
 RUN npm install turbo --global
 
