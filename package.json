@@ -41,26 +41,8 @@
     "typescript": "catalog:",
     "vitest": "catalog:testing"
   },
-  "packageManager": "pnpm@10.7.1+sha512.2d92c86b7928dc8284f53494fb4201f983da65f0fb4f0d40baafa5cf628fa31dae3e5968f12466f17df7e97310e30f343a648baea1b9b350685dafafffdf5808",
+  "packageManager": "pnpm@11.6.0+sha512.9a36518224080c6fe5165afdcfe79bfa118c29be703f3f462b1e32efe1e98e47e8750b148e08286250aad4113cc7993ca413c4e2cd447752708c2ee5751bc95f",
   "engines": {
     "node": ">=22"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "better-sqlite3",
-      "turbo",
-      "@shopify/react-native-skia"
-    ],
-    "overrides": {
-      "react": "catalog:react19",
-      "react-dom": "catalog:react19",
-      "lodash": "^4.18.0",
-      "shell-quote": "^1.8.4"
-    },
-    "patchedDependencies": {
-      "react-native-usb-serialport-for-android": "patches/react-native-usb-serialport-for-android.patch",
-      "@better-auth/expo@1.5.6": "patches/@better-auth__expo@1.5.6.patch"
-    }
   }
 }
