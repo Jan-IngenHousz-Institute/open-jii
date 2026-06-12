@@ -1,15 +1,13 @@
-import {
-  CognitoIdentityClient,
-  GetIdCommand,
-  GetCredentialsForIdentityCommand,
-} from "@aws-sdk/client-cognito-identity";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
 import "react-native-get-random-values";
+import { getApiClient } from "~/shared/api/client";
 import { createLogger } from "~/shared/observability/logger";
-import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/time/time-sync";
-
-const log = createLogger("mqtt-conn");
+import {
+  ensureSynced,
+  getSyncedUtcDateTime,
+  getSyncedUtcNow,
+  getTimeSyncState,
+} from "~/shared/time/time-sync";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -89,76 +87,13 @@ export async function createSignedUrl(params: {
   return `wss://${params.endpoint}${canonicalUri}?${query}`;
 }
 
-// Cognito IdentityId is durable per device + pool — once issued it can be
-// reused forever. Calling GetId on every connection creates a brand-new
-// identity each time (driving the pool's identity count up indefinitely)
-// and adds a serial request to every upload. Persist it once and reuse.
-const IDENTITY_ID_STORAGE_PREFIX = "cognito_identity_id:";
+const logger = createLogger("aws-iot-auth");
 
-let cachedIdentityId: string | null = null;
-let inflightIdentityIdPromise: Promise<string> | null = null;
-
-function storageKeyFor(identityPoolId: string): string {
-  return `${IDENTITY_ID_STORAGE_PREFIX}${identityPoolId}`;
-}
-
-async function fetchAndPersistIdentityId(
-  identityClient: CognitoIdentityClient,
-  identityPoolId: string,
-): Promise<string> {
-  const { IdentityId } = await identityClient.send(
-    new GetIdCommand({ IdentityPoolId: identityPoolId }),
-  );
-  if (!IdentityId) throw new Error("Missing identity ID");
-  try {
-    await AsyncStorage.setItem(storageKeyFor(identityPoolId), IdentityId);
-  } catch (e) {
-    log.warn("Failed to persist Cognito IdentityId", { err: (e as Error)?.message });
-  }
-  cachedIdentityId = IdentityId;
-  return IdentityId;
-}
-
-async function getOrCreateIdentityId(
-  identityClient: CognitoIdentityClient,
-  identityPoolId: string,
-): Promise<string> {
-  if (cachedIdentityId) return cachedIdentityId;
-  if (inflightIdentityIdPromise) return inflightIdentityIdPromise;
-
-  inflightIdentityIdPromise = (async () => {
-    const stored = await AsyncStorage.getItem(storageKeyFor(identityPoolId));
-    if (stored) {
-      cachedIdentityId = stored;
-      return stored;
-    }
-    return fetchAndPersistIdentityId(identityClient, identityPoolId);
-  })();
-
-  try {
-    return await inflightIdentityIdPromise;
-  } finally {
-    inflightIdentityIdPromise = null;
-  }
-}
-
-async function clearCachedIdentityId(identityPoolId: string): Promise<void> {
-  cachedIdentityId = null;
-  try {
-    await AsyncStorage.removeItem(storageKeyFor(identityPoolId));
-  } catch (e) {
-    log.warn("Failed to clear persisted Cognito IdentityId", { err: (e as Error)?.message });
-  }
-}
-
-// Cognito unauth credentials are valid for ~1h. Reuse the same set across
-// every MQTT publish in that window — kept in memory only (never on disk:
-// these *are* secrets, unlike the IdentityId above). Refresh ~1 min before
-// the SDK-reported Expiration so a publish in flight doesn't race expiry.
+// Developer-authenticated IoT credentials are valid for ~1h. Reuse the same
+// set across every MQTT publish in that window — kept in memory only (never on
+// disk: these *are* secrets). Refresh ~1 min before the reported expiration so
+// a publish in flight doesn't race expiry.
 const CREDENTIALS_SAFETY_MARGIN_MS = 60_000;
-// Fallback TTL if the SDK doesn't populate Expiration (shouldn't happen for
-// Cognito, but defend against an undefined slipping through to NaN math).
-const CREDENTIALS_FALLBACK_TTL_MS = 50 * 60_000;
 
 interface CachedCredentials {
   accessKeyId: string;
@@ -171,35 +106,30 @@ let cachedCredentials: CachedCredentials | null = null;
 let inflightCredentialsPromise: Promise<CachedCredentials> | null = null;
 
 function isStillValid(c: CachedCredentials): boolean {
-  return c.expiresAt - Date.now() > CREDENTIALS_SAFETY_MARGIN_MS;
+  // Compare against the synced clock — the same time source used for SigV4
+  // signing — so a skewed device clock can't keep AWS-expired credentials alive.
+  return c.expiresAt - getSyncedUtcNow() > CREDENTIALS_SAFETY_MARGIN_MS;
 }
 
-function toReturnShape(c: CachedCredentials) {
+function toReturnShape(credentials: CachedCredentials) {
   return {
-    accessKeyId: c.accessKeyId,
-    secretAccessKey: c.secretAccessKey,
-    sessionToken: c.sessionToken,
+    accessKeyId: credentials.accessKeyId,
+    secretAccessKey: credentials.secretAccessKey,
+    sessionToken: credentials.sessionToken,
   };
 }
 
 // Test seam — lets unit tests reset module-level cache state between runs.
-export function _resetIdentityIdCacheForTests(): void {
-  cachedIdentityId = null;
-  inflightIdentityIdPromise = null;
-}
-
 export function _resetCredentialsCacheForTests(): void {
   cachedCredentials = null;
   inflightCredentialsPromise = null;
 }
 
-export async function getCredentials({
-  region,
-  identityPoolId,
-}: {
-  region: string;
-  identityPoolId: string;
-}) {
+// Fetches temporary AWS IoT credentials from the backend, which mints them via
+// Cognito developer-authenticated identities scoped to the signed-in user. The
+// Better Auth session cookie is attached by the shared fetcher; a signed-out
+// caller gets a 401 and a thrown error rather than silent anonymous access.
+export async function getCredentials() {
   if (cachedCredentials && isStillValid(cachedCredentials)) {
     return toReturnShape(cachedCredentials);
   }
@@ -208,49 +138,34 @@ export async function getCredentials({
   }
 
   inflightCredentialsPromise = (async () => {
-    const identityClient = new CognitoIdentityClient({ region });
+    const result = await getApiClient().iot.getCredentials();
 
-    const fetchCredentialsFor = async (IdentityId: string) => {
-      const { Credentials } = await identityClient.send(
-        new GetCredentialsForIdentityCommand({ IdentityId }),
-      );
-      if (!Credentials) throw new Error("Missing credentials");
-      return Credentials;
-    };
-
-    let IdentityId = await getOrCreateIdentityId(identityClient, identityPoolId);
-    let Credentials;
-    try {
-      Credentials = await fetchCredentialsFor(IdentityId);
-    } catch (err) {
-      // The cached identity may have been deleted out from under us (manual
-      // pool cleanup, expired unauth identity, etc). Drop the cache, mint a
-      // fresh one, and try exactly once more.
-      const name = (err as { name?: string })?.name;
-      if (name === "ResourceNotFoundException" || name === "NotAuthorizedException") {
-        log.warn("Cached IdentityId rejected — refreshing", { name });
-        await clearCachedIdentityId(identityPoolId);
-        IdentityId = await fetchAndPersistIdentityId(identityClient, identityPoolId);
-        Credentials = await fetchCredentialsFor(IdentityId);
-      } else {
-        throw err;
-      }
+    if (result.status !== 200) {
+      throw new Error(`Failed to fetch IoT credentials: ${result.status}`);
     }
 
-    const {
-      AccessKeyId: accessKeyId,
-      SecretKey: secretAccessKey,
-      SessionToken: sessionToken,
-      Expiration,
-    } = Credentials;
+    const { accessKeyId, secretAccessKey, sessionToken, expiration } = result.body;
 
     if (!accessKeyId || !secretAccessKey || !sessionToken) {
       throw new Error("Missing one or more required AWS credential fields.");
     }
 
-    const expiresAt = Expiration
-      ? new Date(Expiration).getTime()
-      : Date.now() + CREDENTIALS_FALLBACK_TTL_MS;
+    const expiresAt = new Date(expiration).getTime();
+    if (!Number.isFinite(expiresAt)) {
+      // No silent long-lived fallback: a missing/invalid expiration is a
+      // backend contract breach we must surface, not paper over.
+      logger.error("IoT credentials missing or invalid expiration", { expiration });
+      throw new Error("IoT credentials missing or invalid expiration field.");
+    }
+    if (expiresAt - getSyncedUtcNow() <= CREDENTIALS_SAFETY_MARGIN_MS) {
+      // Already expired (or inside the safety margin) on arrival — caching it
+      // would just fail the first publish and force an immediate refetch.
+      logger.error("IoT credentials already expired or expiring too soon", {
+        expiresAt,
+        now: getSyncedUtcNow(),
+      });
+      throw new Error("IoT credentials already expired or expiring too soon.");
+    }
 
     const next: CachedCredentials = { accessKeyId, secretAccessKey, sessionToken, expiresAt };
     cachedCredentials = next;

@@ -1,6 +1,5 @@
 export interface EnvVariables {
   REGION: string;
-  IDENTITY_POOL_ID: string;
   IOT_ENDPOINT: string;
   CLIENT_ID: string;
   MQTT_TOPIC: string;

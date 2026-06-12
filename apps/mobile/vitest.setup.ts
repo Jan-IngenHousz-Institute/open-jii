@@ -9,14 +9,12 @@ import { vi } from "vitest";
 // in ANY test, regardless of its import graph.
 const EXPO_ENV_DEFAULTS: Record<string, string> = {
   EXPO_PUBLIC_PROD_REGION: "test-region",
-  EXPO_PUBLIC_PROD_IDENTITY_POOL_ID: "test-identity-pool-id",
   EXPO_PUBLIC_PROD_IOT_ENDPOINT: "test-iot-endpoint",
   EXPO_PUBLIC_PROD_CLIENT_ID: "test-client-id",
   EXPO_PUBLIC_PROD_MQTT_TOPIC: "test-mqtt-topic",
   EXPO_PUBLIC_PROD_NEXT_AUTH_URI: "https://test-next-auth.invalid",
   EXPO_PUBLIC_PROD_BACKEND_URI: "https://test-backend.invalid",
   EXPO_PUBLIC_DEV_REGION: "test-region",
-  EXPO_PUBLIC_DEV_IDENTITY_POOL_ID: "test-identity-pool-id",
   EXPO_PUBLIC_DEV_IOT_ENDPOINT: "test-iot-endpoint",
   EXPO_PUBLIC_DEV_CLIENT_ID: "test-client-id",
   EXPO_PUBLIC_DEV_MQTT_TOPIC: "test-mqtt-topic",
