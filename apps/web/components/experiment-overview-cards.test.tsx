@@ -17,7 +17,7 @@ describe("ExperimentOverviewCards", () => {
     expect(screen.getByText("experiments.noExperiments")).toBeInTheDocument();
   });
 
-  it("renders experiment cards with name, description and status", () => {
+  it("renders experiment cards with name and description (no status pill)", () => {
     const exp = createExperiment({
       name: "Photosynthesis Study",
       description: "Measuring chlorophyll",
@@ -26,7 +26,8 @@ describe("ExperimentOverviewCards", () => {
     render(<ExperimentOverviewCards experiments={[exp]} />);
     expect(screen.getByText("Photosynthesis Study")).toBeInTheDocument();
     expect(screen.getByText("Measuring chlorophyll")).toBeInTheDocument();
-    expect(screen.getByText("status.active")).toBeInTheDocument();
+    // Status pill/label was removed from the overview cards (name/description/last-updated only).
+    expect(screen.queryByText("status.active")).not.toBeInTheDocument();
   });
 
   it("links to the correct experiment page", () => {

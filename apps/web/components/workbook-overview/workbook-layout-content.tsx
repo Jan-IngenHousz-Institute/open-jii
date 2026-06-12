@@ -44,9 +44,8 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Title + metadata constrained to max-w-7xl */}
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        {/* Title + save indicator */}
+      {/* Title + metadata — fluid; the parent PageContainer controls overall width. */}
+      <div className="flex w-full flex-col gap-8">
         <div className="flex flex-col gap-2">
           <InlineEditableTitle
             name={workbook.name}
@@ -57,7 +56,6 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
           <AutosaveIndicator status={indicatorStatus} />
         </div>
 
-        {/* Metadata row - stacked labels */}
         <div className="flex items-start gap-10 border-b border-[#EDF2F6] pb-8">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
@@ -90,7 +88,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
         className="-mx-6 -mb-6 flex-1 border-t border-[#EDF2F6] px-6 pb-6"
         style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
       >
-        <div className="mx-auto w-full max-w-7xl">{children}</div>
+        <div className="w-full">{children}</div>
       </div>
     </div>
   );

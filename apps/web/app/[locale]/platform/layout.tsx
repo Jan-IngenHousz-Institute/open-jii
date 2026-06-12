@@ -1,11 +1,20 @@
+import { ActivityProvider } from "@/components/activity/activity-context";
+import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
+import { PageContainer } from "@/components/page-container";
+import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 import { Suspense } from "react";
 import { auth } from "~/app/actions/auth";
 
-import { SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
+import {
+  SidebarEdgePeek,
+  SidebarFloatingReopen,
+  SidebarInset,
+  SidebarProvider,
+} from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
 
 import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
@@ -45,19 +54,23 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <NavigationSidebarWrapper locale={locale} />
-      <SidebarInset>
-        <NavigationTopbar locale={locale} user={session.user} />
-        <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
-          <div className="mx-auto w-full max-w-7xl has-[.visualization-page]:flex has-[.workbook-page]:flex has-[.visualization-page]:max-w-none has-[.workbook-page]:max-w-none has-[.visualization-page]:flex-1 has-[.workbook-page]:flex-1 has-[.visualization-page]:flex-col has-[.workbook-page]:flex-col">
-            <div className="mx-auto w-full max-w-7xl">
+      <ActivityProvider>
+        <NavigationSidebarWrapper locale={locale} />
+        <SidebarEdgePeek />
+        <SidebarFloatingReopen />
+        <SidebarInset>
+          <NavigationTopbar locale={locale} user={session.user} />
+          <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
+            <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
               <Breadcrumbs locale={locale} />
-            </div>
-            <Suspense>{children}</Suspense>
+              <Suspense>{children}</Suspense>
+            </PageContainer>
           </div>
-        </div>
-      </SidebarInset>
-      <Toaster />
+        </SidebarInset>
+        <ShortcutsRoot locale={locale} />
+        <CommandPalette locale={locale} />
+        <Toaster />
+      </ActivityProvider>
     </SidebarProvider>
   );
 }

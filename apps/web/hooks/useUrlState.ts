@@ -59,7 +59,6 @@ export function useUrlState<T>(options: UseUrlStateOptions<T>): readonly [T, (ne
       next.set(key, serialized);
     }
     navigate(next.toString());
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load-bearing signal is `serialized`; depending on searchParams would re-fire on every identity churn.
   }, [serialized, key, navigate]);
 
   // Back/forward replay.
