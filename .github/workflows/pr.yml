@@ -82,6 +82,25 @@ jobs:
         shell: bash
         run: pnpm format:check
 
+  workspace_lint:
+    name: Workspace Lint (sherif)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Sherif Workspace Lint
+        shell: bash
+        run: pnpm lint:ws
+
   mobile_styling_guard:
     name: Mobile Styling Guard
     runs-on: ubuntu-latest
