@@ -2,7 +2,12 @@ import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
 import "react-native-get-random-values";
 import { getApiClient } from "~/shared/api/client";
 import { createLogger } from "~/shared/observability/logger";
-import { ensureSynced, getSyncedUtcDateTime, getTimeSyncState } from "~/shared/time/time-sync";
+import {
+  ensureSynced,
+  getSyncedUtcDateTime,
+  getSyncedUtcNow,
+  getTimeSyncState,
+} from "~/shared/time/time-sync";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -101,7 +106,9 @@ let cachedCredentials: CachedCredentials | null = null;
 let inflightCredentialsPromise: Promise<CachedCredentials> | null = null;
 
 function isStillValid(c: CachedCredentials): boolean {
-  return c.expiresAt - Date.now() > CREDENTIALS_SAFETY_MARGIN_MS;
+  // Compare against the synced clock — the same time source used for SigV4
+  // signing — so a skewed device clock can't keep AWS-expired credentials alive.
+  return c.expiresAt - getSyncedUtcNow() > CREDENTIALS_SAFETY_MARGIN_MS;
 }
 
 function toReturnShape(credentials: CachedCredentials) {
@@ -143,12 +150,21 @@ export async function getCredentials() {
       throw new Error("Missing one or more required AWS credential fields.");
     }
 
-    const expiresAt = expiration ? new Date(expiration).getTime() : NaN;
+    const expiresAt = new Date(expiration).getTime();
     if (!Number.isFinite(expiresAt)) {
       // No silent long-lived fallback: a missing/invalid expiration is a
       // backend contract breach we must surface, not paper over.
       logger.error("IoT credentials missing or invalid expiration", { expiration });
       throw new Error("IoT credentials missing or invalid expiration field.");
+    }
+    if (expiresAt - getSyncedUtcNow() <= CREDENTIALS_SAFETY_MARGIN_MS) {
+      // Already expired (or inside the safety margin) on arrival — caching it
+      // would just fail the first publish and force an immediate refetch.
+      logger.error("IoT credentials already expired or expiring too soon", {
+        expiresAt,
+        now: getSyncedUtcNow(),
+      });
+      throw new Error("IoT credentials already expired or expiring too soon.");
     }
 
     const next: CachedCredentials = { accessKeyId, secretAccessKey, sessionToken, expiresAt };

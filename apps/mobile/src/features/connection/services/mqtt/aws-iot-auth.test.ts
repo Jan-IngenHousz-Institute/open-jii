@@ -19,6 +19,8 @@ vi.mock("~/shared/time/time-sync", () => ({
   // createSignedUrl calls .toFormat on the returned DateTime; return a stub that
   // echoes the format so signing proceeds deterministically.
   getSyncedUtcDateTime: vi.fn(() => ({ toFormat: (fmt: string) => fmt })),
+  // Tests drive time via vi.setSystemTime, so the "synced" clock is Date.now().
+  getSyncedUtcNow: vi.fn(() => Date.now()),
   getTimeSyncState: vi.fn(() => ({ timezone: "UTC" })),
 }));
 vi.mock("~/features/connection/utils/emitter", () => ({ Emitter: vi.fn() }));
@@ -152,6 +154,23 @@ describe("getCredentials — backend endpoint", () => {
     await expect(mod.getCredentials()).rejects.toThrow("Failed to fetch IoT credentials: 401");
 
     // Next caller retries rather than returning a poisoned cache.
+    mockGetCredentials.mockResolvedValue(okResponse(new Date(Date.now() + 3600_000).toISOString()));
+    const creds = await mod.getCredentials();
+    expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
+  });
+
+  it("rejects credentials that are already expired or expire within the safety margin", async () => {
+    // Expires in 30s — inside the 60s safety margin, so caching it would only
+    // fail the first publish.
+    mockGetCredentials.mockResolvedValueOnce(
+      okResponse(new Date(Date.now() + 30_000).toISOString()),
+    );
+
+    const mod = await freshModule();
+    await expect(mod.getCredentials()).rejects.toThrow(
+      "IoT credentials already expired or expiring too soon.",
+    );
+
     mockGetCredentials.mockResolvedValue(okResponse(new Date(Date.now() + 3600_000).toISOString()));
     const creds = await mod.getCredentials();
     expect(creds.accessKeyId).toBe("AKIA-EXAMPLE");
