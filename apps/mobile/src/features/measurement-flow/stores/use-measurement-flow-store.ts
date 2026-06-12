@@ -227,7 +227,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         set((state) => {
           const stack = state.branchReturnStack;
           const top = stack[stack.length - 1];
-          if (top && top.landing === state.currentFlowStep) {
+          if (top?.landing === state.currentFlowStep) {
             return {
               branchReturnStack: [...stack.slice(0, -1), { landing, step: top.step }],
             };

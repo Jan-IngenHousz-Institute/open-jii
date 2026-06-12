@@ -511,7 +511,9 @@ describe("useMeasurementFlowStore", () => {
       // User was on q1 (index 1) before the branch at index 2 jumped to 5.
       useMeasurementFlowStore.setState({ currentFlowStep: 2 });
       useMeasurementFlowStore.getState().recordBranchJump(5);
-      expect(useMeasurementFlowStore.getState().branchReturnStack).toEqual([{ landing: 5, step: 1 }]);
+      expect(useMeasurementFlowStore.getState().branchReturnStack).toEqual([
+        { landing: 5, step: 1 },
+      ]);
     });
 
     it("recordBranchJump inherits the return target for a chained branch", () => {
@@ -521,7 +523,9 @@ describe("useMeasurementFlowStore", () => {
         branchReturnStack: [{ landing: 5, step: 1 }],
       });
       useMeasurementFlowStore.getState().recordBranchJump(8);
-      expect(useMeasurementFlowStore.getState().branchReturnStack).toEqual([{ landing: 8, step: 1 }]);
+      expect(useMeasurementFlowStore.getState().branchReturnStack).toEqual([
+        { landing: 8, step: 1 },
+      ]);
     });
 
     it("previousStep unwinds a branch jump instead of stepping into a skipped node", () => {
