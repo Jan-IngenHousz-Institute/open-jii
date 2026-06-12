@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  canRequestToJoinExperiment,
+  findMember,
+  isAdmin,
+} from "@/features/experiments/domain/access";
 import { useLocale } from "@/shared/i18n/useLocale";
 import { formatDate } from "@/shared/utils/date";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
@@ -69,10 +74,11 @@ export function ExperimentDetailsCard({
   const [transitionsReady, setTransitionsReady] = useState(false);
   const { data: session } = useSession();
   const currentUserId = session?.user.id;
-  const currentMember = members.find((m) => m.user.id === currentUserId);
+  const currentMember = findMember(members, currentUserId);
   const currentUserRole = currentMember?.role;
   const canRequestToJoin =
-    currentUserId && !currentMember && !isArchived && experiment.visibility === "public";
+    !!currentUserId &&
+    canRequestToJoinExperiment(experiment, { isArchived, isMember: !!currentMember });
 
   useEffect(() => {
     const stored = localStorage.getItem(DETAILS_PANEL_STORAGE_KEY);
@@ -195,7 +201,7 @@ export function ExperimentDetailsCard({
                 className="text-muted-foreground mx-4 border-t"
               />
 
-              {currentUserRole === "admin" ? (
+              {isAdmin(currentUserRole) ? (
                 <ExperimentVisibilityCard
                   experimentId={experimentId}
                   initialVisibility={experiment.visibility}

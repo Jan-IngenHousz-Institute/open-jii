@@ -1,5 +1,6 @@
 "use client";
 
+import { countAdmins } from "@/features/experiments/domain/access";
 import { useUserSearch } from "@/features/experiments/hooks/useUserSearch";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useMemo, useState } from "react";
@@ -95,10 +96,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
     }
   };
 
-  // Calculate admin count
-  const adminCount = useMemo(() => {
-    return members.filter((m) => m.role === "admin").length;
-  }, [members]);
+  const adminCount = useMemo(() => countAdmins(members), [members]);
 
   const membersWithUserInfo = useMemo(
     () =>

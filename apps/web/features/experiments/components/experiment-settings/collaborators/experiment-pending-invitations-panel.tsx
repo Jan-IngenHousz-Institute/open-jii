@@ -1,5 +1,6 @@
 "use client";
 
+import { canManageMembers } from "@/features/experiments/domain/access";
 import { Mail } from "lucide-react";
 
 import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
@@ -92,7 +93,7 @@ export function ExperimentPendingInvitationsPanel({
           <div className="flex flex-shrink-0">
             <Select
               value={invitation.role}
-              disabled={isArchived || !isAdmin}
+              disabled={!canManageMembers({ isAdmin, isArchived })}
               onValueChange={(value) => handleInvitationValueChange(value, invitation)}
             >
               <SelectTrigger className="w-[100px]">

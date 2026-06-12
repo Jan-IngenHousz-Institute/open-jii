@@ -1,3 +1,7 @@
+import {
+  isAdmin as isAdminRole,
+  isLastAdmin as isLastAdminRole,
+} from "@/features/experiments/domain/access";
 import { useExperimentMemberRoleUpdate } from "@/features/experiments/hooks/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
 import { parseApiError } from "@/shared/api/apiError";
 import { useLocale } from "@/shared/i18n/useLocale";
@@ -59,7 +63,7 @@ export function MemberList({
   const [showDemoteConfirmDialog, setShowDemoteConfirmDialog] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const { mutate: updateMemberRole } = useExperimentMemberRoleUpdate();
-  const isCurrentUserAdmin = currentUserRole === "admin";
+  const isCurrentUserAdmin = isAdminRole(currentUserRole);
 
   // Handle role change
   const handleRoleChange = async (
@@ -191,7 +195,7 @@ export function MemberList({
     <>
       <div className="border-border divide-border divide-y overflow-hidden rounded-lg border">
         {membersWithUserInfo.map((member) => {
-          const isLastAdmin = member.role === "admin" && adminCount === 1;
+          const isLastAdmin = isLastAdminRole(member.role, adminCount);
           const isCurrentUser = member.user.userId === currentUserId;
           const isOptimistic =
             isAddingMember && member.user.firstName === "" && member.user.lastName === "";

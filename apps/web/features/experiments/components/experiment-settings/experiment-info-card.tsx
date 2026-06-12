@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  findMember,
+  isAdmin as isAdminRole,
+  isExperimentArchived,
+} from "@/features/experiments/domain/access";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
@@ -21,13 +26,11 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
   const { data: session } = useSession();
   const currentUserId = session?.user.id;
 
-  const currentMember = currentUserId
-    ? members.find((m) => m.user.id === currentUserId)
-    : undefined;
-  const isAdmin = currentMember?.role === "admin";
+  const currentMember = findMember(members, currentUserId);
+  const isAdmin = isAdminRole(currentMember?.role);
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.EXPERIMENT_DELETION);
 
-  const isArchived = experiment.status === "archived";
+  const isArchived = isExperimentArchived(experiment);
 
   if (!isAdmin && !isDeletionEnabled) return null;
 

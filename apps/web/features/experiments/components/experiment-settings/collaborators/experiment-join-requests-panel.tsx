@@ -1,5 +1,6 @@
 "use client";
 
+import { canManageJoinRequests } from "@/features/experiments/domain/access";
 import { useApproveJoinRequest } from "@/features/experiments/hooks/join-request/useApproveJoinRequest/useApproveJoinRequest";
 import { useExperimentJoinRequests } from "@/features/experiments/hooks/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
 import { useRejectJoinRequest } from "@/features/experiments/hooks/join-request/useRejectJoinRequest/useRejectJoinRequest";
@@ -77,7 +78,7 @@ function JoinRequestRow({
             </span>
           )}
         </div>
-        {isAdmin && !isArchived && (
+        {canManageJoinRequests({ isAdmin, isArchived }) && (
           <TooltipProvider delayDuration={200}>
             <div className="flex shrink-0 gap-2">
               <Tooltip>
