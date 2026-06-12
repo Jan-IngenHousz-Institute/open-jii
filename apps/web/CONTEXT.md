@@ -61,8 +61,9 @@ Settled during the web finishing pass (OJD-1598), carrying mobile's calls forwar
 - **workbooks** — protocol & macro development workbooks: editor, cell execution, versioning/go-live. Backend mirror: `apps/backend/src/workbooks/`.
 - **protocols** / **macros** — library CRUD + code editors; `protocol-run` lives under protocols.
 - **iot** — device communication (MultispeQ), sensor families. Backend mirror: `apps/backend/src/iot/`.
-- **auth** — login/register/verify flows over next-auth.
+- **auth** — login/register/verify flows over Better Auth.
 - **account** — account settings + profile.
 - **dashboard** — landing dashboard and its cards.
+- **navigation** — sidebar/topbar/breadcrumb shell. A feature (not shared/ui) because it composes auth and account hooks; shared/ may not import features.
 
-`shared/` holds the cross-feature substrate: `api` (tsr client, fetch wrapper, error helpers, server actions), `ui` (cross-feature widgets: data-filters, navigation, breadcrumbs, banners), `providers` (composition root), `i18n`, `analytics` (PostHog), `cms` (Contentful), `utils` (pure helpers).
+`shared/` holds the cross-feature substrate: `api` (tsr client, fetch wrapper, error helpers, server actions), `ui` (cross-feature widgets: data-filters, pickers, breadcrumbs, banners, presentational badges), `providers` (composition root), `hooks` (generic React hooks: autosave, debounce, URL state), `i18n`, `analytics` (PostHog), `cms` (Contentful), `utils` (pure helpers).

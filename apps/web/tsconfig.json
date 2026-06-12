@@ -14,12 +14,8 @@
       "~/*": ["./*"],
       "@/features/*": ["./features/*"],
       "@/shared/*": ["./shared/*"],
-      "@/components/*": ["./components/*"],
-      "@/util/*": ["./util/*"],
-      "@/hooks/*": ["./hooks/*"],
       "@/test/*": ["./test/*"],
-      "@repo/cms/lib/*": ["../../packages/cms/src/lib/*"],
-      "@/lib/*": ["./lib/*"]
+      "@repo/cms/lib/*": ["../../packages/cms/src/lib/*"]
     },
     "incremental": true,
     "resolveJsonModule": true
