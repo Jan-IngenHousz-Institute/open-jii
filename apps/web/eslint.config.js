@@ -36,8 +36,14 @@ const envImportPath = {
 
 // Exact-match paths: bans the bare feature specifier (a barrel), not deep imports.
 const noBarrelPaths = FEATURES.flatMap((feature) => [
-  { name: `@/features/${feature}`, message: "No feature barrels — deep-import the concrete module." },
-  { name: `~/features/${feature}`, message: "No feature barrels — deep-import the concrete module." },
+  {
+    name: `@/features/${feature}`,
+    message: "No feature barrels — deep-import the concrete module.",
+  },
+  {
+    name: `~/features/${feature}`,
+    message: "No feature barrels — deep-import the concrete module.",
+  },
 ]);
 
 const noAppImports = {
@@ -121,7 +127,10 @@ const domainPurityBlocks = FEATURES.map((feature) => ({
           crossFeature(feature),
           noAppImports,
           noLegacyDirs,
-          { group: ["next/**", "react-dom/**"], message: "domain/ is pure — no framework imports." },
+          {
+            group: ["next/**", "react-dom/**"],
+            message: "domain/ is pure — no framework imports.",
+          },
           { group: ["@repo/ui/**"], message: "domain/ is pure — no UI imports." },
           {
             group: ["@/shared/api/**", "~/shared/api/**"],
@@ -158,11 +167,7 @@ const sharedBoundaryBlocks = [
   {
     files: ["shared/**"],
     // providers/ is the composition root; tests wire features the same way.
-    ignores: [
-      "shared/providers/**",
-      "shared/**/*.test.*",
-      ...LEGACY_SHARED_TO_FEATURE_FILES,
-    ],
+    ignores: ["shared/providers/**", "shared/**/*.test.*", ...LEGACY_SHARED_TO_FEATURE_FILES],
     rules: sharedRule("error"),
   },
   ...(LEGACY_SHARED_TO_FEATURE_FILES.length
