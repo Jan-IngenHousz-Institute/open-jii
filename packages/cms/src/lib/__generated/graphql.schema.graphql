@@ -519,6 +519,8 @@ type ComponentButtonLinkingCollections {
   entryCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): EntryCursorCollection
   footerCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsFooterCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): FooterCollection
   footerCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsFooterCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): FooterCursorCollection
+  pageForceUpdateCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageForceUpdateCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): PageForceUpdateCollection
+  pageForceUpdateCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageForceUpdateCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): PageForceUpdateCursorCollection
   pageHomeHeroCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageHomeHeroCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): PageHomeHeroCollection
   pageHomeHeroCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageHomeHeroCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): PageHomeHeroCursorCollection
 }
@@ -619,6 +621,48 @@ enum ComponentButtonLinkingCollectionsFooterCursorCollectionOrder {
   menuTitle_DESC
   supportTitle_ASC
   supportTitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+enum ComponentButtonLinkingCollectionsPageForceUpdateCollectionOrder {
+  active_ASC
+  active_DESC
+  effectiveAt_ASC
+  effectiveAt_DESC
+  internalName_ASC
+  internalName_DESC
+  minVersion_ASC
+  minVersion_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+enum ComponentButtonLinkingCollectionsPageForceUpdateCursorCollectionOrder {
+  active_ASC
+  active_DESC
+  effectiveAt_ASC
+  effectiveAt_DESC
+  internalName_ASC
+  internalName_DESC
+  minVersion_ASC
+  minVersion_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -2760,6 +2804,147 @@ enum PageFaqQuestionsCursorCollectionOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageForceUpdate)
+"""
+type PageForceUpdate implements Entry & _Node {
+  _id: ID!
+  active(locale: String, useFallbackLocale: Boolean): Boolean
+  body(locale: String, useFallbackLocale: Boolean): PageForceUpdateBody
+  contentfulMetadata: ContentfulMetadata!
+  effectiveAt(locale: String, useFallbackLocale: Boolean): DateTime
+  internalName(locale: String, useFallbackLocale: Boolean): String
+  linkedFrom(allowedLocales: [String]): PageForceUpdateLinkingCollections
+  minVersion(locale: String, useFallbackLocale: Boolean): String
+  sys: Sys!
+  title(locale: String, useFallbackLocale: Boolean): String
+  updateCta(locale: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentButtonFilter): ComponentButton
+}
+
+type PageForceUpdateBody {
+  json: JSON!
+  links: PageForceUpdateBodyLinks!
+}
+
+type PageForceUpdateBodyAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type PageForceUpdateBodyEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type PageForceUpdateBodyLinks {
+  assets: PageForceUpdateBodyAssets!
+  entries: PageForceUpdateBodyEntries!
+  resources: PageForceUpdateBodyResources!
+}
+
+type PageForceUpdateBodyResources {
+  block: [PageForceUpdateBodyResourcesBlock!]!
+  hyperlink: [PageForceUpdateBodyResourcesHyperlink!]!
+  inline: [PageForceUpdateBodyResourcesInline!]!
+}
+
+type PageForceUpdateBodyResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageForceUpdateBodyResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageForceUpdateBodyResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageForceUpdateCollection {
+  items: [PageForceUpdate]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type PageForceUpdateCursorCollection {
+  items: [PageForceUpdate]!
+  limit: Int!
+  pages: CursorPages!
+}
+
+input PageForceUpdateFilter {
+  AND: [PageForceUpdateFilter]
+  OR: [PageForceUpdateFilter]
+  active: Boolean
+  active_exists: Boolean
+  active_not: Boolean
+  body_contains: String
+  body_exists: Boolean
+  body_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  effectiveAt: DateTime
+  effectiveAt_exists: Boolean
+  effectiveAt_gt: DateTime
+  effectiveAt_gte: DateTime
+  effectiveAt_in: [DateTime]
+  effectiveAt_lt: DateTime
+  effectiveAt_lte: DateTime
+  effectiveAt_not: DateTime
+  effectiveAt_not_in: [DateTime]
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  minVersion: String
+  minVersion_contains: String
+  minVersion_exists: Boolean
+  minVersion_in: [String]
+  minVersion_not: String
+  minVersion_not_contains: String
+  minVersion_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+  updateCta: cfComponentButtonNestedFilter
+  updateCta_exists: Boolean
+}
+
+type PageForceUpdateLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): EntryCollection
+  entryCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): EntryCursorCollection
+}
+
+enum PageForceUpdateOrder {
+  active_ASC
+  active_DESC
+  effectiveAt_ASC
+  effectiveAt_DESC
+  internalName_ASC
+  internalName_DESC
+  minVersion_ASC
+  minVersion_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
 [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures)
 """
 type PageHomeFeatures implements Entry & _Node {
@@ -3709,6 +3894,9 @@ type Query {
   pageFaq(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): PageFaq
   pageFaqCollection(limit: Int = 100, locale: String, order: [PageFaqOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: PageFaqFilter): PageFaqCollection
   pageFaqCursorCollection(limit: Int = 100, locale: String, order: [PageFaqOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: PageFaqFilter): PageFaqCursorCollection
+  pageForceUpdate(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): PageForceUpdate
+  pageForceUpdateCollection(limit: Int = 100, locale: String, order: [PageForceUpdateOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: PageForceUpdateFilter): PageForceUpdateCollection
+  pageForceUpdateCursorCollection(limit: Int = 100, locale: String, order: [PageForceUpdateOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: PageForceUpdateFilter): PageForceUpdateCursorCollection
   pageHomeFeatures(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): PageHomeFeatures
   pageHomeFeaturesCollection(limit: Int = 100, locale: String, order: [PageHomeFeaturesOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: PageHomeFeaturesFilter): PageHomeFeaturesCollection
   pageHomeFeaturesCursorCollection(limit: Int = 100, locale: String, order: [PageHomeFeaturesOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: PageHomeFeaturesFilter): PageHomeFeaturesCursorCollection

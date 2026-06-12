@@ -1,6 +1,6 @@
 import type { Options } from "@contentful/rich-text-react-renderer";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
-import type { Document, Node } from "@contentful/rich-text-types";
+import type { Block, Document, Node } from "@contentful/rich-text-types";
 import { BLOCKS, INLINES, MARKS } from "@contentful/rich-text-types";
 import React from "react";
 import { Linking, Text, View } from "react-native";
@@ -13,10 +13,10 @@ export interface CtfRichTextProps {
 
 const makeInlineOptions = (textClass: string): Options => ({
   renderMark: {
-    [MARKS.BOLD]: (text) => <Text className={`${textClass} font-semibold`}>{text}</Text>,
-    [MARKS.ITALIC]: (text) => <Text className={`${textClass} italic`}>{text}</Text>,
-    [MARKS.UNDERLINE]: (text) => <Text className={`${textClass} underline`}>{text}</Text>,
-    [MARKS.CODE]: (text) => <Text className={`${textClass} font-mono`}>{text}</Text>,
+    [MARKS.BOLD]: (text) => <Text className="font-semibold">{text}</Text>,
+    [MARKS.ITALIC]: (text) => <Text className="italic">{text}</Text>,
+    [MARKS.UNDERLINE]: (text) => <Text className="underline">{text}</Text>,
+    [MARKS.CODE]: (text) => <Text className="font-mono">{text}</Text>,
   },
   renderNode: {
     [BLOCKS.PARAGRAPH]: (_node: Node, children: React.ReactNode) => (
@@ -70,19 +70,11 @@ const makeInlineOptions = (textClass: string): Options => ({
 
 const makeOptions = (textClass: string): Options => ({
   renderMark: {
-    [MARKS.BOLD]: (text) => (
-      <Text className={`text-sm font-semibold leading-5 ${textClass}`}>{text}</Text>
-    ),
-    [MARKS.ITALIC]: (text) => (
-      <Text className={`text-sm italic leading-5 ${textClass}`}>{text}</Text>
-    ),
-    [MARKS.UNDERLINE]: (text) => (
-      <Text className={`text-sm leading-5 underline ${textClass}`}>{text}</Text>
-    ),
+    [MARKS.BOLD]: (text) => <Text className="text-sm font-semibold leading-5">{text}</Text>,
+    [MARKS.ITALIC]: (text) => <Text className="text-sm italic leading-5">{text}</Text>,
+    [MARKS.UNDERLINE]: (text) => <Text className="text-sm leading-5 underline">{text}</Text>,
     [MARKS.CODE]: (text) => (
-      <Text className={`rounded-[3px] bg-black/[6%] px-1 font-mono text-sm leading-5 ${textClass}`}>
-        {text}
-      </Text>
+      <Text className="rounded-[3px] bg-black/[6%] px-1 font-mono text-sm leading-5">{text}</Text>
     ),
   },
   renderNode: {
@@ -112,10 +104,26 @@ const makeOptions = (textClass: string): Options => ({
       <Text className={`mb-0.5 text-sm font-semibold leading-5 ${textClass}`}>{children}</Text>
     ),
     [BLOCKS.UL_LIST]: (_node: Node, children: React.ReactNode) => (
-      <View className="my-1 gap-0.5">{children}</View>
+      <View className="my-1 gap-0.5 pl-2">{children}</View>
     ),
-    [BLOCKS.OL_LIST]: (_node: Node, children: React.ReactNode) => (
-      <View className="my-1 gap-0.5">{children}</View>
+    [BLOCKS.OL_LIST]: (node: Node) => (
+      <View className="my-1 gap-0.5 pl-2">
+        {(node as Block).content.map((item, i) => (
+          <View key={i} className="flex-row items-start">
+            <Text className={`mr-1.5 text-sm leading-5 ${textClass}`}>{`${i + 1}.`}</Text>
+            <View className="flex-1">
+              {documentToReactComponents(
+                {
+                  nodeType: BLOCKS.DOCUMENT,
+                  data: {},
+                  content: (item as Block).content,
+                } as Document,
+                makeOptions(textClass),
+              )}
+            </View>
+          </View>
+        ))}
+      </View>
     ),
     [BLOCKS.LIST_ITEM]: (_node: Node, children: React.ReactNode) => (
       <View className="flex-row items-start">
@@ -124,9 +132,11 @@ const makeOptions = (textClass: string): Options => ({
       </View>
     ),
     [BLOCKS.QUOTE]: (_node: Node, children: React.ReactNode) => (
-      <View className="my-1 border-l-[3px] border-l-black/20 pl-3 opacity-80">{children}</View>
+      <View className="my-1 border-l-[3px] border-l-black/20 pl-3 opacity-80 dark:border-l-white/25">
+        {children}
+      </View>
     ),
-    [BLOCKS.HR]: () => <View className="my-2 h-px bg-black/10" />,
+    [BLOCKS.HR]: () => <View className="my-2 h-px bg-black/10 dark:bg-white/15" />,
     [BLOCKS.TABLE]: (_node: Node, children: React.ReactNode) => (
       <View className="my-1 border border-black/15">{children}</View>
     ),
@@ -148,7 +158,7 @@ const makeOptions = (textClass: string): Options => ({
       if (!uri) return null;
       return (
         <Text
-          className={`text-sm leading-5 underline ${textClass}`}
+          className="text-primary text-sm font-medium leading-5"
           onPress={() =>
             Linking.openURL(uri).catch((e) => console.warn("[ctf] failed to open url", e))
           }

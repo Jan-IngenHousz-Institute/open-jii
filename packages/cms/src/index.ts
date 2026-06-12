@@ -25,3 +25,4 @@ export {
 export { HomeFooter } from "./features/footer";
 export { AlertsContainer } from "./features/alert/alerts-container";
 export type { ComponentAlertFieldsFragment } from "./lib/__generated/sdk";
+export type { PageForceUpdateFieldsFragment } from "./lib/__generated/sdk";

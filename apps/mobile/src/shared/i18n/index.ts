@@ -9,6 +9,7 @@ import calibrationEn from "./locales/en-US/calibration.json";
 import commonEn from "./locales/en-US/common.json";
 import connectionEn from "./locales/en-US/connection.json";
 import experimentsEn from "./locales/en-US/experiments.json";
+import forceUpdateEn from "./locales/en-US/force-update.json";
 import homeEn from "./locales/en-US/home.json";
 import measurementFlowEn from "./locales/en-US/measurement-flow.json";
 import profileEn from "./locales/en-US/profile.json";
@@ -18,6 +19,7 @@ import calibrationNl from "./locales/nl-NL/calibration.json";
 import commonNl from "./locales/nl-NL/common.json";
 import connectionNl from "./locales/nl-NL/connection.json";
 import experimentsNl from "./locales/nl-NL/experiments.json";
+import forceUpdateNl from "./locales/nl-NL/force-update.json";
 import homeNl from "./locales/nl-NL/home.json";
 import measurementFlowNl from "./locales/nl-NL/measurement-flow.json";
 import profileNl from "./locales/nl-NL/profile.json";
@@ -40,6 +42,7 @@ const bundledResources = {
     connection: connectionEn,
     recentMeasurements: recentMeasurementsEn,
     home: homeEn,
+    forceUpdate: forceUpdateEn,
   },
   "nl-NL": {
     common: commonNl,
@@ -51,6 +54,7 @@ const bundledResources = {
     connection: connectionNl,
     recentMeasurements: recentMeasurementsNl,
     home: homeNl,
+    forceUpdate: forceUpdateNl,
   },
 } as const;
 
@@ -103,6 +107,7 @@ export function initI18n(): Promise<typeof i18next> {
         "connection",
         "recentMeasurements",
         "home",
+        "forceUpdate",
       ],
       defaultNS: "common",
       resources: bundledResources,
