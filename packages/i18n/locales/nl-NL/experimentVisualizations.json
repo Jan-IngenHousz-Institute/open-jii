@@ -30,7 +30,6 @@
       }
     }
   },
-
   "form": {
     "details": {
       "title": "Visualisatie Details",
@@ -53,7 +52,6 @@
       "noValidColumns": "Geen geldige kolommen gevonden in deze tabel voor grafiekassen."
     }
   },
-
   "wizard": {
     "steps": {
       "basicInfo": {
@@ -74,7 +72,6 @@
       }
     }
   },
-
   "charts": {
     "types": {
       "line": "Lijndiagram",
@@ -91,7 +88,6 @@
     "preview": "Grafiek Voorvertoning",
     "showLegend": "Legenda tonen"
   },
-
   "configuration": {
     "columns": {
       "select": "Selecteer Kolom",
@@ -193,7 +189,6 @@
       "openjii": "openJII"
     }
   },
-
   "preview": {
     "title": "Voorvertoning",
     "description": "Live voorvertoning van uw grafiekconfiguratie",
@@ -202,7 +197,6 @@
     "noColumns": "Geen kolommen geconfigureerd",
     "configureColumns": "Configureer ten minste één gegevenskolom om de voorvertoning te zien"
   },
-
   "errors": {
     "noData": "Geen gegevens beschikbaar",
     "configuration": "Configuratiefout",
@@ -225,11 +219,9 @@
     "unsupportedChartType": "Niet ondersteund grafiektype",
     "chartTypeNotSupported": "wordt niet ondersteund"
   },
-
   "selector": {
     "noVisualizations": "Geen visualisaties beschikbaar voor dit experiment"
   },
-
   "workspace": {
     "layout": {
       "untitled": "Untitled visualization",
@@ -351,7 +343,8 @@
       "axis": {
         "primary": "Primair",
         "secondary": "Secundair (rechts)"
-      }
+      },
+      "colorScaleHeatmap": "Heatmap color scale"
     },
     "axisTypes": {
       "linear": "Linear",
@@ -480,7 +473,216 @@
       "referenceLineRemove": "Remove reference line",
       "referenceLineValue": "Value",
       "referenceLines": "Reference lines",
-      "referenceLinesEmpty": "Add a vertical or horizontal line at a fixed value - useful for thresholds, targets, and baselines."
+      "referenceLinesEmpty": "Add a vertical or horizontal line at a fixed value - useful for thresholds, targets, and baselines.",
+      "alluvialColor": "Color",
+      "alluvialColorMode": "Color mode",
+      "alluvialColorModes": {
+        "stage": "By stage",
+        "value": "By value"
+      },
+      "alluvialHideLabels": "Hide labels",
+      "alluvialLabels": "Labels",
+      "alluvialLinkOpacity": "Link opacity",
+      "alluvialLinks": "Links",
+      "alluvialNodePadding": "Node padding",
+      "alluvialNodeThickness": "Node thickness",
+      "alluvialNodes": "Nodes",
+      "alluvialOptions": "Alluvial options",
+      "barAppearance": "Appearance",
+      "bargap": "Bar gap",
+      "barmode": "Bar mode",
+      "barnorm": "Normalization",
+      "boxOptions": "Box options",
+      "boxPointsSubsection": "Points",
+      "boxStatistics": "Statistics",
+      "boxmean": "Show mean",
+      "boxmode": "Group mode",
+      "boxpoints": "Points",
+      "bubbleOptions": "Bubble options",
+      "bubbleSizingSubsection": "Sizing",
+      "carpetColor": "Color",
+      "carpetContourColoring": "Coloring",
+      "carpetContourColorings": {
+        "fill": "Filled",
+        "lines": "Lines only"
+      },
+      "carpetContours": "Contours",
+      "carpetNContours": "Number of contours",
+      "carpetOptions": "Carpet options",
+      "carpetShowContourLabels": "Show contour labels",
+      "contourCellAggregate": "Aggregate",
+      "contourColor": "Color",
+      "contourColoring": "Coloring",
+      "contourColorings": {
+        "fill": "Filled",
+        "heatmap": "Heatmap",
+        "lines": "Lines only"
+      },
+      "contourLineWidth": "Line width",
+      "contourLines": "Lines",
+      "contourNcontours": "Number of contours",
+      "contourOptions": "Contour options",
+      "contourShowLabels": "Show labels",
+      "contourShowLines": "Show lines",
+      "contourSmoothing": "Smoothing",
+      "corrMethod": "Method",
+      "corrMethods": {
+        "pearson": "Pearson"
+      },
+      "corrShowValues": "Show values",
+      "corrTextDecimals": "Decimals",
+      "correlationMatrixCellText": "Cell text",
+      "correlationMatrixColor": "Color",
+      "correlationMatrixOptions": "Correlation options",
+      "cumulative": "Cumulative",
+      "density2dContourFill": "Contour fill",
+      "densityAppearance": "Appearance",
+      "densityBandwidth": "Bandwidth",
+      "densityCumulative": "Cumulative",
+      "densityFill": "Fill",
+      "densityKernel": "Kernel",
+      "densityLineWidth": "Line width",
+      "densityOptions": "Density options",
+      "densityPlot2dContour": "Contour",
+      "densityPlot2dOptions": "Density options",
+      "densityPlot2dPoints": "Points",
+      "dotPlotOptions": "Dot plot options",
+      "dotSize": "Dot size",
+      "errorBarCapWidth": "Cap width",
+      "errorBarThickness": "Line thickness",
+      "facetColumns": "Columns",
+      "facetRowOrder": "Row order",
+      "facetRowOrders": {
+        "bottomToTop": "Bottom to top",
+        "topToBottom": "Top to bottom"
+      },
+      "facetSharedX": "Share X axis",
+      "facetSharedXTitle": "Share X title",
+      "facetSharedY": "Share Y axis",
+      "facetSharedYTitle": "Share Y title",
+      "fillOpacity": "Fill opacity",
+      "heatmapCellAggregate": "Aggregate",
+      "heatmapCellText": "Cell text",
+      "heatmapColor": "Color",
+      "heatmapOptions": "Heatmap options",
+      "heatmapShowText": "Show text",
+      "heatmapTextDecimals": "Decimals",
+      "heatmapZsmooth": "Smoothing",
+      "heatmapZsmooths": {
+        "best": "Best",
+        "fast": "Fast",
+        "off": "Off"
+      },
+      "hist2dContourFill": "Contour fill",
+      "hist2dNbinsX": "Bins (X)",
+      "hist2dNbinsY": "Bins (Y)",
+      "hist2dRenderMode": "Render mode",
+      "histfunc": "Aggregation",
+      "histnorm": "Normalization",
+      "histogram2dBinning": "Binning",
+      "histogram2dColor": "Color",
+      "histogram2dOptions": "Histogram options",
+      "histogramBinning": "Binning",
+      "histogramOptions": "Histogram options",
+      "histogramOverlay": "Overlay",
+      "lollipopOptions": "Lollipop options",
+      "maxBubbleSize": "Max bubble size",
+      "minBubbleSize": "Min bubble size",
+      "nbinsAuto": "Auto bins",
+      "nbinsx": "Number of bins",
+      "notched": "Notched",
+      "orientation": "Orientation",
+      "parcoordsLineOpacity": "Line opacity",
+      "parcoordsLineWidth": "Line width",
+      "parcoordsOptions": "Parallel coordinates options",
+      "pieHole": "Donut hole",
+      "pieOptions": "Pie options",
+      "pieOrderingSubsection": "Ordering",
+      "pieSortSlices": "Sort slices",
+      "pieTextInfo": "Slice labels",
+      "pieTextPosition": "Label position",
+      "polarDirection": "Direction",
+      "polarDirections": {
+        "clockwise": "Clockwise",
+        "counterclockwise": "Counter-clockwise"
+      },
+      "polarFill": "Fill",
+      "polarLayout": "Layout",
+      "polarLineWidth": "Line width",
+      "polarMarkerSize": "Marker size",
+      "polarMode": "Mode",
+      "polarModes": {
+        "lines": "Lines",
+        "linesMarkers": "Lines + markers",
+        "markers": "Markers"
+      },
+      "polarOptions": "Polar options",
+      "polarStartAngle": "Start angle",
+      "radarFill": "Fill",
+      "radarFillOpacity": "Fill opacity",
+      "radarLineWidth": "Line width",
+      "radarOptions": "Radar options",
+      "radarShowMarkers": "Show markers",
+      "ridgeAppearance": "Appearance",
+      "ridgeBandwidth": "Bandwidth",
+      "ridgeFill": "Fill",
+      "ridgeKernel": "Kernel",
+      "ridgeLineWidth": "Line width",
+      "ridgeOptions": "Ridge options",
+      "ridgeOverlap": "Overlap",
+      "ridgeSortOrder": "Sort order",
+      "showNormalFit": "Show normal fit",
+      "sizemode": "Sizing mode",
+      "spcAppearance": "Appearance",
+      "spcCusum": "CUSUM",
+      "spcHighlightOutliers": "Highlight outliers",
+      "spcLimits": "Control limits",
+      "spcMode": "Mode",
+      "spcOptions": "SPC options",
+      "spcShowWarningLimits": "Show warning limits",
+      "spcSigmaMultiplier": "Sigma multiplier",
+      "spcSubgroupSize": "Subgroup size",
+      "spcWesternElectric": "Western Electric rules",
+      "stackMode": "Stack mode",
+      "stemSubsection": "Stems",
+      "stemWidth": "Stem width",
+      "ternaryLineWidth": "Line width",
+      "ternaryMarkerSize": "Marker size",
+      "ternaryMode": "Mode",
+      "ternaryModes": {
+        "lines": "Lines",
+        "linesMarkers": "Lines + markers",
+        "markers": "Markers"
+      },
+      "ternaryNormalization": "Normalization",
+      "ternaryOptions": "Ternary options",
+      "ternarySum": "Sum",
+      "ternarySums": {
+        "fraction": "Fraction",
+        "percent": "Percent"
+      },
+      "violinBandwidth": "Bandwidth",
+      "violinOptions": "Violin options",
+      "violinOverlay": "Overlay",
+      "violinScalemode": "Scale mode",
+      "violinShowBox": "Show box",
+      "violinShowMeanline": "Show mean line",
+      "violinSide": "Side",
+      "violinSpanmode": "Span mode",
+      "violinmode": "Group mode",
+      "windRoseBinning": "Binning",
+      "windRoseColor": "Color",
+      "windRoseDirectionBinValues": {
+        "eight": "8 directions",
+        "sixteen": "16 directions",
+        "thirtyTwo": "32 directions"
+      },
+      "windRoseDirectionBins": "Direction bins",
+      "windRoseLabels": "Labels",
+      "windRoseOptions": "Wind rose options",
+      "windRoseRadialAxisTitle": "Radial axis title",
+      "windRoseShowDirectionLabels": "Show direction labels",
+      "windRoseValueBins": "Value bins"
     },
     "orientations": {
       "vertical": "Vertical",
