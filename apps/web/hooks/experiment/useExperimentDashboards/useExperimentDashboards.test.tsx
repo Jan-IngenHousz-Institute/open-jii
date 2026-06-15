@@ -98,6 +98,25 @@ describe("useExperimentDashboards", () => {
     expect(result.current.offset).toBe(0);
   });
 
+  it("clamps initialLimit to the user-facing max so the probe always fits the backend cap", async () => {
+    // initialLimit=100 would request limit+1=101, exceeding the contract's
+    // max=100; the hook caps the visible limit to 99 so the probe still fits.
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    const { result } = renderHook(() =>
+      useExperimentDashboards({ experimentId: "exp-1", initialLimit: 100 }),
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.limit).toBe(99);
+  });
+
+  it("clamps setLimit values above the user-facing max", async () => {
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    act(() => result.current.setLimit(500));
+    expect(result.current.limit).toBe(99);
+  });
+
   it("resetPagination jumps offset back to 0", () => {
     server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     const { result } = renderHook(() =>
