@@ -1,8 +1,15 @@
-import { Activity, Bell, Settings as SettingsIcon, Shield, User, Users } from "lucide-react";
+import { Activity, Bell, Menu, Settings as SettingsIcon, Shield, User, Users } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 
 import initTranslations from "@repo/i18n/server";
+import { Button } from "@repo/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
 interface Tab {
@@ -75,27 +82,34 @@ export default async function AccountSettingsLayout({
     pathname.startsWith(`${tab.href}/`) ||
     (tab.key === "settings" && pathname === base);
 
-  const activeKey = (tabs.find(isActive) ?? tabs[1]).key;
+  const activeTab = tabs.find(isActive) ?? tabs[1];
 
   return (
-    <div className="space-y-6">
-      <NavTabs value={activeKey}>
+    <div className="-mt-4 space-y-6">
+      {/* Desktop tabs — shared NavTabs underline style */}
+      <NavTabs value={activeTab.key} className="hidden md:block">
         <NavTabsList>
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const content = (
+              <>
+                <Icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </>
+            );
+
             if (tab.disabled) {
               return (
                 <NavTabsTrigger key={tab.key} value={tab.key} disabled>
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
+                  {content}
                 </NavTabsTrigger>
               );
             }
+
             return (
               <NavTabsTrigger key={tab.key} value={tab.key} asChild>
                 <Link href={tab.href} locale={locale}>
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
+                  {content}
                 </Link>
               </NavTabsTrigger>
             );
@@ -103,6 +117,55 @@ export default async function AccountSettingsLayout({
         </NavTabsList>
       </NavTabs>
 
+      {/* Mobile fallback — dropdown menu (tab list doesn't fit horizontally) */}
+      <div className="w-full md:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-auto w-full justify-between px-4 py-3"
+              aria-label={t("account:mobileNavAriaLabel")}
+            >
+              <div className="flex items-center gap-2">
+                <activeTab.icon className="text-primary h-4 w-4" />
+                <span className="text-sm font-medium">{activeTab.label}</span>
+              </div>
+              <Menu className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-full min-w-[200px]">
+            {tabs.map((tab) => {
+              const active = isActive(tab);
+              const Icon = tab.icon;
+
+              return (
+                <DropdownMenuItem key={tab.key} asChild disabled={tab.disabled}>
+                  {tab.disabled ? (
+                    <div className="flex cursor-not-allowed items-center gap-2 opacity-50">
+                      <Icon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                    </div>
+                  ) : (
+                    <Link
+                      href={tab.href}
+                      locale={locale}
+                      className={`flex items-center gap-2 ${
+                        active ? "bg-accent text-primary" : ""
+                      }`}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <Icon className={`h-4 w-4 ${active ? "text-primary" : ""}`} />
+                      <span>{tab.label}</span>
+                    </Link>
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Page content below the tabs */}
       <div>{children}</div>
     </div>
   );

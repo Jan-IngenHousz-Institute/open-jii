@@ -234,27 +234,42 @@ export function LinkedWorkbookCard({
               )}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
-            onClick={handleUpgrade}
-            disabled={upgradeState === "upgrading"}
-          >
-            {upgradeState === "upgrading" ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Upgrading…
-              </>
-            ) : (
-              <>
-                <ArrowUpCircle className="h-3 w-3" />
-                {hasNewerPublished
-                  ? t("flow.upgradeToLatest", { version: latestVersion.version })
-                  : t("flow.upgradeToLatest", { version: pinnedVersion.version + 1 })}
-              </>
-            )}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+                disabled={upgradeState === "upgrading"}
+              >
+                {upgradeState === "upgrading" ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Upgrading…
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpCircle className="h-3 w-3" />
+                    {hasNewerPublished
+                      ? t("flow.upgradeToLatest", { version: latestVersion.version })
+                      : t("flow.upgradeToLatest", { version: pinnedVersion.version + 1 })}
+                  </>
+                )}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("flow.confirmUpgradeTitle")}</AlertDialogTitle>
+                <AlertDialogDescription>{t("flow.confirmUpgradeMessage")}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleUpgrade}>
+                  {t("flow.confirmUpgrade")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 

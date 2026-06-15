@@ -1,3 +1,5 @@
+import { experiments, inArray } from "@repo/database";
+
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ListWorkbooksUseCase } from "./list-workbooks";
@@ -65,5 +67,22 @@ describe("ListWorkbooksUseCase", () => {
     const result = await useCase.execute();
     assertSuccess(result);
     expect(result.value.map((w) => w.name)).toEqual(["Alpha", "Bravo", "Charlie"]);
+  });
+
+  it("includes the count of experiments using each workbook", async () => {
+    const used = await testApp.createWorkbook({ name: "Used", createdBy: userId });
+    const unused = await testApp.createWorkbook({ name: "Unused", createdBy: userId });
+
+    const { experiment: e1 } = await testApp.createExperiment({ name: "E1", userId });
+    const { experiment: e2 } = await testApp.createExperiment({ name: "E2", userId });
+    await testApp.database
+      .update(experiments)
+      .set({ workbookId: used.id })
+      .where(inArray(experiments.id, [e1.id, e2.id]));
+
+    const result = await useCase.execute();
+    assertSuccess(result);
+    expect(result.value.find((w) => w.id === used.id)?.experimentCount).toBe(2);
+    expect(result.value.find((w) => w.id === unused.id)?.experimentCount).toBe(0);
   });
 });

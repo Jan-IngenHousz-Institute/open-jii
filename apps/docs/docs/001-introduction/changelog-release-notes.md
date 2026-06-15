@@ -6,6 +6,44 @@ If you have suggestions, feel free to do a [feature request](../data-platform/re
 
 ---
 
+## Platform Chrome Refresh (in review)
+
+A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, resizable sidebar, a command palette, Linear-style keyboard shortcuts, and an activity hub in the top bar. The walkthrough below shows every piece end to end.
+
+<video controls width="100%" poster="/img/chrome-refresh/poster.jpg">
+  <source src="/img/chrome-refresh/walkthrough.webm" type="video/webm" />
+  Your browser does not support embedded video — see the screenshots below.
+</video>
+
+### Highlights
+
+- **Collapsible, resizable sidebar** — drag the rail to resize, double-click it or press `Ctrl`/`⌘`+`B` to collapse. Hover the left edge to peek without re-opening.
+
+  ![Sidebar hover-peek on the collapsed edge](/img/chrome-refresh/sidebar-peek.jpg)
+
+- **Command palette** — `Ctrl`/`⌘`+`K` opens a fuzzy palette across pages and actions.
+
+  ![Command palette](/img/chrome-refresh/command-palette.jpg)
+
+- **Keyboard shortcuts** — press `G` then a letter to jump (`G` `E` → Experiments), `C` to create in the current section, `/` to focus search. `?` opens the cheatsheet; the modifier glyph adapts to your OS (`⌘` on macOS, `Ctrl` elsewhere).
+
+  ![Keyboard shortcuts cheatsheet](/img/chrome-refresh/cheatsheet.jpg)
+
+- **Activity hub** — long-running data exports surface in the top bar bell with a toast on completion.
+
+  ![Activity hub in the top bar](/img/chrome-refresh/activity-bell.jpg)
+
+- **Responsive settings tabs** — a shared underline-style tab bar on desktop that collapses into a dropdown on mobile.
+
+  ![Settings nav tabs on desktop](/img/chrome-refresh/settings-navtabs.jpg)
+  ![Settings tabs collapse to a dropdown on mobile](/img/chrome-refresh/mobile-dropdown.jpg)
+
+:::note
+This is a preview of work still in review. The top bar activity hub currently tracks data exports in-memory; the persisted backend feed and additional job types land with `OJD-1506`.
+:::
+
+---
+
 ## Production Launch (17 March 2026)
 
 The platform went live with updated mobile and web apps.

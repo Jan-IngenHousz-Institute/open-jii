@@ -7,10 +7,12 @@ locals {
   # Get all channel keys.
   all_channels = keys(local.asyncapi.channels)
 
-  # Channel parameters bound to the connecting Cognito identity. In the policy
-  # these render as the ${cognito-identity.amazonaws.com:sub} variable so a device
-  # can only subscribe to / receive on its own topic, never another device's.
-  identity_param_names = ["identityId"]
+  # Channel parameters bound to the connecting device's identity. In the policy
+  # these render as the ${iot:Connection.Thing.ThingName} variable so a device
+  # (authenticated by its X.509 certificate attached to that Thing) can only
+  # subscribe to / receive on its own topic, never another device's. Devices must
+  # connect with clientId == Thing name for the variable to resolve.
+  identity_param_names = ["thingName"]
 
   # AsyncAPI operations are described from the server's perspective: a "subscribe"
   # op means devices publish (cloud-bound), "publish" means the cloud publishes and
@@ -45,14 +47,14 @@ locals {
   }
 
   # Topic used in IoT policy resource ARNs: identity-bound parameters render as the
-  # Cognito sub policy variable, every other parameter becomes a "*" wildcard.
+  # Thing-name policy variable, every other parameter becomes a "*" wildcard.
   iot_policy_topics = {
     for channel in local.all_channels : channel =>
     join("/", [
       for segment in split("/", channel) :
       (startswith(segment, "{") && endswith(segment, "}")) ? (
         contains(local.identity_param_names, substr(segment, 1, length(segment) - 2))
-        ? "$${cognito-identity.amazonaws.com:sub}"
+        ? "$${iot:Connection.Thing.ThingName}"
         : "*"
       ) : segment
     ])

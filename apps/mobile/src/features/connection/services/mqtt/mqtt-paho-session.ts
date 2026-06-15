@@ -121,18 +121,15 @@ export function createPahoSessionFactory(): PahoSessionFactory {
     async connect() {
       const t0 = Date.now();
       log.debug("connect: getCredentials start");
-      const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
-        identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
-        region: getEnvVar("REGION"),
-      }).catch((err) => {
+      const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials().catch((err) => {
         log.warn("getCredentials failed", { err: err?.message });
-        throw new MqttError("CredentialError", "failed to fetch Cognito credentials", {
+        throw new MqttError("CredentialError", "failed to fetch IoT credentials", {
           cause: err,
         });
       });
       const tCreds = Date.now();
 
-      const clientId = `${getEnvVar("CLIENT_ID")} - ${generateRandomString()}`;
+      const clientId = `${getEnvVar("CLIENT_ID")}_${generateRandomString()}`;
 
       log.debug("connect: createSignedUrl start");
       const signedUrl = await createSignedUrl({

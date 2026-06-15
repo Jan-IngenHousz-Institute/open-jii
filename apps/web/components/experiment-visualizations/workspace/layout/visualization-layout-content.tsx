@@ -47,7 +47,7 @@ export function VisualizationLayoutContent({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
@@ -104,7 +104,7 @@ export function VisualizationLayoutContent({
         className="-mx-6 -mb-6 flex-1 border-t border-[#EDF2F6] px-6 pb-6"
         style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
       >
-        <div className="mx-auto w-full max-w-7xl pt-6">{children}</div>
+        <div className="w-full pt-6">{children}</div>
       </div>
     </div>
   );
