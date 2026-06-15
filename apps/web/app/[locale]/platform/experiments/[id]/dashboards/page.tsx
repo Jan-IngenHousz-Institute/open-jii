@@ -21,7 +21,7 @@ export default function ExperimentDashboardsPage() {
 
   const { data: accessData } = useExperimentAccess(experimentId);
   const experimentData = accessData?.body.experiment;
-  const hasAccess = accessData?.body.isAdmin;
+  const isAdmin = accessData?.body.isAdmin;
 
   if (experimentData?.status === "archived") {
     notFound();
@@ -57,7 +57,7 @@ export default function ExperimentDashboardsPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("ui.title")}</h1>
           <p className="text-muted-foreground text-sm">{t("ui.subtitle")}</p>
         </div>
-        <Button onClick={handleCreate} disabled={!hasAccess || isCreating}>
+        <Button onClick={handleCreate} disabled={!isAdmin || isCreating}>
           {isCreating ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
