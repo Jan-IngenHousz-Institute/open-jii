@@ -136,6 +136,7 @@ describe("useScannerCommandExecutorStore", () => {
         chunks: 3,
         bytes: 120,
         elapsedMs: 40,
+        lastEventAt: 1_700_000_000_000,
       };
       exec.emitProgress(progress);
       expect(useScannerCommandExecutorStore.getState().progress).toEqual(progress);
@@ -147,6 +148,50 @@ describe("useScannerCommandExecutorStore", () => {
       const done = useScannerCommandExecutorStore.getState();
       expect(done.progress).toBeUndefined();
       expect(typeof done.scanStartedAt).toBe("number");
+    });
+
+    it("runs background commands transparently without touching scan UI state", async () => {
+      const exec = await attachExecutor();
+
+      const pending = useScannerCommandExecutorStore
+        .getState()
+        .executeCommand("battery", { background: true });
+
+      // A background command (battery poll) must not flip any measurement-facing
+      // state — otherwise it resets the elapsed timer / estimate mid-scan.
+      const mid = useScannerCommandExecutorStore.getState();
+      expect(mid.isExecuting).toBe(false);
+      expect(mid.scanStartedAt).toBeUndefined();
+      expect(mid.estimatedMs).toBeUndefined();
+
+      // No progress subscription either — emissions are ignored.
+      exec.emitProgress({ phase: "receiving", chunks: 1, bytes: 4, elapsedMs: 1, lastEventAt: 1 });
+      expect(useScannerCommandExecutorStore.getState().progress).toBeUndefined();
+
+      exec.calls[0].resolve("battery:88");
+      await expect(pending).resolves.toBe("battery:88");
+
+      const done = useScannerCommandExecutorStore.getState();
+      expect(done.commandResponse).toBeUndefined();
+      expect(done.error).toBeUndefined();
+      expect(done.isExecuting).toBe(false);
+    });
+
+    it("propagates background command errors without surfacing a scan error", async () => {
+      const exec = await attachExecutor();
+
+      const pending = useScannerCommandExecutorStore
+        .getState()
+        .executeCommand("battery", { background: true })
+        .catch((e: Error) => e);
+
+      exec.calls[0].reject(new Error("Command timeout"));
+
+      const err = await pending;
+      expect((err as Error).message).toBe("Command timeout");
+      // A failed battery poll must never show up as a measurement error.
+      expect(useScannerCommandExecutorStore.getState().error).toBeUndefined();
+      expect(useScannerCommandExecutorStore.getState().isExecuting).toBe(false);
     });
 
     it("throws and sets error when no executor is attached", async () => {

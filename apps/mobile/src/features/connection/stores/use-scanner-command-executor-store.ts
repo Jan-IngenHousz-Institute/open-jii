@@ -115,6 +115,15 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       throw error;
     }
 
+    // Background commands (battery polling) run transparently: they must not
+    // touch the measurement-facing UI state or they'd reset the elapsed timer /
+    // estimate mid-measurement and surface their own timeout as a scan error.
+    // They also leave `isExecuting` untouched so the battery poller's
+    // `!isExecuting` gate reflects measurements only.
+    if (options?.background) {
+      return commandExecutor.execute(command, options);
+    }
+
     // Estimated runtime sizes the elapsed-time progress bar. Console commands
     // (plain strings) estimate to 0 → treated as indeterminate (no bar).
     const estimatedMs = estimateProtocolDurationMs(command) || undefined;

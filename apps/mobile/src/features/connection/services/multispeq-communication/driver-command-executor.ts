@@ -13,6 +13,13 @@ let commandSeq = 0;
 export interface ExecuteOptions {
   /** Override the response timeout (ms) for this command. */
   timeoutMs?: number;
+  /**
+   * Background/maintenance command (e.g. battery polling). The store keeps
+   * these off the measurement-facing UI state so they never reset the elapsed
+   * timer / estimate or surface their timeout as a measurement error. No effect
+   * on the driver itself.
+   */
+  background?: boolean;
 }
 
 /**
@@ -32,6 +39,8 @@ export interface CommandProgress {
   bytes: number;
   /** ms since the command was sent. */
   elapsedMs: number;
+  /** Epoch ms of the most recent tx/rx event — drives a "last signal Xs ago" readout. */
+  lastEventAt: number;
 }
 
 export type CommandProgressListener = (progress: CommandProgress) => void;
@@ -51,6 +60,14 @@ export interface IMultispeqCommandExecutor {
 
 /** Minimum gap (ms) between throttled "receiving" emissions. */
 const PROGRESS_THROTTLE_MS = 100;
+
+/**
+ * A MultispeQ runs silently, so a long protocol emits nothing between `tx` and
+ * the final reply. Log a coarse heartbeat while waiting so the logs prove the
+ * app is still alive. Sub-second commands (battery, hello) finish well before
+ * the first tick, so this is measurement-only noise-free.
+ */
+const HEARTBEAT_MS = 15_000;
 
 /**
  * Adapts the shared `@repo/iot` `MultispeqDriver` to the app's command-executor
@@ -78,6 +95,14 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
   private bytes = 0;
   private cmdStartedAt = 0;
   private lastEmitAt = 0;
+
+  // execute() callers can overlap (a battery poll and a measurement), but the
+  // driver runs them one at a time. `activeTrace` is a single field, so setting
+  // it eagerly per-call let a later call clobber the trace of the command still
+  // on the wire — cross-contaminating events. Chain runs so trace ownership is
+  // handed over only when the previous command settles, matching the driver's
+  // serial execution.
+  private commandTail: Promise<unknown> = Promise.resolve();
 
   constructor(transport: ITransportAdapter) {
     this.driver = new MultispeqDriver(this.createBridgeLogger());
@@ -152,6 +177,7 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
       chunks: this.chunkCount,
       bytes: this.bytes,
       elapsedMs: this.cmdStartedAt ? now - this.cmdStartedAt : 0,
+      lastEventAt: now,
     };
     this.progressListeners.forEach((listener) => {
       try {
@@ -170,12 +196,39 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
   }
 
   async execute(command: string | object, options?: ExecuteOptions): Promise<string | object> {
+    // Hand trace ownership over serially (see `commandTail`). The chain must
+    // survive a failed command, so both branches continue to the next run.
+    const run = this.commandTail.then(
+      () => this.runCommand(command, options),
+      () => this.runCommand(command, options),
+    );
+    this.commandTail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  private async runCommand(
+    command: string | object,
+    options?: ExecuteOptions,
+  ): Promise<string | object> {
     const trace = startTrace("multispeq.command", `multispeq-cmd-${++commandSeq}`);
     this.activeTrace = trace;
     this.chunkCount = 0;
     this.bytes = 0;
     this.cmdStartedAt = 0;
     this.lastEmitAt = 0;
+
+    // Heartbeat: a silent multi-minute protocol logs nothing between tx and the
+    // final reply, so emit elapsed every HEARTBEAT_MS to prove liveness. Guarded
+    // on `cmdStartedAt` so it stays quiet until the command is actually on the
+    // wire; cleared in `finally`.
+    const heartbeat = setInterval(() => {
+      if (this.cmdStartedAt) {
+        log.info("measuring", { elapsedMs: Date.now() - this.cmdStartedAt });
+      }
+    }, HEARTBEAT_MS);
 
     try {
       const result = await this.driver.execute(command, options);
@@ -188,6 +241,7 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
       trace.end("error", { err: error instanceof Error ? error.message : String(error) });
       throw error;
     } finally {
+      clearInterval(heartbeat);
       this.activeTrace = null;
     }
   }

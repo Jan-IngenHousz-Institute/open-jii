@@ -244,9 +244,16 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   }
 
   async destroy(): Promise<void> {
+    // Abort any in-flight command so it rejects immediately instead of hanging
+    // until its (possibly multi-minute) timeout after the transport is gone —
+    // e.g. the device disconnects mid-measurement. Without this the pending
+    // execute() waits the full budget, so the UI looks "still measuring" long
+    // after the device left (OJD-1565).
+    const abort = this.pendingAbort;
+    this.pendingAbort = undefined;
+    abort?.();
     this.dataBuffer = [];
     this.bufferLength = 0;
-    this.pendingAbort = undefined;
     await super.destroy();
   }
 }

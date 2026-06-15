@@ -75,9 +75,10 @@ describe("createDriverCommandExecutor", () => {
     const executor = createDriverCommandExecutor(transport);
 
     const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
-    // Let the queued command register its response wait.
-    await Promise.resolve();
-    await Promise.resolve();
+    // Let the serialized command reach the driver and register its response
+    // wait (a macrotask flush covers the executor's trace-handover hop plus the
+    // queue + send microtasks) before we abort it.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     await executor.cancel();
 
@@ -109,6 +110,7 @@ describe("createDriverCommandExecutor", () => {
     expect(last?.phase).toBe("receiving");
     expect(last?.chunks).toBeGreaterThanOrEqual(1);
     expect(last?.bytes).toBeGreaterThan(0);
+    expect(typeof last?.lastEventAt).toBe("number");
 
     // Unsubscribing stops further deliveries.
     off();

@@ -143,9 +143,10 @@
       "title": "Bezig met meten",
       "receiving": "Resultaten ontvangen…",
       "takingLonger": "Duurt langer dan verwacht…",
-      "packets": "{{count}} pakketten ontvangen",
+      "measuring": "Bezig met meten… (apparaat werkt in stilte)",
       "elapsed": "{{elapsed}} verstreken",
-      "elapsedOfEstimate": "{{elapsed}} van ~{{estimate}}"
+      "elapsedOfEstimate": "{{elapsed}} van ~{{estimate}}",
+      "expected": "~{{estimate}} verwacht"
     },
     "toast": {
       "notConnected": "Geen verbinding met sensor",

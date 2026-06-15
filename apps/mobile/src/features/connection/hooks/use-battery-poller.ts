@@ -17,9 +17,11 @@ const BATTERY_TIMEOUT_MS = 5_000;
  * Home device card, Profile, etc.) can read it without re-firing the BLE
  * command.
  *
- * Battery and measurements share one serialized command queue, so polling is
- * paused while a command is in flight (`isExecuting`) — a battery refetch must
- * never jump the queue ahead of, or stall, a running measurement.
+ * Battery and measurements share one serialized command queue. Polls run as
+ * `background` commands (they don't flip `isExecuting`), so the `!isExecuting`
+ * gate below reflects measurements only and pauses polling for their whole
+ * duration — a battery refetch must never jump the queue ahead of, or stall, a
+ * running measurement, nor reset its on-screen timer/estimate.
  */
 export function useBatteryPoller() {
   const { data: connectedDevice } = useConnectedDevice();
@@ -30,7 +32,10 @@ export function useBatteryPoller() {
     queryKey: ["device", connectedDevice?.id, "battery"],
     queryFn: async () => {
       if (!connectedDevice) return null;
-      const response = await executeCommand("battery", { timeoutMs: BATTERY_TIMEOUT_MS });
+      const response = await executeCommand("battery", {
+        timeoutMs: BATTERY_TIMEOUT_MS,
+        background: true,
+      });
       if (typeof response !== "string") return null;
       const pct = parseInt(response.replace("battery:", ""));
       if (isNaN(pct)) return null;

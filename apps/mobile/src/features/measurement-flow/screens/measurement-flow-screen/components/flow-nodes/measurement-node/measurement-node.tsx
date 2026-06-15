@@ -51,16 +51,20 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     setProtocolId(content.protocolId);
   }, [setProtocolId, content.protocolId]);
 
-  // Keep a stable ref to resetScan so the disconnect-cleanup effect below
-  // doesn't need to list it as a dependency (avoids any memoisation concerns).
+  // Keep stable refs so the disconnect-cleanup effect below doesn't need to
+  // list these as dependencies (avoids any memoisation concerns).
   const resetScanRef = useRef(resetScan);
   resetScanRef.current = resetScan;
+  const cancelCommandRef = useRef(cancelCommand);
+  cancelCommandRef.current = cancelCommand;
 
-  // When the device unexpectedly disconnects while a scan is in progress,
+  // When the device unexpectedly disconnects while a scan is in progress, abort
+  // the in-flight command (so it doesn't keep running until its timeout) and
   // reset the scan so the user can reconnect and retry cleanly rather than
   // being stuck on the scanning screen.
   useEffect(() => {
     if (!device && isScanning) {
+      void cancelCommandRef.current();
       resetScanRef.current();
     }
   }, [device, isScanning]);

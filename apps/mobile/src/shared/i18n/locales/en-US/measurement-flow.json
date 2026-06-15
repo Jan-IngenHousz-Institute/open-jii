@@ -143,9 +143,10 @@
       "title": "Measuring",
       "receiving": "Receiving results…",
       "takingLonger": "Taking longer than expected…",
-      "packets": "{{count}} packets received",
+      "measuring": "Measuring… (device works silently)",
       "elapsed": "{{elapsed}} elapsed",
-      "elapsedOfEstimate": "{{elapsed}} of ~{{estimate}}"
+      "elapsedOfEstimate": "{{elapsed}} of ~{{estimate}}",
+      "expected": "~{{estimate}} expected"
     },
     "toast": {
       "notConnected": "Not connected to sensor",

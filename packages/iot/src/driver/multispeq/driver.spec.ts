@@ -252,6 +252,24 @@ describe("MultispeqDriver", () => {
 
       expect(transport.disconnect).toHaveBeenCalled();
     });
+
+    it("aborts an in-flight command instead of letting it hang until timeout", async () => {
+      driver.initialize(transport);
+
+      // Start a long protocol that never replies, so it stays in-flight.
+      const resultPromise = driver.execute(LONG_PROTOCOL);
+      // Let the queued task register its response wait.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Destroying (e.g. the device disconnects mid-measurement) must reject the
+      // pending command now rather than after its multi-minute timeout.
+      await driver.destroy();
+
+      const result = await resultPromise;
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("Command cancelled");
+    });
   });
 
   describe("waitForResponse timeout", () => {
