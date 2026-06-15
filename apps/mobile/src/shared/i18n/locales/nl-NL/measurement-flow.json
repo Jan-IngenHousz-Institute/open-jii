@@ -143,7 +143,7 @@
       "title": "Bezig met meten",
       "receiving": "Resultaten ontvangen…",
       "takingLonger": "Duurt langer dan verwacht…",
-      "measuring": "Bezig met meten… (apparaat werkt in stilte)",
+      "measuring": "Bezig met meten…",
       "elapsed": "{{elapsed}} verstreken",
       "elapsedOfEstimate": "{{elapsed}} van ~{{estimate}}",
       "expected": "~{{estimate}} verwacht"
