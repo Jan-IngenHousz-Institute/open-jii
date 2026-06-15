@@ -68,6 +68,26 @@ describe("ErrorBarStyleSection", () => {
     expect(screen.getByText("workspace.style.errorBarCapWidth")).toBeInTheDocument();
   });
 
+  it("renders nothing when only a non-Y data source carries an errorColumn", () => {
+    // The renderer only emits error bars from Y-role series, so an
+    // errorColumn on an X-role source must not unlock these style controls.
+    const formValues: ChartFormValues = {
+      ...withoutErrorColumn(),
+      dataConfig: {
+        tableName: "readings",
+        dataSources: [
+          { tableName: "readings", columnName: "time", role: "x", errorColumn: "time_err" },
+          { tableName: "readings", columnName: "temp", role: "y" },
+        ],
+      },
+    };
+    const { container } = renderWithForm<ChartFormValues>(
+      (form) => <ErrorBarStyleSection form={form} />,
+      { useFormProps: { defaultValues: formValues } },
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("renders nothing when errorColumn is an empty string", () => {
     const formValues: ChartFormValues = {
       ...withoutErrorColumn(),
