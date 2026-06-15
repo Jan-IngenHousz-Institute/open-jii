@@ -14,19 +14,19 @@ import {
 
 import { InlineEditableProfileField } from "./inline-editable-profile-field";
 
-interface ProfileCardProps {
+interface ProfileInformationCardProps {
   profile: CreateUserProfileBody;
   onSaveBio: (bio: string) => Promise<void>;
   onSaveOrganization: (organization: string) => Promise<void>;
   isPending?: boolean;
 }
 
-export function ProfileCard({
+export function ProfileInformationCard({
   profile,
   onSaveBio,
   onSaveOrganization,
   isPending = false,
-}: ProfileCardProps) {
+}: ProfileInformationCardProps) {
   const { t } = useTranslation("account");
 
   return (
@@ -34,26 +34,26 @@ export function ProfileCard({
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <BriefcaseBusiness className="text-primary h-5 w-5" aria-hidden />
-          <CardTitle>{t("settings.profileCard.title")}</CardTitle>
+          <CardTitle>{t("settings.ProfileInformationCard.title")}</CardTitle>
         </div>
-        <CardDescription>{t("settings.profileCard.description")}</CardDescription>
+        <CardDescription>{t("settings.ProfileInformationCard.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <InlineEditableProfileField
-          label={t("settings.profileCard.bio")}
+          label={t("settings.ProfileInformationCard.bio")}
           value={profile.bio ?? ""}
-          emptyValue={t("settings.profileCard.emptyBio")}
-          placeholder={t("settings.profileCard.bioPlaceholder")}
+          emptyValue={t("settings.ProfileInformationCard.emptyBio")}
+          placeholder={t("settings.ProfileInformationCard.bioPlaceholder")}
           onSave={onSaveBio}
           isPending={isPending}
           multiline
         />
 
         <InlineEditableProfileField
-          label={t("settings.profileCard.institution")}
+          label={t("settings.ProfileInformationCard.institution")}
           value={profile.organization ?? ""}
-          emptyValue={t("settings.profileCard.emptyInstitution")}
-          placeholder={t("settings.profileCard.institutionPlaceholder")}
+          emptyValue={t("settings.ProfileInformationCard.emptyInstitution")}
+          placeholder={t("settings.ProfileInformationCard.institutionPlaceholder")}
           onSave={onSaveOrganization}
           isPending={isPending}
         />

@@ -24,7 +24,7 @@
       "urlPlaceholder": "https://example.com/avatar.png",
       "emptyUrl": "No custom image URL"
     },
-    "profileCard": {
+    "ProfileInformationCard": {
       "title": "Profile Information",
       "description": "Profile details shown across OpenJII.",
       "emptyName": "Set up your profile",

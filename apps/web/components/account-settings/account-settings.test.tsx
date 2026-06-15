@@ -48,8 +48,8 @@ vi.mock("./account-identity-card", () => ({
   ),
 }));
 
-vi.mock("./profile-card", () => ({
-  ProfileCard: ({
+vi.mock("./profile-information-card", () => ({
+  ProfileInformationCard: ({
     profile,
     onSaveBio,
     onSaveOrganization,
@@ -58,7 +58,7 @@ vi.mock("./profile-card", () => ({
     onSaveBio: (bio: string) => Promise<void>;
     onSaveOrganization: (organization: string) => Promise<void>;
   }) => (
-    <div data-testid="profile-card">
+    <div data-testid="profile-information-card">
       <span data-testid="firstName">{profile.firstName}</span>
       <span data-testid="lastName">{profile.lastName}</span>
       <span data-testid="bio">{profile.bio ?? ""}</span>
@@ -131,7 +131,7 @@ describe("<AccountSettings />", () => {
 
   it("renders profile sections with empty defaults when session is null", () => {
     render(<AccountSettings session={null} />);
-    const card = screen.getByTestId("profile-card");
+    const card = screen.getByTestId("profile-information-card");
     expect(within(card).getByTestId("firstName")).toHaveTextContent("");
     expect(within(card).getByTestId("lastName")).toHaveTextContent("");
     expect(within(card).getByTestId("bio")).toHaveTextContent("");
@@ -143,12 +143,12 @@ describe("<AccountSettings />", () => {
     render(<AccountSettings session={session} />);
 
     await waitFor(() => {
-      expect(within(screen.getByTestId("profile-card")).getByTestId("firstName")).toHaveTextContent(
-        "Ada",
-      );
+      expect(
+        within(screen.getByTestId("profile-information-card")).getByTestId("firstName"),
+      ).toHaveTextContent("Ada");
     });
 
-    const card = screen.getByTestId("profile-card");
+    const card = screen.getByTestId("profile-information-card");
     expect(within(card).getByTestId("lastName")).toHaveTextContent("Lovelace");
     expect(within(card).getByTestId("bio")).toHaveTextContent("Math enjoyer");
     expect(within(card).getByTestId("organization")).toHaveTextContent("Analytical Engines Inc.");

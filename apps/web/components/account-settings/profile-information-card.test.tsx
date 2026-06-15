@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
 
-import { ProfileCard } from "./profile-card";
+import { ProfileInformationCard } from "./profile-information-card";
 
 const profile: CreateUserProfileBody = {
   firstName: "Ada",
@@ -19,7 +19,7 @@ function setup(values: Partial<CreateUserProfileBody> = {}) {
   const onSaveOrganization = vi.fn().mockResolvedValue(undefined);
 
   render(
-    <ProfileCard
+    <ProfileInformationCard
       profile={{ ...profile, ...values }}
       onSaveBio={onSaveBio}
       onSaveOrganization={onSaveOrganization}
@@ -29,14 +29,14 @@ function setup(values: Partial<CreateUserProfileBody> = {}) {
   return { onSaveBio, onSaveOrganization };
 }
 
-describe("ProfileCard", () => {
+describe("ProfileInformationCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("renders profile information", () => {
     setup();
-    expect(screen.getByText("settings.profileCard.title")).toBeInTheDocument();
+    expect(screen.getByText("settings.ProfileInformationCard.title")).toBeInTheDocument();
     expect(screen.getByText("Math enjoyer")).toBeInTheDocument();
     expect(screen.getAllByText("Analytical Engines Inc.").length).toBeGreaterThanOrEqual(1);
   });
@@ -46,7 +46,7 @@ describe("ProfileCard", () => {
     const { onSaveBio } = setup();
 
     await user.click(screen.getByText("Math enjoyer"));
-    const input = screen.getByLabelText("settings.profileCard.bio");
+    const input = screen.getByLabelText("settings.ProfileInformationCard.bio");
     await user.clear(input);
     await user.type(input, "New bio");
     await user.click(screen.getByLabelText("Save"));
@@ -59,7 +59,7 @@ describe("ProfileCard", () => {
     const { onSaveOrganization } = setup();
 
     await user.click(screen.getAllByText("Analytical Engines Inc.")[0]);
-    const input = screen.getByLabelText("settings.profileCard.institution");
+    const input = screen.getByLabelText("settings.ProfileInformationCard.institution");
     await user.clear(input);
     await user.type(input, "New Org");
     await user.click(screen.getByLabelText("Save"));
@@ -69,11 +69,11 @@ describe("ProfileCard", () => {
 
   it("renders empty states", () => {
     setup({ bio: "", organization: "" });
-    expect(screen.getByText("settings.profileCard.emptyBio")).toHaveClass(
+    expect(screen.getByText("settings.ProfileInformationCard.emptyBio")).toHaveClass(
       "text-muted-foreground",
       "italic",
     );
-    expect(screen.getByText("settings.profileCard.emptyInstitution")).toHaveClass(
+    expect(screen.getByText("settings.ProfileInformationCard.emptyInstitution")).toHaveClass(
       "text-muted-foreground",
       "italic",
     );

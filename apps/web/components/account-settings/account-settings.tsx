@@ -13,7 +13,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { ErrorDisplay } from "../error-display";
 import { AccountIdentityCard } from "./account-identity-card";
 import { DangerZoneCard } from "./danger-zone/danger-zone-card";
-import { ProfileCard } from "./profile-card";
+import { ProfileInformationCard } from "./profile-information-card";
 
 export function AccountSettings({ session }: { session: Session | null }) {
   const { t } = useTranslation("account");
@@ -94,7 +94,7 @@ function AccountSettingsContent({
 
     if (firstName.length < 2 || lastName.length < 2) {
       toast({
-        description: t("settings.profileCard.nameValidation"),
+        description: t("settings.ProfileInformationCard.nameValidation"),
         variant: "destructive",
       });
       return;
@@ -125,7 +125,7 @@ function AccountSettingsContent({
         onSaveAvatarUrl={saveAvatarUrl}
         isPending={isPending}
       />
-      <ProfileCard
+      <ProfileInformationCard
         profile={profile}
         onSaveBio={saveBio}
         onSaveOrganization={saveOrganization}
