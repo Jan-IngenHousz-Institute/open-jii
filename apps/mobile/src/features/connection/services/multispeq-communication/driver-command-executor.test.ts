@@ -59,15 +59,20 @@ describe("createDriverCommandExecutor", () => {
 
   it("throws when the underlying command fails (timeout)", async () => {
     vi.useFakeTimers();
-    const transport = mockTransport(); // never replies
-    const executor = createDriverCommandExecutor(transport);
+    try {
+      const transport = mockTransport(); // never replies
+      const executor = createDriverCommandExecutor(transport);
 
-    const settled = executor.execute("cmd").catch((e: Error) => e);
-    await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+      const settled = executor.execute("cmd").catch((e: Error) => e);
+      await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
 
-    const err = await settled;
-    expect((err as Error).message).toBe("Command timeout");
-    vi.useRealTimers();
+      const err = await settled;
+      expect((err as Error).message).toBe("Command timeout");
+    } finally {
+      // Restore real timers even if the assertion throws, so a failure here
+      // can't leave later tests running under fake timers.
+      vi.useRealTimers();
+    }
   });
 
   it("cancel() aborts the in-flight command, sends -1+, and rejects as cancelled", async () => {
@@ -118,6 +123,31 @@ describe("createDriverCommandExecutor", () => {
     await executor.execute("cmd");
     expect(events.length).toBe(before);
   });
+
+  it("keeps executing when a progress listener throws", async () => {
+    const transport = mockTransport();
+    transport.send.mockImplementation(() => {
+      setTimeout(() => transport.simulate('{"ok":1}ABCD1234\n'), 0);
+      return Promise.resolve();
+    });
+    const executor = createDriverCommandExecutor(transport);
+
+    // A throwing listener must never break command execution.
+    executor.onProgress(() => {
+      throw new Error("bad listener");
+    });
+
+    await expect(executor.execute("cmd")).resolves.toEqual({ ok: 1 });
+  });
+
+  it("tears down the underlying driver on destroy()", async () => {
+    const transport = mockTransport();
+    const executor = createDriverCommandExecutor(transport);
+
+    await executor.destroy();
+
+    expect(transport.disconnect).toHaveBeenCalled();
+  });
 });
 
 describe("bluetoothClassicTransport", () => {
@@ -148,6 +178,75 @@ describe("bluetoothClassicTransport", () => {
     await expect(executor.execute("cmd")).resolves.toEqual({ ok: 1 });
     expect(device.write).toHaveBeenCalledWith(`cmd${MULTISPEQ_FRAMING.LINE_ENDING}`);
   });
+
+  /** Mock device with manual control over data events and the write result. */
+  function controllableBtDevice(writeOk = true) {
+    let dataCb: ((event: { data: unknown }) => void) | undefined;
+    return {
+      onDataReceived: (cb: (event: { data: unknown }) => void) => {
+        dataCb = cb;
+      },
+      write: vi.fn().mockResolvedValue(writeOk),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      emit: (data: unknown) => dataCb?.({ data }),
+    };
+  }
+
+  function makeBtTransport(device: ReturnType<typeof controllableBtDevice>) {
+    return bluetoothClassicTransport(
+      device as unknown as Parameters<typeof bluetoothClassicTransport>[0],
+    );
+  }
+
+  it("appends a newline only when the device message lacks one", () => {
+    const device = controllableBtDevice();
+    const transport = makeBtTransport(device);
+    const received: string[] = [];
+    transport.onDataReceived((d) => received.push(d));
+
+    device.emit("already\n");
+    device.emit("missing");
+
+    expect(received).toEqual(["already\n", "missing\n"]);
+  });
+
+  it("ignores non-string device events", () => {
+    const device = controllableBtDevice();
+    const transport = makeBtTransport(device);
+    const received: string[] = [];
+    transport.onDataReceived((d) => received.push(d));
+
+    device.emit(42);
+    device.emit({ nested: true });
+
+    expect(received).toEqual([]);
+  });
+
+  it("resolves send on a successful write and reports connected", async () => {
+    const device = controllableBtDevice(true);
+    const transport = makeBtTransport(device);
+
+    expect(transport.isConnected()).toBe(true);
+    transport.onStatusChanged(() => {});
+    await expect(transport.send("cmd")).resolves.toBeUndefined();
+    expect(device.write).toHaveBeenCalledWith("cmd");
+  });
+
+  it("throws when the device write reports failure", async () => {
+    const device = controllableBtDevice(false);
+    const transport = makeBtTransport(device);
+
+    await expect(transport.send("cmd")).rejects.toThrow("Failed to write to device");
+  });
+
+  it("disconnects the underlying device", async () => {
+    const device = controllableBtDevice();
+    const transport = makeBtTransport(device);
+
+    await transport.disconnect();
+
+    expect(device.disconnect).toHaveBeenCalled();
+  });
 });
 
 describe("serialPortTransport", () => {
@@ -164,5 +263,31 @@ describe("serialPortTransport", () => {
     const executor = createDriverCommandExecutor(serialPortTransport(emitter));
 
     await expect(executor.execute("cmd")).resolves.toEqual({ v: 2 });
+  });
+
+  it("forwards data, reports connected, and emits destroy on disconnect", async () => {
+    const emitter = new Emitter<SerialPortEvents>();
+    const sent: string[] = [];
+    const destroyed = vi.fn();
+    emitter.on("sendDataToDevice", (d) => {
+      sent.push(d);
+    });
+    emitter.on("destroy", destroyed);
+
+    const transport = serialPortTransport(emitter);
+
+    expect(transport.isConnected()).toBe(true);
+    transport.onStatusChanged(() => {});
+
+    const received: string[] = [];
+    transport.onDataReceived((d) => received.push(d));
+    await emitter.emit("dataReceivedFromDevice", "chunk");
+    expect(received).toEqual(["chunk"]);
+
+    await transport.send("out");
+    expect(sent).toEqual(["out"]);
+
+    await transport.disconnect();
+    expect(destroyed).toHaveBeenCalled();
   });
 });

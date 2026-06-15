@@ -208,6 +208,10 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
         commandResponse: undefined,
         error: undefined,
         isExecuting: false,
+        isCancelled: false,
+        progress: undefined,
+        scanStartedAt: undefined,
+        estimatedMs: undefined,
       });
     }
   },

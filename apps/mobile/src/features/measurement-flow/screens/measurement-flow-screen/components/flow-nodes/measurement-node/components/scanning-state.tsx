@@ -17,7 +17,8 @@ interface ScanningStateProps {
 
 /** Format a duration as `m:ss`, or `Ns` under a minute. */
 function formatDuration(ms: number): string {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  // Floor (not round) so the clock never reads ahead of the real elapsed time.
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   if (minutes === 0) return `${seconds}s`;

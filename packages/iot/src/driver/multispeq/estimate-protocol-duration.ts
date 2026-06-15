@@ -115,8 +115,11 @@ function estimateBlockMs(block: Json, vArrays: VArrays): number {
   // Pulse train: Σ pulses[i] × pulse_distance[i] (µs) → ms.
   let pulseTrainUs = 0;
   for (let i = 0; i < pulses.length; i++) {
-    const count = asNumber(pulses[i]) ?? 0;
-    const distanceUs = asNumber(pulseDistance[i]) ?? 0;
+    // pulses / pulse_distance entries may be protocol refs (e.g. "@n0:1"), not
+    // just literals — resolve them so a referenced count/distance isn't read as
+    // 0, which would under-size the timeout and abort a valid long measurement.
+    const count = resolveNumericRef(pulses[i], vArrays) ?? 0;
+    const distanceUs = resolveNumericRef(pulseDistance[i], vArrays) ?? 0;
     pulseTrainUs += count * distanceUs;
   }
   const pulseTrainMs = pulseTrainUs / 1000;

@@ -64,8 +64,17 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   // being stuck on the scanning screen.
   useEffect(() => {
     if (!device && isScanning) {
-      void cancelCommandRef.current();
-      resetScanRef.current();
+      // Await the cancel before resetting: resetting first would clear the
+      // cancellation state while the execute() is still settling, so the
+      // in-flight command would surface a raw transport/cancel error instead of
+      // the coherent "Measurement cancelled" path.
+      void (async () => {
+        try {
+          await cancelCommandRef.current();
+        } finally {
+          resetScanRef.current();
+        }
+      })();
     }
   }, [device, isScanning]);
 

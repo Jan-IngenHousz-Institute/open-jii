@@ -305,6 +305,39 @@ describe("MultispeqDriver", () => {
     });
   });
 
+  describe("stale reply isolation (OJD-1565)", () => {
+    it("does not let a timed-out command's buffered fragment leak into the next command", async () => {
+      vi.useFakeTimers();
+      try {
+        driver.initialize(transport);
+
+        // Command A never gets a complete reply, so it times out at the base budget.
+        const aResult = driver.execute("A");
+        await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+        expect((await aResult).success).toBe(false);
+
+        // A partial frame from A lands after the timeout and sits in the buffer.
+        transport.simulateData('{"stale":"A"}');
+
+        // Command B then runs; the next send delivers B's own complete reply.
+        // Without the pre-send buffer flush, A's fragment would fuse with B's
+        // reply and B would resolve with corrupted data.
+        vi.mocked(transport.send).mockImplementationOnce(() => {
+          setTimeout(() => transport.simulateData('{"fresh":"B"}ABCD1234\n'), 0);
+          return Promise.resolve();
+        });
+        const bResultPromise = driver.execute("B");
+        await vi.advanceTimersByTimeAsync(1);
+        const bResult = await bResultPromise;
+
+        expect(bResult.success).toBe(true);
+        expect(bResult.data).toEqual({ fresh: "B" });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe("cancel", () => {
     it("aborts an in-flight command, sends -1+, and rejects as cancelled", async () => {
       driver.initialize(transport);

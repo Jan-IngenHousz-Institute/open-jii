@@ -130,6 +130,14 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
         }
 
         this.log.debug("tx", { command: summarizeCommand(commandStr), timeoutMs });
+        // Resync barrier: drop any bytes still buffered from a previous command
+        // (e.g. a partial frame left by one that timed out or was cancelled)
+        // before sending this one. Commands are serialized, so whatever is
+        // buffered now necessarily predates this send — letting it linger would
+        // fuse a stale fragment onto this command's reply and return wrong data
+        // to the next queued execute(). See OJD-1565.
+        this.dataBuffer = [];
+        this.bufferLength = 0;
         await this.transport.send(commandWithEnding);
 
         // Wait for response

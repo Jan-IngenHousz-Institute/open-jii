@@ -83,6 +83,14 @@ const HEARTBEAT_MS = 15_000;
  */
 class DriverCommandExecutor implements IMultispeqCommandExecutor {
   private readonly driver: MultispeqDriver;
+  /**
+   * Resolves once the driver has been initialized. `initialize()` is currently
+   * synchronous, but the interface allows it to be async (handshake/probe), so
+   * every public op awaits this first — that keeps execute/cancel/destroy from
+   * racing setup and turns any init failure into a controlled command error
+   * rather than an unhandled rejection.
+   */
+  private readonly initPromise: Promise<void>;
   private activeTrace: Trace | null = null;
 
   // Per-chunk events would bloat the wide event on long measurements —
@@ -106,7 +114,9 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
 
   constructor(transport: ITransportAdapter) {
     this.driver = new MultispeqDriver(this.createBridgeLogger());
-    void this.driver.initialize(transport);
+    // `initialize()` may return void or a promise; normalize so callers can
+    // always await it. Errors are swallowed here and re-surface per-command.
+    this.initPromise = Promise.resolve(this.driver.initialize(transport));
   }
 
   /**
@@ -213,6 +223,8 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
     command: string | object,
     options?: ExecuteOptions,
   ): Promise<string | object> {
+    // Ensure the driver finished initializing before sending anything.
+    await this.initPromise;
     const trace = startTrace("multispeq.command", `multispeq-cmd-${++commandSeq}`);
     this.activeTrace = trace;
     this.chunkCount = 0;
@@ -247,11 +259,11 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
   }
 
   cancel(): Promise<void> {
-    return this.driver.cancel();
+    return this.initPromise.then(() => this.driver.cancel());
   }
 
   destroy(): Promise<void> {
-    return this.driver.destroy();
+    return this.initPromise.then(() => this.driver.destroy());
   }
 }
 
