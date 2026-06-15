@@ -24,8 +24,8 @@ import { Separator } from "@repo/ui/components/separator";
 
 import { getChartTypeDef } from "../../../../experiment-visualizations/charts/chart-registry";
 import { ChartTypePickerContent } from "../../../../experiment-visualizations/workspace/chart-type-picker";
-import { useDashboardEditor } from "../../context/dashboard-editor-context";
 import type { DashboardFormValues } from "../../../dashboard-form-shell";
+import { useDashboardEditor } from "../../context/dashboard-editor-context";
 import type { StripOverflowItem } from "../strip-overflow-list";
 import { StripOverflowList } from "../strip-overflow-list";
 import { StripPopoverControl } from "../strip-popover-control";
@@ -154,11 +154,7 @@ export function VisualizationWidgetStrip({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[440px] p-0" align="center" side="top" sideOffset={8}>
-                <ChartTypePickerContent
-                  value="line"
-                  onPick={handleCreateWithType}
-                  resyncKey={pickerOpen}
-                />
+                <ChartTypePickerContent value="line" onPick={handleCreateWithType} />
               </PopoverContent>
             </Popover>
           </div>

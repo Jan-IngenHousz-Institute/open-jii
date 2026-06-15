@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { ChartFamily, ChartType } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -43,7 +43,7 @@ export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[440px] p-0" align="start" sideOffset={8}>
-        <ChartTypePickerContent value={value} onPick={handlePick} resyncKey={open} />
+        <ChartTypePickerContent value={value} onPick={handlePick} />
       </PopoverContent>
     </Popover>
   );
@@ -53,15 +53,9 @@ interface ChartTypePickerContentProps {
   /** Highlighted tile + initial family tab. Pass any ChartType (e.g. "line") for create flows. */
   value: ChartType;
   onPick: (type: ChartType) => void;
-  /** Toggle on reopen to re-sync the active tab back to `value`'s family. */
-  resyncKey?: unknown;
 }
 
-export function ChartTypePickerContent({
-  value,
-  onPick,
-  resyncKey,
-}: ChartTypePickerContentProps) {
+export function ChartTypePickerContent({ value, onPick }: ChartTypePickerContentProps) {
   const { t } = useTranslation("experimentVisualizations");
   const grouped = useMemo(() => listChartTypesByFamily(), []);
   const current = getChartTypeDef(value);
@@ -73,16 +67,13 @@ export function ChartTypePickerContent({
     [grouped],
   );
 
-  const initialFamily = availableFamilies.includes(current.family)
-    ? current.family
-    : (availableFamilies[0] ?? "basic");
-  const [activeFamily, setActiveFamily] = useState<ChartFamily>(initialFamily);
-
-  // Re-sync the active tab whenever the parent flips `resyncKey` (e.g. popover
-  // reopens) so the tab matches the value's family again.
-  useEffect(() => {
-    setActiveFamily(initialFamily);
-  }, [resyncKey, initialFamily]);
+  // Each popover open is a fresh mount (Radix unmounts content on close), so
+  // initializing state from `value`'s family here is enough to re-sync the
+  // tab on reopen. A useEffect tied to `value` here used to snap the tab
+  // back mid-browse when `value` changed externally.
+  const [activeFamily, setActiveFamily] = useState<ChartFamily>(() =>
+    availableFamilies.includes(current.family) ? current.family : (availableFamilies[0] ?? "basic"),
+  );
 
   const types = grouped[activeFamily];
 
