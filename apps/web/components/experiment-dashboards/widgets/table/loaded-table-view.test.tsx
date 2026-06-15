@@ -70,6 +70,35 @@ describe("LoadedTableView", () => {
     });
   });
 
+  it("resets to page 1 when the widget filters change", async () => {
+    const spy = mountDataAndTables({ tableName: "raw_data", totalPages: 5 });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />,
+    );
+
+    const next = await screen.findByLabelText("Go to next page");
+    await user.click(next);
+    await waitFor(() => {
+      const last = spy.calls[spy.calls.length - 1];
+      expect(last.query.page).toBe("2");
+    });
+
+    rerender(
+      <LoadedTableView
+        tableName="raw_data"
+        pageSize={25}
+        experimentId="exp-1"
+        widgetFilters={[{ column: "value", operator: "gt", value: 0 }]}
+      />,
+    );
+
+    await waitFor(() => {
+      const last = spy.calls[spy.calls.length - 1];
+      expect(last.query.page).toBe("1");
+    });
+  });
+
   it("shows the load-failed empty state when the data fetch errors", async () => {
     server.mount(contract.experiments.getExperimentData, { status: 500 });
     server.mount(contract.experiments.getExperimentTables, {

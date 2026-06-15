@@ -47,10 +47,6 @@ export function LoadedTableView({
   const [page, setPage] = useState(1);
   const { sortColumn, sortDirection, handleSort } = useTableSort(tableMeta?.defaultSortColumn);
 
-  useEffect(() => {
-    setPage(1);
-  }, [tableName, pageSize]);
-
   const dashboardFilters = useDashboardFiltersForTable(tableName);
   const mergedFilters = useMemo(() => {
     if (dashboardFilters.length === 0) {
@@ -58,6 +54,14 @@ export function LoadedTableView({
     }
     return [...(widgetFilters ?? []), ...dashboardFilters];
   }, [widgetFilters, dashboardFilters]);
+
+  // Compare filters by content so a fresh array with identical filters does
+  // not bounce the user to page 1 on unrelated re-renders.
+  const filtersKey = JSON.stringify(mergedFilters ?? []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tableName, pageSize, filtersKey]);
 
   const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
