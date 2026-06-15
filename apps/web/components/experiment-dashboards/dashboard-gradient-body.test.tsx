@@ -53,11 +53,17 @@ describe("DashboardGradientBody", () => {
     expect(screen.getByTestId("child")).toBeInTheDocument();
   });
 
-  it("always mounts modebar, toolbar, and placement ghost so each can drive its own animation", () => {
+  it("mounts the modebar when editing with no widget selected (toolbar stays unmounted)", () => {
     setup(true);
     expect(screen.getByTestId("dashboard-modebar")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-toolbar")).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-toolbar")).toBeNull();
     expect(screen.getByTestId("placement-ghost")).toBeInTheDocument();
+  });
+
+  it("does not mount either chrome when not editing", () => {
+    setup(false);
+    expect(screen.queryByTestId("dashboard-modebar")).toBeNull();
+    expect(screen.queryByTestId("dashboard-toolbar")).toBeNull();
   });
 
   it("does not render the grid backdrop when not editing (even if bounds existed)", () => {

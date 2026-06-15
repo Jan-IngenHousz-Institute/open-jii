@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
 
 import {
+  compactWidgets,
   compactWithGhost,
   defaultWidgetSize,
   PLACEMENT_GHOST_ID,
@@ -10,6 +11,10 @@ import {
   widgetToLayoutItem,
   widgetTypeForTool,
 } from "./dashboard-grid-helpers";
+
+function richText(id: string, layout: DashboardWidget["layout"]): DashboardWidget {
+  return { id, type: "richText", layout, config: { html: "" } };
+}
 
 describe("widgetTypeForTool", () => {
   it("returns null for the cursor tool", () => {
@@ -100,5 +105,37 @@ describe("compactWithGhost", () => {
     const compacted = compactWithGhost(items, ghost, 12);
     expect(compacted.some((c) => c.i === PLACEMENT_GHOST_ID)).toBe(true);
     expect(compacted.some((c) => c.i === "a")).toBe(true);
+  });
+});
+
+describe("compactWidgets", () => {
+  it("closes the row gap left by a deleted widget so the lower one shifts up", () => {
+    // Caller has already removed widget "deleted"; the remaining "below"
+    // started at row 6, leaving a 6-row gap that the compactor must close.
+    const remaining = [richText("below", { col: 0, row: 6, colSpan: 6, rowSpan: 4 })];
+    const result = compactWidgets(remaining, 12);
+    expect(result[0].layout.row).toBe(0);
+  });
+
+  it("returns the same widget references when nothing needs to move", () => {
+    const a = richText("a", { col: 0, row: 0, colSpan: 6, rowSpan: 4 });
+    const b = richText("b", { col: 6, row: 0, colSpan: 6, rowSpan: 4 });
+    const result = compactWidgets([a, b], 12);
+    // Untouched widgets keep their identity so widget config / refs stay stable.
+    expect(result[0]).toBe(a);
+    expect(result[1]).toBe(b);
+  });
+
+  it("preserves widget config / fields that aren't part of layout", () => {
+    const widget: DashboardWidget = {
+      id: "w1",
+      type: "richText",
+      layout: { col: 0, row: 5, colSpan: 6, rowSpan: 4 },
+      config: { html: "<p>hello</p>" },
+    };
+    const [result] = compactWidgets([widget], 12);
+    expect(result.id).toBe("w1");
+    expect(result.config).toEqual({ html: "<p>hello</p>" });
+    expect(result.layout.row).toBe(0);
   });
 });

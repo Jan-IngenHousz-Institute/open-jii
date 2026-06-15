@@ -108,3 +108,34 @@ export function widgetToLayoutItem(widget: DashboardWidget): LayoutItem {
     maxH,
   };
 }
+
+/**
+ * Run `verticalCompactor` over the widgets and return a new widget array with
+ * any shifted layouts updated in place. Widgets whose layouts didn't move stay
+ * referentially equal so unrelated state (config edits, refs) isn't disturbed.
+ *
+ * Use this after any change that can leave a gap (delete, resize-shrink) so the
+ * form's layout stays in sync with what RGL renders.
+ */
+export function compactWidgets(widgets: DashboardWidget[], columns: number): DashboardWidget[] {
+  const compacted = verticalCompactor.compact(widgets.map(widgetToLayoutItem), columns);
+  const compactedById = new Map(compacted.map((item) => [item.i, item]));
+  return widgets.map((w) => {
+    const c = compactedById.get(w.id);
+    if (!c) {
+      return w;
+    }
+    const sameLayout =
+      c.x === w.layout.col &&
+      c.y === w.layout.row &&
+      c.w === w.layout.colSpan &&
+      c.h === w.layout.rowSpan;
+    if (sameLayout) {
+      return w;
+    }
+    return {
+      ...w,
+      layout: { col: c.x, row: c.y, colSpan: c.w, rowSpan: c.h },
+    };
+  });
+}

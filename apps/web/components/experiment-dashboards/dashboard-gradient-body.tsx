@@ -37,8 +37,9 @@ export function DashboardGradientBody({
   const layout = useWatch({ control: form.control, name: "layout" });
   const { selectedWidgetId } = useDashboardEditor();
 
-  // Both chromes always mounted; visibility is derived state, ToolbarShell
-  // animates the slide. Selection drives which is visible.
+  // Conditionally mount only the active chrome — keeping both mounted (the
+  // previous design) caused the inactive sticky pill to perturb Chrome's
+  // overflow/scroll calculation, leaving a white strip below the gradient.
   const modebarVisible = isEditing && selectedWidgetId === null;
   const toolbarVisible = isEditing && selectedWidgetId !== null;
 
@@ -57,8 +58,10 @@ export function DashboardGradientBody({
           <div ref={canvasRef} className="relative min-w-0">
             {children}
           </div>
-          <DashboardModebar visible={modebarVisible} />
-          <DashboardToolbar visible={toolbarVisible} experimentId={experimentId} />
+          {modebarVisible && <DashboardModebar visible={true} />}
+          {toolbarVisible && (
+            <DashboardToolbar visible={true} experimentId={experimentId} />
+          )}
           <WidgetPlacementGhost />
         </div>
       </div>

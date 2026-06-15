@@ -20,6 +20,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { widgetMetaFor } from "../widgets/widget-meta";
+import { compactWidgets } from "./canvas/dashboard-grid-helpers";
 import { useDashboardEditor } from "./context/dashboard-editor-context";
 import { ComingSoonStrip } from "./inspector-toolbar/strips/coming-soon-strip";
 import { FilterDataStrip } from "./inspector-toolbar/strips/filter-data-strip";
@@ -94,11 +95,15 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
       return;
     }
     selectWidget(null);
-    form.setValue(
-      "widgets",
-      widgets.filter((w) => w.id !== widget.id),
-      { shouldDirty: true },
-    );
+
+    // Compact the remaining widgets so the gap left by the deleted one closes.
+    // Without this, RGL visually re-flows the widgets but the form keeps the
+    // pre-delete layout positions and autosave persists the stale layout.
+    const layout = form.getValues("layout");
+    const remaining = widgets.filter((w) => w.id !== widget.id);
+    form.setValue("widgets", compactWidgets(remaining, layout.columns), {
+      shouldDirty: true,
+    });
   };
 
   const meta = widget ? widgetMetaFor(widget.type) : null;
