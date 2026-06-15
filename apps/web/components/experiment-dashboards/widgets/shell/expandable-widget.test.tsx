@@ -52,6 +52,22 @@ describe("ExpandableWidget", () => {
     expect(screen.getByRole("heading", { name: "Plot" })).toBeInTheDocument();
   });
 
+  it("mounts the children in exactly one slot at a time (no double-render)", async () => {
+    const user = userEvent.setup();
+    render(
+      <WidgetCard>
+        <ExpandableWidget title="Plot">
+          <div data-testid="chart-body">chart body</div>
+        </ExpandableWidget>
+      </WidgetCard>,
+    );
+
+    expect(screen.getAllByTestId("chart-body")).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "widget.expand" }));
+    expect(screen.getAllByTestId("chart-body")).toHaveLength(1);
+  });
+
   it("falls back to a generic dialog title when the widget title is null", async () => {
     const user = userEvent.setup();
     render(
