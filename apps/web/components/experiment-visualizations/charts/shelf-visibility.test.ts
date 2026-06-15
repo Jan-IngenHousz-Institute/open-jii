@@ -43,6 +43,14 @@ describe("shelf-visibility predicates", () => {
       ]);
       expect(hasAnyErrorColumn(form)).toBe(true);
     });
+
+    it("ignores errorColumn on non-Y sources because the renderer only emits Y-axis bars", () => {
+      const form = makeForm([
+        { tableName: "harvest", columnName: "variety", role: "x", errorColumn: "variety_se" },
+        { tableName: "harvest", columnName: "yield", role: "y" },
+      ]);
+      expect(hasAnyErrorColumn(form)).toBe(false);
+    });
   });
 
   describe("hasFacetSource", () => {
