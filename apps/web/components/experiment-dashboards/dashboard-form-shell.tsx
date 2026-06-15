@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
@@ -51,16 +51,6 @@ export function DashboardFormShell({
   );
 
   const form = useForm<DashboardFormValues>({ defaultValues: defaults });
-
-  // `useForm` reads `defaultValues` once at mount, so a later refetch (or a
-  // collaborator's update arriving via React Query) leaves the form stale.
-  // Sync to the new snapshot when the form is idle; preserve in-progress
-  // edits if the user has dirtied any field.
-  useEffect(() => {
-    if (!form.formState.isDirty) {
-      form.reset(defaults);
-    }
-  }, [defaults, form]);
 
   return (
     <AutosaveStatusProvider>
