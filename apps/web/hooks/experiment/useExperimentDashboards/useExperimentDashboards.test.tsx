@@ -47,19 +47,35 @@ describe("useExperimentDashboards", () => {
     expect(result.current.hasPreviousPage).toBe(false);
   });
 
-  it("detects next page when result length matches limit", async () => {
+  it("detects next page only when more items exist beyond the visible page", async () => {
+    // The hook fetches limit + 1 to probe for a next page; we serve back 51
+    // here so the probe row is present and hasNextPage flips to true.
+    server.mount(contract.experiments.listExperimentDashboards, {
+      body: Array.from({ length: 51 }, () => createExperimentDashboard()),
+    });
+    const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.hasNextPage).toBe(true);
+    // The visible page is sliced back to the user-facing limit.
+    expect(result.current.data?.body).toHaveLength(50);
+  });
+
+  it("does not report a phantom next page when results exactly fill the limit", async () => {
+    // A full page (length === limit) with no extra rows means there is no
+    // next page; the previous (== limit) heuristic claimed otherwise.
     server.mount(contract.experiments.listExperimentDashboards, {
       body: Array.from({ length: 50 }, () => createExperimentDashboard()),
     });
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.hasNextPage).toBe(true);
+    expect(result.current.hasNextPage).toBe(false);
   });
 
   it("advances offset by limit when nextPage is called", async () => {
     server.mount(contract.experiments.listExperimentDashboards, {
-      body: Array.from({ length: 50 }, () => createExperimentDashboard()),
+      body: Array.from({ length: 51 }, () => createExperimentDashboard()),
     });
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
 
