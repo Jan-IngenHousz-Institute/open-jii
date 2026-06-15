@@ -111,6 +111,7 @@
         "transferring": "Wird übertragen…",
         "transferSuccess": "Administratorrechte übertragen.",
         "transferPartial": "Einige Experimente konnten nicht aktualisiert werden. Bitte prüfen und erneut versuchen.",
+        "transferError": "Administratorrechte konnten nicht übertragen werden. Bitte versuchen Sie es erneut.",
         "expand": "Auf Vollbild erweitern",
         "collapse": "Vollbild verlassen"
       }

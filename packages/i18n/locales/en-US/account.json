@@ -111,6 +111,7 @@
         "transferring": "Transferring…",
         "transferSuccess": "Admin rights transferred.",
         "transferPartial": "Some experiments couldn't be updated. Please review and try again.",
+        "transferError": "Couldn't transfer admin rights. Please try again.",
         "expand": "Expand to full screen",
         "collapse": "Exit full screen"
       }

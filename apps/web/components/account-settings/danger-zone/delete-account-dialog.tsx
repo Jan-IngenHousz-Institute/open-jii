@@ -50,6 +50,9 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
   });
   const blockers = blockersData?.body.experiments ?? [];
   const hasBlockers = blockers.length > 0;
+  // Expanded only matters while blockers remain; once everything is transferred the section
+  // collapses on its own so the erase/preserve summary comes back on screen.
+  const isExpanded = blockersExpanded && hasBlockers;
 
   const handleClose = () => {
     setOpen(false);
@@ -112,7 +115,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
             <DialogTitle className="text-destructive">
               {t("dangerZone.delete.dialogTitle")}
             </DialogTitle>
-            {!blockersExpanded && (
+            {!isExpanded && (
               <DialogDescription className="text-muted-foreground">
                 {t("dangerZone.delete.dialogDescription")}
               </DialogDescription>
@@ -122,7 +125,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
           {/* Scroll container on mobile; on desktop the inner list scrolls instead. */}
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:overflow-visible">
             {/* What deletion erases / preserves — laid out side by side when there's room */}
-            {!blockersExpanded && (
+            {!isExpanded && (
               <div className="border-destructive/30 bg-muted shrink-0 rounded-md border p-3 text-sm">
                 <div
                   className={cn(hasBlockers ? "grid gap-x-6 gap-y-3 sm:grid-cols-2" : "space-y-3")}
@@ -166,7 +169,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
                 blockers={blockers}
                 currentUserId={userId}
                 locale={locale}
-                expanded={blockersExpanded}
+                expanded={isExpanded}
                 onToggleExpanded={() => setBlockersExpanded((v) => !v)}
               />
             ) : (

@@ -5,13 +5,11 @@ import { useMemo, useState } from "react";
 import { useTransferExperimentAdmin } from "~/hooks/experiment/useTransferExperimentAdmin/useTransferExperimentAdmin";
 import { useDebounce } from "~/hooks/useDebounce";
 import { useUserSearch } from "~/hooks/useUserSearch";
-import { parseApiError } from "~/util/apiError";
 
 import type { DeletionBlocker, UserMetadata, UserProfile } from "@repo/api/schemas/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 import { UserAvatar } from "../../user-avatar";
@@ -56,7 +54,13 @@ export function DeleteAccountBlockers({
   const { t } = useTranslation("account");
   const [assignments, setAssignments] = useState<Record<string, UserProfile | null>>({});
   const [applyAllUser, setApplyAllUser] = useState<UserProfile | null>(null);
-  const { mutateAsync: transferAdmin, isPending } = useTransferExperimentAdmin();
+  const { mutate: transferAdmin, isPending } = useTransferExperimentAdmin({
+    onSuccess: () => {
+      // Resolved experiments leave the refetched list; clear local selections.
+      setAssignments({});
+      setApplyAllUser(null);
+    },
+  });
 
   // Candidates who belong to every blocking experiment — the clean picks for "transfer all".
   const sharedCandidates = useMemo<UserMetadata[]>(() => {
@@ -121,25 +125,9 @@ export function DeleteAccountBlockers({
   const selectionProgress =
     blockers.length === 0 ? 0 : Math.round((selectedTransferCount / blockers.length) * 100);
 
-  const handleTransfer = async () => {
+  const handleTransfer = () => {
     if (transfers.length === 0 || isPending) return;
-    try {
-      const response = await transferAdmin({ body: { transfers } });
-      const failed = response.body.results.filter((result) => !result.success);
-      if (failed.length > 0) {
-        toast({
-          description: t("dangerZone.delete.blockers.transferPartial"),
-          variant: "destructive",
-        });
-      } else {
-        toast({ description: t("dangerZone.delete.blockers.transferSuccess") });
-      }
-      // Resolved experiments leave the refetched list; clear local selections.
-      setAssignments({});
-      setApplyAllUser(null);
-    } catch (err) {
-      toast({ description: parseApiError(err)?.message, variant: "destructive" });
-    }
+    transferAdmin({ body: { transfers } });
   };
 
   return (
