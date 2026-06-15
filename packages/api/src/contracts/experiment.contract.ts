@@ -12,8 +12,6 @@ import {
   zUpdateExperimentMemberRoleBody,
   zTransferExperimentAdminBody,
   zTransferExperimentAdminResponse,
-  zSeedDeletionBlockersResponse,
-  zClearDeletionBlockersResponse,
   zUpdateExperimentBody,
   zExperimentFilterQuery,
   zCreateExperimentResponse,
@@ -228,32 +226,6 @@ export const experimentContract = c.router({
     summary: "Bulk-transfer experiment admin rights",
     description:
       "Promotes (or adds) the given users as admins across multiple experiments the caller administers. Used to clear account-deletion blockers in one step.",
-  },
-
-  seedDeletionBlockers: {
-    method: "POST",
-    path: "/api/v1/dev/deletion-blockers/seed",
-    body: z.object({}),
-    responses: {
-      200: zSeedDeletionBlockersResponse,
-      403: zErrorResponse,
-    },
-    summary: "[dev only] Seed account-deletion test experiments",
-    description:
-      "Non-production helper that creates experiments covering every account-deletion case for the current user. Disabled in production.",
-  },
-
-  clearDeletionBlockers: {
-    method: "POST",
-    path: "/api/v1/dev/deletion-blockers/clear",
-    body: z.object({}),
-    responses: {
-      200: zClearDeletionBlockersResponse,
-      403: zErrorResponse,
-    },
-    summary: "[dev only] Remove seeded account-deletion test experiments",
-    description:
-      "Non-production helper that deletes the experiments created by the seed endpoint for the current user. Disabled in production.",
   },
 
   createJoinRequest: {

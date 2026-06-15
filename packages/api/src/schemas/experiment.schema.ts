@@ -1107,15 +1107,6 @@ export const zTransferExperimentAdminResponse = z.object({
   results: z.array(zTransferExperimentAdminResult),
 });
 
-// Dev-only helpers for populating/tearing down account-deletion test data.
-export const zSeedDeletionBlockersResponse = z.object({
-  created: z.number().int(),
-});
-
-export const zClearDeletionBlockersResponse = z.object({
-  deleted: z.number().int(),
-});
-
 // --- Experiment Join Request Schemas ---
 export const zJoinRequestStatus = z.enum(["pending", "approved", "rejected", "cancelled"]);
 
@@ -1723,8 +1714,6 @@ export type UpdateExperimentMemberRoleBody = z.infer<typeof zUpdateExperimentMem
 export type TransferExperimentAdminBody = z.infer<typeof zTransferExperimentAdminBody>;
 export type TransferExperimentAdminResult = z.infer<typeof zTransferExperimentAdminResult>;
 export type TransferExperimentAdminResponse = z.infer<typeof zTransferExperimentAdminResponse>;
-export type SeedDeletionBlockersResponse = z.infer<typeof zSeedDeletionBlockersResponse>;
-export type ClearDeletionBlockersResponse = z.infer<typeof zClearDeletionBlockersResponse>;
 export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;

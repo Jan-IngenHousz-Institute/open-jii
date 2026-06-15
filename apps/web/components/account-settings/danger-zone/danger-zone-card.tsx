@@ -2,7 +2,6 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
-import { env } from "~/env";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
@@ -22,7 +21,6 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { DevDeletionBlockersSeeder } from "../dev-deletion-blockers-seeder";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 
 interface DangerZoneCardProps {
@@ -171,9 +169,6 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
 
         {/* Delete Section */}
         <DeleteAccountDialog userId={userId} />
-
-        {/* Dev-only: seed/clear experiments covering every delete-account case */}
-        {env.NODE_ENV === "development" && <DevDeletionBlockersSeeder />}
       </CardContent>
     </Card>
   );
