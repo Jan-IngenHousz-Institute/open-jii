@@ -13,31 +13,37 @@ describe("WidgetCard", () => {
     expect(screen.getByText("inner")).toBeInTheDocument();
   });
 
-  it("is non-interactive (no role/tabIndex) when onSelect is not provided", () => {
-    render(<WidgetCard>x</WidgetCard>);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  it("is non-interactive (no tabIndex) when onSelect is not provided", () => {
+    const { container } = render(<WidgetCard>x</WidgetCard>);
+    const card = container.querySelector("[data-dashboard-widget]");
+    expect(card).not.toHaveAttribute("tabindex");
+    expect(card).not.toHaveAttribute("aria-current");
   });
 
-  it("exposes a button role and aria-pressed state when onSelect is provided", () => {
-    render(
+  it("exposes aria-current when interactive and selected", () => {
+    const { container } = render(
       <WidgetCard onSelect={vi.fn()} isSelected>
         x
       </WidgetCard>,
     );
-    const card = screen.getByRole("button");
-    expect(card).toHaveAttribute("aria-pressed", "true");
+    const card = container.querySelector("[data-dashboard-widget]");
+    expect(card).toHaveAttribute("aria-current", "true");
+    expect(card).toHaveAttribute("tabindex", "0");
   });
 
   it("fires onSelect on click and stops propagation into the parent", async () => {
     const onSelect = vi.fn();
     const onParentClick = vi.fn();
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <div onClick={onParentClick}>
         <WidgetCard onSelect={onSelect}>content</WidgetCard>
       </div>,
     );
-    await user.click(screen.getByRole("button"));
+    const card = container.querySelector<HTMLDivElement>("[data-dashboard-widget]");
+    expect(card).not.toBeNull();
+    if (!card) return;
+    await user.click(card);
     expect(onSelect).toHaveBeenCalled();
     expect(onParentClick).not.toHaveBeenCalled();
   });
@@ -45,9 +51,11 @@ describe("WidgetCard", () => {
   it("fires onSelect on Enter and Space keypresses", async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
-    render(<WidgetCard onSelect={onSelect}>content</WidgetCard>);
+    const { container } = render(<WidgetCard onSelect={onSelect}>content</WidgetCard>);
 
-    const card = screen.getByRole("button");
+    const card = container.querySelector<HTMLDivElement>("[data-dashboard-widget]");
+    expect(card).not.toBeNull();
+    if (!card) return;
     card.focus();
     // Focus auto-selects when not currently selected; clear that initial call.
     onSelect.mockClear();
@@ -59,19 +67,23 @@ describe("WidgetCard", () => {
 
   it("calls onSelect on focus when not already selected", () => {
     const onSelect = vi.fn();
-    render(<WidgetCard onSelect={onSelect}>content</WidgetCard>);
-    screen.getByRole("button").focus();
+    const { container } = render(<WidgetCard onSelect={onSelect}>content</WidgetCard>);
+    const card = container.querySelector<HTMLDivElement>("[data-dashboard-widget]");
+    expect(card).not.toBeNull();
+    card?.focus();
     expect(onSelect).toHaveBeenCalled();
   });
 
   it("does not call onSelect on focus when already selected", () => {
     const onSelect = vi.fn();
-    render(
+    const { container } = render(
       <WidgetCard onSelect={onSelect} isSelected>
         content
       </WidgetCard>,
     );
-    screen.getByRole("button").focus();
+    const card = container.querySelector<HTMLDivElement>("[data-dashboard-widget]");
+    expect(card).not.toBeNull();
+    card?.focus();
     expect(onSelect).not.toHaveBeenCalled();
   });
 });
