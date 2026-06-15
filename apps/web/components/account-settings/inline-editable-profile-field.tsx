@@ -129,9 +129,10 @@ export function InlineEditableProfileField({
   }
 
   return (
-    <button
+    <Button
       type="button"
-      className="hover:border-primary/10 hover:bg-muted group flex w-full items-start justify-between gap-4 rounded-md border border-transparent px-3 py-3 text-left transition-colors"
+      variant="ghost"
+      className="hover:border-primary/10 hover:bg-muted group flex h-auto w-full items-start justify-between gap-4 rounded-md border border-transparent px-3 py-3 text-left font-normal"
       onClick={startEditing}
     >
       <span className="min-w-0 flex-1 space-y-1">
@@ -147,6 +148,6 @@ export function InlineEditableProfileField({
         </span>
       </span>
       <Pencil className="text-muted-foreground mt-1 h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-    </button>
+    </Button>
   );
 }

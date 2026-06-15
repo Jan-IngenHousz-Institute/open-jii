@@ -340,12 +340,13 @@ function TransferUserPicker({
       {!selectedUser && selectableSuggestions.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selectableSuggestions.map((candidate) => (
-            <button
+            <Button
               key={candidate.userId}
               type="button"
+              variant="outline"
               disabled={disabled}
               onClick={() => onSelect(candidateToUserProfile(candidate))}
-              className="border-border bg-background hover:border-primary/30 hover:bg-quaternary/60 inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50"
+              className="hover:border-primary/30 hover:bg-quaternary/60 h-auto max-w-full gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-xs font-normal shadow-none"
             >
               <UserAvatar
                 avatarUrl={candidate.avatarUrl}
@@ -354,7 +355,7 @@ function TransferUserPicker({
                 className="text-md h-6 w-6"
               />
               {candidate.firstName} {candidate.lastName}
-            </button>
+            </Button>
           ))}
         </div>
       )}
