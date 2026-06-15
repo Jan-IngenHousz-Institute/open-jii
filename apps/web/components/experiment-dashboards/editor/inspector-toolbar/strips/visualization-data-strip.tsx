@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, Columns3, Database, Filter as FilterIcon, Loader2 } from "lucide-react";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
@@ -68,8 +69,15 @@ export function VisualizationDataStrip({
   const filtersSummary = filters.length > 0 ? String(filters.length) : undefined;
 
   // Dataset popover open state lives in the editor context so the inline
-  // viz-create flow can request it open before this strip mounts.
+  // viz-create flow can request it open before this strip mounts. Reset on
+  // unmount so the open flag doesn't leak past a section / widget switch.
   const { datasetOpen, setDatasetOpen } = useDashboardEditor();
+  useEffect(
+    () => () => {
+      setDatasetOpen(false);
+    },
+    [setDatasetOpen],
+  );
 
   const datasetItem: StripOverflowItem = {
     key: "dataset",

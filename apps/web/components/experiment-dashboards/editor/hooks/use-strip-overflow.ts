@@ -34,14 +34,29 @@ export function useStripOverflow({
     const shadowItems = shadowItemsRef.current;
     if (!container || !shadowItems) return;
 
+    // The toolbar pill is `w-fit`, so the strip's own clientWidth tracks
+    // whatever its visible items already occupy — a feedback loop that pins
+    // `available` to the already-collapsed state. Anchor instead to the
+    // pill's PARENT (the gradient body's max-w container) and subtract the
+    // pill's non-strip siblings (icon, tabs, more menu, separators) so the
+    // strip knows how wide it could actually grow.
+    const toolbar = container.closest<HTMLElement>("[data-toolbar-shell]");
+    const widthBudgetParent = toolbar?.parentElement ?? null;
+
     const recompute = () => {
       const itemWidths = readChildWidths(shadowItems);
       if (itemWidths.length === 0) {
         setSplitAt(0);
         return;
       }
-      const available = container.clientWidth - trailingSafetyPx;
       const moreWidth = shadowMoreRef.current?.offsetWidth ?? MORE_BUTTON_FALLBACK_PX;
+
+      const baseAvailable =
+        widthBudgetParent && toolbar
+          ? widthBudgetParent.clientWidth - (toolbar.clientWidth - container.clientWidth)
+          : container.clientWidth;
+      const available = baseAvailable - trailingSafetyPx;
+
       setSplitAt(computeSplitIndex(itemWidths, available, moreWidth));
     };
 
@@ -49,6 +64,7 @@ export function useStripOverflow({
     ro.observe(container);
     ro.observe(shadowItems);
     if (shadowMoreRef.current) ro.observe(shadowMoreRef.current);
+    if (widthBudgetParent) ro.observe(widthBudgetParent);
 
     // Sync + RAF catches late layout settling (font load, tab-switch reflow).
     recompute();

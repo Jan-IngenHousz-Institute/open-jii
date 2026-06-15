@@ -455,6 +455,8 @@
       "markerOptions": "Markers",
       "scatterOptions": "Scatter options",
       "barOptions": "Staafdiagram opties",
+      "errorBarOptions": "Foutmarges",
+      "facetOptions": "Facetten",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",

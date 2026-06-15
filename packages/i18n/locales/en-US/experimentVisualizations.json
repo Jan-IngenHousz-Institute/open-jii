@@ -477,6 +477,8 @@
       "markerOptions": "Markers",
       "scatterOptions": "Scatter options",
       "barOptions": "Bar options",
+      "errorBarOptions": "Error bars",
+      "facetOptions": "Facets",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",

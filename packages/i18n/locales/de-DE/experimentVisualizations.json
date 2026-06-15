@@ -455,6 +455,8 @@
       "markerOptions": "Marker",
       "scatterOptions": "Scatter options",
       "barOptions": "Balkendiagramm-Optionen",
+      "errorBarOptions": "Fehlerbalken",
+      "facetOptions": "Facetten",
       "mode": "Drawing mode",
       "connectGaps": "Connect gaps",
       "smoothing": "Line smoothing",

@@ -38,13 +38,15 @@ export function StripPopoverControl({
 
   // The shadow row only needs the trigger's width. Skip the full Popover so
   // controlled `open` / `defaultOpen` don't trigger duplicate content portals
-  // that would compete with the live row for focus / click-outside.
+  // that would compete with the live row for focus / click-outside. No
+  // aria-label here so test queries (and assistive tech) don't see two
+  // buttons with the same accessible name.
   if (isShadow) {
     return (
       <Button
         variant="ghost"
         size="sm"
-        aria-label={label}
+        aria-hidden="true"
         tabIndex={-1}
         className="text-foreground hover:text-foreground hover:bg-accent h-8 gap-1.5 rounded-full px-2.5 text-xs"
       >
