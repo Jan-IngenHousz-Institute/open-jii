@@ -140,7 +140,12 @@
       "notSet": "Niet ingesteld"
     },
     "scanning": {
-      "title": "Bezig met meten"
+      "title": "Bezig met meten",
+      "receiving": "Resultaten ontvangen…",
+      "takingLonger": "Duurt langer dan verwacht…",
+      "packets": "{{count}} pakketten ontvangen",
+      "elapsed": "{{elapsed}} verstreken",
+      "elapsedOfEstimate": "{{elapsed}} van ~{{estimate}}"
     },
     "toast": {
       "notConnected": "Geen verbinding met sensor",

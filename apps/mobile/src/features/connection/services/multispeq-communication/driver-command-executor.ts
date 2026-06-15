@@ -15,12 +15,42 @@ export interface ExecuteOptions {
   timeoutMs?: number;
 }
 
+/**
+ * Live progress of an in-flight command. A MultispeQ runs a protocol silently
+ * and returns ONE response at the end, so `rx chunk`s are fragments of that
+ * final burst — `chunks`/`bytes` climb while the reply transfers, not during
+ * the measurement itself. The measuring phase is conveyed by elapsed time
+ * against an estimate (see the UI), not by this stream. Hence there is
+ * deliberately no chunk-silence watchdog: silence is normal mid-measurement.
+ */
+export interface CommandProgress {
+  /** "sent" once the command is on the wire; "receiving" as the reply streams in. */
+  phase: "sent" | "receiving";
+  /** rx fragments seen so far (final-response transfer). */
+  chunks: number;
+  /** total characters received so far. */
+  bytes: number;
+  /** ms since the command was sent. */
+  elapsedMs: number;
+}
+
+export type CommandProgressListener = (progress: CommandProgress) => void;
+
 export interface IMultispeqCommandExecutor {
   execute(command: string | object, options?: ExecuteOptions): Promise<string | object>;
   /** Abort the in-flight command (sends `-1+` and rejects it as cancelled). */
   cancel(): Promise<void>;
+  /**
+   * Subscribe to live progress of the in-flight command. Returns an
+   * unsubscribe function. Emissions are throttled so a chatty transfer can't
+   * flood the React Native bridge.
+   */
+  onProgress(listener: CommandProgressListener): () => void;
   destroy(): Promise<void>;
 }
+
+/** Minimum gap (ms) between throttled "receiving" emissions. */
+const PROGRESS_THROTTLE_MS = 100;
 
 /**
  * Adapts the shared `@repo/iot` `MultispeqDriver` to the app's command-executor
@@ -42,6 +72,13 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
   // aggregate them and attach one "rx" summary on message completion.
   private chunkCount = 0;
 
+  // Live-progress state for the in-flight command. `bytes`/`cmdStartedAt` are
+  // reset on each `tx`; `lastEmitAt` throttles "receiving" emissions.
+  private readonly progressListeners = new Set<CommandProgressListener>();
+  private bytes = 0;
+  private cmdStartedAt = 0;
+  private lastEmitAt = 0;
+
   constructor(transport: ITransportAdapter) {
     this.driver = new MultispeqDriver(this.createBridgeLogger());
     void this.driver.initialize(transport);
@@ -58,12 +95,24 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
       if (!trace) return false;
       const fields = args[0] as LogFields | undefined;
 
+      if (msg === "tx") {
+        // Command is on the wire — start the clock and announce "sent".
+        this.cmdStartedAt = Date.now();
+        this.bytes = 0;
+        this.lastEmitAt = 0;
+        trace.event(msg, fields);
+        this.emitProgress("sent", true);
+        return true;
+      }
       if (msg === "rx chunk") {
         this.chunkCount += 1;
+        this.bytes += typeof fields?.chars === "number" ? fields.chars : 0;
+        this.emitProgress("receiving", false);
         return true;
       }
       if (msg === "rx complete") {
         trace.event("rx", { ...fields, chunks: this.chunkCount });
+        this.emitProgress("receiving", true);
         this.chunkCount = 0;
         return true;
       }
@@ -89,10 +138,44 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
     };
   }
 
+  /**
+   * Notify progress listeners. "receiving" emissions are throttled to
+   * PROGRESS_THROTTLE_MS; "sent" and the final "rx complete" pass `force`.
+   */
+  private emitProgress(phase: CommandProgress["phase"], force: boolean): void {
+    if (this.progressListeners.size === 0) return;
+    const now = Date.now();
+    if (!force && now - this.lastEmitAt < PROGRESS_THROTTLE_MS) return;
+    this.lastEmitAt = now;
+    const progress: CommandProgress = {
+      phase,
+      chunks: this.chunkCount,
+      bytes: this.bytes,
+      elapsedMs: this.cmdStartedAt ? now - this.cmdStartedAt : 0,
+    };
+    this.progressListeners.forEach((listener) => {
+      try {
+        listener(progress);
+      } catch {
+        // A bad listener must never break command execution.
+      }
+    });
+  }
+
+  onProgress(listener: CommandProgressListener): () => void {
+    this.progressListeners.add(listener);
+    return () => {
+      this.progressListeners.delete(listener);
+    };
+  }
+
   async execute(command: string | object, options?: ExecuteOptions): Promise<string | object> {
     const trace = startTrace("multispeq.command", `multispeq-cmd-${++commandSeq}`);
     this.activeTrace = trace;
     this.chunkCount = 0;
+    this.bytes = 0;
+    this.cmdStartedAt = 0;
+    this.lastEmitAt = 0;
 
     try {
       const result = await this.driver.execute(command, options);

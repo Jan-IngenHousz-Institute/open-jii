@@ -4,6 +4,7 @@ import { Emitter } from "~/features/connection/utils/emitter";
 import { MULTISPEQ_FRAMING } from "@repo/iot";
 
 import type { SerialPortEvents } from "./android-serial-port-connection/serial-port-events";
+import type { CommandProgress } from "./driver-command-executor";
 import { createDriverCommandExecutor } from "./driver-command-executor";
 import { bluetoothClassicTransport } from "./transports/bluetooth-classic-transport";
 import { serialPortTransport } from "./transports/serial-port-transport";
@@ -83,6 +84,37 @@ describe("createDriverCommandExecutor", () => {
     const err = await settled;
     expect((err as Error).message).toBe("Command cancelled");
     expect(transport.send).toHaveBeenCalledWith(CANCEL_FRAME);
+  });
+
+  it("streams command progress to onProgress subscribers", async () => {
+    const transport = mockTransport();
+    transport.send.mockImplementation(() => {
+      // Reply arrives as two raw fragments; the driver frames on the newline.
+      setTimeout(() => {
+        transport.simulate('{"value":');
+        transport.simulate("42}ABCD1234\n");
+      }, 0);
+      return Promise.resolve();
+    });
+    const executor = createDriverCommandExecutor(transport);
+
+    const events: CommandProgress[] = [];
+    const off = executor.onProgress((p) => events.push(p));
+
+    await executor.execute("cmd");
+
+    // "sent" fires first; a forced "receiving" reports the framed transfer.
+    expect(events[0]?.phase).toBe("sent");
+    const last = events.at(-1);
+    expect(last?.phase).toBe("receiving");
+    expect(last?.chunks).toBeGreaterThanOrEqual(1);
+    expect(last?.bytes).toBeGreaterThan(0);
+
+    // Unsubscribing stops further deliveries.
+    off();
+    const before = events.length;
+    await executor.execute("cmd");
+    expect(events.length).toBe(before);
   });
 });
 

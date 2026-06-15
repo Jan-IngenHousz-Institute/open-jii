@@ -39,6 +39,9 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     result: scanResult,
     error: scanError,
     cancelCommand,
+    progress: scanProgress,
+    scanStartedAt,
+    estimatedMs,
   } = useScanner();
   const { data: device } = useConnectedDevice();
   const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
@@ -130,7 +133,12 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       return (
         <View className="flex-1">
           <View className="flex-1 p-4">
-            <ScanningState protocolName={protocol?.name} />
+            <ScanningState
+              protocolName={protocol?.name}
+              progress={scanProgress}
+              scanStartedAt={scanStartedAt}
+              estimatedMs={estimatedMs}
+            />
           </View>
           <View className="gap-4 px-4 py-3">
             <View className="bg-muted flex-row items-center gap-2 rounded-lg p-2">

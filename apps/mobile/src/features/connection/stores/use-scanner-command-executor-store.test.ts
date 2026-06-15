@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
+import type {
+  CommandProgress,
+  IMultispeqCommandExecutor,
+} from "~/features/connection/services/multispeq-communication/driver-command-executor";
 import type { Device } from "~/shared/types/device";
 
 import { useScannerCommandExecutorStore } from "./use-scanner-command-executor-store";
@@ -25,12 +28,15 @@ interface ControllableExecutor extends IMultispeqCommandExecutor {
   calls: ExecuteCall[];
   destroyCalls: () => number;
   cancelCalls: () => number;
+  /** Push a progress event to the currently subscribed listener (if any). */
+  emitProgress: (progress: CommandProgress) => void;
 }
 
 function createControllableExecutor(): ControllableExecutor {
   const calls: ExecuteCall[] = [];
   let destroyed = 0;
   let cancelled = 0;
+  let progressListener: ((progress: CommandProgress) => void) | undefined;
 
   return {
     calls,
@@ -46,12 +52,19 @@ function createControllableExecutor(): ControllableExecutor {
       calls[calls.length - 1]?.reject(new Error("Command cancelled"));
       return Promise.resolve();
     },
+    onProgress(listener) {
+      progressListener = listener;
+      return () => {
+        if (progressListener === listener) progressListener = undefined;
+      };
+    },
     destroy() {
       destroyed++;
       return Promise.resolve();
     },
     destroyCalls: () => destroyed,
     cancelCalls: () => cancelled,
+    emitProgress: (progress) => progressListener?.(progress),
   };
 }
 
@@ -72,6 +85,9 @@ function resetStore() {
     isCancelled: false,
     error: undefined,
     isInitializing: false,
+    progress: undefined,
+    scanStartedAt: undefined,
+    estimatedMs: undefined,
   });
 }
 
@@ -96,6 +112,41 @@ describe("useScannerCommandExecutorStore", () => {
       expect(state.isExecuting).toBe(false);
       expect(state.commandResponse).toEqual({ ok: true });
       expect(state.error).toBeUndefined();
+    });
+
+    it("tracks scan timing and mirrors executor progress, clearing it on settle", async () => {
+      const exec = await attachExecutor();
+      const protocol = [
+        {
+          v_arrays: [],
+          set_repeats: 1,
+          _protocol_set_: [{ pulses: [10], pulse_distance: [1000] }],
+        },
+      ];
+
+      const pending = useScannerCommandExecutorStore.getState().executeCommand(protocol);
+
+      const mid = useScannerCommandExecutorStore.getState();
+      expect(typeof mid.scanStartedAt).toBe("number");
+      expect(mid.estimatedMs).toBeGreaterThan(0);
+
+      // The executor's progress is mirrored into the store verbatim.
+      const progress: CommandProgress = {
+        phase: "receiving",
+        chunks: 3,
+        bytes: 120,
+        elapsedMs: 40,
+      };
+      exec.emitProgress(progress);
+      expect(useScannerCommandExecutorStore.getState().progress).toEqual(progress);
+
+      exec.calls[0].resolve({ ok: true });
+      await expect(pending).resolves.toEqual({ ok: true });
+
+      // progress is cleared on settle; timing lingers until the next run.
+      const done = useScannerCommandExecutorStore.getState();
+      expect(done.progress).toBeUndefined();
+      expect(typeof done.scanStartedAt).toBe("number");
     });
 
     it("throws and sets error when no executor is attached", async () => {
