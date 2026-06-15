@@ -28,18 +28,26 @@ export class ExperimentDashboardsController {
 
   @TsRestHandler(contract.experiments.listExperimentDashboards)
   listDashboards(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listExperimentDashboards, async ({ params }) => {
-      const result = await this.listExperimentDashboardsUseCase.execute(params.id, session.user.id);
+    return tsRestHandler(
+      contract.experiments.listExperimentDashboards,
+      async ({ params, query }) => {
+        const result = await this.listExperimentDashboardsUseCase.execute(
+          params.id,
+          session.user.id,
+          query.limit,
+          query.offset,
+        );
 
-      if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK as const,
-          body: formatDatesList(result.value),
-        };
-      }
+        if (result.isSuccess()) {
+          return {
+            status: StatusCodes.OK as const,
+            body: formatDatesList(result.value),
+          };
+        }
 
-      return handleFailure(result, this.logger);
-    });
+        return handleFailure(result, this.logger);
+      },
+    );
   }
 
   @TsRestHandler(contract.experiments.createExperimentDashboard)

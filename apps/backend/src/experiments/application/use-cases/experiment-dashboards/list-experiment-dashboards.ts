@@ -16,12 +16,19 @@ export class ListExperimentDashboardsUseCase {
     private readonly experimentDashboardRepository: ExperimentDashboardRepository,
   ) {}
 
-  async execute(experimentId: string, userId: string): Promise<Result<ExperimentDashboardDto[]>> {
+  async execute(
+    experimentId: string,
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<Result<ExperimentDashboardDto[]>> {
     this.logger.log({
       msg: "Listing dashboards of experiment",
       operation: "listExperimentDashboards",
       experimentId,
       userId,
+      limit,
+      offset,
     });
 
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -55,8 +62,11 @@ export class ListExperimentDashboardsUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        const dashboardsResult =
-          await this.experimentDashboardRepository.listDashboards(experimentId);
+        const dashboardsResult = await this.experimentDashboardRepository.listDashboards(
+          experimentId,
+          limit,
+          offset,
+        );
 
         if (dashboardsResult.isFailure()) {
           this.logger.error({

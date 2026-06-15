@@ -81,14 +81,38 @@ describe("ListExperimentDashboardsUseCase", () => {
         .spyOn(experimentDashboardRepository, "listDashboards")
         .mockResolvedValue(success(dashboards));
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, 50, 0);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toHaveLength(2);
       expect(result.value[0]).toMatchObject({ name: "Dashboard 1" });
       expect(result.value[1]).toMatchObject({ name: "Dashboard 2" });
-      expect(listSpy).toHaveBeenCalledWith(experiment.id);
+      expect(listSpy).toHaveBeenCalledWith(experiment.id, 50, 0);
+    });
+
+    it("should forward custom limit and offset to the repository", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment,
+          hasAccess: true,
+          hasArchiveAccess: true,
+          isAdmin: true,
+        }),
+      );
+
+      const listSpy = vi
+        .spyOn(experimentDashboardRepository, "listDashboards")
+        .mockResolvedValue(success([]));
+
+      await useCase.execute(experiment.id, testUserId, 10, 20);
+
+      expect(listSpy).toHaveBeenCalledWith(experiment.id, 10, 20);
     });
 
     it("should return empty array when there are no dashboards", async () => {
@@ -108,7 +132,7 @@ describe("ListExperimentDashboardsUseCase", () => {
 
       vi.spyOn(experimentDashboardRepository, "listDashboards").mockResolvedValue(success([]));
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, 50, 0);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -135,7 +159,7 @@ describe("ListExperimentDashboardsUseCase", () => {
         success([buildDashboard(experiment.id)]),
       );
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, 50, 0);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -154,7 +178,7 @@ describe("ListExperimentDashboardsUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(nonExistentExperimentId, testUserId);
+      const result = await useCase.execute(nonExistentExperimentId, testUserId, 50, 0);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -176,7 +200,7 @@ describe("ListExperimentDashboardsUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, 50, 0);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -202,7 +226,7 @@ describe("ListExperimentDashboardsUseCase", () => {
         failure(AppError.internal("Database error")),
       );
 
-      const result = await useCase.execute(experiment.id, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId, 50, 0);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);

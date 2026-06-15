@@ -21,7 +21,11 @@ export class ExperimentDashboardRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async listDashboards(experimentId: string): Promise<Result<ExperimentDashboardDto[]>> {
+  async listDashboards(
+    experimentId: string,
+    limit: number,
+    offset: number,
+  ): Promise<Result<ExperimentDashboardDto[]>> {
     return tryCatch(async () => {
       const results = await this.database
         .select({
@@ -32,7 +36,9 @@ export class ExperimentDashboardRepository {
         .from(experimentDashboards)
         .innerJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
         .where(eq(experimentDashboards.experimentId, experimentId))
-        .orderBy(desc(experimentDashboards.createdAt));
+        .orderBy(desc(experimentDashboards.createdAt))
+        .limit(limit)
+        .offset(offset);
 
       return results.map((r) => this.toDashboardDto(r));
     });

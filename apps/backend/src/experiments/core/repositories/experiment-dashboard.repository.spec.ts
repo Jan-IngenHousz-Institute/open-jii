@@ -141,7 +141,7 @@ describe("ExperimentDashboardRepository", () => {
 
   describe("listDashboards", () => {
     it("should return empty array when no dashboards exist", async () => {
-      const result = await repository.listDashboards(testExperimentId);
+      const result = await repository.listDashboards(testExperimentId, 50, 0);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -158,7 +158,7 @@ describe("ExperimentDashboardRepository", () => {
       // Dashboard in another experiment should not be returned.
       await repository.create(anotherExperimentId, createDto1, anotherUserId);
 
-      const result = await repository.listDashboards(testExperimentId);
+      const result = await repository.listDashboards(testExperimentId, 50, 0);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -171,6 +171,25 @@ describe("ExperimentDashboardRepository", () => {
       dashboards.forEach((dashboard) => {
         expect(dashboard.experimentId).toBe(testExperimentId);
       });
+    });
+
+    it("should respect limit and offset pagination", async () => {
+      for (let i = 0; i < 5; i++) {
+        await repository.create(testExperimentId, { name: `Dashboard ${i}` }, testUserId);
+        // Spacing keeps creation timestamps strictly increasing so the
+        // descending order is stable to assert against.
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+
+      const firstPage = await repository.listDashboards(testExperimentId, 2, 0);
+      const secondPage = await repository.listDashboards(testExperimentId, 2, 2);
+
+      assertSuccess(firstPage);
+      assertSuccess(secondPage);
+      expect(firstPage.value).toHaveLength(2);
+      expect(secondPage.value).toHaveLength(2);
+      expect(firstPage.value[0].id).not.toBe(secondPage.value[0].id);
+      expect(firstPage.value[1].id).not.toBe(secondPage.value[0].id);
     });
 
     it("should order dashboards by creation date descending", async () => {
@@ -188,7 +207,7 @@ describe("ExperimentDashboardRepository", () => {
         testUserId,
       );
 
-      const result = await repository.listDashboards(testExperimentId);
+      const result = await repository.listDashboards(testExperimentId, 50, 0);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -354,7 +373,7 @@ describe("ExperimentDashboardRepository", () => {
       assertSuccess(findAfter);
       expect(findAfter.value).toBeNull();
 
-      const listResult = await repository.listDashboards(testExperimentId);
+      const listResult = await repository.listDashboards(testExperimentId, 50, 0);
       assertSuccess(listResult);
       expect(listResult.value).toHaveLength(0);
     });
@@ -398,7 +417,7 @@ describe("ExperimentDashboardRepository", () => {
         description: createDto.description,
       });
 
-      const listResult = await repository.listDashboards(testExperimentId);
+      const listResult = await repository.listDashboards(testExperimentId, 50, 0);
       assertSuccess(listResult);
       expect(listResult.value).toHaveLength(1);
       expect(listResult.value[0].id).toBe(dashboard.id);
@@ -434,7 +453,7 @@ describe("ExperimentDashboardRepository", () => {
         dashboards.push(result.value[0]);
       }
 
-      const listResult = await repository.listDashboards(testExperimentId);
+      const listResult = await repository.listDashboards(testExperimentId, 50, 0);
       assertSuccess(listResult);
       expect(listResult.value).toHaveLength(3);
 
@@ -446,7 +465,7 @@ describe("ExperimentDashboardRepository", () => {
       const deleteResult = await repository.delete(dashboards[0].id);
       assertSuccess(deleteResult);
 
-      const finalListResult = await repository.listDashboards(testExperimentId);
+      const finalListResult = await repository.listDashboards(testExperimentId, 50, 0);
       assertSuccess(finalListResult);
       expect(finalListResult.value).toHaveLength(2);
 
@@ -470,7 +489,7 @@ describe("ExperimentDashboardRepository", () => {
       assertSuccess(createResult);
       const dashboard = createResult.value[0];
 
-      const listResult = await repository.listDashboards(testExperimentId);
+      const listResult = await repository.listDashboards(testExperimentId, 50, 0);
       assertSuccess(listResult);
       const listed = listResult.value.find((d) => d.id === dashboard.id);
       expect(listed?.createdByName).toBe("Active Creator");
@@ -494,7 +513,7 @@ describe("ExperimentDashboardRepository", () => {
       assertSuccess(createResult);
       const dashboard = createResult.value[0];
 
-      const listResult = await repository.listDashboards(testExperimentId);
+      const listResult = await repository.listDashboards(testExperimentId, 50, 0);
       assertSuccess(listResult);
       const listed = listResult.value.find((d) => d.id === dashboard.id);
       expect(listed?.createdByName).toBe("Unknown User");
