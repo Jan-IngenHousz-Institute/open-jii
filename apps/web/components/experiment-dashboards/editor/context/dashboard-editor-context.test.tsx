@@ -51,4 +51,13 @@ describe("DashboardEditorContext", () => {
     rerender();
     expect(result.current.selectWidget).toBe(first);
   });
+
+  it("starts with the dataset popover closed and toggles via setDatasetOpen", () => {
+    const { result } = renderHook(() => useDashboardEditor(), { wrapper });
+    expect(result.current.datasetOpen).toBe(false);
+    act(() => result.current.setDatasetOpen(true));
+    expect(result.current.datasetOpen).toBe(true);
+    act(() => result.current.setDatasetOpen(false));
+    expect(result.current.datasetOpen).toBe(false);
+  });
 });
