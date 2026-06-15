@@ -45,9 +45,7 @@
     "addWidget": "Widget hinzufügen",
     "modebar": {
       "cursor": "Auswählen",
-      "dropHint": "Klicken zum Platzieren",
-      "undo": "Rückgängig",
-      "redo": "Wiederherstellen"
+      "dropHint": "Klicken zum Platzieren"
     },
     "widgetTypes": {
       "visualization": "Visualisierung",

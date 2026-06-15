@@ -27,15 +27,13 @@ function setup(visible: boolean) {
 }
 
 describe("DashboardModebar", () => {
-  it("renders cursor, placement tools, and undo/redo", () => {
+  it("renders cursor and placement tools", () => {
     setup(true);
     expect(screen.getByLabelText("editor.modebar.cursor")).toBeInTheDocument();
     expect(screen.getByLabelText("editor.widgetTypes.visualization")).toBeInTheDocument();
     expect(screen.getByLabelText("editor.widgetTypes.richText")).toBeInTheDocument();
     expect(screen.getByLabelText("editor.widgetTypes.table")).toBeInTheDocument();
     expect(screen.getByLabelText("editor.widgetTypes.filter")).toBeInTheDocument();
-    expect(screen.getByLabelText("editor.modebar.undo")).toBeInTheDocument();
-    expect(screen.getByLabelText("editor.modebar.redo")).toBeInTheDocument();
   });
 
   it("marks the cursor as pressed by default and pressed-state flips when a placement tool is picked", async () => {
@@ -56,11 +54,5 @@ describe("DashboardModebar", () => {
     const shell = container.querySelector("[data-editor-chrome]");
     expect(shell).not.toBeNull();
     expect(shell).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("disables undo and redo", () => {
-    setup(true);
-    expect(screen.getByLabelText("editor.modebar.undo")).toBeDisabled();
-    expect(screen.getByLabelText("editor.modebar.redo")).toBeDisabled();
   });
 });

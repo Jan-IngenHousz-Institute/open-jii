@@ -46,9 +46,7 @@
     "addWidget": "Add widget",
     "modebar": {
       "cursor": "Select",
-      "dropHint": "Click to place",
-      "undo": "Undo",
-      "redo": "Redo"
+      "dropHint": "Click to place"
     },
     "widgetTypes": {
       "visualization": "Visualization",

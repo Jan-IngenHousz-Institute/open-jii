@@ -1,6 +1,6 @@
 "use client";
 
-import { MousePointer2, Redo2, Undo2 } from "lucide-react";
+import { MousePointer2 } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Separator } from "@repo/ui/components/separator";
@@ -20,7 +20,7 @@ interface DashboardModebarProps {
 }
 
 // Placement modebar shown when no widget is selected: cursor + four
-// widget-type placement tools + undo/redo, in a floating pill.
+// widget-type placement tools, in a floating pill.
 export function DashboardModebar({ visible }: DashboardModebarProps) {
   const { t } = useTranslation("experimentDashboards");
   const { tool, setTool } = useDashboardEditor();
@@ -28,7 +28,6 @@ export function DashboardModebar({ visible }: DashboardModebarProps) {
     setTool(tool === next ? "cursor" : next);
   };
   const handleCursor = () => setTool("cursor");
-  const noop = () => undefined;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -48,9 +47,6 @@ export function DashboardModebar({ visible }: DashboardModebarProps) {
             onPick={pickTool}
           />
         ))}
-        <Separator orientation="vertical" className="mx-0.5 h-5" />
-        <ToolButton icon={Undo2} label={t("editor.modebar.undo")} disabled onClick={noop} />
-        <ToolButton icon={Redo2} label={t("editor.modebar.redo")} disabled onClick={noop} />
       </ToolbarShell>
     </TooltipProvider>
   );

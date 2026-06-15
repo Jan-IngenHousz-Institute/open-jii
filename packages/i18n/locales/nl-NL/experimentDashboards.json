@@ -45,9 +45,7 @@
     "addWidget": "Widget toevoegen",
     "modebar": {
       "cursor": "Selecteren",
-      "dropHint": "Klik om te plaatsen",
-      "undo": "Ongedaan maken",
-      "redo": "Opnieuw"
+      "dropHint": "Klik om te plaatsen"
     },
     "widgetTypes": {
       "visualization": "Visualisatie",
