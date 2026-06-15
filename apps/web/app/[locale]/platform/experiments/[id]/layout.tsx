@@ -88,7 +88,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const getActiveTab = () => {
     const base = `/${locale}/platform/experiments/${id}`;
     if (pathname.startsWith(`${base}/data`)) return "data";
-    if (pathname.startsWith(`${base}/dashboards`)) return "dashboards";
     if (pathname.includes("/analysis")) return "analysis";
     if (pathname.endsWith("/flow")) return "flow";
     if (pathname.includes("/collaborators")) return "collaborators";
@@ -116,11 +115,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
           </NavTabsTrigger>
           <NavTabsTrigger value="data" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/data`}>{t("data")}</Link>
-          </NavTabsTrigger>
-          <NavTabsTrigger value="dashboards" asChild>
-            <Link href={`/${locale}/platform/experiments/${id}/dashboards`}>
-              {t("dashboards.tabLabel")}
-            </Link>
           </NavTabsTrigger>
           <NavTabsTrigger value="analysis" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/analysis`}>
