@@ -25,4 +25,5 @@ export default registerAs("aws", () => ({
     iotArchiveBucketName: process.env.AWS_IOT_ARCHIVE_BUCKET_NAME,
     largeIotBucketName: process.env.AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME,
   },
+  internalApiKey: process.env.INTERNAL_API_KEY,
 }));

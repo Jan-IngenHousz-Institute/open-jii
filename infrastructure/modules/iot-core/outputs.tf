@@ -39,3 +39,18 @@ output "databricks_large_iot_read_policy_arn" {
   value       = var.enable_large_iot_sqs ? aws_iam_policy.databricks_large_iot_read[0].arn : null
 }
 
+output "claim_certificate_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing the claim certificate and private key"
+  value       = aws_secretsmanager_secret.claim_cert.arn
+}
+
+output "fleet_provisioning_template_name" {
+  description = "Name of the fleet provisioning template"
+  value       = aws_iot_provisioning_template.fleet.name
+}
+
+output "provisioned_device_policy_name" {
+  description = "Name of the IoT policy attached to provisioned devices"
+  value       = aws_iot_policy.provisioned_device_policy.name
+}
+

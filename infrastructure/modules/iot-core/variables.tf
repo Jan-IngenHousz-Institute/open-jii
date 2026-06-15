@@ -77,3 +77,27 @@ variable "large_iot_bucket_arn" {
   type        = string
   default     = ""
 }
+
+variable "device_types" {
+  description = "IoT Thing Types to create, keyed by short name (e.g. 'ambyte')"
+  type = map(object({
+    description           = string
+    searchable_attributes = list(string)
+  }))
+  default = {}
+}
+
+variable "device_groups" {
+  description = "IoT Thing Groups to create, keyed by short name"
+  type = map(object({
+    description  = string
+    parent_group = optional(string, null)
+  }))
+  default = {}
+}
+
+variable "provisioning_lambda_arn" {
+  description = "ARN of the pre-provisioning Lambda. If empty no Lambda permission is created."
+  type        = string
+  default     = ""
+}
