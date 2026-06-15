@@ -111,6 +111,7 @@ export class ExperimentDashboardsController {
       contract.experiments.updateExperimentDashboard,
       async ({ params, body }) => {
         const result = await this.updateExperimentDashboardUseCase.execute(
+          params.id,
           params.dashboardId,
           body,
           session.user.id,
@@ -121,6 +122,7 @@ export class ExperimentDashboardsController {
           this.logger.log({
             msg: "Dashboard updated",
             operation: "updateExperimentDashboard",
+            experimentId: params.id,
             dashboardId: params.dashboardId,
             userId: session.user.id,
             status: "success",
@@ -141,6 +143,7 @@ export class ExperimentDashboardsController {
   deleteDashboard(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.deleteExperimentDashboard, async ({ params }) => {
       const result = await this.deleteExperimentDashboardUseCase.execute(
+        params.id,
         params.dashboardId,
         session.user.id,
       );
@@ -149,6 +152,7 @@ export class ExperimentDashboardsController {
         this.logger.log({
           msg: "Dashboard deleted",
           operation: "deleteExperimentDashboard",
+          experimentId: params.id,
           dashboardId: params.dashboardId,
           userId: session.user.id,
           status: "success",

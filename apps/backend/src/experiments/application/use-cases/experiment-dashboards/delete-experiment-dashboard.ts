@@ -16,10 +16,11 @@ export class DeleteExperimentDashboardUseCase {
     private readonly experimentDashboardRepository: ExperimentDashboardRepository,
   ) {}
 
-  async execute(dashboardId: string, userId: string): Promise<Result<void>> {
+  async execute(experimentId: string, dashboardId: string, userId: string): Promise<Result<void>> {
     this.logger.log({
       msg: "Deleting dashboard",
       operation: "deleteExperimentDashboard",
+      experimentId,
       dashboardId,
       userId,
     });
@@ -31,10 +32,26 @@ export class DeleteExperimentDashboardUseCase {
         this.logger.warn({
           msg: "Attempt to delete non-existent dashboard",
           operation: "deleteExperimentDashboard",
+          experimentId,
           dashboardId,
           userId,
         });
         return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
+      }
+
+      if (dashboard.experimentId !== experimentId) {
+        // Rejects URL/path mismatch: DELETE /experiments/OTHER/dashboards/D where D
+        // belongs to a different experiment. Same check the get use case enforces.
+        this.logger.warn({
+          msg: "Dashboard does not belong to experiment",
+          operation: "deleteExperimentDashboard",
+          experimentId,
+          dashboardId,
+          userId,
+        });
+        return failure(
+          AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
+        );
       }
 
       const accessResult = await this.experimentRepository.checkAccess(

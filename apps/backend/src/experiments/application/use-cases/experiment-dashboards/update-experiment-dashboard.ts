@@ -20,6 +20,7 @@ export class UpdateExperimentDashboardUseCase {
   ) {}
 
   async execute(
+    experimentId: string,
     dashboardId: string,
     data: UpdateExperimentDashboardDto,
     userId: string,
@@ -27,6 +28,7 @@ export class UpdateExperimentDashboardUseCase {
     this.logger.log({
       msg: "Updating dashboard",
       operation: "updateExperimentDashboard",
+      experimentId,
       dashboardId,
       userId,
     });
@@ -38,10 +40,26 @@ export class UpdateExperimentDashboardUseCase {
         this.logger.warn({
           msg: "Attempt to update non-existent dashboard",
           operation: "updateExperimentDashboard",
+          experimentId,
           dashboardId,
           userId,
         });
         return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
+      }
+
+      if (dashboard.experimentId !== experimentId) {
+        // Rejects URL/path mismatch: PATCH /experiments/OTHER/dashboards/D where D
+        // belongs to a different experiment. Same check the get use case enforces.
+        this.logger.warn({
+          msg: "Dashboard does not belong to experiment",
+          operation: "updateExperimentDashboard",
+          experimentId,
+          dashboardId,
+          userId,
+        });
+        return failure(
+          AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
+        );
       }
 
       const accessResult = await this.experimentRepository.checkAccess(

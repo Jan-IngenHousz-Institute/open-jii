@@ -97,7 +97,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
         .spyOn(experimentDashboardRepository, "update")
         .mockResolvedValue(success([updated]));
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -133,7 +138,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
         success([{ ...existing, name: "Updated Dashboard" }]),
       );
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -161,7 +171,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
 
       vi.spyOn(experimentDashboardRepository, "update").mockResolvedValue(success([existing]));
 
-      const result = await useCase.execute(dashboardId, {}, testUserId);
+      const result = await useCase.execute(experiment.id, dashboardId, {}, testUserId);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -173,7 +183,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
         failure(AppError.internal("Database error")),
       );
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        faker.string.uuid(),
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -183,7 +198,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
     it("should fail when dashboard findById returns success with null", async () => {
       vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(success(null));
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        faker.string.uuid(),
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -206,11 +226,46 @@ describe("UpdateExperimentDashboardUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        fakeExperimentId,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe(`Experiment with ID ${fakeExperimentId} not found`);
+    });
+
+    it("should fail when the dashboard belongs to a different experiment than the URL", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+      const otherExperimentId = faker.string.uuid();
+
+      vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(
+        success(buildDashboard(experiment.id)),
+      );
+
+      const checkAccessSpy = vi.spyOn(experimentRepository, "checkAccess");
+      const updateSpy = vi.spyOn(experimentDashboardRepository, "update");
+
+      const result = await useCase.execute(
+        otherExperimentId,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toBe(
+        `Dashboard with ID ${dashboardId} not found in this experiment`,
+      );
+      expect(checkAccessSpy).not.toHaveBeenCalled();
+      expect(updateSpy).not.toHaveBeenCalled();
     });
 
     it("should fail when user does not have archive access", async () => {
@@ -232,7 +287,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -258,7 +318,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -286,7 +351,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
 
       vi.spyOn(experimentDashboardRepository, "update").mockResolvedValue(success([]));
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -316,7 +386,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
         failure(AppError.internal("Database error")),
       );
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -342,7 +417,12 @@ describe("UpdateExperimentDashboardUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(dashboardId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        dashboardId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);

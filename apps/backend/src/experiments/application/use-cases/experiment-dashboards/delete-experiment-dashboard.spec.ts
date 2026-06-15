@@ -82,7 +82,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
         .spyOn(experimentDashboardRepository, "delete")
         .mockResolvedValue(success(undefined));
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(experiment.id, dashboardId, testUserId);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -111,7 +111,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
 
       vi.spyOn(experimentDashboardRepository, "delete").mockResolvedValue(success(undefined));
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(experiment.id, dashboardId, testUserId);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -141,7 +141,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
         .spyOn(experimentDashboardRepository, "delete")
         .mockResolvedValue(success(undefined));
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(experiment.id, dashboardId, testUserId);
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
@@ -154,7 +154,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
         failure(AppError.internal("Database error")),
       );
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(faker.string.uuid(), dashboardId, testUserId);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -164,7 +164,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
     it("should fail when dashboard findById returns success with null", async () => {
       vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(success(null));
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(faker.string.uuid(), dashboardId, testUserId);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -187,11 +187,36 @@ describe("DeleteExperimentDashboardUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(fakeExperimentId, dashboardId, testUserId);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe(`Experiment with ID ${fakeExperimentId} not found`);
+    });
+
+    it("should fail when the dashboard belongs to a different experiment than the URL", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+      const otherExperimentId = faker.string.uuid();
+
+      vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(
+        success(buildDashboard(experiment.id)),
+      );
+
+      const checkAccessSpy = vi.spyOn(experimentRepository, "checkAccess");
+      const deleteSpy = vi.spyOn(experimentDashboardRepository, "delete");
+
+      const result = await useCase.execute(otherExperimentId, dashboardId, testUserId);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toBe(
+        `Dashboard with ID ${dashboardId} not found in this experiment`,
+      );
+      expect(checkAccessSpy).not.toHaveBeenCalled();
+      expect(deleteSpy).not.toHaveBeenCalled();
     });
 
     it("should fail when user does not have archive access", async () => {
@@ -213,7 +238,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(experiment.id, dashboardId, testUserId);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -243,7 +268,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
         failure(AppError.internal("Database error")),
       );
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(experiment.id, dashboardId, testUserId);
 
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
@@ -269,7 +294,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
         }),
       );
 
-      const result = await useCase.execute(dashboardId, testUserId);
+      const result = await useCase.execute(experiment.id, dashboardId, testUserId);
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
