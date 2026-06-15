@@ -263,10 +263,6 @@ describe("UpdateExperimentDashboardUseCase", () => {
     });
 
     it("should fail when the dashboard belongs to a different experiment than the URL", async () => {
-      // The URL points at a valid, accessible experiment, but the resolved
-      // dashboard belongs to another one. Mismatch must 404 only after the
-      // access check has already passed, so unauthorized callers cannot
-      // distinguish "exists elsewhere" from "does not exist".
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
         userId: testUserId,

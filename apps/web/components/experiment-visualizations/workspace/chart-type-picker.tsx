@@ -67,10 +67,8 @@ export function ChartTypePickerContent({ value, onPick }: ChartTypePickerContent
     [grouped],
   );
 
-  // Each popover open is a fresh mount (Radix unmounts content on close), so
-  // initializing state from `value`'s family here is enough to re-sync the
-  // tab on reopen. A useEffect tied to `value` here used to snap the tab
-  // back mid-browse when `value` changed externally.
+  // Radix unmounts PopoverContent on close, so the lazy initializer reruns
+  // each open. Avoid a useEffect on `value` here: it snaps mid-browse.
   const [activeFamily, setActiveFamily] = useState<ChartFamily>(() =>
     availableFamilies.includes(current.family) ? current.family : (availableFamilies[0] ?? "basic"),
   );

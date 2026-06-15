@@ -105,9 +105,6 @@ describe("ChartTypePicker", () => {
   });
 
   it("does not snap the active tab when the parent value changes mid-browse", async () => {
-    // Reproduces the bug where a value-change in the parent fired an
-    // effect that yanked the active tab back to the new value's family
-    // while the user was browsing a different family.
     const user = userEvent.setup();
     let setValueOutside: ((v: "line" | "heatmap") => void) | null = null;
 
@@ -120,16 +117,13 @@ describe("ChartTypePicker", () => {
     render(<Harness />);
     await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
 
-    // User explicitly browses the statistical family.
     const statisticalTab = await screen.findByRole("tab", {
       name: "workspace.families.statistical",
     });
     await user.click(statisticalTab);
     expect(statisticalTab).toHaveAttribute("aria-selected", "true");
 
-    // Parent now flips the value to a scientific-family chart. Without the
-    // fix, this would snap the active tab to "scientific". With the fix,
-    // the user's "statistical" selection holds.
+    // Flip value to a scientific-family chart; the user's tab choice should hold.
     act(() => {
       setValueOutside?.("heatmap");
     });

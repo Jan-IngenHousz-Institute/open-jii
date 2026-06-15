@@ -14,9 +14,7 @@ export function hasTraceType(form: UseFormReturn<ChartFormValues>, traceType: st
 
 export function hasAnyErrorColumn(form: UseFormReturn<ChartFormValues>): boolean {
   const sources = form.getValues("dataConfig.dataSources");
-  // Only Y-role data sources actually emit error bars at render time, so an
-  // `errorColumn` set on an X / color / size source must not unlock the
-  // error-bar style shelf. Matches the renderer's filter.
+  // Renderer only honors Y-role errorColumn, so gate the shelf on Y too.
   return dataSourcesByRole(sources, "y").some(
     ({ source }) => typeof source.errorColumn === "string" && source.errorColumn.length > 0,
   );

@@ -69,8 +69,6 @@ describe("ErrorBarStyleSection", () => {
   });
 
   it("renders nothing when only a non-Y data source carries an errorColumn", () => {
-    // The renderer only emits error bars from Y-role series, so an
-    // errorColumn on an X-role source must not unlock these style controls.
     const formValues: ChartFormValues = {
       ...withoutErrorColumn(),
       dataConfig: {

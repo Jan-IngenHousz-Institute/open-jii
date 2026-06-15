@@ -1,9 +1,7 @@
 import { tsr } from "@/lib/tsr";
 import { useCallback, useMemo, useState } from "react";
 
-// Contract caps `limit` at 100 (zListExperimentDashboardsQuery). The probe
-// adds 1, so the user-facing limit must leave room for the probe within
-// that cap, hence MAX_USER_LIMIT = 99.
+// Contract max is 100; the +1 probe needs room within it.
 const MAX_BACKEND_LIMIT = 100;
 const MAX_USER_LIMIT = MAX_BACKEND_LIMIT - 1;
 
@@ -22,9 +20,7 @@ export const useExperimentDashboards = ({
   const [offset, setOffset] = useState<number>(initialOffset);
   const setLimit = useCallback((n: number) => setLimitState(clampLimit(n)), []);
 
-  // Request one extra so the response length tells us whether another page
-  // exists. Without it, a full page accidentally looks like a "next page"
-  // exists when the dataset is exactly `limit` long.
+  // Probe one extra row to detect a real next page vs. an exactly-full one.
   const requestedLimit = limit + 1;
 
   const {

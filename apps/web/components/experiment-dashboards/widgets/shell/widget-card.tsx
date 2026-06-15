@@ -65,10 +65,7 @@ export function WidgetCard({ children, className, isSelected, onSelect }: Widget
   return (
     <div
       data-dashboard-widget=""
-      // No role="button" here: this container holds other interactive
-      // children (expand affordance, sort headers, form inputs), which ARIA
-      // forbids inside button-roled elements. `aria-current` carries the
-      // "this is the active widget" semantic without the role conflict.
+      // No role="button": ARIA forbids interactive descendants inside one.
       aria-current={isInteractive && isSelected ? "true" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
       onFocus={handleFocus}

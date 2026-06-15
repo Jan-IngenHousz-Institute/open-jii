@@ -12,9 +12,7 @@ import { useReportAutosaveStatus } from "../../../shared/autosave/autosave-statu
 import type { ChartFormValues } from "../../charts/chart-config";
 import { sanitizeDataConfigForSave } from "../../charts/data/aggregation";
 
-// Module-scoped so the reference is stable across renders. Passing an inline
-// arrow caused `useAutosave`'s `useMemo([value, toKey])` to invalidate every
-// render, re-stringifying the full chart form tree on each keystroke.
+// Module-scoped: inline arrows churn useAutosave's memo every render.
 const stringifyChart = (v: ChartFormValues) => JSON.stringify(v);
 
 interface UseVisualizationAutosaveOptions {

@@ -39,9 +39,7 @@ export function ExpandableWidget({ title, children }: ExpandableWidgetProps) {
     </button>
   );
 
-  // Children render in exactly one of the two slots, never both: leaving them
-  // mounted in the card while the dialog is open would spin up duplicate
-  // charts / hooks / observers and double every effect that fires on mount.
+  // Mount in exactly one slot at a time so charts/hooks don't double-init.
   return (
     <div className="relative h-full">
       {!open && children}

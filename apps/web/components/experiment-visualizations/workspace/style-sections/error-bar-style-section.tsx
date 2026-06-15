@@ -23,9 +23,7 @@ interface ErrorBarStyleSectionProps {
 export function ErrorBarStyleSection({ form, flat = false }: ErrorBarStyleSectionProps) {
   const { t } = useTranslation("experimentVisualizations");
   const dataSources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
-  // Only Y-role data sources actually emit error bars at render time, so an
-  // `errorColumn` set on an X / color / size source must not unlock these
-  // styling controls. Match the renderer's filter.
+  // Renderer only honors Y-role errorColumn, so gate the shelf on Y too.
   const hasAnyYErrorColumn = dataSources.some(
     (ds) => ds.role === "y" && typeof ds.errorColumn === "string" && ds.errorColumn.length > 0,
   );

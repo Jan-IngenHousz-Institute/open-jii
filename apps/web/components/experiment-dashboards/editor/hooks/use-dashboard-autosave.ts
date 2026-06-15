@@ -11,9 +11,7 @@ import type { UpdateExperimentDashboardBody } from "@repo/api/schemas/experiment
 import { useReportAutosaveStatus } from "../../../shared/autosave/autosave-status-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 
-// Module-scoped so the reference is stable across renders. Passing an inline
-// arrow caused `useAutosave`'s `useMemo([value, toKey])` to invalidate every
-// render, re-stringifying the full form tree on each keystroke.
+// Module-scoped: inline arrows churn useAutosave's memo every render.
 const stringifyDashboard = (v: DashboardFormValues) => JSON.stringify(v);
 
 interface UseDashboardAutosaveOptions {

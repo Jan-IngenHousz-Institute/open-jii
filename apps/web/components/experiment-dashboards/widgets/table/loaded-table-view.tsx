@@ -55,8 +55,7 @@ export function LoadedTableView({
     return [...(widgetFilters ?? []), ...dashboardFilters];
   }, [widgetFilters, dashboardFilters]);
 
-  // Compare filters by content so a fresh array with identical filters does
-  // not bounce the user to page 1 on unrelated re-renders.
+  // Content-hash so identical filters with a new array ref don't reset page.
   const filtersKey = JSON.stringify(mergedFilters ?? []);
 
   useEffect(() => {

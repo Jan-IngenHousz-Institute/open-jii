@@ -33,9 +33,8 @@ export class UpdateExperimentDashboardUseCase {
       userId,
     });
 
-    // Check access against the URL experimentId FIRST. Without this, a 404
-    // forking on "exists in a different experiment" vs "does not exist" leaks
-    // dashboard-id existence to unauthorized callers. Matches the GET use case.
+    // Access checked against the URL experimentId BEFORE findById, so a 404
+    // forking on "exists in another experiment" can't leak ids to outsiders.
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(

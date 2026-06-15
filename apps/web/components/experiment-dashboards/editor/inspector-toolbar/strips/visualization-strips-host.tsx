@@ -39,10 +39,8 @@ export function VisualizationStripsHost({
     return <HintChip text={t("editor.inspector.viz.pickVisualizationFirst")} />;
   }
 
-  // Autosave events bubble to the outer dashboard `AutosaveStatusProvider`
-  // so the layout-level indicator reflects both dashboard and viz saves.
-  // Wrapping a nested provider here would shadow the outer one and hide
-  // viz saves from the status pill.
+  // No nested AutosaveStatusProvider: a fresh provider would shadow the
+  // outer one and hide viz saves from the dashboard-level indicator.
   return (
     <Loader
       key={visualizationId}

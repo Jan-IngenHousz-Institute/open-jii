@@ -176,8 +176,7 @@ describe("ExperimentDashboardRepository", () => {
     it("should respect limit and offset pagination", async () => {
       for (let i = 0; i < 5; i++) {
         await repository.create(testExperimentId, { name: `Dashboard ${i}` }, testUserId);
-        // Spacing keeps creation timestamps strictly increasing so the
-        // descending order is stable to assert against.
+        // Strictly increasing createdAt so ORDER BY DESC is stable.
         await new Promise((resolve) => setTimeout(resolve, 5));
       }
 
@@ -232,10 +231,7 @@ describe("ExperimentDashboardRepository", () => {
       assertSuccess(result);
       const orphan = result.value.find((d) => d.name === "Orphan Dashboard");
       expect(orphan).toBeDefined();
-      // The anonymized name SQL (`getAnonymizedFirstName`/`getAnonymizedLastName`)
-      // returns 'Unknown' / 'User' when `profiles.activated` is null, which is
-      // what a left-join produces for a profile-less creator. The dashboard
-      // surfaces with the same placeholder name used for deactivated profiles.
+      // Anonymized name SQL falls back to 'Unknown User' when activated is null.
       expect(orphan?.createdByName).toBe("Unknown User");
     });
   });
