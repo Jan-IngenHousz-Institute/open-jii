@@ -158,7 +158,7 @@ export function FilterDataStrip({ widget, widgetIndex, experimentId }: FilterDat
                 summary={operatorOptions.find((o) => o.value === operator)?.label}
                 icon={FilterIcon}
               >
-                <Select value={operator} onValueChange={handleOperatorChange}>
+                <Select value={operator ?? ""} onValueChange={handleOperatorChange}>
                   <SelectTrigger className="h-8 w-full">
                     <SelectValue />
                   </SelectTrigger>
