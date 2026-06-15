@@ -16,7 +16,6 @@ import { chartFormResolver } from "../../../../experiment-visualizations/charts/
 import { getChartTypeDef } from "../../../../experiment-visualizations/charts/chart-registry";
 import { DataSourcesFieldArrayProvider } from "../../../../experiment-visualizations/workspace/context/data-sources-field-array-context";
 import { useVisualizationAutosave } from "../../../../experiment-visualizations/workspace/hooks/use-visualization-autosave";
-import { AutosaveStatusProvider } from "../../../../shared/autosave/autosave-status-context";
 import { useLiveVizPreview } from "../../hooks/use-live-viz-preview";
 import { VisualizationDataStrip } from "./visualization-data-strip";
 import { VisualizationStyleStrip } from "./visualization-style-strip";
@@ -40,15 +39,17 @@ export function VisualizationStripsHost({
     return <HintChip text={t("editor.inspector.viz.pickVisualizationFirst")} />;
   }
 
+  // Autosave events bubble to the outer dashboard `AutosaveStatusProvider`
+  // so the layout-level indicator reflects both dashboard and viz saves.
+  // Wrapping a nested provider here would shadow the outer one and hide
+  // viz saves from the status pill.
   return (
-    <AutosaveStatusProvider>
-      <Loader
-        key={visualizationId}
-        visualizationId={visualizationId}
-        experimentId={experimentId}
-        section={section}
-      />
-    </AutosaveStatusProvider>
+    <Loader
+      key={visualizationId}
+      visualizationId={visualizationId}
+      experimentId={experimentId}
+      section={section}
+    />
   );
 }
 

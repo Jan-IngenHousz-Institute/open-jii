@@ -14,7 +14,6 @@ import { chartFormResolver } from "../../../experiment-visualizations/charts/cha
 import { getChartTypeDef } from "../../../experiment-visualizations/charts/chart-registry";
 import { DataSourcesFieldArrayProvider } from "../../../experiment-visualizations/workspace/context/data-sources-field-array-context";
 import { useVisualizationAutosave } from "../../../experiment-visualizations/workspace/hooks/use-visualization-autosave";
-import { AutosaveStatusProvider } from "../../../shared/autosave/autosave-status-context";
 import { useLiveVizPreview } from "../hooks/use-live-viz-preview";
 import { BuilderBody } from "./builder-body";
 
@@ -47,14 +46,12 @@ export function EmbeddedVisualizationBuilder({
   }
 
   return (
-    <AutosaveStatusProvider>
-      <BuilderShell
-        key={data.body.id}
-        experimentId={experimentId}
-        visualization={data.body}
-        renderWidgetTab={renderWidgetTab}
-      />
-    </AutosaveStatusProvider>
+    <BuilderShell
+      key={data.body.id}
+      experimentId={experimentId}
+      visualization={data.body}
+      renderWidgetTab={renderWidgetTab}
+    />
   );
 }
 
