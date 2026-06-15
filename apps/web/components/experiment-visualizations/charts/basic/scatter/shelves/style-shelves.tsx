@@ -19,7 +19,7 @@ import { FacetStyleSection } from "../../../../workspace/style-sections/facet-st
 import { LineStyleSection } from "../../../../workspace/style-sections/line-style-section";
 import { MarkerStyleSection } from "../../../../workspace/style-sections/marker-style-section";
 import { ReferenceLinesSection } from "../../../../workspace/style-sections/reference-lines-section";
-import { hasTraceType } from "../../../shelf-visibility";
+import { hasAnyErrorColumn, hasFacetSource, hasTraceType } from "../../../shelf-visibility";
 import type { ChartPanelProps, ShelfDef } from "../../../types";
 
 function ScatterDisplay({ form, flat }: ChartPanelProps) {
@@ -114,6 +114,7 @@ export const scatterStyleShelves: ShelfDef[] = [
     labelKey: "workspace.style.errorBarOptions",
     icon: MoveVertical,
     Component: ScatterErrorBar,
+    visible: hasAnyErrorColumn,
   },
   {
     key: "referenceLines",
@@ -126,5 +127,6 @@ export const scatterStyleShelves: ShelfDef[] = [
     labelKey: "workspace.style.facetOptions",
     icon: LayoutGrid,
     Component: ScatterFacetStyle,
+    visible: hasFacetSource,
   },
 ];
