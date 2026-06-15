@@ -118,37 +118,6 @@ describe("DeleteExperimentDashboardUseCase", () => {
       expect(result.value).toBeUndefined();
     });
 
-    it("should forbid a non-admin non-creator from deleting another user's dashboard", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(
-        success(buildDashboard(experiment.id, { createdBy: faker.string.uuid() })),
-      );
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false,
-        }),
-      );
-
-      const deleteSpy = vi
-        .spyOn(experimentDashboardRepository, "delete")
-        .mockResolvedValue(success(undefined));
-
-      const result = await useCase.execute(experiment.id, dashboardId, testUserId);
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.message).toBe("You do not have permission to delete this dashboard");
-      expect(deleteSpy).not.toHaveBeenCalled();
-    });
-
     it("should fail when dashboard findById returns failure", async () => {
       vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(
         failure(AppError.internal("Database error")),

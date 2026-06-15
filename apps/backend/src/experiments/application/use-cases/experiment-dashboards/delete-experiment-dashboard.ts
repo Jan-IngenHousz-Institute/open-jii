@@ -63,7 +63,6 @@ export class DeleteExperimentDashboardUseCase {
         async ({
           experiment,
           hasArchiveAccess,
-          isAdmin,
         }: {
           experiment: ExperimentDto | null;
           hasAccess: boolean;
@@ -92,19 +91,6 @@ export class DeleteExperimentDashboardUseCase {
               userId,
             });
             return failure(AppError.forbidden("You do not have access to this experiment"));
-          }
-
-          if (dashboard.createdBy !== userId && !isAdmin) {
-            this.logger.warn({
-              msg: "User does not have permission to delete dashboard",
-              operation: "deleteExperimentDashboard",
-              experimentId: dashboard.experimentId,
-              dashboardId,
-              userId,
-            });
-            return failure(
-              AppError.forbidden("You do not have permission to delete this dashboard"),
-            );
           }
 
           const deleteResult = await this.experimentDashboardRepository.delete(dashboardId);
