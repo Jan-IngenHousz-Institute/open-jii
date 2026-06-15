@@ -32,13 +32,25 @@ export interface Trace {
 }
 
 const registry = new Map<string, TraceImpl>();
-const traceLogger = createLogger("trace");
+
+// A trace's `kind` ("multispeq.command") doubles as its logger identity: the
+// segment before the first dot becomes the namespace and the remainder the
+// message — so the final entry reads `[multispeq] command …` instead of a
+// generic `[trace] multispeq.command`, and logs filter by domain.
+function kindToLog(kind: string): { ns: string; msg: string } {
+  const dot = kind.indexOf(".");
+  if (dot === -1) return { ns: kind, msg: kind };
+  return { ns: kind.slice(0, dot), msg: kind.slice(dot + 1) };
+}
 
 class TraceImpl implements Trace {
   readonly t0: number;
   readonly events: TraceEvent[] = [];
   fields: LogFields;
   ended = false;
+  readonly logger: Logger;
+  /** Message logged on end() — the `kind` minus its namespace segment. */
+  readonly msg: string;
   // The finalized result from the first end() call. Returned verbatim on
   // any subsequent end() so a double-end can't fabricate a divergent
   // payload (totalMs: 0, empty events, a different status).
@@ -48,10 +60,12 @@ class TraceImpl implements Trace {
     readonly kind: string,
     readonly id: string,
     base: LogFields | undefined,
-    readonly logger: Logger,
   ) {
     this.t0 = Date.now();
     this.fields = { ...(base ?? {}) };
+    const { ns, msg } = kindToLog(kind);
+    this.logger = createLogger(ns);
+    this.msg = msg;
   }
 
   event(name: string, fields?: LogFields): void {
@@ -87,7 +101,7 @@ class TraceImpl implements Trace {
       e.fields ? `${e.name}+${e.tMs}(${formatInline(e.fields)})` : `${e.name}+${e.tMs}`,
     );
     const level = status === "ok" ? "info" : "error";
-    this.logger[level](this.kind, {
+    this.logger[level](this.msg, {
       id: this.id,
       status,
       total_ms: totalMs,
@@ -117,7 +131,7 @@ export function startTrace(kind: string, id: string, baseFields?: LogFields): Tr
     if (baseFields) existing.setFields(baseFields);
     return existing;
   }
-  const t = new TraceImpl(kind, id, baseFields, traceLogger);
+  const t = new TraceImpl(kind, id, baseFields);
   registry.set(id, t);
   return t;
 }

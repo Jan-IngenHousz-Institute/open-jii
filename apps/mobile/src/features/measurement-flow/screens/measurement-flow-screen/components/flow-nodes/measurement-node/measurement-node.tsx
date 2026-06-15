@@ -39,6 +39,9 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     result: scanResult,
     error: scanError,
     cancelCommand,
+    progress: scanProgress,
+    scanStartedAt,
+    estimatedMs,
   } = useScanner();
   const { data: device } = useConnectedDevice();
   const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
@@ -48,17 +51,30 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     setProtocolId(content.protocolId);
   }, [setProtocolId, content.protocolId]);
 
-  // Keep a stable ref to resetScan so the disconnect-cleanup effect below
-  // doesn't need to list it as a dependency (avoids any memoisation concerns).
+  // Keep stable refs so the disconnect-cleanup effect below doesn't need to
+  // list these as dependencies (avoids any memoisation concerns).
   const resetScanRef = useRef(resetScan);
   resetScanRef.current = resetScan;
+  const cancelCommandRef = useRef(cancelCommand);
+  cancelCommandRef.current = cancelCommand;
 
-  // When the device unexpectedly disconnects while a scan is in progress,
+  // When the device unexpectedly disconnects while a scan is in progress, abort
+  // the in-flight command (so it doesn't keep running until its timeout) and
   // reset the scan so the user can reconnect and retry cleanly rather than
   // being stuck on the scanning screen.
   useEffect(() => {
     if (!device && isScanning) {
-      resetScanRef.current();
+      // Await the cancel before resetting: resetting first would clear the
+      // cancellation state while the execute() is still settling, so the
+      // in-flight command would surface a raw transport/cancel error instead of
+      // the coherent "Measurement cancelled" path.
+      void (async () => {
+        try {
+          await cancelCommandRef.current();
+        } finally {
+          resetScanRef.current();
+        }
+      })();
     }
   }, [device, isScanning]);
 
@@ -130,7 +146,12 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       return (
         <View className="flex-1">
           <View className="flex-1 p-4">
-            <ScanningState protocolName={protocol?.name} />
+            <ScanningState
+              protocolName={protocol?.name}
+              progress={scanProgress}
+              scanStartedAt={scanStartedAt}
+              estimatedMs={estimatedMs}
+            />
           </View>
           <View className="gap-4 px-4 py-3">
             <View className="bg-muted flex-row items-center gap-2 rounded-lg p-2">

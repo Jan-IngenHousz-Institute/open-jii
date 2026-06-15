@@ -29,7 +29,7 @@
     "noDeviceTitle": "Geen apparaat verbonden",
     "noDeviceSub": "Koppel een MultispeQ om te beginnen met meten.",
     "reconnectTitle": "Verbind {{name}} opnieuw",
-    "reconnectSub": "Laatst gekoppelde apparaat",
+    "reconnectSub": "{{mac}}",
     "disconnect": "Verbinding verbreken",
     "reconnect": "Opnieuw verbinden",
     "nearbyTitle": "Apparaten in de buurt",
