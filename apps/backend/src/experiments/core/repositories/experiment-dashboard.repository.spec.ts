@@ -232,7 +232,11 @@ describe("ExperimentDashboardRepository", () => {
       assertSuccess(result);
       const orphan = result.value.find((d) => d.name === "Orphan Dashboard");
       expect(orphan).toBeDefined();
-      expect(orphan?.createdByName).toBeUndefined();
+      // The anonymized name SQL (`getAnonymizedFirstName`/`getAnonymizedLastName`)
+      // returns 'Unknown' / 'User' when `profiles.activated` is null, which is
+      // what a left-join produces for a profile-less creator. The dashboard
+      // surfaces with the same placeholder name used for deactivated profiles.
+      expect(orphan?.createdByName).toBe("Unknown User");
     });
   });
 
