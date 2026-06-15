@@ -90,7 +90,35 @@ describe("DeleteExperimentDashboardUseCase", () => {
       expect(deleteSpy).toHaveBeenCalledWith(dashboardId);
     });
 
-    it("should allow any experiment member to delete a dashboard even if not the creator", async () => {
+    it("should allow an admin to delete a dashboard they did not create", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(
+        success(buildDashboard(experiment.id, { createdBy: faker.string.uuid() })),
+      );
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment,
+          hasAccess: true,
+          hasArchiveAccess: true,
+          isAdmin: true,
+        }),
+      );
+
+      vi.spyOn(experimentDashboardRepository, "delete").mockResolvedValue(success(undefined));
+
+      const result = await useCase.execute(dashboardId, testUserId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeUndefined();
+    });
+
+    it("should forbid a non-admin non-creator from deleting another user's dashboard", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
         userId: testUserId,
@@ -109,13 +137,16 @@ describe("DeleteExperimentDashboardUseCase", () => {
         }),
       );
 
-      vi.spyOn(experimentDashboardRepository, "delete").mockResolvedValue(success(undefined));
+      const deleteSpy = vi
+        .spyOn(experimentDashboardRepository, "delete")
+        .mockResolvedValue(success(undefined));
 
       const result = await useCase.execute(dashboardId, testUserId);
 
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toBeUndefined();
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toBe("You do not have permission to delete this dashboard");
+      expect(deleteSpy).not.toHaveBeenCalled();
     });
 
     it("should fail when dashboard findById returns failure", async () => {
