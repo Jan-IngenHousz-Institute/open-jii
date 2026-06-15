@@ -227,7 +227,7 @@ describe("bluetoothClassicTransport", () => {
     const transport = makeBtTransport(device);
 
     expect(transport.isConnected()).toBe(true);
-    transport.onStatusChanged(() => {});
+    transport.onStatusChanged(() => undefined);
     await expect(transport.send("cmd")).resolves.toBeUndefined();
     expect(device.write).toHaveBeenCalledWith("cmd");
   });
@@ -277,7 +277,7 @@ describe("serialPortTransport", () => {
     const transport = serialPortTransport(emitter);
 
     expect(transport.isConnected()).toBe(true);
-    transport.onStatusChanged(() => {});
+    transport.onStatusChanged(() => undefined);
 
     const received: string[] = [];
     transport.onDataReceived((d) => received.push(d));
