@@ -101,11 +101,14 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
 
         <DialogContent
           className={cn(
-            "max-h-[90vh] grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden",
+            // Mobile: a single flex column that scrolls its body (dvh so the
+            // browser toolbar can't push the footer off-screen). Desktop (sm+):
+            // fixed header/footer with an internally-scrolling list.
+            "flex max-h-[90dvh] flex-col overflow-hidden p-4 sm:grid sm:grid-cols-1 sm:grid-rows-[auto_minmax(0,1fr)_auto] sm:p-6",
             hasBlockers ? "max-w-2xl" : "max-w-md",
           )}
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-destructive">
               {t("dangerZone.delete.dialogTitle")}
             </DialogTitle>
@@ -116,7 +119,8 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
             )}
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-col gap-4">
+          {/* Scroll container on mobile; on desktop the inner list scrolls instead. */}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:overflow-visible">
             {/* What deletion erases / preserves — laid out side by side when there's room */}
             {!blockersExpanded && (
               <div className="border-destructive/30 bg-muted shrink-0 rounded-md border p-3 text-sm">
@@ -183,7 +187,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={handleClose}>
               {t("dangerZone.cancel")}
             </Button>
