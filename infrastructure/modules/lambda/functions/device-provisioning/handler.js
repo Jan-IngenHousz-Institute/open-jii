@@ -9,12 +9,14 @@ const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY ?? "";
 exports.handler = async (event) => {
   const { SerialNumber, DeviceClass } = event.parameters ?? {};
 
-  console.log(JSON.stringify({
-    msg: "Pre-provisioning hook invoked",
-    serialNumber: SerialNumber,
-    deviceClass: DeviceClass,
-    clientId: event.clientId,
-  }));
+  console.log(
+    JSON.stringify({
+      msg: "Pre-provisioning hook invoked",
+      serialNumber: SerialNumber,
+      deviceClass: DeviceClass,
+      clientId: event.clientId,
+    }),
+  );
 
   if (!SerialNumber || !DeviceClass) {
     console.error(JSON.stringify({ msg: "Missing required parameters", event }));
@@ -28,12 +30,14 @@ exports.handler = async (event) => {
       certificateId: event.certificateId,
     });
 
-    console.log(JSON.stringify({
-      msg: "Backend validation result",
-      allowed: response.allowed,
-      reason: response.reason,
-      serialNumber: SerialNumber,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "Backend validation result",
+        allowed: response.allowed,
+        reason: response.reason,
+        serialNumber: SerialNumber,
+      }),
+    );
 
     if (!response.allowed) {
       return { allowProvisioning: false };
@@ -73,7 +77,9 @@ function callBackend(body) {
       },
       (res) => {
         let responseBody = "";
-        res.on("data", (chunk) => { responseBody += chunk; });
+        res.on("data", (chunk) => {
+          responseBody += chunk;
+        });
         res.on("end", () => {
           if (res.statusCode !== 200) {
             reject(new Error(`Backend returned ${res.statusCode}: ${responseBody}`));
@@ -85,7 +91,10 @@ function callBackend(body) {
     );
 
     req.on("error", reject);
-    req.on("timeout", () => { req.destroy(); reject(new Error("Request timeout")); });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Request timeout"));
+    });
     req.write(data);
     req.end();
   });
