@@ -34,7 +34,7 @@ export class ExperimentDashboardRepository {
           lastName: getAnonymizedLastName(),
         })
         .from(experimentDashboards)
-        .innerJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
+        .leftJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
         .where(eq(experimentDashboards.experimentId, experimentId))
         .orderBy(desc(experimentDashboards.createdAt))
         .limit(limit)
@@ -72,7 +72,7 @@ export class ExperimentDashboardRepository {
           lastName: getAnonymizedLastName(),
         })
         .from(experimentDashboards)
-        .innerJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
+        .leftJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
         .where(eq(experimentDashboards.id, insertResults[0].id));
 
       return results.map((r) => this.toDashboardDto(r));
@@ -88,7 +88,7 @@ export class ExperimentDashboardRepository {
           lastName: getAnonymizedLastName(),
         })
         .from(experimentDashboards)
-        .innerJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
+        .leftJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
         .where(eq(experimentDashboards.id, id))
         .limit(1);
 
@@ -116,7 +116,7 @@ export class ExperimentDashboardRepository {
           lastName: getAnonymizedLastName(),
         })
         .from(experimentDashboards)
-        .innerJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
+        .leftJoin(profiles, eq(experimentDashboards.createdBy, profiles.userId))
         .where(eq(experimentDashboards.id, id));
 
       return results.map((r) => this.toDashboardDto(r));

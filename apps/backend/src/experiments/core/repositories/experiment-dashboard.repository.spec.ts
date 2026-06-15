@@ -218,6 +218,22 @@ describe("ExperimentDashboardRepository", () => {
         result.value[1].createdAt.getTime(),
       );
     });
+
+    it("should still return dashboards whose creator has no profile row", async () => {
+      const profilelessUserId = await testApp.createTestUser({
+        name: "Profileless",
+        createProfile: false,
+      });
+
+      await repository.create(testExperimentId, { name: "Orphan Dashboard" }, profilelessUserId);
+
+      const result = await repository.listDashboards(testExperimentId, 50, 0);
+
+      assertSuccess(result);
+      const orphan = result.value.find((d) => d.name === "Orphan Dashboard");
+      expect(orphan).toBeDefined();
+      expect(orphan?.createdByName).toBeUndefined();
+    });
   });
 
   describe("findById", () => {
