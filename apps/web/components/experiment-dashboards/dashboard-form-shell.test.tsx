@@ -1,6 +1,6 @@
 import { createExperimentDashboard, createRichTextWidget } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import { DashboardFormShell } from "./dashboard-form-shell";
@@ -26,13 +26,13 @@ vi.mock("./editor/hooks/use-dashboard-autosave", () => ({
 
 function FormProbe() {
   const form = useFormContext<DashboardFormValues>();
-  const values = form.getValues();
+  const values = useWatch<DashboardFormValues>({ control: form.control });
   const { mode } = useDashboardMode();
   return (
     <div>
-      <span data-testid="probe-name">{values.name}</span>
+      <span data-testid="probe-name">{values.name ?? ""}</span>
       <span data-testid="probe-desc">{values.description ?? ""}</span>
-      <span data-testid="probe-widgets">{values.widgets.length}</span>
+      <span data-testid="probe-widgets">{values.widgets?.length ?? 0}</span>
       <span data-testid="probe-mode">{mode}</span>
     </div>
   );
@@ -99,6 +99,37 @@ describe("DashboardFormShell", () => {
       </DashboardFormShell>,
     );
     expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit");
+  });
+
+  it("resyncs form defaults when the dashboard prop changes while the form is idle", () => {
+    const initial = createExperimentDashboard({ id: "d1", name: "Original" });
+    const { rerender } = render(
+      <DashboardFormShell
+        experimentId="exp-1"
+        dashboardId={initial.id}
+        dashboard={initial}
+        initialMode="view"
+      >
+        <div />
+      </DashboardFormShell>,
+    );
+    expect(screen.getByTestId("probe-name")).toHaveTextContent("Original");
+
+    // Simulate a server refetch returning an updated snapshot for the same
+    // dashboard. The form should pick up the new name because no user edit
+    // is in flight.
+    const refreshed = { ...initial, name: "Refreshed" };
+    rerender(
+      <DashboardFormShell
+        experimentId="exp-1"
+        dashboardId={refreshed.id}
+        dashboard={refreshed}
+        initialMode="view"
+      >
+        <div />
+      </DashboardFormShell>,
+    );
+    expect(screen.getByTestId("probe-name")).toHaveTextContent("Refreshed");
   });
 
   it("renders children inside the layout body", () => {
