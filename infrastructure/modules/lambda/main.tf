@@ -33,6 +33,27 @@ resource "aws_iam_role_policy_attachment" "additional" {
   policy_arn = var.additional_policy_arns[count.index]
 }
 
+resource "aws_iam_policy" "secrets_access" {
+  count = length(var.secret_arns) > 0 ? 1 : 0
+
+  name = "open_jii_${var.environment}_${replace(var.function_name, "-", "_")}_secrets"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "secretsmanager:GetSecretValue"
+      Resource = var.secret_arns
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "secrets_access" {
+  count = length(var.secret_arns) > 0 ? 1 : 0
+
+  role       = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.secrets_access[0].arn
+}
+
 
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${local.full_name}"

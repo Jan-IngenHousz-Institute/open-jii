@@ -56,3 +56,9 @@ variable "layers" {
   default     = []
 }
 
+variable "secret_arns" {
+  description = "Secrets Manager secret ARNs the Lambda needs GetSecretValue access to"
+  type        = list(string)
+  default     = []
+}
+

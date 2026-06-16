@@ -209,28 +209,13 @@ module "device_provisioning_lambda" {
   timeout       = 5
   memory_size   = 128
 
-  # AWS Parameters and Secrets Lambda Extension — reads secrets at runtime
-  # via http://localhost:2773 so the actual key never appears in the function config.
-  layers = ["arn:aws:lambda:${var.aws_region}:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:69"]
-
-  additional_policy_arns = [module.device_provisioning_lambda_secrets_policy.arn]
+  layers      = ["arn:aws:lambda:${var.aws_region}:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:69"]
+  secret_arns = [module.auth_secrets.secret_arn]
 
   environment_variables = {
-    BACKEND_URL      = "https://${module.route53.api_domain}"
-    AUTH_SECRET_ARN  = module.auth_secrets.secret_arn
+    BACKEND_URL     = "https://${module.route53.api_domain}"
+    AUTH_SECRET_ARN = module.auth_secrets.secret_arn
   }
-}
-
-resource "aws_iam_policy" "device_provisioning_lambda_secrets_policy" {
-  name = "open_jii_${var.environment}_device_provisioning_lambda_secrets"
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = "secretsmanager:GetSecretValue"
-      Resource = module.auth_secrets.secret_arn
-    }]
-  })
 }
 
 module "cognito" {
