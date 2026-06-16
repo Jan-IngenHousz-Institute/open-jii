@@ -181,4 +181,40 @@ describe("QuestionCellComponent", () => {
       expect(screen.queryByRole("button", { name: /add option/i })).not.toBeInTheDocument();
     });
   });
+
+  describe("bulk options", () => {
+    it("replaces options from a pasted list via the list editor", async () => {
+      const user = userEvent.setup();
+      const { onUpdate } = renderQuestion({
+        question: { kind: "multi_choice", text: "Pick", required: false, options: ["Option 1"] },
+      });
+
+      await user.click(screen.getByRole("button", { name: /edit as list/i }));
+      const textarea = screen.getByPlaceholderText(/Plot 1/);
+      await user.clear(textarea);
+      await user.type(textarea, "Plot A{Enter}Plot B{Enter}Plot C");
+      await user.click(screen.getByRole("button", { name: /save 3 options/i }));
+
+      const updated = onUpdate.mock.lastCall?.[0] as QuestionCell;
+      expect(updated.question.kind === "multi_choice" && updated.question.options).toEqual([
+        "Plot A",
+        "Plot B",
+        "Plot C",
+      ]);
+    });
+
+    it("collapses to a summary + list editor for large option sets", () => {
+      const many = Array.from({ length: 30 }, (_, i) => `Plot ${i + 1}`);
+      renderQuestion({
+        question: { kind: "multi_choice", text: "Pick", required: false, options: many },
+      });
+
+      // Individual inputs are not rendered for a large set (would otherwise be 30+ inputs).
+      expect(screen.queryByDisplayValue("Plot 30")).not.toBeInTheDocument();
+      // A summary and the list editor are shown instead; single "Add option" is hidden.
+      expect(screen.getByText(/30 options/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /edit as list/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /add option/i })).not.toBeInTheDocument();
+    });
+  });
 });
