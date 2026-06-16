@@ -1,6 +1,6 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import { bluetoothDeviceToMultispeqStream } from "~/features/connection/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
-import { MultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/multispeq-command-executor";
+import { createDriverCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
+import { bluetoothClassicTransport } from "~/features/connection/services/multispeq-communication/transports/bluetooth-classic-transport";
 import { Device } from "~/shared/types/device";
 
 export async function createBluetoothMultiseqCommandExecutor(device: Device | undefined) {
@@ -9,5 +9,5 @@ export async function createBluetoothMultiseqCommandExecutor(device: Device | un
   }
 
   const bluetoothDevice = await RNBluetoothClassic.getConnectedDevice(device.id);
-  return new MultispeqCommandExecutor(bluetoothDeviceToMultispeqStream(bluetoothDevice));
+  return createDriverCommandExecutor(bluetoothClassicTransport(bluetoothDevice));
 }

@@ -140,7 +140,13 @@
       "notSet": "Not set"
     },
     "scanning": {
-      "title": "Measuring"
+      "title": "Measuring",
+      "receiving": "Receiving results…",
+      "takingLonger": "Taking longer than expected…",
+      "measuring": "Measuring…",
+      "elapsed": "{{elapsed}} elapsed",
+      "elapsedOfEstimate": "{{elapsed}} of ~{{estimate}}",
+      "expected": "~{{estimate}} expected"
     },
     "toast": {
       "notConnected": "Not connected to sensor",
