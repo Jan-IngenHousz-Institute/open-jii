@@ -151,3 +151,16 @@ vulnerabilities:
   - id: CVE-2026-9150
     statement: "libsolv Debian metadata parser overflow. No package-manager ops at runtime."
     expired_at: 2026-11-05
+
+  # form-data and ws in Lambda runtime SDK (/var/runtime/node_modules/).
+  # Bundled by AWS in the base image; no npm install in this Dockerfile.
+  - id: CVE-2026-12143
+    statement: >-
+      form-data multipart stream vuln in AWS Lambda runtime SDK. Sandbox has
+      no outbound HTTP and no user-controlled form data reaches this path.
+    expired_at: 2026-10-01
+  - id: CVE-2026-48779
+    statement: >-
+      ws memory exhaustion DoS via tiny fragments. Bundled in Lambda runtime;
+      sandbox has no inbound or outbound WebSocket connections.
+    expired_at: 2026-10-01
