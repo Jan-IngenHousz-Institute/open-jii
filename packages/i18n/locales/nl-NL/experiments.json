@@ -51,6 +51,8 @@
     "tabLabel": "Design",
     "viewList": "Lijst",
     "viewGraph": "Graph",
+    "editWorkbook": "Werkboek bewerken",
+    "viewPinned": "Vastgezette versie bekijken",
     "noWorkbookLinked": "Geen werkboek gekoppeld aan dit experiment.",
     "linkWorkbookPrompt": "Koppel een werkboek om de dataverzamelingsflow van het experiment te definiëren.",
     "attach": "Koppelen",

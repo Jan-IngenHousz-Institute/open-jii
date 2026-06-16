@@ -59,7 +59,7 @@ export class PublishVersionUseCase {
 
     const entitySnapshots: EntitySnapshots = { protocols: {}, macros: {} };
     for (const [id, p] of protocolsResult.value) {
-      entitySnapshots.protocols[id] = { code: p.code };
+      entitySnapshots.protocols[id] = { code: p.code, family: p.family };
     }
     for (const [id, m] of macrosResult.value) {
       entitySnapshots.macros[id] = { code: m.code };

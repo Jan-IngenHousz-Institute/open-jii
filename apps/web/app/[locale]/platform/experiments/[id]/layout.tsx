@@ -90,7 +90,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     if (pathname.startsWith(`${base}/data`)) return "data";
     if (pathname.includes("/analysis")) return "analysis";
     if (pathname.includes("/dashboards")) return "dashboards";
-    if (pathname.endsWith("/flow")) return "flow";
+    if (pathname.endsWith("/design")) return "design";
     if (pathname.includes("/collaborators")) return "collaborators";
     return "overview";
   };
@@ -127,8 +127,8 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
               {t("dashboards.tabLabel")}
             </Link>
           </NavTabsTrigger>
-          <NavTabsTrigger value="flow" asChild>
-            <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
+          <NavTabsTrigger value="design" asChild>
+            <Link href={`/${locale}/platform/experiments/${id}/design`}>{t("flow.tabLabel")}</Link>
           </NavTabsTrigger>
           <NavTabsTrigger value="collaborators" asChild>
             <Link href={`/${locale}/platform/experiments/${id}/collaborators`}>
