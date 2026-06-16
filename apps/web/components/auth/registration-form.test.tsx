@@ -275,9 +275,15 @@ describe("RegistrationForm", () => {
   });
 
   it("prevents multiple submissions when already pending", async () => {
-    createUserProfileMock.mockImplementation(() => {
-      return new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    // Hold the in-flight submission open with a manually-resolved promise rather than a
+    // timer, so the pending (disabled) state is deterministic and never races a timeout.
+    let resolveProfile: () => void = () => undefined;
+    createUserProfileMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveProfile = resolve;
+        }),
+    );
 
     render(<RegistrationForm {...defaultProps} />);
 
@@ -288,17 +294,23 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("checkbox"));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
-    // First click
+    // First click — submission stays pending (and the button disabled) until we resolve.
     await user.click(submitButton);
 
     await waitFor(() => {
       expect(submitButton).toBeDisabled();
     });
 
-    // Second click while pending
+    // Second click while pending is ignored.
     await user.click(submitButton);
 
     expect(createUserProfileMock).toHaveBeenCalledTimes(1);
+
+    // Let the in-flight submission complete so the pending state unwinds cleanly.
+    resolveProfile();
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
   });
 
   it("shows validation error if firstName is too short", async () => {
