@@ -20,7 +20,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
   const { data, isLoading, error } = useExperimentDashboard(dashboardId, experimentId);
 
   return (
-    <div className="dashboard-page flex flex-1 flex-col">
+    <div className="page-fluid flex flex-1 flex-col">
       <EntityLayoutShell
         isLoading={isLoading}
         error={error}

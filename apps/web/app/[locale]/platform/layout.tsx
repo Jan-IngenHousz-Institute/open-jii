@@ -54,12 +54,14 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <NavigationSidebarWrapper locale={locale} />
-      <SidebarInset>
-        <NavigationTopbar locale={locale} user={session.user} />
-        <div className="flex flex-1 flex-col gap-4 p-6 pt-8">
-          <div className="mx-auto w-full max-w-7xl has-[.dashboard-page]:flex has-[.visualization-page]:flex has-[.workbook-page]:flex has-[.dashboard-page]:max-w-none has-[.visualization-page]:max-w-none has-[.workbook-page]:max-w-none has-[.dashboard-page]:flex-1 has-[.visualization-page]:flex-1 has-[.workbook-page]:flex-1 has-[.dashboard-page]:flex-col has-[.visualization-page]:flex-col has-[.workbook-page]:flex-col">
-            <div className="mx-auto w-full max-w-7xl">
+      <ActivityProvider>
+        <NavigationSidebarWrapper locale={locale} />
+        <SidebarEdgePeek />
+        <SidebarFloatingReopen />
+        <SidebarInset>
+          <NavigationTopbar locale={locale} user={session.user} />
+          <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
+            <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
               <Breadcrumbs locale={locale} />
               <Suspense>{children}</Suspense>
             </PageContainer>
