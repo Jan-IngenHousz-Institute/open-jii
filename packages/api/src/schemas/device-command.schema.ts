@@ -20,24 +20,64 @@ export interface DeviceCommandOption {
 
 export const KNOWN_DEVICE_COMMANDS = [
   // Connection / Status
-  { value: "hello", label: "Hello", group: "Connection", description: "Responds \"Instrument Ready\"" },
-  { value: "battery", label: "Battery", group: "Connection", description: "Charge level in percent" },
+  {
+    value: "hello",
+    label: "Hello",
+    group: "Connection",
+    description: 'Responds "Instrument Ready"',
+  },
+  {
+    value: "battery",
+    label: "Battery",
+    group: "Connection",
+    description: "Charge level in percent",
+  },
   { value: "usb", label: "USB", group: "Connection", description: "Check if connected via USB" },
-  { value: "sleep", label: "Sleep", group: "Connection", description: "Sleep (hold button 5s to wake)" },
+  {
+    value: "sleep",
+    label: "Sleep",
+    group: "Connection",
+    description: "Sleep (hold button 5s to wake)",
+  },
   { value: "reset", label: "Reset", group: "Connection", description: "Reboot the instrument" },
   { value: "reboot", label: "Reboot", group: "Connection", description: "Reboot the instrument" },
 
   // Device info
-  { value: "device_info", label: "Device info", group: "Device info", description: "Name, version, id, battery, firmware, config" },
-  { value: "compiled", label: "Compiled", group: "Device info", description: "Firmware compile date/time" },
+  {
+    value: "device_info",
+    label: "Device info",
+    group: "Device info",
+    description: "Name, version, id, battery, firmware, config",
+  },
+  {
+    value: "compiled",
+    label: "Compiled",
+    group: "Device info",
+    description: "Firmware compile date/time",
+  },
   { value: "memory", label: "Memory", group: "Device info" },
 
   // Sensors
-  { value: "temp", label: "Temperature", group: "Sensors", description: "Temperature + relative humidity (BME280)" },
+  {
+    value: "temp",
+    label: "Temperature",
+    group: "Sensors",
+    description: "Temperature + relative humidity (BME280)",
+  },
 
   // Calibration / EEPROM
-  { value: "print_all", label: "Print all", group: "Calibration", description: "All EEPROM values" },
-  { value: "print_memory", label: "Print memory", group: "Calibration", description: "Calibrations as JSON with checksum" },
+  {
+    value: "print_all",
+    label: "Print all",
+    group: "Calibration",
+    description: "All EEPROM values",
+  },
+  {
+    value: "print_memory",
+    label: "Print memory",
+    group: "Calibration",
+    description: "Calibrations as JSON with checksum",
+  },
   { value: "print_date", label: "Print date", group: "Calibration", description: "RTC date" },
   { value: "print_magnetometer", label: "Print magnetometer", group: "Calibration" },
   { value: "print_magnetometer_bias", label: "Print magnetometer bias", group: "Calibration" },
