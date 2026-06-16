@@ -60,7 +60,8 @@
     },
     "uploadDataModal": {
       "title": "Daten hochladen",
-      "description": "Laden Sie CSV-, TSV-, Parquet-, Excel-, JSON- oder NDJSON-Dateien in eine neue oder bestehende Benutzertabelle hoch. Das Schema wird aus der Datei abgeleitet.",
+      "description": "Frühere Uploads ansehen oder einen neuen starten.",
+      "createDescription": "Wählen Sie das Ziel und fügen Sie Ihre Dateien hinzu. Das Schema wird aus der Datei abgeleitet.",
       "targetKind": {
         "new": "Neue Tabelle erstellen",
         "existing": "An bestehende anhängen"
@@ -79,8 +80,14 @@
         "label": "Datenformat"
       },
       "files": {
-        "label": "Datendatei(en) (CSV, TSV, Parquet, Excel, JSON, NDJSON)",
-        "ambyteLabel": "Ambyte-Datenordner"
+        "dropzone": {
+          "placeholder": "{{format}}-Dateien hierher ziehen oder zum Auswählen klicken",
+          "ambytePlaceholder": "Ambyte-Ordner hierher ziehen oder zum Auswählen klicken",
+          "selected": "Auswahl ändern",
+          "accepted": "Zulässig: {{extensions}}",
+          "ambyteHint": "Erwartetes Layout: Ambyte_N/[1-4]/*.txt",
+          "selectedFiles": "Ausgewählte Dateien"
+        }
       },
       "validation": {
         "title": "Hochladen nicht möglich",
@@ -117,6 +124,8 @@
       "actions": {
         "cancel": "Abbrechen",
         "close": "Schließen",
+        "back": "Zurück",
+        "newUpload": "Neuer Upload",
         "upload": "Hochladen"
       },
       "history": {

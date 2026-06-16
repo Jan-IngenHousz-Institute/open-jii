@@ -27,6 +27,11 @@ export interface FileUploadProps {
   allowDirectories?: boolean;
 
   /**
+   * Comma-separated `accept` attribute for the native file picker (e.g. ".csv,.tsv")
+   */
+  accept?: string;
+
+  /**
    * Custom class name for the dropzone container
    */
   className?: string;
@@ -112,6 +117,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
       showFileList = true,
       multiple = true,
       allowDirectories = false,
+      accept,
       placeholder = "Click to select files or drag and drop",
       selectedText = "Change selection",
       browseInstruction = "Browse and select files",
@@ -153,6 +159,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
             {...(allowDirectories
               ? ({ webkitdirectory: "" } as React.InputHTMLAttributes<HTMLInputElement>)
               : {})}
+            {...(accept ? { accept } : {})}
             multiple={multiple}
             onChange={(e) => handleFileSelect(e.target.files)}
             className="hidden"
