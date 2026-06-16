@@ -21,6 +21,7 @@ import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cell
 import { useWorkbookExecution } from "./useWorkbookExecution";
 
 const mockExecuteProtocol = vi.fn();
+const mockExecuteCommand = vi.fn();
 const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
 
@@ -41,8 +42,13 @@ vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
 vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
   useIotProtocolExecution: () => ({
     executeProtocol: mockExecuteProtocol,
+    executeCommand: mockExecuteCommand,
   }),
 }));
+
+function createCommandCell(command = "battery"): WorkbookCell {
+  return { id: `cmd-${command}`, type: "command", isCollapsed: false, payload: { command } };
+}
 
 function renderExecution(
   cells: WorkbookCell[],
@@ -71,6 +77,7 @@ describe("useWorkbookExecution", () => {
   beforeEach(() => {
     mockIsConnected = false;
     mockExecuteProtocol.mockReset();
+    mockExecuteCommand.mockReset();
     mockConnect.mockReset();
     mockDisconnect.mockReset();
     __resetProtocolCodeRegistry();
@@ -207,6 +214,67 @@ describe("useWorkbookExecution", () => {
       const { result, onCellsChange } = renderExecution([proto]);
 
       await act(() => result.current.runCell(proto.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated);
+      expect(outputCell?.messages).toContain("Device timed out");
+    });
+  });
+
+  describe("runCell — command", () => {
+    it("errors when no device is connected", async () => {
+      mockIsConnected = false;
+      const cmd = createCommandCell("battery");
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+
+      await act(() => result.current.runCell(cmd.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated);
+      expect(outputCell?.messages).toEqual(
+        expect.arrayContaining([expect.stringContaining("No device connected")]),
+      );
+      expect(mockExecuteCommand).not.toHaveBeenCalled();
+    });
+
+    it("sends the command and wraps a string response in an output cell", async () => {
+      mockIsConnected = true;
+      mockExecuteCommand.mockResolvedValue("battery: 87");
+      const cmd = createCommandCell("battery");
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+
+      await act(() => result.current.runCell(cmd.id));
+
+      expect(mockExecuteCommand).toHaveBeenCalledWith("battery");
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated, cmd.id);
+      expect(outputCell?.data).toEqual({ response: "battery: 87" });
+    });
+
+    it("passes a JSON object response through unwrapped", async () => {
+      mockIsConnected = true;
+      mockExecuteCommand.mockResolvedValue({ device_name: "MultispeQ" });
+      const cmd = createCommandCell("device_info");
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+
+      await act(() => result.current.runCell(cmd.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated, cmd.id);
+      expect(outputCell?.data).toEqual({ device_name: "MultispeQ" });
+    });
+
+    it("captures command execution errors", async () => {
+      mockIsConnected = true;
+      mockExecuteCommand.mockRejectedValue(new Error("Device timed out"));
+      const cmd = createCommandCell("hello");
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+
+      await act(() => result.current.runCell(cmd.id));
 
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const outputCell = findOutput(updated);
