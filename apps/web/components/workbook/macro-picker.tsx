@@ -73,13 +73,19 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const [isCreating, setIsCreating] = useState(false);
   const createMacro = useMacroCreate();
 
-  const handleSelect = (macro: { id: string; name: string; language: MacroLanguage }) => {
+  const handleSelect = (macro: {
+    id: string;
+    name: string;
+    language: MacroLanguage;
+    latestVersion: number;
+  }) => {
     const cell: MacroCell = {
       id: crypto.randomUUID(),
       type: "macro",
       isCollapsed: false,
       payload: {
         macroId: macro.id,
+        version: macro.latestVersion,
         language: macro.language,
         name: macro.name,
       },
@@ -105,6 +111,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
         isCollapsed: false,
         payload: {
           macroId: result.body.id,
+          version: result.body.latestVersion,
           language: newLanguage,
           name: newName.trim(),
         },

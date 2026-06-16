@@ -32,7 +32,7 @@ const protocolCell = createProtocolCell({
 });
 const macroCell = createMacroCell({
   id: "m1",
-  payload: { macroId: "macro-1", language: "python", name: "Test Macro" },
+  payload: { macroId: "macro-1", version: 1, language: "python", name: "Test Macro" },
 });
 const markdownCell = createMarkdownCell({ id: "md1", content: "# Hello" });
 

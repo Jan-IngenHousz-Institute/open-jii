@@ -49,7 +49,7 @@ describe("CellRenderer", () => {
 
   it("renders macro cell with macro name after loading", async () => {
     const macroId = "m-1";
-    const cell = createMacroCell({ payload: { macroId, language: "python" } });
+    const cell = createMacroCell({ payload: { macroId, version: 1, language: "python" } });
     server.mount(contract.macros.getMacro, {
       body: createMacro({ id: macroId, name: "Chlorophyll Calc" }),
     });

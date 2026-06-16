@@ -76,6 +76,13 @@ export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) =>
       await queryClient.invalidateQueries({
         queryKey: ["macros"],
       });
+      // Editing mints a version, so version history and usage may have changed.
+      await queryClient.invalidateQueries({
+        queryKey: ["macroVersions", macroId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["macroUsage", macroId],
+      });
       // Invalidate breadcrumbs to update entity names
       await queryClient.invalidateQueries({
         queryKey: ["breadcrumbs"],

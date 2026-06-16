@@ -18,7 +18,7 @@ const baseMacro = createMacro({
 
 const cell = createMacroCell({
   id: "cell-1",
-  payload: { macroId: "macro-1", language: "python", name: "My Macro" },
+  payload: { macroId: "macro-1", version: 1, language: "python", name: "My Macro" },
 });
 
 function renderMacroCell(
@@ -98,6 +98,28 @@ describe("MacroCellComponent", () => {
     await waitFor(() => {
       expect(screen.getByText("Python")).toBeInTheDocument();
     });
+
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
+  it("shows the pinned version and an upgrade affordance that re-pins to the latest", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+    } as ReturnType<typeof useSession>);
+
+    // Cell is pinned to v1 while the macro head has advanced to v3.
+    const onUpdate = vi.fn();
+    renderMacroCell({ onUpdate }, { latestVersion: 3 });
+
+    await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
+
+    const upgradeButton = await screen.findByRole("button", { name: /v3/ });
+    await user.click(upgradeButton);
+
+    expect(onUpdate.mock.lastCall?.[0]).toMatchObject({ payload: { version: 3 } });
 
     vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession

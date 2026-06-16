@@ -49,7 +49,7 @@ describe("cellsToFlowGraph", () => {
         id: "m1",
         type: "macro",
         isCollapsed: false,
-        payload: { macroId: uuidA, language: "python" },
+        payload: { macroId: uuidA, version: 1, language: "python" },
       },
     ];
     const { nodes } = cellsToFlowGraph(cells);
@@ -100,7 +100,7 @@ describe("cellsToFlowGraph", () => {
         id: "m1",
         type: "macro",
         isCollapsed: false,
-        payload: { macroId: uuidA, language: "python" },
+        payload: { macroId: uuidA, version: 1, language: "python" },
       },
     ];
     const { nodes } = cellsToFlowGraph(cells);
@@ -120,7 +120,7 @@ describe("cellsToFlowGraph", () => {
         id: "m1",
         type: "macro",
         isCollapsed: false,
-        payload: { macroId: uuidB, language: "python" },
+        payload: { macroId: uuidB, version: 1, language: "python" },
       },
     ];
     const { nodes, edges } = cellsToFlowGraph(cells);

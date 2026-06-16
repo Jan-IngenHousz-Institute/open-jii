@@ -43,26 +43,33 @@ export class PublishVersionUseCase {
     const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
 
     const cells = workbook.cells as WorkbookCell[];
-    const protocolIds = [
-      ...new Set(cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),
-    ];
-    const macroIds = [
-      ...new Set(cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
-    ];
 
-    const [protocolsResult, macrosResult] = await Promise.all([
-      this.protocolRepository.findByIds(protocolIds),
-      this.macroRepository.findScriptsByIds(macroIds),
-    ]);
-    if (protocolsResult.isFailure()) return protocolsResult;
+    // Snapshot the exact PINNED version of each referenced entity, so an attached
+    // experiment captures what the cells pinned rather than whatever the head later
+    // becomes. (Snapshots are keyed by entity id; if two cells pin different versions
+    // of the same entity, the last wins — matching the pre-existing id-keyed model.)
+    const macroPins = new Map<string, number>();
+    const protocolPins = new Map<string, number>();
+    for (const c of cells) {
+      if (c.type === "macro") macroPins.set(c.payload.macroId, c.payload.version);
+      if (c.type === "protocol") protocolPins.set(c.payload.protocolId, c.payload.version);
+    }
+
+    const macrosResult = await this.macroRepository.findScriptsByPins(
+      [...macroPins].map(([macroId, version]) => ({ macroId, version })),
+    );
     if (macrosResult.isFailure()) return macrosResult;
 
     const entitySnapshots: EntitySnapshots = { protocols: {}, macros: {} };
-    for (const [id, p] of protocolsResult.value) {
-      entitySnapshots.protocols[id] = { code: p.code };
-    }
     for (const [id, m] of macrosResult.value) {
       entitySnapshots.macros[id] = { code: m.code };
+    }
+    for (const [protocolId, version] of protocolPins) {
+      const versionResult = await this.protocolRepository.findVersion(protocolId, version);
+      if (versionResult.isFailure()) return versionResult;
+      if (versionResult.value) {
+        entitySnapshots.protocols[protocolId] = { code: versionResult.value.code };
+      }
     }
 
     this.logger.log({

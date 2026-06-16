@@ -8,10 +8,14 @@ import { MacroModule } from "../macros/macro.module";
 import { AddCompatibleMacrosUseCase } from "./application/use-cases/add-compatible-macros/add-compatible-macros";
 import { CreateProtocolUseCase } from "./application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "./application/use-cases/delete-protocol/delete-protocol";
+import { DuplicateProtocolUseCase } from "./application/use-cases/duplicate-protocol/duplicate-protocol";
+import { GetProtocolUsageUseCase } from "./application/use-cases/get-protocol-usage/get-protocol-usage";
 import { GetProtocolUseCase } from "./application/use-cases/get-protocol/get-protocol";
 import { ListCompatibleMacrosUseCase } from "./application/use-cases/list-compatible-macros/list-compatible-macros";
+import { ListProtocolVersionsUseCase } from "./application/use-cases/list-protocol-versions/list-protocol-versions";
 import { ListProtocolsUseCase } from "./application/use-cases/list-protocols/list-protocols";
 import { RemoveCompatibleMacroUseCase } from "./application/use-cases/remove-compatible-macro/remove-compatible-macro";
+import { RestoreProtocolVersionUseCase } from "./application/use-cases/restore-protocol-version/restore-protocol-version";
 import { UpdateProtocolUseCase } from "./application/use-cases/update-protocol/update-protocol";
 // Ports
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
@@ -46,6 +50,12 @@ import { ProtocolController } from "./presentation/protocol.controller";
     ListCompatibleMacrosUseCase,
     AddCompatibleMacrosUseCase,
     RemoveCompatibleMacroUseCase,
+
+    // Protocol versioning / duplicate / usage use cases
+    ListProtocolVersionsUseCase,
+    RestoreProtocolVersionUseCase,
+    DuplicateProtocolUseCase,
+    GetProtocolUsageUseCase,
   ],
 })
 export class ProtocolModule {}

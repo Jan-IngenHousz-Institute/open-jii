@@ -13,6 +13,8 @@ export const zWorkbook = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   isUpgradable: z.boolean().optional(),
+  // True when any cell pins a macro/protocol version below the entity's current latest.
+  hasOutdatedEntities: z.boolean().optional(),
   experimentCount: z.number().int().nonnegative().optional(),
 });
 

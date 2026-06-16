@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { macros } from "@repo/database";
+import { macros, macroVersions } from "@repo/database";
 
 /**
  * Generate a hashed filename based on the macro ID
@@ -39,3 +39,14 @@ export type MacroDto = z.infer<typeof selectMacroSchema>;
 
 /** Lean projection for Lambda execution — only the columns needed to run a script. */
 export type MacroScript = Pick<MacroDto, "id" | "name" | "language" | "code">;
+
+export const selectMacroVersionSchema = createSelectSchema(macroVersions).extend({
+  createdByName: z.string().optional(),
+});
+export type MacroVersionDto = z.infer<typeof selectMacroVersionSchema>;
+
+/** Lightweight version-history entry (no code). */
+export type MacroVersionSummaryDto = Pick<
+  MacroVersionDto,
+  "version" | "createdBy" | "createdByName" | "createdAt"
+>;

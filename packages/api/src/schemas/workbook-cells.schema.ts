@@ -11,7 +11,8 @@ const zBaseCell = z.object({
 const zProtocolPayload = z
   .object({
     protocolId: z.string().uuid(),
-    version: z.number().int().positive(),
+    // Pinned protocol version. Defaulted so cells saved before per-entity versioning still validate.
+    version: z.number().int().positive().default(1),
     name: z.string().optional(),
   })
   .strict();
@@ -21,10 +22,12 @@ export const zProtocolCell = zBaseCell.extend({
   payload: zProtocolPayload,
 });
 
-// Macros are always persisted entities; the cell stores a ref. Versioning happens at the experiment/snapshot level.
+// Macros are persisted entities; the cell stores a ref plus the pinned version.
+// `version` is defaulted so workbooks saved before per-entity versioning still validate on read.
 const zMacroPayload = z
   .object({
     macroId: z.string().uuid(),
+    version: z.number().int().positive().default(1),
     language: zMacroLanguage,
     name: z.string().optional(),
   })

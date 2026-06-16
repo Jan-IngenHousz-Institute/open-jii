@@ -270,6 +270,7 @@ export const protocols = pgTable("protocols", {
   code: jsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
   sortOrder: integer("sort_order"),
+  latestVersion: integer("latest_version").notNull().default(1),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -288,11 +289,61 @@ export const macros = pgTable("macros", {
   language: macroLanguageEnum("language").notNull(),
   code: text("code").notNull(), // Base64 encoded content of the macro code
   sortOrder: integer("sort_order"),
+  latestVersion: integer("latest_version").notNull().default(1),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
   ...timestamps,
 });
+
+// Immutable per-version snapshots of protocol code. The protocols row holds the
+// latest (head); each edit mints a new row here. Workbook cells pin a version.
+export const protocolVersions = pgTable(
+  "protocol_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    protocolId: uuid("protocol_id")
+      .notNull()
+      .references(() => protocols.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    code: jsonb("code").notNull(),
+    family: sensorFamilyEnum("family").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (table) => [
+    unique("protocol_versions_protocol_version_uniq").on(table.protocolId, table.version),
+    index("protocol_versions_protocol_id_idx").on(table.protocolId),
+  ],
+);
+
+// Immutable per-version snapshots of macro code (base64), mirroring protocolVersions.
+export const macroVersions = pgTable(
+  "macro_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    macroId: uuid("macro_id")
+      .notNull()
+      .references(() => macros.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    code: text("code").notNull(), // Base64 encoded content of the macro code
+    language: macroLanguageEnum("language").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (table) => [
+    unique("macro_versions_macro_version_uniq").on(table.macroId, table.version),
+    index("macro_versions_macro_id_idx").on(table.macroId),
+  ],
+);
 
 // Protocol-Macro Compatibility (many-to-many)
 export const protocolMacros = pgTable(

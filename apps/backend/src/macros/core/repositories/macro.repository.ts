@@ -1,6 +1,18 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  macros,
+  macroVersions,
+  profiles,
+  sql,
+  workbooks,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
@@ -13,6 +25,8 @@ import {
   UpdateMacroDto,
   MacroDto,
   MacroScript,
+  MacroVersionDto,
+  MacroVersionSummaryDto,
   generateHashedFilename,
 } from "../models/macro.model";
 import { CACHE_PORT, CachePort } from "../ports/cache.port";
@@ -37,15 +51,27 @@ export class MacroRepository {
       // Generate UUID for the macro to create a consistent hashed filename
       const macroId = crypto.randomUUID();
 
-      const results = await this.database
-        .insert(macros)
-        .values({
-          ...data,
-          id: macroId,
-          filename: generateHashedFilename(macroId),
+      const results = await this.database.transaction(async (tx) => {
+        const rows = await tx
+          .insert(macros)
+          .values({
+            ...data,
+            id: macroId,
+            filename: generateHashedFilename(macroId),
+            createdBy: userId,
+          })
+          .returning();
+        const created = rows[0];
+        // Seed version 1 so every macro has a version-history head from creation.
+        await tx.insert(macroVersions).values({
+          macroId: created.id,
+          version: 1,
+          code: created.code,
+          language: created.language,
           createdBy: userId,
-        })
-        .returning();
+        });
+        return rows;
+      });
       return results as MacroDto[];
     });
   }
@@ -258,6 +284,182 @@ export class MacroRepository {
         return new Map(rows.map((r) => [r.id, r]));
       }),
     );
+  }
+
+  /**
+   * Mint a new immutable version from new code, bump the head's latest_version,
+   * and refresh the denormalized head code — atomically. A row lock on the macro
+   * serialises concurrent edits so version numbers never collide.
+   */
+  async mintVersion(
+    id: string,
+    data: { code: string; language: MacroDto["language"]; createdBy: string },
+  ): Promise<Result<MacroDto>> {
+    return tryCatch(async () => {
+      const updated = await this.database.transaction(async (tx) => {
+        const rows = await tx
+          .select({ latestVersion: macros.latestVersion })
+          .from(macros)
+          .where(eq(macros.id, id))
+          .for("update")
+          .limit(1);
+        if (rows.length === 0) {
+          throw new Error(`Macro ${id} not found`);
+        }
+        const nextVersion = rows[0].latestVersion + 1;
+        await tx.insert(macroVersions).values({
+          macroId: id,
+          version: nextVersion,
+          code: data.code,
+          language: data.language,
+          createdBy: data.createdBy,
+        });
+        const [row] = await tx
+          .update(macros)
+          .set({
+            code: data.code,
+            language: data.language,
+            latestVersion: nextVersion,
+            updatedAt: new Date(),
+          })
+          .where(eq(macros.id, id))
+          .returning();
+        return row;
+      });
+
+      void this.cachePort.invalidate(id).catch(() => {
+        // noop — best-effort
+      });
+
+      return updated as MacroDto;
+    });
+  }
+
+  /** Version history for a macro, newest first. */
+  async listVersions(macroId: string): Promise<Result<MacroVersionSummaryDto[]>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({
+          version: macroVersions.version,
+          createdBy: macroVersions.createdBy,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+          createdAt: macroVersions.createdAt,
+        })
+        .from(macroVersions)
+        .innerJoin(profiles, eq(macroVersions.createdBy, profiles.userId))
+        .where(eq(macroVersions.macroId, macroId))
+        .orderBy(desc(macroVersions.version));
+
+      return rows.map((r) => ({
+        version: r.version,
+        createdBy: r.createdBy,
+        createdByName: r.firstName && r.lastName ? `${r.firstName} ${r.lastName}` : undefined,
+        createdAt: r.createdAt,
+      }));
+    });
+  }
+
+  /** A single stored version (full code), or null. */
+  async findVersion(macroId: string, version: number): Promise<Result<MacroVersionDto | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({
+          mv: macroVersions,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
+        .from(macroVersions)
+        .innerJoin(profiles, eq(macroVersions.createdBy, profiles.userId))
+        .where(and(eq(macroVersions.macroId, macroId), eq(macroVersions.version, version)))
+        .limit(1);
+
+      if (rows.length === 0) return null;
+      const dto = rows[0].mv as MacroVersionDto;
+      const { firstName, lastName } = rows[0];
+      dto.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+      return dto;
+    });
+  }
+
+  /**
+   * Lean script projection for a PINNED version, with read-through caching.
+   * Version rows are immutable, so the version-scoped key never needs invalidation.
+   */
+  async findScriptByVersion(macroId: string, version: number): Promise<Result<MacroScript | null>> {
+    return tryCatch(() =>
+      this.cachePort.tryCache<MacroScript>(`${macroId}:v${version}`, async () => {
+        const rows = await this.database
+          .select({
+            id: macros.id,
+            name: macros.name,
+            language: macroVersions.language,
+            code: macroVersions.code,
+          })
+          .from(macroVersions)
+          .innerJoin(macros, eq(macroVersions.macroId, macros.id))
+          .where(and(eq(macroVersions.macroId, macroId), eq(macroVersions.version, version)))
+          .limit(1);
+
+        return rows.length > 0 ? rows[0] : null;
+      }),
+    );
+  }
+
+  /**
+   * Fetch lean scripts for a set of (macroId, version) pins. Used when publishing a
+   * workbook version so the snapshot captures exactly the pinned code. Keyed by macroId.
+   */
+  async findScriptsByPins(
+    pins: { macroId: string; version: number }[],
+  ): Promise<Result<Map<string, MacroScript>>> {
+    if (pins.length === 0) {
+      return success(new Map());
+    }
+    return tryCatch(async () => {
+      const map = new Map<string, MacroScript>();
+      for (const { macroId, version } of pins) {
+        const result = await this.findScriptByVersion(macroId, version);
+        if (result.isSuccess() && result.value) {
+          map.set(macroId, result.value);
+        }
+      }
+      return map;
+    });
+  }
+
+  /** latest_version for a set of macros, keyed by id (cheap pin-vs-latest drift check). */
+  async findLatestVersions(ids: string[]): Promise<Result<Map<string, number>>> {
+    if (ids.length === 0) {
+      return success(new Map());
+    }
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ id: macros.id, latestVersion: macros.latestVersion })
+        .from(macros)
+        .where(inArray(macros.id, ids));
+      return new Map(rows.map((r) => [r.id, r.latestVersion]));
+    });
+  }
+
+  /**
+   * Workbooks that reference this macro in any cell, for the "used by N workbooks"
+   * warning. Scans the cells jsonb array via a correlated EXISTS.
+   */
+  async findReferencingWorkbooks(macroId: string): Promise<Result<{ id: string; name: string }[]>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ id: workbooks.id, name: workbooks.name })
+        .from(workbooks)
+        .where(
+          sql`jsonb_typeof(${workbooks.cells}) = 'array' and exists (
+            select 1 from jsonb_array_elements(${workbooks.cells}) as cell
+            where cell->>'type' = 'macro' and cell->'payload'->>'macroId' = ${macroId}
+          )`,
+        )
+        .orderBy(asc(workbooks.name));
+      return rows;
+    });
   }
 
   /**

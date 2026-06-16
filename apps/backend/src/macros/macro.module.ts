@@ -11,12 +11,16 @@ import { CacheModule } from "../common/modules/cache/cache.module";
 import { AddCompatibleProtocolsUseCase } from "./application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "./application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "./application/use-cases/delete-macro/delete-macro";
+import { DuplicateMacroUseCase } from "./application/use-cases/duplicate-macro/duplicate-macro";
 import { ExecuteMacroBatchUseCase } from "./application/use-cases/execute-macro-batch/execute-macro-batch";
 import { ExecuteMacroUseCase } from "./application/use-cases/execute-macro/execute-macro";
+import { GetMacroUsageUseCase } from "./application/use-cases/get-macro-usage/get-macro-usage";
 import { GetMacroUseCase } from "./application/use-cases/get-macro/get-macro";
 import { ListCompatibleProtocolsUseCase } from "./application/use-cases/list-compatible-protocols/list-compatible-protocols";
+import { ListMacroVersionsUseCase } from "./application/use-cases/list-macro-versions/list-macro-versions";
 import { ListMacrosUseCase } from "./application/use-cases/list-macros/list-macros";
 import { RemoveCompatibleProtocolUseCase } from "./application/use-cases/remove-compatible-protocol/remove-compatible-protocol";
+import { RestoreMacroVersionUseCase } from "./application/use-cases/restore-macro-version/restore-macro-version";
 import { UpdateMacroUseCase } from "./application/use-cases/update-macro/update-macro";
 // Ports
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
@@ -57,6 +61,12 @@ import { MacroController } from "./presentation/macro.controller";
     ListMacrosUseCase,
     UpdateMacroUseCase,
     DeleteMacroUseCase,
+
+    // Macro versioning / duplicate / usage use cases
+    ListMacroVersionsUseCase,
+    RestoreMacroVersionUseCase,
+    DuplicateMacroUseCase,
+    GetMacroUsageUseCase,
 
     // Macro-Protocol compatibility use cases
     ListCompatibleProtocolsUseCase,

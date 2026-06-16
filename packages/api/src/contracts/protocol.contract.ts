@@ -11,6 +11,11 @@ import {
   zProtocolMacroList,
   zAddCompatibleMacrosBody,
   zProtocolMacroPathParams,
+  zProtocolVersionQuery,
+  zProtocolVersionList,
+  zProtocolVersionPathParam,
+  zProtocolUsage,
+  zDuplicateProtocolRequestBody,
 } from "../schemas/protocol.schema";
 
 const c = initContract();
@@ -32,12 +37,13 @@ export const protocolContract = c.router({
     method: "GET",
     path: "/api/v1/protocols/:id",
     pathParams: zProtocolIdPathParam,
+    query: zProtocolVersionQuery,
     responses: {
       200: zProtocol,
       404: zProtocolErrorResponse,
     },
     summary: "Get protocol by ID",
-    description: "Returns a protocol by its ID",
+    description: "Returns a protocol by its ID, optionally at a pinned ?version",
   },
 
   createProtocol: {
@@ -118,5 +124,57 @@ export const protocolContract = c.router({
     },
     summary: "Remove a compatible macro from a protocol",
     description: "Unlinks a macro from this protocol's compatibility list (creator only)",
+  },
+
+  listProtocolVersions: {
+    method: "GET",
+    path: "/api/v1/protocols/:id/versions",
+    pathParams: zProtocolIdPathParam,
+    responses: {
+      200: zProtocolVersionList,
+      404: zProtocolErrorResponse,
+    },
+    summary: "List protocol versions",
+    description: "Returns the version history of a protocol, newest first",
+  },
+
+  restoreProtocolVersion: {
+    method: "POST",
+    path: "/api/v1/protocols/:id/versions/:version/restore",
+    pathParams: zProtocolVersionPathParam,
+    body: null,
+    responses: {
+      200: zProtocol,
+      403: zProtocolErrorResponse,
+      404: zProtocolErrorResponse,
+    },
+    summary: "Restore a protocol version",
+    description: "Mints a new version from a historical version's code (creator only)",
+  },
+
+  duplicateProtocol: {
+    method: "POST",
+    path: "/api/v1/protocols/:id/duplicate",
+    pathParams: zProtocolIdPathParam,
+    body: zDuplicateProtocolRequestBody,
+    responses: {
+      201: zProtocol,
+      404: zProtocolErrorResponse,
+      409: zProtocolErrorResponse,
+    },
+    summary: "Duplicate a protocol",
+    description: "Creates a new protocol copying the latest code of the source (fork)",
+  },
+
+  getProtocolUsage: {
+    method: "GET",
+    path: "/api/v1/protocols/:id/usage",
+    pathParams: zProtocolIdPathParam,
+    responses: {
+      200: zProtocolUsage,
+      404: zProtocolErrorResponse,
+    },
+    summary: "Protocol usage",
+    description: "Returns the workbooks that reference this protocol",
   },
 });

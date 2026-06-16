@@ -11,11 +11,12 @@ export class GetMacroUseCase {
 
   constructor(private readonly macroRepository: MacroRepository) {}
 
-  async execute(id: string): Promise<Result<MacroDto>> {
+  async execute(id: string, version?: number): Promise<Result<MacroDto>> {
     this.logger.log({
       msg: "Getting macro",
       operation: "getMacro",
       macroId: id,
+      version,
     });
 
     const result = await this.macroRepository.findById(id);
@@ -24,7 +25,8 @@ export class GetMacroUseCase {
       return result;
     }
 
-    if (!result.value) {
+    const macro = result.value;
+    if (!macro) {
       this.logger.warn({
         msg: "Macro not found",
         errorCode: ErrorCodes.MACRO_NOT_FOUND,
@@ -34,6 +36,23 @@ export class GetMacroUseCase {
       return failure(AppError.notFound("Macro not found"));
     }
 
-    return success(result.value);
+    // Serve a pinned version's code/language when requested. The head already holds the
+    // latest, so only a non-latest pin needs a version lookup.
+    if (version != null && version !== macro.latestVersion) {
+      const versionResult = await this.macroRepository.findVersion(id, version);
+      if (versionResult.isFailure()) {
+        return versionResult;
+      }
+      if (!versionResult.value) {
+        return failure(AppError.notFound(`Macro version ${version} not found`));
+      }
+      return success({
+        ...macro,
+        code: versionResult.value.code,
+        language: versionResult.value.language,
+      });
+    }
+
+    return success(macro);
   }
 }

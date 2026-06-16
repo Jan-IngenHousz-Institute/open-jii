@@ -14,6 +14,11 @@ import {
   zMacroProtocolPathParams,
   zMacroExecutionRequestBody,
   zMacroExecutionResponse,
+  zMacroVersionQuery,
+  zMacroVersionList,
+  zMacroVersionPathParam,
+  zMacroUsage,
+  zDuplicateMacroRequestBody,
   zMacroBatchExecutionRequestBody,
   zMacroBatchExecutionResponse,
   zMacroBatchWebhookErrorResponse,
@@ -39,12 +44,13 @@ export const macroContract = c.router({
     method: "GET",
     path: "/api/v1/macros/:id",
     pathParams: zMacroIdPathParam,
+    query: zMacroVersionQuery,
     responses: {
       200: zMacro,
       404: zMacroErrorResponse,
     },
     summary: "Get macro by ID",
-    description: "Returns a macro by its ID",
+    description: "Returns a macro by its ID, optionally at a pinned ?version",
   },
 
   createMacro: {
@@ -128,6 +134,59 @@ export const macroContract = c.router({
     summary: "Remove a compatible protocol from a macro",
     description: "Unlinks a protocol from this macro's compatibility list (creator only)",
   },
+
+  listMacroVersions: {
+    method: "GET",
+    path: "/api/v1/macros/:id/versions",
+    pathParams: zMacroIdPathParam,
+    responses: {
+      200: zMacroVersionList,
+      404: zMacroErrorResponse,
+    },
+    summary: "List macro versions",
+    description: "Returns the version history of a macro, newest first",
+  },
+
+  restoreMacroVersion: {
+    method: "POST",
+    path: "/api/v1/macros/:id/versions/:version/restore",
+    pathParams: zMacroVersionPathParam,
+    body: null,
+    responses: {
+      200: zMacro,
+      403: zMacroErrorResponse,
+      404: zMacroErrorResponse,
+    },
+    summary: "Restore a macro version",
+    description: "Mints a new version from a historical version's code (creator only)",
+  },
+
+  duplicateMacro: {
+    method: "POST",
+    path: "/api/v1/macros/:id/duplicate",
+    pathParams: zMacroIdPathParam,
+    body: zDuplicateMacroRequestBody,
+    responses: {
+      201: zMacro,
+      404: zMacroErrorResponse,
+      409: zMacroErrorResponse,
+    },
+    summary: "Duplicate a macro",
+    description: "Creates a new macro copying the latest code of the source (fork)",
+  },
+
+  getMacroUsage: {
+    method: "GET",
+    path: "/api/v1/macros/:id/usage",
+    pathParams: zMacroIdPathParam,
+    responses: {
+      200: zMacroUsage,
+      404: zMacroErrorResponse,
+    },
+    summary: "Macro usage",
+    description: "Returns the workbooks that reference this macro",
+  },
+
   executeMacro: {
     method: "POST",
     path: "/api/v1/macros/:id/execute",

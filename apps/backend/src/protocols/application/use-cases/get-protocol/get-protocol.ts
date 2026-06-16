@@ -11,11 +11,12 @@ export class GetProtocolUseCase {
 
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
-  async execute(id: string): Promise<Result<ProtocolDto>> {
+  async execute(id: string, version?: number): Promise<Result<ProtocolDto>> {
     this.logger.log({
       msg: "Getting protocol",
       operation: "getProtocol",
       protocolId: id,
+      version,
     });
 
     const result = await this.protocolRepository.findOne(id);
@@ -35,12 +36,22 @@ export class GetProtocolUseCase {
       return failure(AppError.notFound(`Protocol not found`));
     }
 
-    this.logger.log({
-      msg: "Protocol retrieved successfully",
-      operation: "getProtocol",
-      protocolId: id,
-      status: "success",
-    });
+    // Serve a pinned version's code when requested (head already holds the latest).
+    if (version != null && version !== protocol.latestVersion) {
+      const versionResult = await this.protocolRepository.findVersion(id, version);
+      if (versionResult.isFailure()) {
+        return versionResult;
+      }
+      if (!versionResult.value) {
+        return failure(AppError.notFound(`Protocol version ${version} not found`));
+      }
+      return success({
+        ...protocol,
+        code: versionResult.value.code,
+        family: versionResult.value.family,
+      });
+    }
+
     return success(protocol);
   }
 }

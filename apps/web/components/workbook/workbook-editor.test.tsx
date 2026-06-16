@@ -176,7 +176,7 @@ describe("WorkbookEditor — cell rendering", () => {
       createQuestionCell({ id: "q" }),
       createMacroCell({
         id: "m",
-        payload: { macroId: "macro-1", language: "python", name: "Macro" },
+        payload: { macroId: "macro-1", version: 1, language: "python", name: "Macro" },
       }),
       createBranchCell({ id: "b" }),
       createOutputCell({ id: "o", producedBy: "p" }),

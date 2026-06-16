@@ -10,6 +10,7 @@ export const zProtocol = z.object({
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
   sortOrder: z.number().nullable(),
+  latestVersion: z.number().int().positive(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -50,6 +51,40 @@ export const zUpdateProtocolRequestBody = z.object({
   description: z.string().optional(),
   code: z.record(z.unknown()).array().optional(),
   family: zSensorFamily.optional(),
+});
+
+// ── Versioning / usage / duplicate ───────────────────────────────────
+
+export const zProtocolVersionPathParam = z.object({
+  id: z.string().uuid(),
+  version: z.coerce.number().int().positive(),
+});
+
+// Optional ?version on getProtocol to fetch a pinned version's code in a single call.
+export const zProtocolVersionQuery = z.object({
+  version: z.coerce.number().int().positive().optional(),
+});
+
+export const zProtocolVersionSummary = z.object({
+  version: z.number().int().positive(),
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
+  createdAt: z.string().datetime(),
+});
+export const zProtocolVersionList = z.array(zProtocolVersionSummary);
+
+export const zProtocolUsage = z.object({
+  count: z.number().int().nonnegative(),
+  workbooks: z.array(z.object({ id: z.string().uuid(), name: z.string() })),
+});
+
+export const zDuplicateProtocolRequestBody = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(255, "Name must be at most 255 characters")
+    .optional(),
 });
 
 // Error response
@@ -98,3 +133,9 @@ export type CompatibleMacroSummary = z.infer<typeof zCompatibleMacroSummary>;
 export type ProtocolMacroEntry = z.infer<typeof zProtocolMacroEntry>;
 export type ProtocolMacroList = z.infer<typeof zProtocolMacroList>;
 export type AddCompatibleMacrosBody = z.infer<typeof zAddCompatibleMacrosBody>;
+export type ProtocolVersionQuery = z.infer<typeof zProtocolVersionQuery>;
+export type ProtocolVersionSummary = z.infer<typeof zProtocolVersionSummary>;
+export type ProtocolVersionList = z.infer<typeof zProtocolVersionList>;
+export type ProtocolVersionPathParam = z.infer<typeof zProtocolVersionPathParam>;
+export type ProtocolUsage = z.infer<typeof zProtocolUsage>;
+export type DuplicateProtocolRequestBody = z.infer<typeof zDuplicateProtocolRequestBody>;

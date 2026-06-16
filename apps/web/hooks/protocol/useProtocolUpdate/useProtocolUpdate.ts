@@ -43,6 +43,13 @@ export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps
       await queryClient.invalidateQueries({
         queryKey: ["protocols"],
       });
+      // Editing mints a version, so version history and usage may have changed.
+      await queryClient.invalidateQueries({
+        queryKey: ["protocolVersions", protocolId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["protocolUsage", protocolId],
+      });
       // Invalidate breadcrumbs to update entity names
       await queryClient.invalidateQueries({
         queryKey: ["breadcrumbs"],

@@ -14,10 +14,14 @@ import { AppError, failure, handleFailure, success } from "../../common/utils/fp
 import { AddCompatibleMacrosUseCase } from "../application/use-cases/add-compatible-macros/add-compatible-macros";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
+import { DuplicateProtocolUseCase } from "../application/use-cases/duplicate-protocol/duplicate-protocol";
+import { GetProtocolUsageUseCase } from "../application/use-cases/get-protocol-usage/get-protocol-usage";
 import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-protocol";
 import { ListCompatibleMacrosUseCase } from "../application/use-cases/list-compatible-macros/list-compatible-macros";
+import { ListProtocolVersionsUseCase } from "../application/use-cases/list-protocol-versions/list-protocol-versions";
 import { ListProtocolsUseCase } from "../application/use-cases/list-protocols/list-protocols";
 import { RemoveCompatibleMacroUseCase } from "../application/use-cases/remove-compatible-macro/remove-compatible-macro";
+import { RestoreProtocolVersionUseCase } from "../application/use-cases/restore-protocol-version/restore-protocol-version";
 import { UpdateProtocolUseCase } from "../application/use-cases/update-protocol/update-protocol";
 import { CreateProtocolDto } from "../core/models/protocol.model";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
@@ -139,6 +143,10 @@ export class ProtocolController {
     private readonly listCompatibleMacrosUseCase: ListCompatibleMacrosUseCase,
     private readonly addCompatibleMacrosUseCase: AddCompatibleMacrosUseCase,
     private readonly removeCompatibleMacroUseCase: RemoveCompatibleMacroUseCase,
+    private readonly listProtocolVersionsUseCase: ListProtocolVersionsUseCase,
+    private readonly restoreProtocolVersionUseCase: RestoreProtocolVersionUseCase,
+    private readonly duplicateProtocolUseCase: DuplicateProtocolUseCase,
+    private readonly getProtocolUsageUseCase: GetProtocolUsageUseCase,
   ) {}
 
   @TsRestHandler(contract.protocols.listProtocols)
@@ -169,8 +177,8 @@ export class ProtocolController {
 
   @TsRestHandler(contract.protocols.getProtocol)
   getProtocol() {
-    return tsRestHandler(contract.protocols.getProtocol, async ({ params }) => {
-      const result = await this.getProtocolUseCase.execute(params.id);
+    return tsRestHandler(contract.protocols.getProtocol, async ({ params, query }) => {
+      const result = await this.getProtocolUseCase.execute(params.id, query.version);
 
       if (result.isSuccess()) {
         // Transform the code field to ensure it's a proper Record<string, unknown>
@@ -278,7 +286,11 @@ export class ProtocolController {
         family: body.family,
       };
 
-      const result = await this.updateProtocolUseCase.execute(params.id, updateDto);
+      const result = await this.updateProtocolUseCase.execute(
+        params.id,
+        updateDto,
+        session.user.id,
+      );
 
       if (result.isSuccess()) {
         const protocol = {
@@ -410,6 +422,74 @@ export class ProtocolController {
           status: StatusCodes.NO_CONTENT,
           body: null,
         };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.protocols.listProtocolVersions)
+  listProtocolVersions() {
+    return tsRestHandler(contract.protocols.listProtocolVersions, async ({ params }) => {
+      const result = await this.listProtocolVersionsUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return { status: StatusCodes.OK, body: formatDatesList(result.value) };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.protocols.restoreProtocolVersion)
+  restoreProtocolVersion(@Session() session: UserSession) {
+    return tsRestHandler(contract.protocols.restoreProtocolVersion, async ({ params }) => {
+      const result = await this.restoreProtocolVersionUseCase.execute(
+        params.id,
+        params.version,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        const protocol = {
+          ...result.value,
+          code: parseProtocolCode(result.value.code, this.logger),
+        };
+        return { status: StatusCodes.OK, body: formatDates(protocol) };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.protocols.duplicateProtocol)
+  duplicateProtocol(@Session() session: UserSession) {
+    return tsRestHandler(contract.protocols.duplicateProtocol, async ({ params, body }) => {
+      const result = await this.duplicateProtocolUseCase.execute(
+        params.id,
+        session.user.id,
+        body.name,
+      );
+
+      if (result.isSuccess()) {
+        const protocol = {
+          ...result.value,
+          code: parseProtocolCode(result.value.code, this.logger),
+        };
+        return { status: StatusCodes.CREATED, body: formatDates(protocol) };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.protocols.getProtocolUsage)
+  getProtocolUsage() {
+    return tsRestHandler(contract.protocols.getProtocolUsage, async ({ params }) => {
+      const result = await this.getProtocolUsageUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return { status: StatusCodes.OK, body: result.value };
       }
 
       return handleFailure(result, this.logger);

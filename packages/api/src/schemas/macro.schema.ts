@@ -28,6 +28,7 @@ export const zMacro = z.object({
   language: zMacroLanguage,
   code: z.string(),
   sortOrder: z.number().nullable(),
+  latestVersion: z.number().int().positive(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -71,6 +72,44 @@ export const zUpdateMacroRequestBody = z.object({
   code: z.string().optional(), // Base64 encoded file content
 });
 
+// ── Versioning / usage / duplicate ───────────────────────────────────
+
+// Version is a positive int in the URL.
+export const zMacroVersionPathParam = z.object({
+  id: z.string().uuid(),
+  version: z.coerce.number().int().positive(),
+});
+
+// Optional ?version on getMacro to fetch a pinned version's code in a single call.
+export const zMacroVersionQuery = z.object({
+  version: z.coerce.number().int().positive().optional(),
+});
+
+// Lightweight summary for history lists.
+export const zMacroVersionSummary = z.object({
+  version: z.number().int().positive(),
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
+  createdAt: z.string().datetime(),
+});
+export const zMacroVersionList = z.array(zMacroVersionSummary);
+
+// "Used by N workbooks" usage lookup.
+export const zMacroUsage = z.object({
+  count: z.number().int().nonnegative(),
+  workbooks: z.array(z.object({ id: z.string().uuid(), name: z.string() })),
+});
+
+// Duplicate/fork request (optional name override; defaults to "Copy of <name>").
+export const zDuplicateMacroRequestBody = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(255, "Name must be at most 255 characters")
+    .optional(),
+});
+
 // Error response
 export const zMacroErrorResponse = z.object({
   message: z.string(),
@@ -107,6 +146,8 @@ export const zMacroProtocolPathParams = z.object({
 export const zMacroExecutionRequestBody = z.object({
   data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
   timeout: z.number().int().min(1).max(60).optional(),
+  // When set, run the pinned macro version instead of the latest (workbook cells pin a version).
+  version: z.number().int().positive().optional(),
 });
 
 export const zMacroExecutionResponse = z.object({
@@ -170,6 +211,12 @@ export type MacroBatchExecutionResponse = z.infer<typeof zMacroBatchExecutionRes
 export type MacroBatchWebhookErrorResponse = z.infer<typeof zMacroBatchWebhookErrorResponse>;
 export type MacroExecutionRequestBody = z.infer<typeof zMacroExecutionRequestBody>;
 export type MacroExecutionResponse = z.infer<typeof zMacroExecutionResponse>;
+export type MacroVersionQuery = z.infer<typeof zMacroVersionQuery>;
+export type MacroVersionSummary = z.infer<typeof zMacroVersionSummary>;
+export type MacroVersionList = z.infer<typeof zMacroVersionList>;
+export type MacroVersionPathParam = z.infer<typeof zMacroVersionPathParam>;
+export type MacroUsage = z.infer<typeof zMacroUsage>;
+export type DuplicateMacroRequestBody = z.infer<typeof zDuplicateMacroRequestBody>;
 
 // Wire-format types — what Databricks actually sends before Zod preprocessing.
 // Fields wrapped with jsonStringOrValue may arrive as JSON strings.

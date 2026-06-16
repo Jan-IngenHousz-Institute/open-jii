@@ -33,8 +33,12 @@ export class ExecuteMacroUseCase {
       timeout: request.timeout,
     });
 
-    // 1. Fetch the macro script (cached in repository)
-    const macroResult = await this.macroRepository.findScriptById(macroId);
+    // 1. Fetch the macro script (cached). A pinned version (from a workbook cell) runs
+    // that exact version; without one, the latest head.
+    const macroResult =
+      request.version !== undefined
+        ? await this.macroRepository.findScriptByVersion(macroId, request.version)
+        : await this.macroRepository.findScriptById(macroId);
     if (macroResult.isFailure()) {
       return failure(
         AppError.internal("Failed to fetch macro script", ErrorCodes.MACRO_EXECUTION_FAILED),

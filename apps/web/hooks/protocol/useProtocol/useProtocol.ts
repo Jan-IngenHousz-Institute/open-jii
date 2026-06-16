@@ -7,10 +7,10 @@ import { tsr } from "../../../lib/tsr";
  * @param protocolId The ID of the protocol to fetch
  * @returns Query result containing the protocol details
  */
-export const useProtocol = (protocolId: string, enabled = true) => {
+export const useProtocol = (protocolId: string, enabled = true, version?: number) => {
   return tsr.protocols.getProtocol.useQuery({
-    queryData: { params: { id: protocolId } },
-    queryKey: ["protocol", protocolId],
+    queryData: { params: { id: protocolId }, query: { version } },
+    queryKey: version != null ? ["protocol", protocolId, version] : ["protocol", protocolId],
     retry: shouldRetryQuery,
     enabled: enabled && !!protocolId,
   });

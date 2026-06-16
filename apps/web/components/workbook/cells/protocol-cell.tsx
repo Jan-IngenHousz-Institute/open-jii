@@ -7,17 +7,19 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
+import { ArrowUpCircle, Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CellWrapper } from "../cell-wrapper";
+import { EntityVersionHistory } from "../entity-version-history";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
 
 interface ProtocolCellProps {
@@ -40,13 +42,15 @@ export function ProtocolCellComponent({
   readOnly,
 }: ProtocolCellProps) {
   const protocolId = cell.payload.protocolId;
+  const version = cell.payload.version;
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
 
-  const { data: protocolData, isLoading: protocolLoading } = useProtocol(protocolId, true);
+  // One call returns the PINNED version's code plus head metadata (name/family/owner/latest).
+  const { data: protocolData, isLoading: protocolLoading } = useProtocol(protocolId, true, version);
+
   const protocolName = protocolData?.body.name;
-  // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
-  // rather than treating it as a load failure.
+  const latestVersion = protocolData?.body.latestVersion;
   const protocolCode = protocolData?.body.code
     ? JSON.stringify(protocolData.body.code, null, 2)
     : null;
@@ -54,6 +58,7 @@ export function ProtocolCellComponent({
   const protocolFamily = protocolData?.body.family;
   const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
   const isEditable = isOwner && !readOnly;
+  const hasUpgrade = isEditable && latestVersion != null && latestVersion > version;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
 
@@ -65,23 +70,22 @@ export function ProtocolCellComponent({
     }
   }, [protocolCode, localCode]);
 
-  // Mirror the standalone protocol/macro editors: persist via the shared
-  // `useAutosave` hook so debounce, status and flush behave identically across
-  // all three editors. Protocol code is a JSON array; `isValid` skips saves
-  // while the editor is mid-keystroke with text that does not yet parse.
+  // Editing mints a new protocol version server-side; re-pin THIS cell to it so other
+  // workbooks stay on their version. localCode already holds the code, so no flicker.
   const save = useCallback(
     async (code: string) => {
       try {
-        await saveProtocol({
+        const res = await saveProtocol({
           params: { id: protocolId },
           body: { code: JSON.parse(code) as Record<string, unknown>[] },
         });
+        onUpdate({ ...cell, payload: { ...cell.payload, version: res.body.latestVersion } });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
         throw err;
       }
     },
-    [protocolId, saveProtocol],
+    [protocolId, saveProtocol, cell, onUpdate],
   );
 
   const isValidCode = useCallback((code: string) => {
@@ -100,9 +104,29 @@ export function ProtocolCellComponent({
     enabled: isEditable && localCode != null,
   });
 
-  // Expose the live editor code to the run flow so the device runs exactly what
-  // is on screen — no backend round-trip — while autosave persists in the
-  // background. Reads a ref so the source stays stable across keystrokes.
+  const handleUpgrade = useCallback(() => {
+    if (latestVersion == null) return;
+    setLocalCode(null);
+    onUpdate({ ...cell, payload: { ...cell.payload, version: latestVersion } });
+  }, [cell, onUpdate, latestVersion]);
+
+  const handleRestore = useCallback(() => {
+    setLocalCode(null);
+  }, []);
+
+  const handleDuplicated = useCallback(
+    (entity: { id: string; name: string }) => {
+      setLocalCode(null);
+      onUpdate({
+        ...cell,
+        payload: { ...cell.payload, protocolId: entity.id, version: 1, name: entity.name },
+      });
+    },
+    [cell, onUpdate],
+  );
+
+  // Expose the live editor code to the run flow so the device runs exactly what is on
+  // screen — no backend round-trip — while autosave persists in the background.
   const localCodeRef = useRef(localCode);
   localCodeRef.current = localCode;
   const getCurrentCode = useCallback((): Record<string, unknown>[] | null => {
@@ -125,6 +149,7 @@ export function ProtocolCellComponent({
   };
 
   const displayName = cell.payload.name ?? protocolName ?? "Protocol";
+  const isLoading = protocolLoading;
 
   return (
     <CellWrapper
@@ -139,21 +164,42 @@ export function ProtocolCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        protocolFamily || (isEditable && localCode != null) ? (
-          <div className="flex items-center gap-2">
-            {protocolFamily ? (
-              <span className="text-xs capitalize text-[#68737B]">
-                {getSensorFamilyLabel(protocolFamily)}
-              </span>
-            ) : null}
-            {isEditable && localCode != null ? (
-              <AutosaveIndicator status={autosave.status} variant="compact" />
-            ) : null}
-          </div>
-        ) : undefined
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="text-[10px]">
+            v{version}
+          </Badge>
+          {hasUpgrade ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-1.5 text-[10px] font-medium text-[#005E5E] hover:text-[#005E5E]"
+              onClick={handleUpgrade}
+              title={`A newer version is available — update this cell to v${latestVersion}`}
+            >
+              <ArrowUpCircle className="h-3 w-3" />v{latestVersion}
+            </Button>
+          ) : null}
+          {protocolFamily ? (
+            <span className="text-xs capitalize text-[#68737B]">
+              {getSensorFamilyLabel(protocolFamily)}
+            </span>
+          ) : null}
+          {isEditable && localCode != null ? (
+            <AutosaveIndicator status={autosave.status} variant="compact" />
+          ) : null}
+        </div>
       }
       headerActions={
         <div className="flex items-center gap-1">
+          {isEditable ? (
+            <EntityVersionHistory
+              kind="protocol"
+              entityId={protocolId}
+              currentVersion={version}
+              onRestored={handleRestore}
+              onDuplicated={handleDuplicated}
+            />
+          ) : null}
           <Button
             asChild
             variant="ghost"
@@ -181,7 +227,7 @@ export function ProtocolCellComponent({
         </div>
       }
     >
-      {protocolLoading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center py-6">
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
         </div>

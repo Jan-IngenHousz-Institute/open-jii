@@ -97,6 +97,25 @@ describe("MacroPicker", () => {
     });
   });
 
+  // Regression: a newly added cell must pin the macro's current latest version.
+  it("pins the macro's latest version onto the new cell", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    server.mount(contract.macros.listMacros, {
+      body: [createMacro({ id: "m9", name: "Versioned", language: "python", latestVersion: 4 })],
+    });
+
+    renderPicker(onSelect);
+
+    await user.click(screen.getByRole("button", { name: /add macro/i }));
+    await user.click(await screen.findByText("Versioned"));
+
+    expect(onSelect.mock.lastCall?.[0]).toMatchObject({
+      type: "macro",
+      payload: { macroId: "m9", version: 4 },
+    });
+  });
+
   it("shows create form when user clicks 'Create new macro'", async () => {
     const user = userEvent.setup();
     server.mount(contract.macros.listMacros, { body: [] });

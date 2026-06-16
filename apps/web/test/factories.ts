@@ -150,6 +150,7 @@ export function createMacro(overrides: Partial<Macro> = {}): Macro {
     language: "python",
     code: 'print("hello")',
     sortOrder: null,
+    latestVersion: 1,
     createdBy: "user-1",
     createdByName: "Test User",
     createdAt: "2025-01-01T00:00:00.000Z",
@@ -171,6 +172,7 @@ export function createProtocol(overrides: Partial<Protocol> = {}): Protocol {
     code: [{ _protocol_set_: [] }],
     family: "multispeq",
     sortOrder: null,
+    latestVersion: 1,
     createdBy: "user-1",
     createdByName: "Test User",
     createdAt: "2025-01-01T00:00:00.000Z",
@@ -457,7 +459,7 @@ export function createMacroCell(overrides: Partial<MacroCell> = {}): MacroCell {
   return {
     id: `cell-macro-${cellSeq}`,
     type: "macro",
-    payload: { macroId: crypto.randomUUID(), language: "python" },
+    payload: { macroId: crypto.randomUUID(), version: 1, language: "python" },
     isCollapsed: false,
     ...overrides,
   };

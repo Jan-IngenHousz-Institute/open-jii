@@ -47,14 +47,19 @@ export function ProtocolPicker({
   const [isCreating, setIsCreating] = useState(false);
   const createProtocol = useProtocolCreate();
 
-  const handleSelect = (protocol: { id: string; name: string; family: string }) => {
+  const handleSelect = (protocol: {
+    id: string;
+    name: string;
+    family: string;
+    latestVersion: number;
+  }) => {
     const cell: ProtocolCell = {
       id: crypto.randomUUID(),
       type: "protocol",
       isCollapsed: false,
       payload: {
         protocolId: protocol.id,
-        version: 1,
+        version: protocol.latestVersion,
         name: protocol.name,
       },
     };
@@ -79,7 +84,7 @@ export function ProtocolPicker({
         isCollapsed: false,
         payload: {
           protocolId: result.body.id,
-          version: 1,
+          version: result.body.latestVersion,
           name: newName.trim(),
         },
       };

@@ -12,11 +12,15 @@ import { handleFailure, isSuccess } from "../../common/utils/fp-utils";
 import { AddCompatibleProtocolsUseCase } from "../application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
+import { DuplicateMacroUseCase } from "../application/use-cases/duplicate-macro/duplicate-macro";
 import { ExecuteMacroUseCase } from "../application/use-cases/execute-macro/execute-macro";
+import { GetMacroUsageUseCase } from "../application/use-cases/get-macro-usage/get-macro-usage";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListCompatibleProtocolsUseCase } from "../application/use-cases/list-compatible-protocols/list-compatible-protocols";
+import { ListMacroVersionsUseCase } from "../application/use-cases/list-macro-versions/list-macro-versions";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
 import { RemoveCompatibleProtocolUseCase } from "../application/use-cases/remove-compatible-protocol/remove-compatible-protocol";
+import { RestoreMacroVersionUseCase } from "../application/use-cases/restore-macro-version/restore-macro-version";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
@@ -37,6 +41,10 @@ export class MacroController {
     private readonly listCompatibleProtocolsUseCase: ListCompatibleProtocolsUseCase,
     private readonly addCompatibleProtocolsUseCase: AddCompatibleProtocolsUseCase,
     private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
+    private readonly listMacroVersionsUseCase: ListMacroVersionsUseCase,
+    private readonly restoreMacroVersionUseCase: RestoreMacroVersionUseCase,
+    private readonly duplicateMacroUseCase: DuplicateMacroUseCase,
+    private readonly getMacroUsageUseCase: GetMacroUsageUseCase,
   ) {}
 
   @TsRestHandler(macroContract.createMacro)
@@ -57,8 +65,8 @@ export class MacroController {
 
   @TsRestHandler(macroContract.getMacro)
   getMacro() {
-    return tsRestHandler(macroContract.getMacro, async ({ params }) => {
-      const result = await this.getMacroUseCase.execute(params.id);
+    return tsRestHandler(macroContract.getMacro, async ({ params, query }) => {
+      const result = await this.getMacroUseCase.execute(params.id, query.version);
 
       if (isSuccess(result)) {
         return {
@@ -202,6 +210,66 @@ export class MacroController {
           status: StatusCodes.NO_CONTENT,
           body: null,
         };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.listMacroVersions)
+  listMacroVersions() {
+    return tsRestHandler(macroContract.listMacroVersions, async ({ params }) => {
+      const result = await this.listMacroVersionsUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return { status: StatusCodes.OK, body: formatDatesList(result.value) };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.restoreMacroVersion)
+  restoreMacroVersion(@Session() session: UserSession) {
+    return tsRestHandler(macroContract.restoreMacroVersion, async ({ params }) => {
+      const result = await this.restoreMacroVersionUseCase.execute(
+        params.id,
+        params.version,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return { status: StatusCodes.OK, body: formatDates(result.value) };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.duplicateMacro)
+  duplicateMacro(@Session() session: UserSession) {
+    return tsRestHandler(macroContract.duplicateMacro, async ({ params, body }) => {
+      const result = await this.duplicateMacroUseCase.execute(
+        params.id,
+        session.user.id,
+        body.name,
+      );
+
+      if (result.isSuccess()) {
+        return { status: StatusCodes.CREATED, body: formatDates(result.value) };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(macroContract.getMacroUsage)
+  getMacroUsage() {
+    return tsRestHandler(macroContract.getMacroUsage, async ({ params }) => {
+      const result = await this.getMacroUsageUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return { status: StatusCodes.OK, body: result.value };
       }
 
       return handleFailure(result, this.logger);

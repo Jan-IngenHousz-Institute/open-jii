@@ -11,7 +11,11 @@ export class UpdateProtocolUseCase {
 
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
-  async execute(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto>> {
+  async execute(
+    id: string,
+    updateProtocolDto: UpdateProtocolDto,
+    userId: string,
+  ): Promise<Result<ProtocolDto>> {
     this.logger.log({
       msg: "Updating protocol",
       operation: "updateProtocol",
@@ -36,22 +40,57 @@ export class UpdateProtocolUseCase {
       return failure(AppError.notFound(`Protocol not found`));
     }
 
-    // Protocol exists and is not assigned, now update it
-    const updateResult = await this.protocolRepository.update(id, updateProtocolDto);
+    // A code or family change mints a new immutable version (deduped against the
+    // current head); metadata-only edits stay in place. Workbook cells stay pinned
+    // to their version, so other workbooks are unaffected until they opt to upgrade.
+    const codeChanged =
+      updateProtocolDto.code !== undefined && updateProtocolDto.code !== protocol.code;
+    const familyChanged =
+      updateProtocolDto.family !== undefined && updateProtocolDto.family !== protocol.family;
 
-    if (updateResult.isFailure()) {
-      return updateResult;
-    }
+    let updated: ProtocolDto;
 
-    const protocols = updateResult.value;
-    if (protocols.length === 0) {
-      this.logger.error({
-        msg: "Failed to update protocol",
-        errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
-        operation: "updateProtocol",
-        protocolId: id,
+    if (codeChanged || familyChanged) {
+      const mintResult = await this.protocolRepository.mintVersion(id, {
+        code: updateProtocolDto.code ?? protocol.code,
+        family: updateProtocolDto.family ?? protocol.family,
+        createdBy: userId,
       });
-      return failure(AppError.internal("Failed to update protocol"));
+      if (mintResult.isFailure()) {
+        return mintResult;
+      }
+      updated = mintResult.value;
+
+      const metadata: UpdateProtocolDto = {};
+      if (updateProtocolDto.name !== undefined) metadata.name = updateProtocolDto.name;
+      if (updateProtocolDto.description !== undefined) {
+        metadata.description = updateProtocolDto.description;
+      }
+      if (Object.keys(metadata).length > 0) {
+        const metaResult = await this.protocolRepository.update(id, metadata);
+        if (metaResult.isFailure()) {
+          return metaResult;
+        }
+        if (metaResult.value.length > 0) {
+          updated = metaResult.value[0];
+        }
+      }
+    } else {
+      const updateResult = await this.protocolRepository.update(id, updateProtocolDto);
+      if (updateResult.isFailure()) {
+        return updateResult;
+      }
+      const protocols = updateResult.value;
+      if (protocols.length === 0) {
+        this.logger.error({
+          msg: "Failed to update protocol",
+          errorCode: ErrorCodes.PROTOCOL_UPDATE_FAILED,
+          operation: "updateProtocol",
+          protocolId: id,
+        });
+        return failure(AppError.internal("Failed to update protocol"));
+      }
+      updated = protocols[0];
     }
 
     this.logger.log({
@@ -60,6 +99,6 @@ export class UpdateProtocolUseCase {
       protocolId: id,
       status: "success",
     });
-    return success(protocols[0]);
+    return success(updated);
   }
 }

@@ -62,6 +62,7 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
         isCollapsed: false,
         payload: {
           macroId: content.macroId as string,
+          version: 1,
           language: "javascript",
           name: node.name,
         },
