@@ -204,6 +204,8 @@
     "removeOption": "Option entfernen",
     "bulkAddOptions": "Massenhinzufügung",
     "deleteAllOptions": "Alle löschen",
+    "optionCount_one": "{{count}} Option",
+    "optionCount_other": "{{count}} Optionen",
     "textResponseLabel": "Textantwort",
     "textResponseDescription": "Teilnehmer können ihre eigene Antwort schreiben",
     "numberResponseLabel": "Nummerantwort",

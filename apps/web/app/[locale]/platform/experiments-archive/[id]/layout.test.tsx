@@ -171,7 +171,7 @@ describe("<ExperimentLayout />", () => {
     });
 
     it("renders tabs when on design path", async () => {
-      vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id/design");
+      vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments-archive/test-id/design");
       server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 

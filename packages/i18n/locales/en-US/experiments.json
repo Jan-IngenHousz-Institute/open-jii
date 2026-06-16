@@ -234,6 +234,8 @@
     "removeOption": "Remove option",
     "bulkAddOptions": "Bulk Add",
     "deleteAllOptions": "Delete All",
+    "optionCount_one": "{{count}} option",
+    "optionCount_other": "{{count}} options",
     "textResponseLabel": "Text Response",
     "textResponseDescription": "Participants can write their own answer",
     "numberResponseLabel": "Number Response",
