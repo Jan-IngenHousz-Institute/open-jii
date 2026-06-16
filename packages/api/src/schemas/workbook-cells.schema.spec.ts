@@ -77,7 +77,7 @@ describe("Workbook Cells Schema", () => {
       const cell = {
         id: "m1",
         type: "macro",
-        payload: { macroId: uuidA, language: "python" },
+        payload: { macroId: uuidA, version: 1, language: "python" },
       };
       expect(zMacroCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
     });
@@ -86,7 +86,7 @@ describe("Workbook Cells Schema", () => {
       const cell = {
         id: "m2",
         type: "macro",
-        payload: { macroId: uuidA, language: "r", name: "My macro" },
+        payload: { macroId: uuidA, version: 1, language: "r", name: "My macro" },
       };
       expect(zMacroCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
     });
