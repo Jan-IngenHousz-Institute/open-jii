@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { WorkbookList } from "~/components/workbook-list";
@@ -115,7 +115,8 @@ export function ListWorkbooks() {
               {t("workbooks.cancel")}
             </Button>
             <Button onClick={handleCreate} disabled={!newName.trim() || isCreating}>
-              {t("workbooks.create")}
+              {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isCreating ? t("workbooks.creating") : t("workbooks.create")}
             </Button>
           </DialogFooter>
         </DialogContent>

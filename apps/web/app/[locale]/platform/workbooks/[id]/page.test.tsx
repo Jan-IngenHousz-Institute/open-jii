@@ -38,7 +38,7 @@ describe("WorkbookOverviewPage", () => {
       body: createWorkbook({ id: "wb-1" }),
     });
     renderPage();
-    expect(screen.getByText("common.loading")).toBeInTheDocument();
+    expect(screen.getByLabelText("common.loading")).toBeInTheDocument();
   });
 
   it("renders an error display when the fetch fails", async () => {

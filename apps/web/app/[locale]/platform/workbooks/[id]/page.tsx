@@ -7,6 +7,7 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
+import { Loader2 } from "lucide-react";
 import { use, useCallback, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -27,7 +28,11 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
   const { t } = useTranslation(["workbook", "common"]);
 
   if (isLoading) {
-    return <div>{t("common.loading")}</div>;
+    return (
+      <div className="flex items-center justify-center py-24" aria-label={t("common.loading")}>
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+      </div>
+    );
   }
   if (error) {
     return <ErrorDisplay error={error} title={t("workbooks.errorLoading")} />;

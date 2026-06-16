@@ -3,6 +3,7 @@
     "title": "Workbooks",
     "workbook": "Workbook",
     "create": "Create Workbook",
+    "creating": "Creating…",
     "createDescription": "Give your workbook a name. You can rename it later.",
     "namePlaceholder": "Workbook name",
     "cancel": "Cancel",

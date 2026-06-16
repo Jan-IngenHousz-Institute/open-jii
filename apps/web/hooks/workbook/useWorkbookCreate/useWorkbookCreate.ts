@@ -19,7 +19,7 @@ export function useWorkbookCreate(options?: UseWorkbookCreateOptions) {
     ...options,
     onSuccess: (...args) => {
       void queryClient.invalidateQueries({ queryKey: ["workbooks"] });
-      toast({ description: t("workbooks.workbookCreated") });
+      // No success toast — navigating straight to the new workbook is the feedback.
       options?.onSuccess?.(...args);
     },
     onError: (error, ...rest) => {

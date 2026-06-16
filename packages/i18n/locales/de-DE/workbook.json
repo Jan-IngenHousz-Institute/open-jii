@@ -3,6 +3,7 @@
     "title": "Arbeitsmappen",
     "workbook": "Arbeitsmappe",
     "create": "Arbeitsmappe erstellen",
+    "creating": "Wird erstellt…",
     "noWorkbooks": "Keine Arbeitsmappen gefunden",
     "workbookCreated": "Arbeitsmappe erfolgreich erstellt",
     "workbookUpdated": "Arbeitsmappe erfolgreich aktualisiert",
