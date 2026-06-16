@@ -157,6 +157,8 @@ function GetIndexByLabel(label, json, array) {
 
   if (array === undefined) array = false;
 
+  if (json === undefined || json.set === undefined) return null;
+
   var out = json.set
     .map(function (a, i) {
       if (a.label == label) return i;
@@ -216,6 +218,8 @@ function GetProtocolByLabel(label, json, array) {
   if (label === undefined) return null;
 
   if (array === undefined) array = false;
+
+  if (json === undefined || json.set === undefined) return null;
 
   var out = json.set.filter(function (a) {
     return a.label == label;

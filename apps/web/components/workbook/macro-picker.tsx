@@ -56,13 +56,15 @@ function getDefaultCode(language: MacroLanguage, username: string): string {
 
 export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [language, setLanguage] = useState<MacroLanguage | undefined>(undefined);
   const { data: session } = useSession();
-  const { data: macros } = useMacros({
+  const {
+    data: macros,
+    search,
+    setSearch,
+    language,
+    setLanguage,
+  } = useMacros({
     initialFilter: "all",
-    initialSearch: search,
-    initialLanguage: language,
   });
 
   const [showCreate, setShowCreate] = useState(false);
@@ -119,6 +121,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const resetAndClose = () => {
     setOpen(false);
     setSearch("");
+    setLanguage(undefined);
     setShowCreate(false);
     setNewName("");
     setNewLanguage("python");

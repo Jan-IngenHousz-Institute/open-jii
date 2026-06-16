@@ -39,8 +39,7 @@ export function ProtocolPicker({
   children,
 }: ProtocolPickerProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const { protocols } = useProtocols({ initialFilter: "all", initialSearch: search });
+  const { protocols, search, setSearch } = useProtocols({ initialFilter: "all" });
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

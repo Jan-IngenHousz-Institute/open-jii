@@ -63,6 +63,40 @@ describe("MacroPicker", () => {
     ]);
   });
 
+  // Regression: the search box was wired to `initialSearch`, which only seeds
+  // the hook's state once, so typing never reached the query.
+  it("passes the typed search text through to the macros query", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.macros.listMacros, {
+      body: [createMacro({ id: "m1", name: "NDVI Calculator", language: "python" })],
+    });
+
+    renderPicker();
+
+    await user.click(screen.getByRole("button", { name: /add macro/i }));
+    const searchInput = await screen.findByPlaceholderText(/search macros/i);
+    await user.type(searchInput, "ndvi");
+
+    await waitFor(() => {
+      expect(spy.calls.some((c) => c.query.search === "ndvi")).toBe(true);
+    });
+  });
+
+  it("passes the selected language filter through to the macros query", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.macros.listMacros, { body: [] });
+
+    renderPicker();
+
+    await user.click(screen.getByRole("button", { name: /add macro/i }));
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "Python" }));
+
+    await waitFor(() => {
+      expect(spy.calls.some((c) => c.query.language === "python")).toBe(true);
+    });
+  });
+
   it("shows create form when user clicks 'Create new macro'", async () => {
     const user = userEvent.setup();
     server.mount(contract.macros.listMacros, { body: [] });

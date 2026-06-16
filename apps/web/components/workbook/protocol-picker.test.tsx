@@ -67,6 +67,25 @@ describe("ProtocolPicker", () => {
     ]);
   });
 
+  // Regression: the search box was wired to `initialSearch`, which only seeds
+  // the hook's state once, so typing never reached the query.
+  it("passes the typed search text through to the protocols query", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.protocols.listProtocols, {
+      body: [createProtocol({ id: "p1", name: "Leaf Absorbance" })],
+    });
+
+    renderPicker();
+
+    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    const searchInput = await screen.findByPlaceholderText(/search protocols/i);
+    await user.type(searchInput, "leaf");
+
+    await waitFor(() => {
+      expect(spy.calls.some((c) => c.query.search === "leaf")).toBe(true);
+    });
+  });
+
   it("shows 'Create new protocol' button that opens create form", async () => {
     const user = userEvent.setup();
     server.mount(contract.protocols.listProtocols, { body: [] });
