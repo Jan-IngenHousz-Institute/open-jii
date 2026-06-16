@@ -2,9 +2,11 @@ import { z } from "zod";
 
 import { zWorkbookCellArray } from "./workbook-cells.schema";
 
+// Keyed by entity id, then by version, so a workbook that pins two versions of the same
+// macro/protocol snapshots both: { [entityId]: { [version]: { code } } }.
 export const zEntitySnapshots = z.object({
-  protocols: z.record(z.string(), z.object({ code: z.unknown() })),
-  macros: z.record(z.string(), z.object({ code: z.string() })),
+  protocols: z.record(z.string(), z.record(z.string(), z.object({ code: z.unknown() }))),
+  macros: z.record(z.string(), z.record(z.string(), z.object({ code: z.string() }))),
 });
 
 export const zWorkbookVersion = z.object({

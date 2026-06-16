@@ -70,14 +70,22 @@ export class IsWorkbookUpgradableUseCase {
     if (protocolsResult.isFailure()) return protocolsResult;
     if (macrosResult.isFailure()) return macrosResult;
 
+    // Snapshots are keyed id -> version -> { code }. The workbook is upgradable if the head
+    // code drifted from any pinned version it published (or nothing was snapshotted for it).
     const snapshots = latest.entitySnapshots;
     for (const [id, p] of protocolsResult.value) {
-      const snap = snapshots.protocols[id] as { code: unknown } | undefined;
-      if (JSON.stringify(snap?.code) !== JSON.stringify(p.code)) return success(true);
+      const pinned = snapshots.protocols[id] as Record<string, { code: unknown }> | undefined;
+      const snaps = pinned ? Object.values(pinned) : [];
+      if (
+        snaps.length === 0 ||
+        snaps.some((s) => JSON.stringify(s.code) !== JSON.stringify(p.code))
+      )
+        return success(true);
     }
     for (const [id, m] of macrosResult.value) {
-      const snap = snapshots.macros[id] as { code: string } | undefined;
-      if (snap?.code !== m.code) return success(true);
+      const pinned = snapshots.macros[id] as Record<string, { code: string }> | undefined;
+      const snaps = pinned ? Object.values(pinned) : [];
+      if (snaps.length === 0 || snaps.some((s) => s.code !== m.code)) return success(true);
     }
 
     return success(false);

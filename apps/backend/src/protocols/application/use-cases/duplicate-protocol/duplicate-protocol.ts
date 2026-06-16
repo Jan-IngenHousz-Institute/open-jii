@@ -27,35 +27,48 @@ export class DuplicateProtocolUseCase {
     const trimmed = nameOverride?.trim() ?? "";
     // Cap to leave room under the 255-char name limit for the " (N)" disambiguator suffix.
     const baseName = (trimmed.length > 0 ? trimmed : `Copy of ${source.name}`).slice(0, 240);
-    const nameResult = await this.resolveUniqueName(baseName);
-    if (nameResult.isFailure()) {
-      return nameResult;
+
+    // Probe for a free name, then insert. A concurrent duplicate can claim the name
+    // between probe and insert (unique-index race), so retry on conflict: the next probe
+    // sees the committed row and picks a fresh suffix.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const nameResult = await this.resolveUniqueName(baseName);
+      if (nameResult.isFailure()) {
+        return nameResult;
+      }
+
+      const created = await this.protocolRepository.create(
+        {
+          name: nameResult.value,
+          description: source.description ?? undefined,
+          code: source.code,
+          family: source.family,
+        },
+        userId,
+      );
+      if (created.isFailure()) {
+        if (created.error.code === "REPOSITORY_DUPLICATE") {
+          continue;
+        }
+        return created;
+      }
+      if (created.value.length === 0) {
+        return failure(AppError.internal("Failed to duplicate protocol"));
+      }
+
+      this.logger.log({
+        msg: "Duplicated protocol",
+        operation: "duplicateProtocol",
+        sourceId: protocolId,
+        newId: created.value[0].id,
+        userId,
+      });
+      return success(created.value[0]);
     }
 
-    const created = await this.protocolRepository.create(
-      {
-        name: nameResult.value,
-        description: source.description ?? undefined,
-        code: source.code,
-        family: source.family,
-      },
-      userId,
+    return failure(
+      AppError.conflict("Could not generate a unique name for the duplicated protocol"),
     );
-    if (created.isFailure()) {
-      return created;
-    }
-    if (created.value.length === 0) {
-      return failure(AppError.internal("Failed to duplicate protocol"));
-    }
-
-    this.logger.log({
-      msg: "Duplicated protocol",
-      operation: "duplicateProtocol",
-      sourceId: protocolId,
-      newId: created.value[0].id,
-      userId,
-    });
-    return success(created.value[0]);
   }
 
   /** Probe "Copy of X", "Copy of X (2)", … until the UNIQUE name constraint is free. */

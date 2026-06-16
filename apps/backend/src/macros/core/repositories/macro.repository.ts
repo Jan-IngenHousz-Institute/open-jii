@@ -414,28 +414,6 @@ export class MacroRepository {
     );
   }
 
-  /**
-   * Fetch lean scripts for a set of (macroId, version) pins. Used when publishing a
-   * workbook version so the snapshot captures exactly the pinned code. Keyed by macroId.
-   */
-  async findScriptsByPins(
-    pins: { macroId: string; version: number }[],
-  ): Promise<Result<Map<string, MacroScript>>> {
-    if (pins.length === 0) {
-      return success(new Map());
-    }
-    return tryCatch(async () => {
-      const map = new Map<string, MacroScript>();
-      for (const { macroId, version } of pins) {
-        const result = await this.findScriptByVersion(macroId, version);
-        if (result.isSuccess() && result.value) {
-          map.set(macroId, result.value);
-        }
-      }
-      return map;
-    });
-  }
-
   /** latest_version for a set of macros, keyed by id (cheap pin-vs-latest drift check). */
   async findLatestVersions(ids: string[]): Promise<Result<Map<string, number>>> {
     if (ids.length === 0) {
