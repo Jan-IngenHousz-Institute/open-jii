@@ -86,13 +86,14 @@ describe("DuplicateMacroUseCase", () => {
   it("retries when create hits a unique-constraint violation, then succeeds", async () => {
     const source = await createSource("Original");
     const fork = { ...source, id: faker.string.uuid(), name: "Copy of Original" };
-    vi.spyOn(macroRepository, "create")
+    const createSpy = vi
+      .spyOn(macroRepository, "create")
       .mockResolvedValueOnce(failure(AppError.conflict("dup", "REPOSITORY_DUPLICATE")))
       .mockResolvedValueOnce(success([fork]));
 
     const result = await useCase.execute(source.id, userId);
     assertSuccess(result);
-    expect(macroRepository.create).toHaveBeenCalledTimes(2);
+    expect(createSpy).toHaveBeenCalledTimes(2);
   });
 
   it("fails after exhausting retries on persistent conflicts", async () => {
