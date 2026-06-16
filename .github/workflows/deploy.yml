@@ -113,7 +113,6 @@ jobs:
       environment: ${{ inputs.environment }}
       ref: ${{ inputs.ref || github.sha }}
       tofu_version: "1.9.0"
-      skip_approval_gate: true
     secrets: inherit
 
   database-migrations:
