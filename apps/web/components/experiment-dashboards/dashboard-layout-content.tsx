@@ -61,7 +61,7 @@ export function DashboardLayoutContent({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="3xl:max-w-[1680px] 4xl:max-w-[2200px] mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <Link
           href={backHref}
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"

@@ -54,7 +54,7 @@ export function DashboardGradientBody({
         style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
       >
         {isEditing && bounds && <GridBackdrop bounds={bounds} layout={layout} />}
-        <div className="3xl:max-w-[1680px] 4xl:max-w-[2200px] relative mx-auto w-full max-w-7xl pt-6">
+        <div className="relative w-full pt-6">
           <div ref={canvasRef} className="relative min-w-0">
             {children}
           </div>
