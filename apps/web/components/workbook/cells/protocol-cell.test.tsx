@@ -451,4 +451,90 @@ describe("ProtocolCellComponent", () => {
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
   });
+
+  describe("version actions", () => {
+    it("re-pins the cell to the latest version when the upgrade button is clicked", async () => {
+      const user = userEvent.setup();
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], latestVersion: 3 }),
+      });
+      const onUpdate = vi.fn();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      const upgrade = await screen.findByRole("button", { name: /v3/ });
+      await user.click(upgrade);
+
+      expect(onUpdate.mock.lastCall?.[0]).toMatchObject({
+        payload: { protocolId: "p1", version: 3, name: "Light Sensor" },
+      });
+    });
+
+    it("duplicates via version history and re-points the cell to the fork (owner)", async () => {
+      const user = userEvent.setup();
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      });
+      server.mount(contract.protocols.listProtocolVersions, {
+        body: [{ version: 1, createdBy: OWNER_ID, createdAt: "2024-01-01T00:00:00Z" }],
+      });
+      server.mount(contract.protocols.getProtocolUsage, { body: { count: 0, workbooks: [] } });
+      server.mount(contract.protocols.duplicateProtocol, {
+        body: createProtocol({ id: "p2", name: "Copy of Light Sensor" }),
+        status: 201,
+      });
+      const onUpdate = vi.fn();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Version history" }));
+      await user.click(await screen.findByRole("button", { name: /Duplicate as a new protocol/ }));
+
+      await waitFor(() =>
+        expect(onUpdate.mock.lastCall?.[0]).toMatchObject({
+          payload: { protocolId: "p2", version: 1, name: "Copy of Light Sensor" },
+        }),
+      );
+    });
+
+    it("resets the local buffer after a restore (owner)", async () => {
+      const user = userEvent.setup();
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: "p1",
+          code: [{ measurement: "light" }],
+          createdBy: OWNER_ID,
+          latestVersion: 2,
+        }),
+      });
+      server.mount(contract.protocols.listProtocolVersions, {
+        body: [
+          { version: 2, createdBy: OWNER_ID, createdAt: "2024-01-02T00:00:00Z" },
+          { version: 1, createdBy: OWNER_ID, createdAt: "2024-01-01T00:00:00Z" },
+        ],
+      });
+      server.mount(contract.protocols.getProtocolUsage, { body: { count: 0, workbooks: [] } });
+      server.mount(contract.protocols.restoreProtocolVersion, {
+        body: createProtocol({ id: "p1" }),
+      });
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Version history" }));
+      await user.click(await screen.findByRole("button", { name: /Restore/ }));
+
+      await waitFor(() => expect(screen.queryByText("No versions yet")).not.toBeInTheDocument());
+    });
+  });
 });

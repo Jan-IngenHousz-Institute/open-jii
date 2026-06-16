@@ -1,6 +1,12 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { UpdateProtocolUseCase } from "./update-protocol";
@@ -122,5 +128,41 @@ describe("UpdateProtocolUseCase", () => {
       message: "Protocol not found",
       statusCode: 404,
     });
+  });
+
+  it("propagates a repository failure from the existence check", async () => {
+    vi.spyOn(protocolRepository, "findOne").mockResolvedValue(
+      failure(AppError.internal("db down")),
+    );
+
+    const result = await useCase.execute(faker.string.uuid(), { name: "X" }, testUserId);
+    assertFailure(result);
+  });
+
+  it("returns the mint failure when minting a new version fails", async () => {
+    const created = await protocolRepository.create(
+      { name: "Mint Fail", code: [{ step: 1 }], family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(created);
+    vi.spyOn(protocolRepository, "mintVersion").mockResolvedValue(
+      failure(AppError.internal("mint failed")),
+    );
+
+    const result = await useCase.execute(created.value[0].id, { code: [{ step: 2 }] }, testUserId);
+    assertFailure(result);
+  });
+
+  it("returns an internal error when a metadata-only update affects no rows", async () => {
+    const created = await protocolRepository.create(
+      { name: "No Rows", code: [{ step: 1 }], family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(created);
+    vi.spyOn(protocolRepository, "update").mockResolvedValue(success([]));
+
+    const result = await useCase.execute(created.value[0].id, { name: "Renamed" }, testUserId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(500);
   });
 });
