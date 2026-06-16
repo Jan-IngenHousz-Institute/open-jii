@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { RestoreMacroVersionUseCase } from "./restore-macro-version";
@@ -76,5 +76,22 @@ describe("RestoreMacroVersionUseCase", () => {
     const result = await useCase.execute(macroId, 99, userId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
+  });
+
+  it("propagates a repository failure from the macro lookup", async () => {
+    vi.spyOn(macroRepository, "findById").mockResolvedValue(failure(AppError.internal("db down")));
+
+    const result = await useCase.execute(faker.string.uuid(), 1, userId);
+    assertFailure(result);
+  });
+
+  it("propagates a repository failure from the version lookup", async () => {
+    const macroId = await createWithTwoVersions();
+    vi.spyOn(macroRepository, "findVersion").mockResolvedValue(
+      failure(AppError.internal("db down")),
+    );
+
+    const result = await useCase.execute(macroId, 1, userId);
+    assertFailure(result);
   });
 });

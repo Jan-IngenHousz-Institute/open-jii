@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { RestoreProtocolVersionUseCase } from "./restore-protocol-version";
@@ -76,5 +76,24 @@ describe("RestoreProtocolVersionUseCase", () => {
     const result = await useCase.execute(protocolId, 99, userId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
+  });
+
+  it("propagates a repository failure from the protocol lookup", async () => {
+    vi.spyOn(protocolRepository, "findOne").mockResolvedValue(
+      failure(AppError.internal("db down")),
+    );
+
+    const result = await useCase.execute(faker.string.uuid(), 1, userId);
+    assertFailure(result);
+  });
+
+  it("propagates a repository failure from the version lookup", async () => {
+    const protocolId = await createWithTwoVersions();
+    vi.spyOn(protocolRepository, "findVersion").mockResolvedValue(
+      failure(AppError.internal("db down")),
+    );
+
+    const result = await useCase.execute(protocolId, 1, userId);
+    assertFailure(result);
   });
 });

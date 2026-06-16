@@ -106,4 +106,11 @@ describe("DuplicateMacroUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(409);
   });
+
+  it("propagates a repository failure from the source lookup", async () => {
+    vi.spyOn(macroRepository, "findById").mockResolvedValue(failure(AppError.internal("db down")));
+
+    const result = await useCase.execute(faker.string.uuid(), userId);
+    assertFailure(result);
+  });
 });
