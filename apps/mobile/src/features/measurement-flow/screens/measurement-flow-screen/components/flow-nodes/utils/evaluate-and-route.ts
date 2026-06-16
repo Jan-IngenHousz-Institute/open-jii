@@ -11,15 +11,19 @@ import { hydrateCells } from "./hydrate-cells";
 export const MAX_BRANCH_VISITS = 100;
 
 // Advance one step, reusing the store's wrap-around so a branch behaves like
-// any other node when it is the last / a mid-flow step.
+// any other node when it is the last / a mid-flow step. On a mid-flow advance
+// it records a Back-return so stepping back unwinds past this auto-advancing
+// branch instead of re-triggering its forward evaluation.
 function advanceSequential(): void {
-  const { currentFlowStep, flowNodes, nextStep, setCurrentFlowStep } =
+  const { currentFlowStep, flowNodes, nextStep, setCurrentFlowStep, recordBranchJump } =
     useMeasurementFlowStore.getState();
-  if (currentFlowStep + 1 >= flowNodes.length) {
+  const nextIndex = currentFlowStep + 1;
+  if (nextIndex >= flowNodes.length) {
     nextStep();
-  } else {
-    setCurrentFlowStep(currentFlowStep + 1);
+    return;
   }
+  recordBranchJump(nextIndex);
+  setCurrentFlowStep(nextIndex);
 }
 
 // Evaluates a branch via the reused `evaluateBranch` (first match wins, else

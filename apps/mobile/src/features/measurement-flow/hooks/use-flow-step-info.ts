@@ -40,7 +40,10 @@ function deriveStepInfo(
   isFlowFinished: boolean,
 ): FlowStepInfo {
   const questionsOnly = isQuestionsOnlyFlow(flowNodes);
-  const totalSteps = Math.max(1, flowNodes.length + (questionsOnly ? 1 : 0));
+  // Branch nodes auto-advance invisibly, so they're excluded from the count —
+  // otherwise "Step X of Y" silently skips a number when the flow routes through one.
+  const visibleCount = flowNodes.reduce((n, node) => n + (node.type === "branch" ? 0 : 1), 0);
+  const totalSteps = Math.max(1, visibleCount + (questionsOnly ? 1 : 0));
 
   // Resolve the rendering state first — order matters here.
   const finishedAfterAllNodes = isFlowFinished && currentFlowStep >= flowNodes.length;
@@ -55,11 +58,17 @@ function deriveStepInfo(
     currentStep = totalSteps;
     stepTypeKey = "completed";
   } else if (isQuestionsSubmitPending) {
-    currentStep = flowNodes.length + 1;
+    currentStep = totalSteps;
     stepTypeKey = "review";
   } else {
-    currentStep = Math.min(flowNodes.length, currentFlowStep + 1);
     const node = flowNodes[currentFlowStep];
+    // Count visible nodes up to the current position; while sitting on a
+    // branch's spinner, hold at the prior step rather than counting the branch.
+    const visibleBefore = flowNodes
+      .slice(0, currentFlowStep)
+      .reduce((n, prev) => n + (prev.type === "branch" ? 0 : 1), 0);
+    const isBranch = node?.type === "branch";
+    currentStep = Math.min(visibleCount, Math.max(1, isBranch ? visibleBefore : visibleBefore + 1));
     stepTypeKey = node ? TYPE_TO_KEY[node.type] : "instruction";
   }
 

@@ -151,8 +151,32 @@ describe("evaluateAndRoute", () => {
     expect(mockSetLastMatchedPath).toHaveBeenCalledWith({ label: "PDEF", color: "#abcdef" });
     // default path has no gotoCellId → sequential (index 1), not the goto target (index 2)
     expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
-    // Sequential fall-through is linear, so no jump is recorded.
-    expect(mockRecordBranchJump).not.toHaveBeenCalled();
+    // Fall-through still records a Back-return (landing = next index) so stepping
+    // back unwinds past the auto-advancing branch instead of re-triggering it.
+    expect(mockRecordBranchJump).toHaveBeenCalledWith(1);
+    expect(mockRecordBranchJump.mock.invocationCallOrder[0]).toBeLessThan(
+      mockSetCurrentFlowStep.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("records a Back-return for a mid-flow fall-through branch (Back can unwind past it)", () => {
+    mockGetAnswer.mockReturnValue("no");
+    // Branch sits in the middle: [q(before)=idx0, branch=idx1, q(after)=idx2].
+    flowState.cells = [
+      qCell("before"),
+      branch("b1", [path("pa", [cond("before", "eq", "yes")], "tgt"), path("pdef", [])], "pdef"),
+      qCell("after"),
+    ];
+    flowState.flowNodes = [plainFlowNode("before"), branchFlowNode("b1"), plainFlowNode("after")];
+    flowState.currentFlowStep = 1; // active node is the branch
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    // Falls through to the node after the branch (idx 2)...
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2);
+    // ...and records the landing so Back unwinds to the step before the branch.
+    expect(mockRecordBranchJump).toHaveBeenCalledWith(2);
+    expect(mockNextStep).not.toHaveBeenCalled();
   });
 
   it("requires all conditions in a path (implicit AND), incl. measurement output", () => {
