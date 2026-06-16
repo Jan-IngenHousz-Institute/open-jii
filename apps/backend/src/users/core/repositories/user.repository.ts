@@ -171,7 +171,9 @@ export class UserRepository {
         return [];
       }
 
-      // 2. Admin count per experiment
+      // 2. Active-admin count per experiment. Deactivated admins can't own an experiment (the same
+      //    rule the transfer flow enforces on its targets), so they don't count toward keeping one
+      //    staffed — otherwise a sole active admin could delete their account and orphan it.
       const experimentIds = adminExperiments.map((e) => e.id);
       const adminCounts = await this.database
         .select({
@@ -179,10 +181,12 @@ export class UserRepository {
           total: count(),
         })
         .from(experimentMembers)
+        .innerJoin(profiles, eq(profiles.userId, experimentMembers.userId))
         .where(
           and(
             inArray(experimentMembers.experimentId, experimentIds),
             eq(experimentMembers.role, "admin"),
+            eq(profiles.activated, true),
           ),
         )
         .groupBy(experimentMembers.experimentId);

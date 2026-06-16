@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useDeleteUser } from "~/hooks/profile/useDeleteUser/useDeleteUser";
 import { useDeletionBlockers } from "~/hooks/profile/useDeletionBlockers/useDeletionBlockers";
-import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -60,8 +59,8 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
     setBlockersExpanded(false);
   };
 
-  // Delete hook with improved success message for soft-delete
-  const { mutateAsync: deleteAccount, isPending: isDeleting } = useDeleteUser({
+  // The hook surfaces the error toast itself; success (sign-out + redirect) is handled here.
+  const { mutate: deleteAccount, isPending: isDeleting } = useDeleteUser({
     onSuccess: async () => {
       toast({
         description: t("dangerZone.delete.successMessage"),
@@ -73,12 +72,8 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
     },
   });
 
-  const handleDelete = async () => {
-    try {
-      await deleteAccount({ params: { id: userId } });
-    } catch (err) {
-      toast({ description: parseApiError(err)?.message, variant: "destructive" });
-    }
+  const handleDelete = () => {
+    deleteAccount({ params: { id: userId } });
   };
 
   return (

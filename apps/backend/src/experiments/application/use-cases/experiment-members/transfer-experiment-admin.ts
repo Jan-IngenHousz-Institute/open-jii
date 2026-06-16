@@ -56,13 +56,17 @@ export class TransferExperimentAdminUseCase {
       results.push(await this.transferOne(transfer, currentUserId));
     }
 
+    const succeeded = results.filter((r) => r.success).length;
+    const failed = results.length - succeeded;
+    const status = failed === 0 ? "success" : succeeded === 0 ? "failed" : "partial";
+
     this.logger.log({
       msg: "Finished transferring experiment admin rights",
       operation: "transfer-experiment-admin",
       userId: currentUserId,
-      succeeded: results.filter((r) => r.success).length,
-      failed: results.filter((r) => !r.success).length,
-      status: "success",
+      succeeded,
+      failed,
+      status,
     });
 
     return success(results);
