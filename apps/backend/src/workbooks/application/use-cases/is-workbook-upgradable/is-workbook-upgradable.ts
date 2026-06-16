@@ -27,6 +27,16 @@ const designOf = (cells: WorkbookCell[]) =>
       Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_FIELDS.has(k))),
     );
 
+// entitySnapshots is keyed by entity id. Rows published before the id+version re-key store the
+// code directly (`{ code }`); newer rows nest by version (`{ [version]: { code } }`). Return every
+// snapshotted code regardless of shape so the drift check is correct for both (the re-key shipped
+// without migrating existing rows, which previously made every legacy workbook read as upgradable).
+function snapshotCodes(entry: unknown): unknown[] {
+  if (entry == null || typeof entry !== "object") return [];
+  if ("code" in entry) return [(entry as { code: unknown }).code];
+  return Object.values(entry as Record<string, { code: unknown }>).map((v) => v.code);
+}
+
 @Injectable()
 export class IsWorkbookUpgradableUseCase {
   private readonly logger = new Logger(IsWorkbookUpgradableUseCase.name);
@@ -70,22 +80,18 @@ export class IsWorkbookUpgradableUseCase {
     if (protocolsResult.isFailure()) return protocolsResult;
     if (macrosResult.isFailure()) return macrosResult;
 
-    // Snapshots are keyed id -> version -> { code }. The workbook is upgradable if the head
-    // code drifted from any pinned version it published (or nothing was snapshotted for it).
+    // The workbook is upgradable if a referenced entity's head code drifted from every code it
+    // snapshotted (or nothing was snapshotted for it). snapshotCodes() tolerates both the legacy
+    // and the versioned snapshot shapes.
     const snapshots = latest.entitySnapshots;
     for (const [id, p] of protocolsResult.value) {
-      const pinned = snapshots.protocols[id] as Record<string, { code: unknown }> | undefined;
-      const snaps = pinned ? Object.values(pinned) : [];
-      if (
-        snaps.length === 0 ||
-        snaps.some((s) => JSON.stringify(s.code) !== JSON.stringify(p.code))
-      )
+      const codes = snapshotCodes(snapshots.protocols[id]);
+      if (codes.length === 0 || codes.some((c) => JSON.stringify(c) !== JSON.stringify(p.code)))
         return success(true);
     }
     for (const [id, m] of macrosResult.value) {
-      const pinned = snapshots.macros[id] as Record<string, { code: string }> | undefined;
-      const snaps = pinned ? Object.values(pinned) : [];
-      if (snaps.length === 0 || snaps.some((s) => s.code !== m.code)) return success(true);
+      const codes = snapshotCodes(snapshots.macros[id]);
+      if (codes.length === 0 || codes.some((c) => c !== m.code)) return success(true);
     }
 
     return success(false);

@@ -289,4 +289,38 @@ describe("ExperimentFlowPage", () => {
       expect(editor).toHaveAttribute("data-readonly", "true");
     });
   });
+
+  it("renders the design from the workbook's live cells even when the pinned version is empty", async () => {
+    server.mount(contract.experiments.getExperiment, { body: experimentWithWorkbook });
+    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [versionSummary] });
+    // Pinned version was published while the workbook was empty...
+    server.mount(contract.workbooks.getWorkbookVersion, {
+      body: {
+        ...versionSummary,
+        cells: [],
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+      },
+    });
+    // ...but the live workbook now has cells, which the design view must reflect.
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({
+        id: WB_ID,
+        name: "Test Workbook",
+        cells: [
+          createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+          createProtocolCell({ id: "c2", payload: { protocolId: "p2", version: 1, name: "P2" } }),
+        ],
+      }),
+    });
+
+    render(<ExperimentFlowPage params={defaultProps.params} />);
+
+    // Design reflects the live workbook (2 cells), not the empty pinned version (0 cells).
+    await waitFor(() => {
+      expect(screen.getByTestId("workbook-editor")).toHaveTextContent("2 cells");
+    });
+  });
 });

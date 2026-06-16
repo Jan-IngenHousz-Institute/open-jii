@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/page-container";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
+import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { GitBranch, List } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use, useMemo } from "react";
@@ -38,22 +38,18 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const workbookId = experimentData?.workbookId;
   const workbookVersionId = experimentData?.workbookVersionId;
 
-  // Fetch the pinned workbook version (immutable snapshot with cells)
-  const { data: pinnedVersionData } = useWorkbookVersion(
-    workbookId ?? "",
-    workbookVersionId ?? "",
-    { enabled: !!(workbookId && workbookVersionId) },
-  );
+  // Render the design from the workbook's LIVE cells so it reflects edits as the user builds it.
+  // The experiment stays pinned to workbookVersionId (the runtime/data snapshot the card shows).
+  const { data: workbookData } = useWorkbook(workbookId ?? "", { enabled: !!workbookId });
 
-  const versionedCells = useMemo<WorkbookCell[]>(() => {
-    if (!pinnedVersionData) return [];
-    return pinnedVersionData.cells as WorkbookCell[];
-  }, [pinnedVersionData]);
+  const liveCells = useMemo<WorkbookCell[]>(() => {
+    return (workbookData?.cells as WorkbookCell[] | undefined) ?? [];
+  }, [workbookData]);
 
   const derivedFlow = useMemo(() => {
-    if (versionedCells.length === 0) return undefined;
+    if (liveCells.length === 0) return undefined;
     try {
-      const graph = cellsToFlowGraph(versionedCells);
+      const graph = cellsToFlowGraph(liveCells);
       if (graph.nodes.length === 0) return undefined;
       return {
         id: "derived",
@@ -65,7 +61,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     } catch {
       return undefined;
     }
-  }, [versionedCells, id]);
+  }, [liveCells, id]);
 
   if (isLoading || accessLoading) {
     return (
@@ -126,7 +122,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         </NavTabsList>
 
         <NavTabsContent value="list" className="mt-6">
-          <WorkbookEditor cells={versionedCells} onCellsChange={() => undefined} readOnly />
+          <WorkbookEditor cells={liveCells} onCellsChange={() => undefined} readOnly />
         </NavTabsContent>
 
         <NavTabsContent value="graph" className="mt-6">

@@ -1,4 +1,4 @@
-import { assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
+import { assertSuccess, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
@@ -283,6 +283,48 @@ describe("IsWorkbookUpgradableUseCase", () => {
     const result = await useCase.execute(expectValue(fresh.value));
     assertSuccess(result);
     expect(result.value).toBe(true);
+  });
+
+  it("is false for a legacy {id:{code}} snapshot when head matches (no false upgrade)", async () => {
+    const macro = await macroRepo.create({ name: "M", language: "python", code: "djE=" }, userId);
+    assertSuccess(macro);
+    const macroId = macro.value[0].id;
+    const headCode = macro.value[0].code;
+
+    const workbook = await testApp.createWorkbook({
+      name: "WB",
+      cells: [
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId, version: 1, language: "python" },
+        },
+      ],
+      createdBy: userId,
+    });
+    const fresh = await workbookRepo.findById(workbook.id);
+    assertSuccess(fresh);
+    const live = expectValue(fresh.value);
+
+    // Simulate a version published BEFORE the id+version re-key: legacy `{ [id]: { code } }`.
+    vi.spyOn(versionRepo, "getLatestVersion").mockResolvedValue(
+      success({
+        id: "11111111-1111-1111-1111-111111111111",
+        workbookId: workbook.id,
+        version: 1,
+        cells: live.cells,
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: { [macroId]: { code: headCode } } },
+        createdAt: new Date().toISOString(),
+        createdBy: userId,
+      } as never),
+    );
+
+    const result = await useCase.execute(live);
+    assertSuccess(result);
+    expect(result.value).toBe(false);
+    vi.restoreAllMocks();
   });
 
   it("propagates failure when the version repository fails", async () => {
