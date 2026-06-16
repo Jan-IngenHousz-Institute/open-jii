@@ -1,0 +1,29 @@
+diff --git a/dist/client.js b/dist/client.js
+--- a/dist/client.js
++++ b/dist/client.js
+@@ -3,6 +3,7 @@
+ import { SECURE_COOKIE_PREFIX, parseSetCookieHeader, parseSetCookieHeader as parseSetCookieHeader$1, stripSecureCookiePrefix } from "better-auth/cookies";
+ import Constants from "expo-constants";
+ import * as Linking from "expo-linking";
++import * as WebBrowser from "expo-web-browser";
+ import { AppState, Platform } from "react-native";
+ import { kFocusManager, kOnlineManager } from "better-auth/client";
+ //#region \0rolldown/runtime.js
+@@ -312,16 +313,7 @@
+ 				if (context.data?.redirect && (context.request.url.toString().includes("/sign-in") || context.request.url.toString().includes("/link-social")) && !context.request?.body.includes("idToken")) {
+ 					const to = JSON.parse(context.request.body)?.callbackURL;
+ 					const signInURL = context.data?.url;
+-					let Browser = void 0;
+-					try {
+-						Browser = await import("expo-web-browser");
+-					} catch {
+-						try {
+-							Browser = __require("expo-web-browser");
+-						} catch (error) {
+-							throw new Error("\"expo-web-browser\" is not installed as a dependency!", { cause: error });
+-						}
+-					}
++					let Browser = WebBrowser;
+ 					if (Platform.OS === "android") try {
+ 						Browser.dismissAuthSession();
+ 					} catch {}
