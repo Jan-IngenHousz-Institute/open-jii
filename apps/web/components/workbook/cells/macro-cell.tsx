@@ -77,6 +77,10 @@ export function MacroCellComponent({
   const [localCode, setLocalCode] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedKeyRef = useRef<string>("");
+  // Async save handlers fire after a debounce/round-trip; read the latest cell from a ref so a
+  // re-pin never clobbers newer payload state captured in a stale closure.
+  const cellRef = useRef(cell);
+  cellRef.current = cell;
 
   useEffect(() => {
     if (macroCode != null && localCode == null) {
@@ -107,13 +111,17 @@ export function MacroCellComponent({
               // Editing mints a new version server-side; re-pin THIS cell to it so other
               // workbooks stay on their version. localCode already holds this code, so the
               // editor does not flicker.
-              onUpdate({ ...cell, payload: { ...cell.payload, version: data.body.latestVersion } });
+              const current = cellRef.current;
+              onUpdate({
+                ...current,
+                payload: { ...current.payload, version: data.body.latestVersion },
+              });
             },
           },
         );
       }, 1000);
     },
-    [macroId, saveMacro, cell, onUpdate],
+    [macroId, saveMacro, onUpdate],
   );
 
   const handleCopy = () => {
@@ -127,15 +135,16 @@ export function MacroCellComponent({
         { params: { id: macroId }, body: { language: lang } },
         {
           onSuccess: (data) => {
+            const current = cellRef.current;
             onUpdate({
-              ...cell,
-              payload: { ...cell.payload, language: lang, version: data.body.latestVersion },
+              ...current,
+              payload: { ...current.payload, language: lang, version: data.body.latestVersion },
             });
           },
         },
       );
     },
-    [macroId, saveMacro, cell, onUpdate],
+    [macroId, saveMacro, onUpdate],
   );
 
   const handleUpgrade = useCallback(() => {

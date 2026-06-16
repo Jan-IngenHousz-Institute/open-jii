@@ -64,6 +64,7 @@ export function EntityVersionHistory({
   const protocolDuplicate = useProtocolDuplicate();
 
   const versions = (isMacro ? macroVersions.data?.body : protocolVersions.data?.body) ?? [];
+  const isLoadingVersions = isMacro ? macroVersions.isLoading : protocolVersions.isLoading;
   const usageCount = (isMacro ? macroUsage.data?.body : protocolUsage.data?.body)?.count;
   const isRestoring = macroRestore.isPending || protocolRestore.isPending;
   const isDuplicating = macroDuplicate.isPending || protocolDuplicate.isPending;
@@ -131,7 +132,11 @@ export function EntityVersionHistory({
         </SheetHeader>
 
         <div className="mt-4 flex-1 space-y-1 overflow-y-auto">
-          {versions.length === 0 ? (
+          {isLoadingVersions ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+            </div>
+          ) : versions.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center text-xs">No versions yet</p>
           ) : (
             versions.map((v) => (

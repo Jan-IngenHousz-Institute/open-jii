@@ -61,34 +61,42 @@ export class PublishVersionUseCase {
 
     const entitySnapshots: EntitySnapshots = { protocols: {}, macros: {} };
 
-    // A pinned version row must exist; fail rather than publish a silently incomplete snapshot.
-    for (const [macroId, versions] of macroPins) {
-      const byVersion: Record<string, { code: string }> = {};
-      for (const version of versions) {
-        const scriptResult = await this.macroRepository.findScriptByVersion(macroId, version);
-        if (scriptResult.isFailure()) return scriptResult;
-        if (!scriptResult.value) {
-          return failure(
-            AppError.notFound(`Pinned macro version not found: ${macroId} v${version}`),
-          );
-        }
-        byVersion[version] = { code: scriptResult.value.code };
+    // Resolve every pinned (id, version) in parallel. A pinned version row must exist, or we
+    // fail rather than publish a silently incomplete snapshot.
+    const macroPairs = [...macroPins].flatMap(([id, vs]) =>
+      [...vs].map((version) => ({ id, version })),
+    );
+    const protocolPairs = [...protocolPins].flatMap(([id, vs]) =>
+      [...vs].map((version) => ({ id, version })),
+    );
+    const [macroLookups, protocolLookups] = await Promise.all([
+      Promise.all(macroPairs.map((p) => this.macroRepository.findScriptByVersion(p.id, p.version))),
+      Promise.all(protocolPairs.map((p) => this.protocolRepository.findVersion(p.id, p.version))),
+    ]);
+
+    for (let i = 0; i < macroPairs.length; i++) {
+      const { id, version } = macroPairs[i];
+      const result = macroLookups[i];
+      if (result.isFailure()) return result;
+      if (!result.value) {
+        return failure(AppError.notFound(`Pinned macro version not found: ${id} v${version}`));
       }
-      entitySnapshots.macros[macroId] = byVersion;
+      entitySnapshots.macros[id] = {
+        ...entitySnapshots.macros[id],
+        [version]: { code: result.value.code },
+      };
     }
-    for (const [protocolId, versions] of protocolPins) {
-      const byVersion: Record<string, { code: unknown }> = {};
-      for (const version of versions) {
-        const versionResult = await this.protocolRepository.findVersion(protocolId, version);
-        if (versionResult.isFailure()) return versionResult;
-        if (!versionResult.value) {
-          return failure(
-            AppError.notFound(`Pinned protocol version not found: ${protocolId} v${version}`),
-          );
-        }
-        byVersion[version] = { code: versionResult.value.code };
+    for (let i = 0; i < protocolPairs.length; i++) {
+      const { id, version } = protocolPairs[i];
+      const result = protocolLookups[i];
+      if (result.isFailure()) return result;
+      if (!result.value) {
+        return failure(AppError.notFound(`Pinned protocol version not found: ${id} v${version}`));
       }
-      entitySnapshots.protocols[protocolId] = byVersion;
+      entitySnapshots.protocols[id] = {
+        ...entitySnapshots.protocols[id],
+        [version]: { code: result.value.code },
+      };
     }
 
     this.logger.log({

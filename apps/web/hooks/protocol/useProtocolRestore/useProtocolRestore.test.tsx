@@ -20,6 +20,7 @@ describe("useProtocolRestore", () => {
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.calls[0].params.id).toBe("p-1");
+    expect(String(spy.calls[0].params.version)).toBe("1");
     expect(result.current.data?.body).toMatchObject({ id: "p-1" });
   });
 

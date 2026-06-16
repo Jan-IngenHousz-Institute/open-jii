@@ -50,7 +50,7 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
         isCollapsed: false,
         payload: {
           protocolId: content.protocolId as string,
-          version: 1,
+          version: (content.version as number | undefined) ?? 1,
           name: node.name,
         },
       };
@@ -62,7 +62,7 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
         isCollapsed: false,
         payload: {
           macroId: content.macroId as string,
-          version: 1,
+          version: (content.version as number | undefined) ?? 1,
           language: "javascript",
           name: node.name,
         },

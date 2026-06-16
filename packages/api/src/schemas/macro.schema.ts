@@ -227,4 +227,5 @@ export interface MacroBatchExecutionWireBody {
 export interface MacroExecutionWireBody {
   data: MacroExecutionRequestBody["data"] | string;
   timeout?: number;
+  version?: number;
 }

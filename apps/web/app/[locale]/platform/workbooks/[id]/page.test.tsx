@@ -117,7 +117,7 @@ describe("WorkbookOverviewPage", () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.queryByText("common.loading")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByLabelText("common.loading")).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /markdown/i })).not.toBeInTheDocument();
   });
 });

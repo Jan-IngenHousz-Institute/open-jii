@@ -119,7 +119,9 @@ describe("MacroCellComponent", () => {
     const upgradeButton = await screen.findByRole("button", { name: /v3/ });
     await user.click(upgradeButton);
 
-    expect(onUpdate.mock.lastCall?.[0]).toMatchObject({ payload: { version: 3 } });
+    expect(onUpdate.mock.lastCall?.[0]).toMatchObject({
+      payload: { macroId: "macro-1", version: 3, language: "python", name: "My Macro" },
+    });
 
     vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession
@@ -153,8 +155,70 @@ describe("MacroCellComponent", () => {
     >);
   });
 
+  it("duplicates via version history and re-points the cell to the fork", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+    } as ReturnType<typeof useSession>);
+
+    server.mount(contract.macros.getMacro, { body: baseMacro });
+    server.mount(contract.macros.listMacroVersions, {
+      body: [{ version: 1, createdBy: "user-1", createdAt: "2024-01-01T00:00:00Z" }],
+    });
+    server.mount(contract.macros.getMacroUsage, { body: { count: 0, workbooks: [] } });
+    server.mount(contract.macros.duplicateMacro, {
+      body: createMacro({ id: "macro-2", name: "Copy of My Macro" }),
+      status: 201,
+    });
+    const onUpdate = vi.fn();
+    render(<MacroCellComponent cell={cell} onUpdate={onUpdate} onDelete={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole("textbox")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Version history" }));
+    await user.click(await screen.findByRole("button", { name: /Duplicate as a new macro/ }));
+
+    await waitFor(() =>
+      expect(onUpdate.mock.lastCall?.[0]).toMatchObject({
+        payload: { macroId: "macro-2", version: 1, name: "Copy of My Macro" },
+      }),
+    );
+
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
+  it("restores a version via version history (owner)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+    } as ReturnType<typeof useSession>);
+
+    server.mount(contract.macros.getMacro, { body: { ...baseMacro, latestVersion: 2 } });
+    server.mount(contract.macros.listMacroVersions, {
+      body: [
+        { version: 2, createdBy: "user-1", createdAt: "2024-01-02T00:00:00Z" },
+        { version: 1, createdBy: "user-1", createdAt: "2024-01-01T00:00:00Z" },
+      ],
+    });
+    server.mount(contract.macros.getMacroUsage, { body: { count: 0, workbooks: [] } });
+    server.mount(contract.macros.restoreMacroVersion, { body: { ...baseMacro, latestVersion: 3 } });
+    render(<MacroCellComponent cell={cell} onUpdate={vi.fn()} onDelete={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole("textbox")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Version history" }));
+    await user.click(await screen.findByRole("button", { name: /Restore/ }));
+
+    // On success EntityVersionHistory closes the sheet, having fired the cell's onRestored.
+    await waitFor(() => expect(screen.queryByText("No versions yet")).not.toBeInTheDocument());
+
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
   it("copies code to clipboard when user clicks the copy button", async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     document.execCommand = vi.fn();
 
     vi.mocked(useSession).mockReturnValue({
@@ -171,7 +235,8 @@ describe("MacroCellComponent", () => {
     const copyButton = copyButtons.find(
       (btn) => btn.querySelector("svg.lucide-copy") ?? btn.querySelector(".lucide-copy"),
     );
-    expect(copyButton ?? copyButtons.length).toBeTruthy();
+    expect(copyButton).toBeTruthy();
+    if (copyButton) await user.click(copyButton);
 
     vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession

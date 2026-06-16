@@ -56,6 +56,14 @@ describe("macro helpers: label lookups", () => {
       expect(h.GetProtocolByLabel("autogain", {}, true)).toBeNull();
     });
 
+    it("returns null when json is null instead of throwing", () => {
+      expect(h.GetProtocolByLabel("autogain", null, true)).toBeNull();
+    });
+
+    it("returns null when json.set is not an array instead of throwing", () => {
+      expect(h.GetProtocolByLabel("autogain", { set: 42 }, true)).toBeNull();
+    });
+
     it("returns a single protocol object when one match and array is false", () => {
       expect(h.GetProtocolByLabel("PAM", data, false)).toEqual({ label: "PAM", a: 2 });
     });
@@ -85,6 +93,14 @@ describe("macro helpers: label lookups", () => {
       expect(h.GetIndexByLabel("autogain", {}, true)).toBeNull();
     });
 
+    it("returns null when json is null instead of throwing", () => {
+      expect(h.GetIndexByLabel("autogain", null, true)).toBeNull();
+    });
+
+    it("returns null when json.set is not an array instead of throwing", () => {
+      expect(h.GetIndexByLabel("autogain", { set: 42 }, true)).toBeNull();
+    });
+
     it("returns a single index when one match and array is false", () => {
       expect(h.GetIndexByLabel("PAM", data, false)).toBe(1);
     });
@@ -95,6 +111,18 @@ describe("macro helpers: label lookups", () => {
 
     it("returns null when no index matches the label", () => {
       expect(h.GetIndexByLabel("missing", data, true)).toBeNull();
+    });
+  });
+
+  describe("GetLabelLookup", () => {
+    it("returns null for undefined, null, or a non-array set instead of throwing", () => {
+      expect(h.GetLabelLookup(undefined)).toBeNull();
+      expect(h.GetLabelLookup(null)).toBeNull();
+      expect(h.GetLabelLookup({ set: 42 })).toBeNull();
+    });
+
+    it("builds a label -> indices lookup from the protocol set", () => {
+      expect(h.GetLabelLookup(data)).toEqual({ autogain: ["0", "2"], PAM: ["1"] });
     });
   });
 });

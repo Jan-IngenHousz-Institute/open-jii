@@ -27,6 +27,7 @@ describe("useProtocolUpdate", () => {
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.calls[0].params).toEqual({ id: "p-1" });
+    expect(spy.calls[0].body).toMatchObject({ name: "Updated" });
     await waitFor(() => expect(successData).not.toBeNull());
     expect(successData).toMatchObject({ id: "p-1", name: "Updated" });
   });
