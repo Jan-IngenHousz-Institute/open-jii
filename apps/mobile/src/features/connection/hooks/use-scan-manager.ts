@@ -3,7 +3,8 @@ import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device
 import { useScannerCommandExecutor } from "~/features/connection/hooks/use-scanner-command-executor";
 
 export function useScanner() {
-  const { executeCommand, cancelCommand } = useScannerCommandExecutor();
+  const { executeCommand, cancelCommand, progress, scanStartedAt, estimatedMs } =
+    useScannerCommandExecutor();
   const { setBatteryLevel } = useDeviceConnectionStore();
 
   const mutation = useMutation({
@@ -30,5 +31,8 @@ export function useScanner() {
     result: mutation.data,
     executeCommand,
     cancelCommand,
+    progress,
+    scanStartedAt,
+    estimatedMs,
   };
 }

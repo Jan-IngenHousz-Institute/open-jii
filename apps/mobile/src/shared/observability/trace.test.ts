@@ -48,7 +48,8 @@ describe("trace", () => {
 
     expect(entries).toHaveLength(1);
     const entry = entries[0];
-    expect(entry.ns).toBe("trace");
+    // A dotless kind is its own namespace and message.
+    expect(entry.ns).toBe("upload");
     expect(entry.msg).toBe("upload");
     expect(entry.level).toBe("info");
     expect(entry.fields).toMatchObject({
@@ -91,6 +92,17 @@ describe("trace", () => {
     const events = entries[0].fields.events as string[];
     expect(events).toEqual(["attempt_1_failed+0", "attempt_2_ok+0"]);
     expect(entries[0].fields.retried).toBe(true);
+  });
+
+  it("splits a dotted kind into namespace + message", () => {
+    const { entries, sink } = captureSink();
+    removeSink = addLogSink(sink);
+
+    startTrace("multispeq.command", "multispeq-cmd-1").end("ok");
+
+    // `[multispeq] command …` rather than `[trace] multispeq.command`.
+    expect(entries[0].ns).toBe("multispeq");
+    expect(entries[0].msg).toBe("command");
   });
 
   it("end emits at error level when status is error", () => {
