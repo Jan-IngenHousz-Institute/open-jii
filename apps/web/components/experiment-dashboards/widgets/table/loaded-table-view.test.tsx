@@ -77,6 +77,7 @@ describe("LoadedTableView", () => {
       <LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />,
     );
 
+    // Step 1 — navigate off page 1.
     const next = await screen.findByLabelText("Go to next page");
     await user.click(next);
     await waitFor(() => {
@@ -84,17 +85,29 @@ describe("LoadedTableView", () => {
       expect(last.query.page).toBe("2");
     });
 
+    // Step 2 — apply a filter. The hook strips `page` from the URL while
+    // filters are active, so we just verify the new request actually fired
+    // with the filter; the reset itself is proven in step 3.
     rerender(
       <LoadedTableView
         tableName="raw_data"
         pageSize={25}
         experimentId="exp-1"
-        widgetFilters={[{ column: "value", operator: "gt", value: 0 }]}
+        widgetFilters={[{ column: "value", operator: "greater_than", value: 0 }]}
       />,
     );
-
     await waitFor(() => {
       const last = spy.calls[spy.calls.length - 1];
+      expect(last.query.filters).toBeDefined();
+      expect(last.query.page).toBeUndefined();
+    });
+
+    // Step 3 — drop the filter again. Page is back in the URL; it must be
+    // "1" (reset), not "2" (the pre-filter state).
+    rerender(<LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />);
+    await waitFor(() => {
+      const last = spy.calls[spy.calls.length - 1];
+      expect(last.query.filters).toBeUndefined();
       expect(last.query.page).toBe("1");
     });
   });
