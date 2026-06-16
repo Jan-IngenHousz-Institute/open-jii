@@ -86,7 +86,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
   // Determine active tab from URL
   const getActiveTab = () => {
-    if (pathname.endsWith("/flow")) return "flow";
+    if (pathname.endsWith("/design")) return "design";
     if (pathname.includes("/collaborators")) return "collaborators";
     if (pathname.startsWith(`/${locale}/platform/experiments-archive/${id}/data`)) return "data";
     if (pathname.includes("/analysis")) return "analysis";
@@ -119,8 +119,8 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
               {t("analysis.title")}
             </Link>
           </NavTabsTrigger>
-          <NavTabsTrigger value="flow" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/flow`}>
+          <NavTabsTrigger value="design" asChild>
+            <Link href={`/${locale}/platform/experiments-archive/${id}/design`}>
               {t("flow.tabLabel")}
             </Link>
           </NavTabsTrigger>

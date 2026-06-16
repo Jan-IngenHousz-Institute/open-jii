@@ -90,6 +90,24 @@ describe("ProtocolCellComponent", () => {
     expect(screen.getByTestId("code-editor").textContent).toContain('"light"');
   });
 
+  it("renders the pinned snapshot code instead of the live protocol row", async () => {
+    // beforeEach mounts the live protocol (code: "light"); with a snapshot present
+    // the live fetch is disabled and the pinned snapshot must win.
+    render(
+      <ProtocolCellComponent
+        cell={makeProtocolCell()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        snapshot={{ code: [{ measurement: "pinned", duration: 9 }], family: "multispeq" }}
+        readOnly
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("code-editor")).toBeInTheDocument());
+    expect(screen.getByTestId("code-editor").textContent).toContain('"pinned"');
+    expect(screen.getByTestId("code-editor").textContent).not.toContain('"light"');
+  });
+
   it("shows an external link to view the full protocol", () => {
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,

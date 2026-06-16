@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 
 import { BranchCellComponent } from "./cells/branch-cell";
 import { MacroCellComponent } from "./cells/macro-cell";
@@ -20,6 +21,9 @@ interface CellRendererProps {
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
   readOnly?: boolean;
+  // Pinned entity code/metadata. When provided, protocol/macro cells render
+  // from it instead of fetching the live row.
+  entitySnapshots?: EntitySnapshots;
 }
 
 export function CellRenderer({
@@ -33,6 +37,7 @@ export function CellRenderer({
   promptedQuestionId,
   onQuestionAnswered,
   readOnly,
+  entitySnapshots,
 }: CellRendererProps) {
   switch (cell.type) {
     case "markdown":
@@ -56,6 +61,7 @@ export function CellRenderer({
           executionStatus={executionStatus}
           executionError={executionError}
           readOnly={readOnly}
+          snapshot={entitySnapshots?.protocols[cell.payload.protocolId]}
         />
       );
     case "macro":
@@ -68,6 +74,7 @@ export function CellRenderer({
           executionStatus={executionStatus}
           executionError={executionError}
           readOnly={readOnly}
+          snapshot={entitySnapshots?.macros[cell.payload.macroId]}
         />
       );
     case "question":
