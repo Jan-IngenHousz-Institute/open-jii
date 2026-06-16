@@ -94,7 +94,7 @@ describe("QuestionCellComponent", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: /add option/i }));
+    await user.click(screen.getByRole("button", { name: "questionCard.addOption" }));
     const updated = onUpdate.mock.calls[0][0] as QuestionCell;
     expect(updated.question.kind === "multi_choice" && updated.question.options).toHaveLength(2);
   });

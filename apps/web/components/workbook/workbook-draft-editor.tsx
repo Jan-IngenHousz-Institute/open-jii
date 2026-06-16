@@ -8,6 +8,7 @@ import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkboo
 import { useCallback, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
+import { zWorkbookCellArray } from "@repo/api/schemas/workbook-cells.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -72,6 +73,10 @@ export function WorkbookDraftEditor({
   const autosave = useAutosave<WorkbookCell[]>({
     value: cells,
     toKey: (c) => JSON.stringify(c),
+    // Skip autosave while cells are transiently invalid (e.g. a half-typed or
+    // just-added empty option) so the draft never persists a state the API
+    // would reject — edits resume saving once valid.
+    isValid: (c) => zWorkbookCellArray.safeParse(c).success,
     save,
     delayMs: AUTO_SAVE_DELAY,
   });
