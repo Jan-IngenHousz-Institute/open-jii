@@ -25,6 +25,14 @@ function parseResponseData(data: unknown): unknown {
   }
 }
 
+/**
+ * Response budget for console commands. Unlike measurement protocols (which can
+ * legitimately run for minutes), console commands like `hello`/`battery` answer
+ * in well under a second — so a wrong or unsupported command fails fast here
+ * instead of hanging on the driver's 60s protocol default. See OJD-1556.
+ */
+const CONSOLE_COMMAND_TIMEOUT_MS = 10_000;
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useIotProtocolExecution(
@@ -70,7 +78,7 @@ export function useIotProtocolExecution(
       if (!driver || !isConnected) {
         throw new Error("Not connected to device");
       }
-      const result = await driver.execute(command);
+      const result = await driver.execute(command, { timeoutMs: CONSOLE_COMMAND_TIMEOUT_MS });
       return parseResponseData(unwrap(result, "Command execution failed"));
     },
     [driver, isConnected],
