@@ -22,6 +22,7 @@ import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
@@ -70,6 +71,7 @@ interface WorkbookEditorProps {
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
   readOnly?: boolean;
+  entitySnapshots?: EntitySnapshots;
 }
 
 export function createDefaultCell(
@@ -192,6 +194,7 @@ interface SortableCellGroupProps {
   executionStates?: Record<string, CellExecutionState>;
   sensorFamily?: "multispeq" | "ambit" | "generic";
   readOnly?: boolean;
+  entitySnapshots?: EntitySnapshots;
   onRunCell?: (cellId: string) => void;
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
@@ -210,6 +213,7 @@ function SortableCellGroup({
   executionStates,
   sensorFamily,
   readOnly,
+  entitySnapshots,
   onRunCell,
   promptedQuestionId,
   onQuestionAnswered,
@@ -283,6 +287,7 @@ function SortableCellGroup({
               promptedQuestionId={promptedQuestionId}
               onQuestionAnswered={onQuestionAnswered}
               readOnly={readOnly}
+              entitySnapshots={entitySnapshots}
             />
           </div>
         </div>
@@ -339,6 +344,7 @@ export function WorkbookEditor({
   promptedQuestionId,
   onQuestionAnswered,
   readOnly,
+  entitySnapshots,
 }: WorkbookEditorProps) {
   const [activeCellId, setActiveCellId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -554,6 +560,7 @@ export function WorkbookEditor({
                   executionStates={executionStates}
                   sensorFamily={sensorFamily}
                   readOnly={readOnly}
+                  entitySnapshots={entitySnapshots}
                   onRunCell={onRunCell}
                   promptedQuestionId={promptedQuestionId}
                   onQuestionAnswered={onQuestionAnswered}

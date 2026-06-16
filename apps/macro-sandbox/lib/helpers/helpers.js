@@ -157,6 +157,8 @@ function GetIndexByLabel(label, json, array) {
 
   if (array === undefined) array = false;
 
+  if (json == null || !Array.isArray(json.set)) return null;
+
   var out = json.set
     .map(function (a, i) {
       if (a.label == label) return i;
@@ -181,8 +183,8 @@ function GetIndexByLabel(label, json, array) {
 
 function GetLabelLookup(json) {
   var lookup = {};
-  // Return null if there is no set
-  if (json.set === undefined) return null;
+  // Return null if there is no (valid) set
+  if (json == null || !Array.isArray(json.set)) return null;
   for (var i in json.set) {
     if (json.set[i].label !== undefined) {
       if (lookup[json.set[i].label] === undefined) lookup[json.set[i].label] = [];
@@ -216,6 +218,8 @@ function GetProtocolByLabel(label, json, array) {
   if (label === undefined) return null;
 
   if (array === undefined) array = false;
+
+  if (json == null || !Array.isArray(json.set)) return null;
 
   var out = json.set.filter(function (a) {
     return a.label == label;
