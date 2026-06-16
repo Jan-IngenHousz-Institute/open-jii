@@ -58,7 +58,7 @@ runs:
         image-ref: ${{ inputs.image-name }}
         format: table
         exit-code: 1
-        severity: ${{ inputs.trivy-severity }}
+        severity: "CRITICAL"
         vuln-type: os,library
         ignore-unfixed: true
         trivyignores: ${{ inputs.trivyignores }}

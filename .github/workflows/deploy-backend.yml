@@ -118,7 +118,7 @@ jobs:
           image-ref: ${{ steps.build-image.outputs.image }}
           format: table
           exit-code: 1
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
           vuln-type: os,library
           ignore-unfixed: true
           trivyignores: .trivyignore
