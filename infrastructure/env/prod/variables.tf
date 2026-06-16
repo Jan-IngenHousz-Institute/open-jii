@@ -196,5 +196,5 @@ variable "internal_api_key" {
   description = "Shared secret for Lambda → backend internal calls (device provisioning validation)"
   type        = string
   sensitive   = true
-  default = "Populate+before_before_merge"
+  default     = "Populate+before_before_merge"
 }
