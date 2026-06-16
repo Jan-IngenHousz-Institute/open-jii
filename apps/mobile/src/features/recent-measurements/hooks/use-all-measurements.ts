@@ -38,6 +38,10 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
     },
     networkMode: "always",
     refetchOnMount: true,
+    // Re-read SQLite when the app returns to the foreground (RN's equivalent
+    // of window focus, wired via focusManager → AppState). Keeps the cached
+    // list instant on resume but refreshes it without a sign-out/in. OJD.
+    refetchOnWindowFocus: true,
   });
 
   // Memoize the flattened page list so referentially-stable consumers
@@ -67,6 +71,7 @@ export function useMeasurementCounts() {
     queryFn: countMeasurementsByStatus,
     networkMode: "always",
     refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
   return {
     counts,
@@ -87,6 +92,7 @@ export function useHasAnyMeasurements(): boolean {
       select: (c) => c.pending + c.failed + c.successful > 0,
       networkMode: "always",
       refetchOnMount: true,
+      refetchOnWindowFocus: true,
     }).data ?? false
   );
 }
@@ -107,6 +113,7 @@ export function useTopMeasurements(n: number) {
     },
     networkMode: "always",
     refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   return { measurements: query.data ?? [] };
