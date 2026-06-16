@@ -8,7 +8,14 @@ import type {
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { Switch } from "@repo/ui/components/switch";
 import { Textarea } from "@repo/ui/components/textarea";
@@ -31,6 +38,17 @@ interface QuestionCellProps {
 }
 
 type QuestionKind = "yes_no" | "open_ended" | "multi_choice" | "number";
+
+// Above this many options the per-option inputs collapse to a summary so a
+// pasted spreadsheet column of thousands of plot IDs doesn't freeze the cell.
+const LARGE_OPTION_COUNT = 25;
+
+function parseOptionsList(text: string): string[] {
+  return text
+    .split("\n")
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
+}
 
 const kindOptions: { kind: QuestionKind; label: string; icon: typeof HelpCircle }[] = [
   { kind: "yes_no", label: "Yes / No", icon: CheckCircle2 },
@@ -55,6 +73,8 @@ export function QuestionCellComponent({
 
   const [isAnswering, setIsAnswering] = useState(false);
   const [pendingAnswer, setPendingAnswer] = useState("");
+  const [listEditorOpen, setListEditorOpen] = useState(false);
+  const [listText, setListText] = useState("");
 
   useEffect(() => {
     if (promptOpen && !isAnswering) {
@@ -144,6 +164,24 @@ export function QuestionCellComponent({
     },
     [cell, question, onUpdate],
   );
+
+  const handleOpenListEditor = useCallback(() => {
+    if (question.kind !== "multi_choice") return;
+    setListText(question.options.join("\n"));
+    setListEditorOpen(true);
+  }, [question]);
+
+  const handleSaveListEditor = useCallback(() => {
+    if (question.kind !== "multi_choice") return;
+    const parsed = parseOptionsList(listText);
+    onUpdate({
+      ...cell,
+      // multi_choice requires at least one option; fall back so a fully-cleared
+      // list never produces an invalid cell.
+      question: { ...question, options: parsed.length > 0 ? parsed : ["Option 1"] },
+    });
+    setListEditorOpen(false);
+  }, [cell, question, listText, onUpdate]);
 
   const handleRunClick = () => {
     setIsAnswering(true);
@@ -304,6 +342,35 @@ export function QuestionCellComponent({
         </DialogContent>
       </Dialog>
 
+      <Dialog open={listEditorOpen} onOpenChange={setListEditorOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit options as list</DialogTitle>
+            <DialogDescription>
+              One option per line. Paste a column from a spreadsheet to add many at once.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={listText}
+            onChange={(e) => setListText(e.target.value)}
+            placeholder={"Plot 001\nPlot 002\nPlot 003"}
+            className="min-h-[240px] font-mono text-sm"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setListEditorOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveListEditor}
+              className="bg-[#005E5E] text-white hover:bg-[#004a4a]"
+            >
+              Save {parseOptionsList(listText).length} options
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <CellWrapper
         icon={<HelpCircle className="h-3.5 w-3.5" />}
         label={
@@ -384,50 +451,83 @@ export function QuestionCellComponent({
             </label>
           )}
 
-          {question.kind === "multi_choice" && (
-            <div className="space-y-1.5 pl-1">
-              {question.options.map((option, index) => (
-                <div key={index} className="group/opt flex items-center gap-2">
-                  <div
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                    style={{
-                      backgroundColor: "rgba(197, 138, 174, 0.15)",
-                      color: "#C58AAE",
-                    }}
-                  >
-                    {index + 1}
-                  </div>
-                  <Input
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    placeholder={`Option ${index + 1}`}
-                    className="focus-visible:border-input focus-visible:bg-background h-8 flex-1 border-transparent bg-transparent text-sm shadow-none"
-                    disabled={readOnly}
-                  />
-                  {!readOnly && question.options.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive h-6 w-6 p-0 opacity-0 transition-opacity group-hover/opt:opacity-100"
-                      onClick={() => handleRemoveOption(index)}
-                    >
-                      <X className="size-3" />
-                    </Button>
-                  )}
+          {question.kind === "multi_choice" &&
+            (question.options.length > LARGE_OPTION_COUNT ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-[#EDF2F6] bg-[#FAFBFC] px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[#011111]">
+                    {question.options.length} options
+                  </p>
+                  <p className="text-muted-foreground truncate text-xs">
+                    {question.options.slice(0, 4).join(", ")}…
+                  </p>
                 </div>
-              ))}
-              {!readOnly && (
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-lg bg-[#EDF2F6] px-3 py-2 text-xs font-medium text-[#011111] transition-colors"
-                  onClick={handleAddOption}
-                >
-                  <Plus className="size-3.5" />
-                  Add option
-                </button>
-              )}
-            </div>
-          )}
+                {!readOnly && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={handleOpenListEditor}
+                  >
+                    <List className="mr-1.5 size-3.5" />
+                    Edit as list
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1.5 pl-1">
+                {question.options.map((option, index) => (
+                  <div key={index} className="group/opt flex items-center gap-2">
+                    <div
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                      style={{
+                        backgroundColor: "rgba(197, 138, 174, 0.15)",
+                        color: "#C58AAE",
+                      }}
+                    >
+                      {index + 1}
+                    </div>
+                    <Input
+                      value={option}
+                      onChange={(e) => handleOptionChange(index, e.target.value)}
+                      placeholder={`Option ${index + 1}`}
+                      className="focus-visible:border-input focus-visible:bg-background h-8 flex-1 border-transparent bg-transparent text-sm shadow-none"
+                      disabled={readOnly}
+                    />
+                    {!readOnly && question.options.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive h-6 w-6 p-0 opacity-0 transition-opacity group-hover/opt:opacity-100"
+                        onClick={() => handleRemoveOption(index)}
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {!readOnly && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 rounded-lg bg-[#EDF2F6] px-3 py-2 text-xs font-medium text-[#011111] transition-colors"
+                      onClick={handleAddOption}
+                    >
+                      <Plus className="size-3.5" />
+                      Add option
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+                      onClick={handleOpenListEditor}
+                    >
+                      <List className="size-3.5" />
+                      Edit as list
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
         </div>
       </CellWrapper>
     </>

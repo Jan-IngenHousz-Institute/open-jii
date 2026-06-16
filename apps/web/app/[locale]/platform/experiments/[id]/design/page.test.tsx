@@ -12,8 +12,9 @@ import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { useSession } from "@repo/auth/client";
 
-import ExperimentFlowPage from "./page";
+import ExperimentDesignPage from "./page";
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
@@ -47,6 +48,12 @@ vi.mock("@/components/workbook/workbook-editor", () => ({
     <div data-testid="workbook-editor" data-readonly={readOnly ? "true" : "false"}>
       Workbook Editor ({cells.length} cells)
     </div>
+  ),
+}));
+
+vi.mock("@/components/workbook/workbook-draft-editor", () => ({
+  WorkbookDraftEditor: ({ initialCells }: { initialCells: unknown[] }) => (
+    <div data-testid="workbook-draft-editor">Draft Editor ({initialCells.length} cells)</div>
   ),
 }));
 
@@ -133,15 +140,19 @@ function mountWithWorkbook(overrides?: {
   });
 }
 
-describe("ExperimentFlowPage", () => {
+describe("ExperimentDesignPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(use).mockReturnValue({ id: EXP_ID, locale: LOCALE });
+    // Default to a logged-out session so the owner-only edit toggle stays hidden.
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
   });
 
-  it("renders the experiment flow page with title when loaded", async () => {
+  it("renders the experiment design page with title when loaded", async () => {
     mountDefaults();
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText("flow.title")).toBeInTheDocument();
@@ -153,7 +164,7 @@ describe("ExperimentFlowPage", () => {
     server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    const { container } = render(<ExperimentFlowPage params={defaultProps.params} />);
+    const { container } = render(<ExperimentDesignPage params={defaultProps.params} />);
 
     // Skeleton elements are rendered during loading
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
@@ -164,7 +175,7 @@ describe("ExperimentFlowPage", () => {
     server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
@@ -182,7 +193,7 @@ describe("ExperimentFlowPage", () => {
     });
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(vi.mocked(notFound)).toHaveBeenCalled();
@@ -191,7 +202,7 @@ describe("ExperimentFlowPage", () => {
 
   it("renders WorkbookEditor when workbook is linked", async () => {
     mountWithWorkbook();
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
@@ -200,7 +211,7 @@ describe("ExperimentFlowPage", () => {
 
   it("shows version badge when workbook is linked", async () => {
     mountWithWorkbook();
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText("v1")).toBeInTheDocument();
@@ -209,7 +220,7 @@ describe("ExperimentFlowPage", () => {
 
   it("shows detach and change buttons for admin users", async () => {
     mountWithWorkbook();
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText("flow.detach")).toBeInTheDocument();
@@ -219,7 +230,7 @@ describe("ExperimentFlowPage", () => {
 
   it("hides detach and change buttons for non-admin users", async () => {
     mountWithWorkbook({ isAdmin: false });
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
@@ -230,7 +241,7 @@ describe("ExperimentFlowPage", () => {
 
   it("shows upgrade banner when a newer version is available", async () => {
     mountWithWorkbook({ versions: [newerVersionSummary, versionSummary] });
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText(/v2 is available/)).toBeInTheDocument();
@@ -240,7 +251,7 @@ describe("ExperimentFlowPage", () => {
 
   it("does not show upgrade banner when already on latest version", async () => {
     mountWithWorkbook({ versions: [versionSummary] });
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
@@ -250,7 +261,7 @@ describe("ExperimentFlowPage", () => {
 
   it("shows no-workbook-linked state when no workbook attached", async () => {
     mountDefaults();
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByText("flow.noWorkbookLinked")).toBeInTheDocument();
@@ -262,7 +273,7 @@ describe("ExperimentFlowPage", () => {
     server.mount(contract.experiments.getExperimentAccess, { delay: "infinite" });
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    const { container } = render(<ExperimentFlowPage params={defaultProps.params} />);
+    const { container } = render(<ExperimentDesignPage params={defaultProps.params} />);
 
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
@@ -272,7 +283,7 @@ describe("ExperimentFlowPage", () => {
     server.mount(contract.experiments.getExperimentAccess, { status: 500 });
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
@@ -281,12 +292,43 @@ describe("ExperimentFlowPage", () => {
 
   it("renders WorkbookEditor with readOnly prop", async () => {
     mountWithWorkbook();
-    render(<ExperimentFlowPage params={defaultProps.params} />);
+    render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       const editor = screen.getByTestId("workbook-editor");
       expect(editor).toBeInTheDocument();
       expect(editor).toHaveAttribute("data-readonly", "true");
     });
+  });
+
+  it("does not show the edit toggle when the viewer is not the workbook owner", async () => {
+    mountWithWorkbook();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
+  });
+
+  it("lets the workbook owner toggle into the editable draft", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    const editToggle = await screen.findByText("flow.editWorkbook");
+    expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+
+    await user.click(editToggle);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
+    });
+    expect(screen.getByText("flow.viewPinned")).toBeInTheDocument();
   });
 });

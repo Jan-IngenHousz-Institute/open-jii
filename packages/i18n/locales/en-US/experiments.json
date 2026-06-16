@@ -56,6 +56,8 @@
     "tabLabel": "Design",
     "viewList": "List",
     "viewGraph": "Graph",
+    "editWorkbook": "Edit workbook",
+    "viewPinned": "View pinned version",
     "noWorkbookLinked": "No workbook linked to this experiment.",
     "linkWorkbookPrompt": "Attach a workbook to define the experiment's data collection flow.",
     "attach": "Attach",

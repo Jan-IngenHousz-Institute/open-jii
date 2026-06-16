@@ -133,7 +133,7 @@ describe("<ExperimentLayout />", () => {
       expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id");
       expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/data");
       expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/analysis");
-      expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/flow");
+      expect(hrefs).toContain("/en-US/platform/experiments-archive/test-id/design");
     });
 
     it("renders tabs when on root experiment path", async () => {
@@ -170,8 +170,8 @@ describe("<ExperimentLayout />", () => {
       expect(screen.getByText("Child Content")).toBeInTheDocument();
     });
 
-    it("renders tabs when on flow path", async () => {
-      vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id/flow");
+    it("renders tabs when on design path", async () => {
+      vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id/design");
       server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 
@@ -213,7 +213,7 @@ describe("<ExperimentLayout />", () => {
       expect(hrefs).toContain("/de/platform/experiments-archive/test-id");
       expect(hrefs).toContain("/de/platform/experiments-archive/test-id/data");
       expect(hrefs).toContain("/de/platform/experiments-archive/test-id/analysis");
-      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/flow");
+      expect(hrefs).toContain("/de/platform/experiments-archive/test-id/design");
     });
 
     it("renders tabs for different locale", async () => {

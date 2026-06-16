@@ -50,6 +50,8 @@
     "tabLabel": "Design",
     "viewList": "Liste",
     "viewGraph": "Graph",
+    "editWorkbook": "Arbeitsbuch bearbeiten",
+    "viewPinned": "Angeheftete Version anzeigen",
     "noWorkbookLinked": "Kein Arbeitsbuch mit diesem Experiment verknüpft.",
     "linkWorkbookPrompt": "Verknüpfen Sie ein Arbeitsbuch, um den Datenerfassungsablauf des Experiments zu definieren.",
     "attach": "Verknüpfen",
