@@ -524,7 +524,7 @@ describe("ProtocolCellComponent", () => {
         ],
       });
       server.mount(contract.protocols.getProtocolUsage, { body: { count: 0, workbooks: [] } });
-      server.mount(contract.protocols.restoreProtocolVersion, {
+      const restoreSpy = server.mount(contract.protocols.restoreProtocolVersion, {
         body: createProtocol({ id: "p1" }),
       });
       render(
@@ -534,7 +534,9 @@ describe("ProtocolCellComponent", () => {
       await user.click(await screen.findByRole("button", { name: "Version history" }));
       await user.click(await screen.findByRole("button", { name: /Restore/ }));
 
-      await waitFor(() => expect(screen.queryByText("No versions yet")).not.toBeInTheDocument());
+      // Gate on the restore request actually firing (for the non-latest v1) before checking state.
+      await waitFor(() => expect(restoreSpy.called).toBe(true));
+      expect(String(restoreSpy.calls[0]?.params?.version)).toBe("1");
     });
   });
 });

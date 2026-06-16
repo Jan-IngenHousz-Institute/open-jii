@@ -105,7 +105,7 @@ describe("EntityVersionHistory", () => {
       ],
     });
     server.mount(contract.protocols.getProtocolUsage, { body: { count: 0, workbooks: [] } });
-    server.mount(contract.protocols.restoreProtocolVersion, {
+    const restoreSpy = server.mount(contract.protocols.restoreProtocolVersion, {
       body: createProtocol({ id: "p-1" }),
     });
     const onRestored = vi.fn();
@@ -123,6 +123,8 @@ describe("EntityVersionHistory", () => {
 
     await user.click(screen.getByRole("button", { name: /Restore/ }));
     await waitFor(() => expect(onRestored).toHaveBeenCalled());
+    // The non-latest version (v1) is the one restored.
+    expect(String(restoreSpy.calls[0]?.params?.version)).toBe("1");
   });
 
   it("duplicates a protocol and fires onDuplicated (protocol kind)", async () => {
