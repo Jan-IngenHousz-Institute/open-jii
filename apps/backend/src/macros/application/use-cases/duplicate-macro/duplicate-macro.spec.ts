@@ -1,6 +1,12 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { DuplicateMacroUseCase } from "./duplicate-macro";
@@ -75,5 +81,28 @@ describe("DuplicateMacroUseCase", () => {
     const result = await useCase.execute(faker.string.uuid(), userId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
+  });
+
+  it("retries when create hits a unique-constraint violation, then succeeds", async () => {
+    const source = await createSource("Original");
+    const fork = { ...source, id: faker.string.uuid(), name: "Copy of Original" };
+    vi.spyOn(macroRepository, "create")
+      .mockResolvedValueOnce(failure(AppError.conflict("dup", "REPOSITORY_DUPLICATE")))
+      .mockResolvedValueOnce(success([fork]));
+
+    const result = await useCase.execute(source.id, userId);
+    assertSuccess(result);
+    expect(macroRepository.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails after exhausting retries on persistent conflicts", async () => {
+    const source = await createSource("Original");
+    vi.spyOn(macroRepository, "create").mockResolvedValue(
+      failure(AppError.conflict("dup", "REPOSITORY_DUPLICATE")),
+    );
+
+    const result = await useCase.execute(source.id, userId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(409);
   });
 });

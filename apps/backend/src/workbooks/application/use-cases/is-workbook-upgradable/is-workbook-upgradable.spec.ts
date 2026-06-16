@@ -1,4 +1,6 @@
 import { assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
+import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
@@ -17,6 +19,8 @@ describe("IsWorkbookUpgradableUseCase", () => {
   let workbookRepo: WorkbookRepository;
   let versionRepo: WorkbookVersionRepository;
   let publishVersion: PublishVersionUseCase;
+  let macroRepo: MacroRepository;
+  let protocolRepo: ProtocolRepository;
   let userId: string;
 
   beforeAll(async () => {
@@ -30,6 +34,8 @@ describe("IsWorkbookUpgradableUseCase", () => {
     workbookRepo = testApp.module.get(WorkbookRepository);
     versionRepo = testApp.module.get(WorkbookVersionRepository);
     publishVersion = testApp.module.get(PublishVersionUseCase);
+    macroRepo = testApp.module.get(MacroRepository);
+    protocolRepo = testApp.module.get(ProtocolRepository);
   });
 
   afterEach(() => {
@@ -191,6 +197,92 @@ describe("IsWorkbookUpgradableUseCase", () => {
     const result = await useCase.execute(expectValue(fresh.value));
     assertSuccess(result);
     expect(result.value).toBe(false);
+  });
+
+  it("is true when a referenced macro's head code drifts from the pinned snapshot", async () => {
+    const macro = await macroRepo.create({ name: "M", language: "python", code: "djE=" }, userId);
+    assertSuccess(macro);
+    const macroId = macro.value[0].id;
+    const workbook = await testApp.createWorkbook({
+      name: "WB",
+      cells: [
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId, version: 1, language: "python" },
+        },
+      ],
+      createdBy: userId,
+    });
+    await publishV1(workbook);
+    // Editing the macro mints v2; the cell still pins v1, so head now drifts from the snapshot.
+    const v2 = await macroRepo.mintVersion(macroId, {
+      code: "djI=",
+      language: "python",
+      createdBy: userId,
+    });
+    assertSuccess(v2);
+
+    const fresh = await workbookRepo.findById(workbook.id);
+    assertSuccess(fresh);
+    const result = await useCase.execute(expectValue(fresh.value));
+    assertSuccess(result);
+    expect(result.value).toBe(true);
+  });
+
+  it("is false when a referenced macro head still matches the pinned snapshot", async () => {
+    const macro = await macroRepo.create({ name: "M2", language: "python", code: "djE=" }, userId);
+    assertSuccess(macro);
+    const macroId = macro.value[0].id;
+    const workbook = await testApp.createWorkbook({
+      name: "WB",
+      cells: [
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId, version: 1, language: "python" },
+        },
+      ],
+      createdBy: userId,
+    });
+    await publishV1(workbook);
+
+    const fresh = await workbookRepo.findById(workbook.id);
+    assertSuccess(fresh);
+    const result = await useCase.execute(expectValue(fresh.value));
+    assertSuccess(result);
+    expect(result.value).toBe(false);
+  });
+
+  it("is true when a referenced protocol's head code drifts from the pinned snapshot", async () => {
+    const proto = await protocolRepo.create(
+      { name: "P", code: [{ step: 1 }], family: "multispeq" },
+      userId,
+    );
+    assertSuccess(proto);
+    const protocolId = proto.value[0].id;
+    const workbook = await testApp.createWorkbook({
+      name: "WB",
+      cells: [
+        { id: "p1", type: "protocol", isCollapsed: false, payload: { protocolId, version: 1 } },
+      ],
+      createdBy: userId,
+    });
+    await publishV1(workbook);
+    const v2 = await protocolRepo.mintVersion(protocolId, {
+      code: [{ step: 2 }],
+      family: "multispeq",
+      createdBy: userId,
+    });
+    assertSuccess(v2);
+
+    const fresh = await workbookRepo.findById(workbook.id);
+    assertSuccess(fresh);
+    const result = await useCase.execute(expectValue(fresh.value));
+    assertSuccess(result);
+    expect(result.value).toBe(true);
   });
 
   it("propagates failure when the version repository fails", async () => {

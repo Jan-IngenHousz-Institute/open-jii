@@ -13,9 +13,13 @@ import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
+import { DuplicateMacroUseCase } from "../application/use-cases/duplicate-macro/duplicate-macro";
 import { ExecuteMacroUseCase } from "../application/use-cases/execute-macro/execute-macro";
+import { GetMacroUsageUseCase } from "../application/use-cases/get-macro-usage/get-macro-usage";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
+import { ListMacroVersionsUseCase } from "../application/use-cases/list-macro-versions/list-macro-versions";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
+import { RestoreMacroVersionUseCase } from "../application/use-cases/restore-macro-version/restore-macro-version";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import type { MacroDto, CreateMacroDto, UpdateMacroDto } from "../core/models/macro.model";
 import { generateHashedFilename } from "../core/models/macro.model";
@@ -929,6 +933,151 @@ describe("MacroController – macro-protocol endpoints", () => {
       });
 
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+  });
+});
+
+describe("MacroController – versioning endpoints", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+  let listMacroVersionsUseCase: ListMacroVersionsUseCase;
+  let restoreMacroVersionUseCase: RestoreMacroVersionUseCase;
+  let duplicateMacroUseCase: DuplicateMacroUseCase;
+  let getMacroUsageUseCase: GetMacroUsageUseCase;
+
+  beforeAll(async () => {
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    listMacroVersionsUseCase = testApp.module.get(ListMacroVersionsUseCase);
+    restoreMacroVersionUseCase = testApp.module.get(RestoreMacroVersionUseCase);
+    duplicateMacroUseCase = testApp.module.get(DuplicateMacroUseCase);
+    getMacroUsageUseCase = testApp.module.get(GetMacroUsageUseCase);
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  const makeMacro = (id: string): MacroDto => ({
+    id,
+    name: "Copy of M",
+    filename: generateHashedFilename(id),
+    description: "",
+    language: "python",
+    code: "cHJpbnQoMSk=",
+    createdBy: testUserId,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  describe("listMacroVersions", () => {
+    it("returns the version list", async () => {
+      const id = faker.string.uuid();
+      const spy = vi.spyOn(listMacroVersionsUseCase, "execute").mockResolvedValue(
+        success([
+          { version: 2, createdBy: testUserId, createdAt: new Date() },
+          { version: 1, createdBy: testUserId, createdAt: new Date() },
+        ]),
+      );
+
+      const res = await testApp
+        .get(contract.macros.listMacroVersions.path.replace(":id", id))
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(res.body).toHaveLength(2);
+      expect(spy).toHaveBeenCalledWith(id);
+    });
+
+    it("requires authentication", async () => {
+      await testApp
+        .get(contract.macros.listMacroVersions.path.replace(":id", faker.string.uuid()))
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("getMacroUsage", () => {
+    it("returns usage count and referencing workbooks", async () => {
+      const id = faker.string.uuid();
+      const spy = vi
+        .spyOn(getMacroUsageUseCase, "execute")
+        .mockResolvedValue(
+          success({ count: 2, workbooks: [{ id: faker.string.uuid(), name: "WB" }] }),
+        );
+
+      const res = await testApp
+        .get(contract.macros.getMacroUsage.path.replace(":id", id))
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(res.body).toMatchObject({ count: 2 });
+      expect(spy).toHaveBeenCalledWith(id);
+    });
+  });
+
+  describe("duplicateMacro", () => {
+    it("duplicates with the session user and name override", async () => {
+      const id = faker.string.uuid();
+      const spy = vi
+        .spyOn(duplicateMacroUseCase, "execute")
+        .mockResolvedValue(success(makeMacro(faker.string.uuid())));
+
+      const res = await testApp
+        .post(contract.macros.duplicateMacro.path.replace(":id", id))
+        .withAuth(testUserId)
+        .send({ name: "Copy of M" })
+        .expect(StatusCodes.CREATED);
+
+      expect(res.body).toMatchObject({ name: "Copy of M" });
+      expect(spy).toHaveBeenCalledWith(id, testUserId, "Copy of M");
+    });
+
+    it("returns 404 when the source macro is missing", async () => {
+      vi.spyOn(duplicateMacroUseCase, "execute").mockResolvedValue(
+        failure(AppError.notFound("Macro not found")),
+      );
+
+      await testApp
+        .post(contract.macros.duplicateMacro.path.replace(":id", faker.string.uuid()))
+        .withAuth(testUserId)
+        .send({})
+        .expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("restoreMacroVersion", () => {
+    it("restores with the session user and the path version", async () => {
+      const id = faker.string.uuid();
+      const spy = vi
+        .spyOn(restoreMacroVersionUseCase, "execute")
+        .mockResolvedValue(success(makeMacro(id)));
+
+      const path = contract.macros.restoreMacroVersion.path
+        .replace(":id", id)
+        .replace(":version", "2");
+      await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.OK);
+
+      expect(spy).toHaveBeenCalledWith(id, 2, testUserId);
+    });
+
+    it("returns 403 when the user is not the creator", async () => {
+      const id = faker.string.uuid();
+      vi.spyOn(restoreMacroVersionUseCase, "execute").mockResolvedValue(
+        failure(AppError.forbidden("Only the macro creator can restore versions")),
+      );
+
+      const path = contract.macros.restoreMacroVersion.path
+        .replace(":id", id)
+        .replace(":version", "1");
+      await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.FORBIDDEN);
     });
   });
 });
