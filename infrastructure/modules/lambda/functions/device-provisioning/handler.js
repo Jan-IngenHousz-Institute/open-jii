@@ -1,9 +1,63 @@
 "use strict";
 
 const https = require("https");
+const http = require("http");
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "";
-const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY ?? "";
+const AUTH_SECRET_ARN = process.env.AUTH_SECRET_ARN ?? "";
+
+// Cached at init time so subsequent invocations don't re-fetch.
+let internalApiKey = null;
+
+async function getInternalApiKey() {
+  if (internalApiKey) return internalApiKey;
+
+  // AWS Parameters and Secrets Lambda Extension — reads from Secrets Manager
+  // via localhost:2773 so the actual value is never stored in function config.
+  const res = await new Promise((resolve, reject) => {
+    const req = http.get(
+      `http://localhost:2773/secretsmanager/get?secretId=${encodeURIComponent(AUTH_SECRET_ARN)}`,
+      {
+        headers: {
+          "X-Aws-Parameters-Secrets-Token": process.env.AWS_SESSION_TOKEN ?? "",
+        },
+      },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => {
+          body += chunk;
+        });
+        res.on("end", () => resolve({ statusCode: res.statusCode, body }));
+      },
+    );
+    req.on("error", reject);
+  });
+
+  if (res.statusCode !== 200) {
+    throw new Error(`Failed to fetch secret: HTTP ${res.statusCode}`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(res.body);
+  } catch {
+    throw new Error("Failed to parse secrets extension response");
+  }
+
+  let secrets;
+  try {
+    secrets = JSON.parse(parsed.SecretString);
+  } catch {
+    throw new Error("Failed to parse SecretString JSON");
+  }
+
+  if (!secrets.INTERNAL_API_KEY) {
+    throw new Error("INTERNAL_API_KEY not found in secret");
+  }
+
+  internalApiKey = secrets.INTERNAL_API_KEY;
+  return internalApiKey;
+}
 
 exports.handler = async (event) => {
   const { SerialNumber, DeviceClass } = event.parameters ?? {};
@@ -28,8 +82,19 @@ exports.handler = async (event) => {
     return { allowProvisioning: false };
   }
 
+  let apiKey;
   try {
-    const response = await callBackend({ serialNumber: SerialNumber, deviceClass: DeviceClass });
+    apiKey = await getInternalApiKey();
+  } catch (error) {
+    console.error(JSON.stringify({ msg: "Failed to load internal API key", error: String(error) }));
+    return { allowProvisioning: false };
+  }
+
+  try {
+    const response = await callBackend(
+      { serialNumber: SerialNumber, deviceClass: DeviceClass },
+      apiKey,
+    );
 
     console.log(
       JSON.stringify({
@@ -56,7 +121,7 @@ exports.handler = async (event) => {
   }
 };
 
-function callBackend(body) {
+function callBackend(body, apiKey) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const url = new URL(`${BACKEND_URL}/api/v1/iot-devices/validate`);
@@ -70,7 +135,7 @@ function callBackend(body) {
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(data),
-          "x-internal-api-key": INTERNAL_API_KEY,
+          "x-internal-api-key": apiKey,
         },
         timeout: 4000,
       },

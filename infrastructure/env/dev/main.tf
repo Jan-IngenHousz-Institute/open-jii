@@ -209,10 +209,28 @@ module "device_provisioning_lambda" {
   timeout       = 5
   memory_size   = 128
 
+  # AWS Parameters and Secrets Lambda Extension — reads secrets at runtime
+  # via http://localhost:2773 so the actual key never appears in the function config.
+  layers = ["arn:aws:lambda:${var.aws_region}:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:69"]
+
+  additional_policy_arns = [module.device_provisioning_lambda_secrets_policy.arn]
+
   environment_variables = {
     BACKEND_URL      = "https://${module.route53.api_domain}"
-    INTERNAL_API_KEY = var.internal_api_key
+    AUTH_SECRET_ARN  = module.auth_secrets.secret_arn
   }
+}
+
+resource "aws_iam_policy" "device_provisioning_lambda_secrets_policy" {
+  name = "open_jii_${var.environment}_device_provisioning_lambda_secrets"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "secretsmanager:GetSecretValue"
+      Resource = module.auth_secrets.secret_arn
+    }]
+  })
 }
 
 module "cognito" {
@@ -1295,6 +1313,7 @@ module "auth_secrets" {
     AUTH_GITHUB_SECRET = var.github_oauth_client_secret
     AUTH_ORCID_ID      = var.orcid_oauth_client_id
     AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
+    INTERNAL_API_KEY   = var.internal_api_key
   })
 
   tags = {
@@ -1789,6 +1808,10 @@ module "backend_ecs" {
       name      = "CONTENTFUL_ACCESS_TOKEN"
       valueFrom = "${module.contentful_secrets.secret_arn}:CONTENTFUL_ACCESS_TOKEN::"
     },
+    {
+      name      = "INTERNAL_API_KEY"
+      valueFrom = "${module.auth_secrets.secret_arn}:INTERNAL_API_KEY::"
+    },
   ]
 
   # Environment variables for the backend service
@@ -1909,10 +1932,6 @@ module "backend_ecs" {
       name  = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME"
       value = module.large_iot_s3.bucket_id
     },
-    {
-      name  = "INTERNAL_API_KEY"
-      value = var.internal_api_key
-    }
   ]
 
   # Additional IAM policies for the task role
