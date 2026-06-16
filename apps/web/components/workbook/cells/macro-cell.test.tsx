@@ -126,6 +126,33 @@ describe("MacroCellComponent", () => {
     >);
   });
 
+  it("debounce-saves an edit and re-pins the cell to the minted version", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+    } as ReturnType<typeof useSession>);
+
+    server.mount(contract.macros.getMacro, { body: baseMacro });
+    const updateSpy = server.mount(contract.macros.updateMacro, {
+      body: { ...baseMacro, latestVersion: 2 },
+    });
+    const onUpdate = vi.fn();
+    render(<MacroCellComponent cell={cell} onUpdate={onUpdate} onDelete={vi.fn()} />);
+
+    const textbox = await screen.findByRole("textbox");
+    await user.type(textbox, " # edit");
+
+    // Edit is debounced (~1s) then minted server-side; the cell re-pins to the new version.
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
+    await waitFor(() =>
+      expect(onUpdate.mock.lastCall?.[0]).toMatchObject({ payload: { version: 2 } }),
+    );
+
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
   it("copies code to clipboard when user clicks the copy button", async () => {
     const _user = userEvent.setup();
     document.execCommand = vi.fn();

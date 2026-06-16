@@ -75,4 +75,35 @@ describe("GetProtocolUseCase", () => {
       statusCode: 404,
     });
   });
+
+  it("returns a pinned version's code when a non-latest version is requested", async () => {
+    const created = await protocolRepository.create(
+      { name: "Versioned Protocol", code: [{ step: 1 }], family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(created);
+    const protocolId = created.value[0].id;
+    const minted = await protocolRepository.mintVersion(protocolId, {
+      code: [{ step: 2 }],
+      family: "multispeq",
+      createdBy: testUserId,
+    });
+    assertSuccess(minted);
+
+    const result = await useCase.execute(protocolId, 1);
+    assertSuccess(result);
+    expect(result.value.code).toEqual([{ step: 1 }]);
+  });
+
+  it("returns not found when a pinned protocol version does not exist", async () => {
+    const created = await protocolRepository.create(
+      { name: "Versioned Protocol 2", code: [{ step: 1 }], family: "multispeq" },
+      testUserId,
+    );
+    assertSuccess(created);
+
+    const result = await useCase.execute(created.value[0].id, 99);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(404);
+  });
 });
