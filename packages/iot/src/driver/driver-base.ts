@@ -15,6 +15,16 @@ export interface CommandResult<T = unknown> {
   checksum?: string;
 }
 
+/** Per-call execution options */
+export interface ExecuteOptions {
+  /**
+   * Override the response timeout (ms) for this command. When omitted the
+   * driver picks a timeout itself (e.g. sized to a measurement protocol's
+   * estimated runtime).
+   */
+  timeoutMs?: number;
+}
+
 /** Abstract device driver interface */
 export interface IDeviceDriver {
   /**
@@ -25,7 +35,10 @@ export interface IDeviceDriver {
   initialize(transport: ITransportAdapter): void | Promise<void>;
 
   /** Execute a command and return the result */
-  execute<T = unknown>(command: string | object): Promise<CommandResult<T>>;
+  execute<T = unknown>(
+    command: string | object,
+    options?: ExecuteOptions,
+  ): Promise<CommandResult<T>>;
 
   /** Get device information (battery, version, etc.) */
   getDeviceInfo?(): Promise<Record<string, unknown>>;
@@ -77,7 +90,10 @@ export abstract class DeviceDriver<
     this.initialized = true;
   }
 
-  abstract execute<T = unknown>(command: string | object): Promise<CommandResult<T>>;
+  abstract execute<T = unknown>(
+    command: string | object,
+    options?: ExecuteOptions,
+  ): Promise<CommandResult<T>>;
 
   async destroy(): Promise<void> {
     this.emitter.removeAllListeners();
