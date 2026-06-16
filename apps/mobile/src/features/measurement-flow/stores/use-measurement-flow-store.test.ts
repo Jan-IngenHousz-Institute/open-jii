@@ -568,5 +568,16 @@ describe("useMeasurementFlowStore", () => {
       expect(state.flowNodes).toEqual([]);
       expect(state.branchReturnStack).toEqual([]);
     });
+
+    it("steps linearly back from a loop-back target when no return was recorded", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeQuestion("q1"), makeMeasurement("m1"), makeBranch("b1")],
+        currentFlowStep: 1, // looped back here; no branchReturnStack entry
+        branchReturnStack: [],
+      });
+      useMeasurementFlowStore.getState().previousStep();
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(0);
+    });
   });
 });

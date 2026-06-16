@@ -137,6 +137,24 @@ describe("evaluateAndRoute", () => {
     expect(mockNextStep).not.toHaveBeenCalled();
   });
 
+  it("does NOT record a Back-return for a backward (loop-back) gotoCellId jump", () => {
+    // Branch at index 2 loops back to "loop" at index 0. Recording a return
+    // here would push Back forward past the target
+    mockGetAnswer.mockImplementation((_c, id) => (id === "loop" ? "yes" : undefined));
+    flowState.cells = [
+      qCell("loop"),
+      qCell("mid"),
+      branch("b1", [path("pa", [cond("loop", "eq", "yes")], "loop")], "pdef"),
+    ];
+    flowState.flowNodes = [plainFlowNode("loop"), plainFlowNode("mid"), branchFlowNode("b1")];
+    flowState.currentFlowStep = 2; // on the branch
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(0); // looped back to "loop"
+    expect(mockRecordBranchJump).not.toHaveBeenCalled(); // backward jump records nothing
+  });
+
   it("fires the default path when no conditions match", () => {
     mockGetAnswer.mockReturnValue("no");
     flowState.cells = [

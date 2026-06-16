@@ -68,9 +68,10 @@ export function evaluateAndRoute(node: FlowNode): void {
     const idx = flow.flowNodes.findIndex((n) => n.id === matched.gotoCellId);
     // Ignore a no-op self-jump (would stall on the branch); fall through instead.
     if (idx >= 0 && idx !== flow.currentFlowStep) {
-      // Record the jump first so Back unwinds it instead of stepping into a
-      // node this matched path skipped over.
-      flow.recordBranchJump(idx);
+      // Only a forward jump skips over un-visited nodes that Back must unwind
+      // past. A backward (loop-back) jump skips nothing, so Back steps linearly
+      // from the target — recording a return there would push Back forward.
+      if (idx > flow.currentFlowStep) flow.recordBranchJump(idx);
       flow.setCurrentFlowStep(idx);
       return;
     }
