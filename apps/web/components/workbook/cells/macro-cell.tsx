@@ -68,7 +68,9 @@ export function MacroCellComponent({
   const macroLanguage = macroData?.language ?? language;
   const isOwner = !!session?.user.id && session.user.id === macroData?.createdBy;
   const isEditable = isOwner && !readOnly;
-  const hasUpgrade = isEditable && latestVersion != null && latestVersion > version;
+  // Re-pinning a cell to a newer version is a workbook edit, available to any workbook
+  // editor — not just the macro's owner.
+  const hasUpgrade = !readOnly && latestVersion != null && latestVersion > version;
 
   const { mutate: saveMacro } = useMacroUpdate(macroId);
 

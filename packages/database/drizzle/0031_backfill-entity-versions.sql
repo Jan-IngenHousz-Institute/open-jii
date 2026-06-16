@@ -41,6 +41,7 @@ FROM (
   GROUP BY w2.id
 ) sub
 WHERE w.id = sub.id
+  AND jsonb_typeof(w.cells) = 'array'
   AND EXISTS (
     SELECT 1 FROM jsonb_array_elements(w.cells) e
     WHERE e->>'type' = 'macro' AND (e->'payload'->>'version') IS NULL
@@ -67,6 +68,7 @@ FROM (
   GROUP BY wv2.id
 ) sub
 WHERE wv.id = sub.id
+  AND jsonb_typeof(wv.cells) = 'array'
   AND EXISTS (
     SELECT 1 FROM jsonb_array_elements(wv.cells) e
     WHERE e->>'type' = 'macro' AND (e->'payload'->>'version') IS NULL

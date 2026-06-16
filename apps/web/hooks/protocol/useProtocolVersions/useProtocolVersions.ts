@@ -1,3 +1,5 @@
+import { shouldRetryQuery } from "@/util/query-retry";
+
 import { tsr } from "../../../lib/tsr";
 
 /** Version history for a protocol (newest first), for the history/restore UI. */
@@ -6,5 +8,6 @@ export const useProtocolVersions = (protocolId: string, options?: { enabled?: bo
     queryData: { params: { id: protocolId } },
     queryKey: ["protocolVersions", protocolId],
     enabled: options?.enabled ?? !!protocolId,
+    retry: shouldRetryQuery,
   });
 };

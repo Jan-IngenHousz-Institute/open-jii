@@ -58,7 +58,9 @@ export function ProtocolCellComponent({
   const protocolFamily = protocolData?.body.family;
   const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
   const isEditable = isOwner && !readOnly;
-  const hasUpgrade = isEditable && latestVersion != null && latestVersion > version;
+  // Re-pinning a cell to a newer version is a workbook edit, available to any workbook
+  // editor — not just the protocol's owner.
+  const hasUpgrade = !readOnly && latestVersion != null && latestVersion > version;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
 

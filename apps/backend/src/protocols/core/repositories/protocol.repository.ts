@@ -189,7 +189,13 @@ export class ProtocolRepository {
    */
   async mintVersion(
     id: string,
-    data: { code: ProtocolDto["code"]; family: ProtocolDto["family"]; createdBy: string },
+    data: {
+      code: ProtocolDto["code"];
+      family: ProtocolDto["family"];
+      createdBy: string;
+      name?: string;
+      description?: string | null;
+    },
   ): Promise<Result<ProtocolDto>> {
     return tryCatch(async () => {
       const updated = await this.database.transaction(async (tx) => {
@@ -217,6 +223,8 @@ export class ProtocolRepository {
             family: data.family,
             latestVersion: nextVersion,
             updatedAt: new Date(),
+            ...(data.name !== undefined ? { name: data.name } : {}),
+            ...(data.description !== undefined ? { description: data.description } : {}),
           })
           .where(eq(protocols.id, id))
           .returning();

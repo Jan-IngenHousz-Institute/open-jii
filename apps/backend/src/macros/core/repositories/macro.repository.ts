@@ -293,7 +293,13 @@ export class MacroRepository {
    */
   async mintVersion(
     id: string,
-    data: { code: string; language: MacroDto["language"]; createdBy: string },
+    data: {
+      code: string;
+      language: MacroDto["language"];
+      createdBy: string;
+      name?: string;
+      description?: string | null;
+    },
   ): Promise<Result<MacroDto>> {
     return tryCatch(async () => {
       const updated = await this.database.transaction(async (tx) => {
@@ -321,6 +327,8 @@ export class MacroRepository {
             language: data.language,
             latestVersion: nextVersion,
             updatedAt: new Date(),
+            ...(data.name !== undefined ? { name: data.name } : {}),
+            ...(data.description !== undefined ? { description: data.description } : {}),
           })
           .where(eq(macros.id, id))
           .returning();

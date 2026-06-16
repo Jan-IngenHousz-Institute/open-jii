@@ -51,30 +51,18 @@ export class UpdateProtocolUseCase {
     let updated: ProtocolDto;
 
     if (codeChanged || familyChanged) {
+      // Mint the version and apply any accompanying name/description in one transaction.
       const mintResult = await this.protocolRepository.mintVersion(id, {
         code: updateProtocolDto.code ?? protocol.code,
         family: updateProtocolDto.family ?? protocol.family,
         createdBy: userId,
+        name: updateProtocolDto.name,
+        description: updateProtocolDto.description,
       });
       if (mintResult.isFailure()) {
         return mintResult;
       }
       updated = mintResult.value;
-
-      const metadata: UpdateProtocolDto = {};
-      if (updateProtocolDto.name !== undefined) metadata.name = updateProtocolDto.name;
-      if (updateProtocolDto.description !== undefined) {
-        metadata.description = updateProtocolDto.description;
-      }
-      if (Object.keys(metadata).length > 0) {
-        const metaResult = await this.protocolRepository.update(id, metadata);
-        if (metaResult.isFailure()) {
-          return metaResult;
-        }
-        if (metaResult.value.length > 0) {
-          updated = metaResult.value[0];
-        }
-      }
     } else {
       const updateResult = await this.protocolRepository.update(id, updateProtocolDto);
       if (updateResult.isFailure()) {

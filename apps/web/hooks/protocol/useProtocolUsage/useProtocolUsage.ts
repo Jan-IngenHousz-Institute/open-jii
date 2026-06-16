@@ -1,3 +1,5 @@
+import { shouldRetryQuery } from "@/util/query-retry";
+
 import { tsr } from "../../../lib/tsr";
 
 /** How many workbooks reference this protocol, for the "used by N workbooks" warning. */
@@ -6,5 +8,6 @@ export const useProtocolUsage = (protocolId: string, options?: { enabled?: boole
     queryData: { params: { id: protocolId } },
     queryKey: ["protocolUsage", protocolId],
     enabled: options?.enabled ?? !!protocolId,
+    retry: shouldRetryQuery,
   });
 };

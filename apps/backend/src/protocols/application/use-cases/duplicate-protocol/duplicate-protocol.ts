@@ -25,7 +25,8 @@ export class DuplicateProtocolUseCase {
     }
 
     const trimmed = nameOverride?.trim() ?? "";
-    const baseName = trimmed.length > 0 ? trimmed : `Copy of ${source.name}`;
+    // Cap to leave room under the 255-char name limit for the " (N)" disambiguator suffix.
+    const baseName = (trimmed.length > 0 ? trimmed : `Copy of ${source.name}`).slice(0, 240);
     const nameResult = await this.resolveUniqueName(baseName);
     if (nameResult.isFailure()) {
       return nameResult;

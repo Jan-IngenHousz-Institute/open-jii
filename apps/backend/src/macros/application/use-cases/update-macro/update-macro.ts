@@ -57,29 +57,18 @@ export class UpdateMacroUseCase {
     let macro: MacroDto;
 
     if (codeChanged || languageChanged) {
+      // Mint the version and apply any accompanying name/description in one transaction.
       const mintResult = await this.macroRepository.mintVersion(id, {
         code: data.code ?? existingMacro.code,
         language: data.language ?? existingMacro.language,
         createdBy: userId,
+        name: data.name,
+        description: data.description,
       });
       if (mintResult.isFailure()) {
         return mintResult;
       }
       macro = mintResult.value;
-
-      // Apply any accompanying metadata (name/description) in place.
-      const metadata: UpdateMacroDto = {};
-      if (data.name !== undefined) metadata.name = data.name;
-      if (data.description !== undefined) metadata.description = data.description;
-      if (Object.keys(metadata).length > 0) {
-        const metaResult = await this.macroRepository.update(id, metadata);
-        if (metaResult.isFailure()) {
-          return metaResult;
-        }
-        if (metaResult.value.length > 0) {
-          macro = metaResult.value[0];
-        }
-      }
     } else {
       const updateResult = await this.macroRepository.update(id, data);
       if (updateResult.isFailure()) {
