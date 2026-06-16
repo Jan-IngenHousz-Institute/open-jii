@@ -56,17 +56,20 @@ describe("WidgetSlot", () => {
     expect(screen.getByText(/hello world/)).toBeInTheDocument();
   });
 
-  it("exposes aria-pressed=true when selected", () => {
+  it("exposes aria-current=true when selected", () => {
     const { container } = setup({ isSelected: true });
     const card = container.querySelector("[data-dashboard-widget]");
-    expect(card).toHaveAttribute("aria-pressed", "true");
+    expect(card).toHaveAttribute("aria-current", "true");
   });
 
   it("invokes onSelect with the widget id when the card is clicked", async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
-    setup({ onSelect });
-    await user.click(screen.getByRole("button"));
+    const { container } = setup({ onSelect });
+    const card = container.querySelector<HTMLDivElement>("[data-dashboard-widget]");
+    expect(card).not.toBeNull();
+    if (!card) return;
+    await user.click(card);
     expect(onSelect).toHaveBeenCalledWith("rt-w1");
   });
 
