@@ -17,6 +17,7 @@ import { useSession } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { CELL_ACCENT } from "../cell-theme";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
 
@@ -130,7 +131,7 @@ export function ProtocolCellComponent({
     <CellWrapper
       icon={<Microscope className="h-3.5 w-3.5" />}
       label={displayName}
-      accentColor="#2D3142"
+      accentColor={CELL_ACCENT.protocol}
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}

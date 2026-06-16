@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zDeviceCommand } from "./device-command.schema";
 import { sanitizeQuestionLabel, zQuestionContent } from "./experiment.schema";
 import { zMacroLanguage } from "./macro.schema";
 
@@ -33,6 +34,22 @@ const zMacroPayload = z
 export const zMacroCell = zBaseCell.extend({
   type: z.literal("macro"),
   payload: zMacroPayload,
+});
+
+// A known instrument console command (e.g. `hello`, `battery`) sent verbatim to
+// the device. Unlike protocols/macros the cell is self-contained — there is no
+// persisted entity to reference. `command` is constrained to the known-command
+// enum; parameterised commands are handled separately (OJD-1603).
+const zCommandPayload = z
+  .object({
+    command: zDeviceCommand,
+    name: z.string().optional(),
+  })
+  .strict();
+
+export const zCommandCell = zBaseCell.extend({
+  type: z.literal("command"),
+  payload: zCommandPayload,
 });
 
 export const zQuestionCell = zBaseCell.extend({
@@ -88,6 +105,7 @@ export const zMarkdownCell = zBaseCell.extend({
 export const zWorkbookCell = z.union([
   zProtocolCell,
   zMacroCell,
+  zCommandCell,
   zQuestionCell,
   zBranchCell,
   zOutputCell,
@@ -114,6 +132,7 @@ export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx
 
 export type ProtocolCell = z.infer<typeof zProtocolCell>;
 export type MacroCell = z.infer<typeof zMacroCell>;
+export type CommandCell = z.infer<typeof zCommandCell>;
 export type QuestionCell = z.infer<typeof zQuestionCell>;
 export type BranchCell = z.infer<typeof zBranchCell>;
 export type BranchCondition = z.infer<typeof zBranchCondition>;
@@ -124,6 +143,7 @@ export type MarkdownCell = z.infer<typeof zMarkdownCell>;
 export type WorkbookCell =
   | ProtocolCell
   | MacroCell
+  | CommandCell
   | QuestionCell
   | BranchCell
   | OutputCell

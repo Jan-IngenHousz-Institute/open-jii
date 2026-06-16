@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { CELL_ACCENT } from "../cell-theme";
 import { CellWrapper } from "../cell-wrapper";
 
 interface BranchCellProps {
@@ -438,7 +439,7 @@ export function BranchCellComponent({
     <CellWrapper
       icon={<GitBranch className="h-3.5 w-3.5" />}
       label="Branch"
-      accentColor="#F29D38"
+      accentColor={CELL_ACCENT.branch}
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}

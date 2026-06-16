@@ -25,29 +25,13 @@ import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
-/** Accent color per cell type, matching the cell components. */
-const cellColors: Record<string, string> = {
-  question: "#C58AAE",
-  protocol: "#2D3142",
-  macro: "#6C5CE7",
-  branch: "#F29D38",
-  markdown: "#6F8596",
-  output: "#94A3B8",
-};
-
-/** Active/selected background per cell type (light tint of accent). */
-const cellActiveBg: Record<string, string> = {
-  question: "#F9F3F6",
-  protocol: "#EAEBEE",
-  macro: "#F1EFFD",
-  branch: "#FBF3EA",
-  markdown: "#F1F3F5",
-};
+import { CELL_ACCENT, CELL_ACTIVE_BG } from "./cell-theme";
 
 const cellTypeLabels: Record<string, string> = {
   question: "Question",
   protocol: "Protocol",
   macro: "Macro",
+  command: "Command",
   branch: "Branch",
   markdown: "Markdown",
   output: "Output",
@@ -62,6 +46,8 @@ function getCellSubtitle(cell: WorkbookCell): string {
       return cell.payload.name ?? "JSON";
     case "macro":
       return cell.payload.name ?? capitalize(cell.payload.language);
+    case "command":
+      return cell.payload.name ?? cell.payload.command;
     case "branch":
       return cell.paths.map((p) => p.label).join(", ") || "Conditions";
     case "markdown": {
@@ -110,7 +96,7 @@ function SidebarRow({
     disabled: !draggable,
   });
 
-  const color = cellColors[cell.type] ?? "#94A3B8";
+  const color = CELL_ACCENT[cell.type];
   const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
 
   return (
@@ -127,7 +113,7 @@ function SidebarRow({
       style={{
         padding: "8px 9px 8px 9px",
         borderLeft: `3px solid ${isActive ? color : "transparent"}`,
-        backgroundColor: isActive ? cellActiveBg[cell.type] : undefined,
+        backgroundColor: isActive ? CELL_ACTIVE_BG[cell.type] : undefined,
         transform: CSS.Transform.toString(transform),
         transition,
       }}

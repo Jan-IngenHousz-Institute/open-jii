@@ -56,6 +56,8 @@
       "protocol_other": "{{count}} Protocollen",
       "macro_one": "{{count}} Macro",
       "macro_other": "{{count}} Macro's",
+      "command_one": "{{count}} Commando",
+      "command_other": "{{count}} Commando's",
       "question_one": "{{count}} Vraag",
       "question_other": "{{count}} Vragen",
       "branch_one": "{{count}} Vertakking",

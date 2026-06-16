@@ -137,7 +137,7 @@ function WorkbookEditorWithAutosave({
   const handleRunCell = useCallback(
     (cellId: string) => {
       const cell = cells.find((c) => c.id === cellId);
-      if (cell?.type === "protocol" && !isConnected) {
+      if ((cell?.type === "protocol" || cell?.type === "command") && !isConnected) {
         void connect();
         return;
       }

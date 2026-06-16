@@ -62,5 +62,19 @@ export function useIotProtocolExecution(
     [driver, isConnected, sensorFamily],
   );
 
-  return { executeProtocol };
+  // Send a known console command (e.g. `hello`, `battery`) verbatim. Both the
+  // MultispeQ and generic drivers accept a raw string — the generic driver
+  // wraps it into `{ command }` before transmit.
+  const executeCommand = useCallback(
+    async (command: string) => {
+      if (!driver || !isConnected) {
+        throw new Error("Not connected to device");
+      }
+      const result = await driver.execute(command);
+      return parseResponseData(unwrap(result, "Command execution failed"));
+    },
+    [driver, isConnected],
+  );
+
+  return { executeProtocol, executeCommand };
 }

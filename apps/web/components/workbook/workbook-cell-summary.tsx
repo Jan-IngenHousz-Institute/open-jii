@@ -1,6 +1,6 @@
 "use client";
 
-import { Code, FileText, FlaskConical, GitBranch, HelpCircle } from "lucide-react";
+import { Code, FileText, FlaskConical, GitBranch, HelpCircle, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -10,6 +10,7 @@ import { cn } from "@repo/ui/lib/utils";
 const cellIcons: Record<string, ReactNode> = {
   protocol: <FlaskConical className="h-3 w-3" />,
   macro: <Code className="h-3 w-3" />,
+  command: <Terminal className="h-3 w-3" />,
   question: <HelpCircle className="h-3 w-3" />,
   branch: <GitBranch className="h-3 w-3" />,
   markdown: <FileText className="h-3 w-3" />,

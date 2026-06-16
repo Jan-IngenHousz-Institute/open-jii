@@ -9,6 +9,7 @@ import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
 import { cn } from "@repo/ui/lib/utils";
 
+import { CELL_ACCENT } from "../cell-theme";
 import { CellWrapper } from "../cell-wrapper";
 
 interface MarkdownCellProps {
@@ -56,7 +57,7 @@ export function MarkdownCellComponent({
     <CellWrapper
       icon={<FileText className="h-3.5 w-3.5" />}
       label="Markdown"
-      accentColor="#6F8596"
+      accentColor={CELL_ACCENT.markdown}
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}

@@ -56,6 +56,8 @@
       "protocol_other": "{{count}} Protocols",
       "macro_one": "{{count}} Macro",
       "macro_other": "{{count}} Macros",
+      "command_one": "{{count}} Command",
+      "command_other": "{{count}} Commands",
       "question_one": "{{count}} Question",
       "question_other": "{{count}} Questions",
       "branch_one": "{{count}} Branch",

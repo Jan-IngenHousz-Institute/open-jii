@@ -86,6 +86,10 @@ export function createDefaultCell(
       throw new Error("Protocol cells must be created via the protocol picker");
     case "macro":
       throw new Error("Macro cells must be created via the macro picker");
+    case "command":
+      // Self-contained, no picker; defaults to a safe handshake command the
+      // user can swap via the in-cell command selector.
+      return { ...base, type: "command", payload: { command: "hello" } };
     case "question":
       throw new Error("Question cells must be created via the question picker");
     case "output":
@@ -454,6 +458,7 @@ export function WorkbookEditor({
       if (
         cell.type === "protocol" ||
         cell.type === "macro" ||
+        cell.type === "command" ||
         cell.type === "question" ||
         cell.type === "branch"
       ) {
