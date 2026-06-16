@@ -35,7 +35,6 @@ export class IotDevicesController {
       const result = await this.validateProvisioningUseCase.execute(
         body.serialNumber,
         body.deviceClass,
-        body.certificateId,
       );
       if (result.isSuccess()) return { status: StatusCodes.OK, body: result.value };
       return handleFailure(result, this.logger);

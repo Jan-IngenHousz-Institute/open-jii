@@ -1,5 +1,5 @@
 {
-  "id": "26a207f1-1005-4d6f-bc86-be3e9d3e0de1",
+  "id": "d904c4fa-1ac0-4f76-bc36-e73bbfd965ff",
   "prevId": "42d3aa99-d8f5-45f7-a372-d41f57f738be",
   "version": "7",
   "dialect": "postgresql",
@@ -1034,7 +1034,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "iot_devices_status_check": {
+          "name": "iot_devices_status_check",
+          "value": "\"iot_devices\".\"status\" IN ('active', 'rotating', 'revoked')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.macros": {

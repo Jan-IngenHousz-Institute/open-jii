@@ -35,11 +35,20 @@ export class RotateCertificateUseCase {
     const { certificateId, certificateArn } = newCertResult.value;
 
     const attachResult = await this.awsIot.attachThingPrincipal(thingName, certificateArn);
-    if (attachResult.isFailure()) return attachResult;
+    if (attachResult.isFailure()) {
+      await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
+      await this.deviceRepository.updateStatus(thingName, "active");
+      return attachResult;
+    }
 
     const policyName = `open_jii_${device.deviceClass}_provisioned_device_policy`;
     const policyResult = await this.awsIot.attachPolicy(policyName, certificateArn);
-    if (policyResult.isFailure()) return policyResult;
+    if (policyResult.isFailure()) {
+      await this.awsIot.detachThingPrincipal(thingName, certificateArn);
+      await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
+      await this.deviceRepository.updateStatus(thingName, "active");
+      return policyResult;
+    }
 
     await this.awsIot.updateCertificateStatus(device.certificateId, "INACTIVE");
     await this.awsIot.detachThingPrincipal(thingName, device.certificateArn);

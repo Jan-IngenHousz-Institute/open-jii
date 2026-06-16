@@ -13,7 +13,8 @@ CREATE TABLE "iot_devices" (
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	CONSTRAINT "iot_devices_thing_name_unique" UNIQUE("thing_name"),
-	CONSTRAINT "iot_devices_serial_number_unique" UNIQUE("serial_number")
+	CONSTRAINT "iot_devices_serial_number_unique" UNIQUE("serial_number"),
+	CONSTRAINT "iot_devices_status_check" CHECK ("iot_devices"."status" IN ('active', 'rotating', 'revoked'))
 );
 --> statement-breakpoint
 ALTER TABLE "iot_devices" ADD CONSTRAINT "iot_devices_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

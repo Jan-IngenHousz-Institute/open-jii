@@ -17,6 +17,7 @@ export const iotDevicesContract = c.router({
     body: zValidateProvisioningRequest,
     responses: {
       200: zValidateProvisioningResponse,
+      400: zErrorResponse,
       500: zErrorResponse,
     },
     summary: "Pre-provisioning validation hook",

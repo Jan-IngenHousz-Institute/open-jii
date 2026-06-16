@@ -27,7 +27,17 @@ export class DecommissionDeviceUseCase {
     const revokeResult = await this.awsIot.updateCertificateStatus(device.certificateId, "REVOKED");
     if (revokeResult.isFailure()) return revokeResult;
 
-    await this.awsIot.detachThingPrincipal(thingName, device.certificateArn);
+    // Detach best-effort — cert is already revoked so the device can no longer connect.
+    // Log failures but do not abort: an inconsistent detach is recoverable; a revoked
+    // cert that still appears "active" in the DB is not.
+    const detachResult = await this.awsIot.detachThingPrincipal(thingName, device.certificateArn);
+    if (detachResult.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to detach principal after revoke — proceeding to update DB",
+        thingName,
+        error: detachResult.error,
+      });
+    }
 
     const updated = await this.deviceRepository.updateStatus(thingName, "revoked");
     this.logger.log({ msg: "Device decommissioned", thingName });

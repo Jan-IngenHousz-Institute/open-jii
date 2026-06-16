@@ -56,6 +56,8 @@ export class DrizzleDeviceRepository implements DeviceRepository {
       .set({ certificateId, certificateArn, rotatedAt: new Date() })
       .where(eq(iotDevices.thingName, thingName))
       .returning();
+    if (rows.length === 0)
+      throw new Error(`Device ${thingName} not found during certificate update`);
     return rows[0] as DeviceRecord;
   }
 
@@ -70,6 +72,7 @@ export class DrizzleDeviceRepository implements DeviceRepository {
       .set({ status, ...extra })
       .where(eq(iotDevices.thingName, thingName))
       .returning();
+    if (rows.length === 0) throw new Error(`Device ${thingName} not found during status update`);
     return rows[0] as DeviceRecord;
   }
 }

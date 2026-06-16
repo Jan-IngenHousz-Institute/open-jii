@@ -19,7 +19,6 @@ export const zIotDevice = z.object({
 export const zValidateProvisioningRequest = z.object({
   serialNumber: z.string().min(1),
   deviceClass: z.string().min(1),
-  certificateId: z.string().min(1),
 });
 
 export const zValidateProvisioningResponse = z.object({

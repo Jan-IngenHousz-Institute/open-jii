@@ -1,7 +1,8 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type { Result } from "../../../../common/utils/fp-utils";
-import { success } from "../../../../common/utils/fp-utils";
+import { failure, success } from "../../../../common/utils/fp-utils";
+import { AppError } from "../../../../common/utils/fp-utils";
 import { DEVICE_REPOSITORY } from "../../../core/repositories/device.repository";
 import type { DeviceRepository } from "../../../core/repositories/device.repository";
 
@@ -22,7 +23,6 @@ export class ValidateProvisioningUseCase {
   async execute(
     serialNumber: string,
     deviceClass: string,
-    certificateId: string,
   ): Promise<Result<ValidateProvisioningResult>> {
     this.logger.log({ msg: "Validating device provisioning", serialNumber, deviceClass });
 
@@ -33,13 +33,19 @@ export class ValidateProvisioningUseCase {
     }
 
     const thingName = `${deviceClass}-${serialNumber}`;
-    await this.deviceRepository.create({
-      thingName,
-      serialNumber,
-      deviceClass,
-      certificateId,
-      certificateArn: `arn:pending:${certificateId}`,
-    });
+    try {
+      await this.deviceRepository.create({
+        thingName,
+        serialNumber,
+        deviceClass,
+        certificateId: "pending",
+        certificateArn: "pending",
+      });
+    } catch (error) {
+      // Unique constraint violation — concurrent provisioning attempt
+      this.logger.warn({ msg: "Duplicate provisioning rejected (race)", serialNumber, error });
+      return success({ allowed: false, reason: "Device already provisioned" });
+    }
 
     this.logger.log({ msg: "Device provisioning approved", serialNumber, thingName });
     return success({ allowed: true });

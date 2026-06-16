@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import * as crypto from "crypto";
 import type { Request } from "express";
 
 @Injectable()
@@ -24,7 +25,18 @@ export class InternalApiKeyGuard implements CanActivate {
       throw new UnauthorizedException("Unauthorized");
     }
 
-    if (!key || key !== expected) {
+    if (!key) {
+      this.logger.warn({ msg: "Missing internal API key header" });
+      throw new UnauthorizedException("Unauthorized");
+    }
+
+    // Constant-time comparison to prevent timing attacks
+    const keyBuf = Buffer.from(key);
+    const expectedBuf = Buffer.from(expected);
+    const valid =
+      keyBuf.length === expectedBuf.length && crypto.timingSafeEqual(keyBuf, expectedBuf);
+
+    if (!valid) {
       this.logger.warn({ msg: "Invalid internal API key" });
       throw new UnauthorizedException("Unauthorized");
     }

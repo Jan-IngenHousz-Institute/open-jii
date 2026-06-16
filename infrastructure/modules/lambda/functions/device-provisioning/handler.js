@@ -1,7 +1,6 @@
 "use strict";
 
 const https = require("https");
-const http = require("http");
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "";
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY ?? "";
@@ -23,12 +22,14 @@ exports.handler = async (event) => {
     return { allowProvisioning: false };
   }
 
+  const url = new URL(`${BACKEND_URL}/api/v1/iot-devices/validate`);
+  if (url.protocol !== "https:") {
+    console.error(JSON.stringify({ msg: "BACKEND_URL must use HTTPS", url: url.toString() }));
+    return { allowProvisioning: false };
+  }
+
   try {
-    const response = await callBackend({
-      serialNumber: SerialNumber,
-      deviceClass: DeviceClass,
-      certificateId: event.certificateId,
-    });
+    const response = await callBackend({ serialNumber: SerialNumber, deviceClass: DeviceClass });
 
     console.log(
       JSON.stringify({
@@ -59,13 +60,11 @@ function callBackend(body) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const url = new URL(`${BACKEND_URL}/api/v1/iot-devices/validate`);
-    const isHttps = url.protocol === "https:";
-    const transport = isHttps ? https : http;
 
-    const req = transport.request(
+    const req = https.request(
       {
         hostname: url.hostname,
-        port: url.port || (isHttps ? 443 : 80),
+        port: url.port || 443,
         path: url.pathname,
         method: "POST",
         headers: {
@@ -85,7 +84,14 @@ function callBackend(body) {
             reject(new Error(`Backend returned ${res.statusCode}: ${responseBody}`));
             return;
           }
-          resolve(JSON.parse(responseBody));
+          let parsed;
+          try {
+            parsed = JSON.parse(responseBody);
+          } catch {
+            reject(new Error(`Failed to parse backend response: ${responseBody}`));
+            return;
+          }
+          resolve(parsed);
         });
       },
     );
