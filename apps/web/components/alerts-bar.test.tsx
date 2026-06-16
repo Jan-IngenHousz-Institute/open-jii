@@ -109,4 +109,10 @@ describe("AlertsBar", () => {
       expect.objectContaining({ audience: ["web", "both"] }),
     );
   });
+
+  it("returns null when Contentful throws (degrades silently)", async () => {
+    mockActiveAlerts.mockRejectedValue(new Error("Contentful 500"));
+    const ui = await AlertsBar(props);
+    expect(ui).toBeNull();
+  });
 });

@@ -3,6 +3,7 @@ import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
@@ -30,31 +31,36 @@ const getBlogDetailData = cache(async (locale: string, slug: string, preview: bo
   };
 });
 
-export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
-  const { locale, slug } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const { blogPost } = await getBlogDetailData(locale, slug, preview);
+export function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, slug } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const { blogPost } = await getBlogDetailData(locale, slug, preview);
 
-  const languages = Object.fromEntries(
-    locales.map((locale) => [locale, locale === defaultLocale ? `/${slug}` : `/${locale}/${slug}`]),
-  );
-  const metadata: Metadata = {
-    alternates: {
-      canonical: slug,
-      languages,
-    },
-  };
-
-  if (blogPost?.seoFields) {
-    metadata.title = blogPost.seoFields.pageTitle;
-    metadata.description = blogPost.seoFields.pageDescription;
-    metadata.robots = {
-      follow: !blogPost.seoFields.nofollow,
-      index: !blogPost.seoFields.noindex,
+    const languages = Object.fromEntries(
+      locales.map((locale) => [
+        locale,
+        locale === defaultLocale ? `/${slug}` : `/${locale}/${slug}`,
+      ]),
+    );
+    const metadata: Metadata = {
+      alternates: {
+        canonical: slug,
+        languages,
+      },
     };
-  }
 
-  return metadata;
+    if (blogPost?.seoFields) {
+      metadata.title = blogPost.seoFields.pageTitle;
+      metadata.description = blogPost.seoFields.pageDescription;
+      metadata.robots = {
+        follow: !blogPost.seoFields.nofollow,
+        index: !blogPost.seoFields.noindex,
+      };
+    }
+
+    return metadata;
+  });
 }
 
 export default async function Page({ params }: BlogPageProps) {
