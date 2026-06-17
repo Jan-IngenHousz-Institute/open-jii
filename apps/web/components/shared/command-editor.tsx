@@ -78,11 +78,23 @@ const editorTheme = EditorView.theme({
   },
   "&.cm-focused": { outline: "none" },
   ".cm-line": { padding: "0 8px" },
-  // Autocomplete popup: wider list + breathing room between command and group.
+  // Autocomplete popup: wider list, command grows so the group is pushed to
+  // the right edge (clear gap between the command and its group label).
   ".cm-tooltip-autocomplete": { minWidth: "340px" },
   ".cm-tooltip-autocomplete > ul": { minWidth: "340px", maxHeight: "18rem" },
-  ".cm-tooltip-autocomplete > ul > li": { padding: "3px 10px" },
-  ".cm-completionDetail": { marginLeft: "1.25rem", fontStyle: "italic", opacity: "0.6" },
+  ".cm-tooltip-autocomplete > ul > li": {
+    display: "flex",
+    alignItems: "center",
+    padding: "3px 10px",
+  },
+  ".cm-completionLabel": { flex: "1 1 auto" },
+  ".cm-completionDetail": {
+    flex: "0 0 auto",
+    marginLeft: "auto",
+    paddingLeft: "1.5rem",
+    fontStyle: "italic",
+    opacity: "0.6",
+  },
 });
 
 interface CommandEditorProps {
