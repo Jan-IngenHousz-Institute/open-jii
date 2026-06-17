@@ -20,6 +20,9 @@ const LAYER_ORDER: [string, number][] = [
   ["/use-cases/", 4],
   ["/presentation/", 5],
   [".controller.spec.", 5],
+  // Org data-layer helper specs (kept last so /use-cases/ and /presentation/
+  // still win for any future organizations module sub-layers).
+  ["/organizations/", 3],
 ];
 
 function layerPriority(filepath: string): number {

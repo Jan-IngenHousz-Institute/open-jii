@@ -1,6 +1,7 @@
 import { eq, inArray, like } from "drizzle-orm";
 
 import { db } from "../src/database";
+import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
 import {
   users,
   profiles,
@@ -10,6 +11,7 @@ import {
   experiments,
   experimentMembers,
   flows,
+  organizations,
 } from "../src/schema";
 
 const SEED_EMAIL = "seed@openjii.local";
@@ -90,6 +92,19 @@ async function clearSeedData() {
     .select({ id: users.id })
     .from(users)
     .where(eq(users.email, SEED_EMAIL));
+
+  // Personal organizations for seed + contributor users (org membership
+  // cascade-deletes with the org). Delete before the users themselves.
+  const personalOrgUserIds = [
+    ...seedUsers.map((u) => u.id),
+    ...CONTRIBUTOR_SEEDS.map((c) => c.id),
+  ];
+  if (personalOrgUserIds.length > 0) {
+    await db
+      .delete(organizations)
+      .where(inArray(organizations.slug, personalOrgUserIds.map(personalOrgSlug)));
+  }
+
   if (seedUsers.length > 0) {
     await db.delete(profiles).where(eq(profiles.userId, seedUsers[0].id));
     await db.delete(users).where(eq(users.id, seedUsers[0].id));
@@ -125,6 +140,8 @@ async function main() {
     lastName: "User",
     activated: true,
   });
+
+  await ensurePersonalOrganization(db, { id: user.id, name: user.name });
 
   console.log(`  Created user: ${user.id}`);
 
@@ -488,6 +505,9 @@ async function main() {
       role: "member" as const,
     })),
   );
+  for (const c of CONTRIBUTOR_SEEDS) {
+    await ensurePersonalOrganization(db, { id: c.id, name: c.name });
+  }
   console.log(`  Created ${CONTRIBUTOR_SEEDS.length} contributor users + members`);
 
   // 6. Create flows for 3 experiments

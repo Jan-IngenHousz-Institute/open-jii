@@ -2,9 +2,9 @@ import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { emailOTP, genericOAuth } from "better-auth/plugins";
+import { admin, emailOTP, genericOAuth, organization } from "better-auth/plugins";
 
-import { db, and, eq, profiles } from "@repo/database";
+import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { sendOtpEmail } from "./email/otpEmail";
@@ -41,6 +41,9 @@ export const auth = betterAuth({
       account: schema.accounts,
       verification: schema.verifications,
       rateLimit: schema.rateLimits,
+      organization: schema.organizations,
+      member: schema.organizationMembers,
+      invitation: schema.organizationInvitations,
     },
   }),
   secret: process.env.AUTH_SECRET,
@@ -145,6 +148,17 @@ export const auth = betterAuth({
         }
       },
     }),
+    // Organization tier: per-org membership + roles (owner/admin/member).
+    // Resources are org-owned; org membership grants baseline access.
+    organization({
+      allowUserToCreateOrganization: true,
+      creatorRole: "owner",
+    }),
+    // Platform tier: global admin role, ban controls, impersonation.
+    admin({
+      defaultRole: "user",
+      adminRoles: ["admin"],
+    }),
     // Add custom OAuth providers using the generic OAuth plugin
     ...(customOAuthProviders.length > 0
       ? [
@@ -164,6 +178,35 @@ export const auth = betterAuth({
           },
         }
       : {}),
+  },
+  // Database lifecycle hooks: provision a personal organization for every user
+  // and set it as the active organization atomically when a session is created
+  // (avoids the cookie-cache lag of a post-hoc update).
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          try {
+            await ensurePersonalOrganization(db, { id: user.id, name: user.name });
+          } catch (err) {
+            console.warn("Failed to provision personal organization for user:", err);
+          }
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session) => {
+          try {
+            const organizationId = await ensurePersonalOrganization(db, { id: session.userId });
+            return { data: { ...session, activeOrganizationId: organizationId } };
+          } catch (err) {
+            console.warn("Failed to set active organization on session:", err);
+            return;
+          }
+        },
+      },
+    },
   },
   // Lifecycle hooks
   hooks: {
