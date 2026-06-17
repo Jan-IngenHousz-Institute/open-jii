@@ -1,113 +1,155 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
 
 /*
- * Theme CSS variables live OUTSIDE @layer base.
- *
- * Tailwind v3's `addBase`/`@layer base` pipeline silently drops selectors it
- * does not consider valid base rules — `.dark:root` is one such selector. The
- * rule never reaches the final CSS, which means NativeWind's
- * css-to-rn parser never sees the dark variant of these variables, and
- * `bg-background` / `text-foreground` / etc. stay locked to their light
- * values regardless of `colorScheme`. Keeping the rules at the top level
- * preserves them in the compiled output, where `react-native-css-interop`'s
- * `isRootDarkVariableSelector` picks them up as `rootVariables.dark`.
+ * Theme tokens live at the top level (not inside @layer base) and the `.dark`
+ * variant overrides them. The @theme block maps each token to a color utility
+ * so `bg-*` / `text-*` / `border-*` resolve through the active scheme.
+ * Source of truth for the values: src/constants/colors.ts (JII Design System).
  */
 :root {
-  /* Light theme — sourced from src/constants/colors.ts (JII Design System) */
-  --background: 0 0% 100%; /* #FFFFFF */
-  --foreground: 0 0% 7%; /* #121212 */
-  --surface: 0 0% 96%; /* #F5F5F5 */
-  --on-surface: 0 0% 7%; /* #121212 */
-  --on-background: 0 0% 7%; /* #121212 */
-  --on-primary: 0 0% 100%; /* #FFFFFF */
-  --card: 0 0% 100%; /* #FFFFFF */
-  --card-foreground: 0 0% 7%; /* #121212 */
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 7%;
-  --border: 0 0% 88%; /* #E0E0E0 */
-  --input: 0 0% 88%;
-  --ring: 180 100% 18%;
-  --divider: 0 0% 88%;
-  --inactive: 0 0% 62%; /* #9E9E9E */
-  --muted: 220 14% 96%; /* gray100 */
-  --muted-foreground: 220 9% 46%; /* gray500 */
-  --accent: 210 40% 96%;
-  --accent-foreground: 0 0% 7%;
-  --primary: 180 100% 18%; /* #005e5e */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 220 14% 96%;
-  --secondary-foreground: 0 0% 7%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --gray-background: 210 17% 97%; /* #F6F8FA */
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 7%);
+  --surface: hsl(0 0% 96%);
+  --on-surface: hsl(0 0% 7%);
+  --on-background: hsl(0 0% 7%);
+  --on-primary: hsl(0 0% 100%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 7%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 7%);
+  --border: hsl(0 0% 88%);
+  --input: hsl(0 0% 88%);
+  --ring: hsl(180 100% 18%);
+  --divider: hsl(0 0% 88%);
+  --inactive: hsl(0 0% 62%);
+  --muted: hsl(220 14% 96%);
+  --muted-foreground: hsl(220 9% 46%);
+  --accent: hsl(210 40% 96%);
+  --accent-foreground: hsl(0 0% 7%);
+  --primary: hsl(180 100% 18%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(220 14% 96%);
+  --secondary-foreground: hsl(0 0% 7%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --gray-background: hsl(210 17% 97%);
 
-  --jii-primary: 180 100% 18%; /* #005e5e */
-  --jii-primary-bright: 134 70% 58%; /* #49e06d */
-  --jii-secondary-blue: 207 78% 82%; /* #afd7f4 */
-  --jii-secondary-yellow: 55 100% 75%; /* #fff381 */
+  --jii-primary: hsl(180 100% 18%);
+  --jii-primary-bright: hsl(134 70% 58%);
+  --jii-secondary-blue: hsl(207 78% 82%);
+  --jii-secondary-yellow: hsl(55 100% 75%);
 
-  --jii-darker-green: 180 100% 9%; /* #002f2f */
-  --jii-yellow: 55 100% 75%; /* #fff481 */
-  --jii-yellow-light: 56 80% 87%; /* #fbf8c1 */
-  --jii-mint: 180 76% 94%; /* #e2fcfc */
-  --jii-mint-light: 180 100% 96%; /* #edffff */
-  --muted-body: 207 8% 44%; /* #68737b */
+  --jii-darker-green: hsl(180 100% 9%);
+  --jii-yellow: hsl(55 100% 75%);
+  --jii-yellow-light: hsl(56 80% 87%);
+  --jii-mint: hsl(180 76% 94%);
+  --jii-mint-light: hsl(180 100% 96%);
+  --muted-body: hsl(207 8% 44%);
 
-  --badge-active: 142 86% 90%; /* #ccfcd8 */
-  --badge-stale: 35 100% 85%; /* #ffe0b2 */
-  --badge-published: 200 79% 92%; /* #d8f2fc */
-  --badge-featured: 180 76% 94%; /* #e2fcfc */
+  --badge-active: hsl(142 86% 90%);
+  --badge-stale: hsl(35 100% 85%);
+  --badge-published: hsl(200 79% 92%);
+  --badge-featured: hsl(180 76% 94%);
 
-  --success: 140 89% 38%; /* #09b732 — design system success */
-  --warning: 43 96% 56%; /* #FBBF24 */
-  --error: 0 84% 60%; /* #EF4444 */
-  --info: 217 91% 60%; /* #3B82F6 */
+  --success: hsl(140 89% 38%);
+  --warning: hsl(43 96% 56%);
+  --error: hsl(0 84% 60%);
+  --info: hsl(217 91% 60%);
 }
 
-.dark:root {
-  --background: 0 0% 7%; /* #121212 */
-  --foreground: 0 0% 100%; /* #FFFFFF */
-  --surface: 0 0% 12%; /* #1E1E1E */
-  --on-surface: 0 0% 100%;
-  --on-background: 0 0% 100%;
-  --on-primary: 0 0% 0%;
-  --card: 0 0% 15%; /* #252525 */
-  --card-foreground: 0 0% 100%;
-  --popover: 0 0% 15%;
-  --popover-foreground: 0 0% 100%;
-  --border: 0 0% 17%; /* #2C2C2C */
-  --input: 0 0% 17%;
-  --ring: 134 70% 58%;
-  --divider: 0 0% 17%;
-  --inactive: 0 0% 46%; /* #757575 */
-  --muted: 0 0% 12%;
-  --muted-foreground: 220 9% 72%;
-  --accent: 0 0% 15%;
-  --accent-foreground: 0 0% 100%;
-  --primary: 134 70% 58%;
-  --primary-foreground: 0 0% 7%;
-  --secondary: 0 0% 15%;
-  --secondary-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --gray-background: 0 0% 18%; /* #2E2E2E */
+.dark {
+  --background: hsl(0 0% 7%);
+  --foreground: hsl(0 0% 100%);
+  --surface: hsl(0 0% 12%);
+  --on-surface: hsl(0 0% 100%);
+  --on-background: hsl(0 0% 100%);
+  --on-primary: hsl(0 0% 0%);
+  --card: hsl(0 0% 15%);
+  --card-foreground: hsl(0 0% 100%);
+  --popover: hsl(0 0% 15%);
+  --popover-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 17%);
+  --input: hsl(0 0% 17%);
+  --ring: hsl(134 70% 58%);
+  --divider: hsl(0 0% 17%);
+  --inactive: hsl(0 0% 46%);
+  --muted: hsl(0 0% 12%);
+  --muted-foreground: hsl(220 9% 72%);
+  --accent: hsl(0 0% 15%);
+  --accent-foreground: hsl(0 0% 100%);
+  --primary: hsl(134 70% 58%);
+  --primary-foreground: hsl(0 0% 7%);
+  --secondary: hsl(0 0% 15%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --gray-background: hsl(0 0% 18%);
 
-  --jii-darker-green: 180 100% 9%;
-  --jii-yellow: 55 80% 60%;
-  --jii-yellow-light: 56 25% 22%;
-  --jii-mint: 180 14% 16%;
-  --jii-mint-light: 180 14% 18%;
-  --muted-body: 210 7% 70%;
+  --jii-darker-green: hsl(180 100% 9%);
+  --jii-yellow: hsl(55 80% 60%);
+  --jii-yellow-light: hsl(56 25% 22%);
+  --jii-mint: hsl(180 14% 16%);
+  --jii-mint-light: hsl(180 14% 18%);
+  --muted-body: hsl(210 7% 70%);
 
-  --badge-active: 142 30% 22%;
-  --badge-stale: 35 50% 28%;
-  --badge-published: 200 30% 25%;
-  --badge-featured: 180 14% 20%;
+  --badge-active: hsl(142 30% 22%);
+  --badge-stale: hsl(35 50% 28%);
+  --badge-published: hsl(200 30% 25%);
+  --badge-featured: hsl(180 14% 20%);
 
-  --success: 140 70% 50%;
-  --warning: 43 96% 56%;
-  --error: 0 84% 60%;
-  --info: 217 91% 60%;
+  --success: hsl(140 70% 50%);
+  --warning: hsl(43 96% 56%);
+  --error: hsl(0 84% 60%);
+  --info: hsl(217 91% 60%);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-on-surface: var(--on-surface);
+  --color-on-background: var(--on-background);
+  --color-on-primary: var(--on-primary);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-divider: var(--divider);
+  --color-inactive: var(--inactive);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-gray-background: var(--gray-background);
+  --color-jii-primary: var(--jii-primary);
+  --color-jii-primary-bright: var(--jii-primary-bright);
+  --color-jii-secondary-blue: var(--jii-secondary-blue);
+  --color-jii-secondary-yellow: var(--jii-secondary-yellow);
+  --color-jii-darker-green: var(--jii-darker-green);
+  --color-jii-yellow: var(--jii-yellow);
+  --color-jii-yellow-light: var(--jii-yellow-light);
+  --color-jii-mint: var(--jii-mint);
+  --color-jii-mint-light: var(--jii-mint-light);
+  --color-muted-body: var(--muted-body);
+  --color-badge-active: var(--badge-active);
+  --color-badge-stale: var(--badge-stale);
+  --color-badge-published: var(--badge-published);
+  --color-badge-featured: var(--badge-featured);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
 }
