@@ -130,11 +130,20 @@ describe("Workbook Cells Schema", () => {
       expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
     });
 
-    it("rejects an unknown command", () => {
+    it("accepts a custom / parameterised command", () => {
       const cell = {
         id: "c3",
         type: "command",
-        payload: { command: "rm -rf" },
+        payload: { command: "set_led_delay+1" },
+      };
+      expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
+    });
+
+    it("rejects an empty command", () => {
+      const cell = {
+        id: "c3b",
+        type: "command",
+        payload: { command: "" },
       };
       expect(() => zCommandCell.parse(cell)).toThrow();
     });

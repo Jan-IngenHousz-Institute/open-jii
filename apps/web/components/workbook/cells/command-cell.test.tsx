@@ -38,11 +38,10 @@ function renderCommand(
 describe("CommandCellComponent", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows the selected command in the picker trigger", () => {
+  it("renders the command editor in edit mode", () => {
     renderCommand({ payload: { command: "battery" } });
-    expect(screen.getByRole("combobox", { name: /select a command/i })).toHaveTextContent(
-      "battery",
-    );
+    // CodeMirror is not interactively testable in jsdom; assert the editor surface.
+    expect(screen.getByLabelText(/device command/i)).toBeInTheDocument();
   });
 
   it("falls back to the command label as the header name", () => {
@@ -55,27 +54,10 @@ describe("CommandCellComponent", () => {
     expect(screen.getByText("Handshake")).toBeInTheDocument();
   });
 
-  it("lets the user pick a different known command", async () => {
-    const user = userEvent.setup();
-    const { onUpdate } = renderCommand({ payload: { command: "hello" } });
-
-    await user.click(screen.getByRole("combobox", { name: /select a command/i }));
-    await user.click(await screen.findByText("battery"));
-
-    expect(onUpdate).toHaveBeenCalledTimes(1);
-    const updated = onUpdate.mock.calls[0][0] as CommandCell;
-    expect(updated.payload.command).toBe("battery");
-  });
-
-  it("filters commands via the search box", async () => {
-    const user = userEvent.setup();
-    renderCommand();
-
-    await user.click(screen.getByRole("combobox", { name: /select a command/i }));
-    await user.type(screen.getByPlaceholderText(/search commands/i), "device");
-
-    expect(await screen.findByText("device_info")).toBeInTheDocument();
-    expect(screen.queryByText("battery")).not.toBeInTheDocument();
+  it("uses a custom (non-known) command as the header name", () => {
+    renderCommand({ payload: { command: "set_led_delay+1" } });
+    // Appears both in the cell header and inside the editor surface.
+    expect(screen.getAllByText("set_led_delay+1").length).toBeGreaterThan(0);
   });
 
   it("runs the cell when the run button is clicked", async () => {
@@ -86,9 +68,9 @@ describe("CommandCellComponent", () => {
     expect(onRun).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the command read-only without a picker", () => {
+  it("renders the command read-only without an editor", () => {
     renderCommand({ payload: { command: "battery" } }, { readOnly: true });
-    expect(screen.queryByRole("combobox", { name: /select a command/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/device command/i)).not.toBeInTheDocument();
     expect(screen.getByText("battery")).toBeInTheDocument();
   });
 });

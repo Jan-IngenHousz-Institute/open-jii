@@ -1,6 +1,5 @@
 import type { z } from "zod";
 
-import type { DeviceCommand } from "../schemas/device-command.schema";
 import type { zFlowEdge, zFlowNode } from "../schemas/experiment.schema";
 import type { QuestionCell, WorkbookCell } from "../schemas/workbook-cells.schema";
 
@@ -87,17 +86,19 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
         content: typeof content.text === "string" ? content.text : "",
       };
 
-    case "command":
+    case "command": {
+      const command = content.command as string;
       return {
         id: node.id,
         type: "command",
         isCollapsed: false,
         payload: {
-          command: content.command as DeviceCommand,
+          command,
           // Drop the auto-derived name so a round-trip doesn't fabricate one.
-          ...(node.name && node.name !== content.command ? { name: node.name } : {}),
+          ...(node.name && node.name !== command ? { name: node.name } : {}),
         },
       };
+    }
 
     default:
       return null;

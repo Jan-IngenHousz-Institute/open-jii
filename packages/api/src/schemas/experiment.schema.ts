@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { zDeviceCommand } from "./device-command.schema";
 import { zMacroLanguage } from "./macro.schema";
 import { zSensorFamily } from "./protocol.schema";
 
@@ -378,10 +377,10 @@ export const zBranchContent = z.object({
   defaultPathId: z.string().optional(),
 });
 
-// A command node sends a parameter-free MultispeQ console command to the
-// connected device during a measurement run.
+// A command node sends a MultispeQ console command to the connected device
+// during a measurement run. Free text — known commands are editor hints.
 export const zCommandContent = z.object({
-  command: zDeviceCommand,
+  command: z.string().min(1),
 });
 
 export const zFlowNode = z.object({

@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { zDeviceCommand } from "./device-command.schema";
 import { sanitizeQuestionLabel, zQuestionContent } from "./experiment.schema";
 import { zMacroLanguage } from "./macro.schema";
 
@@ -36,13 +35,14 @@ export const zMacroCell = zBaseCell.extend({
   payload: zMacroPayload,
 });
 
-// A known instrument console command (e.g. `hello`, `battery`) sent verbatim to
-// the device. Unlike protocols/macros the cell is self-contained — there is no
-// persisted entity to reference. `command` is constrained to the known-command
-// enum; parameterised commands are handled separately (OJD-1603).
+// An instrument console command (e.g. `hello`, `battery`) sent verbatim to the
+// device. Unlike protocols/macros the cell is self-contained — there is no
+// persisted entity to reference. `command` is free text: the known commands
+// (see KNOWN_DEVICE_COMMANDS) are offered as editor autocomplete/hints, but
+// parameterised or custom commands are also accepted (OJD-1603).
 const zCommandPayload = z
   .object({
-    command: zDeviceCommand,
+    command: z.string().min(1),
     name: z.string().optional(),
   })
   .strict();
