@@ -8,6 +8,7 @@ export const createProtocolSchema = createInsertSchema(protocols).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  organizationId: true, // server-controlled: creator's org
 });
 
 export const updateProtocolSchema = createInsertSchema(protocols).partial().omit({
@@ -15,6 +16,7 @@ export const updateProtocolSchema = createInsertSchema(protocols).partial().omit
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  organizationId: true, // server-controlled: creator's org
 });
 
 export const selectProtocolSchema = createSelectSchema(protocols).extend({

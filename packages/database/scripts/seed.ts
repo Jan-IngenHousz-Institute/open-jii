@@ -114,6 +114,9 @@ async function clearSeedData() {
     ...CONTRIBUTOR_SEEDS.map((c) => c.id),
   ];
   if (personalOrgUserIds.length > 0) {
+    // resource_grants are polymorphic (no FK to their resource) and createdBy is
+    // only set-null on user delete, so clear seed-created grants explicitly.
+    await db.delete(resourceGrants).where(inArray(resourceGrants.createdBy, personalOrgUserIds));
     await db
       .delete(organizations)
       .where(inArray(organizations.slug, personalOrgUserIds.map(personalOrgSlug)));

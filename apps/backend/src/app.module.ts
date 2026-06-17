@@ -21,6 +21,7 @@ import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
 import { ProtocolModule } from "./protocols/protocol.module";
+import { SharingModule } from "./sharing/sharing.module";
 import { UserModule } from "./users/user.module";
 import { WorkbookModule } from "./workbooks/workbook.module";
 
@@ -46,6 +47,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     IotModule,
     MacroModule,
     ProtocolModule,
+    SharingModule,
     UserModule,
     WorkbookModule,
     HealthModule,

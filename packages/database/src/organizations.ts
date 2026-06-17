@@ -32,11 +32,28 @@ export async function ensurePersonalOrganization(
 
   let organizationId = existing[0]?.id;
   if (!organizationId) {
-    const [org] = await db
+    // Conflict-safe against concurrent sign-ins (user.create.after +
+    // session.create.before, multi-tab logins): the slug is unique, so a lost
+    // race returns no row and we re-read the winner's org id.
+    const inserted = await db
       .insert(organizations)
       .values({ name: personalOrgName(user.name), slug })
+      .onConflictDoNothing({ target: organizations.slug })
       .returning({ id: organizations.id });
-    organizationId = org.id;
+    if (inserted.length > 0) {
+      organizationId = inserted[0].id;
+    } else {
+      const reread = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.slug, slug))
+        .limit(1);
+      organizationId = reread[0]?.id;
+    }
+  }
+
+  if (!organizationId) {
+    throw new Error(`Failed to ensure personal organization for user ${user.id}`);
   }
 
   await db

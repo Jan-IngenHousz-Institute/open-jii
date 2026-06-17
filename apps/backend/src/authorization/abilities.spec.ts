@@ -26,6 +26,17 @@ describe("abilities", () => {
         expect(roleCan("stranger", action)).toBe(false);
       }
     });
+
+    it("tolerates comma-separated multi-roles (Better Auth format)", () => {
+      // A token that grants the action grants the whole role.
+      expect(roleCan("admin,member", "delete")).toBe(true);
+      expect(roleCan("owner,member", "update")).toBe(true);
+      expect(roleCan(" member , admin ", "share")).toBe(true);
+      // Only read-capable tokens → read-only.
+      expect(roleCan("member,viewer", "read")).toBe(true);
+      expect(roleCan("member,viewer", "update")).toBe(false);
+      expect(roleCan("member,stranger", "delete")).toBe(false);
+    });
   });
 
   describe("isPlatformAdmin", () => {

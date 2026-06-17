@@ -24,6 +24,7 @@ const LAYER_ORDER: [string, number][] = [
   // kept last so /use-cases/ and /presentation/ still win for any sub-layers.
   ["/authorization/", 2],
   ["/organizations/", 3],
+  ["/sharing/", 3],
 ];
 
 function layerPriority(filepath: string): number {

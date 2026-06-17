@@ -19,6 +19,7 @@ export const createMacroSchema = createInsertSchema(macros).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  organizationId: true, // server-controlled: creator's org
 });
 
 export const updateMacroSchema = createInsertSchema(macros).partial().omit({
@@ -27,6 +28,7 @@ export const updateMacroSchema = createInsertSchema(macros).partial().omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  organizationId: true, // server-controlled: creator's org
 });
 
 export const selectMacroSchema = createSelectSchema(macros).extend({
