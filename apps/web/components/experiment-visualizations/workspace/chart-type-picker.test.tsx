@@ -1,4 +1,5 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { act, render, screen, userEvent } from "@/test/test-utils";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ChartTypePicker } from "./chart-type-picker";
@@ -101,6 +102,35 @@ describe("ChartTypePicker", () => {
     expect(screen.getByRole("tab", { name: "workspace.families.statistical" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "workspace.families.scientific" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "workspace.families.3d" })).not.toBeInTheDocument();
+  });
+
+  it("does not snap the active tab when the parent value changes mid-browse", async () => {
+    const user = userEvent.setup();
+    let setValueOutside: ((v: "line" | "heatmap") => void) | null = null;
+
+    function Harness() {
+      const [value, setValue] = useState<"line" | "heatmap">("line");
+      setValueOutside = setValue;
+      return <ChartTypePicker value={value} onChange={vi.fn()} />;
+    }
+
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: /workspace\.charts\.pickerLabel/ }));
+
+    const statisticalTab = await screen.findByRole("tab", {
+      name: "workspace.families.statistical",
+    });
+    await user.click(statisticalTab);
+    expect(statisticalTab).toHaveAttribute("aria-selected", "true");
+
+    // Flip value to a scientific-family chart; the user's tab choice should hold.
+    act(() => {
+      setValueOutside?.("heatmap");
+    });
+    expect(screen.getByRole("tab", { name: "workspace.families.statistical" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("renders a tile for every registered basic chart type", async () => {
