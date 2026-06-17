@@ -119,3 +119,6 @@ release-summary-*.json
 
 # jiti transpile cache
 node-jiti/
+
+# e2e video/screenshot artifacts (docs assets, not source)
+apps/web/e2e/artifacts/
