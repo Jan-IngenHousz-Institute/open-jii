@@ -1,0 +1,80 @@
+"use client";
+
+import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+import { authClient } from "@repo/auth/client";
+import { Button } from "@repo/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
+
+/**
+ * Active-organization switcher for the topbar. Lists the organizations the user
+ * belongs to and switches the session's active organization. Hidden until at
+ * least one organization is available (every user has a personal org).
+ */
+export function OrganizationSwitcher() {
+  const router = useRouter();
+  const { data: organizations, isPending } = authClient.useListOrganizations();
+  const { data: activeOrganization } = authClient.useActiveOrganization();
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  const orgs = organizations ?? [];
+  if (isPending || orgs.length === 0) {
+    return null;
+  }
+
+  const activeName = activeOrganization?.name ?? orgs[0].name;
+
+  const handleSelect = async (organizationId: string) => {
+    if (organizationId === activeOrganization?.id) {
+      return;
+    }
+    setIsSwitching(true);
+    try {
+      await authClient.organization.setActive({ organizationId });
+      router.refresh();
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="max-w-[220px] gap-2"
+          disabled={isSwitching}
+          aria-label="Switch organization"
+        >
+          <Building2 className="h-4 w-4 shrink-0" />
+          <span className="truncate">{activeName}</span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {orgs.map((org) => (
+          <DropdownMenuItem
+            key={org.id}
+            onClick={() => void handleSelect(org.id)}
+            className="gap-2"
+          >
+            <span className="truncate">{org.name}</span>
+            {org.id === activeOrganization?.id && <Check className="ml-auto h-4 w-4 shrink-0" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}

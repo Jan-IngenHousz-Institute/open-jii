@@ -43,6 +43,10 @@ const testUser: User = {
   registered: true,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
+  role: null,
+  banned: false,
+  banReason: null,
+  banExpires: null,
 };
 
 describe("NavigationTopbar", () => {

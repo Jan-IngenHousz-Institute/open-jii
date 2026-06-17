@@ -4,6 +4,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { mainNavigation, userNavigation, iconMap } from "@/components/navigation/navigation-config";
 import { NavigationMobileNavItem } from "@/components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item";
 import { ActivityPopover } from "@/components/navigation/navigation-topbar/activity-popover";
+import { OrganizationSwitcher } from "@/components/navigation/navigation-topbar/organization-switcher";
 import { Menu, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -95,6 +96,9 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
 
           {/* Desktop: Full navigation */}
           <div className="ml-auto hidden items-center gap-2 md:flex">
+            {/* Active organization switcher — OJD-1638 */}
+            <OrganizationSwitcher />
+
             {/* Activity bell — OJD-1506 */}
             <ActivityPopover />
 

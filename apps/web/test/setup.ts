@@ -214,6 +214,11 @@ vi.mock("@repo/auth/client", () => ({
     },
     updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
     getSession: vi.fn().mockResolvedValue({ data: null, error: null }),
+    useListOrganizations: vi.fn(() => ({ data: [], isPending: false })),
+    useActiveOrganization: vi.fn(() => ({ data: null, isPending: false })),
+    organization: {
+      setActive: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
   },
   useSession: vi.fn(() => ({ data: null, isPending: false })),
 }));
