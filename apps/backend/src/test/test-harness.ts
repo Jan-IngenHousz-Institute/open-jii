@@ -27,7 +27,11 @@ import {
   macros,
   workbooks,
   workbookVersions,
+  resourceGrants,
+  organizationMembers,
+  grantResource,
 } from "@repo/database";
+import type { ResourceType, GranteeType } from "@repo/database";
 
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
@@ -179,6 +183,8 @@ export class TestHarness {
 
     // Clean up test data in correct order (respecting foreign key constraints)
     await this.database.delete(auditLogs).execute();
+    // resource_grants are polymorphic (no FK cascade); clear before everything else
+    await this.database.delete(resourceGrants).execute();
     await this.database.delete(invitations).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentLocations).execute();
@@ -353,6 +359,7 @@ export class TestHarness {
     status?: "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
     embargoUntil?: Date;
+    organizationId?: string;
   }) {
     const [experiment] = await this.database
       .insert(experiments)
@@ -362,6 +369,7 @@ export class TestHarness {
         status: data.status ?? "active",
         visibility: data.visibility ?? "private",
         embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        organizationId: data.organizationId,
         createdBy: data.userId,
       })
       .returning();
@@ -369,6 +377,39 @@ export class TestHarness {
     const experimentAdmin = await this.addExperimentMember(experiment.id, data.userId, "admin");
 
     return { experiment, experimentAdmin };
+  }
+
+  /** Create an organization (org tier). */
+  public async createOrganization(data: { name?: string; slug?: string } = {}) {
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const [org] = await this.database
+      .insert(organizations)
+      .values({
+        name: data.name ?? `Org ${suffix}`,
+        slug: data.slug ?? `org-${suffix}`,
+      })
+      .returning();
+    return org;
+  }
+
+  /** Add a user to an organization with a role. */
+  public async addOrgMember(organizationId: string, userId: string, role = "member") {
+    const [member] = await this.database
+      .insert(organizationMembers)
+      .values({ organizationId, userId, role })
+      .returning();
+    return member;
+  }
+
+  /** Grant a role on a resource to a user/org/team (per-resource grant tier). */
+  public async grant(input: {
+    resourceType: ResourceType;
+    resourceId: string;
+    granteeType: GranteeType;
+    granteeId: string;
+    role?: string;
+  }) {
+    await grantResource(this.database, input);
   }
 
   /**

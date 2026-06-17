@@ -20,8 +20,9 @@ const LAYER_ORDER: [string, number][] = [
   ["/use-cases/", 4],
   ["/presentation/", 5],
   [".controller.spec.", 5],
-  // Org data-layer helper specs (kept last so /use-cases/ and /presentation/
-  // still win for any future organizations module sub-layers).
+  // Cross-cutting authorization (service tier) and org data-layer helper specs,
+  // kept last so /use-cases/ and /presentation/ still win for any sub-layers.
+  ["/authorization/", 2],
   ["/organizations/", 3],
 ];
 

@@ -219,6 +219,11 @@ export const experiments = pgTable("experiments", {
   workbookVersionId: uuid("workbook_version_id").references(() => workbookVersions.id, {
     onDelete: "set null",
   }),
+  // Owning organization (org-scoped access control). Nullable during the
+  // transition; backfilled to each experiment creator's personal org.
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -242,6 +247,46 @@ export const experimentMembers = pgTable(
       .notNull(),
   },
   (table) => [primaryKey({ columns: [table.experimentId, table.userId] })],
+);
+
+// Resource Grants: the unified per-resource sharing layer that generalizes
+// experiment_members to every shareable entity. A grant gives a grantee
+// (a user, an organization, or a team) a role on one resource — on top of the
+// baseline access conferred by owning-org membership.
+export const resourceTypeEnum = pgEnum("resource_type", [
+  "experiment",
+  "macro",
+  "protocol",
+  "workbook",
+  "device",
+]);
+
+export const granteeTypeEnum = pgEnum("grantee_type", ["user", "organization", "team"]);
+
+export const resourceGrants = pgTable(
+  "resource_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    resourceType: resourceTypeEnum("resource_type").notNull(),
+    // Polymorphic ids (resource + grantee): FK is enforced in the app layer
+    // since the referenced table varies by type.
+    resourceId: uuid("resource_id").notNull(),
+    granteeType: granteeTypeEnum("grantee_type").notNull(),
+    granteeId: uuid("grantee_id").notNull(),
+    role: text("role").default("member").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("resource_grants_unique").on(
+      t.resourceType,
+      t.resourceId,
+      t.granteeType,
+      t.granteeId,
+    ),
+    index("resource_grants_resource_idx").on(t.resourceType, t.resourceId),
+    index("resource_grants_grantee_idx").on(t.granteeType, t.granteeId),
+  ],
 );
 
 // Invitation Status Enum

@@ -13,6 +13,7 @@ import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
+import { AuthorizationModule } from "./authorization/authorization.module";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
 import { ExperimentModule } from "./experiments/experiment.module";
@@ -40,6 +41,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     BetterAuthModule.forRoot({ auth }),
     AnalyticsModule,
     DatabaseModule,
+    AuthorizationModule,
     ExperimentModule,
     IotModule,
     MacroModule,

@@ -13,6 +13,8 @@ import {
   exists,
   sql,
   profiles,
+  ensurePersonalOrganization,
+  grantResource,
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
@@ -38,15 +40,31 @@ export class ExperimentRepository {
     createExperimentDto: CreateExperimentDto,
     userId: string,
   ): Promise<Result<ExperimentDto[]>> {
-    return tryCatch(() =>
-      this.database
+    return tryCatch(async () => {
+      // Org-scoped ownership: a new experiment belongs to the creator's personal
+      // org, and the creator gets an admin resource grant (the unified sharing
+      // layer that generalizes experiment_members).
+      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
+      const rows = await this.database
         .insert(experiments)
         .values({
           ...createExperimentDto,
+          organizationId,
           createdBy: userId,
         })
-        .returning(),
-    );
+        .returning();
+      if (rows.length > 0) {
+        await grantResource(this.database, {
+          resourceType: "experiment",
+          resourceId: rows[0].id,
+          granteeType: "user",
+          granteeId: userId,
+          role: "admin",
+          createdBy: userId,
+        });
+      }
+      return rows;
+    });
   }
 
   async findAll(
@@ -65,6 +83,7 @@ export class ExperimentRepository {
       anonymizeContributors: experiments.anonymizeContributors,
       workbookId: experiments.workbookId,
       workbookVersionId: experiments.workbookVersionId,
+      organizationId: experiments.organizationId,
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
@@ -209,6 +228,7 @@ export class ExperimentRepository {
         anonymizeContributors: experiments.anonymizeContributors,
         workbookId: experiments.workbookId,
         workbookVersionId: experiments.workbookVersionId,
+        organizationId: experiments.organizationId,
         createdAt: experiments.createdAt,
         createdBy: experiments.createdBy,
         updatedAt: experiments.updatedAt,

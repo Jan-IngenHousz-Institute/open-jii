@@ -1,7 +1,8 @@
-import { eq, inArray, like } from "drizzle-orm";
+import { and, eq, inArray, like } from "drizzle-orm";
 
 import { db } from "../src/database";
 import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
+import { backfillExperimentOrganizationsAndGrants } from "../src/resource-grants";
 import {
   users,
   profiles,
@@ -12,6 +13,7 @@ import {
   experimentMembers,
   flows,
   organizations,
+  resourceGrants,
 } from "../src/schema";
 
 const SEED_EMAIL = "seed@openjii.local";
@@ -79,6 +81,15 @@ async function clearSeedData() {
   if (seedExpIds.length > 0) {
     // Delete experimentMembers (no cascade) before experiments
     await db.delete(experimentMembers).where(inArray(experimentMembers.experimentId, seedExpIds));
+    // resource_grants are polymorphic (no FK to experiments); clear them explicitly
+    await db
+      .delete(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "experiment"),
+          inArray(resourceGrants.resourceId, seedExpIds),
+        ),
+      );
     // Experiments cascade-delete: flows
     await db.delete(experiments).where(inArray(experiments.id, seedExpIds));
   }
@@ -646,6 +657,10 @@ async function main() {
 
   await db.insert(flows).values(flowGraphs);
   console.log(`  Created ${flowGraphs.length} flows`);
+
+  // Assign experiments to the owner's org and mirror members into resource_grants.
+  const { grantsCreated } = await backfillExperimentOrganizationsAndGrants(db);
+  console.log(`  Assigned experiment orgs + ${grantsCreated} resource grants`);
 
   console.log("Seed complete!");
 }

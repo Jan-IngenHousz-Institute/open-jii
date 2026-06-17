@@ -13,6 +13,8 @@ export const createExperimentSchema = createInsertSchema(experiments)
     createdAt: true,
     updatedAt: true,
     createdBy: true,
+    // Server-controlled: set to the creator's org by the repository.
+    organizationId: true,
   })
   .extend({
     members: z
@@ -41,6 +43,7 @@ export const updateExperimentSchema = createInsertSchema(experiments)
     createdAt: true,
     updatedAt: true,
     createdBy: true,
+    organizationId: true,
   })
   .extend({
     locations: z
