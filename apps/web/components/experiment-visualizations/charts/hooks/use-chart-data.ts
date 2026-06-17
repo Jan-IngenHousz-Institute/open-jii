@@ -1,8 +1,9 @@
 "use client";
 
-import type { DataFilter, ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
 
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import { useDashboardFiltersForTable } from "../../../experiment-dashboards/dashboard-filters-context";
 import { dataSourcesByRole } from "../data/data-sources";
 
 export interface UseChartDataResult {
@@ -11,19 +12,12 @@ export interface UseChartDataResult {
   error: unknown;
 }
 
-interface UseChartDataOptions {
-  orderBy?: string;
-  enabled?: boolean;
-  /** Additional filters AND-merged with `dataConfig.filters`. Dashboards pass their widget filters here. */
-  extraFilters?: DataFilter[];
-}
-
 // Pass through providedData when available, otherwise fetch (TanStack dedupes).
 export function useChartData(
   visualization: ExperimentVisualization,
   experimentId: string,
   providedData: Record<string, unknown>[] | undefined,
-  options: UseChartDataOptions = {},
+  options: { orderBy?: string; enabled?: boolean } = {},
 ): UseChartDataResult {
   const dataConfig = visualization.dataConfig;
   // Project primary + errorColumn dedup'd.
@@ -43,12 +37,11 @@ export function useChartData(
   );
   const extraGroupByColumns = extraSplitColumns.length > 0 ? extraSplitColumns : undefined;
 
-  // AND-merge caller-supplied filters (e.g. dashboard widget filters) with the
-  // visualization's own filters. Caller is responsible for sourcing them.
-  const extraFilters = options.extraFilters;
+  // AND-merge dashboard filter widgets; empty outside a dashboard.
+  const dashboardFilters = useDashboardFiltersForTable(dataConfig.tableName);
   const mergedFilters =
-    extraFilters && extraFilters.length > 0
-      ? [...(dataConfig.filters ?? []), ...extraFilters]
+    dashboardFilters.length > 0
+      ? [...(dataConfig.filters ?? []), ...dashboardFilters]
       : dataConfig.filters;
 
   // Pre-flight check so an orphan cumsum config renders inline, not a global toast.

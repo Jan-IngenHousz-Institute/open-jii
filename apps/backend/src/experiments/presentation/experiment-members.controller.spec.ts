@@ -2,7 +2,11 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ErrorResponse, ExperimentMemberList } from "@repo/api/schemas/experiment.schema";
+import type {
+  ErrorResponse,
+  ExperimentMemberList,
+  TransferExperimentAdminResponse,
+} from "@repo/api/schemas/experiment.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -722,6 +726,163 @@ describe("ExperimentMembersController", () => {
         .patch(path)
         .withoutAuth()
         .send({ role: "admin" })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("transferExperimentAdmin", () => {
+    const transferPath = () =>
+      testApp.resolvePath(contract.experiments.transferExperimentAdmin.path, {});
+
+    it("should promote an existing member to admin", async () => {
+      // Create an experiment - creator is the only admin
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Admin Transfer",
+        userId: testUserId,
+      });
+
+      // Add a regular member to hand admin rights to
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Transfer admin rights to the member
+      const response: SuperTestResponse<TransferExperimentAdminResponse> = await testApp
+        .post(transferPath())
+        .withAuth(testUserId)
+        .send({ transfers: [{ experimentId: experiment.id, targetUserId: memberId }] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.results).toEqual([{ experimentId: experiment.id, success: true }]);
+
+      // Verify the member is now an admin
+      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
+      const listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
+        .get(listPath)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(listResponse.body.find((m) => m.user.id === memberId)?.role).toBe("admin");
+    });
+
+    it("should add a non-member as a new admin", async () => {
+      // Create an experiment - creator is the only admin
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Non-Member Transfer",
+        userId: testUserId,
+      });
+
+      // Target is not a member of the experiment yet
+      const targetId = await testApp.createTestUser({
+        email: "non-member@example.com",
+      });
+
+      const response: SuperTestResponse<TransferExperimentAdminResponse> = await testApp
+        .post(transferPath())
+        .withAuth(testUserId)
+        .send({ transfers: [{ experimentId: experiment.id, targetUserId: targetId }] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.results).toEqual([{ experimentId: experiment.id, success: true }]);
+
+      // Verify the target was added as an admin
+      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
+      const listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
+        .get(listPath)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(listResponse.body).toHaveLength(2);
+      expect(listResponse.body.find((m) => m.user.id === targetId)?.role).toBe("admin");
+    });
+
+    it("should transfer admin on an archived experiment (the controlled exception)", async () => {
+      // Archived experiments are immutable everywhere else, but admin hand-off is allowed
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Archived Experiment for Transfer",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      const memberId = await testApp.createTestUser({
+        email: "archived-member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      const response: SuperTestResponse<TransferExperimentAdminResponse> = await testApp
+        .post(transferPath())
+        .withAuth(testUserId)
+        .send({ transfers: [{ experimentId: experiment.id, targetUserId: memberId }] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.results).toEqual([{ experimentId: experiment.id, success: true }]);
+
+      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
+      const listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
+        .get(listPath)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(listResponse.body.find((m) => m.user.id === memberId)?.role).toBe("admin");
+    });
+
+    it("should report success:false when the caller is not an admin of the experiment", async () => {
+      // Experiment owned by another user; the caller has no access
+      const otherUserId = await testApp.createTestUser({
+        email: "owner@example.com",
+      });
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment Owned By Someone Else",
+        userId: otherUserId,
+      });
+
+      const response: SuperTestResponse<TransferExperimentAdminResponse> = await testApp
+        .post(transferPath())
+        .withAuth(testUserId)
+        .send({ transfers: [{ experimentId: experiment.id, targetUserId: otherUserId }] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.results).toHaveLength(1);
+      expect(response.body.results[0]).toMatchObject({
+        experimentId: experiment.id,
+        success: false,
+      });
+      expect(response.body.results[0].error).toBeDefined();
+    });
+
+    it("should return 400 for an empty transfers list", async () => {
+      await testApp
+        .post(transferPath())
+        .withAuth(testUserId)
+        .send({ transfers: [] })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 for invalid UUIDs in the transfers", async () => {
+      await testApp
+        .post(transferPath())
+        .withAuth(testUserId)
+        .send({ transfers: [{ experimentId: "not-a-uuid", targetUserId: "also-not-a-uuid" }] })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Unauthenticated Transfer",
+        userId: testUserId,
+      });
+
+      await testApp
+        .post(transferPath())
+        .withoutAuth()
+        .send({ transfers: [{ experimentId: experiment.id, targetUserId: faker.string.uuid() }] })
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });
