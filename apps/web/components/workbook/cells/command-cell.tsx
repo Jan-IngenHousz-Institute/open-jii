@@ -123,7 +123,7 @@ export function CommandCellComponent({
                         <CommandItem
                           key={option.value}
                           value={`${option.value} ${option.label}`}
-                          onSelect={() => handleSelect(option.value)}
+                          onSelect={() => handleSelect(option.value as DeviceCommand)}
                         >
                           <Check
                             className={cn(
