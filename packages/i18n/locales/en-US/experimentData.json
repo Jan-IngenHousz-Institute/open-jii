@@ -60,7 +60,8 @@
     },
     "uploadDataModal": {
       "title": "Upload data",
-      "description": "Upload CSV, TSV, parquet, Excel, JSON, or NDJSON files into a new or existing user table. Schema is inferred from the file.",
+      "description": "Review past uploads or start a new one.",
+      "createDescription": "Choose where the data lands, then add your files. Schema is inferred from the file.",
       "targetKind": {
         "new": "Create new table",
         "existing": "Append to existing"
@@ -79,8 +80,14 @@
         "label": "Data format"
       },
       "files": {
-        "label": "Data file(s) (CSV, TSV, parquet, Excel, JSON, NDJSON)",
-        "ambyteLabel": "Ambyte data folder"
+        "dropzone": {
+          "placeholder": "Drag {{format}} files here, or click to browse",
+          "ambytePlaceholder": "Drag your Ambyte folder here, or click to browse",
+          "selected": "Change selection",
+          "accepted": "Accepted: {{extensions}}",
+          "ambyteHint": "Expected layout: Ambyte_N/[1-4]/*.txt",
+          "selectedFiles": "Selected files"
+        }
       },
       "validation": {
         "title": "Cannot upload",
@@ -117,6 +124,8 @@
       "actions": {
         "cancel": "Cancel",
         "close": "Close",
+        "back": "Back",
+        "newUpload": "New upload",
         "upload": "Upload"
       },
       "history": {

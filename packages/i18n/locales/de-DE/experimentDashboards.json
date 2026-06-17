@@ -1,0 +1,160 @@
+{
+  "ui": {
+    "title": "Dashboards",
+    "subtitle": "Compose visualizations and narrative into a single layout.",
+    "actions": {
+      "create": "Neues Dashboard",
+      "delete": "Dashboard löschen",
+      "edit": "Dashboard bearbeiten",
+      "done": "Fertig",
+      "back": "Zurück zu Dashboards"
+    },
+    "messages": {
+      "noDashboards": "Noch keine Dashboards",
+      "noDashboardsDescription": "Erstelle dein erstes Dashboard oder sieh dir eigenständige Visualisierungen an.",
+      "browseVisualizations": "Visualisierungen durchsuchen",
+      "createSuccess": "Dashboard erstellt",
+      "deleteSuccess": "Dashboard gelöscht",
+      "deleteConfirm": "\"{{name}}\" dauerhaft löschen? Visualisierungen, auf die dieses Dashboard verweist, sind nicht betroffen.",
+      "loading": "Dashboard wird geladen…",
+      "loadFailed": "Dashboard konnte nicht geladen werden",
+      "emptyDashboard": "Noch nichts hier"
+    },
+    "labels": {
+      "createdBy": "Erstellt von",
+      "createdAt": "Erstellt",
+      "updatedAt": "Aktualisiert",
+      "updatedAgo": "Aktualisiert {{date}}",
+      "widgetCount_one": "{{count}} Widget",
+      "widgetCount_other": "{{count}} Widgets",
+      "columns": {
+        "name": "Name",
+        "widgets": "Widgets",
+        "user": "Benutzer",
+        "updated": "Aktualisiert"
+      }
+    }
+  },
+  "form": {
+    "name": "Name",
+    "namePlaceholder": "Unbenanntes Dashboard",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Beschreibung hinzufügen"
+  },
+  "editor": {
+    "addWidget": "Widget hinzufügen",
+    "modebar": {
+      "cursor": "Auswählen",
+      "dropHint": "Klicken zum Platzieren"
+    },
+    "widgetTypes": {
+      "visualization": "Visualisierung",
+      "visualizationDescription": "Vorhandenes Diagramm per Referenz einbetten",
+      "richText": "Markdown",
+      "richTextDescription": "Erzählung oder Anweisungen hinzufügen",
+      "table": "Tabelle",
+      "tableDescription": "Paginierte Zeilen aus einer Experimenttabelle anzeigen",
+      "filter": "Filter",
+      "filterDescription": "Lasse Betrachter die in den Widgets gezeigten Daten eingrenzen"
+    },
+    "inspector": {
+      "title": "Widget-Einstellungen",
+      "noSelection": "Wähle ein Widget, um seine Einstellungen zu bearbeiten.",
+      "layout": "Layout",
+      "col": "Spalte",
+      "row": "Zeile",
+      "colSpan": "Breite",
+      "rowSpan": "Höhe",
+      "delete": "Widget entfernen",
+      "actions": "Aktionen",
+      "display": "Anzeige",
+      "chartType": "Diagrammtyp",
+      "visualization": "Visualisierung",
+      "more": "Mehr",
+      "comingSoon": "Kommt bald",
+      "tabs": {
+        "widget": "Widget",
+        "data": "Daten",
+        "style": "Stil"
+      },
+      "viz": {
+        "pickVisualizationFirst": "Zuerst eine Visualisierung auswählen"
+      },
+      "moreShelves": "Mehr"
+    },
+    "vizDataStrip": {
+      "dataset": "Datensatz",
+      "fields": "Felder"
+    },
+    "vizStyleStrip": {
+      "style": "Stil"
+    },
+    "visualizationConfig": {
+      "pickVisualization": "Visualisierung auswählen",
+      "pickHint": "Wähle ein Diagramm im Inspektor rechts.",
+      "changeVisualization": "Visualisierung ändern",
+      "noneAvailable": "Noch keine Visualisierungen für dieses Experiment.",
+      "newVisualization": "Neue Visualisierung",
+      "untitledViz": "Unbenannte Visualisierung",
+      "editVisualization": "Im Editor öffnen",
+      "openInEditor": "Im Editor öffnen",
+      "showTitle": "Titel anzeigen",
+      "showDescription": "Beschreibung anzeigen"
+    },
+    "filterConfig": {
+      "configureLabel": "Diesen Filter konfigurieren",
+      "configureHint": "Wähle im Inspektor eine Tabelle, Spalte und einen Operator aus.",
+      "defaultValueHint": "Legt den Standardwert des Dashboards fest. Betrachter können ihn pro Sitzung überschreiben."
+    },
+    "richTextConfig": {
+      "placeholder": "Schreibe etwas…",
+      "emptyHint": "Klicken, um Text hinzuzufügen"
+    },
+    "tableConfig": {
+      "pickTable": "Tabelle auswählen",
+      "pickHint": "Wähle im Inspektor rechts eine Tabelle aus.",
+      "noneAvailable": "Keine Tabellen für dieses Experiment verfügbar.",
+      "pageSize": "Seitengröße",
+      "columns": "Spalten",
+      "allColumns": "Alle",
+      "filters": "Filter",
+      "filtersHint": "Mit allen Filter-Widgets auf Dashboard-Ebene, die dieselbe Tabelle betreffen, per AND verknüpft."
+    },
+    "widgetHeader": {
+      "title": "Titel",
+      "description": "Beschreibung",
+      "titlePlaceholder": "Titel hinzufügen",
+      "descriptionPlaceholder": "Beschreibung hinzufügen"
+    }
+  },
+  "widget": {
+    "missingVisualization": "Visualisierung nicht gefunden",
+    "missingVisualizationDescription": "Das Diagramm, auf das dieses Widget verweist, wurde möglicherweise gelöscht.",
+    "emptyVisualization": "Keine Visualisierung ausgewählt",
+    "emptyVisualizationDescription": "Dieses Widget ist noch nicht mit einem Diagramm verknüpft.",
+    "emptyRichText": "Leerer Textblock",
+    "emptyRichTextDescription": "Dieses Text-Widget hat noch keinen Inhalt.",
+    "emptyTable": "Keine Tabelle ausgewählt",
+    "emptyTableDescription": "Dieses Widget ist noch nicht mit einer Datentabelle verknüpft.",
+    "emptyFilter": "Filter nicht konfiguriert",
+    "emptyFilterDescription": "Öffne den Inspektor, um eine Spalte und einen Operator auszuwählen.",
+    "emptyDashboard": "Leeres Dashboard",
+    "emptyDashboardDescription": "Es wurden noch keine Widgets hinzugefügt.",
+    "filterReset": "Zurücksetzen",
+    "filterResetTitle": "Auf Standard zurücksetzen",
+    "expand": "Erweitern",
+    "expandedPreview": "Vorschau",
+    "expandedPreviewDescription": "Full-size preview of the widget content.",
+    "tableLoadFailed": "Tabelle konnte nicht geladen werden",
+    "tableLoadFailedDescription": "Die Tabelle, auf die dieses Widget verweist, wurde möglicherweise entfernt oder ist nicht verfügbar.",
+    "tablePageOf": "Seite {{page}} von {{totalPages}}"
+  },
+  "overview": {
+    "title": "Dashboards",
+    "viewAll": "Alle anzeigen",
+    "createDashboard": "Dashboard erstellen",
+    "browseVisualizations": "Visualisierungen durchsuchen",
+    "emptyTitle": "Noch keine Dashboards",
+    "emptyDescription": "Füge Visualisierungen und Erzählung in einem Layout zusammen oder springe direkt zu eigenständigen Diagrammen."
+  }
+}

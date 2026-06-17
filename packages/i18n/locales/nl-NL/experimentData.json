@@ -60,7 +60,8 @@
     },
     "uploadDataModal": {
       "title": "Gegevens uploaden",
-      "description": "Upload CSV-, TSV-, parquet-, Excel-, JSON- of NDJSON-bestanden naar een nieuwe of bestaande gebruikerstabel. Het schema wordt afgeleid uit het bestand.",
+      "description": "Bekijk eerdere uploads of start een nieuwe.",
+      "createDescription": "Kies waar de gegevens terechtkomen en voeg je bestanden toe. Het schema wordt afgeleid uit het bestand.",
       "targetKind": {
         "new": "Nieuwe tabel aanmaken",
         "existing": "Toevoegen aan bestaande"
@@ -79,8 +80,14 @@
         "label": "Gegevensformaat"
       },
       "files": {
-        "label": "Gegevensbestand(en) (CSV, TSV, parquet, Excel, JSON, NDJSON)",
-        "ambyteLabel": "Ambyte-gegevensmap"
+        "dropzone": {
+          "placeholder": "Sleep {{format}}-bestanden hierheen, of klik om te bladeren",
+          "ambytePlaceholder": "Sleep je Ambyte-map hierheen, of klik om te bladeren",
+          "selected": "Selectie wijzigen",
+          "accepted": "Toegestaan: {{extensions}}",
+          "ambyteHint": "Verwachte indeling: Ambyte_N/[1-4]/*.txt",
+          "selectedFiles": "Geselecteerde bestanden"
+        }
       },
       "validation": {
         "title": "Uploaden niet mogelijk",
@@ -117,6 +124,8 @@
       "actions": {
         "cancel": "Annuleren",
         "close": "Sluiten",
+        "back": "Terug",
+        "newUpload": "Nieuwe upload",
         "upload": "Uploaden"
       },
       "history": {
