@@ -1,7 +1,17 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api/schemas/protocol.schema";
-import { and, asc, eq, ilike, inArray, protocols, users } from "@repo/database";
+import {
+  and,
+  asc,
+  eq,
+  ensurePersonalOrganization,
+  grantResource,
+  ilike,
+  inArray,
+  protocols,
+  users,
+} from "@repo/database";
 import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
@@ -24,13 +34,25 @@ export class ProtocolRepository {
     userId: string,
   ): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
+      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
       const results = await this.database
         .insert(protocols)
         .values({
           ...createProtocolDto,
+          organizationId,
           createdBy: userId,
         })
         .returning();
+      if (results.length > 0) {
+        await grantResource(this.database, {
+          resourceType: "protocol",
+          resourceId: results[0].id,
+          granteeType: "user",
+          granteeId: userId,
+          role: "admin",
+          createdBy: userId,
+        });
+      }
       return results as ProtocolDto[];
     });
   }

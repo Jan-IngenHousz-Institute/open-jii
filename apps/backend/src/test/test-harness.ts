@@ -464,6 +464,8 @@ export class TestHarness {
     language?: "python" | "r" | "javascript";
     code?: string;
     createdBy: string;
+    organizationId?: string;
+    visibility?: "private" | "public";
   }) {
     const macroId = crypto.randomUUID();
     const [macro] = await this.database
@@ -475,6 +477,8 @@ export class TestHarness {
         description: data.description ?? "Test macro description",
         language: data.language ?? "python",
         code: data.code ?? btoa("print('hello')"),
+        organizationId: data.organizationId,
+        visibility: data.visibility ?? "public",
         createdBy: data.createdBy,
       })
       .returning();

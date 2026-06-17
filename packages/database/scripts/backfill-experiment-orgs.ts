@@ -1,16 +1,21 @@
 import { db } from "../src/database";
-import { backfillExperimentOrganizationsAndGrants } from "../src/resource-grants";
+import {
+  backfillExperimentOrganizationsAndGrants,
+  backfillOwnedEntitiesOwnership,
+} from "../src/resource-grants";
 
 /**
- * One-off backfill (run after backfill-personal-orgs): assign each experiment to
- * its creator's personal org and mirror experiment_members into resource_grants.
- * Idempotent.
+ * One-off backfill (run after backfill-personal-orgs): assign every resource
+ * (experiments, macros, protocols, workbooks) to its creator's personal org and
+ * mirror existing membership/ownership into resource_grants. Idempotent.
  */
 async function main() {
-  console.log("Backfilling experiment organizations + resource grants...");
+  console.log("Backfilling resource organizations + grants...");
   const { experimentsUpdated, grantsCreated } = await backfillExperimentOrganizationsAndGrants(db);
+  const owned = await backfillOwnedEntitiesOwnership(db);
   console.log(
-    `Done. Assigned org to ${experimentsUpdated} experiment(s); ensured ${grantsCreated} grant(s).`,
+    `Done. experiments=${experimentsUpdated} (+${grantsCreated} grants), ` +
+      `macros=${owned.macros}, protocols=${owned.protocols}, workbooks=${owned.workbooks}.`,
   );
 }
 

@@ -174,6 +174,54 @@ describe("AuthorizationService", () => {
     });
     expect(decision).toEqual({ allow: false, reason: "not-found" });
   });
+
+  it("authorizes a macro via owning-org role (non-experiment resource type)", async () => {
+    const ownerId = await testApp.createTestUser();
+    const org = await testApp.createOrganization();
+    await testApp.addOrgMember(org.id, ownerId, "admin");
+    const macro = await testApp.createMacro({
+      name: `Macro ${crypto.randomUUID().slice(0, 8)}`,
+      createdBy: ownerId,
+      organizationId: org.id,
+      visibility: "private",
+    });
+
+    expect(
+      await service.can(ownerId, { resourceType: "macro", resourceId: macro.id, action: "update" }),
+    ).toMatchObject({ allow: true, reason: "org-role" });
+
+    const stranger = await testApp.createTestUser();
+    expect(
+      await service.can(stranger, {
+        resourceType: "macro",
+        resourceId: macro.id,
+        action: "update",
+      }),
+    ).toMatchObject({ allow: false, reason: "forbidden" });
+  });
+
+  it("treats a public macro as world-readable", async () => {
+    const ownerId = await testApp.createTestUser();
+    const org = await testApp.createOrganization();
+    const macro = await testApp.createMacro({
+      name: `Macro ${crypto.randomUUID().slice(0, 8)}`,
+      createdBy: ownerId,
+      organizationId: org.id,
+      visibility: "public",
+    });
+    const stranger = await testApp.createTestUser();
+
+    expect(
+      await service.can(stranger, { resourceType: "macro", resourceId: macro.id, action: "read" }),
+    ).toMatchObject({ allow: true, reason: "public" });
+    expect(
+      await service.can(stranger, {
+        resourceType: "macro",
+        resourceId: macro.id,
+        action: "delete",
+      }),
+    ).toMatchObject({ allow: false, reason: "forbidden" });
+  });
 });
 
 function base(resourceId: string, action: "read" | "update" | "delete" | "share" | "manage") {

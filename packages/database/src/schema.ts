@@ -205,6 +205,9 @@ export const experimentStatusEnum = pgEnum("experiment_status", [
 // Experiment Visibility Enum
 export const experimentVisibilityEnum = pgEnum("experiment_visibility", ["private", "public"]);
 
+// Shared visibility enum for org-scoped resources (macros/protocols/workbooks/…).
+export const visibilityEnum = pgEnum("visibility", ["private", "public"]);
+
 export const experiments = pgTable("experiments", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
@@ -376,6 +379,10 @@ export const protocols = pgTable("protocols", {
   code: jsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
   sortOrder: integer("sort_order"),
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
+  visibility: visibilityEnum("visibility").default("public").notNull(),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -394,6 +401,10 @@ export const macros = pgTable("macros", {
   language: macroLanguageEnum("language").notNull(),
   code: text("code").notNull(), // Base64 encoded content of the macro code
   sortOrder: integer("sort_order"),
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
+  visibility: visibilityEnum("visibility").default("public").notNull(),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -508,6 +519,10 @@ export const workbooks = pgTable(
     description: text("description"),
     cells: jsonb("cells").notNull().default([]),
     metadata: jsonb("metadata").notNull().default({}),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+    visibility: visibilityEnum("visibility").default("private").notNull(),
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),

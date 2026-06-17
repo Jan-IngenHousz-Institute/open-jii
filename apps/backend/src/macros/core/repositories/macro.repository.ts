@@ -1,6 +1,16 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
+import {
+  and,
+  asc,
+  eq,
+  ensurePersonalOrganization,
+  grantResource,
+  ilike,
+  inArray,
+  macros,
+  profiles,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
@@ -36,6 +46,7 @@ export class MacroRepository {
     return tryCatch(async () => {
       // Generate UUID for the macro to create a consistent hashed filename
       const macroId = crypto.randomUUID();
+      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
 
       const results = await this.database
         .insert(macros)
@@ -43,9 +54,18 @@ export class MacroRepository {
           ...data,
           id: macroId,
           filename: generateHashedFilename(macroId),
+          organizationId,
           createdBy: userId,
         })
         .returning();
+      await grantResource(this.database, {
+        resourceType: "macro",
+        resourceId: macroId,
+        granteeType: "user",
+        granteeId: userId,
+        role: "admin",
+        createdBy: userId,
+      });
       return results as MacroDto[];
     });
   }

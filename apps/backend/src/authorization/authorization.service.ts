@@ -1,6 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, eq, experiments, organizationMembers, resourceGrants, users } from "@repo/database";
+import {
+  and,
+  eq,
+  experiments,
+  macros,
+  organizationMembers,
+  protocols,
+  resourceGrants,
+  users,
+  workbooks,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
@@ -127,21 +137,25 @@ export class AuthorizationService {
     resourceType: ResourceType,
     resourceId: string,
   ): Promise<ResourceOwnership | null> {
-    switch (resourceType) {
-      case "experiment": {
-        const rows = await this.db
-          .select({
-            organizationId: experiments.organizationId,
-            visibility: experiments.visibility,
-          })
-          .from(experiments)
-          .where(eq(experiments.id, resourceId))
-          .limit(1);
-        return rows.length > 0 ? rows[0] : null;
-      }
-      // macro/protocol/workbook/device gain org ownership + visibility in P3.
-      default:
-        return null;
+    const table =
+      resourceType === "experiment"
+        ? experiments
+        : resourceType === "macro"
+          ? macros
+          : resourceType === "protocol"
+            ? protocols
+            : resourceType === "workbook"
+              ? workbooks
+              : null;
+    // device ownership lands in P6 (sensors → devices).
+    if (!table) {
+      return null;
     }
+    const rows = await this.db
+      .select({ organizationId: table.organizationId, visibility: table.visibility })
+      .from(table)
+      .where(eq(table.id, resourceId))
+      .limit(1);
+    return rows.length > 0 ? rows[0] : null;
   }
 }

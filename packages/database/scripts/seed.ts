@@ -2,7 +2,10 @@ import { and, eq, inArray, like } from "drizzle-orm";
 
 import { db } from "../src/database";
 import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
-import { backfillExperimentOrganizationsAndGrants } from "../src/resource-grants";
+import {
+  backfillExperimentOrganizationsAndGrants,
+  backfillOwnedEntitiesOwnership,
+} from "../src/resource-grants";
 import {
   users,
   profiles,
@@ -660,7 +663,9 @@ async function main() {
 
   // Assign experiments to the owner's org and mirror members into resource_grants.
   const { grantsCreated } = await backfillExperimentOrganizationsAndGrants(db);
-  console.log(`  Assigned experiment orgs + ${grantsCreated} resource grants`);
+  // Same for single-owner entities (macros/protocols/workbooks).
+  await backfillOwnedEntitiesOwnership(db);
+  console.log(`  Assigned org ownership + ${grantsCreated} experiment grants`);
 
   console.log("Seed complete!");
 }

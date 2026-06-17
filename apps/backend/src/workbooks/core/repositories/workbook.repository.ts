@@ -1,6 +1,17 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, asc, eq, experiments, ilike, profiles, sql, workbooks } from "@repo/database";
+import {
+  and,
+  asc,
+  eq,
+  ensurePersonalOrganization,
+  experiments,
+  grantResource,
+  ilike,
+  profiles,
+  sql,
+  workbooks,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -33,13 +44,25 @@ export class WorkbookRepository {
 
   async create(data: CreateWorkbookDto, userId: string): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
+      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
       const results = await this.database
         .insert(workbooks)
         .values({
           ...data,
+          organizationId,
           createdBy: userId,
         })
         .returning();
+      if (results.length > 0) {
+        await grantResource(this.database, {
+          resourceType: "workbook",
+          resourceId: results[0].id,
+          granteeType: "user",
+          granteeId: userId,
+          role: "admin",
+          createdBy: userId,
+        });
+      }
       return results as WorkbookDto[];
     });
   }

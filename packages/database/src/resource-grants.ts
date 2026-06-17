@@ -2,7 +2,14 @@ import { eq, isNull } from "drizzle-orm";
 
 import type { DatabaseInstance } from "./database";
 import { ensurePersonalOrganization } from "./organizations";
-import { experimentMembers, experiments, resourceGrants } from "./schema";
+import {
+  experimentMembers,
+  experiments,
+  macros,
+  protocols,
+  resourceGrants,
+  workbooks,
+} from "./schema";
 
 export type ResourceType = (typeof resourceGrants.resourceType.enumValues)[number];
 export type GranteeType = (typeof resourceGrants.granteeType.enumValues)[number];
@@ -72,4 +79,45 @@ export async function backfillExperimentOrganizationsAndGrants(
   }
 
   return { experimentsUpdated: rows.length, grantsCreated: members.length };
+}
+
+/**
+ * Backfill org ownership + an owner grant for a single-owner entity (macro,
+ * protocol, workbook): set organizationId to the creator's personal org and
+ * grant the creator admin. Idempotent.
+ */
+async function backfillOwnedEntity(
+  db: DatabaseInstance,
+  resourceType: ResourceType,
+  table: typeof macros | typeof protocols | typeof workbooks,
+): Promise<number> {
+  const rows = await db
+    .select({ id: table.id, createdBy: table.createdBy })
+    .from(table)
+    .where(isNull(table.organizationId));
+
+  for (const row of rows) {
+    const organizationId = await ensurePersonalOrganization(db, { id: row.createdBy });
+    await db.update(table).set({ organizationId }).where(eq(table.id, row.id));
+    await grantResource(db, {
+      resourceType,
+      resourceId: row.id,
+      granteeType: "user",
+      granteeId: row.createdBy,
+      role: "admin",
+      createdBy: row.createdBy,
+    });
+  }
+  return rows.length;
+}
+
+/** Backfill org ownership + owner grants for macros, protocols, and workbooks. */
+export async function backfillOwnedEntitiesOwnership(
+  db: DatabaseInstance,
+): Promise<{ macros: number; protocols: number; workbooks: number }> {
+  return {
+    macros: await backfillOwnedEntity(db, "macro", macros),
+    protocols: await backfillOwnedEntity(db, "protocol", protocols),
+    workbooks: await backfillOwnedEntity(db, "workbook", workbooks),
+  };
 }
