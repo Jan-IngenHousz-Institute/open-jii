@@ -113,7 +113,7 @@ export function ActivityPopover({ className }: { className?: string }) {
           type="button"
           aria-label={`Activity${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
           className={cn(
-            "text-foreground/70 hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring relative inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2",
+            "text-foreground/70 hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring focus-visible:outline-hidden relative inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2",
             className,
           )}
         >
@@ -168,7 +168,7 @@ export function ActivityPopover({ className }: { className?: string }) {
                         href={job.resultUrl}
                         className={cn(
                           rowClass,
-                          "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none",
+                          "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-hidden",
                         )}
                       >
                         {inner}

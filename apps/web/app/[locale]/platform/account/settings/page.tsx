@@ -2,7 +2,7 @@ import { PageContainer } from "@/components/page-container";
 import { auth } from "~/app/actions/auth";
 import { AccountSettings } from "~/components/account-settings/account-settings";
 
-export default async function AccountPage() {
+export default async function AccountSettingsPage() {
   const session = await auth();
 
   return (

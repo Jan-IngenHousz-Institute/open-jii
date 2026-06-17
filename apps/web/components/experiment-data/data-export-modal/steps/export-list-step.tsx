@@ -173,7 +173,7 @@ const ExportCard = ({
     <div
       className={`flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800 ${borderColor}`}
     >
-      <div className="flex-shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
+      <div className="shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
         <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
       </div>
 
@@ -210,7 +210,7 @@ const ExportCard = ({
           size="icon"
           onClick={() => onDownload(exportRecord.exportId ?? "")}
           disabled={isDownloading}
-          className="h-8 w-8 flex-shrink-0"
+          className="h-8 w-8 shrink-0"
         >
           {isDownloading ? (
             <Loader2 className="h-4 w-4 animate-spin" />

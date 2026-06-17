@@ -7,7 +7,7 @@ export function TextAnswerDisplay() {
 
   return (
     <div className="from-jii-medium-green/10 to-jii-dark-green/10 rounded-lg bg-gradient-to-r p-6 text-center">
-      <div className="mx-auto mb-3 w-fit rounded-full bg-white p-3 shadow-sm">
+      <div className="shadow-xs mx-auto mb-3 w-fit rounded-full bg-white p-3">
         <svg
           className="text-jii-dark-green h-5 w-5"
           fill="none"

@@ -23,10 +23,6 @@ function renderCard(props: { profile?: CreateUserProfileBody | null; userId?: st
 describe("DangerZoneCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    server.mount(contract.users.getDeletionBlockers, {
-      body: { experiments: [] },
-      status: 200,
-    });
   });
 
   describe("rendering", () => {
@@ -89,7 +85,6 @@ describe("DangerZoneCard", () => {
         bio: "Mathematician",
         organization: "Royal Society",
         activated: true,
-        avatarUrl: "https://example.com/ada.png",
       };
       renderCard({ profile });
 

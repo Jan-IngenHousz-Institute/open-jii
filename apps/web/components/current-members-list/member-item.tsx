@@ -66,7 +66,7 @@ export function MemberItem({
           {`${member.user.firstName} ${member.user.lastName}`}
         </h4>
         <span className="flex min-w-0 items-center gap-x-1">
-          <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+          <Mail className="text-muted-foreground h-3 w-3 shrink-0" />
           <span
             className="text-muted-foreground truncate text-xs"
             title={member.user.email ?? t("experimentSettings.noEmail")}
@@ -76,7 +76,7 @@ export function MemberItem({
         </span>
       </div>
 
-      <div className="flex flex-shrink-0">
+      <div className="flex shrink-0">
         <Select
           value={member.role}
           disabled={

@@ -27,7 +27,7 @@ const cardVariants = cva(
   {
     variants: {
       featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm",
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs",
         false: "border-gray-200 bg-white",
       },
     },

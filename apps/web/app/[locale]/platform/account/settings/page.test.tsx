@@ -1,9 +1,9 @@
 import { createSession } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { auth } from "~/app/actions/auth";
 
-import AccountPage from "./page";
+import AccountSettingsPage from "./page";
 
 vi.mock("~/components/account-settings/account-settings", () => ({
   AccountSettings: ({ session }: { session: unknown }) => (
@@ -13,11 +13,11 @@ vi.mock("~/components/account-settings/account-settings", () => ({
   ),
 }));
 
-describe("AccountPage", () => {
+describe("AccountSettingsPage", () => {
   it("renders with session", async () => {
     vi.mocked(auth).mockResolvedValue(createSession({ user: { id: "1", name: "User" } }));
 
-    render(await AccountPage());
+    render(await AccountSettingsPage());
 
     expect(screen.getByText(/with session/)).toBeInTheDocument();
   });
@@ -25,7 +25,7 @@ describe("AccountPage", () => {
   it("renders without session", async () => {
     vi.mocked(auth).mockResolvedValue(null);
 
-    render(await AccountPage());
+    render(await AccountSettingsPage());
 
     expect(screen.getByText(/no session/)).toBeInTheDocument();
   });
@@ -33,7 +33,7 @@ describe("AccountPage", () => {
   it("calls auth to get session", async () => {
     vi.mocked(auth).mockResolvedValue(null);
 
-    await AccountPage();
+    await AccountSettingsPage();
 
     expect(auth).toHaveBeenCalledTimes(1);
   });
@@ -41,6 +41,6 @@ describe("AccountPage", () => {
   it("handles auth error", async () => {
     vi.mocked(auth).mockRejectedValue(new Error("Auth failed"));
 
-    await expect(AccountPage()).rejects.toThrow("Auth failed");
+    await expect(AccountSettingsPage()).rejects.toThrow("Auth failed");
   });
 });

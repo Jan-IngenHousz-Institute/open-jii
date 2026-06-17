@@ -132,7 +132,7 @@ export function AddCellButton({
             <div className="border-muted-foreground/20 absolute inset-x-0 left-11 top-1/2 border-t" />
             <div
               className={cn(
-                "bg-background relative z-10 flex items-center gap-1 rounded-full border px-1 py-0.5 shadow-sm",
+                "bg-background shadow-xs relative z-10 flex items-center gap-1 rounded-full border px-1 py-0.5",
               )}
               style={accentColor ? { borderColor: accentColor + "40" } : undefined}
             >

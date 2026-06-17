@@ -34,7 +34,7 @@ export function ToolButton({
           className={cn(
             "text-muted-foreground hover:text-foreground hover:bg-accent",
             "focus-visible:ring-primary/40 inline-flex size-9 items-center justify-center rounded-full",
-            "focus-visible:outline-none focus-visible:ring-2",
+            "focus-visible:outline-hidden focus-visible:ring-2",
             active &&
               "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
             disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",

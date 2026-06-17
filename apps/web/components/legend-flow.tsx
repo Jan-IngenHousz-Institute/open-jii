@@ -33,7 +33,7 @@ export function LegendFlow({
               draggable
               onDragStart={(e) => e.dataTransfer.setData("application/reactflow", type)}
               tabIndex={0}
-              className="flex items-center gap-2 rounded-[10px] border px-2.5 py-2 shadow-sm transition-transform hover:scale-105"
+              className="shadow-xs flex items-center gap-2 rounded-[10px] border px-2.5 py-2 transition-transform hover:scale-105"
               style={{
                 borderColor: "#EDF2F6",
                 backgroundColor: "#FFFFFF",

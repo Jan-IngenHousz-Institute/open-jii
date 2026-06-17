@@ -76,7 +76,7 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-background hover:bg-accent absolute right-2 top-2 z-10 h-7 w-7 border shadow-sm"
+                  className="bg-background hover:bg-accent shadow-xs absolute right-2 top-2 z-10 h-7 w-7 border"
                   onClick={handleCopy}
                   aria-label={copied ? tCommon("common.copied") : tCommon("common.copy")}
                   title={copied ? tCommon("common.copied") : tCommon("common.copy")}

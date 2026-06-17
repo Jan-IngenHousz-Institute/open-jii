@@ -161,7 +161,7 @@ describe("UnifiedNavbar", () => {
     const dropdown = screen.getAllByTestId("dropdown-content")[0];
     expect(within(dropdown).getByRole("link", { name: /auth\.account/i })).toHaveAttribute(
       "href",
-      "/en-US/platform/account",
+      "/en-US/platform/account/settings",
     );
     expect(within(dropdown).getByRole("menuitem", { name: /auth\.signOut/i })).toBeInTheDocument();
   });

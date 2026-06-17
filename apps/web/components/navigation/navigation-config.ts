@@ -151,7 +151,7 @@ export const userNavigation = {
   account: {
     titleKey: "auth.account",
     namespace: "auth",
-    url: (locale: string) => `/${locale}/platform/account`,
+    url: (locale: string) => `/${locale}/platform/account/settings`,
     icon: "User",
   },
   support: {
