@@ -3,13 +3,16 @@
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
+import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
 import { parseApiError } from "~/util/apiError";
 
 import type { Workbook } from "@repo/api/schemas/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 interface WorkbookLayoutContentProps {
@@ -23,8 +26,12 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
   const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();
   const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id);
+  const { data: versionsData, isLoading: isLoadingVersions } = useWorkbookVersions(id);
   const autosave = useAutosaveStatus();
 
+  // Versions are returned newest-first; the live page is the draft, so the
+  // latest published version is the meaningful number to surface here.
+  const latestVersion = versionsData?.body[0]?.version;
   const isCreator = session?.user.id === workbook.createdBy;
   const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
@@ -80,6 +87,20 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
             <span className="text-sm leading-[21px] text-[#68737B]">
               {workbook.createdByName ?? "-"}
             </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+              {t("workbooks.version")}
+            </span>
+            {isLoadingVersions ? (
+              <Skeleton className="h-[21px] w-10" />
+            ) : latestVersion != null ? (
+              <WorkbookVersionBadge currentVersion={latestVersion} showUpgrade={false} />
+            ) : (
+              <span className="text-sm leading-[21px] text-[#68737B]">
+                {t("workbooks.draftVersion")}
+              </span>
+            )}
           </div>
         </div>
       </div>

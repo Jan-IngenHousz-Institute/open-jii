@@ -17,6 +17,8 @@
     "filterWorkbooks": "Arbeitsmappen filtern",
     "clearSearch": "Suche loschen",
     "lastUpdate": "Letzte Aktualisierung",
+    "version": "Version",
+    "draftVersion": "Entwurf",
     "noCells": "Noch keine Zellen. Offnen Sie die Arbeitsmappe, um Ihr Notebook zu erstellen.",
     "saving": "Speichern...",
     "allChangesSaved": "Alle Änderungen gespeichert",
