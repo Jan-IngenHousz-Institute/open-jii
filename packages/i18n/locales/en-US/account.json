@@ -16,26 +16,33 @@
     "title": "Activity"
   },
   "settings": {
-    "profilePictureCard": {
+    "AccountIdentityCard": {
       "title": "Profile Picture",
       "upload": "Upload New Photo",
-      "description": "JPG, PNG or GIF. Max size 5MB."
+      "description": "Paste a link to an image to use as your avatar.",
+      "urlLabel": "Image URL",
+      "urlPlaceholder": "https://example.com/avatar.png",
+      "emptyUrl": "No custom image URL"
     },
-    "profileCard": {
+    "ProfileInformationCard": {
       "title": "Profile Information",
-      "professionalTitle": "Professional Title",
+      "description": "Profile details shown across OpenJII.",
+      "emptyName": "Set up your profile",
+      "nameValidation": "Enter at least a first and last name.",
       "bio": "Bio",
       "bioPlaceholder": "Tell us about yourself",
+      "emptyBio": "No bio added",
       "institution": "Institution/Organization",
-      "institutionPlaceholder": "Search or create organization",
-      "department": "Department",
-      "professionalTitlePlaceholder": "Your professional title",
-      "departmentPlaceholder": "Your department"
+      "institutionPlaceholder": "Enter your institution or organization",
+      "emptyInstitution": "No institution added"
+    },
+    "status": {
+      "active": "Account active",
+      "deactivated": "Account deactivated"
     },
     "disabled": "Disabled",
     "title": "Settings",
     "accountsettings": "Account Settings",
-    "description": "Manage your information and preferences",
     "loading": "Loading account settings...",
     "errorTitle": "Error loading account settings",
     "cancel": "Cancel",
@@ -90,7 +97,24 @@
       "confirmPlaceholder": "Type 'delete' here",
       "buttonDeleting": "Deleting...",
       "buttonConfirm": "Delete Account",
-      "successMessage": "Account deleted. Your personal data has been erased."
+      "successMessage": "Account deleted. Your personal data has been erased.",
+      "blockers": {
+        "title": "Hand over your experiments first",
+        "description": "You're the only admin of the experiments below, so they'd be left without an owner. Choose who should take over admin rights, then transfer. You can do it all here.",
+        "loading": "Checking your experiments…",
+        "applyToAllLabel": "Transfer all to one person",
+        "applyToAllPlaceholder": "Search someone to take over everything…",
+        "rowPlaceholder": "Search a person…",
+        "noCandidatesHint": "No collaborators yet. Search anyone above, or invite someone via the experiment's collaborators page.",
+        "manageLink": "Open collaborators",
+        "transferAll": "Transfer admin rights",
+        "transferring": "Transferring…",
+        "transferSuccess": "Admin rights transferred.",
+        "transferPartial": "Some experiments couldn't be updated. Please review and try again.",
+        "transferError": "Couldn't transfer admin rights. Please try again.",
+        "expand": "Expand to full screen",
+        "collapse": "Exit full screen"
+      }
     },
     "cancel": "Cancel"
   }

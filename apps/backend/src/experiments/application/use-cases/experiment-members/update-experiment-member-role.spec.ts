@@ -167,4 +167,23 @@ describe("UpdateExperimentMemberRoleUseCase", () => {
     assertSuccess(result);
     expect(result.value.role).toBe("admin");
   });
+
+  it("should return BAD_REQUEST when promoting a deactivated account to admin", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Deactivated Promotion Test",
+      userId: testUserId,
+    });
+
+    // Add a deactivated ("Unknown") member
+    const deactivatedMemberId = await testApp.createTestUser({
+      email: "deactivated@example.com",
+      activated: false,
+    });
+    await testApp.addExperimentMember(experiment.id, deactivatedMemberId, "member");
+
+    const result = await useCase.execute(experiment.id, deactivatedMemberId, "admin", testUserId);
+
+    assertFailure(result);
+    expect(result.error.message).toContain("Cannot make a deactivated account an admin");
+  });
 });

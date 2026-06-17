@@ -9,6 +9,7 @@ import { AcceptPendingInvitationsUseCase } from "./application/use-cases/accept-
 import { CreateInvitationUseCase } from "./application/use-cases/create-invitation/create-invitation";
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
 import { DeleteUserUseCase } from "./application/use-cases/delete-user/delete-user";
+import { GetDeletionBlockersUseCase } from "./application/use-cases/get-deletion-blockers/get-deletion-blockers";
 import { GetInvitationsUseCase } from "./application/use-cases/get-invitations/get-invitations";
 import { GetUserProfileUseCase } from "./application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
@@ -46,6 +47,7 @@ import { UserController } from "./presentation/user.controller";
 
     // Use case providers
     DeleteUserUseCase,
+    GetDeletionBlockersUseCase,
     GetUserUseCase,
     SearchUsersUseCase,
     CreateUserProfileUseCase,

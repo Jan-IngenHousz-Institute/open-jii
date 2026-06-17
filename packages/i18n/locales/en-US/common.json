@@ -268,7 +268,7 @@
     "noMembersYet": "No members yet",
     "addCollaborators": "Add collaborators to your experiment",
     "unknownUser": "Unknown user",
-    "noEmail": "No email",
+    "noEmail": "Unknown email",
     "joined": "Joined",
     "cannotRemoveLastAdmin": "Cannot remove last admin",
     "removeMember": "Remove member",
