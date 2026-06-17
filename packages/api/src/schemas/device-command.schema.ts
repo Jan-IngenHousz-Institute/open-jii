@@ -91,7 +91,12 @@ export const KNOWN_DEVICE_COMMANDS = [
   { value: "indicate_off", label: "Indicator off", group: "Light" },
 ] as const satisfies readonly DeviceCommandOption[];
 
-const commandValues = KNOWN_DEVICE_COMMANDS.map((c) => c.value) as [string, ...string[]];
+type DeviceCommandValue = (typeof KNOWN_DEVICE_COMMANDS)[number]["value"];
+
+const commandValues = KNOWN_DEVICE_COMMANDS.map((c) => c.value) as [
+  DeviceCommandValue,
+  ...DeviceCommandValue[],
+];
 
 export const zDeviceCommand = z.enum(commandValues);
 
