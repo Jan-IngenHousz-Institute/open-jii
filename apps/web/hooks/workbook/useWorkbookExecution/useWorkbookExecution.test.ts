@@ -16,6 +16,7 @@ import {
 } from "~/lib/protocol-code-registry";
 
 import { contract } from "@repo/api/contract";
+import type { DeviceCommand } from "@repo/api/schemas/device-command.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { useWorkbookExecution } from "./useWorkbookExecution";
@@ -46,7 +47,7 @@ vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
   }),
 }));
 
-function createCommandCell(command = "battery"): WorkbookCell {
+function createCommandCell(command: DeviceCommand = "battery"): WorkbookCell {
   return { id: `cmd-${command}`, type: "command", isCollapsed: false, payload: { command } };
 }
 
