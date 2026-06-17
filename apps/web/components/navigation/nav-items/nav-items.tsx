@@ -6,19 +6,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-import { cva } from "@repo/ui/lib/utils";
-
-const navIconVariants = cva("h-5 w-5 shrink-0", {
-  variants: {
-    isActive: {
-      true: "fill-white",
-      false: "",
-    },
-  },
-  defaultVariants: {
-    isActive: false,
-  },
-});
+// Lucide icons are stroke-only — `fill-*` paints the inside of the outline and
+// looks garbled. Active state is conveyed by the row's background + font weight,
+// not by the icon.
+const navIconClass = "h-5 w-5 shrink-0";
 
 interface NavItem {
   title: string;
@@ -57,7 +48,7 @@ export function NavItems({ items }: { items: NavItem[] }) {
                   : "font-medium"
               }`}
             >
-              {item.icon && <item.icon className={navIconVariants({ isActive })} />}
+              {item.icon && <item.icon className={navIconClass} />}
               <span className="text-sm leading-[18px] tracking-[0.02em] group-data-[collapsible=icon]:hidden">
                 {item.title}
               </span>
@@ -86,7 +77,7 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
           anyChildActive ? "font-semibold" : "font-medium"
         }`}
       >
-        {item.icon && <item.icon className={navIconVariants({ isActive: !!anyChildActive })} />}
+        {item.icon && <item.icon className={navIconClass} />}
         <span className="text-sm leading-[18px] tracking-[0.02em] group-data-[collapsible=icon]:hidden">
           {item.title}
         </span>
@@ -114,9 +105,7 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
                     : "font-medium"
                 }`}
               >
-                {child.icon && (
-                  <child.icon className={navIconVariants({ isActive: isChildActive })} />
-                )}
+                {child.icon && <child.icon className={navIconClass} />}
                 <span className="leading-[18px] tracking-[0.02em] group-data-[collapsible=icon]:hidden">
                   {child.title}
                 </span>

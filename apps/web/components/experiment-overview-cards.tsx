@@ -1,7 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
-import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
 import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -45,9 +44,6 @@ export function ExperimentOverviewCards({
         return (
           <Link key={experiment.id} href={experimentPath}>
             <div className="relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
-              <div className="inline-flex">
-                <ExperimentStatusBadge status={experiment.status} />
-              </div>
               <div className="mb-auto">
                 <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
                   {experiment.name}

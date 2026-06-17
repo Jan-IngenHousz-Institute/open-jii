@@ -1,5 +1,6 @@
 "use client";
 
+import { PageContainer } from "@/components/page-container";
 import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { WorkbookLayoutContent } from "@/components/workbook-overview/workbook-layout-content";
@@ -18,7 +19,7 @@ export default function WorkbookLayout({ children }: WorkbookLayoutProps) {
   const { data, isLoading, error } = useWorkbook(id);
 
   return (
-    <div className="workbook-page flex flex-1 flex-col">
+    <PageContainer width="fluid">
       <EntityLayoutShell
         isLoading={isLoading}
         error={error}
@@ -33,6 +34,6 @@ export default function WorkbookLayout({ children }: WorkbookLayoutProps) {
           </AutosaveStatusProvider>
         )}
       </EntityLayoutShell>
-    </div>
+    </PageContainer>
   );
 }

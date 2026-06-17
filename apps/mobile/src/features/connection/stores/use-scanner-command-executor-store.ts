@@ -1,10 +1,14 @@
 import { create } from "zustand";
-import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/multispeq-command-executor";
+import type {
+  CommandProgress,
+  ExecuteOptions,
+  IMultispeqCommandExecutor,
+} from "~/features/connection/services/multispeq-communication/driver-command-executor";
 import { createMultispeqCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor";
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
 
-import { MULTISPEQ_CONSOLE } from "@repo/iot";
+import { estimateProtocolDurationMs } from "@repo/iot";
 
 const log = createLogger("scanner-executor");
 
@@ -16,11 +20,21 @@ interface ScannerCommandExecutorStore {
   error: Error | undefined;
   isInitializing: boolean;
 
+  /** Live progress of the in-flight command (final-response transfer). */
+  progress: CommandProgress | undefined;
+  /** Epoch ms when the current scan started — drives the elapsed-time UI. */
+  scanStartedAt: number | undefined;
+  /** Estimated protocol runtime (ms) for the in-flight command, if known. */
+  estimatedMs: number | undefined;
+
   // Set the device and create/update the executor
   setDevice: (device: Device | undefined) => Promise<void>;
 
-  // Execute a command
-  executeCommand: (command: string | object) => Promise<string | object | undefined>;
+  // Execute a command (optionally overriding the response timeout)
+  executeCommand: (
+    command: string | object,
+    options?: ExecuteOptions,
+  ) => Promise<string | object | undefined>;
 
   // Send cancel command (-1+) to stop a running operation on the device
   cancelCommand: () => Promise<void>;
@@ -39,6 +53,9 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
   isCancelled: false,
   error: undefined,
   isInitializing: false,
+  progress: undefined,
+  scanStartedAt: undefined,
+  estimatedMs: undefined,
 
   setDevice: async (device: Device | undefined) => {
     // Prevent concurrent calls
@@ -71,6 +88,9 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       if (device === undefined) {
         updates.commandResponse = undefined;
         updates.isExecuting = false;
+        updates.progress = undefined;
+        updates.scanStartedAt = undefined;
+        updates.estimatedMs = undefined;
       }
 
       set(updates);
@@ -82,7 +102,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
     }
   },
 
-  executeCommand: async (command: string | object) => {
+  executeCommand: async (command: string | object, options?: ExecuteOptions) => {
     const { commandExecutor, isInitializing } = get();
     if (isInitializing) {
       const error = new Error("Command executor is being initialized. Please wait.");
@@ -95,10 +115,32 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       throw error;
     }
 
-    set({ isExecuting: true, isCancelled: false, error: undefined });
+    // Background commands (battery polling) run transparently: they must not
+    // touch the measurement-facing UI state or they'd reset the elapsed timer /
+    // estimate mid-measurement and surface their own timeout as a scan error.
+    // They also leave `isExecuting` untouched so the battery poller's
+    // `!isExecuting` gate reflects measurements only.
+    if (options?.background) {
+      return commandExecutor.execute(command, options);
+    }
+
+    // Estimated runtime sizes the elapsed-time progress bar. Console commands
+    // (plain strings) estimate to 0 → treated as indeterminate (no bar).
+    const estimatedMs = estimateProtocolDurationMs(command) || undefined;
+    set({
+      isExecuting: true,
+      isCancelled: false,
+      error: undefined,
+      progress: undefined,
+      scanStartedAt: Date.now(),
+      estimatedMs,
+    });
+
+    // Mirror live command progress into the store while this execute runs.
+    const unsubscribe = commandExecutor.onProgress((progress) => set({ progress }));
 
     try {
-      const result = await commandExecutor.execute(command);
+      const result = await commandExecutor.execute(command, options);
       if (get().isCancelled) {
         throw new Error("Measurement cancelled");
       }
@@ -115,6 +157,12 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
           : new Error(String(err));
       set({ error, isExecuting: false });
       throw error;
+    } finally {
+      // Only the transfer indicator is cleared here; scanStartedAt/estimatedMs
+      // linger so the bar reads "complete" until the flow navigates away, and
+      // are overwritten by the next run (or cleared on reset/disconnect).
+      unsubscribe();
+      set({ progress: undefined });
     }
   },
 
@@ -125,7 +173,10 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       return;
     }
     try {
-      await commandExecutor.execute(MULTISPEQ_CONSOLE.CANCEL);
+      // Preemptively abort the in-flight command on the driver. This sends the
+      // `-1+` cancel switch to the device and rejects the running execute() —
+      // the in-flight executeCommand() then surfaces "Measurement cancelled".
+      await commandExecutor.cancel();
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       log.error("Failed to send cancel command", { err: error.message });
@@ -135,7 +186,15 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
   },
 
   reset: () => {
-    set({ commandResponse: undefined, error: undefined, isExecuting: false, isCancelled: false });
+    set({
+      commandResponse: undefined,
+      error: undefined,
+      isExecuting: false,
+      isCancelled: false,
+      progress: undefined,
+      scanStartedAt: undefined,
+      estimatedMs: undefined,
+    });
   },
 
   destroy: async () => {
@@ -149,6 +208,10 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
         commandResponse: undefined,
         error: undefined,
         isExecuting: false,
+        isCancelled: false,
+        progress: undefined,
+        scanStartedAt: undefined,
+        estimatedMs: undefined,
       });
     }
   },

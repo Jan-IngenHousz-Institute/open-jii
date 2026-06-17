@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient, QueryCache, onlineManager } from "@tanstack/react-query";
+import { QueryClient, QueryCache, onlineManager, focusManager } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import React, { useEffect, useRef } from "react";
+import { AppState } from "react-native";
 import { toast } from "sonner-native";
 import { isOnline } from "~/shared/device/is-online";
 import { createLogger } from "~/shared/observability/logger";
@@ -15,6 +16,18 @@ const CHECK_INTERVAL = 10 * 1000;
 // Must run at module level (before any render) so the session guard in
 // the tabs layout doesn't assume online on cold start.
 onlineManager.setOnline(false);
+
+// RN has no window focus events, so React Query's `refetchOnWindowFocus`
+// never fires on its own. Point focusManager at AppState — now "focus" means
+// the app returning to the foreground. setFocused is edge-triggered (only a
+// real false→true flip refetches), so boot-time active→inactive→active flaps
+// don't trigger refetch storms. Symmetric with onlineManager above.
+focusManager.setEventListener((handleFocus) => {
+  const sub = AppState.addEventListener("change", (state) => {
+    handleFocus(state === "active");
+  });
+  return () => sub.remove();
+});
 
 function startConnectivityWatcher() {
   let lastOnline = false;

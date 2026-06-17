@@ -1,4 +1,5 @@
 import { NewExperimentForm } from "@/components/new-experiment/new-experiment";
+import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
@@ -19,12 +20,12 @@ export default async function NewExperimentPage({ params }: NewExperimentPagePro
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="reading" className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">{t("experiments.newExperiment")}</h3>
         <p className="text-muted-foreground text-sm">{t("newExperiment.description")}</p>
       </div>
       <NewExperimentForm />
-    </div>
+    </PageContainer>
   );
 }

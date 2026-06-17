@@ -19,7 +19,7 @@ export {
   isTransportSupported,
 } from "./core/types";
 export type { ITransportAdapter, TransportAdapterFactory } from "./transport/interface";
-export type { IDeviceDriver, CommandResult } from "./driver/driver-base";
+export type { IDeviceDriver, CommandResult, ExecuteOptions } from "./driver/driver-base";
 export { DeviceDriver, DEFAULT_MAX_BUFFER_SIZE } from "./driver/driver-base";
 export type { ICommandExecutor } from "./core/command-executor";
 export { CommandExecutor } from "./core/command-executor";
@@ -44,6 +44,14 @@ export {
 export { MultispeqDriver } from "./driver/multispeq/driver";
 export type { MultispeqTransportConfig, MultispeqTransportType } from "./driver/multispeq/config";
 export { MULTISPEQ_SERIAL_DEFAULTS, MULTISPEQ_FRAMING } from "./driver/multispeq/config";
+export type { ScanTimeoutOptions } from "./driver/multispeq/estimate-protocol-duration";
+export {
+  estimateProtocolDurationMs,
+  computeScanTimeoutMs,
+  resolveCommandTimeoutMs,
+  resolveNumericRef,
+  SCAN_TIMEOUT_DEFAULTS,
+} from "./driver/multispeq/estimate-protocol-duration";
 
 // ── Driver: Generic ─────────────────────────────────
 export type {
