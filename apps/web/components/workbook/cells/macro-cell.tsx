@@ -32,6 +32,9 @@ interface MacroCellProps {
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
   readOnly?: boolean;
+  // Immutable code pinned at publish time. When present the cell renders
+  // exclusively from it and never fetches the live macro row.
+  snapshot?: { code: string };
 }
 
 const languageLabels: Record<MacroLanguage, string> = {
@@ -48,15 +51,18 @@ export function MacroCellComponent({
   executionStatus,
   executionError,
   readOnly,
+  snapshot,
 }: MacroCellProps) {
   const macroId = cell.payload.macroId;
   const language = cell.payload.language;
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
 
-  const { data: macroData, isLoading: macroLoading } = useMacro(macroId);
+  const useSnapshot = snapshot != null;
+  const { data: macroData, isLoading: liveLoading } = useMacro(macroId, !useSnapshot);
+  const macroLoading = !useSnapshot && liveLoading;
   const macroName = macroData?.name;
-  const rawCode = macroData?.code ?? null;
+  const rawCode = useSnapshot ? snapshot.code : (macroData?.code ?? null);
   const macroCode = rawCode ? decodeBase64(rawCode) : null;
   const macroLanguage = macroData?.language;
   const isOwner = !!session?.user.id && session.user.id === macroData?.createdBy;
