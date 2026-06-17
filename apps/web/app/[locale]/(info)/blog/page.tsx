@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
@@ -33,30 +34,32 @@ const getBlogData = cache(async (locale: string, preview: boolean) => {
   };
 });
 
-export async function generateMetadata({ params }: LandingPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const { page } = await getBlogData(locale, preview);
+export function generateMetadata({ params }: LandingPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const { page } = await getBlogData(locale, preview);
 
-  const languages = Object.fromEntries(
-    locales.map((locale) => [locale, locale === defaultLocale ? "/" : `/${locale}`]),
-  );
-  const metadata: Metadata = {
-    alternates: {
-      canonical: "/",
-      languages: languages,
-    },
-  };
-  if (page?.seoFields) {
-    metadata.title = page.seoFields.pageTitle;
-    metadata.description = page.seoFields.pageDescription;
-    metadata.robots = {
-      follow: !page.seoFields.nofollow,
-      index: !page.seoFields.noindex,
+    const languages = Object.fromEntries(
+      locales.map((locale) => [locale, locale === defaultLocale ? "/" : `/${locale}`]),
+    );
+    const metadata: Metadata = {
+      alternates: {
+        canonical: "/",
+        languages: languages,
+      },
     };
-  }
+    if (page?.seoFields) {
+      metadata.title = page.seoFields.pageTitle;
+      metadata.description = page.seoFields.pageDescription;
+      metadata.robots = {
+        follow: !page.seoFields.nofollow,
+        index: !page.seoFields.noindex,
+      };
+    }
 
-  return metadata;
+    return metadata;
+  });
 }
 
 export default async function Page({ params }: LandingPageProps) {

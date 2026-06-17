@@ -18,11 +18,15 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
   const { locale } = await params;
   const session = await auth();
 
-  // Fetch Contentful footer data (with preview support)
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const footerQuery = await gqlClient.footer({ locale, preview });
-  const footerData = footerQuery.footerCollection?.items[0] as FooterFieldsFragment;
+  let footerData: FooterFieldsFragment | undefined;
+  try {
+    const { previewClient, client } = await getContentfulClients();
+    const gqlClient = preview ? previewClient : client;
+    const footerQuery = await gqlClient.footer({ locale, preview });
+    footerData = footerQuery.footerCollection?.items[0] as FooterFieldsFragment;
+  } catch {
+    // Contentful unavailable - render without footer
+  }
 
   return (
     <>
@@ -30,7 +34,7 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
       <div className="mx-auto flex w-full max-w-7xl justify-center">
         <main className="flex min-h-screen w-full flex-col px-4">{children}</main>
       </div>
-      <HomeFooter footerData={footerData} preview={preview} locale={locale} />
+      {footerData && <HomeFooter footerData={footerData} preview={preview} locale={locale} />}
       <Toaster />
     </>
   );

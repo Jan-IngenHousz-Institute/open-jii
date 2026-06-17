@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { CookiePolicyContent } from "@repo/cms";
 import type { PageCookiePolicyFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -17,22 +18,24 @@ const getCookiePolicyData = cache(async (locale: string, preview: boolean) => {
   return cookiePolicyQuery.pageCookiePolicyCollection?.items[0] as PageCookiePolicyFieldsFragment;
 });
 
-export async function generateMetadata({ params }: CookiePolicyPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const cookiePolicy = await getCookiePolicyData(locale, preview);
+export function generateMetadata({ params }: CookiePolicyPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const cookiePolicy = await getCookiePolicyData(locale, preview);
 
-  const metadata: Metadata = {};
+    const metadata: Metadata = {};
 
-  if (cookiePolicy.pageTitle) {
-    metadata.title = cookiePolicy.pageTitle;
-  }
+    if (cookiePolicy.pageTitle) {
+      metadata.title = cookiePolicy.pageTitle;
+    }
 
-  if (cookiePolicy.pageDescription) {
-    metadata.description = cookiePolicy.pageDescription;
-  }
+    if (cookiePolicy.pageDescription) {
+      metadata.description = cookiePolicy.pageDescription;
+    }
 
-  return metadata;
+    return metadata;
+  });
 }
 
 export default async function CookiePolicyPage({ params }: CookiePolicyPageProps) {
