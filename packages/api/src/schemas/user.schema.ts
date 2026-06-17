@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zExperimentMemberRole } from "./experiment.schema";
+import { zExperimentMemberRole, zExperimentStatus } from "./experiment.schema";
 
 export const zUser = z.object({
   id: z.string().uuid(),
@@ -115,6 +115,24 @@ export type UserMetadata = z.infer<typeof zUserMetadata>;
 export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookResponse>;
 export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
 export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
+
+// --- Account Deletion Blocker Schemas ---
+// An experiment blocks account deletion when the user is its only admin. Each blocker carries
+// that experiment's other members (as user metadata) so the delete dialog can suggest who to
+// hand admin to, per experiment.
+export const zDeletionBlocker = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  status: zExperimentStatus,
+  candidates: z.array(zUserMetadata),
+});
+
+export const zDeletionBlockersResponse = z.object({
+  experiments: z.array(zDeletionBlocker),
+});
+
+export type DeletionBlocker = z.infer<typeof zDeletionBlocker>;
+export type DeletionBlockersResponse = z.infer<typeof zDeletionBlockersResponse>;
 
 // --- Invitation Schemas ---
 export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);

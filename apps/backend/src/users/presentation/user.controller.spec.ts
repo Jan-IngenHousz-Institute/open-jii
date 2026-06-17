@@ -3,12 +3,18 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ErrorResponse } from "@repo/api/schemas/experiment.schema";
-import type { UserList, UserProfileList, User } from "@repo/api/schemas/user.schema";
+import type {
+  UserList,
+  UserProfileList,
+  User,
+  DeletionBlockersResponse,
+} from "@repo/api/schemas/user.schema";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
+import { GetDeletionBlockersUseCase } from "../application/use-cases/get-deletion-blockers/get-deletion-blockers";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
 
 describe("UserController", () => {
@@ -16,6 +22,7 @@ describe("UserController", () => {
   let testUserId: string;
   let searchUsersUseCase: SearchUsersUseCase;
   let createUserProfileUseCase: CreateUserProfileUseCase;
+  let getDeletionBlockersUseCase: GetDeletionBlockersUseCase;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -26,6 +33,7 @@ describe("UserController", () => {
     testUserId = await testApp.createTestUser({});
     searchUsersUseCase = testApp.module.get(SearchUsersUseCase);
     createUserProfileUseCase = testApp.module.get(CreateUserProfileUseCase);
+    getDeletionBlockersUseCase = testApp.module.get(GetDeletionBlockersUseCase);
   });
 
   afterEach(() => {
@@ -465,6 +473,89 @@ describe("UserController", () => {
       });
 
       await testApp.delete(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("getDeletionBlockers", () => {
+    it("returns an empty list when the user administers nothing", async () => {
+      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+        id: testUserId,
+      });
+
+      const response: SuperTestResponse<DeletionBlockersResponse> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({ experiments: [] });
+    });
+
+    it("lists experiments where the user is the only admin, with their members as candidates", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Sole Admin Experiment",
+        userId: testUserId,
+      });
+      const memberId = await testApp.createTestUser({ email: "member@example.com" });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+        id: testUserId,
+      });
+
+      const response: SuperTestResponse<DeletionBlockersResponse> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.experiments).toHaveLength(1);
+      expect(response.body.experiments[0]).toMatchObject({
+        id: experiment.id,
+        name: experiment.name,
+      });
+      expect(response.body.experiments[0].candidates.map((c) => c.userId)).toEqual([memberId]);
+    });
+
+    it("returns 403 when requesting another user's deletion blockers", async () => {
+      const otherUserId = await testApp.createTestUser({ email: "someone-else@example.com" });
+      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+        id: otherUserId,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message.toLowerCase()).toContain("your own");
+        });
+    });
+
+    it("returns 400 for an invalid UUID", async () => {
+      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+        id: "invalid-uuid",
+      });
+
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 401 if not authenticated", async () => {
+      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+        id: testUserId,
+      });
+
+      await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("returns 500 when the use case returns failure", async () => {
+      vi.spyOn(getDeletionBlockersUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+        id: testUserId,
+      });
+
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
 });

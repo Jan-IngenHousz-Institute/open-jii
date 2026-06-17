@@ -10,6 +10,8 @@ import {
   zCreateExperimentBody,
   zAddExperimentMembersBody,
   zUpdateExperimentMemberRoleBody,
+  zTransferExperimentAdminBody,
+  zTransferExperimentAdminResponse,
   zUpdateExperimentBody,
   zExperimentFilterQuery,
   zCreateExperimentResponse,
@@ -207,6 +209,21 @@ export const experimentContract = c.router({
     },
     summary: "Update experiment member role",
     description: "Updates the role of an existing experiment member",
+  },
+
+  transferExperimentAdmin: {
+    method: "POST",
+    path: "/api/v1/experiments/transfer-admin",
+    body: zTransferExperimentAdminBody,
+    responses: {
+      200: zTransferExperimentAdminResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Bulk-transfer experiment admin rights",
+    description:
+      "Promotes (or adds) the given users as admins across multiple experiments the caller administers. Used to clear account-deletion blockers in one step.",
   },
 
   createJoinRequest: {
