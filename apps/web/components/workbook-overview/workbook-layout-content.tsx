@@ -26,7 +26,11 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
   const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();
   const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id);
-  const { data: versionsData, isLoading: isLoadingVersions } = useWorkbookVersions(id);
+  const {
+    data: versionsData,
+    isLoading: isLoadingVersions,
+    isError: isVersionsError,
+  } = useWorkbookVersions(id);
   const autosave = useAutosaveStatus();
 
   // Versions are returned newest-first; the live page is the draft, so the
@@ -94,6 +98,9 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
             </span>
             {isLoadingVersions ? (
               <Skeleton className="h-[21px] w-10" />
+            ) : isVersionsError ? (
+              // Don't claim "Draft" when the version state is simply unknown.
+              <span className="text-sm leading-[21px] text-[#68737B]">-</span>
             ) : latestVersion != null ? (
               <WorkbookVersionBadge currentVersion={latestVersion} showUpgrade={false} />
             ) : (

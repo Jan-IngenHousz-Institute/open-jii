@@ -95,4 +95,14 @@ describe("WorkbookLayoutContent", () => {
     renderContent();
     expect(await screen.findByText("workbooks.draftVersion")).toBeInTheDocument();
   });
+
+  it("falls back to a dash (not 'Draft') when the versions fetch fails", async () => {
+    server.mount(contract.workbooks.listWorkbookVersions, { status: 500 });
+
+    renderContent({ createdByName: "Test User" });
+
+    // The version cell shows "-" rather than wrongly claiming the workbook is a draft.
+    expect(await screen.findByText("-")).toBeInTheDocument();
+    expect(screen.queryByText("workbooks.draftVersion")).not.toBeInTheDocument();
+  });
 });
