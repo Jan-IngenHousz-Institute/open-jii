@@ -19,7 +19,11 @@ export class ExperimentMemberRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async getMembers(experimentId: string): Promise<Result<ExperimentMemberDto[]>> {
+  // Lists an experiment's members; `activeOnly` excludes deactivated ("Unknown") accounts.
+  async getMembers(
+    experimentId: string,
+    { activeOnly = false }: { activeOnly?: boolean } = {},
+  ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
       return this.database
         .select({
@@ -37,7 +41,12 @@ export class ExperimentMemberRepository {
         .from(experimentMembers)
         .innerJoin(users, eq(experimentMembers.userId, users.id))
         .innerJoin(profiles, eq(users.id, profiles.userId))
-        .where(eq(experimentMembers.experimentId, experimentId));
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            activeOnly ? eq(profiles.activated, true) : undefined,
+          ),
+        );
     });
   }
 

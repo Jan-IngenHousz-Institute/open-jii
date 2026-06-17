@@ -154,7 +154,7 @@ function renderHook<TResult, TProps = undefined>(
  * import { renderWithForm, screen } from "@/test/test-utils";
  *
  * renderWithForm<CreateUserProfileBody>(
- *   (form) => <ProfileCard form={form} />,
+ *   (form) => <ProfileInformationCard form={form} />,
  *   { useFormProps: { defaultValues: { firstName: "", lastName: "" } } },
  * );
  * ```
