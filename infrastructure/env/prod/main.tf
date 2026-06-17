@@ -1093,7 +1093,7 @@ module "project_transfer_job" {
     {
       environment_key = "project_transfer"
       spec = {
-        environment_version = "1"
+        environment_version = "4"
         dependencies = [
           "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
         ]
