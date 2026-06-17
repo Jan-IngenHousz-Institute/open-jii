@@ -14,7 +14,10 @@ export function hasTraceType(form: UseFormReturn<ChartFormValues>, traceType: st
 
 export function hasAnyErrorColumn(form: UseFormReturn<ChartFormValues>): boolean {
   const sources = form.getValues("dataConfig.dataSources");
-  return sources.some((ds) => typeof ds.errorColumn === "string" && ds.errorColumn.length > 0);
+  // Renderer only honors Y-role errorColumn, so gate the shelf on Y too.
+  return dataSourcesByRole(sources, "y").some(
+    ({ source }) => typeof source.errorColumn === "string" && source.errorColumn.length > 0,
+  );
 }
 
 export function hasFacetSource(form: UseFormReturn<ChartFormValues>): boolean {

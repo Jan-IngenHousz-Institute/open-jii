@@ -41,6 +41,9 @@
     "downloadData": "Gegevens downloaden",
     "noMeasurements": "Nog geen metingen geregistreerd"
   },
+  "dashboards": {
+    "tabLabel": "Dashboards"
+  },
   "flow": {
     "title": "Werkboek",
     "description": "De dataverzamelingsflow van dit experiment: protocollen, vragen, macro's en vertakkingen.",
