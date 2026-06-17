@@ -4,6 +4,7 @@ import { draftMode } from "next/headers";
 import { cache } from "react";
 import { auth } from "~/app/actions/auth";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import {
   HomeHero as HomeHeroComponent,
@@ -39,22 +40,24 @@ const getHomeData = cache(async (locale: string, preview: boolean) => {
   };
 });
 
-export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const { landingMetadata } = await getHomeData(locale, preview);
+export function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const { landingMetadata } = await getHomeData(locale, preview);
 
-  const metadata: Metadata = {};
+    const metadata: Metadata = {};
 
-  if (landingMetadata.title) {
-    metadata.title = landingMetadata.title;
-  }
+    if (landingMetadata.title) {
+      metadata.title = landingMetadata.title;
+    }
 
-  if (landingMetadata.description) {
-    metadata.description = landingMetadata.description;
-  }
+    if (landingMetadata.description) {
+      metadata.description = landingMetadata.description;
+    }
 
-  return metadata;
+    return metadata;
+  });
 }
 
 export default async function Home({ params }: HomePageProps) {
