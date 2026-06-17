@@ -20,6 +20,9 @@ vi.mock("~/components/experiment-overview/experiment-details/experiment-details-
 vi.mock("~/components/experiment-overview/experiment-measurements", () => ({
   ExperimentMeasurements: () => <section aria-label="measurements" />,
 }));
+vi.mock("@/components/experiment-dashboards/experiment-dashboards-display", () => ({
+  default: () => <section aria-label="dashboards" />,
+}));
 vi.mock("~/components/experiment-overview/experiment-linked-workbook", () => ({
   ExperimentLinkedWorkbook: () => <section aria-label="workbook" />,
 }));
@@ -33,6 +36,7 @@ function mountDefaults() {
   server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
   server.mount(contract.experiments.getExperimentLocations, { body: [] });
   server.mount(contract.experiments.listExperimentMembers, { body: [] });
+  server.mount(contract.experiments.listExperimentDashboards, { body: [] });
 }
 
 describe("ExperimentOverviewPage", () => {
@@ -53,6 +57,7 @@ describe("ExperimentOverviewPage", () => {
     server.mount(contract.experiments.getExperimentAccess, { status: 500 });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
     server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     render(<ExperimentOverviewPage {...props} />);
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("failedToLoad");

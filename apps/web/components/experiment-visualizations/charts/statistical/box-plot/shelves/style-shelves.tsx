@@ -20,6 +20,7 @@ import { FacetStyleSection } from "../../../../workspace/style-sections/facet-st
 import { ReferenceLinesSection } from "../../../../workspace/style-sections/reference-lines-section";
 import { CollapsibleStyleSection } from "../../../../workspace/style-sections/shared/collapsible-style-section";
 import { StyleSubsection } from "../../../../workspace/style-sections/shared/style-subsection";
+import { hasFacetSource } from "../../../shelf-visibility";
 import type { ChartPanelProps, ShelfDef } from "../../../types";
 
 function BoxPlotDisplay({ form, flat }: ChartPanelProps) {
@@ -214,5 +215,6 @@ export const boxPlotStyleShelves: ShelfDef[] = [
     labelKey: "workspace.style.facetOptions",
     icon: LayoutGrid,
     Component: BoxPlotFacetStyle,
+    visible: hasFacetSource,
   },
 ];
