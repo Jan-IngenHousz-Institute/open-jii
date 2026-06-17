@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zDeviceCommand } from "./device-command.schema";
 import { zMacroLanguage } from "./macro.schema";
 import { zSensorFamily } from "./protocol.schema";
 
@@ -299,6 +300,7 @@ export const zFlowNodeType = z.enum([
   "measurement",
   "analysis",
   "branch",
+  "command",
 ]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
@@ -376,6 +378,12 @@ export const zBranchContent = z.object({
   defaultPathId: z.string().optional(),
 });
 
+// A command node sends a parameter-free MultispeQ console command to the
+// connected device during a measurement run.
+export const zCommandContent = z.object({
+  command: zDeviceCommand,
+});
+
 export const zFlowNode = z.object({
   id: z.string().min(1),
   type: zFlowNodeType,
@@ -389,6 +397,7 @@ export const zFlowNode = z.object({
     zMeasurementContent,
     zAnalysisContent,
     zBranchContent,
+    zCommandContent,
   ]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),

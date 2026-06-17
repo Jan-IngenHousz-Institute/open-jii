@@ -12,6 +12,7 @@ const NODE_MINUTES: Record<FlowNode["type"], number> = {
   measurement: 1.5,
   analysis: 0.5,
   branch: 0,
+  command: 0.5,
 };
 
 export function estimateFlowDuration(nodes: FlowNode[]): number {

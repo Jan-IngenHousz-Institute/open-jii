@@ -78,10 +78,16 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         isStart,
       );
 
-    case "output":
-      return null;
-
     case "command":
+      return makeNode(
+        cell.id,
+        "command",
+        cell.payload.name ?? cell.payload.command,
+        { command: cell.payload.command } as Content,
+        isStart,
+      );
+
+    case "output":
       return null;
 
     default:

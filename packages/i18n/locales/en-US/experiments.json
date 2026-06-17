@@ -88,7 +88,12 @@
       "INSTRUCTION": "Instruction",
       "QUESTION": "Question",
       "MEASUREMENT": "Measurement",
-      "ANALYSIS": "Analysis"
+      "ANALYSIS": "Analysis",
+      "COMMAND": "Command"
+    },
+    "commandPanel": {
+      "title": "Device command",
+      "placeholder": "Select a command"
     },
     "questionTooltip": {
       "title": "Data Column Name",

@@ -50,6 +50,7 @@
       "question": "Vraag",
       "measurement": "Meting",
       "analysis": "Analyse",
+      "command": "Apparaatcommando",
       "review": "Antwoorden controleren",
       "completed": "Afgerond"
     },
@@ -159,6 +160,17 @@
     "startMeasurement": "Meting starten",
     "retryMeasurement": "Meting opnieuw proberen",
     "connectToDevice": "Verbinden met apparaat"
+  },
+  "commandNode": {
+    "heading": "Apparaatcommando",
+    "responseLabel": "Antwoord",
+    "run": "Commando uitvoeren",
+    "running": "Bezig…",
+    "continue": "Doorgaan",
+    "toast": {
+      "notConnected": "Niet verbonden met sensor",
+      "error": "Commando mislukt"
+    }
   },
   "questionNode": {
     "autoProceeded": {

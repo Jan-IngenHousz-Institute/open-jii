@@ -68,7 +68,12 @@
       "INSTRUCTION": "Instructie",
       "QUESTION": "Vraag",
       "MEASUREMENT": "Meting",
-      "ANALYSIS": "Analyse"
+      "ANALYSIS": "Analyse",
+      "COMMAND": "Commando"
+    },
+    "commandPanel": {
+      "title": "Apparaatcommando",
+      "placeholder": "Selecteer een commando"
     },
     "questionTooltip": {
       "title": "Gegevenskolomnaam",

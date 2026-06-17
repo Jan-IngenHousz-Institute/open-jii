@@ -1,4 +1,10 @@
-export type FlowNodeType = "instruction" | "question" | "measurement" | "analysis" | "branch";
+export type FlowNodeType =
+  | "instruction"
+  | "question"
+  | "measurement"
+  | "analysis"
+  | "branch"
+  | "command";
 
 export type QuestionKind =
   | "text"
@@ -49,6 +55,10 @@ export interface MeasurementContent {
 export interface AnalysisContent {
   params: Record<string, any>;
   macroId: string;
+}
+
+export interface CommandContent {
+  command: string;
 }
 
 export interface FlowEdge {

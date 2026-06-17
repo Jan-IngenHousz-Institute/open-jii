@@ -13,6 +13,7 @@ const TYPE_LABELS: Record<NodeType, string> = {
   MEASUREMENT: "Protocol",
   ANALYSIS: "Macro",
   BRANCH: "Branch",
+  COMMAND: "Command",
 };
 
 interface NodeContentProps {

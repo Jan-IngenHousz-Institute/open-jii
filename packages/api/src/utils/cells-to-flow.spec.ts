@@ -85,6 +85,35 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[0].name).toBe("Step 1: prepare sample");
   });
 
+  it("converts a command cell to a command node carrying the device command", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { command: "battery" },
+      },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].type).toBe("command");
+    expect(nodes[0].name).toBe("battery");
+    expect(nodes[0].content).toEqual({ command: "battery" });
+  });
+
+  it("uses the command cell's name as the node name when present", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { command: "battery", name: "Check battery" },
+      },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes[0].name).toBe("Check battery");
+  });
+
   it("skips output cells", () => {
     const cells: WorkbookCell[] = [
       { id: "o1", type: "output", isCollapsed: false, producedBy: "p1" },

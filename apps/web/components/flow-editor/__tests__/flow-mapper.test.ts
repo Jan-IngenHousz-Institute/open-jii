@@ -170,7 +170,7 @@ describe("FlowMapper branch + sourceHandle", () => {
     const data = n.data as FlowNodeDataWithSpec & {
       stepSpecification?: { paths: { id: string }[]; defaultPathId?: string };
     };
-    expect(data.stepSpecification?.paths.map((p) => p.id)).toEqual(["p1", "p2"]);
+    expect(data.stepSpecification?.paths.map((p: { id: string }) => p.id)).toEqual(["p1", "p2"]);
     expect(data.stepSpecification?.defaultPathId).toBe("p2");
   });
 
