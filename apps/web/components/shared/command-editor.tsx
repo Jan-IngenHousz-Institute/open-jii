@@ -3,7 +3,7 @@
 import { autocompletion, completionStatus, startCompletion } from "@codemirror/autocomplete";
 import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { EditorState } from "@codemirror/state";
-import { EditorView, hoverTooltip, keymap, placeholder as placeholderExt } from "@codemirror/view";
+import { EditorView, hoverTooltip, placeholder as placeholderExt } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { useMemo } from "react";
 
@@ -78,6 +78,11 @@ const editorTheme = EditorView.theme({
   },
   "&.cm-focused": { outline: "none" },
   ".cm-line": { padding: "0 8px" },
+  // Autocomplete popup: wider list + breathing room between command and group.
+  ".cm-tooltip-autocomplete": { minWidth: "340px" },
+  ".cm-tooltip-autocomplete > ul": { minWidth: "340px", maxHeight: "18rem" },
+  ".cm-tooltip-autocomplete > ul > li": { padding: "3px 10px" },
+  ".cm-completionDetail": { marginLeft: "1.25rem", fontStyle: "italic", opacity: "0.6" },
 });
 
 interface CommandEditorProps {
@@ -105,16 +110,24 @@ export function CommandEditor({
     () => [
       singleLine,
       editorTheme,
-      autocompletion({ override: [commandCompletionSource], icons: false }),
+      autocompletion({
+        override: [commandCompletionSource],
+        icons: false,
+        activateOnTyping: true,
+      }),
       commandHover,
-      // Open the completion list as soon as the field is focused while editing.
+      // Open the completion list when the field is focused. Defer past the
+      // focus/click tick so the view is actually focused — otherwise the list
+      // only appears on a second focus (tab away + back).
       EditorView.domEventHandlers({
         focus: (_event, view) => {
-          if (!readOnly && completionStatus(view.state) === null) startCompletion(view);
+          if (readOnly) return false;
+          setTimeout(() => {
+            if (view.hasFocus && completionStatus(view.state) === null) startCompletion(view);
+          }, 0);
           return false;
         },
       }),
-      keymap.of([]),
       ...(placeholder ? [placeholderExt(placeholder)] : []),
     ],
     [readOnly, placeholder],
@@ -124,7 +137,7 @@ export function CommandEditor({
     <div
       className={
         className ??
-        "focus-within:border-jii-dark-green w-full max-w-md rounded-md border border-gray-300 bg-white"
+        "focus-within:border-jii-dark-green w-full rounded-md border border-gray-300 bg-white"
       }
     >
       <CodeMirror
