@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
@@ -29,6 +30,10 @@ interface ProtocolCellProps {
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
   readOnly?: boolean;
+  // Immutable code/family pinned at publish time. When present the cell renders
+  // exclusively from it and never fetches the live protocol row. `code` is
+  // optional because the snapshot schema types it as `unknown`.
+  snapshot?: { code?: unknown; family?: SensorFamily };
 }
 
 export function ProtocolCellComponent({
@@ -39,20 +44,25 @@ export function ProtocolCellComponent({
   executionStatus,
   executionError,
   readOnly,
+  snapshot,
 }: ProtocolCellProps) {
   const protocolId = cell.payload.protocolId;
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
 
-  const { data: protocolData, isLoading: protocolLoading } = useProtocol(protocolId, true);
+  const useSnapshot = snapshot != null;
+  const { data: protocolData, isLoading: liveLoading } = useProtocol(protocolId, !useSnapshot);
+  const protocolLoading = !useSnapshot && liveLoading;
   const protocolName = protocolData?.body.name;
   // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
   // rather than treating it as a load failure.
-  const protocolCode = protocolData?.body.code
-    ? JSON.stringify(protocolData.body.code, null, 2)
-    : null;
+  const protocolCode = useSnapshot
+    ? JSON.stringify(snapshot.code ?? [], null, 2)
+    : protocolData?.body.code
+      ? JSON.stringify(protocolData.body.code, null, 2)
+      : null;
 
-  const protocolFamily = protocolData?.body.family;
+  const protocolFamily = useSnapshot ? snapshot.family : protocolData?.body.family;
   const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
   const isEditable = isOwner && !readOnly;
 

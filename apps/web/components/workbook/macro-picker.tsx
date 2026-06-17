@@ -56,14 +56,16 @@ function getDefaultCode(language: MacroLanguage, username: string): string {
 
 export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [language, setLanguage] = useState<MacroLanguage | undefined>(undefined);
   const { data: session } = useSession();
-  const { data: macros } = useMacros({
-    initialFilter: "all",
-    initialSearch: search,
-    initialLanguage: language,
-  });
+  // Drive search/language from the hook's own state so the inputs actually
+  // filter the query (passing them as `initial*` props is read only once).
+  const {
+    data: macros,
+    search,
+    setSearch,
+    language,
+    setLanguage,
+  } = useMacros({ initialFilter: "all" });
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
