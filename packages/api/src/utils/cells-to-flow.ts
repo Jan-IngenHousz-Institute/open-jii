@@ -81,6 +81,9 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
     case "output":
       return null;
 
+    case "command":
+      return null;
+
     default:
       return null;
   }
