@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function MaintenancePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-16">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-16">
       <div className="w-full max-w-md text-center">
         <div className="mb-8 flex justify-center">
           <div className="bg-primary/10 rounded-full p-6">
