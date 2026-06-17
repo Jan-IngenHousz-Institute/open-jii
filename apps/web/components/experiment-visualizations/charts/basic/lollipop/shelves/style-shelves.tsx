@@ -18,6 +18,7 @@ import { ErrorBarStyleSection } from "../../../../workspace/style-sections/error
 import { ReferenceLinesSection } from "../../../../workspace/style-sections/reference-lines-section";
 import { CollapsibleStyleSection } from "../../../../workspace/style-sections/shared/collapsible-style-section";
 import { StyleSubsection } from "../../../../workspace/style-sections/shared/style-subsection";
+import { hasAnyErrorColumn } from "../../../shelf-visibility";
 import type { ChartPanelProps, ShelfDef } from "../../../types";
 
 function LollipopDisplay({ form, flat }: ChartPanelProps) {
@@ -122,6 +123,7 @@ export const lollipopStyleShelves: ShelfDef[] = [
     labelKey: "workspace.style.errorBarOptions",
     icon: MoveVertical,
     Component: LollipopErrorBar,
+    visible: hasAnyErrorColumn,
   },
   {
     key: "referenceLines",

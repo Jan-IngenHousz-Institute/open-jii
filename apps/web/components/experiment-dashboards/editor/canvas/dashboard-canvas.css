@@ -1,0 +1,184 @@
+/* react-resizable rotates its single SE handle per axis; we reset transforms
+ * + sizes below so each axis lays out cleanly. */
+
+.dashboard-canvas-root .react-grid-item {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* No transform transition mid-gesture so N/W resize tracks the pointer 1:1. */
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging,
+.dashboard-canvas-root .react-grid-item.resizing {
+  transition: none;
+  z-index: 3;
+}
+
+.dashboard-canvas-root .react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.08);
+  border: 1px dashed hsl(var(--primary) / 0.5);
+  border-radius: 0;
+  opacity: 1;
+  transition-duration: 80ms;
+}
+
+/* Mid-gesture: drop the widget's rounded corners so handles sit flush. */
+.dashboard-canvas-root .react-grid-item.resizing [data-dashboard-widget],
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging [data-dashboard-widget] {
+  border-radius: 0 !important;
+}
+
+/* Reset RGL handle styles. `opacity: 1` overrides RGL's hover-reveal so our
+ * own `::before` opacity controls visibility (see selection block below). */
+.dashboard-canvas-root .react-resizable-handle {
+  background-image: none !important;
+  padding: 0 !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* RGL's `::after` chevron renders as a rotated L-bracket at each corner. */
+.dashboard-canvas-root .react-resizable-handle::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+}
+
+.dashboard-canvas-root .react-resizable-handle-n,
+.dashboard-canvas-root .react-resizable-handle-s {
+  left: 12px !important;
+  right: 12px !important;
+  width: auto !important;
+  height: 8px !important;
+  margin-left: 0 !important;
+  cursor: ns-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-n {
+  top: -4px !important;
+  bottom: auto !important;
+}
+.dashboard-canvas-root .react-resizable-handle-s {
+  bottom: -4px !important;
+  top: auto !important;
+}
+
+.dashboard-canvas-root .react-resizable-handle-e,
+.dashboard-canvas-root .react-resizable-handle-w {
+  top: 12px !important;
+  bottom: 12px !important;
+  height: auto !important;
+  width: 8px !important;
+  margin-top: 0 !important;
+  cursor: ew-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-e {
+  right: -4px !important;
+  left: auto !important;
+}
+.dashboard-canvas-root .react-resizable-handle-w {
+  left: -4px !important;
+  right: auto !important;
+}
+
+.dashboard-canvas-root .react-resizable-handle-n::before,
+.dashboard-canvas-root .react-resizable-handle-s::before,
+.dashboard-canvas-root .react-resizable-handle-e::before,
+.dashboard-canvas-root .react-resizable-handle-w::before {
+  content: "";
+  position: absolute;
+  background: hsl(var(--background));
+  border: 1.5px solid hsl(var(--primary));
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.dashboard-canvas-root .react-resizable-handle-n::before,
+.dashboard-canvas-root .react-resizable-handle-s::before {
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 6px;
+  margin-left: -14px;
+  margin-top: -3px;
+}
+.dashboard-canvas-root .react-resizable-handle-e::before,
+.dashboard-canvas-root .react-resizable-handle-w::before {
+  top: 50%;
+  left: 50%;
+  height: 28px;
+  width: 6px;
+  margin-top: -14px;
+  margin-left: -3px;
+}
+
+.dashboard-canvas-root .react-resizable-handle-nw,
+.dashboard-canvas-root .react-resizable-handle-ne,
+.dashboard-canvas-root .react-resizable-handle-sw,
+.dashboard-canvas-root .react-resizable-handle-se {
+  width: 14px !important;
+  height: 14px !important;
+}
+.dashboard-canvas-root .react-resizable-handle-nw {
+  top: -7px !important;
+  left: -7px !important;
+  cursor: nwse-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-ne {
+  top: -7px !important;
+  right: -7px !important;
+  cursor: nesw-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-sw {
+  bottom: -7px !important;
+  left: -7px !important;
+  cursor: nesw-resize;
+}
+.dashboard-canvas-root .react-resizable-handle-se {
+  bottom: -7px !important;
+  right: -7px !important;
+  cursor: nwse-resize;
+}
+
+.dashboard-canvas-root .react-resizable-handle-nw::before,
+.dashboard-canvas-root .react-resizable-handle-ne::before,
+.dashboard-canvas-root .react-resizable-handle-sw::before,
+.dashboard-canvas-root .react-resizable-handle-se::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: hsl(var(--background));
+  border: 1.5px solid hsl(var(--primary));
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+/* `:has()` walks down to the inner widget card where the selected class lives. */
+.dashboard-canvas-root
+  .react-grid-item:has(.dashboard-widget--selected)
+  .react-resizable-handle::before,
+.dashboard-canvas-root .react-grid-item.resizing .react-resizable-handle::before,
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging .react-resizable-handle::before {
+  opacity: 1;
+}
+
+.dashboard-canvas-root .react-grid-item {
+  cursor: grab;
+}
+.dashboard-canvas-root .react-grid-item.react-draggable-dragging {
+  cursor: grabbing;
+}
+.dashboard-canvas-root .react-grid-item .js-plotly-plot,
+.dashboard-canvas-root .react-grid-item .ProseMirror,
+.dashboard-canvas-root .react-grid-item [contenteditable="true"],
+.dashboard-canvas-root .react-grid-item button,
+.dashboard-canvas-root .react-grid-item input,
+.dashboard-canvas-root .react-grid-item textarea,
+.dashboard-canvas-root .react-grid-item select,
+.dashboard-canvas-root .react-grid-item [data-no-drag] {
+  cursor: auto;
+}
