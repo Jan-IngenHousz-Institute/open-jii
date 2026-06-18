@@ -225,6 +225,7 @@ vi.mock("@repo/auth/client", () => ({
       removeMember: vi.fn().mockResolvedValue({ data: {}, error: null }),
       updateMemberRole: vi.fn().mockResolvedValue({ data: {}, error: null }),
       cancelInvitation: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      acceptInvitation: vi.fn().mockResolvedValue({ data: {}, error: null }),
     },
   },
   useSession: vi.fn(() => ({ data: null, isPending: false })),

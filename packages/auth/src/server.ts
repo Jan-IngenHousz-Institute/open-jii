@@ -7,6 +7,7 @@ import { admin, emailOTP, genericOAuth, organization } from "better-auth/plugins
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
+import { sendInvitationEmail } from "./email/invitationEmail";
 import { sendOtpEmail } from "./email/otpEmail";
 import { orcidProvider } from "./providers/orcid";
 
@@ -153,6 +154,22 @@ export const auth = betterAuth({
     organization({
       allowUserToCreateOrganization: true,
       creatorRole: "owner",
+      async sendInvitationEmail(data) {
+        const emailServer = process.env.AUTH_EMAIL_SERVER;
+        const emailFrom = process.env.AUTH_EMAIL_FROM;
+        if (!emailServer || !emailFrom) {
+          return;
+        }
+        await sendInvitationEmail({
+          to: data.email,
+          inviteLink: `${clientUrl}/en-US/platform/accept-invitation/${data.id}`,
+          organizationName: data.organization.name,
+          inviterName: data.inviter.user.name,
+          emailServer,
+          emailFrom,
+          senderName: "openJII",
+        });
+      },
     }),
     // Platform tier: global admin role, ban controls, impersonation.
     admin({
