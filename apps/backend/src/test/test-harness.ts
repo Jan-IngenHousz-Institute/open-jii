@@ -382,13 +382,16 @@ export class TestHarness {
   }
 
   /** Create an organization (org tier). */
-  public async createOrganization(data: { name?: string; slug?: string } = {}) {
+  public async createOrganization(
+    data: { name?: string; slug?: string; visibility?: "private" | "public" } = {},
+  ) {
     const suffix = crypto.randomUUID().slice(0, 8);
     const [org] = await this.database
       .insert(organizations)
       .values({
         name: data.name ?? `Org ${suffix}`,
         slug: data.slug ?? `org-${suffix}`,
+        visibility: data.visibility ?? "private",
       })
       .returning();
     return org;

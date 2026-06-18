@@ -157,6 +157,18 @@ export const auth = betterAuth({
       allowUserToCreateOrganization: true,
       creatorRole: "owner",
       teams: { enabled: true },
+      // openJII org profile fields, persisted in one organization.create call.
+      schema: {
+        organization: {
+          additionalFields: {
+            type: { type: "string", required: false, input: true },
+            description: { type: "string", required: false, input: true },
+            website: { type: "string", required: false, input: true },
+            location: { type: "string", required: false, input: true },
+            visibility: { type: "string", required: false, input: true },
+          },
+        },
+      },
       async sendInvitationEmail(data) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;
         const emailFrom = process.env.AUTH_EMAIL_FROM;

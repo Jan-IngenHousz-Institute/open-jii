@@ -6,6 +6,7 @@ import { env } from "~/env";
 
 import { experimentContract } from "@repo/api/contracts/experiment.contract";
 import { macroContract } from "@repo/api/contracts/macro.contract";
+import { organizationContract } from "@repo/api/contracts/organization.contract";
 import { protocolContract } from "@repo/api/contracts/protocol.contract";
 import { sharingContract } from "@repo/api/contracts/sharing.contract";
 import { userContract } from "@repo/api/contracts/user.contract";
@@ -20,6 +21,7 @@ const c = initContract();
 export const contract = c.router({
   experiments: experimentContract,
   macros: macroContract,
+  organizations: organizationContract,
   protocols: protocolContract,
   sharing: sharingContract,
   users: userContract,

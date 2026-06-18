@@ -139,6 +139,8 @@ export const organizations = pgTable("organizations", {
   description: text("description"),
   website: varchar("website", { length: 255 }),
   location: text("location"),
+  // Directory visibility: public orgs are discoverable + request-to-join; private are invite-only.
+  visibility: visibilityEnum("visibility").default("private").notNull(),
   ...timestamps,
 });
 
@@ -403,6 +405,32 @@ export const experimentJoinRequests = pgTable(
       .on(table.experimentId, table.userId)
       .where(sql`${table.status} = 'pending'`),
     index("experiment_join_requests_experiment_idx").on(table.experimentId),
+  ],
+);
+
+// Organization Join Requests Table (mirrors experiment_join_requests for the
+// public-org directory: a user asks to join a public org; an owner/admin decides).
+export const organizationJoinRequests = pgTable(
+  "organization_join_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    message: varchar("message", { length: 250 }),
+    status: joinRequestStatusEnum("status").default("pending").notNull(),
+    decidedBy: uuid("decided_by").references(() => users.id),
+    decidedAt: timestamp("decided_at"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("organization_join_requests_pending_uniq")
+      .on(table.organizationId, table.userId)
+      .where(sql`${table.status} = 'pending'`),
+    index("organization_join_requests_organization_idx").on(table.organizationId),
   ],
 );
 

@@ -253,6 +253,13 @@
       "when": 1781783478885,
       "tag": "0035_normal_franklin_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1781784861819,
+      "tag": "0036_burly_marauders",
+      "breakpoints": true
     }
   ]
 }

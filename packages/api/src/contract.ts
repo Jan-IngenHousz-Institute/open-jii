@@ -5,6 +5,7 @@ import { experimentContract } from "./contracts/experiment.contract";
 import { healthContract } from "./contracts/health.contract";
 import { iotContract } from "./contracts/iot.contract";
 import { macroContract } from "./contracts/macro.contract";
+import { organizationContract } from "./contracts/organization.contract";
 import { protocolContract } from "./contracts/protocol.contract";
 import { sharingContract } from "./contracts/sharing.contract";
 import { userContract } from "./contracts/user.contract";
@@ -20,6 +21,7 @@ export const contract = c.router({
   health: healthContract,
   iot: iotContract,
   macros: macroContract,
+  organizations: organizationContract,
   protocols: protocolContract,
   sharing: sharingContract,
   users: userContract,
