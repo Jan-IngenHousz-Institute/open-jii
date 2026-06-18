@@ -218,6 +218,13 @@ vi.mock("@repo/auth/client", () => ({
     useActiveOrganization: vi.fn(() => ({ data: null, isPending: false })),
     organization: {
       setActive: vi.fn().mockResolvedValue({ data: null, error: null }),
+      getFullOrganization: vi
+        .fn()
+        .mockResolvedValue({ data: { members: [], invitations: [] }, error: null }),
+      inviteMember: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      removeMember: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      updateMemberRole: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      cancelInvitation: vi.fn().mockResolvedValue({ data: {}, error: null }),
     },
   },
   useSession: vi.fn(() => ({ data: null, isPending: false })),
