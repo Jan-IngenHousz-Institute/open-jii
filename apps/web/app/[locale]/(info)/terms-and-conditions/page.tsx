@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { TermsAndConditionsPage } from "@repo/cms";
 import type { PageTermsAndConditionsFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -18,22 +19,24 @@ const getTermsAndConditionsData = cache(async (locale: string, preview: boolean)
     ?.items[0] as PageTermsAndConditionsFieldsFragment;
 });
 
-export async function generateMetadata({ params }: TermsAndConditionsPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const termsAndConditions = await getTermsAndConditionsData(locale, preview);
+export function generateMetadata({ params }: TermsAndConditionsPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const termsAndConditions = await getTermsAndConditionsData(locale, preview);
 
-  const metadata: Metadata = {};
+    const metadata: Metadata = {};
 
-  if (termsAndConditions.pageTitle) {
-    metadata.title = termsAndConditions.pageTitle;
-  }
+    if (termsAndConditions.pageTitle) {
+      metadata.title = termsAndConditions.pageTitle;
+    }
 
-  if (termsAndConditions.pageDescription) {
-    metadata.description = termsAndConditions.pageDescription;
-  }
+    if (termsAndConditions.pageDescription) {
+      metadata.description = termsAndConditions.pageDescription;
+    }
 
-  return metadata;
+    return metadata;
+  });
 }
 
 export default async function TermsAndConditionsPageRoute({ params }: TermsAndConditionsPageProps) {

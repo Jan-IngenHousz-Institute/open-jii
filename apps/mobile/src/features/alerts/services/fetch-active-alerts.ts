@@ -43,15 +43,22 @@ export async function fetchActiveAlerts(locale: string): Promise<ComponentAlertF
   const client = getClient();
   if (!client) return [];
 
-  console.log("[contentful] fetching active alerts, locale:", locale);
-  const data = await client.activeAlerts({
-    preview: false,
-    now: new Date().toISOString(),
-    locale,
-    audience: ["mobile", "both"],
-  });
+  try {
+    const data = await client.activeAlerts({
+      preview: false,
+      now: new Date().toISOString(),
+      locale,
+      audience: ["mobile", "both"],
+    });
 
-  return (data.componentAlertCollection?.items ?? []).filter(
-    (item): item is ComponentAlertFieldsFragment => item !== null,
-  );
+    return (data.componentAlertCollection?.items ?? []).filter(
+      (item): item is ComponentAlertFieldsFragment => item !== null,
+    );
+  } catch (error) {
+    // Contentful unreachable (network, 5xx, or a stale/invalid token → 401).
+    // Alerts are a non-critical banner, so degrade to none rather than letting
+    // the throw reach the global query error toast and fill the screen.
+    console.warn("[contentful] failed to fetch active alerts:", error);
+    return [];
+  }
 }

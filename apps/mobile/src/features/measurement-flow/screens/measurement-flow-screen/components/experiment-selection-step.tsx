@@ -1,6 +1,13 @@
 import { Search, X } from "lucide-react-native";
 import React, { useMemo } from "react";
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
@@ -27,7 +34,7 @@ export function ExperimentSelectionStep() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation("measurementFlow");
-  const { experiments, isLoading, error } = useExperiments();
+  const { experiments, isLoading, error, refetch, isRefetching } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const setExperimentId = useMeasurementFlowStore((s) => s.setExperimentId);
   const { isReady: experimentFlowReady } = useLoadExperimentFlow(selectedExperimentId);
@@ -129,6 +136,14 @@ export function ExperimentSelectionStep() {
             data={filtered}
             keyExtractor={(item) => item.value}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 0 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={() => void refetch()}
+                tintColor={colors.brand}
+                colors={[colors.brand]}
+              />
+            }
             renderItem={({ item }) => {
               const meta = flowMeta[item.value];
               return (

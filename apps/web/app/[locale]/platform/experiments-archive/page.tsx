@@ -1,4 +1,5 @@
 import { ListExperiments } from "@/components/list-experiments";
+import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
@@ -19,12 +20,12 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="fluid" className="space-y-6">
       <div>
         <h1 className="text-4xl font-bold text-gray-900">{t("experiments.archiveTitle")}</h1>
         <p>{t("experiments.archiveDescription")}</p>
       </div>
       <ListExperiments archived={true} />
-    </div>
+    </PageContainer>
   );
 }

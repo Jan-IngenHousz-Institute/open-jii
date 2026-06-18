@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { PoliciesContent } from "@repo/cms";
 import type { PagePoliciesFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -17,22 +18,24 @@ const getPoliciesData = cache(async (locale: string, preview: boolean) => {
   return policiesQuery.pagePoliciesCollection?.items[0] as PagePoliciesFieldsFragment;
 });
 
-export async function generateMetadata({ params }: PoliciesPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const policies = await getPoliciesData(locale, preview);
+export function generateMetadata({ params }: PoliciesPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const policies = await getPoliciesData(locale, preview);
 
-  const metadata: Metadata = {};
+    const metadata: Metadata = {};
 
-  if (policies.pageTitle) {
-    metadata.title = policies.pageTitle;
-  }
+    if (policies.pageTitle) {
+      metadata.title = policies.pageTitle;
+    }
 
-  if (policies.pageDescription) {
-    metadata.description = policies.pageDescription;
-  }
+    if (policies.pageDescription) {
+      metadata.description = policies.pageDescription;
+    }
 
-  return metadata;
+    return metadata;
+  });
 }
 
 export default async function PoliciesPage({ params }: PoliciesPageProps) {

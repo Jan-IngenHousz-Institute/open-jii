@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { AboutContent } from "@repo/cms";
 import type { PageAboutFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -17,22 +18,24 @@ const getAboutData = cache(async (locale: string, preview: boolean) => {
   return aboutQuery.pageAboutCollection?.items[0] as PageAboutFieldsFragment;
 });
 
-export async function generateMetadata({ params }: AboutPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const about = await getAboutData(locale, preview);
+export function generateMetadata({ params }: AboutPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const about = await getAboutData(locale, preview);
 
-  const metadata: Metadata = {};
+    const metadata: Metadata = {};
 
-  if (about.pageTitle) {
-    metadata.title = about.pageTitle;
-  }
+    if (about.pageTitle) {
+      metadata.title = about.pageTitle;
+    }
 
-  if (about.pageDescription) {
-    metadata.description = about.pageDescription;
-  }
+    if (about.pageDescription) {
+      metadata.description = about.pageDescription;
+    }
 
-  return metadata;
+    return metadata;
+  });
 }
 
 export default async function AboutPage({ params }: AboutPageProps) {

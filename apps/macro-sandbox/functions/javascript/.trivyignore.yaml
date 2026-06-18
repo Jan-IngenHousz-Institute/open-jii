@@ -132,6 +132,23 @@ vulnerabilities:
       amzn2023.0.4; awaiting AWS base image republish.
     expired_at: 2026-11-05
 
+  # form-data in Lambda runtime (/var/runtime/node_modules/form-data).
+  # Used by AWS SDK for multipart HTTP uploads. Fix requires AWS to republish the base image.
+  - id: CVE-2026-12143
+    statement: >-
+      form-data multipart-stream vulnerability in AWS Lambda runtime SDK.
+      Sandbox has no outbound HTTP and no IAM creds; SDK upload paths are unreachable.
+    expired_at: 2026-11-05
+
+  # ws in Lambda runtime (/var/runtime/node_modules/).
+  # Used by AWS SDK for WebSocket-based APIs. Fix requires AWS to republish the base image.
+  - id: CVE-2026-48779
+    statement: >-
+      ws memory-exhaustion DoS via tiny WebSocket fragments.
+      Lambda is invoked via the runtime API, not inbound WebSocket connections;
+      no attacker-controlled frames can reach this library.
+    expired_at: 2026-11-05
+
   # libsolv (dnf dependency solver) in Amazon Linux 2023 base image.
   # All four are buffer overflows reachable only when a package manager parses
   # crafted repo metadata, solv files, or PGP signatures. The sandbox invokes no

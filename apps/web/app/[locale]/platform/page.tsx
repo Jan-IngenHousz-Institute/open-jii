@@ -25,7 +25,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
   return (
     <div className="space-y-6">
       {/* Dashboard Banner */}
-      <div className="mt-6">
+      <div className="-mt-6">
         <DashboardBanner
           title={t("dashboard.transferBannerTitle")}
           description={t("dashboard.transferBannerDescription")}

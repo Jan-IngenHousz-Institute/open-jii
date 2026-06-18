@@ -28,6 +28,7 @@ const webConfig = defineConfig({
         ".open-next/**", // OpenNext build artifacts
         ".releaserc.js", // Semantic release configuration
         "proxy.ts", // Next.js proxy (middleware) — thin routing layer
+        "test/**", // jsdom drag/rect helpers, no runtime code
       ],
     },
   },

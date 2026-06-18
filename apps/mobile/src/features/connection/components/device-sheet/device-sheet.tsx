@@ -165,7 +165,7 @@ export function DeviceSheet() {
                     {t("deviceSheet.reconnectTitle", { name: lastConnectedDevice.name })}
                   </Text>
                   <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
-                    {t("deviceSheet.reconnectSub")}
+                    {t("deviceSheet.reconnectSub", { mac: lastConnectedDevice.id })}
                   </Text>
                 </>
               ) : (

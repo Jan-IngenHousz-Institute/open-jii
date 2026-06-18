@@ -1,8 +1,17 @@
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 
 export function useScannerCommandExecutor() {
-  const { commandResponse, reset, isExecuting, error, executeCommand, cancelCommand } =
-    useScannerCommandExecutorStore();
+  const {
+    commandResponse,
+    reset,
+    isExecuting,
+    error,
+    executeCommand,
+    cancelCommand,
+    progress,
+    scanStartedAt,
+    estimatedMs,
+  } = useScannerCommandExecutorStore();
 
   return {
     commandResponse,
@@ -11,5 +20,8 @@ export function useScannerCommandExecutor() {
     error,
     executeCommand,
     cancelCommand,
+    progress,
+    scanStartedAt,
+    estimatedMs,
   };
 }

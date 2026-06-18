@@ -1,4 +1,5 @@
 import { ListExperiments } from "@/components/list-experiments";
+import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -21,7 +22,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="fluid" className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         {/* Left: title, description and archive link */}
         <div>
@@ -36,17 +37,19 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
         </div>
 
         {/* Right: actions (create, transfer) */}
-        <div className="flex gap-4">
-          <Link href={`/${locale}/platform/transfer-request`}>
-            <Button variant="secondary">{t("transferRequest.title")}</Button>
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:gap-4">
+          <Link href={`/${locale}/platform/transfer-request`} className="w-full md:w-auto">
+            <Button variant="secondary" className="w-full md:w-auto">
+              {t("transferRequest.title")}
+            </Button>
           </Link>
-          <Link href={`/platform/experiments/new`} locale={locale}>
-            <Button>{t("experiments.create")}</Button>
+          <Link href={`/platform/experiments/new`} locale={locale} className="w-full md:w-auto">
+            <Button className="w-full md:w-auto">{t("experiments.create")}</Button>
           </Link>
         </div>
       </div>
 
       <ListExperiments />
-    </div>
+    </PageContainer>
   );
 }

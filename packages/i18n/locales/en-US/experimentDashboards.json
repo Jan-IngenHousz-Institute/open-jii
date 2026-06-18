@@ -1,0 +1,166 @@
+{
+  "ui": {
+    "title": "Dashboards",
+    "subtitle": "Compose visualizations and narrative into a single layout.",
+    "actions": {
+      "create": "New dashboard",
+      "delete": "Delete dashboard",
+      "edit": "Edit dashboard",
+      "done": "Done",
+      "back": "Back to dashboards"
+    },
+    "messages": {
+      "noDashboards": "No dashboards yet",
+      "noDashboardsDescription": "Create your first dashboard or browse standalone visualizations.",
+      "browseVisualizations": "Browse visualizations",
+      "createSuccess": "Dashboard created",
+      "deleteSuccess": "Dashboard deleted",
+      "deleteConfirm": "Permanently delete \"{{name}}\"? Visualizations referenced by this dashboard are not affected.",
+      "loading": "Loading dashboard\u2026",
+      "loadFailed": "Failed to load dashboard",
+      "emptyDashboard": "Nothing here yet",
+      "emptyDashboardEditorHint": "Pick a widget from the toolbar to get started."
+    },
+    "labels": {
+      "createdBy": "Created by",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "updatedAgo": "Updated {{date}}",
+      "widgetCount_one": "{{count}} widget",
+      "widgetCount_other": "{{count}} widgets",
+      "columns": {
+        "name": "Name",
+        "widgets": "Widgets",
+        "user": "User",
+        "updated": "Updated"
+      }
+    }
+  },
+  "form": {
+    "name": "Name",
+    "namePlaceholder": "Untitled dashboard",
+    "description": "Description",
+    "descriptionPlaceholder": "Add a description"
+  },
+  "editor": {
+    "addWidget": "Add widget",
+    "modebar": {
+      "cursor": "Select",
+      "dropHint": "Click to place"
+    },
+    "widgetTypes": {
+      "visualization": "Visualization",
+      "visualizationDescription": "Embed an existing chart by reference",
+      "richText": "Markdown",
+      "richTextDescription": "Add narrative or instructions",
+      "table": "Table",
+      "tableDescription": "Show paginated rows from an experiment table",
+      "filter": "Filter",
+      "filterDescription": "Let viewers narrow the data shown across widgets"
+    },
+    "inspector": {
+      "title": "Widget settings",
+      "noSelection": "Select a widget to edit its settings.",
+      "layout": "Layout",
+      "col": "Column",
+      "row": "Row",
+      "colSpan": "Width",
+      "rowSpan": "Height",
+      "delete": "Remove widget",
+      "actions": "Actions",
+      "display": "Display",
+      "chartType": "Chart type",
+      "visualization": "Visualization",
+      "more": "More",
+      "comingSoon": "Coming next",
+      "tabs": {
+        "widget": "Widget",
+        "data": "Data",
+        "style": "Style"
+      },
+      "viz": {
+        "pickVisualizationFirst": "Pick a visualization first"
+      },
+      "moreShelves": "More"
+    },
+    "vizDataStrip": {
+      "dataset": "Dataset",
+      "fields": "Fields"
+    },
+    "vizStyleStrip": {
+      "style": "Style"
+    },
+    "visualizationConfig": {
+      "pickVisualization": "Pick a visualization",
+      "pickHint": "Use the inspector on the right to choose a chart.",
+      "changeVisualization": "Change visualization",
+      "noneAvailable": "No visualizations yet for this experiment.",
+      "newVisualization": "New visualization",
+      "untitledViz": "Untitled visualization",
+      "editVisualization": "Open in editor",
+      "openInEditor": "Open in editor",
+      "showTitle": "Show title",
+      "showDescription": "Show description"
+    },
+    "filterConfig": {
+      "configureLabel": "Configure this filter",
+      "configureHint": "Use the inspector to pick a table, column, and operator.",
+      "defaultValueHint": "Sets the dashboard's default value. Viewers can override per session.",
+      "titlePlaceholder": "Filter label",
+      "scopeHint": "Filters apply to every visualization on this dashboard that reads from the same table.",
+      "pickTable": "Filter target",
+      "pickColumn": "Column",
+      "pickOperator": "Operator"
+    },
+    "richTextConfig": {
+      "placeholder": "Write something\u2026",
+      "emptyHint": "Click to add text"
+    },
+    "tableConfig": {
+      "pickTable": "Pick a table",
+      "pickHint": "Use the inspector on the right to choose a table.",
+      "noneAvailable": "No tables available for this experiment.",
+      "pageSize": "Page size",
+      "columns": "Columns",
+      "allColumns": "All",
+      "filters": "Filters",
+      "filtersHint": "AND-merged with any dashboard-level filter widgets that target the same table."
+    },
+    "widgetHeader": {
+      "title": "Title",
+      "description": "Description",
+      "titlePlaceholder": "Add a title",
+      "descriptionPlaceholder": "Add a description"
+    }
+  },
+  "widget": {
+    "missingVisualization": "Visualization not found",
+    "missingVisualizationDescription": "The chart this widget points to may have been deleted.",
+    "emptyVisualization": "No visualization picked",
+    "emptyVisualizationDescription": "This widget hasn't been wired up to a chart yet.",
+    "emptyRichText": "Empty text block",
+    "emptyRichTextDescription": "This text widget has no content yet.",
+    "emptyTable": "No table picked",
+    "emptyTableDescription": "This widget hasn't been wired up to a data table yet.",
+    "emptyFilter": "Filter not configured",
+    "emptyFilterDescription": "Open the inspector to pick a column and operator.",
+    "emptyDashboard": "Empty dashboard",
+    "emptyDashboardDescription": "No widgets have been added yet.",
+    "filterReset": "Reset",
+    "filterResetTitle": "Reset to default",
+    "expand": "Expand",
+    "expandedPreview": "Preview",
+    "expandedPreviewDescription": "Full-size preview of the widget content.",
+    "tableLoadFailed": "Failed to load table",
+    "tableLoadFailedDescription": "The table this widget points to may have been removed or is unavailable.",
+    "tablePageOf": "Page {{page}} of {{totalPages}}"
+  },
+  "overview": {
+    "title": "Dashboards",
+    "viewAll": "View all",
+    "createDashboard": "Create dashboard",
+    "browseVisualizations": "Browse visualizations",
+    "emptyTitle": "No dashboards yet",
+    "emptyDescription": "Compose visualizations and narrative into a layout, or jump straight to standalone charts."
+  }
+}

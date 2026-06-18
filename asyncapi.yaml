@@ -58,7 +58,7 @@ channels:
       message:
         $ref: "#/components/messages/ExperimentDataMessage"
 
-  device/scripts/v1/{sensorType}/{sensorVersion}/{identityId}:
+  device/scripts/v1/{sensorType}/{sensorVersion}/{thingName}:
     description: |
       Channel for delivering behaviour scripts to a device. The cloud publishes and
       the device subscribes, then applies the script to its attached sensor. Messages
@@ -68,8 +68,9 @@ channels:
       <ul>
         <li><strong>sensorType:</strong> The target sensor family (e.g., MultispeQ, Ambit...).</li>
         <li><strong>sensorVersion:</strong> Target firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
-        <li><strong>identityId:</strong> Cognito identity id of the target device. The IoT policy binds this
-          segment to ${cognito-identity.amazonaws.com:sub}, so a device can only subscribe to and receive its own scripts.</li>
+        <li><strong>thingName:</strong> AWS IoT Thing name of the target device. The IoT policy binds this
+          segment to ${iot:Connection.Thing.ThingName}, so a device (authenticated by its X.509 certificate)
+          can only subscribe to and receive its own scripts.</li>
       </ul>
     parameters:
       sensorType:
@@ -80,8 +81,8 @@ channels:
         description: Target firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).
         schema:
           type: string
-      identityId:
-        description: Cognito identity id of the target device (e.g., eu-central-1:uuid).
+      thingName:
+        description: AWS IoT Thing name of the target device (e.g., dom_ludo_prototype_ambyte_thing_v2).
         schema:
           type: string
     publish:

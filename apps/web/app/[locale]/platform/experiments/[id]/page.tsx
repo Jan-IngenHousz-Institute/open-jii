@@ -14,6 +14,8 @@ import { ExperimentMeasurements } from "~/components/experiment-overview/experim
 import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
+import ExperimentDashboardsDisplay from "../../../../../components/experiment-dashboards/list/experiment-dashboards-display";
+
 interface ExperimentOverviewPageProps {
   params: Promise<{ id: string }>;
 }
@@ -83,6 +85,8 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           workbookVersionId={experiment.workbookVersionId}
         />
         <ExperimentMeasurements experimentId={id} />
+
+        <ExperimentDashboardsDisplay experimentId={id} hasAccess={hasAccess} />
       </div>
     </div>
   );

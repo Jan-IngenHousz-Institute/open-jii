@@ -48,6 +48,9 @@
     "lastProcessed": "Last Processed",
     "seeAll": "See all"
   },
+  "dashboards": {
+    "tabLabel": "Dashboards"
+  },
   "flow": {
     "title": "Workbook",
     "legend": "Legend",
@@ -56,11 +59,17 @@
     "tabLabel": "Design",
     "viewList": "List",
     "viewGraph": "Graph",
+    "editWorkbook": "Edit workbook",
+    "viewPinned": "View pinned version",
     "noWorkbookLinked": "No workbook linked to this experiment.",
     "linkWorkbookPrompt": "Attach a workbook to define the experiment's data collection flow.",
     "attach": "Attach",
     "workbookAttached": "Workbook attached successfully",
     "attachFailed": "Failed to attach workbook",
+    "createNew": "Create new workbook",
+    "creating": "Creating…",
+    "or": "or",
+    "newWorkbookName": "{{name}} - Workbook",
     "versionUpgraded": "Workbook version upgraded successfully",
     "upgradeFailed": "Failed to upgrade workbook version",
     "upgradeToLatest": "Upgrade to v{{version}}",
@@ -71,8 +80,11 @@
     "detachFailed": "Failed to detach workbook",
     "changeWorkbook": "Change",
     "confirmChangeTitle": "Change workbook?",
-    "confirmChangeMessage": "Switching to a different workbook will replace the current measurement flow for this experiment. Existing data and results are preserved, but future measurements will use the new workbook's protocol.",
+    "confirmChangeMessage": "Switching workbooks replaces this experiment's measurement protocol. Existing measurements and results are preserved, but all future measurements will follow the new workbook. Changing the flow mid-experiment can affect how comparable your data is.",
     "confirmChange": "Switch workbook",
+    "confirmUpgradeTitle": "Upgrade workbook version?",
+    "confirmUpgradeMessage": "Upgrading pins this experiment to the latest workbook version, changing its measurement protocol for future measurements. Existing data is preserved, but changing the flow mid-experiment can affect how comparable your data is.",
+    "confirmUpgrade": "Upgrade",
     "saving": "Saving...",
     "saveFlow": "Save Flow",
     "nodeTypes": {
@@ -86,7 +98,8 @@
       "description": "This label will become a column in your data analysis:",
       "defaultColumnName": "question_name"
     },
-    "untitledNode": "(Untitled)"
+    "untitledNode": "(Untitled)",
+    "createFailed": "Failed to create workbook"
   },
   "overview": "Overview",
   "data": "Data",
@@ -224,6 +237,8 @@
     "removeOption": "Remove option",
     "bulkAddOptions": "Bulk Add",
     "deleteAllOptions": "Delete All",
+    "optionCount_one": "{{count}} option",
+    "optionCount_other": "{{count}} options",
     "textResponseLabel": "Text Response",
     "textResponseDescription": "Participants can write their own answer",
     "numberResponseLabel": "Number Response",

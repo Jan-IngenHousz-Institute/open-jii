@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { NavTabs, NavTabsList, NavTabsTrigger, NavTabsContent } from "../nav-tabs";
 
@@ -65,10 +65,14 @@ describe("NavTabs", () => {
 
       const list = screen.getByTestId("tabs-list");
       expect(list).toBeInTheDocument();
-      expect(list.className).toContain("inline-flex");
-      expect(list.className).toContain("gap-6");
-      expect(list.className).toContain("border-b");
-      expect(list.className).toContain("overflow-x-auto");
+      // Underline-style tabs: inline-flex row, capped at max-w-full, with a 2px
+      // baseline that matches the active indicator's height.
+      // Assert exact class tokens so e.g. "flex" can't pass on "inline-flex".
+      const tokens = list.className.split(/\s+/);
+      expect(tokens).toContain("inline-flex");
+      expect(tokens).toContain("max-w-full");
+      expect(tokens).toContain("border-b-2");
+      expect(tokens).toContain("gap-6");
     });
 
     it("applies custom className to tabs list", () => {
@@ -131,10 +135,9 @@ describe("NavTabs", () => {
       expect(activeTrigger).toHaveAttribute("data-state", "active");
       expect(inactiveTrigger).toHaveAttribute("data-state", "inactive");
 
-      // Check for base classes that should be present
-      expect(activeTrigger.className).toContain("inline-flex");
-      expect(activeTrigger.className).toContain("px-1");
-      expect(activeTrigger.className).toContain("pb-3");
+      // Active tab is marked by brand-teal text; the underline itself is drawn by
+      // the list's separate sliding indicator, not a per-trigger border.
+      expect(activeTrigger.className).toContain("data-[state=active]:text-primary");
     });
 
     it("applies custom className to trigger", () => {
@@ -384,6 +387,61 @@ describe("NavTabs", () => {
       expect(tab2).toHaveAttribute("role", "tab");
       expect(tab1).toHaveAttribute("data-state", "active");
       expect(tab2).toHaveAttribute("data-state", "inactive");
+    });
+  });
+
+  describe("Mobile dropdown", () => {
+    const originalMatchMedia = window.matchMedia;
+
+    // Force the mobile breakpoint so NavTabsList renders its dropdown variant.
+    beforeEach(() => {
+      window.matchMedia = ((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })) as unknown as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+    });
+
+    it("collapses tabs into a dropdown labelled by the active tab", () => {
+      render(
+        <NavTabs value="data">
+          <NavTabsList>
+            <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
+            <NavTabsTrigger value="data">Data</NavTabsTrigger>
+          </NavTabsList>
+        </NavTabs>,
+      );
+
+      // Closed dropdown shows the active tab's label; the tab rows stay collapsed.
+      expect(screen.getByRole("button", { name: /data/i })).toBeInTheDocument();
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    });
+
+    it("reveals the tabs when the dropdown is opened", async () => {
+      const user = userEvent.setup();
+
+      render(
+        <NavTabs value="overview">
+          <NavTabsList>
+            <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
+            <NavTabsTrigger value="data">Data</NavTabsTrigger>
+          </NavTabsList>
+        </NavTabs>,
+      );
+
+      await user.click(screen.getByRole("button", { name: /overview/i }));
+
+      expect(screen.getByRole("tab", { name: /overview/i })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: /data/i })).toBeInTheDocument();
     });
   });
 });

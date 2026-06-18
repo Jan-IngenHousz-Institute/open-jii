@@ -35,34 +35,12 @@ describe("ExperimentTitle", () => {
     expect(screen.getByText("My Experiment")).toBeInTheDocument();
   });
 
-  it("renders status badge for active experiments", () => {
-    renderComponent({ status: "active" });
-    expect(screen.getByText("status.active")).toBeInTheDocument();
-  });
-
-  it("renders status badge for archived experiments", () => {
-    renderComponent({ status: "archived" });
-    expect(screen.getByText("status.archived")).toBeInTheDocument();
-  });
-
-  it("renders status badge for stale experiments", () => {
-    renderComponent({ status: "stale" });
-    expect(screen.getByText("status.stale")).toBeInTheDocument();
-  });
-
-  it("renders status badge for published experiments", () => {
-    renderComponent({ status: "published" });
-    expect(screen.getByText("status.published")).toBeInTheDocument();
-  });
-
-  it("renders public visibility badge", () => {
-    renderComponent({ visibility: "public" });
-    expect(screen.getByText("public")).toBeInTheDocument();
-  });
-
-  it("renders private visibility badge", () => {
-    renderComponent({ visibility: "private" });
-    expect(screen.getByText("private")).toBeInTheDocument();
+  it("does not render the active / public pills anymore", () => {
+    // Status + visibility badges were removed from the title as part of the chrome refresh
+    // (ExperimentTitle still accepts the props but renders only InlineEditableTitle).
+    renderComponent({ status: "active", visibility: "public" });
+    expect(screen.queryByText("status.active")).not.toBeInTheDocument();
+    expect(screen.queryByText("public")).not.toBeInTheDocument();
   });
 
   it("enters edit mode when title is clicked with access", async () => {

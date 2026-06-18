@@ -1,15 +1,17 @@
 "use client";
 
+import {
+  getWorkbookCellSummary,
+  WorkbookCellSummary,
+} from "@/components/workbook/workbook-cell-summary";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
-import { BookOpen, Code, FlaskConical, GitBranch, HelpCircle, FileText } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/components/card";
@@ -18,23 +20,6 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 interface ExperimentLinkedWorkbookProps {
   workbookId: string | null;
   workbookVersionId?: string | null;
-}
-
-const cellMeta: Record<string, { label: string; color: string; icon: ReactNode }> = {
-  protocol: { label: "Protocol", color: "#2D3142", icon: <FlaskConical className="h-3 w-3" /> },
-  macro: { label: "Macro", color: "#6C5CE7", icon: <Code className="h-3 w-3" /> },
-  question: { label: "Question", color: "#C58AAE", icon: <HelpCircle className="h-3 w-3" /> },
-  branch: { label: "Branch", color: "#D08A3C", icon: <GitBranch className="h-3 w-3" /> },
-  markdown: { label: "Note", color: "#6F8596", icon: <FileText className="h-3 w-3" /> },
-};
-
-function getCellSummary(cells: WorkbookCell[]) {
-  const counts: Record<string, number> = {};
-  for (const cell of cells) {
-    if (cell.type === "output") continue;
-    counts[cell.type] = (counts[cell.type] ?? 0) + 1;
-  }
-  return Object.entries(counts);
 }
 
 export function ExperimentLinkedWorkbook({
@@ -57,8 +42,6 @@ export function ExperimentLinkedWorkbook({
 
   if (!workbookId) return null;
 
-  const cellSummary = workbook ? getCellSummary(workbook.cells) : [];
-
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -69,6 +52,8 @@ export function ExperimentLinkedWorkbook({
   }
 
   if (!workbook) return null;
+
+  const hasCells = getWorkbookCellSummary(workbook.cells).length > 0;
 
   return (
     <div className="space-y-4">
@@ -111,25 +96,9 @@ export function ExperimentLinkedWorkbook({
             </p>
           )}
 
-          {cellSummary.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {cellSummary.map(([type, count]) => {
-                const meta = cellMeta[type];
-                return (
-                  <span
-                    key={type}
-                    className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-                  >
-                    {meta.icon}
-                    {count} {meta.label}
-                    {count > 1 ? "s" : ""}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
-          {cellSummary.length === 0 && (
+          {hasCells ? (
+            <WorkbookCellSummary cells={workbook.cells} className="mt-3" />
+          ) : (
             <p className="text-muted-foreground mt-3 text-sm italic">{t("workbooks.noCells")}</p>
           )}
         </CardContent>

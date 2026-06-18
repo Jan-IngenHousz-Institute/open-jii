@@ -1,44 +1,38 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
+import { parseApiError } from "~/util/apiError";
 
-import { zCreateUserProfileBody } from "@repo/api/schemas/user.schema";
 import type { CreateUserProfileBody, User } from "@repo/api/schemas/user.schema";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
-import { Form } from "@repo/ui/components/form";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ErrorDisplay } from "../error-display";
-import { DangerZoneCard } from "./danger-zone-card";
-import { ProfileCard } from "./profile-card";
-import { ProfilePictureCard } from "./profile-picture-card";
+import { AccountIdentityCard } from "./account-identity-card";
+import { DangerZoneCard } from "./danger-zone/danger-zone-card";
+import { ProfileInformationCard } from "./profile-information-card";
 
 export function AccountSettings({ session }: { session: Session | null }) {
   const { t } = useTranslation("account");
   const user = session?.user as User | undefined;
 
-  // Fetch existing user profile data
   const {
     data: userProfile,
     isLoading: isLoadingProfile,
     error,
   } = useGetUserProfile(user?.id ?? "");
 
-  // 1) Loading gate
   if (isLoadingProfile) {
     return <div>{t("settings.loading")}</div>;
   }
 
-  // 2) Error gate
   if (error) {
     return <ErrorDisplay error={error} title={t("settings.errorTitle")} />;
   }
+
   const initialValues: CreateUserProfileBody = userProfile?.body
     ? {
         firstName: userProfile.body.firstName,
@@ -46,6 +40,7 @@ export function AccountSettings({ session }: { session: Session | null }) {
         bio: userProfile.body.bio ?? "",
         organization: userProfile.body.organization ?? "",
         activated: userProfile.body.activated ?? true,
+        avatarUrl: userProfile.body.avatarUrl ?? user?.image ?? null,
       }
     : {
         firstName: "",
@@ -53,74 +48,90 @@ export function AccountSettings({ session }: { session: Session | null }) {
         bio: "",
         organization: "",
         activated: true,
+        avatarUrl: user?.image ?? null,
       };
 
-  return <AccountSettingsForm initialValues={initialValues} userId={user?.id ?? ""} />;
+  return (
+    <AccountSettingsContent
+      initialValues={initialValues}
+      userId={user?.id ?? ""}
+      email={userProfile?.body.email ?? user?.email ?? null}
+    />
+  );
 }
 
-// A pure form component that mounts once with the right defaults.
-function AccountSettingsForm({
+function AccountSettingsContent({
   initialValues,
   userId,
+  email,
 }: {
   initialValues: CreateUserProfileBody;
   userId: string;
+  email?: string | null;
 }) {
-  const router = useRouter();
   const { t } = useTranslation("account");
-  const { mutate: createUserProfile, isPending } = useCreateUserProfile({
+  const [profile, setProfile] = useState(initialValues);
+  const { mutateAsync: updateProfile, isPending } = useCreateUserProfile({
     onSuccess: () => {
       toast({ description: t("settings.saved") });
     },
   });
 
-  const form = useForm<CreateUserProfileBody>({
-    resolver: zodResolver(zCreateUserProfileBody),
-    defaultValues: initialValues,
-    mode: "onSubmit",
-  });
+  const saveProfile = async (nextProfile: CreateUserProfileBody) => {
+    try {
+      await updateProfile({ body: nextProfile });
+      setProfile(nextProfile);
+    } catch (err) {
+      toast({ description: parseApiError(err)?.message, variant: "destructive" });
+      throw err;
+    }
+  };
 
-  function onCancel() {
-    router.back();
-  }
+  const saveName = async (displayName: string) => {
+    const parts = displayName.trim().split(/\s+/).filter(Boolean);
+    const firstName = parts[0] ?? "";
+    const lastName = parts.slice(1).join(" ") || profile.lastName;
 
-  function onSubmit(values: CreateUserProfileBody) {
-    createUserProfile({ body: values });
-  }
+    if (firstName.length < 2 || lastName.length < 2) {
+      toast({
+        description: t("settings.ProfileInformationCard.nameValidation"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await saveProfile({ ...profile, firstName, lastName });
+  };
+
+  const saveAvatarUrl = async (avatarUrl: string) => {
+    const trimmedUrl = avatarUrl.trim();
+    await saveProfile({ ...profile, avatarUrl: trimmedUrl || null });
+  };
+
+  const saveBio = async (bio: string) => {
+    await saveProfile({ ...profile, bio });
+  };
+
+  const saveOrganization = async (organization: string) => {
+    await saveProfile({ ...profile, organization: organization.trim() });
+  };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium">{t("settings.accountsettings")}</h3>
-            <p className="text-muted-foreground text-sm">{t("settings.description")}</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button type="button" onClick={onCancel} variant="outline">
-              {t("settings.cancel")}
-            </Button>
-            <Button type="submit" disabled={isPending} aria-busy={isPending}>
-              {isPending ? t("settings.saving") : t("settings.save")}
-            </Button>
-          </div>
-        </div>
-        {/* Two-column layout: picture card on the left, profile card on the right */}
-        <div className="grid items-stretch gap-6 md:grid-cols-2">
-          <div className="h-full">
-            <ProfilePictureCard />
-          </div>
-          <div className="h-full">
-            <ProfileCard form={form} />
-          </div>
-        </div>
-
-        {/* Danger zone: deactivate account */}
-        <div>
-          <DangerZoneCard profile={initialValues} userId={userId} />
-        </div>
-      </form>
-    </Form>
+    <div className="mx-auto w-full max-w-5xl space-y-6">
+      <AccountIdentityCard
+        profile={profile}
+        email={email}
+        onSaveName={saveName}
+        onSaveAvatarUrl={saveAvatarUrl}
+        isPending={isPending}
+      />
+      <ProfileInformationCard
+        profile={profile}
+        onSaveBio={saveBio}
+        onSaveOrganization={saveOrganization}
+        isPending={isPending}
+      />
+      <DangerZoneCard profile={profile} userId={userId} />
+    </div>
   );
 }

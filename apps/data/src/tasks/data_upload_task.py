@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 import pandas as pd
 from pyspark.dbutils import DBUtils
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StringType, StructField, StructType, TimestampType
+from pyspark.sql.types import LongType, StringType, StructField, StructType, TimestampType
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
 
@@ -126,8 +126,9 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
             "created_by": USER_ID,
             "uploaded_at": uploaded_at,
             "uploaded_data": json.dumps(row, default=str),
+            "row_index": i,
         }
-        for row in all_rows
+        for i, row in enumerate(all_rows)
     ]
 
     schema = StructType([
@@ -138,6 +139,7 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
         StructField("created_by", StringType(), True),
         StructField("uploaded_at", TimestampType(), True),
         StructField("uploaded_data", StringType(), True),
+        StructField("row_index", LongType(), True),
     ])
 
     spark_df = spark.createDataFrame(records, schema=schema)
@@ -312,8 +314,9 @@ def process_ambyte_upload() -> dict:
             "created_by": USER_ID,
             "uploaded_at": uploaded_at,
             "uploaded_data": json.dumps(row, default=str),
+            "row_index": i,
         }
-        for row in rows
+        for i, row in enumerate(rows)
     ]
 
     schema = StructType([
@@ -324,6 +327,7 @@ def process_ambyte_upload() -> dict:
         StructField("created_by", StringType(), True),
         StructField("uploaded_at", TimestampType(), True),
         StructField("uploaded_data", StringType(), True),
+        StructField("row_index", LongType(), True),
     ])
 
     spark_df = spark.createDataFrame(records, schema=schema)

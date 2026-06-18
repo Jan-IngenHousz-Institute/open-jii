@@ -20,6 +20,7 @@
  * });
  * ```
  */
+import { ActivityProvider } from "@/components/activity/activity-context";
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
@@ -56,12 +57,20 @@ function createTestQueryClient() {
 
 interface WrapperProps {
   children: React.ReactNode;
+  queryClient?: QueryClient;
 }
 
-function AllProviders({ children }: WrapperProps) {
-  const queryClient = createTestQueryClient();
+function AllProviders({ children, queryClient }: WrapperProps) {
+  // Stable for the render's lifetime so rerenders don't reset React Query state.
+  const [client] = React.useState(() => queryClient ?? createTestQueryClient());
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <tsr.ReactQueryProvider>
+        <ActivityProvider>{children}</ActivityProvider>
+      </tsr.ReactQueryProvider>
+    </QueryClientProvider>
+  );
 }
 
 // ── Custom render ───────────────────────────────────────────────
@@ -84,12 +93,7 @@ function render(ui: ReactElement, options?: CustomRenderOptions): CustomRenderRe
   const { queryClient, ...renderOptions } = options ?? {};
 
   function Wrapper({ children }: WrapperProps) {
-    const client = queryClient ?? createTestQueryClient();
-    return (
-      <QueryClientProvider client={client}>
-        <tsr.ReactQueryProvider>{children}</tsr.ReactQueryProvider>
-      </QueryClientProvider>
-    );
+    return <AllProviders queryClient={queryClient}>{children}</AllProviders>;
   }
 
   const result = rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
@@ -114,12 +118,7 @@ function renderHook<TResult, TProps = undefined>(
   const { queryClient, initialProps } = options ?? {};
 
   function Wrapper({ children }: WrapperProps) {
-    const client = queryClient ?? createTestQueryClient();
-    return (
-      <QueryClientProvider client={client}>
-        <tsr.ReactQueryProvider>{children}</tsr.ReactQueryProvider>
-      </QueryClientProvider>
-    );
+    return <AllProviders queryClient={queryClient}>{children}</AllProviders>;
   }
 
   const hookResult = rtlRenderHook<TResult, TProps>(hook as (props: TProps) => TResult, {
@@ -155,7 +154,7 @@ function renderHook<TResult, TProps = undefined>(
  * import { renderWithForm, screen } from "@/test/test-utils";
  *
  * renderWithForm<CreateUserProfileBody>(
- *   (form) => <ProfileCard form={form} />,
+ *   (form) => <ProfileInformationCard form={form} />,
  *   { useFormProps: { defaultValues: { firstName: "", lastName: "" } } },
  * );
  * ```

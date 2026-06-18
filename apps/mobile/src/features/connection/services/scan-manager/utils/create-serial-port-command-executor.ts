@@ -1,6 +1,6 @@
 import { getConnectedSerialPortConnection } from "~/features/connection/services/device-connection-manager/serial-port-connection";
-import { serialPortToMultispeqStream } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
-import { MultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/multispeq-command-executor";
+import { createDriverCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
+import { serialPortTransport } from "~/features/connection/services/multispeq-communication/transports/serial-port-transport";
 
 export function createSerialPortCommandExecutor() {
   const connection = getConnectedSerialPortConnection();
@@ -8,5 +8,5 @@ export function createSerialPortCommandExecutor() {
     return undefined;
   }
 
-  return new MultispeqCommandExecutor(serialPortToMultispeqStream(connection));
+  return createDriverCommandExecutor(serialPortTransport(connection));
 }

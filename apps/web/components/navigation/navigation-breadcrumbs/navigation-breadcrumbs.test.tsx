@@ -12,13 +12,16 @@ vi.mock("~/app/actions/breadcrumbs", () => ({
 }));
 
 describe("Breadcrumbs", () => {
-  it("renders nothing when no segments", async () => {
+  it("renders an empty breadcrumb row when there are no segments", async () => {
+    // We always render the nav so the layout doesn't shift between routes.
     enrichPathSegmentsMock.mockResolvedValue([]);
 
     render(<Breadcrumbs locale="en-US" />);
 
     await waitFor(() => {
-      expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument();
+      const nav = screen.getByRole("navigation", { name: "breadcrumb" });
+      expect(nav).toBeInTheDocument();
+      expect(nav.querySelector("ol")).toBeNull();
     });
   });
 
