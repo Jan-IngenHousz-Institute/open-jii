@@ -63,7 +63,7 @@ describe("navigation-config", () => {
 
   describe("userNavigation", () => {
     it("generates account URL", () => {
-      expect(userNavigation.account.url(locale)).toBe(`/${locale}/platform/account/settings`);
+      expect(userNavigation.account.url(locale)).toBe(`/${locale}/platform/account`);
     });
 
     it("generates support URL (external)", () => {

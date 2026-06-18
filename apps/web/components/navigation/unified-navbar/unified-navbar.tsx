@@ -106,7 +106,7 @@ function UserMenu({
         {/* Account link */}
         <DropdownMenuItem asChild>
           <Link
-            href={`/${locale}/platform/account/settings`}
+            href={`/${locale}/platform/account`}
             className="flex w-full cursor-default items-center"
           >
             <Avatar className="bg-muted mr-2 h-4 w-4">
@@ -365,7 +365,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                     {/* Account link for mobile */}
                     <DropdownMenuItem asChild>
                       <Link
-                        href={`/${locale}/platform/account/settings`}
+                        href={`/${locale}/platform/account`}
                         className="flex w-full cursor-default items-center"
                       >
                         <Avatar className="bg-muted mr-2 h-4 w-4">

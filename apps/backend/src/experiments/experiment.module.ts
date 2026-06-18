@@ -54,6 +54,7 @@ import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experi
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
+import { TransferExperimentAdminUseCase } from "./application/use-cases/experiment-members/transfer-experiment-admin";
 import { UpdateExperimentMemberRoleUseCase } from "./application/use-cases/experiment-members/update-experiment-member-role";
 import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
@@ -208,6 +209,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     AddExperimentMembersUseCase,
     RemoveExperimentMemberUseCase,
     UpdateExperimentMemberRoleUseCase,
+    TransferExperimentAdminUseCase,
 
     // Experiment join request use cases
     RequestJoinExperimentUseCase,

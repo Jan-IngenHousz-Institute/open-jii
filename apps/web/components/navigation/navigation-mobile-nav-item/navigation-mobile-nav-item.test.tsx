@@ -11,14 +11,14 @@ describe("NavigationMobileNavItem", () => {
     const item = {
       titleKey: "auth.account",
       namespace: "auth",
-      url: (locale: string) => `/${locale}/platform/account/settings`,
+      url: (locale: string) => `/${locale}/platform/account`,
       icon: "User",
     } as const;
 
     render(<NavigationMobileNavItem item={item} locale={locale} onItemClick={mockOnItemClick} />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/en/platform/account/settings");
+    expect(link).toHaveAttribute("href", "/en/platform/account");
     expect(link).not.toHaveAttribute("target");
     expect(screen.getByText("auth.account")).toBeInTheDocument();
   });

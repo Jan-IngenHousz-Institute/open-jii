@@ -3,6 +3,8 @@ import z from "zod";
 
 import { profiles, users } from "@repo/database";
 
+import type { ExperimentDto } from "../../../experiments/core/models/experiment.model";
+
 // Create schemas for database operations
 export const createUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -53,4 +55,12 @@ export interface SearchUsersParams {
   query?: string;
   limit?: number;
   offset?: number;
+}
+
+// An experiment for which the user is the sole admin — i.e. a blocker for account deletion.
+export type SoleAdminExperiment = Pick<ExperimentDto, "id" | "name" | "status">;
+
+// A sole-admin experiment enriched with the other members who could take over admin before deletion.
+export interface DeletionBlocker extends SoleAdminExperiment {
+  candidates: UserProfileMetadata[];
 }
