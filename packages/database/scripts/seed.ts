@@ -5,6 +5,7 @@ import { ensurePersonalOrganization, personalOrgSlug } from "../src/organization
 import {
   backfillExperimentOrganizationsAndGrants,
   backfillOwnedEntitiesOwnership,
+  grantResource,
 } from "../src/resource-grants";
 import {
   users,
@@ -16,7 +17,11 @@ import {
   experimentMembers,
   flows,
   organizations,
+  organizationMembers,
+  organizationJoinRequests,
   resourceGrants,
+  teams,
+  teamMembers,
   workbooks,
 } from "../src/schema";
 
@@ -73,6 +78,23 @@ const CONTRIBUTOR_SEEDS = [
     experimentId: EXPERIMENT_ID_WINTER_WHEAT,
   },
 ] as const;
+
+// ── Phase G: rich org/teams/members seed (fixed UUIDs for idempotent cleanup) ──
+// Member users who populate the named organizations (some belong to two orgs).
+const MEMBER_SEEDS = [
+  { id: "5b1a0001-0000-4000-8000-000000000001", firstName: "Alice", lastName: "Green" },
+  { id: "5b1a0002-0000-4000-8000-000000000002", firstName: "Bob", lastName: "Rivera" },
+  { id: "5b1a0003-0000-4000-8000-000000000003", firstName: "Carol", lastName: "Singh" },
+  { id: "5b1a0004-0000-4000-8000-000000000004", firstName: "Dana", lastName: "Okafor" },
+] as const;
+const MEMBER_BY_NAME = Object.fromEntries(MEMBER_SEEDS.map((mbr) => [mbr.firstName, mbr.id]));
+
+const ORG_PHOTO_ID = "5b1a0010-0000-4000-8000-000000000010";
+const ORG_FIELD_ID = "5b1a0011-0000-4000-8000-000000000011";
+const ORG_COMMUNITY_ID = "5b1a0012-0000-4000-8000-000000000012";
+const TEAM_IMAGING_ID = "5b1a0020-0000-4000-8000-000000000020";
+const NAMED_ORG_IDS = [ORG_PHOTO_ID, ORG_FIELD_ID, ORG_COMMUNITY_ID];
+const MEMBER_IDS = MEMBER_SEEDS.map((mbr) => mbr.id);
 
 async function clearSeedData() {
   // Find seed experiment IDs for join table cleanup
@@ -135,6 +157,234 @@ async function clearSeedData() {
   const contributorIds = CONTRIBUTOR_SEEDS.map((c) => c.id);
   await db.delete(profiles).where(inArray(profiles.userId, contributorIds));
   await db.delete(users).where(inArray(users.id, contributorIds));
+
+  // Phase G: named orgs + members + teams + join requests + member users.
+  // resource_grants are polymorphic (no FK), so clear org/team grants first.
+  await db
+    .delete(resourceGrants)
+    .where(inArray(resourceGrants.granteeId, [...NAMED_ORG_IDS, TEAM_IMAGING_ID]));
+  await db.delete(resourceGrants).where(inArray(resourceGrants.createdBy, MEMBER_IDS));
+  // Deleting a named org cascades its members, teams, team_members, join
+  // requests, and org-owned entities.
+  await db.delete(organizations).where(inArray(organizations.id, NAMED_ORG_IDS));
+  // Member users' personal orgs (by slug), then profiles + users.
+  await db.delete(organizations).where(inArray(organizations.slug, MEMBER_IDS.map(personalOrgSlug)));
+  await db.delete(profiles).where(inArray(profiles.userId, MEMBER_IDS));
+  await db.delete(users).where(inArray(users.id, MEMBER_IDS));
+}
+
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+
+/**
+ * Seed the named organizations, their members (with overlap), a team, a mix of
+ * public/private org-owned entities, org/team resource grants, and pending join
+ * requests — the rich fixtures the directory / profiles / teams UX demos against.
+ */
+async function seedOrganizations(seedUserId: string) {
+  const alice = MEMBER_BY_NAME.Alice;
+  const bob = MEMBER_BY_NAME.Bob;
+  const carol = MEMBER_BY_NAME.Carol;
+  const dana = MEMBER_BY_NAME.Dana;
+
+  // 1. Member users + profiles + personal orgs.
+  await db.insert(users).values(
+    MEMBER_SEEDS.map((mbr) => ({
+      id: mbr.id,
+      name: `${mbr.firstName} ${mbr.lastName}`,
+      email: `${mbr.firstName.toLowerCase()}@openjii.local`,
+      emailVerified: true,
+      registered: true,
+    })),
+  );
+  await db.insert(profiles).values(
+    MEMBER_SEEDS.map((mbr) => ({
+      userId: mbr.id,
+      firstName: mbr.firstName,
+      lastName: mbr.lastName,
+      activated: true,
+    })),
+  );
+  for (const mbr of MEMBER_SEEDS) {
+    await ensurePersonalOrganization(db, { id: mbr.id, name: `${mbr.firstName} ${mbr.lastName}` });
+  }
+
+  // 2. Three named organizations (Photosynthesis public so it can take join
+  // requests; Field Trials private; Community public and seed user is NOT in it).
+  await db.insert(organizations).values([
+    {
+      id: ORG_PHOTO_ID,
+      name: "Photosynthesis Lab",
+      slug: "seed-photosynthesis-lab",
+      visibility: "public",
+      type: "research_institute",
+      description:
+        "A plant-physiology lab studying photosynthetic efficiency with the MultispeQ.",
+      location: "Wageningen, NL",
+      website: "https://openjii.org",
+    },
+    {
+      id: ORG_FIELD_ID,
+      name: "Field Trials Group",
+      slug: "seed-field-trials-group",
+      visibility: "private",
+      type: "non_profit",
+      description: "Coordinates multi-site outdoor crop trials and shared protocols.",
+      location: "Ames, IA",
+    },
+    {
+      id: ORG_COMMUNITY_ID,
+      name: "Community",
+      slug: "seed-community",
+      visibility: "public",
+      type: "non_profit",
+      description:
+        "An open community sharing public protocols, macros, and workbooks for everyone.",
+      location: "Global",
+    },
+  ]);
+
+  // 3. Members (Bob is in both Photosynthesis and Field Trials).
+  await db.insert(organizationMembers).values([
+    { organizationId: ORG_PHOTO_ID, userId: seedUserId, role: "owner" },
+    { organizationId: ORG_PHOTO_ID, userId: alice, role: "admin" },
+    { organizationId: ORG_PHOTO_ID, userId: bob, role: "member" },
+    { organizationId: ORG_FIELD_ID, userId: seedUserId, role: "owner" },
+    { organizationId: ORG_FIELD_ID, userId: bob, role: "member" },
+    { organizationId: ORG_FIELD_ID, userId: carol, role: "member" },
+    { organizationId: ORG_COMMUNITY_ID, userId: alice, role: "owner" },
+    { organizationId: ORG_COMMUNITY_ID, userId: carol, role: "member" },
+    { organizationId: ORG_COMMUNITY_ID, userId: dana, role: "member" },
+  ]);
+
+  // 4. An "Imaging" team in Photosynthesis with a couple of members.
+  await db
+    .insert(teams)
+    .values({ id: TEAM_IMAGING_ID, name: "Imaging", organizationId: ORG_PHOTO_ID });
+  await db.insert(teamMembers).values([
+    { teamId: TEAM_IMAGING_ID, userId: alice },
+    { teamId: TEAM_IMAGING_ID, userId: bob },
+  ]);
+
+  // 5. Org-owned entities (createdBy = seed user for simple, prefix-based cleanup).
+  const [communityExp] = await db
+    .insert(experiments)
+    .values({
+      name: "[Seed] Community Light Atlas",
+      description: "A community-curated atlas of light environments across growing sites.",
+      status: "active",
+      visibility: "public",
+      organizationId: ORG_COMMUNITY_ID,
+      createdBy: seedUserId,
+      embargoUntil: new Date(Date.now() + NINETY_DAYS_MS),
+    })
+    .returning();
+  await db
+    .insert(experimentMembers)
+    .values({ experimentId: communityExp.id, userId: seedUserId, role: "admin" });
+
+  await db.insert(macros).values({
+    name: "[Seed] Community PAR Normalizer",
+    filename: "seed_macro_community_par",
+    description: "Normalizes PAR readings to a 0-1 scale for cross-site comparison.",
+    language: "python",
+    code: btoa("def normalize(par):\n    return min(par / 2000.0, 1.0)\n"),
+    organizationId: ORG_COMMUNITY_ID,
+    visibility: "public",
+    createdBy: seedUserId,
+  });
+  await db.insert(protocols).values({
+    name: "[Seed] Community Open PAR Protocol",
+    description: "An openly shared PAR measurement protocol anyone can run.",
+    code: [{ _protocol_set: [{ label: "PAR", range: [400, 700] }] }],
+    family: "multispeq",
+    organizationId: ORG_COMMUNITY_ID,
+    visibility: "public",
+    createdBy: seedUserId,
+  });
+  await db.insert(workbooks).values({
+    name: "[Seed] Community Field Guide",
+    description: "A public field guide workbook for new community members.",
+    cells: [{ id: "md1", type: "markdown", content: "# Field Guide\nWelcome to the community." }],
+    metadata: {},
+    organizationId: ORG_COMMUNITY_ID,
+    visibility: "public",
+    createdBy: seedUserId,
+  });
+
+  const [photoExp] = await db
+    .insert(experiments)
+    .values({
+      name: "[Seed] Photosynthesis Canopy Study",
+      description: "Canopy-level photosynthesis across the lab's experimental plots.",
+      status: "active",
+      visibility: "public",
+      organizationId: ORG_PHOTO_ID,
+      createdBy: seedUserId,
+      embargoUntil: new Date(Date.now() + NINETY_DAYS_MS),
+    })
+    .returning();
+  await db
+    .insert(experimentMembers)
+    .values({ experimentId: photoExp.id, userId: seedUserId, role: "admin" });
+  const [photoMacro] = await db
+    .insert(macros)
+    .values({
+      name: "[Seed] Photosynthesis Phi2 Batch",
+      filename: "seed_macro_photo_phi2",
+      description: "Batch Phi2 computation for the lab's internal pipelines (private).",
+      language: "python",
+      code: btoa("def phi2(fm_prime, fs):\n    return (fm_prime - fs) / fm_prime\n"),
+      organizationId: ORG_PHOTO_ID,
+      visibility: "private",
+      createdBy: seedUserId,
+    })
+    .returning();
+
+  await db.insert(protocols).values({
+    name: "[Seed] Field Soil Moisture v2",
+    description: "Updated soil-moisture protocol shared across the field trials.",
+    code: [{ _protocol_set: [{ label: "SoilMoisture", interval: 5 }] }],
+    family: "ambit",
+    organizationId: ORG_FIELD_ID,
+    visibility: "public",
+    createdBy: seedUserId,
+  });
+
+  // 6. Resource grants: a team grant and a cross-org organization grant.
+  await grantResource(db, {
+    resourceType: "experiment",
+    resourceId: photoExp.id,
+    granteeType: "team",
+    granteeId: TEAM_IMAGING_ID,
+    role: "member",
+    createdBy: seedUserId,
+  });
+  await grantResource(db, {
+    resourceType: "macro",
+    resourceId: photoMacro.id,
+    granteeType: "organization",
+    granteeId: ORG_FIELD_ID,
+    role: "viewer",
+    createdBy: seedUserId,
+  });
+
+  // 7. Pending join requests to the public Photosynthesis Lab (for the approve demo).
+  await db.insert(organizationJoinRequests).values([
+    {
+      organizationId: ORG_PHOTO_ID,
+      userId: CONTRIBUTOR_SEEDS[0].id,
+      message: "I'd love to help with imaging analysis.",
+    },
+    {
+      organizationId: ORG_PHOTO_ID,
+      userId: CONTRIBUTOR_SEEDS[1].id,
+      message: "Requesting access for the corn trial.",
+    },
+  ]);
+
+  console.log(
+    `  Created 3 organizations, ${MEMBER_SEEDS.length} members, 1 team, org/team grants, 2 join requests`,
+  );
 }
 
 async function main() {
@@ -677,6 +927,10 @@ async function main() {
     createdBy: user.id,
   });
   console.log("  Created 1 workbook");
+
+  // Phase G: named orgs, members (with overlap), a team, org-owned public/private
+  // entities, org/team grants, and pending join requests.
+  await seedOrganizations(user.id);
 
   // Assign experiments to the owner's org and mirror members into resource_grants.
   const { grantsCreated } = await backfillExperimentOrganizationsAndGrants(db);
