@@ -12,6 +12,7 @@ import { CreateResourceGrantUseCase } from "./use-cases/create-resource-grant";
 import { GetResourceAccessUseCase } from "./use-cases/get-resource-access";
 import { ListResourceGrantsUseCase } from "./use-cases/list-resource-grants";
 import { RevokeResourceGrantUseCase } from "./use-cases/revoke-resource-grant";
+import { UpdateResourceGrantUseCase } from "./use-cases/update-resource-grant";
 
 @Controller()
 export class SharingController {
@@ -20,6 +21,7 @@ export class SharingController {
   constructor(
     private readonly listGrants: ListResourceGrantsUseCase,
     private readonly createGrant: CreateResourceGrantUseCase,
+    private readonly updateGrant: UpdateResourceGrantUseCase,
     private readonly revokeGrant: RevokeResourceGrantUseCase,
     private readonly getAccess: GetResourceAccessUseCase,
   ) {}
@@ -62,6 +64,23 @@ export class SharingController {
       );
       if (result.isSuccess()) {
         return { status: StatusCodes.CREATED as const, body: formatDates(result.value) };
+      }
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.sharing.updateResourceGrant)
+  update(@Session() session: UserSession) {
+    return tsRestHandler(contract.sharing.updateResourceGrant, async ({ params, body }) => {
+      const result = await this.updateGrant.execute(
+        session.user.id,
+        params.resourceType,
+        params.resourceId,
+        params.grantId,
+        body,
+      );
+      if (result.isSuccess()) {
+        return { status: StatusCodes.OK as const, body: formatDates(result.value) };
       }
       return handleFailure(result, this.logger);
     });

@@ -139,6 +139,40 @@ describe("AuthorizationService", () => {
     });
   });
 
+  it("honors a grant to a team the user belongs to", async () => {
+    const ownerId = await testApp.createTestUser();
+    const { experiment } = await experimentInOrg({ ownerId });
+    const otherOrg = await testApp.createOrganization();
+    const team = await testApp.createTeam(otherOrg.id, "Imaging");
+    const teammate = await testApp.createTestUser();
+    await testApp.addTeamMember(team.id, teammate);
+
+    expect(await service.can(teammate, base(experiment.id, "read"))).toMatchObject({
+      allow: false,
+      reason: "forbidden",
+    });
+
+    await testApp.grant({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "team",
+      granteeId: team.id,
+      role: "admin",
+    });
+
+    expect(await service.can(teammate, base(experiment.id, "update"))).toMatchObject({
+      allow: true,
+      reason: "resource-grant:team",
+      role: "admin",
+    });
+    // A user not on the team gets nothing from the team grant.
+    const outsider = await testApp.createTestUser();
+    expect(await service.can(outsider, base(experiment.id, "read"))).toMatchObject({
+      allow: false,
+      reason: "forbidden",
+    });
+  });
+
   it("allows anyone to read a public resource but not mutate it", async () => {
     const ownerId = await testApp.createTestUser();
     const { experiment } = await experimentInOrg({ ownerId, visibility: "public" });

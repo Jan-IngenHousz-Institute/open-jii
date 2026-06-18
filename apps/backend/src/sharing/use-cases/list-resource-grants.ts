@@ -4,7 +4,7 @@ import type { ResourceType } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../common/utils/fp-utils";
-import { ResourceGrantRow, SharingRepository } from "../sharing.repository";
+import { ResourceGrantWithGranteeRow, SharingRepository } from "../sharing.repository";
 
 @Injectable()
 export class ListResourceGrantsUseCase {
@@ -17,7 +17,7 @@ export class ListResourceGrantsUseCase {
     userId: string,
     resourceType: ResourceType,
     resourceId: string,
-  ): Promise<Result<ResourceGrantRow[]>> {
+  ): Promise<Result<ResourceGrantWithGranteeRow[]>> {
     const decision = await this.authz.can(userId, { resourceType, resourceId, action: "read" });
     if (!decision.allow) {
       return failure(

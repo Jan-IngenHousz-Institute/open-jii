@@ -4,11 +4,12 @@ import {
   zCreateResourceGrantBody,
   zResourceAccess,
   zResourceGrant,
-  zResourceGrantList,
+  zResourceGrantWithGranteeList,
   zResourceGrantPathParams,
   zRevokeGrantPathParams,
   zRevokeGrantResponse,
   zSharingErrorResponse,
+  zUpdateResourceGrantBody,
 } from "../schemas/sharing.schema";
 
 const c = initContract();
@@ -35,12 +36,14 @@ export const sharingContract = c.router({
     path: "/api/v1/resources/:resourceType/:resourceId/grants",
     pathParams: zResourceGrantPathParams,
     responses: {
-      200: zResourceGrantList,
+      200: zResourceGrantWithGranteeList,
       403: zSharingErrorResponse,
       404: zSharingErrorResponse,
     },
     summary: "List grants on a resource",
-    description: "Returns the grants (shares) on a resource. Requires read access to the resource.",
+    description:
+      "Returns the grants (shares) on a resource, each enriched with its grantee's " +
+      "display info. Requires read access to the resource.",
   },
 
   createResourceGrant: {
@@ -58,6 +61,21 @@ export const sharingContract = c.router({
     summary: "Share a resource",
     description:
       "Grants a role on a resource to a user, organization, or team. Requires share access.",
+  },
+
+  updateResourceGrant: {
+    method: "PATCH",
+    path: "/api/v1/resources/:resourceType/:resourceId/grants/:grantId",
+    pathParams: zRevokeGrantPathParams,
+    body: zUpdateResourceGrantBody,
+    responses: {
+      200: zResourceGrant,
+      400: zSharingErrorResponse,
+      403: zSharingErrorResponse,
+      404: zSharingErrorResponse,
+    },
+    summary: "Change a grant's role",
+    description: "Updates the role conferred by a grant. Requires share access.",
   },
 
   revokeResourceGrant: {

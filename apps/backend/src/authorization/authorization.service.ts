@@ -9,6 +9,7 @@ import {
   protocols,
   resourceGrants,
   sensors,
+  teamMembers,
   users,
   workbooks,
 } from "@repo/database";
@@ -32,6 +33,7 @@ export interface AccessDecision {
     | "org-role"
     | "resource-grant:user"
     | "resource-grant:org"
+    | "resource-grant:team"
     | "public"
     | "forbidden"
     | "not-found";
@@ -122,6 +124,24 @@ export class AuthorizationService {
     for (const g of orgGrants) {
       if (roleCan(g.role, req.action)) {
         return { allow: true, reason: "resource-grant:org", role: g.role };
+      }
+    }
+
+    const teamGrants = await this.db
+      .select({ role: resourceGrants.role })
+      .from(resourceGrants)
+      .innerJoin(teamMembers, eq(teamMembers.teamId, resourceGrants.granteeId))
+      .where(
+        and(
+          eq(resourceGrants.resourceType, req.resourceType),
+          eq(resourceGrants.resourceId, req.resourceId),
+          eq(resourceGrants.granteeType, "team"),
+          eq(teamMembers.userId, userId),
+        ),
+      );
+    for (const g of teamGrants) {
+      if (roleCan(g.role, req.action)) {
+        return { allow: true, reason: "resource-grant:team", role: g.role };
       }
     }
 

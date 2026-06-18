@@ -29,6 +29,8 @@ import {
   workbookVersions,
   resourceGrants,
   organizationMembers,
+  teams,
+  teamMembers,
   grantResource,
 } from "@repo/database";
 import type { ResourceType, GranteeType } from "@repo/database";
@@ -398,6 +400,21 @@ export class TestHarness {
       .insert(organizationMembers)
       .values({ organizationId, userId, role })
       .returning();
+    return member;
+  }
+
+  /** Create a team within an organization. */
+  public async createTeam(organizationId: string, name?: string) {
+    const [team] = await this.database
+      .insert(teams)
+      .values({ organizationId, name: name ?? `Team ${crypto.randomUUID().slice(0, 8)}` })
+      .returning();
+    return team;
+  }
+
+  /** Add a user to a team. */
+  public async addTeamMember(teamId: string, userId: string) {
+    const [member] = await this.database.insert(teamMembers).values({ teamId, userId }).returning();
     return member;
   }
 

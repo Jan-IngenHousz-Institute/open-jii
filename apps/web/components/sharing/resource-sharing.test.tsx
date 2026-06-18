@@ -16,6 +16,13 @@ function mountAccess(canShare: boolean) {
   });
 }
 
+const grantee = {
+  type: "user" as const,
+  displayName: null,
+  email: null,
+  avatarUrl: null,
+};
+
 function mountGrants(
   body: {
     id: string;
@@ -26,6 +33,7 @@ function mountGrants(
     role: string;
     createdAt: string;
     createdBy: string | null;
+    grantee: typeof grantee;
   }[],
 ) {
   return server.mount(contract.sharing.listResourceGrants, { body });
@@ -55,6 +63,7 @@ describe("ResourceSharing", () => {
         role: "member",
         createdAt: "2024-01-01T00:00:00.000Z",
         createdBy: null,
+        grantee,
       },
     ]);
 
@@ -116,6 +125,7 @@ describe("ResourceSharing", () => {
         role: "member",
         createdAt: "2024-01-01T00:00:00.000Z",
         createdBy: null,
+        grantee,
       },
     ]);
     const spy = server.mount(contract.sharing.revokeResourceGrant, { body: { success: true } });

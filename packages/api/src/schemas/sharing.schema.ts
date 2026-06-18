@@ -30,10 +30,28 @@ export const zResourceGrant = z.object({
 });
 export const zResourceGrantList = z.array(zResourceGrant);
 
+/** Display info for whoever a grant is for (person, org, or team). */
+export const zGrantee = z.object({
+  type: zGranteeType,
+  displayName: z.string().nullable(),
+  email: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+});
+
+/** A grant enriched with its grantee's display info, for the sharing list UI. */
+export const zResourceGrantWithGrantee = zResourceGrant.extend({
+  grantee: zGrantee,
+});
+export const zResourceGrantWithGranteeList = z.array(zResourceGrantWithGrantee);
+
 export const zCreateResourceGrantBody = z.object({
   granteeType: zGranteeType,
   granteeId: z.string().uuid(),
   role: zGrantRole.default("member"),
+});
+
+export const zUpdateResourceGrantBody = z.object({
+  role: zGrantRole,
 });
 
 export const zRevokeGrantResponse = z.object({ success: z.boolean() });
@@ -50,5 +68,9 @@ export const zSharingErrorResponse = z.object({ message: z.string() });
 
 export type ResourceTypeValue = z.infer<typeof zResourceType>;
 export type GranteeTypeValue = z.infer<typeof zGranteeType>;
+export type GrantRoleValue = z.infer<typeof zGrantRole>;
 export type ResourceGrantDto = z.infer<typeof zResourceGrant>;
+export type ResourceGrantWithGranteeDto = z.infer<typeof zResourceGrantWithGrantee>;
+export type GranteeDto = z.infer<typeof zGrantee>;
 export type CreateResourceGrantBody = z.infer<typeof zCreateResourceGrantBody>;
+export type UpdateResourceGrantBody = z.infer<typeof zUpdateResourceGrantBody>;
