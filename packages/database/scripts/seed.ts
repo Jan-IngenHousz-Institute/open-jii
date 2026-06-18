@@ -17,6 +17,7 @@ import {
   flows,
   organizations,
   resourceGrants,
+  workbooks,
 } from "../src/schema";
 
 const SEED_EMAIL = "seed@openjii.local";
@@ -123,6 +124,8 @@ async function clearSeedData() {
   }
 
   if (seedUsers.length > 0) {
+    // Workbooks reference users with no cascade; delete before the user.
+    await db.delete(workbooks).where(eq(workbooks.createdBy, seedUsers[0].id));
     await db.delete(profiles).where(eq(profiles.userId, seedUsers[0].id));
     await db.delete(users).where(eq(users.id, seedUsers[0].id));
   }
@@ -663,6 +666,16 @@ async function main() {
 
   await db.insert(flows).values(flowGraphs);
   console.log(`  Created ${flowGraphs.length} flows`);
+
+  // A workbook owned by the seed user (private by default) to exercise sharing.
+  await db.insert(workbooks).values({
+    name: "[Seed] Demo Workbook",
+    description: "A private workbook for demonstrating resource sharing.",
+    cells: [{ id: "md1", type: "markdown", content: "# Demo\nShare me with a teammate." }],
+    metadata: {},
+    createdBy: user.id,
+  });
+  console.log("  Created 1 workbook");
 
   // Assign experiments to the owner's org and mirror members into resource_grants.
   const { grantsCreated } = await backfillExperimentOrganizationsAndGrants(db);

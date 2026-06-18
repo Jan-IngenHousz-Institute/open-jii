@@ -110,6 +110,14 @@ def seed_experiment_id(email: str = SEED_EMAIL) -> str:
     )
 
 
+def seed_workbook_id(email: str = SEED_EMAIL) -> str:
+    """Return a workbook id the seed user owns (for the sharing-page check)."""
+    return _psql(
+        "SELECT w.id FROM workbooks w JOIN users u ON u.id = w.created_by "
+        f"WHERE u.email = '{email}' ORDER BY w.created_at LIMIT 1;"
+    )
+
+
 def dismiss_cookie_banner(page) -> None:
     """Click 'Reject all' on the consent banner if it is showing (privacy-preserving)."""
     btn = page.get_by_role("button", name="Reject all")

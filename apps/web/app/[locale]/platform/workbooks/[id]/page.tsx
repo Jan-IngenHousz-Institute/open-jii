@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { ResourceSharing } from "@/components/sharing/resource-sharing";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { use } from "react";
@@ -37,6 +38,9 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
         createdBy={data.createdBy}
         name={data.name}
       />
+      <div className="rounded-lg border p-4">
+        <ResourceSharing resourceType="workbook" resourceId={id} />
+      </div>
     </div>
   );
 }
