@@ -159,15 +159,19 @@ export class UserRepository {
         return false;
       }
 
-      // For each experiment, check how many admins exist. If any has exactly 1 admin, return true.
+      // For each experiment, count only ACTIVATED admins. A deactivated admin
+      // can't own an experiment, so it must not count — otherwise a sole active
+      // admin could delete their account and orphan the experiment.
       for (const row of adminRows) {
         const admins = await this.database
-          .select()
+          .select({ userId: experimentMembers.userId })
           .from(experimentMembers)
+          .innerJoin(profiles, eq(profiles.userId, experimentMembers.userId))
           .where(
             and(
               eq(experimentMembers.experimentId, row.experimentId),
               eq(experimentMembers.role, "admin"),
+              eq(profiles.activated, true),
             ),
           );
 

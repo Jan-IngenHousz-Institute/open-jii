@@ -358,6 +358,31 @@ describe("UserRepository", () => {
       expect(result.value).toBe(false);
     });
 
+    it("should return true when the only other admin is deactivated", async () => {
+      // A deactivated admin can't own an experiment, so it must not count —
+      // otherwise the sole active admin could delete their account and orphan it.
+      const activeAdminId = await testApp.createTestUser({
+        email: "active-admin@example.com",
+        activated: true,
+      });
+      const deactivatedAdminId = await testApp.createTestUser({
+        email: "deactivated-admin@example.com",
+        activated: false,
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Deactivated Co-admin Experiment",
+        userId: activeAdminId,
+      });
+      await testApp.addExperimentMember(experiment.id, deactivatedAdminId, "admin");
+
+      const result = await repository.isOnlyAdminOfAnyExperiments(activeAdminId);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
     it("should return true when user is the only admin of an experiment", async () => {
       // Arrange
       const soloAdminId = await testApp.createTestUser({

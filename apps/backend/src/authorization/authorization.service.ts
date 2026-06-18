@@ -8,6 +8,7 @@ import {
   organizationMembers,
   protocols,
   resourceGrants,
+  sensors,
   users,
   workbooks,
 } from "@repo/database";
@@ -137,6 +138,8 @@ export class AuthorizationService {
     resourceType: ResourceType,
     resourceId: string,
   ): Promise<ResourceOwnership | null> {
+    // resourceType is exhaustive over the resource_grants enum; the last arm is
+    // "device" (sensors).
     const table =
       resourceType === "experiment"
         ? experiments
@@ -146,11 +149,7 @@ export class AuthorizationService {
             ? protocols
             : resourceType === "workbook"
               ? workbooks
-              : null;
-    // device ownership lands in P6 (sensors → devices).
-    if (!table) {
-      return null;
-    }
+              : sensors;
     const rows = await this.db
       .select({ organizationId: table.organizationId, visibility: table.visibility })
       .from(table)

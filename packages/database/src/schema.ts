@@ -103,6 +103,9 @@ export const organizationTypeEnum = pgEnum("organization_type", [
 // Sensor Family Enum
 export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit", "generic"]);
 
+// Shared visibility enum for org-scoped resources (sensors/macros/protocols/workbooks/…).
+export const visibilityEnum = pgEnum("visibility", ["private", "public"]);
+
 // Profiles Table
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -181,7 +184,9 @@ export const organizationInvitations = pgTable("organization_invitations", {
     .notNull(),
 });
 
-// Sensors Table
+// Sensors Table (devices). Org ownership + visibility are added here for the
+// unified access-control model; the full devices model (and sensors→devices
+// rename) is owned by the Devices & Calibration epic (OJD-1602).
 export const sensors = pgTable("sensors", {
   id: uuid("id").primaryKey().defaultRandom(),
   serialNumber: varchar("serial_number", { length: 100 }).unique().notNull(),
@@ -189,6 +194,10 @@ export const sensors = pgTable("sensors", {
   family: sensorFamilyEnum("family").notNull(),
   location: text("location"),
   isActive: boolean("is_active").default(true).notNull(),
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
+  visibility: visibilityEnum("visibility").default("public").notNull(),
   ...timestamps,
 });
 
@@ -204,9 +213,6 @@ export const experimentStatusEnum = pgEnum("experiment_status", [
 
 // Experiment Visibility Enum
 export const experimentVisibilityEnum = pgEnum("experiment_visibility", ["private", "public"]);
-
-// Shared visibility enum for org-scoped resources (macros/protocols/workbooks/…).
-export const visibilityEnum = pgEnum("visibility", ["private", "public"]);
 
 export const experiments = pgTable("experiments", {
   id: uuid("id").primaryKey().defaultRandom(),

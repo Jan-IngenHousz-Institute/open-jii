@@ -1,4 +1,4 @@
-import { eq, users } from "@repo/database";
+import { eq, sensors, users } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
 import { AuthorizationService } from "./authorization.service";
@@ -165,7 +165,7 @@ describe("AuthorizationService", () => {
     });
   });
 
-  it("returns not-found for resource types without org ownership yet", async () => {
+  it("returns not-found for a missing device", async () => {
     const userId = await testApp.createTestUser();
     const decision = await service.can(userId, {
       resourceType: "device",
@@ -173,6 +173,35 @@ describe("AuthorizationService", () => {
       action: "read",
     });
     expect(decision).toEqual({ allow: false, reason: "not-found" });
+  });
+
+  it("authorizes a device (sensor) via owning-org role", async () => {
+    const ownerId = await testApp.createTestUser();
+    const org = await testApp.createOrganization();
+    await testApp.addOrgMember(org.id, ownerId, "member");
+    const [sensor] = await testApp.database
+      .insert(sensors)
+      .values({
+        serialNumber: `S-${crypto.randomUUID().slice(0, 8)}`,
+        name: "MultispeQ",
+        family: "multispeq",
+        organizationId: org.id,
+        visibility: "private",
+      })
+      .returning();
+
+    expect(
+      await service.can(ownerId, { resourceType: "device", resourceId: sensor.id, action: "read" }),
+    ).toMatchObject({ allow: true, reason: "org-role" });
+
+    const stranger = await testApp.createTestUser();
+    expect(
+      await service.can(stranger, {
+        resourceType: "device",
+        resourceId: sensor.id,
+        action: "read",
+      }),
+    ).toMatchObject({ allow: false, reason: "forbidden" });
   });
 
   it("authorizes a macro via owning-org role (non-experiment resource type)", async () => {
