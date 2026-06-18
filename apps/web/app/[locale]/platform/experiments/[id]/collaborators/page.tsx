@@ -5,7 +5,7 @@ import { ExperimentInviteModal } from "@/components/experiment-settings/collabor
 import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
 import { ExperimentMembersPanel } from "@/components/experiment-settings/collaborators/experiment-members-panel";
 import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
-import { ResourceSharing } from "@/components/sharing/resource-sharing";
+import { ResourceCollaborators } from "@/components/sharing/resource-collaborators";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { Search, UserPlus } from "lucide-react";
@@ -186,7 +186,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
       </NavTabs>
 
       <div className="rounded-lg border p-4">
-        <ResourceSharing resourceType="experiment" resourceId={id} />
+        <ResourceCollaborators resourceType="experiment" resourceId={id} />
       </div>
 
       <ExperimentInviteModal

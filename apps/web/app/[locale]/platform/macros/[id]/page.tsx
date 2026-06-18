@@ -6,7 +6,7 @@ import MacroCodeViewer from "@/components/macro-code-viewer";
 import { MacroDetailsSidebar } from "@/components/macro-overview/macro-details-sidebar";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
-import { ResourceSharing } from "@/components/sharing/resource-sharing";
+import { ResourceCollaborators } from "@/components/sharing/resource-collaborators";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -133,7 +133,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
         )}
 
         <div className="rounded-lg border p-4">
-          <ResourceSharing resourceType="macro" resourceId={id} />
+          <ResourceCollaborators resourceType="macro" resourceId={id} />
         </div>
       </div>
     </div>
