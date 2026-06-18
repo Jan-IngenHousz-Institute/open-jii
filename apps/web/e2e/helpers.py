@@ -139,6 +139,26 @@ def seed_protocol_id(email: str = SEED_EMAIL) -> str:
     )
 
 
+def seed_public_org_id() -> str:
+    """The public 'Community' org the seed user is NOT a member of (to discover + join)."""
+    return _psql("SELECT id FROM organizations WHERE slug = 'seed-community' LIMIT 1;")
+
+
+def seed_owned_org_id() -> str:
+    """The public, seed-owned 'Photosynthesis Lab' org (has a team + pending requests)."""
+    return _psql("SELECT id FROM organizations WHERE slug = 'seed-photosynthesis-lab' LIMIT 1;")
+
+
+def seed_owned_org_pending_requests() -> int:
+    """Count of pending join requests on the seed-owned org (for the approve demo)."""
+    out = _psql(
+        "SELECT count(*) FROM organization_join_requests r "
+        "JOIN organizations o ON o.id = r.organization_id "
+        "WHERE o.slug = 'seed-photosynthesis-lab' AND r.status = 'pending';"
+    )
+    return int(out or "0")
+
+
 def dismiss_cookie_banner(page) -> None:
     """Click 'Reject all' on the consent banner if it is showing (privacy-preserving)."""
     btn = page.get_by_role("button", name="Reject all")

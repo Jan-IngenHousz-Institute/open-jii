@@ -97,6 +97,14 @@ const NAMED_ORG_IDS = [ORG_PHOTO_ID, ORG_FIELD_ID, ORG_COMMUNITY_ID];
 const MEMBER_IDS = MEMBER_SEEDS.map((mbr) => mbr.id);
 
 async function clearSeedData() {
+  // Org join requests reference users via a no-action FK (decided_by), so clear
+  // the named-org requests (and any demo-created "Demo Lab …" orgs) up front,
+  // before the user deletions below.
+  await db
+    .delete(organizationJoinRequests)
+    .where(inArray(organizationJoinRequests.organizationId, NAMED_ORG_IDS));
+  await db.delete(organizations).where(like(organizations.name, "Demo Lab %"));
+
   // Find seed experiment IDs for join table cleanup
   const seedExperiments = await db
     .select({ id: experiments.id })

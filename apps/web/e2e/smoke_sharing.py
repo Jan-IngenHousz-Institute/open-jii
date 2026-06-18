@@ -1,5 +1,5 @@
 """P3 sharing smoke (OJD-1638): the owner of a private workbook shares it with
-another user through the generalized ResourceSharing panel.
+another user through the unified ResourceCollaborators panel.
 
 Run after the local stack + seed are up (the seed creates a private workbook):
     cd apps/web/e2e && python3 smoke_sharing.py
@@ -31,25 +31,26 @@ def main() -> int:
             )
             page.wait_for_load_state("networkidle")
 
-            # The owner sees the Sharing panel with a people search (canShare).
-            page.get_by_role("region", name="Sharing").wait_for(state="visible", timeout=10_000)
-            search = page.get_by_label("Search people to share with")
-            search.wait_for(state="visible", timeout=10_000)
-            search.click()
-            search.press_sequentially("Participant", delay=20)
+            # The owner sees the Collaborators panel with a Share button (canShare).
+            region = page.get_by_role("region", name="Collaborators")
+            region.wait_for(state="visible", timeout=10_000)
+            region.get_by_role("button", name="Share").click()
 
-            # Share with the first matching person.
-            share_btn = page.get_by_role("button", name="Share").first
-            share_btn.wait_for(state="visible", timeout=10_000)
-            share_btn.click()
+            # In the Share dialog, search for and select a person, then share.
+            dialog = page.get_by_role("dialog")
+            dialog.wait_for(state="visible", timeout=10_000)
+            dialog.get_by_label("Search people to share with").fill("Participant")
+            dialog.get_by_role("button", name=re.compile("Participant")).first.click()
+            dialog.get_by_role("button", name="Share").click()
 
-            # The grant now shows in the list with a remove control.
-            page.get_by_role("button", name=re.compile("^Remove access for")).first.wait_for(
+            # The grant now shows as a collaborator with a role control.
+            dialog.wait_for(state="hidden", timeout=10_000)
+            page.get_by_role("combobox", name=re.compile("^Role for ")).first.wait_for(
                 state="visible", timeout=10_000
             )
 
             page.screenshot(path=f"{helpers.VIDEO_DIR}/sharing.png")
-            print("PASS: shared a workbook via the ResourceSharing panel")
+            print("PASS: shared a workbook via the ResourceCollaborators panel")
             return 0
         except Exception as err:  # noqa: BLE001
             print(f"FAIL: {err}", file=sys.stderr)
