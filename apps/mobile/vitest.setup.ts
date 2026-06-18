@@ -221,6 +221,14 @@ vi.mock("~/shared/composition/upload", () => {
   };
 });
 
+// RN core's NativeSoundManager runs a TurboModuleRegistry lookup at module load
+// that can race the harness stub across workers ("TurboModuleRegistry.get is not
+// a function") and flakily fail any component test. Tests play no sound; stub it.
+vi.mock("react-native/Libraries/Components/Sound/NativeSoundManager", () => ({
+  __esModule: true,
+  default: { playTouchSound: () => undefined, setEnabled: () => undefined },
+}));
+
 // safe-area-context needs a provider at the root; zero insets work fine for
 // component tests.
 vi.mock("react-native-safe-area-context", () => ({

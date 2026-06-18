@@ -35,6 +35,19 @@ The walkthrough below adds a protocol, a macro and a multiple-choice question:
   time, or use **Bulk Add** to paste a whole spreadsheet column (one option per line). Each option
   is capped at 64 characters, and large sets (over 25 options) collapse to a compact summary so a
   column of thousands of plot IDs never freezes the editor.
+- **Branches** route the flow based on data collected so far (e.g. re-measure when a value is out of
+  range):
+  - **Paths** — a branch holds one or more paths, checked top to bottom; the flow takes the first
+    path whose conditions all pass. If none match, it continues to the next cell.
+  - **Conditions** — each compares a value from an earlier cell (a question's answer, or a field
+    from a protocol/macro output) against a value you type, using `=`, `!=`, `>`, `<`, `>=` or `<=`
+    (numeric when both sides are numbers, otherwise text). Multiple conditions on a path are combined
+    with **AND**, and a value that can't be read yet safely counts as no-match.
+  - **Jump** — a matching path can jump to another cell: forward to skip ahead, or back to repeat a
+    step (loop-backs are protected against running forever); otherwise the flow continues to the next
+    cell.
+  - **Mobile** — on the [mobile app](../002-mobile-app.md) branches are evaluated automatically
+    on-device, so they work offline.
 
 ## Versioning & editing in place
 

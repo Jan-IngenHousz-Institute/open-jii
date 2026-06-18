@@ -53,7 +53,8 @@
       "review": "Antwoorden controleren",
       "completed": "Afgerond"
     },
-    "exitLabel": "Afsluiten"
+    "exitLabel": "Afsluiten",
+    "branchPathA11y": "Actief vertakkingspad: {{label}}"
   },
   "exitSheet": {
     "title": "Meting afsluiten?",
