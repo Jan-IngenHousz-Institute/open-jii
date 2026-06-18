@@ -235,8 +235,10 @@ def process_ambyte_upload() -> dict:
     if not UPLOAD_ID:
         raise Exception("UPLOAD_ID is required for source_kind=ambyte")
 
+    # Ambyte files land under the shared "uploads" volume dir (the backend uses
+    # volumeSourceType="uploads" for every kind), not a dedicated ambyte dir.
     ambyte_base_path = (
-        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/ambyte/{UPLOAD_DIRECTORY}"
+        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
     )
     processed_output_path = (
         f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"
