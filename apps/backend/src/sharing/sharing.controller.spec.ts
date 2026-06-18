@@ -36,6 +36,35 @@ describe("SharingController", () => {
   }
 
   const grantsUrl = (id: string) => `/api/v1/resources/experiment/${id}/grants`;
+  const accessUrl = (id: string) => `/api/v1/resources/experiment/${id}/access`;
+
+  describe("getResourceAccess", () => {
+    it("reports full permissions for an org admin", async () => {
+      const { owner, experiment } = await ownedExperiment();
+      const res = await testApp.get(accessUrl(experiment.id)).withAuth(owner).expect(StatusCodes.OK);
+      expect(res.body).toEqual({
+        canRead: true,
+        canUpdate: true,
+        canDelete: true,
+        canShare: true,
+      });
+    });
+
+    it("reports no permissions for a stranger on a private resource", async () => {
+      const { experiment } = await ownedExperiment();
+      const stranger = await testApp.createTestUser();
+      const res = await testApp
+        .get(accessUrl(experiment.id))
+        .withAuth(stranger)
+        .expect(StatusCodes.OK);
+      expect(res.body).toEqual({
+        canRead: false,
+        canUpdate: false,
+        canDelete: false,
+        canShare: false,
+      });
+    });
+  });
 
   describe("listResourceGrants", () => {
     it("returns grants for a user who can read the resource", async () => {

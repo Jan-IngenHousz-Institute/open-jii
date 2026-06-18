@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import {
   zCreateResourceGrantBody,
+  zResourceAccess,
   zResourceGrant,
   zResourceGrantList,
   zResourceGrantPathParams,
@@ -18,6 +19,17 @@ const c = initContract();
  * grantee can be a user, an organization, or a team.
  */
 export const sharingContract = c.router({
+  getResourceAccess: {
+    method: "GET",
+    path: "/api/v1/resources/:resourceType/:resourceId/access",
+    pathParams: zResourceGrantPathParams,
+    responses: {
+      200: zResourceAccess,
+    },
+    summary: "Get the caller's effective permissions on a resource",
+    description: "Returns canRead/canUpdate/canDelete/canShare for the current user.",
+  },
+
   listResourceGrants: {
     method: "GET",
     path: "/api/v1/resources/:resourceType/:resourceId/grants",

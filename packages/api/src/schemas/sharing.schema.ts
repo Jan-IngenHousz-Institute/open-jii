@@ -38,6 +38,14 @@ export const zCreateResourceGrantBody = z.object({
 
 export const zRevokeGrantResponse = z.object({ success: z.boolean() });
 
+/** The caller's effective permissions on a resource (drives UI gating). */
+export const zResourceAccess = z.object({
+  canRead: z.boolean(),
+  canUpdate: z.boolean(),
+  canDelete: z.boolean(),
+  canShare: z.boolean(),
+});
+
 export const zSharingErrorResponse = z.object({ message: z.string() });
 
 export type ResourceTypeValue = z.infer<typeof zResourceType>;

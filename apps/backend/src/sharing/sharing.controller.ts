@@ -9,6 +9,7 @@ import { contract } from "@repo/api/contract";
 import { formatDates, formatDatesList } from "../common/utils/date-formatter";
 import { handleFailure } from "../common/utils/fp-utils";
 import { CreateResourceGrantUseCase } from "./use-cases/create-resource-grant";
+import { GetResourceAccessUseCase } from "./use-cases/get-resource-access";
 import { ListResourceGrantsUseCase } from "./use-cases/list-resource-grants";
 import { RevokeResourceGrantUseCase } from "./use-cases/revoke-resource-grant";
 
@@ -20,7 +21,20 @@ export class SharingController {
     private readonly listGrants: ListResourceGrantsUseCase,
     private readonly createGrant: CreateResourceGrantUseCase,
     private readonly revokeGrant: RevokeResourceGrantUseCase,
+    private readonly getAccess: GetResourceAccessUseCase,
   ) {}
+
+  @TsRestHandler(contract.sharing.getResourceAccess)
+  access(@Session() session: UserSession) {
+    return tsRestHandler(contract.sharing.getResourceAccess, async ({ params }) => {
+      const body = await this.getAccess.execute(
+        session.user.id,
+        params.resourceType,
+        params.resourceId,
+      );
+      return { status: StatusCodes.OK as const, body };
+    });
+  }
 
   @TsRestHandler(contract.sharing.listResourceGrants)
   list(@Session() session: UserSession) {
