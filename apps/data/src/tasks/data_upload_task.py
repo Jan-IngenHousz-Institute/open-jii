@@ -177,19 +177,26 @@ def process_parquet_upload() -> dict:
 
 
 def process_xlsx_upload() -> dict:
-    # Excel files can have multiple sheets; concat them so users don't lose data.
+    # Native Spark Excel reader (no pandas engine). Reads one sheet at a time, so
+    # list sheets and concat, tagging rows with `sheet` when there's more than one.
     def _read_excel_all_sheets(path: str):
-        sheets = pd.read_excel(path, sheet_name=None)
-        if not sheets:
-            return pd.DataFrame()
-        if len(sheets) == 1:
-            return next(iter(sheets.values()))
+        sheet_names = [
+            row[0] for row in spark.read.option("operation", "listSheets").excel(path).collect()
+        ]
         frames = []
-        for sheet_name, sheet_df in sheets.items():
-            sheet_df = sheet_df.copy()
-            sheet_df["sheet"] = sheet_name
+        for sheet in sheet_names:
+            sheet_df = (
+                spark.read.option("headerRows", "1")
+                .option("dataAddress", f"'{sheet}'!A1")
+                .excel(path)
+                .toPandas()
+            )
+            if len(sheet_names) > 1:
+                sheet_df["sheet"] = sheet
             frames.append(sheet_df)
-        return pd.concat(frames, ignore_index=True)
+        if not frames:
+            return pd.DataFrame()
+        return pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
 
     return _process_tabular_upload("xlsx", (".xlsx", ".xls"), _read_excel_all_sheets)
 
