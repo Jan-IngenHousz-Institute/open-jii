@@ -165,6 +165,54 @@ describe("AuthorizationService", () => {
     });
   });
 
+  it("handles a resource with no owning org (skips org role; grants still apply)", async () => {
+    const ownerId = await testApp.createTestUser();
+    const { experiment } = await testApp.createExperiment({
+      name: `NoOrg ${crypto.randomUUID().slice(0, 8)}`,
+      userId: ownerId,
+      visibility: "private",
+      // organizationId intentionally omitted → null
+    });
+    const outsider = await testApp.createTestUser();
+
+    expect(await service.can(outsider, base(experiment.id, "read"))).toMatchObject({
+      allow: false,
+      reason: "forbidden",
+    });
+
+    await testApp.grant({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: outsider,
+      role: "member",
+    });
+    expect(await service.can(outsider, base(experiment.id, "read"))).toMatchObject({
+      allow: true,
+      reason: "resource-grant:user",
+    });
+    // A member-level user grant does not permit mutation.
+    expect(await service.can(outsider, base(experiment.id, "delete"))).toMatchObject({
+      allow: false,
+      reason: "forbidden",
+    });
+  });
+
+  it("denies an unknown user but still serves public resources", async () => {
+    const ownerId = await testApp.createTestUser();
+    const { experiment } = await experimentInOrg({ ownerId, visibility: "public" });
+    const ghostUserId = crypto.randomUUID(); // not a real user row
+
+    expect(await service.can(ghostUserId, base(experiment.id, "read"))).toMatchObject({
+      allow: true,
+      reason: "public",
+    });
+    expect(await service.can(ghostUserId, base(experiment.id, "update"))).toMatchObject({
+      allow: false,
+      reason: "forbidden",
+    });
+  });
+
   it("returns not-found for a missing device", async () => {
     const userId = await testApp.createTestUser();
     const decision = await service.can(userId, {

@@ -41,7 +41,10 @@ describe("SharingController", () => {
   describe("getResourceAccess", () => {
     it("reports full permissions for an org admin", async () => {
       const { owner, experiment } = await ownedExperiment();
-      const res = await testApp.get(accessUrl(experiment.id)).withAuth(owner).expect(StatusCodes.OK);
+      const res = await testApp
+        .get(accessUrl(experiment.id))
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
       expect(res.body).toEqual({
         canRead: true,
         canUpdate: true,
@@ -142,6 +145,34 @@ describe("SharingController", () => {
         .send({ granteeType: "user", granteeId: grantee, role: "member" })
         .expect(StatusCodes.FORBIDDEN);
     });
+
+    it("shares with an organization grantee (201)", async () => {
+      const { owner, experiment } = await ownedExperiment();
+      const otherOrg = await testApp.createOrganization();
+      await testApp
+        .post(grantsUrl(experiment.id))
+        .withAuth(owner)
+        .send({ granteeType: "organization", granteeId: otherOrg.id, role: "member" })
+        .expect(StatusCodes.CREATED);
+    });
+
+    it("400 for a non-existent organization grantee", async () => {
+      const { owner, experiment } = await ownedExperiment();
+      await testApp
+        .post(grantsUrl(experiment.id))
+        .withAuth(owner)
+        .send({ granteeType: "organization", granteeId: crypto.randomUUID(), role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("400 for a team grantee (teams not enabled)", async () => {
+      const { owner, experiment } = await ownedExperiment();
+      await testApp
+        .post(grantsUrl(experiment.id))
+        .withAuth(owner)
+        .send({ granteeType: "team", granteeId: crypto.randomUUID(), role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
   });
 
   describe("revokeResourceGrant", () => {
@@ -172,6 +203,14 @@ describe("SharingController", () => {
       await testApp
         .delete(`${grantsUrl(experiment.id)}/${crypto.randomUUID()}`)
         .withAuth(owner)
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("404 when revoking on a non-existent resource", async () => {
+      const user = await testApp.createTestUser();
+      await testApp
+        .delete(`${grantsUrl(crypto.randomUUID())}/${crypto.randomUUID()}`)
+        .withAuth(user)
         .expect(StatusCodes.NOT_FOUND);
     });
   });

@@ -77,6 +77,51 @@ describe("OrganizationSettings", () => {
     });
   });
 
+  it("changes a member's role, removes a member, and cancels an invitation", async () => {
+    const updateMemberRole = vi.mocked(authClient.organization.updateMemberRole);
+    const removeMember = vi.mocked(authClient.organization.removeMember);
+    const cancelInvitation = vi.mocked(authClient.organization.cancelInvitation);
+    setUser("u-owner");
+    getFullOrganization.mockResolvedValue({
+      data: {
+        ...ORG,
+        members: [
+          member("m1", "u-owner", "owner", "ada@example.com", "Ada"),
+          member("m2", "u-bob", "member", "bob@example.com", "Bob"),
+        ],
+        invitations: [
+          { id: "inv-1", email: "carol@example.com", role: "member", status: "pending" },
+        ],
+      },
+      error: null,
+    } as never);
+
+    render(<OrganizationSettings />);
+
+    await userEvent.selectOptions(
+      await screen.findByLabelText("Role for bob@example.com"),
+      "admin",
+    );
+    await waitFor(() =>
+      expect(updateMemberRole).toHaveBeenCalledWith({
+        memberId: "m2",
+        role: "admin",
+        organizationId: "org1",
+      }),
+    );
+
+    await userEvent.click(screen.getByLabelText("Remove bob@example.com"));
+    await waitFor(() =>
+      expect(removeMember).toHaveBeenCalledWith({
+        memberIdOrEmail: "bob@example.com",
+        organizationId: "org1",
+      }),
+    );
+
+    await userEvent.click(screen.getByLabelText("Cancel invitation for carol@example.com"));
+    await waitFor(() => expect(cancelInvitation).toHaveBeenCalledWith({ invitationId: "inv-1" }));
+  });
+
   it("hides management controls for a non-admin member", async () => {
     setUser("u-bob");
     setOrg([

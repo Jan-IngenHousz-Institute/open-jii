@@ -103,4 +103,57 @@ describe("ResourceSharing", () => {
     expect(spy.body).toMatchObject({ granteeType: "user", granteeId: GRACE, role: "member" });
     expect(spy.params).toMatchObject({ resourceType: RT, resourceId: RID });
   });
+
+  it("revokes an existing grant", async () => {
+    mountAccess(true);
+    mountGrants([
+      {
+        id: "grant-1",
+        resourceType: RT,
+        resourceId: RID,
+        granteeType: "user",
+        granteeId: GRACE,
+        role: "member",
+        createdAt: "2024-01-01T00:00:00.000Z",
+        createdBy: null,
+      },
+    ]);
+    const spy = server.mount(contract.sharing.revokeResourceGrant, { body: { success: true } });
+
+    render(<ResourceSharing resourceType={RT} resourceId={RID} />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: `Remove access for ${GRACE}` }),
+    );
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.params).toMatchObject({ resourceType: RT, resourceId: RID, grantId: "grant-1" });
+  });
+
+  it("surfaces an error when sharing fails", async () => {
+    mountAccess(true);
+    mountGrants([]);
+    server.mount(contract.users.searchUsers, {
+      body: [
+        {
+          userId: GRACE,
+          firstName: "Grace",
+          lastName: "Hopper",
+          bio: null,
+          activated: true,
+          email: "grace@example.com",
+          avatarUrl: null,
+        },
+      ],
+    });
+    const spy = server.mount(contract.sharing.createResourceGrant, {
+      status: 403,
+      body: { message: "You cannot share this resource" },
+    });
+
+    render(<ResourceSharing resourceType={RT} resourceId={RID} />);
+    await userEvent.type(await screen.findByLabelText("Search people to share with"), "grace");
+    await userEvent.click(await screen.findByRole("button", { name: "Share" }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+  });
 });

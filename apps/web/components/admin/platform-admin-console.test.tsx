@@ -75,4 +75,20 @@ describe("PlatformAdminConsole", () => {
 
     await waitFor(() => expect(setRole).toHaveBeenCalledWith({ userId: "u-bob", role: "admin" }));
   });
+
+  it("impersonates a user and unbans a banned user", async () => {
+    const impersonateUser = vi.mocked(authClient.admin.impersonateUser);
+    const unbanUser = vi.mocked(authClient.admin.unbanUser);
+    setSessionRole("admin", "u-admin");
+    setUsers([adminUser, { ...plainUser, banned: true }]);
+
+    render(<PlatformAdminConsole />);
+
+    await userEvent.click(await screen.findByLabelText("Impersonate bob@x.com"));
+    await waitFor(() => expect(impersonateUser).toHaveBeenCalledWith({ userId: "u-bob" }));
+
+    // A banned user shows Unban instead of Ban.
+    await userEvent.click(screen.getByLabelText("Unban bob@x.com"));
+    await waitFor(() => expect(unbanUser).toHaveBeenCalledWith({ userId: "u-bob" }));
+  });
 });
