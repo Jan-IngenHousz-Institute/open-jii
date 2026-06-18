@@ -17,7 +17,7 @@ export const authClient = createAuthClient({
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID
-    organizationClient(),
+    organizationClient({ teams: { enabled: true } }),
     adminClient(),
   ],
 });

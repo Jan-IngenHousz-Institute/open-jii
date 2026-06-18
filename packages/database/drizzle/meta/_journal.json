@@ -246,6 +246,13 @@
       "when": 1781768595075,
       "tag": "0034_thick_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1781783478885,
+      "tag": "0035_normal_franklin_richards",
+      "breakpoints": true
     }
   ]
 }

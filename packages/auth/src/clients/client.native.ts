@@ -17,7 +17,7 @@ export function createOpenJiiAuthClient(backendUrl: string) {
     plugins: [
       emailOTPClient(),
       genericOAuthClient(),
-      organizationClient(),
+      organizationClient({ teams: { enabled: true } }),
       adminClient(),
       expoClient({
         scheme: SCHEME,

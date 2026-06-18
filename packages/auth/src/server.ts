@@ -45,6 +45,8 @@ export const auth = betterAuth({
       organization: schema.organizations,
       member: schema.organizationMembers,
       invitation: schema.organizationInvitations,
+      team: schema.teams,
+      teamMember: schema.teamMembers,
     },
   }),
   secret: process.env.AUTH_SECRET,
@@ -154,6 +156,7 @@ export const auth = betterAuth({
     organization({
       allowUserToCreateOrganization: true,
       creatorRole: "owner",
+      teams: { enabled: true },
       async sendInvitationEmail(data) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;
         const emailFrom = process.env.AUTH_EMAIL_FROM;
