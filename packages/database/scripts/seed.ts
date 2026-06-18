@@ -151,6 +151,7 @@ async function main() {
       email: SEED_EMAIL,
       emailVerified: true,
       registered: true,
+      role: "admin", // platform admin, for the admin console
     })
     .returning();
 
