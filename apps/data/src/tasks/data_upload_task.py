@@ -103,7 +103,9 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
 
     for path in matched_files:
         try:
-            local_path = path.replace("dbfs:", "/dbfs") if path.startswith("dbfs:") else path
+            # pandas reads UC volumes via the /Volumes FUSE path; strip the dbfs:
+            # scheme dbutils.fs.ls prepends. /dbfs only mounts DBFS, not volumes.
+            local_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
             df = parser(local_path)
             df = df.where(pd.notnull(df), None)
             rows = df.to_dict(orient="records")
