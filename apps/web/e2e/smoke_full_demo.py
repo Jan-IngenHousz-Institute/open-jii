@@ -1,16 +1,24 @@
 """Full IAM + organizations demo (OJD-1638) in one continuous, paced flow + video.
 
-As the seed user (a platform admin and org owner), walks the whole journey:
-  1. log in
-  2. create a brand-new organization (name -> live slug check -> visibility)
-  3. browse the public organization directory
-  4. open the public "Community" org -> see its public resources -> request to join
-  5. switch the active organization to the owned "Photosynthesis Lab"
-  6. open the owned org -> Teams (the Imaging team) -> Requests -> approve a pending one
-  7. share each entity via the unified collaborators UI:
-     experiment, macro, protocol (with a person) and a workbook (with a team)
+A wide tour, as the seed user (platform admin + org owner), of everything the
+access-control work adds:
 
-Paced with slow_mo so the recording is watchable (~60-75s). Run after the local
+  1. log in (email-OTP)
+  2. platform admin console — change a user's global role, ban + unban a user
+  3. create a brand-new organization (name -> live slug check -> type -> visibility)
+  4. browse + search the public organization directory
+  5. open the public "Community" org -> see its public resources -> request to join
+  6. switch the active organization to the owned "Photosynthesis Lab"
+  7. manage the owned org:
+       Members  -> invite by email, change a member's role, cancel the invite
+       Teams    -> create a team, see the seeded Imaging team
+       Requests -> approve one pending join request, reject the other
+  8. share resources via the unified collaborators panel:
+       experiment -> a person (Admin)      macro    -> a person, then re-role to Viewer
+       protocol   -> an organization        workbook -> the Imaging team
+  9. impersonate a participant and confirm the session really switched (no admin access)
+
+Paced with slow_mo so the recording is watchable (~2-3 min). Run after the local
 stack + seed are up:
     cd apps/web/e2e && python3 smoke_full_demo.py
 Records artifacts/videos/full_demo.webm.
@@ -28,16 +36,21 @@ import helpers
 
 BASE = helpers.BASE_URL
 LOCALE = helpers.LOCALE
-SLOW_MO_MS = 550
-PAUSE_MS = 1100
+SLOW_MO_MS = 750
+PAUSE_MS = 1500
 
 
 def step(msg: str) -> None:
     print(f"  → {msg}")
 
 
-def share_with_person(page, url: str, what: str) -> None:
-    """Open an entity page and share it with a person via the collaborators panel."""
+def pick_radix_option(page, label: str, option_re: str) -> None:
+    """Open a Radix Select by its trigger aria-label and click a matching option."""
+    page.get_by_role("combobox", name=label).click()
+    page.get_by_role("option", name=re.compile(option_re)).first.click()
+
+
+def open_collaborators(page, url: str):
     page.goto(url)
     page.wait_for_load_state("networkidle")
     region = page.get_by_role("region", name="Collaborators")
@@ -46,32 +59,33 @@ def share_with_person(page, url: str, what: str) -> None:
     region.get_by_role("button", name="Share").click()
     dialog = page.get_by_role("dialog")
     dialog.wait_for(state="visible", timeout=10_000)
+    return region, dialog
+
+
+def share_with_person(page, url: str, what: str, role: str | None = None) -> None:
+    region, dialog = open_collaborators(page, url)
     dialog.get_by_label("Search people to share with").fill("Participant")
     dialog.get_by_role("button", name=re.compile("Participant")).first.click()
-    page.wait_for_timeout(400)
+    if role:
+        dialog.get_by_role("combobox", name="Role to grant").click()
+        page.get_by_role("option", name=role).first.click()
+    page.wait_for_timeout(300)
     dialog.get_by_role("button", name="Share").click()
     dialog.wait_for(state="hidden", timeout=10_000)
     page.wait_for_timeout(PAUSE_MS)
-    step(f"shared {what} with a person")
+    step(f"shared {what} with a person{f' as {role}' if role else ''}")
 
 
-def share_with_team(page, url: str, what: str) -> None:
-    """Share an entity with the active org's Imaging team."""
-    page.goto(url)
-    page.wait_for_load_state("networkidle")
-    region = page.get_by_role("region", name="Collaborators")
-    region.scroll_into_view_if_needed()
-    region.wait_for(state="visible", timeout=10_000)
-    region.get_by_role("button", name="Share").click()
-    dialog = page.get_by_role("dialog")
-    dialog.wait_for(state="visible", timeout=10_000)
-    dialog.get_by_role("button", name="Team").click()
+def share_with_picker(page, url: str, mode: str, label: str, what: str) -> None:
+    """Share with a Team or Organization picked from the dialog list."""
+    region, dialog = open_collaborators(page, url)
+    dialog.get_by_role("button", name=mode).click()
     page.wait_for_timeout(400)
-    dialog.get_by_text("Imaging").first.click()
+    dialog.get_by_text(label).first.click()
     dialog.get_by_role("button", name="Share").click()
     dialog.wait_for(state="hidden", timeout=10_000)
     page.wait_for_timeout(PAUSE_MS)
-    step(f"shared {what} with the Imaging team")
+    step(f"shared {what} with {mode.lower()} '{label}'")
 
 
 def main() -> int:
@@ -105,36 +119,58 @@ def main() -> int:
             page.wait_for_timeout(PAUSE_MS)
             step("logged in")
 
-            # 2. Create a brand-new organization.
+            # 2. Platform admin console: role change + ban/unban.
+            page.goto(f"{BASE}/{LOCALE}/platform/admin")
+            page.wait_for_load_state("networkidle")
+            page.get_by_role("region", name="Platform admin").wait_for(state="visible", timeout=10_000)
+            page.get_by_text("participant1@openjii.local").wait_for(state="visible", timeout=10_000)
+            page.wait_for_timeout(PAUSE_MS)
+            page.get_by_label("Role for participant2@openjii.local").select_option("admin")
+            page.wait_for_timeout(PAUSE_MS)
+            step("granted participant2 the admin role")
+            page.get_by_role("button", name="Ban participant4@openjii.local").click()
+            page.get_by_role("button", name="Unban participant4@openjii.local").wait_for(
+                state="visible", timeout=10_000
+            )
+            page.wait_for_timeout(PAUSE_MS)
+            page.get_by_role("button", name="Unban participant4@openjii.local").click()
+            page.get_by_role("button", name="Ban participant4@openjii.local").wait_for(
+                state="visible", timeout=10_000
+            )
+            page.wait_for_timeout(PAUSE_MS)
+            step("banned then unbanned participant4")
+
+            # 3. Create a brand-new organization.
             unique = str(int(time.time()) % 100000)
             new_org_name = f"Demo Lab {unique}"
             page.goto(f"{BASE}/{LOCALE}/platform/organizations/new")
             page.wait_for_load_state("networkidle")
             page.get_by_label("Name").fill(new_org_name)
-            # Wait for the live slug check to settle to "available".
+            pick_radix_option(page, "Organization type", "University")
+            pick_radix_option(page, "Organization visibility", "Public")
             create_btn = page.get_by_role("button", name="Create organization")
             for _ in range(20):
                 if create_btn.is_enabled():
                     break
                 page.wait_for_timeout(300)
-            page.get_by_label("Organization visibility").click()
-            page.get_by_role("option", name=re.compile("Public")).click()
             page.wait_for_timeout(PAUSE_MS)
             create_btn.click()
             page.wait_for_url(re.compile(r"/platform/organizations/[0-9a-f-]{36}"), timeout=15_000)
             page.wait_for_load_state("networkidle")
             page.wait_for_timeout(PAUSE_MS)
-            step(f"created organization '{new_org_name}'")
+            step(f"created organization '{new_org_name}' (University, Public)")
 
-            # 3. Browse the public directory.
+            # 4. Browse + search the directory.
             page.goto(f"{BASE}/{LOCALE}/platform/organizations")
             page.wait_for_load_state("networkidle")
             page.get_by_role("heading", name="Organizations").wait_for(state="visible", timeout=10_000)
-            page.get_by_text("Community", exact=True).first.wait_for(state="visible", timeout=10_000)
+            search = page.get_by_label("Search organizations")
+            search.fill("Community")
             page.wait_for_timeout(PAUSE_MS)
-            step("browsed the organization directory")
+            page.get_by_text("Community", exact=True).first.wait_for(state="visible", timeout=10_000)
+            step("searched the organization directory")
 
-            # 4. Open the public Community org, see its resources, request to join.
+            # 5. Open Community, see its resources, request to join.
             page.goto(f"{BASE}/{LOCALE}/platform/organizations/{public_org_id}")
             page.wait_for_load_state("networkidle")
             page.get_by_role("heading", name="Community").wait_for(state="visible", timeout=10_000)
@@ -151,46 +187,108 @@ def main() -> int:
                 step("already requested to join Community")
             page.wait_for_timeout(PAUSE_MS)
 
-            # 5. Switch the active organization to the owned Photosynthesis Lab.
+            # 6. Switch the active org to the owned Photosynthesis Lab.
             switcher = page.get_by_role("button", name="Switch organization")
             switcher.click()
             page.get_by_role("menuitem", name=re.compile("Photosynthesis Lab")).click()
             page.wait_for_timeout(PAUSE_MS)
             step("switched active org to Photosynthesis Lab")
 
-            # 6. Open the owned org: Teams + Requests (approve a pending one).
+            # 7. Manage the owned org.
             page.goto(f"{BASE}/{LOCALE}/platform/organizations/{owned_org_id}")
             page.wait_for_load_state("networkidle")
             page.get_by_role("heading", name="Photosynthesis Lab").wait_for(
                 state="visible", timeout=10_000
             )
+
+            # 7a. Members: invite, change a role, cancel the invite.
+            page.get_by_role("tab", name="Members").click()
+            invite_email = "newhire@openjii.local"
+            page.get_by_label("Invite email").fill(invite_email)
+            page.get_by_role("button", name="Invite").click()
+            page.get_by_label(f"Cancel invitation for {invite_email}").wait_for(
+                state="visible", timeout=10_000
+            )
+            page.wait_for_timeout(PAUSE_MS)
+            step(f"invited {invite_email}")
+            page.get_by_label("Role for bob@openjii.local").select_option("admin")
+            page.wait_for_timeout(PAUSE_MS)
+            step("promoted bob to admin")
+            page.get_by_label(f"Cancel invitation for {invite_email}").click()
+            page.wait_for_timeout(PAUSE_MS)
+            step("cancelled the pending invite")
+
+            # 7b. Teams: create one, see the seeded Imaging team.
             page.get_by_role("tab", name="Teams").click()
             page.get_by_text("Imaging").first.wait_for(state="visible", timeout=10_000)
+            page.get_by_label("New team name").fill("Analysis")
+            page.get_by_role("button", name="Create team").click()
+            page.get_by_text("Analysis").first.wait_for(state="visible", timeout=10_000)
             page.wait_for_timeout(PAUSE_MS)
-            step("viewed the Imaging team")
+            step("created the Analysis team (alongside Imaging)")
 
+            # 7c. Requests: approve one, reject the other.
             page.get_by_role("tab", name="Requests").click()
             approve = page.get_by_role("button", name=re.compile("^Approve "))
             if approve.count():
                 approve.first.click()
                 page.wait_for_timeout(PAUSE_MS)
-                step("approved a pending join request")
-            else:
-                step("no pending join requests to approve")
-            page.wait_for_timeout(PAUSE_MS)
+                step("approved a join request")
+            reject = page.get_by_role("button", name=re.compile("^Reject "))
+            if reject.count():
+                reject.first.click()
+                page.wait_for_timeout(PAUSE_MS)
+                step("rejected a join request")
 
-            # 7. Share each entity via the unified collaborators UI.
+            # 8. Share resources via the unified collaborators panel.
             share_with_person(
                 page,
                 f"{BASE}/{LOCALE}/platform/experiments/{experiment_id}/collaborators",
                 "an experiment",
+                role="Admin",
             )
+            # macro: share with a person, then re-role that grant to Viewer.
             share_with_person(page, f"{BASE}/{LOCALE}/platform/macros/{macro_id}", "a macro")
-            share_with_person(page, f"{BASE}/{LOCALE}/platform/protocols/{protocol_id}", "a protocol")
-            share_with_team(page, f"{BASE}/{LOCALE}/platform/workbooks/{workbook_id}", "a workbook")
+            region = page.get_by_role("region", name="Collaborators")
+            role_ctl = region.get_by_role("combobox", name=re.compile("^Role for ")).first
+            role_ctl.click()
+            page.get_by_role("option", name="Viewer").first.click()
+            page.wait_for_timeout(PAUSE_MS)
+            step("changed the macro grant's role to Viewer")
+
+            share_with_picker(
+                page,
+                f"{BASE}/{LOCALE}/platform/protocols/{protocol_id}",
+                "Organization",
+                "Photosynthesis Lab",
+                "a protocol",
+            )
+            share_with_picker(
+                page,
+                f"{BASE}/{LOCALE}/platform/workbooks/{workbook_id}",
+                "Team",
+                "Imaging",
+                "a workbook",
+            )
+
+            # 9. Impersonate a participant; confirm the session actually switched.
+            page.goto(f"{BASE}/{LOCALE}/platform/admin")
+            page.wait_for_load_state("networkidle")
+            page.get_by_role("button", name="Impersonate participant1@openjii.local").first.click()
+            page.wait_for_timeout(PAUSE_MS)
+            page.goto(f"{BASE}/{LOCALE}/platform/admin")
+            page.wait_for_load_state("networkidle")
+            page.get_by_text("You do not have platform admin access.").wait_for(
+                state="visible", timeout=10_000
+            )
+            page.wait_for_timeout(PAUSE_MS)
+            step("impersonated participant1 (admin console now denies access)")
 
             page.screenshot(path=f"{helpers.VIDEO_DIR}/full_demo.png")
-            print("PASS: full IAM + orgs demo (create → browse → join → switch → teams → approve → share)")
+            print(
+                "PASS: full IAM + orgs demo "
+                "(login → admin → create → browse → join → switch → manage → share → impersonate)"
+            )
             return 0
         except Exception as err:  # noqa: BLE001
             print(f"FAIL: {err}", file=sys.stderr)
