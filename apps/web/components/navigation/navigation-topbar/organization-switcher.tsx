@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { Building2, Check, ChevronsUpDown, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -22,6 +23,7 @@ import {
  */
 export function OrganizationSwitcher() {
   const router = useRouter();
+  const locale = useLocale();
   const { data: organizations, isPending } = authClient.useListOrganizations();
   const { data: activeOrganization } = authClient.useActiveOrganization();
   const [isSwitching, setIsSwitching] = useState(false);
@@ -74,6 +76,21 @@ export function OrganizationSwitcher() {
             {org.id === activeOrganization?.id && <Check className="ml-auto h-4 w-4 shrink-0" />}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="gap-2"
+          onClick={() => router.push(`/${locale}/platform/organizations`)}
+        >
+          <Search className="h-4 w-4 shrink-0" />
+          Browse organizations
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2"
+          onClick={() => router.push(`/${locale}/platform/organizations/new`)}
+        >
+          <Plus className="h-4 w-4 shrink-0" />
+          Create organization
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

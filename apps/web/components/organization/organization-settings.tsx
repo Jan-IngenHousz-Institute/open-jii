@@ -23,15 +23,22 @@ interface OrgInvitation {
 const MANAGER_ROLES = new Set(["owner", "admin"]);
 const ASSIGNABLE_ROLES = ["member", "admin", "owner"] as const;
 
+interface OrganizationSettingsProps {
+  /** Manage this org; defaults to the session's active organization. */
+  organizationId?: string;
+}
+
 /**
- * Organization management: members, roles, and invitations for the active org.
- * Backed directly by the Better Auth organization plugin client.
+ * Organization management: members, roles, and invitations for an organization
+ * (defaults to the active org). Backed directly by the Better Auth org plugin.
  */
-export function OrganizationSettings() {
+export function OrganizationSettings({
+  organizationId: organizationIdProp,
+}: OrganizationSettingsProps = {}) {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const { data: activeOrg } = authClient.useActiveOrganization();
-  const organizationId = activeOrg?.id;
+  const organizationId = organizationIdProp ?? activeOrg?.id;
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<(typeof ASSIGNABLE_ROLES)[number]>("member");
@@ -113,7 +120,9 @@ export function OrganizationSettings() {
   return (
     <section aria-label="Organization members" className="space-y-6">
       <header>
-        <h2 className="text-xl font-semibold">{activeOrg.name}</h2>
+        <h2 className="text-xl font-semibold">
+          {fullOrg.data?.name ?? activeOrg?.name ?? "Organization"}
+        </h2>
         <p className="text-muted-foreground text-sm">Manage members and invitations.</p>
       </header>
 
