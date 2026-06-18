@@ -5,6 +5,7 @@ import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
 import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
+import { ResourceSharing } from "@/components/sharing/resource-sharing";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -119,6 +120,10 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           title={t("protocols.codeTitle")}
           placeholder={t("protocols.codePlaceholder")}
         />
+
+        <div className="rounded-lg border p-4">
+          <ResourceSharing resourceType="protocol" resourceId={id} />
+        </div>
       </div>
     </div>
   );

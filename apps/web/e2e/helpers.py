@@ -25,17 +25,22 @@ PG_USER = os.environ.get("E2E_PG_USER", "postgres")
 # Directory where per-flow screenshots and .webm videos are written (docs assets).
 VIDEO_DIR = os.environ.get("E2E_VIDEO_DIR", os.path.join(os.path.dirname(__file__), "artifacts"))
 VIEWPORT = {"width": 1440, "height": 900}
+# Per-action delay (ms) so recorded demos are watchable. Override via E2E_SLOW_MO.
+SLOW_MO = int(os.environ.get("E2E_SLOW_MO", "0"))
 
 
-def start_recording(playwright, name: str):
+def start_recording(playwright, name: str, slow_mo: int | None = None):
     """Launch headless chromium and a video-recording context for one flow.
 
-    Returns (browser, context, page). Pair with `finish_recording` to flush and
-    rename the webm to <name>.webm under VIDEO_DIR.
+    `slow_mo` (ms) paces every action so the recording is watchable; defaults to
+    the E2E_SLOW_MO env. Returns (browser, context, page). Pair with
+    `finish_recording` to flush and rename the webm to <name>.webm under VIDEO_DIR.
     """
     out = Path(VIDEO_DIR) / "videos"
     out.mkdir(parents=True, exist_ok=True)
-    browser = playwright.chromium.launch(headless=True)
+    browser = playwright.chromium.launch(
+        headless=True, slow_mo=slow_mo if slow_mo is not None else SLOW_MO
+    )
     context = browser.new_context(
         viewport=VIEWPORT,
         record_video_dir=str(out),
@@ -115,6 +120,22 @@ def seed_workbook_id(email: str = SEED_EMAIL) -> str:
     return _psql(
         "SELECT w.id FROM workbooks w JOIN users u ON u.id = w.created_by "
         f"WHERE u.email = '{email}' ORDER BY w.created_at LIMIT 1;"
+    )
+
+
+def seed_macro_id(email: str = SEED_EMAIL) -> str:
+    """Return a macro id the seed user owns."""
+    return _psql(
+        "SELECT m.id FROM macros m JOIN users u ON u.id = m.created_by "
+        f"WHERE u.email = '{email}' ORDER BY m.created_at LIMIT 1;"
+    )
+
+
+def seed_protocol_id(email: str = SEED_EMAIL) -> str:
+    """Return a protocol id the seed user owns."""
+    return _psql(
+        "SELECT p.id FROM protocols p JOIN users u ON u.id = p.created_by "
+        f"WHERE u.email = '{email}' ORDER BY p.created_at LIMIT 1;"
     )
 
 
