@@ -2,10 +2,12 @@ import { initContract } from "@ts-rest/core";
 
 import {
   zCreateResourceGrantBody,
+  zInviteResourceUserBody,
   zResourceAccess,
   zResourceGrant,
   zResourceGrantWithGranteeList,
   zResourceGrantPathParams,
+  zResourceInvitation,
   zRevokeGrantPathParams,
   zRevokeGrantResponse,
   zSharingErrorResponse,
@@ -61,6 +63,24 @@ export const sharingContract = c.router({
     summary: "Share a resource",
     description:
       "Grants a role on a resource to a user, organization, or team. Requires share access.",
+  },
+
+  inviteResourceUser: {
+    method: "POST",
+    path: "/api/v1/resources/:resourceType/:resourceId/invitations",
+    pathParams: zResourceGrantPathParams,
+    body: zInviteResourceUserBody,
+    responses: {
+      201: zResourceInvitation,
+      200: zResourceInvitation,
+      400: zSharingErrorResponse,
+      403: zSharingErrorResponse,
+      404: zSharingErrorResponse,
+    },
+    summary: "Invite a person by email to a resource",
+    description:
+      "Creates a pending invitation for an email that may not have an account yet; " +
+      "the grant is applied when they sign up. Requires share access.",
   },
 
   updateResourceGrant: {

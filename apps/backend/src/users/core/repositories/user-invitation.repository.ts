@@ -7,12 +7,16 @@ import {
   profiles,
   experiments,
   experimentMembers,
+  resourceGrants,
   users,
 } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, ResourceType } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import type { InvitationDto } from "../models/user-invitation.model";
+import type { InvitationDto, InvitationResourceType } from "../models/user-invitation.model";
+
+/** Invitation resource types that map to a per-resource grant on acceptance. */
+const GRANT_RESOURCE_TYPES = new Set(["macro", "protocol", "workbook", "device"]);
 
 @Injectable()
 export class InvitationRepository {
@@ -214,8 +218,8 @@ export class InvitationRepository {
   async acceptInvitation(
     invitationId: string,
     userId: string,
-    _resourceType: "experiment",
-    resourceId: string,
+    resourceType: InvitationResourceType,
+    resourceId: string | null,
     role: string,
   ): Promise<Result<void>> {
     return tryCatch(async () => {
@@ -226,15 +230,30 @@ export class InvitationRepository {
           .set({ status: "accepted" })
           .where(eq(invitations.id, invitationId));
 
-        // Add user as experiment member
-        await tx
-          .insert(experimentMembers)
-          .values({
-            experimentId: resourceId,
-            userId,
-            role: role as "admin" | "member",
-          })
-          .onConflictDoNothing();
+        if (resourceType === "experiment" && resourceId) {
+          // Experiments still enforce via experiment_members.
+          await tx
+            .insert(experimentMembers)
+            .values({
+              experimentId: resourceId,
+              userId,
+              role: role as "admin" | "member",
+            })
+            .onConflictDoNothing();
+        } else if (GRANT_RESOURCE_TYPES.has(resourceType) && resourceId) {
+          // macro/protocol/workbook/device → a per-resource grant.
+          await tx
+            .insert(resourceGrants)
+            .values({
+              resourceType: resourceType as ResourceType,
+              resourceId,
+              granteeType: "user",
+              granteeId: userId,
+              role,
+            })
+            .onConflictDoNothing();
+        }
+        // platform invitations confer no resource grant.
       });
     });
   }

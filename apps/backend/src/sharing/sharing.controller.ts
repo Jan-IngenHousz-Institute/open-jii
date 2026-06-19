@@ -10,6 +10,7 @@ import { formatDates, formatDatesList } from "../common/utils/date-formatter";
 import { handleFailure } from "../common/utils/fp-utils";
 import { CreateResourceGrantUseCase } from "./use-cases/create-resource-grant";
 import { GetResourceAccessUseCase } from "./use-cases/get-resource-access";
+import { InviteResourceUserUseCase } from "./use-cases/invite-resource-user";
 import { ListResourceGrantsUseCase } from "./use-cases/list-resource-grants";
 import { RevokeResourceGrantUseCase } from "./use-cases/revoke-resource-grant";
 import { UpdateResourceGrantUseCase } from "./use-cases/update-resource-grant";
@@ -21,6 +22,7 @@ export class SharingController {
   constructor(
     private readonly listGrants: ListResourceGrantsUseCase,
     private readonly createGrant: CreateResourceGrantUseCase,
+    private readonly inviteUser: InviteResourceUserUseCase,
     private readonly updateGrant: UpdateResourceGrantUseCase,
     private readonly revokeGrant: RevokeResourceGrantUseCase,
     private readonly getAccess: GetResourceAccessUseCase,
@@ -64,6 +66,23 @@ export class SharingController {
       );
       if (result.isSuccess()) {
         return { status: StatusCodes.CREATED as const, body: formatDates(result.value) };
+      }
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.sharing.inviteResourceUser)
+  invite(@Session() session: UserSession) {
+    return tsRestHandler(contract.sharing.inviteResourceUser, async ({ params, body }) => {
+      const result = await this.inviteUser.execute(
+        session.user.id,
+        params.resourceType,
+        params.resourceId,
+        body,
+      );
+      if (result.isSuccess()) {
+        const status = result.value.created ? StatusCodes.CREATED : StatusCodes.OK;
+        return { status: status as 201, body: formatDates(result.value.invitation) };
       }
       return handleFailure(result, this.logger);
     });

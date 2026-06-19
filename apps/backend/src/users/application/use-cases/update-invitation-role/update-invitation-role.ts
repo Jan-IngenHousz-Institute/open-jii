@@ -48,6 +48,10 @@ export class UpdateInvitationRoleUseCase {
       );
     }
 
+    if (!invitation.resourceId) {
+      return failure(AppError.badRequest("Invitation has no resource"));
+    }
+
     const accessResult = await this.experimentRepository.checkAccess(invitation.resourceId, userId);
     if (accessResult.isFailure()) {
       return failure(AppError.internal("Failed to check experiment access"));

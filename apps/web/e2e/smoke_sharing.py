@@ -39,8 +39,10 @@ def main() -> int:
             # In the dialog, search for and select a person, then share.
             dialog = page.get_by_role("dialog")
             dialog.wait_for(state="visible", timeout=10_000)
-            dialog.get_by_label("Search people to share with").fill("Participant")
-            dialog.get_by_role("button", name=re.compile("Participant")).first.click()
+            dialog.get_by_placeholder(re.compile("Search people by name or email")).fill("Participant")
+            page.get_by_role("button", name=re.compile("Participant")).first.click()
+            # Let React register the selection so the Share button enables.
+            page.wait_for_timeout(400)
             dialog.get_by_role("button", name="Share").click()
 
             # The grant now shows as a collaborator with a role control.

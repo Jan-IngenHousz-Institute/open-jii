@@ -342,6 +342,10 @@ export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "acc
 export const invitationResourceTypeEnum = pgEnum("invitation_resource_type", [
   "platform",
   "experiment",
+  "macro",
+  "protocol",
+  "workbook",
+  "device",
 ]);
 
 // Invitations Table

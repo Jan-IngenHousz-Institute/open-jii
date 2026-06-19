@@ -1,5 +1,5 @@
 {
-  "id": "2db5671b-797b-4704-8d48-db826a3e3351",
+  "id": "758d0174-fdcf-44cd-8320-8d8b40bef4bb",
   "prevId": "226948eb-85d8-421d-b363-f4569ecaa212",
   "version": "7",
   "dialect": "postgresql",
@@ -3004,7 +3004,11 @@
       "schema": "public",
       "values": [
         "platform",
-        "experiment"
+        "experiment",
+        "macro",
+        "protocol",
+        "workbook",
+        "device"
       ]
     },
     "public.invitation_status": {

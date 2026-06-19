@@ -63,8 +63,9 @@ def add_person(region, page, what: str) -> None:
     region.get_by_role("button", name="Add people").click()
     dialog = page.get_by_role("dialog")
     dialog.wait_for(state="visible", timeout=10_000)
-    dialog.get_by_label("Search people to share with").fill("Participant")
-    dialog.get_by_role("button", name=re.compile("Participant")).first.click()
+    # UserSearchPopover: type to search, then pick a result (rendered in a portal).
+    dialog.get_by_placeholder(re.compile("Search people by name or email")).fill("Participant")
+    page.get_by_role("button", name=re.compile("Participant")).first.click()
     page.wait_for_timeout(300)
     dialog.get_by_role("button", name="Share").click()
     dialog.wait_for(state="hidden", timeout=10_000)

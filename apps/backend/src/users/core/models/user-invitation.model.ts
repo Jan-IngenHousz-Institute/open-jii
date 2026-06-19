@@ -21,10 +21,12 @@ export const createInvitationSchema = createInsertSchema(invitations)
     resourceId: z.string().uuid(),
   });
 
-// Select schema for returning invitations
+// Select schema for returning invitations. resourceType spans all invitable
+// resources (experiment + the per-resource grant types); resourceId is null only
+// for platform invitations.
 export const invitationSchema = createSelectSchema(invitations).extend({
-  resourceType: z.literal("experiment"),
-  resourceId: z.string().uuid(),
+  resourceType: z.enum(["platform", "experiment", "macro", "protocol", "workbook", "device"]),
+  resourceId: z.string().uuid().nullable(),
   invitedByName: z.string().optional(),
   resourceName: z.string().optional(),
 });

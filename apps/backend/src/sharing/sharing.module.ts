@@ -4,6 +4,7 @@ import { SharingController } from "./sharing.controller";
 import { SharingRepository } from "./sharing.repository";
 import { CreateResourceGrantUseCase } from "./use-cases/create-resource-grant";
 import { GetResourceAccessUseCase } from "./use-cases/get-resource-access";
+import { InviteResourceUserUseCase } from "./use-cases/invite-resource-user";
 import { ListResourceGrantsUseCase } from "./use-cases/list-resource-grants";
 import { RevokeResourceGrantUseCase } from "./use-cases/revoke-resource-grant";
 import { UpdateResourceGrantUseCase } from "./use-cases/update-resource-grant";
@@ -15,6 +16,7 @@ import { UpdateResourceGrantUseCase } from "./use-cases/update-resource-grant";
     SharingRepository,
     ListResourceGrantsUseCase,
     CreateResourceGrantUseCase,
+    InviteResourceUserUseCase,
     UpdateResourceGrantUseCase,
     RevokeResourceGrantUseCase,
     GetResourceAccessUseCase,

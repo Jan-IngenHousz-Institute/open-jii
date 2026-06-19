@@ -118,7 +118,14 @@ export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
 
 // --- Invitation Schemas ---
 export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);
-export const zInvitationResourceType = z.enum(["platform", "experiment"]);
+export const zInvitationResourceType = z.enum([
+  "platform",
+  "experiment",
+  "macro",
+  "protocol",
+  "workbook",
+  "device",
+]);
 
 export const zInvitation = z.object({
   id: z.string().uuid(),

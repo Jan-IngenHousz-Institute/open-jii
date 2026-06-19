@@ -169,8 +169,11 @@ describe("ResourceCollaborators", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Add people" }));
 
     const dialog = await screen.findByRole("dialog");
-    await userEvent.type(within(dialog).getByLabelText("Search people to share with"), "ada");
-    await userEvent.click(await within(dialog).findByText("Ada Lovelace"));
+    await userEvent.type(
+      within(dialog).getByPlaceholderText(/Search people by name or email/),
+      "ada",
+    );
+    await userEvent.click(await screen.findByText("Ada Lovelace"));
     await userEvent.click(within(dialog).getByRole("button", { name: "Share" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
@@ -178,6 +181,38 @@ describe("ResourceCollaborators", () => {
       granteeType: "user",
       granteeId: "44444444-4444-4444-4444-444444444444",
     });
+  });
+
+  it("invites a person by email who has no account yet (POST invitation)", async () => {
+    mountAccess(true);
+    mountGrants([]);
+    server.mount(contract.users.searchUsers, { body: [] });
+    const spy = server.mount(contract.sharing.inviteResourceUser, {
+      status: 201,
+      body: {
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        email: "newbie@example.com",
+        role: "member",
+        status: "pending",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    });
+
+    render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Add people" }));
+
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(
+      within(dialog).getByPlaceholderText(/Search people by name or email/),
+      "newbie@example.com",
+    );
+    await userEvent.click(
+      await screen.findByText(/Invite .*newbie@example.com|newbie@example.com/),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Share" }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({ email: "newbie@example.com" });
   });
 
   it("shows org members + teams on the Organization access tab", async () => {

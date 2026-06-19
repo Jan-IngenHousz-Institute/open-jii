@@ -1,6 +1,10 @@
 CREATE TYPE "public"."grantee_type" AS ENUM('user', 'organization', 'team');--> statement-breakpoint
 CREATE TYPE "public"."resource_type" AS ENUM('experiment', 'macro', 'protocol', 'workbook', 'device');--> statement-breakpoint
 CREATE TYPE "public"."visibility" AS ENUM('private', 'public');--> statement-breakpoint
+ALTER TYPE "public"."invitation_resource_type" ADD VALUE 'macro';--> statement-breakpoint
+ALTER TYPE "public"."invitation_resource_type" ADD VALUE 'protocol';--> statement-breakpoint
+ALTER TYPE "public"."invitation_resource_type" ADD VALUE 'workbook';--> statement-breakpoint
+ALTER TYPE "public"."invitation_resource_type" ADD VALUE 'device';--> statement-breakpoint
 CREATE TABLE "organization_invitations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,

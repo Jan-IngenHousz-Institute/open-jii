@@ -4,6 +4,7 @@ import {
   and,
   desc,
   eq,
+  invitations,
   organizationMembers,
   organizations,
   profiles,
@@ -15,6 +16,14 @@ import {
 import type { DatabaseInstance, GranteeType, ResourceType } from "@repo/database";
 
 import { Result, tryCatch } from "../common/utils/fp-utils";
+
+export interface ResourceInvitationRow {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: Date;
+}
 
 export interface ResourceGrantRow {
   id: string;
@@ -160,6 +169,62 @@ export class SharingRepository {
           ),
         )
         .limit(1),
+    );
+  }
+
+  /** A pending email invitation for this resource + email, if any. */
+  findPendingInvitation(
+    resourceType: ResourceType,
+    resourceId: string,
+    email: string,
+  ): Promise<Result<ResourceInvitationRow | null>> {
+    return tryCatch(async () => {
+      const rows = await this.db
+        .select({
+          id: invitations.id,
+          email: invitations.email,
+          role: invitations.role,
+          status: invitations.status,
+          createdAt: invitations.createdAt,
+        })
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.resourceType, resourceType),
+            eq(invitations.resourceId, resourceId),
+            eq(invitations.email, email),
+            eq(invitations.status, "pending"),
+          ),
+        )
+        .limit(1);
+      return rows.length > 0 ? rows[0] : null;
+    });
+  }
+
+  createInvitation(input: {
+    resourceType: ResourceType;
+    resourceId: string;
+    email: string;
+    role: string;
+    invitedBy: string;
+  }): Promise<Result<ResourceInvitationRow[]>> {
+    return tryCatch(() =>
+      this.db
+        .insert(invitations)
+        .values({
+          resourceType: input.resourceType,
+          resourceId: input.resourceId,
+          email: input.email,
+          role: input.role,
+          invitedBy: input.invitedBy,
+        })
+        .returning({
+          id: invitations.id,
+          email: invitations.email,
+          role: invitations.role,
+          status: invitations.status,
+          createdAt: invitations.createdAt,
+        }),
     );
   }
 

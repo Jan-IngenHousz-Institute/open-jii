@@ -60,6 +60,21 @@ export const zUpdateResourceGrantBody = z.object({
   role: zGrantRole,
 });
 
+/** Invite someone (by email) who may not have an account yet to a resource. */
+export const zInviteResourceUserBody = z.object({
+  email: z.string().email(),
+  role: zGrantRole.default("member"),
+});
+
+/** A pending email invitation to a resource (granted on the invitee's signup). */
+export const zResourceInvitation = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  role: z.string(),
+  status: z.string(),
+  createdAt: z.string(),
+});
+
 export const zRevokeGrantResponse = z.object({ success: z.boolean() });
 
 /** The caller's effective permissions on a resource (drives UI gating). */
@@ -85,3 +100,4 @@ export type ResourceGrantWithGranteeDto = z.infer<typeof zResourceGrantWithGrant
 export type GranteeDto = z.infer<typeof zGrantee>;
 export type CreateResourceGrantBody = z.infer<typeof zCreateResourceGrantBody>;
 export type UpdateResourceGrantBody = z.infer<typeof zUpdateResourceGrantBody>;
+export type InviteResourceUserBody = z.infer<typeof zInviteResourceUserBody>;
