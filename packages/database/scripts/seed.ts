@@ -945,6 +945,18 @@ async function main() {
   await backfillOwnedEntitiesOwnership(db);
   console.log(`  Assigned org ownership + ${grantsCreated} experiment grants`);
 
+  // Direct grant to a user who is NOT in the macro's owning org (seed's personal
+  // org) → shows as an "Outside Collaborator" in the collaborators UI.
+  await grantResource(db, {
+    resourceType: "macro",
+    resourceId: createdMacros[0].id,
+    granteeType: "user",
+    granteeId: MEMBER_BY_NAME.Alice,
+    role: "member",
+    createdBy: user.id,
+  });
+  console.log("  Added an outside-collaborator grant (Alice on a seed macro)");
+
   console.log("Seed complete!");
 }
 

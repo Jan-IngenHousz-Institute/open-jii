@@ -27,16 +27,16 @@ def main() -> int:
         try:
             helpers.login(page)
             page.goto(
-                f"{helpers.BASE_URL}/{helpers.LOCALE}/platform/workbooks/{workbook_id}"
+                f"{helpers.BASE_URL}/{helpers.LOCALE}/platform/workbooks/{workbook_id}/collaborators"
             )
             page.wait_for_load_state("networkidle")
 
-            # The owner sees the Collaborators panel with a Share button (canShare).
-            region = page.get_by_role("region", name="Collaborators")
+            # The owner sees the GitHub-style "Collaborators and teams" tab (canShare).
+            region = page.get_by_role("region", name="Collaborators and teams")
             region.wait_for(state="visible", timeout=10_000)
-            region.get_by_role("button", name="Share").click()
+            region.get_by_role("button", name="Add people").click()
 
-            # In the Share dialog, search for and select a person, then share.
+            # In the dialog, search for and select a person, then share.
             dialog = page.get_by_role("dialog")
             dialog.wait_for(state="visible", timeout=10_000)
             dialog.get_by_label("Search people to share with").fill("Participant")
@@ -45,12 +45,12 @@ def main() -> int:
 
             # The grant now shows as a collaborator with a role control.
             dialog.wait_for(state="hidden", timeout=10_000)
-            page.get_by_role("combobox", name=re.compile("^Role for ")).first.wait_for(
+            region.get_by_role("combobox", name=re.compile("^Role for ")).first.wait_for(
                 state="visible", timeout=10_000
             )
 
             page.screenshot(path=f"{helpers.VIDEO_DIR}/sharing.png")
-            print("PASS: shared a workbook via the ResourceCollaborators panel")
+            print("PASS: shared a workbook via the Collaborators and teams tab")
             return 0
         except Exception as err:  # noqa: BLE001
             print(f"FAIL: {err}", file=sys.stderr)
