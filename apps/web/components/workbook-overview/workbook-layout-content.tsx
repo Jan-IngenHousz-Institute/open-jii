@@ -95,6 +95,8 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
         <div className="w-full">
           <EntityTabs
             basePath={`/${locale}/platform/workbooks/${id}`}
+            resourceType="workbook"
+            resourceId={id}
             overviewLabel={tNav("sidebar.overview")}
             collaboratorsLabel={tNav("sidebar.collaborators")}
           >

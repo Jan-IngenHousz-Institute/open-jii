@@ -9,6 +9,9 @@ export interface ResourceAccess {
   canUpdate: boolean;
   canDelete: boolean;
   canShare: boolean;
+  /** True when the caller has a real role on the resource (org-role or a grant) —
+   *  i.e. a collaborator, not merely a public-read viewer. Gates the Collaborators tab. */
+  isCollaborator: boolean;
   /** Owning org + visibility, so the sharing UI can render the GitHub-style cards. */
   organizationId: string | null;
   visibility: "private" | "public" | null;
@@ -35,6 +38,7 @@ export class GetResourceAccessUseCase {
       canUpdate: update.allow,
       canDelete: del.allow,
       canShare: share.allow,
+      isCollaborator: read.allow && read.reason !== "public",
       organizationId: ownership?.organizationId ?? null,
       visibility: ownership?.visibility ?? null,
     };

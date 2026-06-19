@@ -12,13 +12,14 @@ const RID = "11111111-1111-1111-1111-111111111111";
 const ORG_ID = "00000000-0000-4000-8000-000000000abc";
 const GRANT_ID = "99999999-9999-9999-9999-999999999999";
 
-function mountAccess(canShare: boolean) {
+function mountAccess(canShare: boolean, isCollaborator = true) {
   return server.mount(contract.sharing.getResourceAccess, {
     body: {
       canRead: true,
       canUpdate: canShare,
       canDelete: canShare,
       canShare,
+      isCollaborator,
       organizationId: ORG_ID,
       visibility: "private",
     },
@@ -74,6 +75,18 @@ describe("ResourceCollaborators", () => {
     expect(await screen.findByText("Grace Hopper")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Role for Grace Hopper" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add people" })).toBeInTheDocument();
+  });
+
+  it("shows a private notice and skips the grants list for non-collaborators", async () => {
+    mountAccess(false, false);
+    const grantsSpy = mountGrants([userGrant]);
+
+    render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
+
+    expect(await screen.findByText("Collaborators are private")).toBeInTheDocument();
+    expect(screen.queryByText("Grace Hopper")).not.toBeInTheDocument();
+    // The grants endpoint is never hit for a public-read viewer.
+    expect(grantsSpy.called).toBe(false);
   });
 
   it("labels a non-org-member grant as an Outside Collaborator", async () => {

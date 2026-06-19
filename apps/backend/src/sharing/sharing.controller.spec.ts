@@ -50,6 +50,7 @@ describe("SharingController", () => {
         canUpdate: true,
         canDelete: true,
         canShare: true,
+        isCollaborator: true,
         organizationId: org.id,
         visibility: "private",
       });
@@ -67,7 +68,26 @@ describe("SharingController", () => {
         canUpdate: false,
         canDelete: false,
         canShare: false,
+        isCollaborator: false,
       });
+    });
+
+    it("a public-read viewer can read but is not a collaborator", async () => {
+      const owner = await testApp.createTestUser();
+      const org = await testApp.createOrganization();
+      await testApp.addOrgMember(org.id, owner, "admin");
+      const { experiment } = await testApp.createExperiment({
+        name: `Public ${crypto.randomUUID().slice(0, 8)}`,
+        userId: owner,
+        visibility: "public",
+        organizationId: org.id,
+      });
+      const stranger = await testApp.createTestUser();
+      const res = await testApp
+        .get(accessUrl(experiment.id))
+        .withAuth(stranger)
+        .expect(StatusCodes.OK);
+      expect(res.body).toMatchObject({ canRead: true, isCollaborator: false });
     });
   });
 

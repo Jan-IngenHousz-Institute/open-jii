@@ -38,17 +38,25 @@ interface ResourceCollaboratorsProps {
  * tab (who inherits via the owning org). Backed by resource_grants + /access.
  */
 export function ResourceCollaborators({ resourceType, resourceId }: ResourceCollaboratorsProps) {
-  const { data: accessRes } = useResourceAccess(resourceType, resourceId);
-  const { data: grantsRes, isPending } = useResourceGrants(resourceType, resourceId);
-  const updateGrant = useUpdateResourceGrant();
-  const revokeGrant = useRevokeResourceGrant();
+  const { data: accessRes, isPending: accessPending } = useResourceAccess(resourceType, resourceId);
 
-  const canManage = accessRes?.body.canShare ?? false;
-  const visibility = accessRes?.body.visibility ?? null;
-  const organizationId = accessRes?.body.organizationId ?? null;
+  const access = accessRes?.body;
+  const isCollaborator = access?.isCollaborator ?? false;
+  const canManage = access?.canShare ?? false;
+  const visibility = access?.visibility ?? null;
+  const organizationId = access?.organizationId ?? null;
   const isPublic = visibility === "public";
 
-  const { data: orgAccessRes } = useOrganizationAccess(organizationId);
+  // Only collaborators (people with a role/grant) may see the list or hit the
+  // grants / organization-access endpoints — public-read viewers get nothing.
+  const { data: grantsRes, isPending: grantsPending } = useResourceGrants(
+    resourceType,
+    resourceId,
+    isCollaborator,
+  );
+  const updateGrant = useUpdateResourceGrant();
+  const revokeGrant = useRevokeResourceGrant();
+  const { data: orgAccessRes } = useOrganizationAccess(isCollaborator ? organizationId : null);
   const orgAccess = orgAccessRes?.body;
 
   const grants = useMemo(() => grantsRes?.body ?? [], [grantsRes]);
@@ -92,6 +100,26 @@ export function ResourceCollaborators({ resourceType, resourceId }: ResourceColl
     (updateGrant.isPending || revokeGrant.isPending) &&
     (updateGrant.variables?.params.grantId === grantId ||
       revokeGrant.variables?.params.grantId === grantId);
+
+  if (accessPending) {
+    return <Skeleton className="h-40 w-full rounded-lg" />;
+  }
+
+  // Public-read viewers (non-collaborators) don't see the list and never hit the
+  // grants / organization-access endpoints.
+  if (!isCollaborator) {
+    return (
+      <section aria-label="Collaborators and teams" className="px-6 py-16 text-center">
+        <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
+          <Lock className="h-5 w-5" />
+        </div>
+        <p className="text-foreground text-sm font-semibold">Collaborators are private</p>
+        <p className="text-muted-foreground mx-auto mt-1 max-w-[320px] text-xs leading-relaxed">
+          Only collaborators on this resource can see who has access.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Collaborators and teams" className="space-y-6">
@@ -192,7 +220,7 @@ export function ResourceCollaborators({ resourceType, resourceId }: ResourceColl
             </div>
           </div>
 
-          {isPending ? (
+          {grantsPending ? (
             <div className="divide-border divide-y overflow-hidden rounded-lg border">
               {[0, 1].map((i) => (
                 <div key={i} className="flex items-center gap-3 px-3 py-2.5">

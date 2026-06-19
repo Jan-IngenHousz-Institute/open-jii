@@ -68,6 +68,8 @@ export const zResourceAccess = z.object({
   canUpdate: z.boolean(),
   canDelete: z.boolean(),
   canShare: z.boolean(),
+  /** Caller is a collaborator (has a role/grant), not just a public-read viewer. */
+  isCollaborator: z.boolean(),
   /** Owning org + visibility, for the GitHub-style collaborators cards. */
   organizationId: z.string().uuid().nullable(),
   visibility: zVisibility.nullable(),

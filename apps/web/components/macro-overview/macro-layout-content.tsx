@@ -57,6 +57,8 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
       />
       <EntityTabs
         basePath={`/${locale}/platform/macros/${id}`}
+        resourceType="macro"
+        resourceId={id}
         overviewLabel={tNav("sidebar.overview")}
         collaboratorsLabel={tNav("sidebar.collaborators")}
       >

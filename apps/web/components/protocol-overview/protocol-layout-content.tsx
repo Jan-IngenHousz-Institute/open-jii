@@ -64,6 +64,8 @@ export function ProtocolLayoutContent({
       />
       <EntityTabs
         basePath={`/${locale}/platform/protocols/${id}`}
+        resourceType="protocol"
+        resourceId={id}
         overviewLabel={tNav("sidebar.overview")}
         collaboratorsLabel={tNav("sidebar.collaborators")}
       >
