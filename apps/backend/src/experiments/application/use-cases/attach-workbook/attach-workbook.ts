@@ -75,9 +75,6 @@ export class AttachWorkbookUseCase {
           version = versionResult.value;
         }
 
-        // Never pin a version that belongs to another workbook: that leaves the
-        // experiment broken (Design view 404 / perpetual "upgrade available").
-        // See OJD-1626.
         if (version.workbookId !== workbookId) {
           return failure(
             AppError.notFound(`No valid workbook version found for workbook ${workbookId}`),

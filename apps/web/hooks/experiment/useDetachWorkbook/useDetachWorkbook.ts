@@ -4,9 +4,7 @@ export const useDetachWorkbook = () => {
   const queryClient = tsr.useQueryClient();
 
   return tsr.experiments.detachWorkbook.useMutation({
-    // The detach response carries no workbookId, so grab it from the experiment
-    // cache before invalidation. We drop the workbook caches too so a later
-    // re-attach never shows a stale version badge / "upgrade available". OJD-1626.
+    // Detach has no workbookId in its response; read it from the experiment cache.
     onMutate: (variables) => {
       const experiment = queryClient.getQueryData<{ body: { workbookId?: string | null } }>([
         "experiment",

@@ -87,9 +87,6 @@ export class UpgradeWorkbookVersionUseCase {
           version = versionResult.value;
         }
 
-        // Never pin a version that belongs to another workbook: that leaves the
-        // experiment broken (Design view 404 / perpetual "upgrade available").
-        // See OJD-1626.
         if (version.workbookId !== experiment.workbookId) {
           return failure(
             AppError.notFound(

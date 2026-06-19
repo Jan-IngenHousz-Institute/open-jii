@@ -67,9 +67,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const isWorkbookOwner =
     !!session?.user.id && !!workbookDraft && session.user.id === workbookDraft.createdBy;
 
-  // Editing the workbook here auto-pins the experiment to the freshly-saved
-  // draft: every autosave publishes/reuses a version and re-points the
-  // experiment at it, so no manual "upgrade" step is needed (OJD-1626).
+  // Each autosave re-pins the experiment to the latest version (OJD-1626).
   const upgradeVersion = useUpgradeWorkbookVersion();
   const handleDraftSaved = useCallback(() => {
     upgradeVersion.mutate({ params: { id } });

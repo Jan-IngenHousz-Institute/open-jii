@@ -119,10 +119,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
     expect(result.value).toBe(true);
   });
 
-  // OJD-1626: a referenced protocol that hasn't changed must NOT read as
-  // upgradable (the bug flagged it forever). Drift is detected against the live
-  // protocol code; key-order-only differences are ignored — that canonical
-  // comparison is covered directly in stable-json.spec.ts.
+  // Key-order insensitivity is covered in stable-json.spec.ts.
   it("tracks drift in a referenced protocol's code", async () => {
     const protocol = await testApp.createProtocol({
       name: "P",

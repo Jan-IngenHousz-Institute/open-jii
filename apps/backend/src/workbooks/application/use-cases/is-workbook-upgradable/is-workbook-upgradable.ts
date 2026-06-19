@@ -50,10 +50,7 @@ export class IsWorkbookUpgradableUseCase {
     const latest = latestResult.value;
     if (!latest) return success(false);
 
-    // Canonical (key-order-insensitive) comparison: live entities arrive with
-    // keys in insertion order while published snapshots come back from jsonb
-    // with keys re-normalised, so a plain JSON.stringify diff would flag the
-    // workbook upgradable forever for some protocols (OJD-1626).
+    // Key-order-insensitive: jsonb snapshots come back re-normalised (OJD-1626).
     const cellsChanged =
       stableStringify(designOf(workbook.cells)) !==
       stableStringify(designOf(latest.cells as WorkbookCell[]));

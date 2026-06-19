@@ -67,8 +67,7 @@ describe("LinkedWorkbookCard", () => {
     expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
   });
 
-  // OJD-1626: drift reported by the backend (isUpgradable) should surface the
-  // banner even when no newer version has been published yet...
+  // isUpgradable drift shows the banner even with no newer published version.
   it("shows the drift banner when isUpgradable is true without a newer published version", async () => {
     server.mount(contract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: true } });
     server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
@@ -80,8 +79,7 @@ describe("LinkedWorkbookCard", () => {
     );
   });
 
-  // ...and once the upgrade is accepted (isUpgradable false, pinned == latest)
-  // the prompt stays gone — the upgrade is offered only once.
+  // Once accepted (isUpgradable false, pinned == latest) the prompt stays gone.
   it("hides the banner when isUpgradable is false and pinned is latest (offered once)", async () => {
     server.mount(contract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: false } });
     server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });

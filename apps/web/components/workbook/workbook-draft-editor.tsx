@@ -22,8 +22,7 @@ interface WorkbookDraftEditorProps {
   initialCells: WorkbookCell[];
   createdBy: string;
   name: string;
-  /** Called after each successful autosave (e.g. so the experiment design page
-   *  can auto-pin the experiment to the freshly-saved draft). */
+  /** Called after each successful autosave. */
   onSaved?: (workbook: Workbook) => void;
 }
 
