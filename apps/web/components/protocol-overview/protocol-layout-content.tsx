@@ -1,7 +1,9 @@
 "use client";
 
+import { EntityTabs } from "@/components/shared/entity-tabs";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useLocale } from "@/hooks/useLocale";
 import { parseApiError } from "~/util/apiError";
 
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
@@ -25,6 +27,8 @@ export function ProtocolLayoutContent({
 }: ProtocolLayoutContentProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
+  const { t: tNav } = useTranslation("navigation");
+  const locale = useLocale();
   const { data: session } = useSession();
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
@@ -58,7 +62,13 @@ export function ProtocolLayoutContent({
         }
         actions={actions}
       />
-      {children}
+      <EntityTabs
+        basePath={`/${locale}/platform/protocols/${id}`}
+        overviewLabel={tNav("sidebar.overview")}
+        collaboratorsLabel={tNav("sidebar.collaborators")}
+      >
+        {children}
+      </EntityTabs>
     </div>
   );
 }

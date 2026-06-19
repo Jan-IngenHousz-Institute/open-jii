@@ -1,7 +1,6 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { ResourceCollaborators } from "@/components/sharing/resource-collaborators";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { use } from "react";
@@ -31,16 +30,11 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
   // Mount the editor only after data loads so `useAutosave` sees the
   // persisted state as its first value.
   return (
-    <div className="space-y-6">
-      <WorkbookDraftEditor
-        id={id}
-        initialCells={data.cells as WorkbookCell[]}
-        createdBy={data.createdBy}
-        name={data.name}
-      />
-      <div className="rounded-lg border p-4">
-        <ResourceCollaborators resourceType="workbook" resourceId={id} />
-      </div>
-    </div>
+    <WorkbookDraftEditor
+      id={id}
+      initialCells={data.cells as WorkbookCell[]}
+      createdBy={data.createdBy}
+      name={data.name}
+    />
   );
 }

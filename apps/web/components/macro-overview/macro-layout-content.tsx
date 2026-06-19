@@ -1,7 +1,9 @@
 "use client";
 
+import { EntityTabs } from "@/components/shared/entity-tabs";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useLocale } from "@/hooks/useLocale";
 import { parseApiError } from "~/util/apiError";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
@@ -19,6 +21,8 @@ interface MacroLayoutContentProps {
 export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentProps) {
   const { t } = useTranslation(["macro", "common"]);
   const { t: tCommon } = useTranslation("common");
+  const { t: tNav } = useTranslation("navigation");
+  const locale = useLocale();
   const { data: session } = useSession();
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
 
@@ -51,7 +55,13 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
           ) : undefined
         }
       />
-      {children}
+      <EntityTabs
+        basePath={`/${locale}/platform/macros/${id}`}
+        overviewLabel={tNav("sidebar.overview")}
+        collaboratorsLabel={tNav("sidebar.collaborators")}
+      >
+        {children}
+      </EntityTabs>
     </div>
   );
 }

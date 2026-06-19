@@ -2,7 +2,9 @@
 
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
+import { EntityTabs } from "@/components/shared/entity-tabs";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { formatDate } from "@/util/date";
 import { parseApiError } from "~/util/apiError";
@@ -21,6 +23,8 @@ interface WorkbookLayoutContentProps {
 export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayoutContentProps) {
   const { t } = useTranslation(["workbook", "common"]);
   const { t: tCommon } = useTranslation("common");
+  const { t: tNav } = useTranslation("navigation");
+  const locale = useLocale();
   const { data: session } = useSession();
   const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id);
   const autosave = useAutosaveStatus();
@@ -88,7 +92,15 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
         className="-mx-6 -mb-6 flex-1 border-t border-[#EDF2F6] px-6 pb-6"
         style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
       >
-        <div className="w-full">{children}</div>
+        <div className="w-full">
+          <EntityTabs
+            basePath={`/${locale}/platform/workbooks/${id}`}
+            overviewLabel={tNav("sidebar.overview")}
+            collaboratorsLabel={tNav("sidebar.collaborators")}
+          >
+            {children}
+          </EntityTabs>
+        </div>
       </div>
     </div>
   );

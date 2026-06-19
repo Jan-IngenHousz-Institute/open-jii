@@ -1,8 +1,9 @@
 "use client";
 
-import { Building2, Mail, Users } from "lucide-react";
+import { Building2, Trash2, Users } from "lucide-react";
 
-import type { GranteeTypeValue } from "@repo/api/schemas/sharing.schema";
+import type { ResourceGrantWithGranteeDto } from "@repo/api/schemas/sharing.schema";
+import { Button } from "@repo/ui/components/button";
 import {
   Select,
   SelectContent,
@@ -10,32 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-import { cn } from "@repo/ui/lib/utils";
 
 import { UserAvatar } from "../../user-avatar";
 
-export interface CollaboratorGrant {
-  id: string;
-  role: string;
-  granteeType: GranteeTypeValue;
-  granteeId: string;
-  grantee: {
-    type: GranteeTypeValue;
-    displayName: string | null;
-    email: string | null;
-    avatarUrl: string | null;
-  };
-}
-
 interface CollaboratorItemProps {
-  grant: CollaboratorGrant;
-  canShare: boolean;
-  isUpdating: boolean;
-  onValueChange: (value: string) => void;
+  grant: ResourceGrantWithGranteeDto;
+  canManage: boolean;
+  isBusy: boolean;
+  onRoleChange: (role: string) => void;
+  onRemove: () => void;
 }
 
-const SUBTITLE: Record<GranteeTypeValue, string> = {
-  user: "Person",
+const TYPE_SUBLABEL: Record<string, string> = {
   organization: "Organization",
   team: "Team",
 };
@@ -45,19 +32,24 @@ function splitName(displayName: string): [string, string] {
   return [parts[0] ?? "", parts.length > 1 ? parts[parts.length - 1] : ""];
 }
 
-/** One row in the collaborators list: a user, org, or team granted access. */
+/** One GitHub-style access row: avatar, name + handle/label, Role dropdown, delete. */
 export function CollaboratorItem({
   grant,
-  canShare,
-  isUpdating,
-  onValueChange,
+  canManage,
+  isBusy,
+  onRoleChange,
+  onRemove,
 }: CollaboratorItemProps) {
   const name = grant.grantee.displayName ?? grant.granteeId;
-  const subtitle =
-    grant.granteeType === "user"
-      ? (grant.grantee.email ?? SUBTITLE.user)
-      : SUBTITLE[grant.granteeType];
   const isOwner = grant.role === "owner";
+
+  // GitHub-style sublabel under the name.
+  const sublabel =
+    grant.granteeType === "user"
+      ? grant.grantee.isOrgMember
+        ? (grant.grantee.email ?? "Member")
+        : "Outside Collaborator"
+      : (TYPE_SUBLABEL[grant.granteeType] ?? null);
 
   return (
     <div className="flex items-center gap-3 px-3 py-2.5">
@@ -69,7 +61,7 @@ export function CollaboratorItem({
           className="h-9 w-9"
         />
       ) : (
-        <div className="bg-primary/10 text-primary grid h-9 w-9 shrink-0 place-items-center rounded-full">
+        <div className="bg-primary/10 text-primary grid h-9 w-9 shrink-0 place-items-center rounded-md">
           {grant.granteeType === "organization" ? (
             <Building2 className="h-4 w-4" />
           ) : (
@@ -79,43 +71,43 @@ export function CollaboratorItem({
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <h4 className="text-foreground truncate text-sm font-medium" title={name}>
+        <span className="text-foreground truncate text-sm font-semibold" title={name}>
           {name}
-        </h4>
-        <span className="flex min-w-0 items-center gap-x-1">
-          {grant.granteeType === "user" && (
-            <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-          )}
-          <span className="text-muted-foreground truncate text-xs" title={subtitle}>
-            {subtitle}
-          </span>
         </span>
+        {sublabel && (
+          <span className="text-muted-foreground truncate text-xs" title={sublabel}>
+            {sublabel}
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-shrink-0">
-        {canShare && !isOwner ? (
-          <Select value={grant.role} disabled={isUpdating} onValueChange={onValueChange}>
-            <SelectTrigger className="w-[110px]" aria-label={`Role for ${name}`}>
+      <div className="flex shrink-0 items-center gap-2">
+        {canManage && !isOwner ? (
+          <Select value={grant.role} disabled={isBusy} onValueChange={onRoleChange}>
+            <SelectTrigger className="h-9 w-[130px]" aria-label={`Role for ${name}`}>
+              <span className="text-muted-foreground mr-1 text-xs">Role:</span>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="member">Member</SelectItem>
-              <SelectItem value="viewer">Viewer</SelectItem>
-              <div className="my-1 border-t" />
-              <SelectItem
-                value="remove"
-                className="text-destructive focus:text-destructive"
-                aria-label={`Remove access for ${name}`}
-              >
-                Remove
-              </SelectItem>
+              <SelectItem value="admin">admin</SelectItem>
+              <SelectItem value="member">member</SelectItem>
+              <SelectItem value="viewer">viewer</SelectItem>
             </SelectContent>
           </Select>
         ) : (
-          <span className={cn("text-muted-foreground text-xs font-medium capitalize")}>
-            {grant.role}
-          </span>
+          <span className="text-muted-foreground text-xs font-medium">Role: {grant.role}</span>
+        )}
+        {canManage && !isOwner && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="text-destructive hover:text-destructive h-9 w-9"
+            disabled={isBusy}
+            onClick={onRemove}
+            aria-label={`Remove access for ${name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         )}
       </div>
     </div>

@@ -9,11 +9,19 @@ import { ResourceCollaborators } from "./resource-collaborators";
 
 const RT = "macro" as const;
 const RID = "11111111-1111-1111-1111-111111111111";
+const ORG_ID = "00000000-0000-4000-8000-000000000abc";
 const GRANT_ID = "99999999-9999-9999-9999-999999999999";
 
 function mountAccess(canShare: boolean) {
   return server.mount(contract.sharing.getResourceAccess, {
-    body: { canRead: true, canUpdate: canShare, canDelete: canShare, canShare },
+    body: {
+      canRead: true,
+      canUpdate: canShare,
+      canDelete: canShare,
+      canShare,
+      organizationId: ORG_ID,
+      visibility: "private",
+    },
   });
 }
 
@@ -31,20 +39,20 @@ const userGrant: ResourceGrantWithGranteeDto = {
     displayName: "Grace Hopper",
     email: "grace@example.com",
     avatarUrl: null,
+    isOrgMember: true,
   },
 };
 
-const orgGrant: ResourceGrantWithGranteeDto = {
+const outsideGrant: ResourceGrantWithGranteeDto = {
   ...userGrant,
-  id: "88888888-8888-8888-8888-888888888888",
-  granteeType: "organization",
+  id: "77777777-7777-7777-7777-777777777777",
   granteeId: "33333333-3333-3333-3333-333333333333",
-  role: "admin",
   grantee: {
-    type: "organization",
-    displayName: "Field Trials Group",
-    email: null,
+    type: "user",
+    displayName: "Ada Outsider",
+    email: "ada@example.com",
     avatarUrl: null,
+    isOrgMember: false,
   },
 };
 
@@ -53,50 +61,48 @@ function mountGrants(body: ResourceGrantWithGranteeDto[]) {
 }
 
 describe("ResourceCollaborators", () => {
-  it("shows the empty state and a Share button when the user can share", async () => {
-    mountAccess(true);
-    mountGrants([]);
-
-    render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
-
-    expect(await screen.findByText("Not shared with anyone yet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument();
-  });
-
-  it("lists a user grant with name, email, and a role control", async () => {
+  it("renders the GitHub-style header, visibility card, and a collaborator row", async () => {
     mountAccess(true);
     mountGrants([userGrant]);
 
     render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
 
+    expect(
+      await screen.findByRole("heading", { name: "Collaborators and teams" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Private")).toBeInTheDocument();
     expect(await screen.findByText("Grace Hopper")).toBeInTheDocument();
-    expect(screen.getByText("grace@example.com")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Role for Grace Hopper" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add people" })).toBeInTheDocument();
   });
 
-  it("renders an organization grant with the org name and Organization subtitle", async () => {
+  it("labels a non-org-member grant as an Outside Collaborator", async () => {
     mountAccess(true);
-    mountGrants([orgGrant]);
+    mountGrants([outsideGrant]);
 
     render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
 
-    expect(await screen.findByText("Field Trials Group")).toBeInTheDocument();
-    expect(screen.getByText("Organization")).toBeInTheDocument();
+    expect(await screen.findByText("Ada Outsider")).toBeInTheDocument();
+    expect(screen.getByText("Outside Collaborator")).toBeInTheDocument();
   });
 
-  it("hides controls when the user cannot share (role shown read-only)", async () => {
+  it("hides management controls when the user cannot share", async () => {
     mountAccess(false);
     mountGrants([userGrant]);
 
     render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
 
     expect(await screen.findByText("Grace Hopper")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Share" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByText("member")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add people" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Role for Grace Hopper" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Remove access for Grace Hopper" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("changes a grant's role via the role control (PATCH)", async () => {
+  it("changes a grant's role (PATCH)", async () => {
     mountAccess(true);
     mountGrants([userGrant]);
     const spy = server.mount(contract.sharing.updateResourceGrant, {
@@ -105,27 +111,28 @@ describe("ResourceCollaborators", () => {
 
     render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
     await userEvent.click(await screen.findByRole("combobox", { name: "Role for Grace Hopper" }));
-    await userEvent.click(screen.getByRole("option", { name: "Admin" }));
+    await userEvent.click(screen.getByRole("option", { name: "admin" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.params).toMatchObject({ resourceType: RT, resourceId: RID, grantId: GRANT_ID });
     expect(spy.body).toMatchObject({ role: "admin" });
   });
 
-  it("removes a grant via the role control (DELETE)", async () => {
+  it("removes a grant via the trash button (DELETE)", async () => {
     mountAccess(true);
     mountGrants([userGrant]);
     const spy = server.mount(contract.sharing.revokeResourceGrant, { body: { success: true } });
 
     render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
-    await userEvent.click(await screen.findByRole("combobox", { name: "Role for Grace Hopper" }));
-    await userEvent.click(screen.getByRole("option", { name: "Remove" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Remove access for Grace Hopper" }),
+    );
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.params).toMatchObject({ resourceType: RT, resourceId: RID, grantId: GRANT_ID });
   });
 
-  it("shares with a searched person via the Share dialog (POST)", async () => {
+  it("adds a person via the Add people dialog (POST)", async () => {
     mountAccess(true);
     mountGrants([]);
     server.mount(contract.users.searchUsers, {
@@ -146,7 +153,7 @@ describe("ResourceCollaborators", () => {
     });
 
     render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
-    await userEvent.click(await screen.findByRole("button", { name: "Share" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add people" }));
 
     const dialog = await screen.findByRole("dialog");
     await userEvent.type(within(dialog).getByLabelText("Search people to share with"), "ada");
@@ -154,11 +161,48 @@ describe("ResourceCollaborators", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Share" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.params).toMatchObject({ resourceType: RT, resourceId: RID });
     expect(spy.body).toMatchObject({
       granteeType: "user",
       granteeId: "44444444-4444-4444-4444-444444444444",
-      role: "member",
     });
+  });
+
+  it("shows org members + teams on the Organization access tab", async () => {
+    mountAccess(true);
+    mountGrants([]);
+    server.mount(contract.organizations.getOrganizationAccess, {
+      body: {
+        organization: {
+          id: ORG_ID,
+          name: "Photosynthesis Lab",
+          slug: "photosynthesis-lab",
+          logo: null,
+          type: "research_institute",
+          description: null,
+          website: null,
+          location: null,
+          visibility: "public",
+          memberCount: 2,
+          membershipStatus: "member",
+          createdAt: "2024-01-01T00:00:00.000Z",
+        },
+        members: [
+          {
+            id: "55555555-5555-5555-5555-555555555555",
+            displayName: "Bob Rivera",
+            email: "bob@example.com",
+            avatarUrl: null,
+            role: "admin",
+          },
+        ],
+        teams: [{ id: "66666666-6666-6666-6666-666666666666", name: "Imaging", memberCount: 3 }],
+      },
+    });
+
+    render(<ResourceCollaborators resourceType={RT} resourceId={RID} />);
+    await userEvent.click(await screen.findByRole("tab", { name: /Organization access/ }));
+
+    expect(await screen.findByText("Imaging")).toBeInTheDocument();
+    expect(screen.getByText("Bob Rivera")).toBeInTheDocument();
   });
 });

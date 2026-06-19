@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Check, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGrantResource } from "~/hooks/sharing/useGrantResource";
 import { useDebounce } from "~/hooks/useDebounce";
 import { useUserSearch } from "~/hooks/useUserSearch";
@@ -34,6 +34,8 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { UserAvatar } from "../../user-avatar";
 
+type Mode = Exclude<GranteeTypeValue, never>;
+
 interface ShareCollaboratorDialogProps {
   resourceType: ResourceTypeValue;
   resourceId: string;
@@ -41,9 +43,9 @@ interface ShareCollaboratorDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Grantee ids already on the resource, to filter out of the pickers. */
   grantedIds: Set<string>;
+  /** Which picker the dialog opens on (Add people → user, Add teams → team). */
+  initialMode?: Mode;
 }
-
-type Mode = Exclude<GranteeTypeValue, never>;
 
 const MODES: { value: Mode; label: string; icon: typeof Users }[] = [
   { value: "user", label: "People", icon: Users },
@@ -58,8 +60,9 @@ export function ShareCollaboratorDialog({
   open,
   onOpenChange,
   grantedIds,
+  initialMode = "user",
 }: ShareCollaboratorDialogProps) {
-  const [mode, setMode] = useState<Mode>("user");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [role, setRole] = useState<GrantRoleValue>("member");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -105,8 +108,16 @@ export function ShareCollaboratorDialog({
     setSelectedId(null);
     setSearch("");
     setRole("member");
-    setMode("user");
+    setMode(initialMode);
   };
+
+  // Open on the requested picker (Add people vs Add teams).
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+      setSelectedId(null);
+    }
+  }, [open, initialMode]);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) reset();
