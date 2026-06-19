@@ -89,12 +89,21 @@ const MEMBER_SEEDS = [
 ] as const;
 const MEMBER_BY_NAME = Object.fromEntries(MEMBER_SEEDS.map((mbr) => [mbr.firstName, mbr.id]));
 
+// A real testing account (logs in via email-OTP) wired into the seeded orgs so
+// there's a rich, ready-to-demo identity. Recreated idempotently on each reseed.
+const DEMO_TESTER = {
+  id: "5b1a0005-0000-4000-8000-000000000005",
+  email: "dominikvrbic01@gmail.com",
+  firstName: "Dominik",
+  lastName: "Vrbic",
+};
+
 const ORG_PHOTO_ID = "5b1a0010-0000-4000-8000-000000000010";
 const ORG_FIELD_ID = "5b1a0011-0000-4000-8000-000000000011";
 const ORG_COMMUNITY_ID = "5b1a0012-0000-4000-8000-000000000012";
 const TEAM_IMAGING_ID = "5b1a0020-0000-4000-8000-000000000020";
 const NAMED_ORG_IDS = [ORG_PHOTO_ID, ORG_FIELD_ID, ORG_COMMUNITY_ID];
-const MEMBER_IDS = MEMBER_SEEDS.map((mbr) => mbr.id);
+const MEMBER_IDS = [...MEMBER_SEEDS.map((mbr) => mbr.id), DEMO_TESTER.id];
 
 async function clearSeedData() {
   // Org join requests reference users via a no-action FK (decided_by), so clear
@@ -216,6 +225,26 @@ async function seedOrganizations(seedUserId: string) {
     await ensurePersonalOrganization(db, { id: mbr.id, name: `${mbr.firstName} ${mbr.lastName}` });
   }
 
+  // 1b. The real testing account (logs in via email-OTP), so there's a rich,
+  // ready-to-demo identity wired into the seeded orgs below.
+  await db.insert(users).values({
+    id: DEMO_TESTER.id,
+    name: `${DEMO_TESTER.firstName} ${DEMO_TESTER.lastName}`,
+    email: DEMO_TESTER.email,
+    emailVerified: true,
+    registered: true,
+  });
+  await db.insert(profiles).values({
+    userId: DEMO_TESTER.id,
+    firstName: DEMO_TESTER.firstName,
+    lastName: DEMO_TESTER.lastName,
+    activated: true,
+  });
+  await ensurePersonalOrganization(db, {
+    id: DEMO_TESTER.id,
+    name: `${DEMO_TESTER.firstName} ${DEMO_TESTER.lastName}`,
+  });
+
   // 2. Three named organizations (Photosynthesis public so it can take join
   // requests; Field Trials private; Community public and seed user is NOT in it).
   await db.insert(organizations).values([
@@ -262,15 +291,20 @@ async function seedOrganizations(seedUserId: string) {
     { organizationId: ORG_COMMUNITY_ID, userId: alice, role: "owner" },
     { organizationId: ORG_COMMUNITY_ID, userId: carol, role: "member" },
     { organizationId: ORG_COMMUNITY_ID, userId: dana, role: "member" },
+    // The testing account: admin of Photosynthesis, member of Field Trials + Community.
+    { organizationId: ORG_PHOTO_ID, userId: DEMO_TESTER.id, role: "admin" },
+    { organizationId: ORG_FIELD_ID, userId: DEMO_TESTER.id, role: "member" },
+    { organizationId: ORG_COMMUNITY_ID, userId: DEMO_TESTER.id, role: "member" },
   ]);
 
-  // 4. An "Imaging" team in Photosynthesis with a couple of members.
+  // 4. An "Imaging" team in Photosynthesis with a couple of members (+ the tester).
   await db
     .insert(teams)
     .values({ id: TEAM_IMAGING_ID, name: "Imaging", organizationId: ORG_PHOTO_ID });
   await db.insert(teamMembers).values([
     { teamId: TEAM_IMAGING_ID, userId: alice },
     { teamId: TEAM_IMAGING_ID, userId: bob },
+    { teamId: TEAM_IMAGING_ID, userId: DEMO_TESTER.id },
   ]);
 
   // 5. Org-owned entities (createdBy = seed user for simple, prefix-based cleanup).
@@ -956,6 +990,18 @@ async function main() {
     createdBy: user.id,
   });
   console.log("  Added an outside-collaborator grant (Alice on a seed macro)");
+
+  // Give the testing account a direct grant on a standalone resource (a protocol
+  // it doesn't own via an org) so it shows up as a collaborator it can manage.
+  await grantResource(db, {
+    resourceType: "protocol",
+    resourceId: createdProtocols[0].id,
+    granteeType: "user",
+    granteeId: DEMO_TESTER.id,
+    role: "admin",
+    createdBy: user.id,
+  });
+  console.log(`  Wired ${DEMO_TESTER.email} into the seeded orgs/teams/grants`);
 
   console.log("Seed complete!");
 }
