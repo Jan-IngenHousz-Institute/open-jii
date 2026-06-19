@@ -1,5 +1,8 @@
-import { assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
+import { assertSuccess, failure, success, AppError } from "../../../../common/utils/fp-utils";
+import type { ProtocolDto } from "../../../../protocols/core/models/protocol.model";
+import type { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import type { WorkbookVersionDto } from "../../../core/models/workbook-version.model";
 import type { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
@@ -116,6 +119,109 @@ describe("IsWorkbookUpgradableUseCase", () => {
     const result = await useCase.execute(expectValue(fresh.value));
     assertSuccess(result);
     expect(result.value).toBe(true);
+  });
+
+  // Regression for OJD-1626: live entities keep keys in insertion order while
+  // published snapshots come back from jsonb with keys re-normalised. A plain
+  // JSON.stringify diff flags such workbooks "upgradable" forever; the
+  // canonical comparison must treat key-order-only differences as unchanged.
+  function makeVersion(overrides: Partial<WorkbookVersionDto>): WorkbookVersionDto {
+    return {
+      id: "ver-1",
+      workbookId: "wb-1",
+      version: 1,
+      cells: [],
+      metadata: {},
+      entitySnapshots: { protocols: {}, macros: {} },
+      createdAt: new Date(),
+      createdBy: userId,
+      ...overrides,
+    } as unknown as WorkbookVersionDto;
+  }
+
+  it("is false when cells differ only in object key order", async () => {
+    const liveCell = { id: "md1", isCollapsed: false, type: "markdown" as const, content: "hi" };
+    const snapCell = { type: "markdown" as const, content: "hi", isCollapsed: false, id: "md1" };
+    const workbook = { id: "wb-1", cells: [liveCell] } as unknown as WorkbookDto;
+
+    vi.spyOn(versionRepo, "getLatestVersion").mockResolvedValue(
+      success(makeVersion({ cells: [snapCell] })),
+    );
+
+    const result = await useCase.execute(workbook);
+    assertSuccess(result);
+    expect(result.value).toBe(false);
+    vi.restoreAllMocks();
+  });
+
+  it("is false when a referenced protocol's code differs only in object key order", async () => {
+    const protocolId = "11111111-1111-1111-1111-111111111111";
+    const protocolCell = {
+      id: "p1",
+      isCollapsed: false,
+      type: "protocol" as const,
+      payload: { protocolId, version: 1 },
+    };
+    const workbook = { id: "wb-1", cells: [protocolCell] } as unknown as WorkbookDto;
+
+    vi.spyOn(versionRepo, "getLatestVersion").mockResolvedValue(
+      success(
+        makeVersion({
+          cells: [protocolCell],
+          entitySnapshots: {
+            protocols: { [protocolId]: { code: { a: 1, b: 2 }, family: "multispeq" } },
+            macros: {},
+          },
+        }),
+      ),
+    );
+    // ProtocolRepository is duplicated across modules, so spy on the exact
+    // instance the use-case holds rather than whatever module.get() resolves.
+    const protocolRepo = (useCase as unknown as { protocolRepository: ProtocolRepository })
+      .protocolRepository;
+    vi.spyOn(protocolRepo, "findByIds").mockResolvedValue(
+      success(new Map([[protocolId, { code: { b: 2, a: 1 } } as unknown as ProtocolDto]])),
+    );
+
+    const result = await useCase.execute(workbook);
+    assertSuccess(result);
+    expect(result.value).toBe(false);
+    vi.restoreAllMocks();
+  });
+
+  it("is true when a referenced protocol's code has genuinely changed", async () => {
+    const protocolId = "22222222-2222-2222-2222-222222222222";
+    const protocolCell = {
+      id: "p1",
+      isCollapsed: false,
+      type: "protocol" as const,
+      payload: { protocolId, version: 1 },
+    };
+    const workbook = { id: "wb-1", cells: [protocolCell] } as unknown as WorkbookDto;
+
+    vi.spyOn(versionRepo, "getLatestVersion").mockResolvedValue(
+      success(
+        makeVersion({
+          cells: [protocolCell],
+          entitySnapshots: {
+            protocols: { [protocolId]: { code: { a: 1, b: 2 }, family: "multispeq" } },
+            macros: {},
+          },
+        }),
+      ),
+    );
+    // ProtocolRepository is duplicated across modules, so spy on the exact
+    // instance the use-case holds rather than whatever module.get() resolves.
+    const protocolRepo = (useCase as unknown as { protocolRepository: ProtocolRepository })
+      .protocolRepository;
+    vi.spyOn(protocolRepo, "findByIds").mockResolvedValue(
+      success(new Map([[protocolId, { code: { a: 1, b: 3 } } as unknown as ProtocolDto]])),
+    );
+
+    const result = await useCase.execute(workbook);
+    assertSuccess(result);
+    expect(result.value).toBe(true);
+    vi.restoreAllMocks();
   });
 
   it("is false when only UI fold state (isCollapsed) changes", async () => {

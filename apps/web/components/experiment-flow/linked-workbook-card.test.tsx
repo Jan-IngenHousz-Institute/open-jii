@@ -67,6 +67,32 @@ describe("LinkedWorkbookCard", () => {
     expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
   });
 
+  // OJD-1626: drift reported by the backend (isUpgradable) should surface the
+  // banner even when no newer version has been published yet...
+  it("shows the drift banner when isUpgradable is true without a newer published version", async () => {
+    server.mount(contract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: true } });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
+    server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
+
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await waitFor(() =>
+      expect(screen.getByText(/Workbook has updates available/)).toBeInTheDocument(),
+    );
+  });
+
+  // ...and once the upgrade is accepted (isUpgradable false, pinned == latest)
+  // the prompt stays gone — the upgrade is offered only once.
+  it("hides the banner when isUpgradable is false and pinned is latest (offered once)", async () => {
+    server.mount(contract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: false } });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
+    server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
+
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
+    expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Workbook has updates available/)).not.toBeInTheDocument();
+  });
+
   it("hides controls when hasAccess is false", async () => {
     mountDefaults();
     render(<LinkedWorkbookCard {...defaultProps} hasAccess={false} />);
@@ -130,7 +156,7 @@ describe("LinkedWorkbookCard", () => {
     );
   });
 
-  it("upgrades to latest version and shows toast", async () => {
+  it("upgrades to latest version (no toast)", async () => {
     mountDefaults();
     const spy = server.mount(contract.experiments.upgradeWorkbookVersion, {
       body: { workbookId: "wb-1", workbookVersionId: "ver-2", version: 2 },
@@ -148,9 +174,8 @@ describe("LinkedWorkbookCard", () => {
     if (confirmBtn) await user.click(confirmBtn);
 
     await waitFor(() => expect(spy.called).toBe(true));
-    await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith({ description: "flow.versionUpgraded" }),
-    );
+    // The "upgraded" toast was intentionally removed; no success toast fires.
+    expect(toast).not.toHaveBeenCalledWith({ description: "flow.versionUpgraded" });
   });
 
   it("shows error toast when upgrade fails", async () => {

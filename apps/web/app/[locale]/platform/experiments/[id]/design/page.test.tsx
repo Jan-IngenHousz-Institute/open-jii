@@ -52,8 +52,19 @@ vi.mock("@/components/workbook/workbook-editor", () => ({
 }));
 
 vi.mock("@/components/workbook/workbook-draft-editor", () => ({
-  WorkbookDraftEditor: ({ initialCells }: { initialCells: unknown[] }) => (
-    <div data-testid="workbook-draft-editor">Draft Editor ({initialCells.length} cells)</div>
+  WorkbookDraftEditor: ({
+    initialCells,
+    onSaved,
+  }: {
+    initialCells: unknown[];
+    onSaved?: () => void;
+  }) => (
+    <div data-testid="workbook-draft-editor">
+      Draft Editor ({initialCells.length} cells)
+      <button data-testid="trigger-save" onClick={() => onSaved?.()}>
+        save
+      </button>
+    </div>
   ),
 }));
 
@@ -311,24 +322,38 @@ describe("ExperimentDesignPage", () => {
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
   });
 
-  it("lets the workbook owner toggle into the editable draft", async () => {
+  it("renders the editable draft editor for the workbook owner without a toggle", async () => {
     vi.mocked(useSession).mockReturnValue({
       data: { user: { id: "user-1" } },
       isPending: false,
     } as unknown as ReturnType<typeof useSession>);
     mountWithWorkbook();
-    const { default: userEvent } = await import("@testing-library/user-event");
-    const user = userEvent.setup();
     render(<ExperimentDesignPage params={defaultProps.params} />);
-
-    const editToggle = await screen.findByText("flow.editWorkbook");
-    expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
-
-    await user.click(editToggle);
 
     await waitFor(() => {
       expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
     });
-    expect(screen.getByText("flow.viewPinned")).toBeInTheDocument();
+    // No edit/view toggle anymore — owners edit in place.
+    expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
+    expect(screen.queryByText("flow.viewPinned")).not.toBeInTheDocument();
+  });
+
+  it("auto-upgrades the experiment's pinned version when the owner saves a draft edit", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const upgradeSpy = server.mount(contract.experiments.upgradeWorkbookVersion, {
+      body: { workbookId: WB_ID, workbookVersionId: "ver-2", version: 2 },
+    });
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    const saveTrigger = await screen.findByTestId("trigger-save");
+    await user.click(saveTrigger);
+
+    await waitFor(() => expect(upgradeSpy.called).toBe(true));
   });
 });

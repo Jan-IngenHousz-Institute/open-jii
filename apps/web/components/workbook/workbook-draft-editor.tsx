@@ -10,6 +10,7 @@ import { parseApiError } from "~/util/apiError";
 
 import { zWorkbookCellArray } from "@repo/api/schemas/workbook-cells.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { Workbook } from "@repo/api/schemas/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -21,6 +22,9 @@ interface WorkbookDraftEditorProps {
   initialCells: WorkbookCell[];
   createdBy: string;
   name: string;
+  /** Called after each successful autosave (e.g. so the experiment design page
+   *  can auto-pin the experiment to the freshly-saved draft). */
+  onSaved?: (workbook: Workbook) => void;
 }
 
 /**
@@ -34,10 +38,11 @@ export function WorkbookDraftEditor({
   initialCells,
   createdBy,
   name,
+  onSaved,
 }: WorkbookDraftEditorProps) {
   const { data: session } = useSession();
   const { t } = useTranslation(["workbook", "common"]);
-  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id);
+  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id, { onSuccess: onSaved });
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
 

@@ -128,7 +128,6 @@ export function LinkedWorkbookCard({
       {
         onSuccess: () => {
           setUpgradeState("success");
-          toast({ description: t("flow.versionUpgraded") });
         },
         onError: () => {
           setUpgradeState("idle");

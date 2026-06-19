@@ -1,5 +1,7 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { WorkbookVersionDto } from "../../../../workbooks/core/models/workbook-version.model";
+import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "./attach-workbook";
 
@@ -90,6 +92,29 @@ describe("AttachWorkbookUseCase", () => {
 
     expect(second.value.workbookVersionId).toBe(first.value.workbookVersionId);
     expect(second.value.version).toBe(1);
+  });
+
+  it("returns failure when the resolved version belongs to another workbook (OJD-1626)", async () => {
+    const versionRepo = testApp.module.get(WorkbookVersionRepository);
+    // Cells match the workbook so it reads as not-upgradable and the use-case
+    // takes the "reuse latest" branch, surfacing the foreign/invalid version.
+    vi.spyOn(versionRepo, "getLatestVersion").mockResolvedValue(
+      success({
+        id: "ver-foreign",
+        workbookId: "99999999-9999-9999-9999-999999999999",
+        version: 1,
+        cells: [{ id: "md1", type: "markdown", content: "Hello", isCollapsed: false }],
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+        createdAt: new Date(),
+        createdBy: adminUserId,
+      } as unknown as WorkbookVersionDto),
+    );
+
+    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(404);
+    vi.restoreAllMocks();
   });
 
   it("materialises a flow row from the version's cells (mobile backward compat)", async () => {
