@@ -17,12 +17,28 @@ import {
   profiles,
   protocols,
   sensors,
+  teamMembers,
+  teams,
   users,
   workbooks,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../common/utils/fp-utils";
+
+export interface OrganizationMemberRow {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+  role: string;
+}
+
+export interface OrganizationTeamRow {
+  id: string;
+  name: string;
+  memberCount: number;
+}
 
 export interface OrganizationResourceItemRow {
   id: string;
@@ -194,6 +210,56 @@ export class OrganizationsRepository {
       )
       .limit(1);
     return rows.length > 0 ? rows[0].role : null;
+  }
+
+  /** An org's members with display info + org role (for the Organization access tab). */
+  listMembers(organizationId: string): Promise<Result<OrganizationMemberRow[]>> {
+    return tryCatch(async () => {
+      const rows = await this.db
+        .select({
+          userId: organizationMembers.userId,
+          role: organizationMembers.role,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          name: users.name,
+          email: users.email,
+          avatarUrl: profiles.avatarUrl,
+          image: users.image,
+        })
+        .from(organizationMembers)
+        .leftJoin(profiles, eq(profiles.userId, organizationMembers.userId))
+        .leftJoin(users, eq(users.id, organizationMembers.userId))
+        .where(eq(organizationMembers.organizationId, organizationId))
+        .orderBy(asc(organizationMembers.createdAt));
+      return rows.map((r) => {
+        const profileName = r.firstName && r.lastName ? `${r.firstName} ${r.lastName}` : null;
+        return {
+          id: r.userId,
+          displayName: profileName ?? r.name,
+          email: r.email,
+          avatarUrl: r.avatarUrl ?? r.image,
+          role: r.role,
+        };
+      });
+    });
+  }
+
+  /** An org's teams with member counts (for the Organization access tab). */
+  listTeams(organizationId: string): Promise<Result<OrganizationTeamRow[]>> {
+    return tryCatch(async () => {
+      const rows = await this.db
+        .select({
+          id: teams.id,
+          name: teams.name,
+          memberCount: count(teamMembers.id),
+        })
+        .from(teams)
+        .leftJoin(teamMembers, eq(teamMembers.teamId, teams.id))
+        .where(eq(teams.organizationId, organizationId))
+        .groupBy(teams.id, teams.name)
+        .orderBy(asc(teams.name));
+      return rows.map((r) => ({ id: r.id, name: r.name, memberCount: Number(r.memberCount) }));
+    });
   }
 
   /** An org's public entities, grouped by type (the public-resources showcase). */

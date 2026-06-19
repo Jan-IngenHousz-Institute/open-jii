@@ -3,8 +3,10 @@ import { Injectable } from "@nestjs/common";
 import { AppError, Result, failure, success } from "../common/utils/fp-utils";
 import {
   JoinRequestRow,
+  OrganizationMemberRow,
   OrganizationResourcesRows,
   OrganizationSummaryRow,
+  OrganizationTeamRow,
   OrganizationsRepository,
 } from "./organizations.repository";
 
@@ -59,6 +61,37 @@ export class GetOrganizationResourcesUseCase {
     if (orgResult.isFailure()) return failure(orgResult.error);
     if (!orgResult.value) return failure(AppError.notFound("Organization not found"));
     return this.repo.listPublicResources(organizationId);
+  }
+}
+
+export interface OrganizationAccessResult {
+  organization: OrganizationSummaryRow;
+  members: OrganizationMemberRow[];
+  teams: OrganizationTeamRow[];
+}
+
+@Injectable()
+export class GetOrganizationAccessUseCase {
+  constructor(private readonly repo: OrganizationsRepository) {}
+
+  async execute(userId: string, organizationId: string): Promise<Result<OrganizationAccessResult>> {
+    const orgResult = await this.repo.findById(organizationId);
+    if (orgResult.isFailure()) return failure(orgResult.error);
+    const org = orgResult.value;
+    if (!org) return failure(AppError.notFound("Organization not found"));
+
+    const role = await this.repo.memberRole(organizationId, userId);
+    if (!role) {
+      return failure(AppError.forbidden("Only organization members can view organization access"));
+    }
+
+    const [summary] = await this.repo.enrich(userId, [org]);
+    const members = await this.repo.listMembers(organizationId);
+    if (members.isFailure()) return failure(members.error);
+    const teamsResult = await this.repo.listTeams(organizationId);
+    if (teamsResult.isFailure()) return failure(teamsResult.error);
+
+    return success({ organization: summary, members: members.value, teams: teamsResult.value });
   }
 }
 

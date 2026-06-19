@@ -73,6 +73,29 @@ export const zOrganizationJoinRequest = z.object({
 });
 export const zOrganizationJoinRequestList = z.array(zOrganizationJoinRequest);
 
+/** A member of an organization (for the "Organization access" tab). */
+export const zOrganizationMember = z.object({
+  id: z.string().uuid(),
+  displayName: z.string().nullable(),
+  email: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  role: z.string(),
+});
+
+/** A team within an organization (for the "Organization access" tab). */
+export const zOrganizationTeam = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  memberCount: z.number(),
+});
+
+/** Who inherits access to a resource through its owning org (members + teams). */
+export const zOrganizationAccess = z.object({
+  organization: zOrganizationSummary,
+  members: z.array(zOrganizationMember),
+  teams: z.array(zOrganizationTeam),
+});
+
 export const zOrganizationIdPathParam = z.object({ id: z.string().uuid() });
 export const zOrganizationJoinRequestPathParam = z.object({
   id: z.string().uuid(),
@@ -96,4 +119,5 @@ export type OrganizationTypeValue = z.infer<typeof zOrganizationType>;
 export type MembershipStatus = z.infer<typeof zMembershipStatus>;
 export type OrganizationSummary = z.infer<typeof zOrganizationSummary>;
 export type OrganizationResources = z.infer<typeof zOrganizationResources>;
+export type OrganizationAccess = z.infer<typeof zOrganizationAccess>;
 export type OrganizationJoinRequestDto = z.infer<typeof zOrganizationJoinRequest>;

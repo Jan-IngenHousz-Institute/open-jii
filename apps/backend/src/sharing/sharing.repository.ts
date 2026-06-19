@@ -4,9 +4,11 @@ import {
   and,
   desc,
   eq,
+  organizationMembers,
   organizations,
   profiles,
   resourceGrants,
+  sql,
   teams,
   users,
 } from "@repo/database";
@@ -31,6 +33,8 @@ export interface GranteeInfo {
   displayName: string | null;
   email: string | null;
   avatarUrl: string | null;
+  /** For user grantees: member of the resource's owning org? (false → outside collaborator). */
+  isOrgMember: boolean;
 }
 
 export interface ResourceGrantWithGranteeRow extends ResourceGrantRow {
@@ -69,8 +73,19 @@ export class SharingRepository {
   list(
     resourceType: ResourceType,
     resourceId: string,
+    owningOrganizationId: string | null = null,
   ): Promise<Result<ResourceGrantWithGranteeRow[]>> {
     return tryCatch(async () => {
+      // For the "Outside Collaborator" label: a user grantee is an org member when
+      // they have a membership row in the resource's owning org. When the resource
+      // has no owning org, the join condition is false → everyone is "outside".
+      const onOrgMember = owningOrganizationId
+        ? and(
+            eq(organizationMembers.userId, resourceGrants.granteeId),
+            eq(organizationMembers.organizationId, owningOrganizationId),
+          )
+        : sql`false`;
+
       const rows = await this.db
         .select({
           ...this.fields,
@@ -82,6 +97,7 @@ export class SharingRepository {
           userImage: users.image,
           orgName: organizations.name,
           teamName: teams.name,
+          orgMemberId: organizationMembers.id,
         })
         .from(resourceGrants)
         .leftJoin(
@@ -100,6 +116,7 @@ export class SharingRepository {
           teams,
           and(eq(resourceGrants.granteeType, "team"), eq(teams.id, resourceGrants.granteeId)),
         )
+        .leftJoin(organizationMembers, onOrgMember)
         .where(
           and(
             eq(resourceGrants.resourceType, resourceType),
@@ -199,6 +216,7 @@ interface GranteeJoinRow {
   userImage: string | null;
   orgName: string | null;
   teamName: string | null;
+  orgMemberId: string | null;
 }
 
 /** Collapse the LEFT-JOINed grantee columns into one display object. */
@@ -211,10 +229,17 @@ function buildGrantee(r: GranteeJoinRow): GranteeInfo {
       displayName: profileName ?? r.userName,
       email: r.userEmail,
       avatarUrl: r.profileAvatarUrl ?? r.userImage,
+      isOrgMember: r.orgMemberId != null,
     };
   }
   if (r.granteeType === "organization") {
-    return { type: "organization", displayName: r.orgName, email: null, avatarUrl: null };
+    return {
+      type: "organization",
+      displayName: r.orgName,
+      email: null,
+      avatarUrl: null,
+      isOrgMember: true,
+    };
   }
-  return { type: "team", displayName: r.teamName, email: null, avatarUrl: null };
+  return { type: "team", displayName: r.teamName, email: null, avatarUrl: null, isOrgMember: true };
 }

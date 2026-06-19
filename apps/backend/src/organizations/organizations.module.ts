@@ -5,6 +5,7 @@ import { OrganizationsRepository } from "./organizations.repository";
 import {
   CancelOrganizationJoinRequestUseCase,
   DecideOrganizationJoinRequestUseCase,
+  GetOrganizationAccessUseCase,
   GetOrganizationResourcesUseCase,
   GetOrganizationUseCase,
   ListOrganizationJoinRequestsUseCase,
@@ -20,6 +21,7 @@ import {
     ListPublicOrganizationsUseCase,
     GetOrganizationUseCase,
     GetOrganizationResourcesUseCase,
+    GetOrganizationAccessUseCase,
     RequestOrganizationJoinUseCase,
     ListOrganizationJoinRequestsUseCase,
     DecideOrganizationJoinRequestUseCase,

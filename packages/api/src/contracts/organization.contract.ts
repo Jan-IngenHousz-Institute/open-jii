@@ -3,6 +3,7 @@ import { initContract } from "@ts-rest/core";
 import {
   zCreateOrganizationJoinRequestBody,
   zListPublicOrganizationsQuery,
+  zOrganizationAccess,
   zOrganizationErrorResponse,
   zOrganizationIdPathParam,
   zOrganizationJoinRequest,
@@ -59,6 +60,21 @@ export const organizationContract = c.router({
     description:
       "The org's public experiments/macros/protocols/workbooks/devices — its public " +
       "face ('what they're up to'). No membership required.",
+  },
+
+  getOrganizationAccess: {
+    method: "GET",
+    path: "/api/v1/organizations/:id/access",
+    pathParams: zOrganizationIdPathParam,
+    responses: {
+      200: zOrganizationAccess,
+      403: zOrganizationErrorResponse,
+      404: zOrganizationErrorResponse,
+    },
+    summary: "List who inherits access through an organization",
+    description:
+      "The org's members (with role) + teams — the 'Organization access' tab for a " +
+      "resource owned by this org. Requires membership of the organization.",
   },
 
   requestToJoin: {

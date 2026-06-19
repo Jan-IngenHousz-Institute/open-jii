@@ -38,10 +38,3 @@ function singleRoleCan(role: string, action: ResourceAction): boolean {
 export function roleCan(role: string, action: ResourceAction): boolean {
   return roleTokens(role).some((r) => singleRoleCan(r, action));
 }
-
-/** Platform-tier admin roles (Better Auth admin plugin). */
-const PLATFORM_ADMIN_ROLES = new Set(["admin"]);
-
-export function isPlatformAdmin(role: string | null | undefined): boolean {
-  return roleTokens(role).some((r) => PLATFORM_ADMIN_ROLES.has(r));
-}

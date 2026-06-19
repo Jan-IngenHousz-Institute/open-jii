@@ -9,6 +9,9 @@ export const zGranteeType = z.enum(["user", "organization", "team"]);
 /** Role conferred by a grant. */
 export const zGrantRole = z.enum(["owner", "admin", "member", "viewer"]);
 
+/** Resource visibility (mirrors the shared visibility enum). */
+export const zVisibility = z.enum(["private", "public"]);
+
 export const zResourceGrantPathParams = z.object({
   resourceType: zResourceType,
   resourceId: z.string().uuid(),
@@ -36,6 +39,9 @@ export const zGrantee = z.object({
   displayName: z.string().nullable(),
   email: z.string().nullable(),
   avatarUrl: z.string().nullable(),
+  /** For user grantees: whether they belong to the resource's owning org
+   *  (false → shown as an "Outside Collaborator"). Always true for org/team. */
+  isOrgMember: z.boolean(),
 });
 
 /** A grant enriched with its grantee's display info, for the sharing list UI. */
@@ -62,6 +68,9 @@ export const zResourceAccess = z.object({
   canUpdate: z.boolean(),
   canDelete: z.boolean(),
   canShare: z.boolean(),
+  /** Owning org + visibility, for the GitHub-style collaborators cards. */
+  organizationId: z.string().uuid().nullable(),
+  visibility: zVisibility.nullable(),
 });
 
 export const zSharingErrorResponse = z.object({ message: z.string() });

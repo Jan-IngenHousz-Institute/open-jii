@@ -39,8 +39,8 @@ describe("SharingController", () => {
   const accessUrl = (id: string) => `/api/v1/resources/experiment/${id}/access`;
 
   describe("getResourceAccess", () => {
-    it("reports full permissions for an org admin", async () => {
-      const { owner, experiment } = await ownedExperiment();
+    it("reports full permissions for an org admin + the owning org/visibility", async () => {
+      const { owner, org, experiment } = await ownedExperiment();
       const res = await testApp
         .get(accessUrl(experiment.id))
         .withAuth(owner)
@@ -50,6 +50,8 @@ describe("SharingController", () => {
         canUpdate: true,
         canDelete: true,
         canShare: true,
+        organizationId: org.id,
+        visibility: "private",
       });
     });
 
@@ -60,7 +62,7 @@ describe("SharingController", () => {
         .get(accessUrl(experiment.id))
         .withAuth(stranger)
         .expect(StatusCodes.OK);
-      expect(res.body).toEqual({
+      expect(res.body).toMatchObject({
         canRead: false,
         canUpdate: false,
         canDelete: false,
@@ -205,6 +207,33 @@ describe("SharingController", () => {
       }[];
       expect(grants[0].grantee.type).toBe("user");
       expect(grants[0].grantee.email).toBeTruthy();
+    });
+
+    it("flags an outside collaborator vs an owning-org member", async () => {
+      const { owner, org, experiment } = await ownedExperiment();
+      const insider = await testApp.createTestUser();
+      await testApp.addOrgMember(org.id, insider, "member");
+      const outsider = await testApp.createTestUser();
+      for (const granteeId of [insider, outsider]) {
+        await testApp
+          .post(grantsUrl(experiment.id))
+          .withAuth(owner)
+          .send({ granteeType: "user", granteeId, role: "member" })
+          .expect(StatusCodes.CREATED);
+      }
+
+      const list = await testApp
+        .get(grantsUrl(experiment.id))
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+      const byId = new Map(
+        (list.body as { granteeId: string; grantee: { isOrgMember: boolean } }[]).map((g) => [
+          g.granteeId,
+          g.grantee.isOrgMember,
+        ]),
+      );
+      expect(byId.get(insider)).toBe(true);
+      expect(byId.get(outsider)).toBe(false);
     });
 
     it("enriches an organization grant with the org name", async () => {

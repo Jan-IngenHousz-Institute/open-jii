@@ -15,6 +15,7 @@ import { JoinRequestRow, OrganizationSummaryRow } from "./organizations.reposito
 import {
   CancelOrganizationJoinRequestUseCase,
   DecideOrganizationJoinRequestUseCase,
+  GetOrganizationAccessUseCase,
   GetOrganizationResourcesUseCase,
   GetOrganizationUseCase,
   ListOrganizationJoinRequestsUseCase,
@@ -65,6 +66,7 @@ export class OrganizationsController {
     private readonly listRequests: ListOrganizationJoinRequestsUseCase,
     private readonly decideRequest: DecideOrganizationJoinRequestUseCase,
     private readonly cancelRequest: CancelOrganizationJoinRequestUseCase,
+    private readonly getAccess: GetOrganizationAccessUseCase,
   ) {}
 
   @TsRestHandler(contract.organizations.listPublicOrganizations)
@@ -102,6 +104,24 @@ export class OrganizationsController {
             protocols: result.value.protocols.map(toResourceItem),
             workbooks: result.value.workbooks.map(toResourceItem),
             devices: result.value.devices.map(toResourceItem),
+          },
+        };
+      }
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.organizations.getOrganizationAccess)
+  access(@Session() session: UserSession) {
+    return tsRestHandler(contract.organizations.getOrganizationAccess, async ({ params }) => {
+      const result = await this.getAccess.execute(session.user.id, params.id);
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK as const,
+          body: {
+            organization: toSummary(result.value.organization),
+            members: result.value.members,
+            teams: result.value.teams,
           },
         };
       }

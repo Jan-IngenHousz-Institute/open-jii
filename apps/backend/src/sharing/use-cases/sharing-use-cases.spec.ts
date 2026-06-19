@@ -13,7 +13,10 @@ const denyForbidden = { allow: false as const, reason: "forbidden" as const };
 const denyNotFound = { allow: false as const, reason: "not-found" as const };
 
 const authzWith = (decision: unknown) =>
-  ({ can: vi.fn().mockResolvedValue(decision) }) as unknown as AuthorizationService;
+  ({
+    can: vi.fn().mockResolvedValue(decision),
+    getOwnership: vi.fn().mockResolvedValue({ organizationId: null, visibility: "private" }),
+  }) as unknown as AuthorizationService;
 
 const repoWith = (methods: Partial<SharingRepository>) => methods as unknown as SharingRepository;
 

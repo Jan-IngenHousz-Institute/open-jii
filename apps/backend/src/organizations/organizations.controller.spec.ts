@@ -124,6 +124,33 @@ describe("OrganizationsController", () => {
     });
   });
 
+  describe("getOrganizationAccess", () => {
+    const accessUrl = (id: string) => `/api/v1/organizations/${id}/access`;
+
+    it("returns members + teams for a member", async () => {
+      const { owner, org } = await publicOrg();
+      const team = await testApp.createTeam(org.id, "Imaging");
+      await testApp.addTeamMember(team.id, owner);
+
+      const res = await testApp.get(accessUrl(org.id)).withAuth(owner).expect(StatusCodes.OK);
+      const body = res.body as {
+        organization: { id: string };
+        members: { id: string; role: string }[];
+        teams: { name: string; memberCount: number }[];
+      };
+      expect(body.organization.id).toBe(org.id);
+      expect(body.members.some((m) => m.id === owner && m.role === "owner")).toBe(true);
+      expect(body.teams).toHaveLength(1);
+      expect(body.teams[0]).toMatchObject({ name: "Imaging", memberCount: 1 });
+    });
+
+    it("403s a non-member", async () => {
+      const { org } = await publicOrg();
+      const stranger = await testApp.createTestUser();
+      await testApp.get(accessUrl(org.id)).withAuth(stranger).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
   describe("requestToJoin", () => {
     const url = (id: string) => `/api/v1/organizations/${id}/join-requests`;
 

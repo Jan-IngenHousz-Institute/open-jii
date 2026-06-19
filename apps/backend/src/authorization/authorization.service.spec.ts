@@ -1,4 +1,4 @@
-import { eq, sensors, users } from "@repo/database";
+import { sensors } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
 import { AuthorizationService } from "./authorization.service";
@@ -34,20 +34,6 @@ describe("AuthorizationService", () => {
     });
     return { org, experiment };
   }
-
-  it("allows a platform admin any action (resolution short-circuits)", async () => {
-    const adminId = await testApp.createTestUser();
-    await testApp.database.update(users).set({ role: "admin" }).where(eq(users.id, adminId));
-    const owner = await testApp.createTestUser();
-    const { experiment } = await experimentInOrg({ ownerId: owner });
-
-    const decision = await service.can(adminId, {
-      resourceType: "experiment",
-      resourceId: experiment.id,
-      action: "delete",
-    });
-    expect(decision).toMatchObject({ allow: true, reason: "platform-admin" });
-  });
 
   it("returns not-found for a missing resource", async () => {
     const userId = await testApp.createTestUser();

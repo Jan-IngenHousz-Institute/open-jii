@@ -26,6 +26,8 @@ export class ListResourceGrantsUseCase {
           : AppError.forbidden("You do not have access to this resource"),
       );
     }
-    return this.repo.list(resourceType, resourceId);
+    // Owning org powers the "Outside Collaborator" label on user grants.
+    const ownership = await this.authz.getOwnership(resourceType, resourceId);
+    return this.repo.list(resourceType, resourceId, ownership?.organizationId ?? null);
   }
 }

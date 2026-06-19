@@ -1,4 +1,4 @@
-import { isPlatformAdmin, roleCan } from "./abilities";
+import { roleCan } from "./abilities";
 import type { ResourceAction } from "./abilities";
 
 const ALL_ACTIONS: ResourceAction[] = ["read", "update", "delete", "share", "manage"];
@@ -36,21 +36,6 @@ describe("abilities", () => {
       expect(roleCan("member,viewer", "read")).toBe(true);
       expect(roleCan("member,viewer", "update")).toBe(false);
       expect(roleCan("member,stranger", "delete")).toBe(false);
-    });
-  });
-
-  describe("isPlatformAdmin", () => {
-    it("is true only when an admin role is present", () => {
-      expect(isPlatformAdmin("admin")).toBe(true);
-      expect(isPlatformAdmin("user,admin")).toBe(true);
-      expect(isPlatformAdmin(" admin , user ")).toBe(true);
-    });
-
-    it("is false for non-admin, empty, or nullish roles", () => {
-      expect(isPlatformAdmin("user")).toBe(false);
-      expect(isPlatformAdmin("")).toBe(false);
-      expect(isPlatformAdmin(null)).toBe(false);
-      expect(isPlatformAdmin(undefined)).toBe(false);
     });
   });
 });

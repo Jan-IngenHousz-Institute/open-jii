@@ -1,5 +1,4 @@
 import {
-  adminClient,
   emailOTPClient,
   genericOAuthClient,
   inferAdditionalFields,
@@ -18,7 +17,6 @@ export const authClient = createAuthClient({
     emailOTPClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID
     organizationClient({ teams: { enabled: true } }),
-    adminClient(),
   ],
 });
 

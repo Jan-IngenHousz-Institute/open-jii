@@ -32,11 +32,6 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   registered: boolean("registered").notNull().default(false),
-  // Better Auth admin plugin (platform tier): global role + ban controls
-  role: text("role"),
-  banned: boolean("banned").default(false),
-  banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires"),
   ...timestamps,
 });
 
@@ -49,8 +44,6 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  // Better Auth admin plugin: set while an admin impersonates this session
-  impersonatedBy: uuid("impersonated_by").references(() => users.id, { onDelete: "set null" }),
   // Better Auth organization plugin: the user's currently active organization
   activeOrganizationId: uuid("active_organization_id").references(() => organizations.id, {
     onDelete: "set null",

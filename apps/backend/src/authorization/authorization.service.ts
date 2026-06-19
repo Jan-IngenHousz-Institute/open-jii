@@ -10,13 +10,12 @@ import {
   resourceGrants,
   sensors,
   teamMembers,
-  users,
   workbooks,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
-import { isPlatformAdmin, roleCan } from "./abilities";
+import { roleCan } from "./abilities";
 import type { ResourceAction } from "./abilities";
 
 export interface AccessRequest {
@@ -29,7 +28,6 @@ export interface AccessDecision {
   allow: boolean;
   /** Machine-readable reason: why access was granted or denied. */
   reason:
-    | "platform-admin"
     | "org-role"
     | "resource-grant:user"
     | "resource-grant:org"
@@ -40,38 +38,27 @@ export interface AccessDecision {
   role?: string;
 }
 
-interface ResourceOwnership {
+export interface ResourceOwnership {
   organizationId: string | null;
   visibility: "private" | "public" | null;
 }
 
 /**
  * Single authorization entry point for org-scoped, per-resource access control.
- * Resolution order: platform admin → owning-org role → resource_grants → public+read.
+ * Resolution order: owning-org role → resource_grants → public+read.
  */
 @Injectable()
 export class AuthorizationService {
   constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
 
   async can(userId: string, req: AccessRequest): Promise<AccessDecision> {
-    // 1. Platform admin: global staff bypass everything.
-    const userRows = await this.db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    const userRole = userRows.length > 0 ? userRows[0].role : null;
-    if (isPlatformAdmin(userRole)) {
-      return { allow: true, reason: "platform-admin", role: userRole ?? undefined };
-    }
-
-    // 2. Resolve the resource's owning org + visibility.
+    // 1. Resolve the resource's owning org + visibility.
     const ownership = await this.loadOwnership(req.resourceType, req.resourceId);
     if (!ownership) {
       return { allow: false, reason: "not-found" };
     }
 
-    // 3. Owning-org membership role.
+    // 2. Owning-org membership role.
     if (ownership.organizationId) {
       const memberRows = await this.db
         .select({ role: organizationMembers.role })
@@ -88,7 +75,7 @@ export class AuthorizationService {
       }
     }
 
-    // 4. Per-resource grants: direct to the user, or to an org the user belongs to.
+    // 3. Per-resource grants: direct to the user, or to an org the user belongs to.
     const userGrants = await this.db
       .select({ role: resourceGrants.role })
       .from(resourceGrants)
@@ -145,12 +132,17 @@ export class AuthorizationService {
       }
     }
 
-    // 5. Public resources are world-readable.
+    // 4. Public resources are world-readable.
     if (ownership.visibility === "public" && req.action === "read") {
       return { allow: true, reason: "public" };
     }
 
     return { allow: false, reason: "forbidden" };
+  }
+
+  /** Public accessor for a resource's owning org + visibility (drives sharing UI). */
+  getOwnership(resourceType: ResourceType, resourceId: string): Promise<ResourceOwnership | null> {
+    return this.loadOwnership(resourceType, resourceId);
   }
 
   /** Load owning org + visibility for a resource. Returns null when not found. */

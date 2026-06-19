@@ -2,7 +2,7 @@ import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { admin, emailOTP, genericOAuth, organization } from "better-auth/plugins";
+import { emailOTP, genericOAuth, organization } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
@@ -185,11 +185,6 @@ export const auth = betterAuth({
           senderName: "openJII",
         });
       },
-    }),
-    // Platform tier: global admin role, ban controls, impersonation.
-    admin({
-      defaultRole: "user",
-      adminRoles: ["admin"],
     }),
     // Add custom OAuth providers using the generic OAuth plugin
     ...(customOAuthProviders.length > 0
