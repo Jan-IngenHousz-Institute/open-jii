@@ -198,6 +198,35 @@ describe("LinkedWorkbookCard", () => {
     );
   });
 
+  it("hides the rename affordance for non-owners", async () => {
+    mountDefaults();
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
+    expect(screen.queryByLabelText("flow.renameWorkbook")).not.toBeInTheDocument();
+  });
+
+  it("renames the workbook in place when the user owns it", async () => {
+    mountDefaults();
+    const spy = server.mount(contract.workbooks.updateWorkbook, {
+      body: { ...workbook, name: "Renamed Workbook" },
+    });
+    const user = userEvent.setup();
+    render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
+    await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText("flow.renameWorkbook"));
+    const input = screen.getByLabelText("flow.renameWorkbook");
+    await user.clear(input);
+    await user.type(input, "Renamed Workbook");
+    await user.click(screen.getByRole("button", { name: "flow.saveRename" }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({ name: "Renamed Workbook" });
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({ description: "flow.workbookRenamed" }),
+    );
+  });
+
   it("changes workbook via attach confirm dialog", async () => {
     mountDefaults();
     const spy = server.mount(contract.experiments.attachWorkbook, {

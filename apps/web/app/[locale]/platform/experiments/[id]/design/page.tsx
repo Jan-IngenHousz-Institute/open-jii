@@ -139,6 +139,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         workbookId={workbookId}
         workbookVersionId={workbookVersionId}
         hasAccess={hasAccess}
+        isWorkbookOwner={isWorkbookOwner}
       />
 
       <NavTabs defaultValue="list">
