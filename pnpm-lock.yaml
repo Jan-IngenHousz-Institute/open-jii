@@ -41,8 +41,8 @@ catalogs:
       specifier: 16.2.6
       version: 16.2.6
     nodemailer:
-      specifier: 8.0.11
-      version: 8.0.11
+      specifier: 9.0.1
+      version: 9.0.1
     posthog-js:
       specifier: 1.386.8
       version: 1.386.8
@@ -118,6 +118,7 @@ overrides:
   qs@6: 6.15.2
   js-yaml@4: 4.2.0
   '@xmldom/xmldom': '>=0.8.13'
+  multer@2: 2.2.0
 
 patchedDependencies:
   '@better-auth/expo@1.5.6':
@@ -253,7 +254,7 @@ importers:
         version: 4.6.1(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.1)(rxjs@7.8.2)
       nodemailer:
         specifier: 'catalog:'
-        version: 8.0.11
+        version: 9.0.1
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
@@ -1094,7 +1095,7 @@ importers:
         version: 15.0.8(expo@55.0.15)
       nodemailer:
         specifier: 'catalog:'
-        version: 8.0.11
+        version: 9.0.1
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -14159,8 +14160,8 @@ packages:
       typescript:
         optional: true
 
-  multer@2.1.1:
-    resolution: {integrity: sha512-mo+QTzKlx8R7E5ylSXxWzGoXoZbOsRMpyitcht8By2KHvMbf3tjwosZ/Mu/XYU6UuJ3VZnODIrak5ZrPiPyB6A==}
+  multer@2.2.0:
+    resolution: {integrity: sha512-6rdyFg2kLrMh9Jee7/BMPuV9lEAd7lLW2YUpF9/YxR7njyoUwwQ0ZPh3TaIY50Sw6vlyD2HW3wGOkTS4P79xrQ==}
     engines: {node: '>= 10.16.0'}
 
   multicast-dns@7.2.5:
@@ -14359,8 +14360,8 @@ packages:
   node-releases@2.0.37:
     resolution: {integrity: sha512-1h5gKZCF+pO/o3Iqt5Jp7wc9rH3eJJ0+nh/CIoiRwjRxde/hAHyLPXYN4V3CqKAbiZPSeJFSWHmJsbkicta0Eg==}
 
-  nodemailer@8.0.11:
-    resolution: {integrity: sha512-nrO/pDAUKl+wXX+lx16tDLbnm0fW6sK/x8mgohaCpg+CdCEl482bD4tCuAZk2DyliruiNTIZxRCoWkDqJEnAiA==}
+  nodemailer@9.0.1:
+    resolution: {integrity: sha512-Gwv8SQewT616ZM/URn0H54b8PWo/Wum7md3EW2aWy1lO27+WZCX+Xyak3J+NlmHUjDh5ME+uesJUDRbR3Ye8Bw==}
     engines: {node: '>=6.0.0'}
 
   normalize-package-data@2.5.0:
@@ -23946,7 +23947,7 @@ snapshots:
       '@nestjs/core': 11.1.18(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.18)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       cors: 2.8.6
       express: 5.2.1
-      multer: 2.1.1
+      multer: 2.2.0
       path-to-regexp: 8.4.2
       tslib: 2.8.1
     transitivePeerDependencies:
@@ -34283,7 +34284,7 @@ snapshots:
       - '@types/node'
     optional: true
 
-  multer@2.1.1:
+  multer@2.2.0:
     dependencies:
       append-field: 1.0.0
       busboy: 1.6.0
@@ -34478,7 +34479,7 @@ snapshots:
 
   node-releases@2.0.37: {}
 
-  nodemailer@8.0.11: {}
+  nodemailer@9.0.1: {}
 
   normalize-package-data@2.5.0:
     dependencies:
