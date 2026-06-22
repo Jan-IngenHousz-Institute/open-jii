@@ -63,7 +63,8 @@
       "ws@8": "8.21.0",
       "qs@6": "6.15.2",
       "js-yaml@4": "4.2.0",
-      "@xmldom/xmldom": ">=0.8.13"
+      "@xmldom/xmldom": ">=0.8.13",
+      "multer@2": "2.2.0"
     },
     "patchedDependencies": {
       "react-native-usb-serialport-for-android": "patches/react-native-usb-serialport-for-android.patch",
