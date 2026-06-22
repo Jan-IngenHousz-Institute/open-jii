@@ -114,6 +114,23 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[0].name).toBe("Check battery");
   });
 
+  it("clamps a long free-form command to the 64-char node-name limit", () => {
+    const longCommand = "a".repeat(100);
+    const cells: WorkbookCell[] = [
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { command: longCommand },
+      },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes[0].name).toBe("a".repeat(64));
+    expect(nodes[0].name.length).toBe(64);
+    // The full command is still carried verbatim in the node content.
+    expect(nodes[0].content).toEqual({ command: longCommand });
+  });
+
   it("skips output cells", () => {
     const cells: WorkbookCell[] = [
       { id: "o1", type: "output", isCollapsed: false, producedBy: "p1" },
