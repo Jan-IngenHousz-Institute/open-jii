@@ -43,7 +43,11 @@ const getPreviewAlerts = cache(async (locale: string) => {
 });
 
 export async function AlertsBar({ locale, preview }: AlertsBarProps) {
-  const alerts = await (preview ? getPreviewAlerts(locale) : getActiveAlerts(locale));
-  if (alerts.length === 0) return null;
-  return <AlertsContainer alerts={alerts} />;
+  try {
+    const alerts = await (preview ? getPreviewAlerts(locale) : getActiveAlerts(locale));
+    if (alerts.length === 0) return null;
+    return <AlertsContainer alerts={alerts} />;
+  } catch {
+    return null;
+  }
 }

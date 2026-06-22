@@ -38,9 +38,15 @@ export function NavigationButtons() {
   const isInstructionOrQuestion =
     currentNode?.type === "instruction" || currentNode?.type === "question";
 
-  // Show navigation buttons only for instruction/question nodes, not on the submit/review screen
+  // Show navigation buttons only for instruction/question nodes, not on the
+  // submit/review screen. Branch nodes route automatically and must never show
+  // Back/Next (the `!== "branch"` guard is defensive — branch isn't an
+  // instruction/question anyway).
   const shouldShowNavigationButtons =
-    !!experimentId && isInstructionOrQuestion && !isQuestionsSubmitPending;
+    !!experimentId &&
+    isInstructionOrQuestion &&
+    currentNode?.type !== "branch" &&
+    !isQuestionsSubmitPending;
 
   if (!shouldShowNavigationButtons) {
     return null;

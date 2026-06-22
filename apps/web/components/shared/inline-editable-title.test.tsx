@@ -86,12 +86,12 @@ describe("InlineEditableTitle", () => {
 
   it("shows pencil icon only when hasAccess is true", () => {
     const { rerender } = render(<InlineEditableTitle {...defaultProps} hasAccess={false} />);
-    expect(screen.queryByText("My Title")?.querySelector("svg")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("My Title").parentElement?.querySelector("svg"),
+    ).not.toBeInTheDocument();
 
     rerender(<InlineEditableTitle {...defaultProps} hasAccess={true} />);
-    // Pencil icon is rendered as an inline SVG inside the title
-    const title = screen.getByText("My Title");
-    expect(title.querySelector("svg")).toBeInTheDocument();
+    expect(screen.getByText("My Title").parentElement?.querySelector("svg")).toBeInTheDocument();
   });
 
   it("renders badges and actions when provided", () => {

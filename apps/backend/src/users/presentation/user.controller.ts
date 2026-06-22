@@ -10,6 +10,7 @@ import { formatDates, formatDatesList } from "../../common/utils/date-formatter"
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
 import { DeleteUserUseCase } from "../application/use-cases/delete-user/delete-user";
+import { GetDeletionBlockersUseCase } from "../application/use-cases/get-deletion-blockers/get-deletion-blockers";
 import { GetUserProfileUseCase } from "../application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
@@ -24,6 +25,7 @@ export class UserController {
     private readonly getUserUseCase: GetUserUseCase,
     private readonly getUserProfileUseCase: GetUserProfileUseCase,
     private readonly deleteUserUseCase: DeleteUserUseCase,
+    private readonly getDeletionBlockersUseCase: GetDeletionBlockersUseCase,
   ) {}
 
   @TsRestHandler(contract.users.deleteUser)
@@ -41,6 +43,30 @@ export class UserController {
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.users.getDeletionBlockers)
+  getDeletionBlockers(@Session() session: UserSession) {
+    return tsRestHandler(contract.users.getDeletionBlockers, async ({ params }) => {
+      // Only the user themselves may inspect what blocks their own account deletion.
+      if (params.id !== session.user.id) {
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "You can only view your own deletion blockers" },
+        };
+      }
+
+      const result = await this.getDeletionBlockersUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK,
+          body: { experiments: result.value },
         };
       }
 

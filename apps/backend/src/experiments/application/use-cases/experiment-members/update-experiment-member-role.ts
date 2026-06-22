@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import {
   ExperimentMemberDto,
   ExperimentMemberRole,
@@ -17,6 +18,7 @@ export class UpdateExperimentMemberRoleUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
+    private readonly userRepository: UserRepository,
   ) {}
 
   async execute(
@@ -67,6 +69,23 @@ export class UpdateExperimentMemberRoleUseCase {
             userId: currentUserId,
           });
           return failure(AppError.forbidden("Only admins can update member roles"));
+        }
+
+        // Don't promote a deactivated ("Unknown") account to admin, it can't act as one
+        if (newRole === "admin") {
+          const targetProfileResult = await this.userRepository.findUserProfile(memberId);
+          if (targetProfileResult.isFailure()) return targetProfileResult;
+          const targetProfile = targetProfileResult.value;
+          if (!targetProfile || targetProfile.activated === false) {
+            this.logger.warn({
+              msg: "User attempted to promote a deactivated account to admin",
+              operation: "update-experiment-member-role",
+              experimentId,
+              memberId,
+              userId: currentUserId,
+            });
+            return failure(AppError.badRequest("Cannot make a deactivated account an admin"));
+          }
         }
 
         // Prevent demoting the last admin

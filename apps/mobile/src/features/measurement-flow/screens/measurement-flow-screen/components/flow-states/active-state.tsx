@@ -3,6 +3,7 @@ import { View, ScrollView } from "react-native";
 
 import { FlowNode } from "../../types";
 import { AnalysisNode } from "../flow-nodes/analysis-node/analysis-node";
+import { BranchNode } from "../flow-nodes/branch-node/branch-node";
 import { CommandNode } from "../flow-nodes/command-node/command-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
@@ -12,32 +13,45 @@ interface ActiveStateProps {
   currentNode: FlowNode;
 }
 
+const ScrollableNode = ({ children }: { children: React.ReactNode }) => (
+  <ScrollView
+    style={{ flex: 1 }}
+    contentContainerStyle={{ flexGrow: 1 }}
+    showsVerticalScrollIndicator={true}
+    keyboardShouldPersistTaps="handled"
+  >
+    {children}
+  </ScrollView>
+);
+
+function renderNode(currentNode: FlowNode) {
+  switch (currentNode.type) {
+    case "question":
+      return <QuestionNode node={currentNode} />;
+    case "analysis":
+      return <AnalysisNode content={currentNode.content} />;
+    case "command":
+      return <CommandNode content={currentNode.content} />;
+    case "branch":
+      return <BranchNode node={currentNode} />;
+    case "instruction":
+      return (
+        <ScrollableNode>
+          <InstructionNode content={currentNode.content} />
+        </ScrollableNode>
+      );
+    case "measurement":
+      return (
+        <ScrollableNode>
+          <MeasurementNode content={currentNode.content} />
+        </ScrollableNode>
+      );
+    default:
+      return null;
+  }
+}
+
 export function ActiveState({ currentNode }: ActiveStateProps) {
-  const isQuestionNode = currentNode.type === "question";
-  const isAnalysisNode = currentNode.type === "analysis";
-  const isCommandNode = currentNode.type === "command";
-
-  return (
-    <View className="flex-1">
-      {isQuestionNode ? (
-        <QuestionNode node={currentNode} />
-      ) : isAnalysisNode ? (
-        <AnalysisNode content={currentNode.content} />
-      ) : isCommandNode ? (
-        <CommandNode content={currentNode.content} />
-      ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
-          showsVerticalScrollIndicator={true}
-          keyboardShouldPersistTaps="handled"
-        >
-          {currentNode.type === "instruction" && <InstructionNode content={currentNode.content} />}
-          {currentNode.type === "measurement" && <MeasurementNode content={currentNode.content} />}
-        </ScrollView>
-      )}
-
-      {/* Footer removed: each node should control its own navigation/actions */}
-    </View>
-  );
+  // Each node controls its own navigation/actions; no shared footer here.
+  return <View className="flex-1">{renderNode(currentNode)}</View>;
 }

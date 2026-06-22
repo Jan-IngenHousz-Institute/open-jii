@@ -1,0 +1,13 @@
+import { PageContainer } from "@/components/page-container";
+import { auth } from "~/app/actions/auth";
+import { AccountSettings } from "~/components/account-settings/account-settings";
+
+export default async function AccountPage() {
+  const session = await auth();
+
+  return (
+    <PageContainer width="reading" className="space-y-6">
+      <AccountSettings session={session} />
+    </PageContainer>
+  );
+}

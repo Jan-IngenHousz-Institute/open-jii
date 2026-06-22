@@ -42,6 +42,9 @@
     "downloadData": "Daten herunterladen",
     "noMeasurements": "Noch keine Messungen aufgezeichnet"
   },
+  "dashboards": {
+    "tabLabel": "Dashboards"
+  },
   "flow": {
     "title": "Arbeitsbuch",
     "legend": "Legende",

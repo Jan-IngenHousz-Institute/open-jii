@@ -64,7 +64,7 @@ describe("NavUser", () => {
 
     expect(screen.getByRole("menuitem", { name: "auth.account" })).toHaveAttribute(
       "href",
-      "/en-US/platform/account/settings",
+      "/en-US/platform/account",
     );
     expect(screen.getByRole("menuitem", { name: "navigation.logout" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "navigation.support" })).toBeInTheDocument();

@@ -10,18 +10,25 @@
  * ```
  */
 import type {
+  DashboardLayout,
+  DashboardWidget,
   Experiment,
-  TransferRequest,
   ExperimentAccess,
+  ExperimentDashboard,
   ExperimentDataResponse,
+  ExperimentTableMetadata,
+  ExperimentVisualization,
   ExportRecord,
+  FilterWidget,
   Flow,
   FlowGraph,
   Location,
-  ExperimentVisualization,
-  ExperimentTableMetadata,
   PlaceSearchResult,
+  RichTextWidget,
+  TableWidget,
+  TransferRequest,
   UploadMetadata,
+  VisualizationWidget,
 } from "@repo/api/schemas/experiment.schema";
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
@@ -107,7 +114,7 @@ export function createSession(
   } = {},
 ): NonNullable<Session> {
   // Resolve the user first so the session's `userId` follows a caller's
-  // `user.id` override automatically — without this, tests that override
+  // `user.id` override automatically. Without this, tests that override
   // only one of the two would silently produce inconsistent fixtures.
   const user: NonNullable<Session>["user"] = {
     id: "user-1",
@@ -216,10 +223,17 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
 
 let vizSeq = 0;
 
+// Accept any object in `config` so tests can pass typed `defaultConfig()`
+// results into the schema's opaque `Record<string, unknown>` slot.
+type VisualizationOverrides = Omit<Partial<ExperimentVisualization>, "config"> & {
+  config?: object;
+};
+
 export function createVisualization(
-  overrides: Partial<ExperimentVisualization> = {},
+  overrides: VisualizationOverrides = {},
 ): ExperimentVisualization {
   vizSeq++;
+  const { config: configOverride, ...rest } = overrides;
   return {
     id: `viz-${vizSeq}-${crypto.randomUUID().slice(0, 8)}`,
     name: `Visualization ${vizSeq}`,
@@ -227,7 +241,7 @@ export function createVisualization(
     experimentId: "exp-1",
     chartFamily: "basic",
     chartType: "line",
-    config: {},
+    config: (configOverride as Record<string, unknown> | undefined) ?? {},
     dataConfig: {
       tableName: "test_table",
       dataSources: [
@@ -239,7 +253,7 @@ export function createVisualization(
     createdByName: "Test User",
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-15T00:00:00.000Z",
-    ...overrides,
+    ...rest,
   };
 }
 
@@ -513,6 +527,115 @@ export function createBranchCell(overrides: Partial<BranchCell> = {}): BranchCel
   };
 }
 
+// ── Experiment Dashboard ────────────────────────────────────────
+
+let dashboardSeq = 0;
+let dashboardWidgetSeq = 0;
+
+function uuid(): string {
+  return crypto.randomUUID();
+}
+
+export function createRichTextWidget(overrides: Partial<RichTextWidget> = {}): RichTextWidget {
+  dashboardWidgetSeq++;
+  return {
+    id: uuid(),
+    type: "richText",
+    layout: { col: 0, row: 0, colSpan: 6, rowSpan: 2 },
+    config: { html: `<p>Widget ${dashboardWidgetSeq}</p>` },
+    ...overrides,
+  };
+}
+
+export function createVisualizationWidget(
+  overrides: Partial<VisualizationWidget> = {},
+): VisualizationWidget {
+  dashboardWidgetSeq++;
+  const { config: configOverride, ...rest } = overrides;
+  return {
+    id: uuid(),
+    type: "visualization",
+    layout: { col: 0, row: 0, colSpan: 6, rowSpan: 4 },
+    config: {
+      showTitle: true,
+      showDescription: false,
+      ...configOverride,
+    },
+    ...rest,
+  };
+}
+
+export function createTableWidget(overrides: Partial<TableWidget> = {}): TableWidget {
+  dashboardWidgetSeq++;
+  const { config: configOverride, ...rest } = overrides;
+  return {
+    id: uuid(),
+    type: "table",
+    layout: { col: 0, row: 0, colSpan: 6, rowSpan: 4 },
+    config: {
+      pageSize: 25,
+      showTitle: true,
+      showDescription: true,
+      ...configOverride,
+    },
+    ...rest,
+  };
+}
+
+// Accept Partial<config> so tests don't have to repeat showTitle/showDescription
+// when they only care about column/operator/value/tableName.
+type FilterWidgetOverrides = Omit<Partial<FilterWidget>, "config"> & {
+  config?: Partial<FilterWidget["config"]>;
+};
+
+export function createFilterWidget(overrides: FilterWidgetOverrides = {}): FilterWidget {
+  dashboardWidgetSeq++;
+  const { config: configOverride, ...rest } = overrides;
+  return {
+    id: uuid(),
+    type: "filter",
+    layout: { col: 0, row: 0, colSpan: 3, rowSpan: 1 },
+    config: {
+      showTitle: true,
+      showDescription: true,
+      ...configOverride,
+    },
+    ...rest,
+  };
+}
+
+export function createDashboardLayout(overrides: Partial<DashboardLayout> = {}): DashboardLayout {
+  return {
+    columns: 12,
+    rowHeight: 80,
+    gap: 16,
+    ...overrides,
+  };
+}
+
+export function createExperimentDashboard(
+  overrides: Partial<Omit<ExperimentDashboard, "layout" | "widgets">> & {
+    layout?: Partial<DashboardLayout>;
+    widgets?: DashboardWidget[];
+  } = {},
+): ExperimentDashboard {
+  dashboardSeq++;
+  const { layout: layoutOverrides, widgets, ...rest } = overrides;
+  return {
+    id: uuid(),
+    experimentId: uuid(),
+    name: `Dashboard ${dashboardSeq}`,
+    description: `Description for dashboard ${dashboardSeq}`,
+    layout: createDashboardLayout(layoutOverrides),
+    widgets: widgets ?? [],
+    createdBy: uuid(),
+    createdByName: "Test User",
+    createdAt: "2025-01-01T00:00:00.000Z",
+    updatedAt: "2025-01-15T00:00:00.000Z",
+    ...rest,
+  };
+}
+
 let versionSeq = 0;
 
 export function createWorkbookVersionSummary(
@@ -572,4 +695,6 @@ export function resetFactories() {
   cellSeq = 0;
   versionSeq = 0;
   uploadSeq = 0;
+  dashboardSeq = 0;
+  dashboardWidgetSeq = 0;
 }

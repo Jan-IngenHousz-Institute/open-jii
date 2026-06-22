@@ -29,14 +29,27 @@ function mountUploadCapture() {
   });
 }
 
+// The list view is the default; the form lives behind the "New upload" dropdown.
+async function enterCreateView(kind = "csv") {
+  await userEvent.click(
+    screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.newUpload" }),
+  );
+  await userEvent.click(
+    await screen.findByRole("menuitem", {
+      name: `experimentData.uploadDataModal.history.sourceKind.${kind}`,
+    }),
+  );
+}
+
 async function selectFiles(
   filenames: string[],
   options?: { relativePath?: (i: number) => string },
 ) {
-  // The modal binds a single file input; pick it by its accessible label.
-  // Both the tabular and ambyte labels surface the same key suffix at runtime,
-  // so the test uses the i18n key text directly.
-  const input = screen.getByLabelText(/uploadDataModal\.files\./);
+  // The dropzone's file input is hidden and unlabeled; there's one per modal.
+  const input = document.querySelector('input[type="file"]');
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error("file input not found");
+  }
   const files = filenames.map((name, i) => {
     const f = new File(["content"], name, { type: "text/csv" });
     Object.defineProperty(f, "webkitRelativePath", {
@@ -58,13 +71,27 @@ describe("UploadDataModal", () => {
     expect(screen.getByText("experimentData.uploadDataModal.description")).toBeInTheDocument();
   });
 
-  it("posts a CSV upload with inferred fields when sourceKind defaults to csv", async () => {
+  it("opens the create form from the New upload dropdown", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+
+    expect(
+      await screen.findByLabelText("experimentData.uploadDataModal.newTable.label"),
+    ).toBeInTheDocument();
+  });
+
+  it("posts a CSV upload with the dropdown-selected source kind", async () => {
     setExperimentTables();
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
+    await enterCreateView("csv");
     await userEvent.type(
       screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
       "leaf_traits",
@@ -91,6 +118,7 @@ describe("UploadDataModal", () => {
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
+    await enterCreateView("csv");
     await userEvent.type(
       screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
       "leaf_traits",
@@ -101,9 +129,7 @@ describe("UploadDataModal", () => {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText("experimentData.uploadDataModal.validation.mixedFormats"),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/validation\.mixedFormats/)).toBeInTheDocument();
     });
     expect(spy.called).toBe(false);
   });
@@ -121,6 +147,8 @@ describe("UploadDataModal", () => {
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
+    await enterCreateView("csv");
+
     await waitFor(() => {
       expect(
         screen.getByText("experimentData.uploadDataModal.existingTable.label"),
@@ -128,39 +156,20 @@ describe("UploadDataModal", () => {
     });
   });
 
-  it("releases the ambyte target lock when switching back to a tabular kind", async () => {
+  it("hides the target picker and uses the folder label for ambyte uploads", async () => {
     setExperimentTables();
     mountEmptyHistory();
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
-    const sourceKind = await screen.findByLabelText(
-      "experimentData.uploadDataModal.sourceKind.label",
-    );
+    await enterCreateView("ambyte");
 
-    // Ambyte pins the target to raw_ambyte_data and hides the picker.
-    await userEvent.click(sourceKind);
-    await userEvent.click(
-      screen.getByRole("option", {
-        name: "experimentData.uploadDataModal.history.sourceKind.ambyte",
-      }),
-    );
-    await waitFor(() => {
-      expect(
-        screen.queryByLabelText("experimentData.uploadDataModal.newTable.label"),
-      ).not.toBeInTheDocument();
-    });
-
-    // Switching back releases the lock: the name is cleared, not raw_ambyte_data.
-    await userEvent.click(sourceKind);
-    await userEvent.click(
-      screen.getByRole("option", {
-        name: "experimentData.uploadDataModal.history.sourceKind.csv",
-      }),
-    );
-
-    const input = await screen.findByLabelText("experimentData.uploadDataModal.newTable.label");
-    expect(input).toHaveValue("");
+    expect(
+      await screen.findByText("experimentData.uploadDataModal.files.dropzone.ambytePlaceholder"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("experimentData.uploadDataModal.newTable.label"),
+    ).not.toBeInTheDocument();
   });
 
   it("blocks submit and surfaces the noFiles validation when no files are picked", async () => {
@@ -170,6 +179,7 @@ describe("UploadDataModal", () => {
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
+    await enterCreateView("csv");
     await userEvent.type(
       screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
       "leaf_traits",
@@ -179,9 +189,7 @@ describe("UploadDataModal", () => {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText("experimentData.uploadDataModal.validation.noFiles"),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/validation\.noFiles/)).toBeInTheDocument();
     });
     expect(spy.called).toBe(false);
   });
@@ -193,6 +201,7 @@ describe("UploadDataModal", () => {
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
+    await enterCreateView("csv");
     await userEvent.type(
       screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
       "leaf_traits",
@@ -217,6 +226,7 @@ describe("UploadDataModal", () => {
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
+    await enterCreateView("csv");
     await userEvent.type(
       screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
       "leaf_traits",
@@ -231,6 +241,24 @@ describe("UploadDataModal", () => {
         screen.getByText("experimentData.uploadDataModal.submitError.title"),
       ).toBeInTheDocument();
     });
+  });
+
+  it("returns to the list view via Back without uploading", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+    const spy = mountUploadCapture();
+
+    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+    await userEvent.click(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.back" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.newUpload" }),
+    ).toBeInTheDocument();
+    expect(spy.called).toBe(false);
   });
 
   it("invokes onOpenChange when the close button is clicked", async () => {

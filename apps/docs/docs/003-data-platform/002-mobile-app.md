@@ -17,6 +17,8 @@ At the moment the mobile app is mostly targeted at the MultispeQ sensor, but mor
   - Preview raw data and processed data in tabbed view
   - Upload measurement to web platform
 - **Question-only flows** — collect survey data or field observations without a sensor
+- **Branching flows** — follow conditional paths from a workbook (e.g. re-measure when a value is out of range), evaluated on-device
+
 - **Add comments** to measurements via bottom-sheet modal
 - **Swipe actions** on measurements — swipe to upload, comment, or delete
 - **Export measurements** locally as JSON (from your profile) for backup or external analysis
@@ -29,6 +31,15 @@ At the moment the mobile app is mostly targeted at the MultispeQ sensor, but mor
 ![Measurement flow screens: (1) progress bar / step indicator showing which step in the flow the user is on, (2) a question screen with answer options and the auto-advance behaviour, (3) result preview screen with raw and processed data after a measurement completes.](image.png)
 
 ![Comments and swiping: (1) the bottom-sheet comment modal that appears when adding a comment to a measurement, (2) a measurement list item mid-swipe showing the swipe action buttons (e.g. upload, comment, delete).](image-1.png)
+
+#### Branching
+
+If the experiment's workbook contains a **Branch** cell, the app follows it automatically: when the
+flow reaches a branch it evaluates on its own (no extra tap) and continues down the matching path —
+including **looping back** to repeat a step, such as a re-measure.
+
+Branch logic runs entirely **on-device**, so it behaves the same offline. See
+[workbooks](./web-platform/workbooks) for how branches and their conditions are set up.
 
 ### Logging in on a phone without email inbox
 

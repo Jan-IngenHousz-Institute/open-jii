@@ -54,4 +54,12 @@ describe("InfoGroupLayout", () => {
     await renderLayout(createSession());
     expect(screen.getByRole("navigation")).toHaveTextContent("logged-in");
   });
+
+  it("renders children without footer when Contentful throws", async () => {
+    mockFooter.mockRejectedValue(new Error("Contentful 500"));
+    await renderLayout();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+    expect(screen.getByTestId("child")).toHaveTextContent("Child content");
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
+  });
 });

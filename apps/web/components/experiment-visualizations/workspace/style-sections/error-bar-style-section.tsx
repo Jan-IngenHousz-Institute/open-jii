@@ -23,10 +23,11 @@ interface ErrorBarStyleSectionProps {
 export function ErrorBarStyleSection({ form, flat = false }: ErrorBarStyleSectionProps) {
   const { t } = useTranslation("experimentVisualizations");
   const dataSources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
-  const hasAnyErrorColumn = dataSources.some(
-    (ds) => typeof ds.errorColumn === "string" && ds.errorColumn.length > 0,
+  // Renderer only honors Y-role errorColumn, so gate the shelf on Y too.
+  const hasAnyYErrorColumn = dataSources.some(
+    (ds) => ds.role === "y" && typeof ds.errorColumn === "string" && ds.errorColumn.length > 0,
   );
-  if (!hasAnyErrorColumn) {
+  if (!hasAnyYErrorColumn) {
     return null;
   }
 

@@ -29,7 +29,7 @@ import { LineStyleSection } from "../../../../workspace/style-sections/line-styl
 import { ReferenceLinesSection } from "../../../../workspace/style-sections/reference-lines-section";
 import { CollapsibleStyleSection } from "../../../../workspace/style-sections/shared/collapsible-style-section";
 import { StyleSubsection } from "../../../../workspace/style-sections/shared/style-subsection";
-import { hasTraceType } from "../../../shelf-visibility";
+import { hasFacetSource, hasTraceType } from "../../../shelf-visibility";
 import type { ChartPanelProps, ShelfDef } from "../../../types";
 
 function BubbleDisplay({ form, flat }: ChartPanelProps) {
@@ -237,5 +237,6 @@ export const bubbleStyleShelves: ShelfDef[] = [
     labelKey: "workspace.style.facetOptions",
     icon: LayoutGrid,
     Component: BubbleFacetStyle,
+    visible: hasFacetSource,
   },
 ];
