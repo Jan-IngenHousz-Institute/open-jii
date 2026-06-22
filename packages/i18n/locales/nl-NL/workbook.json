@@ -66,6 +66,10 @@
       "markdown_other": "{{count}} Notities"
     }
   },
+  "command": {
+    "editorAriaLabel": "Apparaatcommando",
+    "editorPlaceholder": "Typ een commando, bijv. battery"
+  },
   "output": {
     "label": "Uitvoer",
     "expand": "Uitvoer uitvouwen",

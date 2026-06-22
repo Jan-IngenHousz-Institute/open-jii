@@ -5,6 +5,7 @@ import { Terminal } from "lucide-react";
 import type { DeviceCommandOption } from "@repo/api/schemas/device-command.schema";
 import { KNOWN_DEVICE_COMMANDS } from "@repo/api/schemas/device-command.schema";
 import type { CommandCell as CommandCellType } from "@repo/api/schemas/workbook-cells.schema";
+import { useTranslation } from "@repo/i18n";
 
 import { CommandEditor } from "../../shared/command-editor";
 import { CELL_ACCENT } from "../cell-theme";
@@ -36,6 +37,7 @@ export function CommandCellComponent({
   executionError,
   readOnly,
 }: CommandCellProps) {
+  const { t } = useTranslation("workbook");
   const command = cell.payload.command;
   const known = commandOption(command);
   const displayName = cell.payload.name ?? known?.label ?? command;
@@ -70,8 +72,8 @@ export function CommandCellComponent({
           <CommandEditor
             value={command}
             onChange={handleChange}
-            aria-label="Device command"
-            placeholder="Type a command, e.g. battery"
+            aria-label={t("command.editorAriaLabel")}
+            placeholder={t("command.editorPlaceholder")}
           />
         )}
       </div>

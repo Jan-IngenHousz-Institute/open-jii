@@ -66,6 +66,10 @@
       "markdown_other": "{{count}} Notizen"
     }
   },
+  "command": {
+    "editorAriaLabel": "Gerätebefehl",
+    "editorPlaceholder": "Befehl eingeben, z. B. battery"
+  },
   "output": {
     "label": "Ausgabe",
     "expand": "Ausgabe ausklappen",

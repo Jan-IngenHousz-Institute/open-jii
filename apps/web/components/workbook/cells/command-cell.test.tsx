@@ -41,7 +41,8 @@ describe("CommandCellComponent", () => {
   it("renders the command editor in edit mode", () => {
     renderCommand({ payload: { command: "battery" } });
     // CodeMirror is not interactively testable in jsdom; assert the editor surface.
-    expect(screen.getByLabelText(/device command/i)).toBeInTheDocument();
+    // The i18n mock returns the key verbatim, so we match on the translation key.
+    expect(screen.getByLabelText("command.editorAriaLabel")).toBeInTheDocument();
   });
 
   it("falls back to the command label as the header name", () => {
@@ -70,7 +71,7 @@ describe("CommandCellComponent", () => {
 
   it("renders the command read-only without an editor", () => {
     renderCommand({ payload: { command: "battery" } }, { readOnly: true });
-    expect(screen.queryByLabelText(/device command/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("command.editorAriaLabel")).not.toBeInTheDocument();
     expect(screen.getByText("battery")).toBeInTheDocument();
   });
 });

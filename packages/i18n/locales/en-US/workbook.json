@@ -66,6 +66,10 @@
       "markdown_other": "{{count}} Notes"
     }
   },
+  "command": {
+    "editorAriaLabel": "Device command",
+    "editorPlaceholder": "Type a command, e.g. battery"
+  },
   "output": {
     "label": "Output",
     "expand": "Expand output",
