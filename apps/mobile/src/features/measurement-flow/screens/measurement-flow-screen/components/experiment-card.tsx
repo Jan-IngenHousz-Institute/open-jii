@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import { FlaskConical, MessageSquare } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
@@ -19,6 +20,15 @@ export interface ExperimentCardProps {
   durationMin: number;
   recentCount?: number;
 }
+
+const cardSelection = cva("border-2", {
+  variants: {
+    selected: {
+      true: "border-primary",
+      false: "border-transparent",
+    },
+  },
+});
 
 function pickTag(
   requiresSensor: boolean,
@@ -56,7 +66,7 @@ export function ExperimentCard({
       <Card
         tone={selected ? "mint" : "white"}
         padded
-        className="border-0"
+        className={cardSelection({ selected })}
         style={{ marginVertical: 0, padding: 14 }}
       >
         <View className="flex-row items-start gap-3">
