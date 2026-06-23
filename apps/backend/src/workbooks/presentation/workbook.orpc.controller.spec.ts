@@ -15,7 +15,7 @@ import { UpdateWorkbookUseCase } from "../application/use-cases/update-workbook/
 import type { WorkbookVersionDto } from "../core/models/workbook-version.model";
 import type { WorkbookDto } from "../core/models/workbook.model";
 
-describe("WorkbookController", () => {
+describe("WorkbookOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let createWorkbookUseCase: CreateWorkbookUseCase;

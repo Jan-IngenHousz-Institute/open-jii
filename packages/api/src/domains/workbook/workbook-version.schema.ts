@@ -20,7 +20,7 @@ export const zWorkbookVersion = z.object({
   version: z.number().int().positive(),
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
-  entitySnapshots: zEntitySnapshots,
+  entitySnapshots: zEntitySnapshots.optional(),
   createdAt: z.string().datetime(),
   createdBy: z.string().uuid(),
 });
