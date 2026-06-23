@@ -109,10 +109,13 @@ export function BoxPlot({
         pointpos: series.pointpos || -1.8,
 
         // Styling
+        // line.color defaults to the trace color which then matches the
+        // box fill, hiding the box border, mean line, and notched outline.
+        // Force a contrasting dark line so those features stay visible.
         fillcolor: series.fillcolor || series.color,
         line: {
-          color: series.line?.color || series.color,
-          width: series.line?.width || 2,
+          color: series.line?.color || "#444",
+          width: series.line?.width || 1.5,
         },
         marker: {
           color: series.marker?.color || series.color,
