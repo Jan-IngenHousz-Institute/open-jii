@@ -33,9 +33,14 @@ export class ExperimentDataRepository {
   ) {}
 
   /**
-   * Get table data via one of three paths: paginated read (cached row count),
-   * column projection (full scan), or filtered/aggregated read (capped by
-   * `limit`, totalRows reflects returned rows only).
+   * Get table data. Behaviour depends on which fields the caller sets:
+   *   - `aggregation`: one-page summary (page/pageSize ignored).
+   *   - `filters`/`columns` + `page`+`pageSize`: paginated read with an
+   *     explicit COUNT over the filtered set, so the table widget can
+   *     keep navigating pages after a filter is applied.
+   *   - `filters`/`columns` without `page`: all matching rows in one page
+   *     (chart consumers that need the full series).
+   *   - none of the above: plain paginated read using the cached row count.
    */
   async getTableData(params: {
     experimentId: string;
@@ -59,8 +64,8 @@ export class ExperimentDataRepository {
       aggregation,
       orderBy,
       orderDirection = "ASC",
-      page = 1,
-      pageSize = 5,
+      page,
+      pageSize,
       limit,
     } = params;
 
@@ -80,13 +85,12 @@ export class ExperimentDataRepository {
     const hasAggregation =
       (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
     const hasFilters = (filters?.length ?? 0) > 0;
-    const usesAdhocPath = hasAggregation || hasFilters || Boolean(columns);
+    const hasColumns = Boolean(columns && columns.length > 0);
+    const hasPaging = page !== undefined && pageSize !== undefined;
 
-    if (usesAdhocPath) {
-      // Aggregation defines its own projection; passing `columns` would shadow it.
-      const effectiveColumns = hasAggregation ? undefined : columns;
+    // Aggregation summary: page/pageSize ignored, `limit` caps the result.
+    if (hasAggregation) {
       const queryResult = this.buildQuery(experimentId, metadata, {
-        columns: effectiveColumns,
         filters,
         aggregation,
         orderBy,
@@ -96,19 +100,74 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-
-      return this.getFullTableData({
-        tableName,
-        experiment,
-        query: queryResult.value,
-      });
+      return this.getFullTableData({ tableName, experiment, query: queryResult.value });
     }
 
-    const offset = (page - 1) * pageSize;
+    // Filters or column projection requested.
+    if (hasFilters || hasColumns) {
+      if (hasPaging) {
+        const offset = (page - 1) * pageSize;
+
+        // Count of filtered/projected rows: build the same filter query
+        // without LIMIT/OFFSET/ORDER BY and wrap it as a COUNT subquery.
+        const countSubqueryResult = this.buildQuery(experimentId, metadata, {
+          columns,
+          filters,
+        });
+        if (countSubqueryResult.isFailure()) {
+          return countSubqueryResult;
+        }
+        const countSql = `SELECT COUNT(*) AS total FROM (${countSubqueryResult.value}) AS sub`;
+        const countResult = await this.executeQuery(countSql);
+        if (countResult.isFailure()) {
+          return countResult;
+        }
+        const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
+
+        const dataQueryResult = this.buildQuery(experimentId, metadata, {
+          columns,
+          filters,
+          orderBy,
+          orderDirection,
+          limit: pageSize,
+          offset,
+        });
+        if (dataQueryResult.isFailure()) {
+          return dataQueryResult;
+        }
+
+        return this.getTableDataPage({
+          tableName,
+          experiment,
+          page,
+          pageSize,
+          rowCount: totalRows,
+          query: dataQueryResult.value,
+        });
+      }
+
+      // Chart-style: all matching rows in one page, capped by `limit`.
+      const queryResult = this.buildQuery(experimentId, metadata, {
+        columns,
+        filters,
+        orderBy,
+        orderDirection,
+        limit,
+      });
+      if (queryResult.isFailure()) {
+        return queryResult;
+      }
+      return this.getFullTableData({ tableName, experiment, query: queryResult.value });
+    }
+
+    // Plain paginated read (no filters, no aggregation, no projection).
+    const usedPage = page ?? 1;
+    const usedPageSize = pageSize ?? 5;
+    const offset = (usedPage - 1) * usedPageSize;
     const queryResult = this.buildQuery(experimentId, metadata, {
       orderBy,
       orderDirection,
-      limit: pageSize,
+      limit: usedPageSize,
       offset,
     });
     if (queryResult.isFailure()) {
@@ -118,8 +177,8 @@ export class ExperimentDataRepository {
     return this.getTableDataPage({
       tableName,
       experiment,
-      page,
-      pageSize,
+      page: usedPage,
+      pageSize: usedPageSize,
       rowCount: metadata.rowCount,
       query: queryResult.value,
     });
