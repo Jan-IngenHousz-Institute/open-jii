@@ -11,12 +11,20 @@ import type {
 import { VariantSchema } from "./schema/variant-schema";
 
 export abstract class BaseQueryBuilder {
+  protected isDistinct = false;
+
   abstract select(columns?: string[]): this;
   abstract from(table: string): this;
   abstract where(condition: string): this;
   abstract limit(value: number): this;
   abstract offset(value: number): this;
   abstract build(): string;
+
+  /** Emit `SELECT DISTINCT` instead of `SELECT`. */
+  distinct(): this {
+    this.isDistinct = true;
+    return this;
+  }
 
   /**
    * Escape a SQL identifier (table, column, struct field path).
@@ -130,18 +138,11 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   private limitValue?: number;
   private offsetValue?: number;
   private exceptColumns: string[] = [];
-  private isDistinct = false;
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
       this.selectClause = columns.map((c) => this.escapeIdentifier(c)).join(", ");
     }
-    return this;
-  }
-
-  /** Emit `SELECT DISTINCT` instead of `SELECT`. */
-  distinct(): this {
-    this.isDistinct = true;
     return this;
   }
 
@@ -441,10 +442,13 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
         ? `SELECT * FROM (${flattenedView}) ${whereFlattened}`.trim()
         : flattenedView;
 
-    // Add outer SELECT for column filtering if specific columns requested
+    // Add outer SELECT for column filtering if specific columns requested.
+    // DISTINCT applies at the outer projection so dedup happens on the
+    // flattened/extracted columns, not the raw VARIANT row.
     if (this.selectClause !== "*") {
+      const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
       return `
-        SELECT ${this.selectClause}
+        ${selectKeyword} ${this.selectClause}
         FROM (
           ${filteredFlattened}
         )

@@ -137,9 +137,13 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, tableName, column, limit } = params;
 
+    // Schemas are needed so columns living inside a VARIANT (upload / macro /
+    // questions / custom_metadata) get extracted by `buildQuery`. Without
+    // them the picker SELECTs nothing for non-static columns and returns
+    // "No values found." even though the data table renders them fine.
     const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
       identifier: tableName,
-      includeSchemas: false,
+      includeSchemas: true,
     });
     if (metadataResult.isFailure()) {
       return metadataResult;
@@ -148,12 +152,7 @@ export class ExperimentDataRepository {
       return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
     }
 
-    const { tableType } = metadataResult.value[0];
-
-    const queryResult = this.databricksPort.buildExperimentQuery({
-      tableName,
-      tableType,
-      experimentId,
+    const queryResult = this.buildQuery(experimentId, metadataResult.value[0], {
       columns: [column],
       distinct: true,
       orderBy: column,
@@ -205,13 +204,15 @@ export class ExperimentDataRepository {
       columns?: string[];
       filters?: FilterCondition[];
       aggregation?: AggregationSpec;
+      distinct?: boolean;
       orderBy?: string;
       orderDirection?: "ASC" | "DESC";
       limit?: number;
       offset?: number;
     } = {},
   ): Result<string> {
-    const { columns, filters, aggregation, orderBy, orderDirection, limit, offset } = options;
+    const { columns, filters, aggregation, distinct, orderBy, orderDirection, limit, offset } =
+      options;
     const {
       identifier: tableName,
       tableType,
@@ -284,6 +285,7 @@ export class ExperimentDataRepository {
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,
       aggregation,
+      distinct,
       orderBy,
       orderDirection,
       limit,
