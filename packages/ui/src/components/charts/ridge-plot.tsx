@@ -72,7 +72,6 @@ export function RidgePlot({
         line: { color: series.color, width: lineWidth },
         fill: fill ? "toself" : "none",
         fillcolor: fill ? withAlpha(series.color, fillOpacity) : undefined,
-        showlegend: false,
         hoverinfo: "name+x",
       }) as unknown as PlotData,
   );
