@@ -305,26 +305,47 @@ export function transformCartesianData(
     });
   };
 
-  // Dispatch by colour mode. Only cell 0 contributes to the shared legend /
-  // colorbar; later cells suppress legend + colorbar to stay deduped.
+  // Dispatch by colour mode. The continuous-color path still hides the
+  // colorbar on cells > 0 (only one colorbar per chart makes sense); the
+  // legend itself is deduped across cells below so each unique series
+  // appears once regardless of which facet first contains its data.
   const buildSeriesForCell = (
     cellRows: Record<string, unknown>[],
     cellIndex: number,
   ): CartesianSeries[] => {
     const { xaxisId, yaxisId } = buildAxisIds(cellIndex);
-    const showlegend = cellIndex === 0 ? undefined : false;
     if (isContinuousColor && colorColumn) {
+      // Continuous still suppresses extra colorbars; the per-cell
+      // showlegend flag here doubles as the colorbar gate.
+      const showlegend = cellIndex === 0 ? undefined : false;
       return buildContinuousColorCellSeries(cellRows, cellIndex, xaxisId, yaxisId, showlegend);
     }
     if (!colorColumn) {
-      return buildPlainCellSeries(cellRows, xaxisId, yaxisId, showlegend);
+      return buildPlainCellSeries(cellRows, xaxisId, yaxisId, undefined);
     }
-    return buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, showlegend);
+    return buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, undefined);
   };
 
   const allSeries: CartesianSeries[] = [];
   for (let i = 0; i < facetGroups.length; i++) {
     allSeries.push(...buildSeriesForCell(facetGroups[i].rows, i));
+  }
+
+  // Faceted charts emit one trace per (cell, series). Each species may
+  // only have data in a subset of cells, so dedupe legend entries by
+  // (legendgroup ?? name) and keep showlegend=true only on the first
+  // trace whose y array carries values -- i.e. the first facet that
+  // actually plots that series.
+  const seenLegendKeys = new Set<string>();
+  for (let i = 0; i < allSeries.length; i++) {
+    const trace = allSeries[i];
+    const hasData = trace.y.length > 0 && trace.y.some((v) => v !== null);
+    const key = trace.legendgroup ?? trace.name ?? "";
+    if (!hasData || seenLegendKeys.has(key)) {
+      allSeries[i] = { ...trace, showlegend: false };
+      continue;
+    }
+    seenLegendKeys.add(key);
   }
 
   // Plotly's `stackgroup` only stacks on numeric (linear or log) axes.
