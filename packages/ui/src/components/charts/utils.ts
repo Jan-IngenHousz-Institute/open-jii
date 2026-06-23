@@ -69,10 +69,12 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
 }
 
 // ISO 8601 date / datetime, with optional time, fractional seconds, and
-// timezone. Loose enough to catch the common shapes that come back from
-// Postgres / Databricks (e.g. `2025-08-26`, `2025-08-26 14:30:00`,
-// `2025-08-26T14:30:00.123Z`).
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+// timezone. Also accepts year-only (`2025`) and year-month (`2025-08`)
+// shapes -- these come back from `date_trunc('month', ...)` etc. and
+// previously fell through to "category", which silently disabled
+// stackgroup on area charts (Plotly only stacks on numeric/date axes).
+const ISO_DATE_RE =
+  /^\d{4}(-\d{2}(-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?)?)?$/;
 
 /**
  * Infer the right Plotly axis type for a column of values. Treating ISO
