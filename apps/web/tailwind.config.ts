@@ -138,12 +138,18 @@ export default {
           "60%": { transform: "scale(1.03)", opacity: "1" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
+        "shortcut-pop": {
+          "0%": { opacity: "0", transform: "translateY(12px) scale(0.92)" },
+          "60%": { opacity: "1", transform: "translateY(-3px) scale(1.04)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 1.5s ease-in-out infinite",
         "version-pop": "version-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "shortcut-pop": "shortcut-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1)",
       },
       fontFamily: {
         poppins: ["Poppins", "sans-serif"],
