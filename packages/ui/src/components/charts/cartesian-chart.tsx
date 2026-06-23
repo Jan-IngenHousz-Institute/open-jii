@@ -391,13 +391,13 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
             line: series.marker?.line,
           }
         : undefined,
-    // Plotly auto-defaults stacked traces to `fill: "tonexty"` so each band
-    // fills between its own line and the previous trace's line. Forcing
-    // "tozeroy" here would make every fill drop to y=0 and the topmost
-    // trace would cover the others. Leave fill undefined when stacking
-    // so Plotly's stackgroup default ("tonexty") takes over.
+    // Stacked area traces need fill: "tonexty" so each band fills between
+    // its own line and the trace below. "tozeroy" would make every fill
+    // drop to y=0 and the topmost trace would cover the others. Plotly
+    // claims to auto-default this when stackgroup is set, but in practice
+    // (v3 + react-plotly.js) only an explicit value renders the bands.
     fill:
-      series.fill ?? (series.stackgroup ? undefined : isArea ? "tozeroy" : "none"),
+      series.fill ?? (series.stackgroup ? "tonexty" : isArea ? "tozeroy" : "none"),
     fillcolor: series.fillcolor,
     connectgaps: series.connectgaps !== false,
     stackgroup: series.stackgroup,
