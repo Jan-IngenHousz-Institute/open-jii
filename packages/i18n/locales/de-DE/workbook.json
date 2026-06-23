@@ -56,6 +56,8 @@
     "cellSummary": {
       "protocol_one": "{{count}} Protokoll",
       "protocol_other": "{{count}} Protokolle",
+      "command_one": "{{count}} Befehl",
+      "command_other": "{{count}} Befehle",
       "macro_one": "{{count}} Makro",
       "macro_other": "{{count}} Makros",
       "question_one": "{{count}} Frage",
@@ -71,7 +73,7 @@
     "expand": "Ausgabe ausklappen",
     "collapse": "Ausgabe einklappen",
     "clear": "Ausgabe löschen",
-    "empty": "Keine Messdaten verfügbar — führen Sie zuerst eine Protokollzelle aus",
+    "empty": "Keine Messdaten verfügbar - führen Sie zuerst eine Protokoll- oder Befehlszelle aus",
     "noData": "Keine Ausgabedaten",
     "tabTable": "Tabelle",
     "tabJson": "JSON",

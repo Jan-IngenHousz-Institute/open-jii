@@ -43,7 +43,22 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
   const content = node.content as Record<string, unknown>;
 
   switch (node.type) {
-    case "measurement":
+    case "measurement": {
+      // A measurement node carries either a protocol reference or an inline command.
+      const inline = content.command as { format?: string; content?: string } | undefined;
+      if (inline && typeof inline.content === "string") {
+        return {
+          id: node.id,
+          type: "command",
+          isCollapsed: false,
+          payload: {
+            format: (inline.format as "string" | "json" | "yaml" | undefined) ?? "string",
+            content: inline.content,
+            // Drop the auto-derived name so a round-trip doesn't fabricate one.
+            ...(node.name && node.name !== inline.content ? { name: node.name } : {}),
+          },
+        };
+      }
       return {
         id: node.id,
         type: "protocol",
@@ -54,6 +69,7 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
           name: node.name,
         },
       };
+    }
 
     case "analysis":
       return {

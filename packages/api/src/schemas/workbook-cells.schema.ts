@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { sanitizeQuestionLabel, zQuestionContent } from "./experiment.schema";
+import { sanitizeQuestionLabel, zCommandFormat, zQuestionContent } from "./experiment.schema";
 import { zMacroLanguage } from "./macro.schema";
 
 const zBaseCell = z.object({
@@ -19,6 +19,23 @@ const zProtocolPayload = z
 export const zProtocolCell = zBaseCell.extend({
   type: z.literal("protocol"),
   payload: zProtocolPayload,
+});
+
+// An inline command cell sends a raw string (e.g. `hello`, `battery`), JSON, or
+// YAML straight to the instrument. Kept as a separate cell type (not folded into
+// the protocol cell) so old mobile apps, whose bundled cells->flow only knows
+// "protocol", keep rendering protocol cells and simply skip command cells.
+const zCommandPayload = z
+  .object({
+    format: zCommandFormat,
+    content: z.string().min(1, "Command content is required"),
+    name: z.string().optional(),
+  })
+  .strict();
+
+export const zCommandCell = zBaseCell.extend({
+  type: z.literal("command"),
+  payload: zCommandPayload,
 });
 
 // Macros are always persisted entities; the cell stores a ref. Versioning happens at the experiment/snapshot level.
@@ -87,6 +104,7 @@ export const zMarkdownCell = zBaseCell.extend({
 
 export const zWorkbookCell = z.union([
   zProtocolCell,
+  zCommandCell,
   zMacroCell,
   zQuestionCell,
   zBranchCell,
@@ -113,6 +131,7 @@ export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx
 });
 
 export type ProtocolCell = z.infer<typeof zProtocolCell>;
+export type CommandCell = z.infer<typeof zCommandCell>;
 export type MacroCell = z.infer<typeof zMacroCell>;
 export type QuestionCell = z.infer<typeof zQuestionCell>;
 export type BranchCell = z.infer<typeof zBranchCell>;
@@ -123,6 +142,7 @@ export type MarkdownCell = z.infer<typeof zMarkdownCell>;
 
 export type WorkbookCell =
   | ProtocolCell
+  | CommandCell
   | MacroCell
   | QuestionCell
   | BranchCell

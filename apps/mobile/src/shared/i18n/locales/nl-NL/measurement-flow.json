@@ -163,6 +163,17 @@
     "retryMeasurement": "Meting opnieuw proberen",
     "connectToDevice": "Verbinden met apparaat"
   },
+  "commandNode": {
+    "heading": "Apparaatopdracht",
+    "responseLabel": "Antwoord",
+    "run": "Opdracht uitvoeren",
+    "running": "Bezig…",
+    "continue": "Doorgaan",
+    "toast": {
+      "notConnected": "Niet verbonden met sensor",
+      "error": "Opdracht mislukt"
+    }
+  },
   "questionNode": {
     "autoProceeded": {
       "currentPlot": "Jouw huidige plot"

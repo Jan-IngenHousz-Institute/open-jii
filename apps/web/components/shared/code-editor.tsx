@@ -4,6 +4,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
+import { yaml } from "@codemirror/lang-yaml";
 import { StreamLanguage, syntaxTree } from "@codemirror/language";
 import { r } from "@codemirror/legacy-modes/mode/r";
 import { forceLinting, lintGutter, linter } from "@codemirror/lint";
@@ -13,7 +14,7 @@ import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { useCallback, useMemo } from "react";
 
-export type CodeLanguage = "json" | "javascript" | "python" | "r" | "markdown";
+export type CodeLanguage = "json" | "javascript" | "python" | "r" | "markdown" | "yaml";
 export type { Diagnostic };
 
 export type LintSource = (doc: string) => Diagnostic[];
@@ -30,6 +31,8 @@ const getLanguageExtension = (language: CodeLanguage) => {
       return StreamLanguage.define(r);
     case "markdown":
       return markdown();
+    case "yaml":
+      return yaml();
   }
 };
 

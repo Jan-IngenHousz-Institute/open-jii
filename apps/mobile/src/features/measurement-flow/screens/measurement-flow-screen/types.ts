@@ -49,6 +49,13 @@ export interface MeasurementContent {
   protocolId: string;
 }
 
+// An inline device command (raw string / JSON / YAML) carried on a measurement
+// node when the workbook cell is an inline command rather than a protocol ref.
+export interface InlineCommandContent {
+  format: "string" | "json" | "yaml";
+  content: string;
+}
+
 export interface AnalysisContent {
   params: Record<string, any>;
   macroId: string;
