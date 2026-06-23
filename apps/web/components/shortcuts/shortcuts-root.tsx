@@ -16,14 +16,11 @@ const G_MODE_TIMEOUT_MS = 1500;
 const COMMAND_PALETTE_OPEN_EVENT = "openjii:open-command-palette";
 const CHEATSHEET_OPEN_EVENT = "openjii:open-cheatsheet";
 
-// Single-key shortcuts manage preventDefault themselves: the handler bails when
-// focus is in a field/widget (TanStack's tag-only `ignoreInputs` misses ARIA
-// widgets), and only swallows the key when it actually acts. Default options
-// would preventDefault/stopPropagation on match — before our guard runs.
+// Guard single-key shortcuts ourselves: the defaults preventDefault/stopPropagation
+// on match, before our focus check runs.
 const GUARD_OPTS = { preventDefault: false, stopPropagation: false } as const;
 
-// True when the page shortcut should be ignored because focus is in an
-// editable field/widget. Checks both the focused element and the event target.
+// True when focus is in an editable field/widget (checks active element + event target).
 function blockedByFocus(event: KeyboardEvent): boolean {
   return isEditableTarget(document.activeElement) || isEditableTarget(event.target);
 }
@@ -61,8 +58,7 @@ interface GoToShortcut {
   action?: () => void;
 }
 
-// One `G` then <key> sequence. A component (not a loop) so the hook count stays
-// stable across renders.
+// One G-then-<key> sequence, as a component so the hook count stays stable.
 function GoToSequence({
   shortcut,
   onNavigate,
@@ -144,14 +140,13 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
     GUARD_OPTS,
   );
 
-  // `?` is Shift+/ — bind by raw key since it isn't in the typed Hotkey union.
+  // "?" is Shift+/, bound by raw key since it isn't in the typed Hotkey union.
   useHotkey(
     { key: "?", shift: true },
     (event) => {
       if (blockedByFocus(event)) return;
       event.preventDefault();
-      // Opening the sheet is its own feedback — and emitting a hint here would
-      // immediately trip the sheet's dismiss-on-shortcut watcher.
+      // No hint: opening the sheet is the feedback, and a hint would trip its dismiss watcher.
       window.dispatchEvent(new Event(CHEATSHEET_OPEN_EVENT));
     },
     GUARD_OPTS,

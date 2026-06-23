@@ -66,10 +66,8 @@ export function CheatsheetDialog() {
     return () => window.removeEventListener(CHEATSHEET_OPEN_EVENT, onToggle);
   }, []);
 
-  // The cheatsheet is a non-blocking reference: it doesn't trap the keyboard
-  // (modal={false} + autofocus suppressed below), so shortcuts keep firing while
-  // it's open, and it dismisses itself once one does. Every fired shortcut pushes
-  // a hint, so we close on the first hint raised after the sheet opened.
+  // Non-blocking reference (modal={false} + autofocus suppressed) so shortcuts keep
+  // firing; dismiss on the first hint raised after it opened.
   const hint = useShortcutHint();
   const latestHint = React.useRef(hint);
   latestHint.current = hint;

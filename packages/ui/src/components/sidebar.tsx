@@ -167,8 +167,7 @@ const SidebarProvider = React.forwardRef<
       writeStoredSidebar({ width });
     }, [dragging, width]);
 
-    // Helper to toggle the sidebar. The ⌘/Ctrl+B shortcut that drives this is
-    // registered in the app's ShortcutsRoot (TanStack Hotkeys), not here.
+    // Toggle the sidebar. The ⌘/Ctrl+B shortcut is registered app-side, not here.
     const toggleSidebar = React.useCallback(() => {
       return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
     }, [isMobile, setOpen, setOpenMobile]);

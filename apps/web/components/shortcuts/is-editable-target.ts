@@ -1,5 +1,3 @@
-// Roles where letters/arrows mean type-ahead or option navigation, so a
-// global single-key shortcut must not also fire.
 const EDITABLE_ROLES = new Set([
   "textbox",
   "searchbox",
@@ -14,13 +12,10 @@ const EDITABLE_ROLES = new Set([
   "slider",
 ]);
 
-// Whether keyboard focus sits in a field/widget that should swallow the key.
-// Generalises the old INPUT/TEXTAREA/SELECT/contentEditable check with the
-// ARIA widgets (radix Select = button[role=combobox] + [role=listbox], cmdk,
-// comboboxes) that TanStack's tag-only `ignoreInputs` does not catch.
+// True when focus is in a field/widget that should swallow the key, including
+// ARIA widgets (e.g. radix Select) that TanStack's tag-only ignoreInputs misses.
 export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
-  // A modal owns the keyboard — don't let page shortcuts act behind it.
   if (target.closest("[role='dialog']")) return true;
   if (target.isContentEditable) return true;
   const tag = target.tagName;

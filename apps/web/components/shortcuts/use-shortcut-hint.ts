@@ -10,9 +10,7 @@ export interface ShortcutHint {
   label: string;
 }
 
-// Dedicated single-slot store, separate from the toast store so shortcut
-// feedback never evicts a real toast (and vice versa). Replace-on-new: a
-// fresh shortcut overwrites whatever is showing and restarts the timer.
+// Single-slot store, kept separate from the toast store so the two never evict each other.
 let current: ShortcutHint | null = null;
 let counter = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;

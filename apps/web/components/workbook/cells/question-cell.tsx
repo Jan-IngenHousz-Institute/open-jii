@@ -165,8 +165,7 @@ export function QuestionCellComponent({
     onRun?.();
   };
 
-  // Returns whether the answer was actually submitted (false when blocked by
-  // the required-field guard) so callers don't report success on a no-op.
+  // Returns whether the answer actually submitted, so callers don't treat a no-op as success.
   const handleSubmitAnswer = () => {
     if (question.required && !pendingAnswer.trim()) return false;
     onUpdate({ ...cell, answer: pendingAnswer, isAnswered: true });

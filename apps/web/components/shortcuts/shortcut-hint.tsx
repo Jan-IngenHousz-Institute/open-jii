@@ -4,11 +4,8 @@ import { Kbd } from "@/components/command/kbd";
 
 import { useShortcutHint } from "./use-shortcut-hint";
 
-// Bottom-center feedback when a global shortcut fires. It has no surface of its
-// own — the keycaps pop in and read as a tactile press rather than a toast.
-// Informational only, so it never captures pointer events.
-// NOTE: the keyframes live inline until Tailwind is upgraded on main, after
-// which this should move to an `animate-*` theme utility.
+// Bottom-center, pointer-events-none feedback shown when a shortcut fires.
+// TODO: move the inline keyframes to an animate-* theme utility after the Tailwind upgrade.
 export function ShortcutHint() {
   const hint = useShortcutHint();
 
