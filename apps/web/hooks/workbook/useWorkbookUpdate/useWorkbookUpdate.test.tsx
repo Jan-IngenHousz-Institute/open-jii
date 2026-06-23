@@ -124,28 +124,4 @@ describe("useWorkbookUpdate", () => {
       expect(cachedList?.body[0].name).toBe("Original");
     });
   });
-
-  it("invalidates breadcrumbs cache on settled", async () => {
-    server.mount(contract.workbooks.updateWorkbook, {
-      body: createWorkbook({ id: "wb-1" }),
-    });
-
-    const queryClient = createTestQueryClient();
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const { result } = renderHook(() => useWorkbookUpdate("wb-1"), { queryClient });
-
-    act(() => {
-      result.current.mutate({
-        params: { id: "wb-1" },
-        body: { name: "Updated" },
-      });
-    });
-
-    await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: ["breadcrumbs"] }),
-      );
-    });
-  });
 });

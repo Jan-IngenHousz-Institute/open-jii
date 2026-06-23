@@ -63,58 +63,50 @@ function toInternalHref(href: string): string {
 
 export function Breadcrumbs({ locale }: BreadcrumbsProps) {
   const { t } = useTranslation("common");
-  const { data: segments } = useBreadcrumbs(locale);
+  const segments = useBreadcrumbs(locale);
   // The first crumb is usually "platform" (no section icon); attach the
   // sidebar-matching icon to the first segment that actually has one.
-  const leadingIconSegment = segments?.find((item) => item.segment in SECTION_ICONS)?.segment;
+  const leadingIconSegment = segments.find((item) => item.segment in SECTION_ICONS)?.segment;
 
-  // Reserve a constant 28px row so navigating between routes never shifts
-  // the content below — even the platform root (which has no breadcrumb)
-  // keeps the slot.
+  // Section roots have no trail — render nothing so the heading isn't pushed down.
+  if (segments.length === 0) {
+    return null;
+  }
+
   return (
     <nav
       aria-label="breadcrumb"
       className="text-muted-foreground flex min-h-7 items-center text-sm"
     >
-      {segments && segments.length > 0 ? (
-        <ol className="flex flex-wrap items-center gap-1.5">
-          {segments.map((item, index) => {
-            const isLast = index === segments.length - 1;
-            const title =
-              item.title !== item.segment ? item.title : getTranslatedTitle(item.segment, t);
-            const Icon =
-              item.segment === leadingIconSegment ? SECTION_ICONS[item.segment] : undefined;
+      <ol className="flex flex-wrap items-center gap-1.5">
+        {segments.map((item, index) => {
+          const title = getTranslatedTitle(item.segment, t);
+          const Icon =
+            item.segment === leadingIconSegment ? SECTION_ICONS[item.segment] : undefined;
 
-            return (
-              <React.Fragment key={item.href}>
-                {index !== 0 && (
-                  <li role="presentation" aria-hidden="true" className="flex items-center">
-                    <ChevronRight className="text-muted-foreground/60 size-3.5 shrink-0" />
-                  </li>
-                )}
-                <li className="inline-flex items-center gap-1.5">
-                  {Icon && <Icon className="text-muted-foreground size-3.5 shrink-0" />}
-                  {isLast ? (
-                    <span aria-current="page" className="text-foreground font-medium">
-                      {title}
-                    </span>
-                  ) : (
-                    <Link
-                      href={toInternalHref(item.href)}
-                      className={cn(
-                        "hover:text-foreground transition-colors",
-                        "focus-visible:ring-ring focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                      )}
-                    >
-                      {title}
-                    </Link>
-                  )}
+          return (
+            <React.Fragment key={item.href}>
+              {index !== 0 && (
+                <li role="presentation" aria-hidden="true" className="flex items-center">
+                  <ChevronRight className="text-muted-foreground/60 size-3.5 shrink-0" />
                 </li>
-              </React.Fragment>
-            );
-          })}
-        </ol>
-      ) : null}
+              )}
+              <li className="inline-flex items-center gap-1.5">
+                {Icon && <Icon className="text-muted-foreground size-3.5 shrink-0" />}
+                <Link
+                  href={toInternalHref(item.href)}
+                  className={cn(
+                    "hover:text-foreground transition-colors",
+                    "focus-visible:ring-ring focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                  )}
+                >
+                  {title}
+                </Link>
+              </li>
+            </React.Fragment>
+          );
+        })}
+      </ol>
     </nav>
   );
 }

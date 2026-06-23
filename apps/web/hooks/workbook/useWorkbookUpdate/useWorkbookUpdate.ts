@@ -62,9 +62,6 @@ export const useWorkbookUpdate = (workbookId: string, props: WorkbookUpdateProps
       await queryClient.invalidateQueries({
         queryKey: ["workbooks"],
       });
-      await queryClient.invalidateQueries({
-        queryKey: ["breadcrumbs"],
-      });
     },
     onSuccess: (data) => {
       if (props.onSuccess) {

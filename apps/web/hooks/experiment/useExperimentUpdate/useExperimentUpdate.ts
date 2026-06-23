@@ -73,10 +73,6 @@ export const useExperimentUpdate = () => {
       await queryClient.invalidateQueries({
         queryKey: ["experiments"],
       });
-      // Invalidate breadcrumbs to update entity names
-      await queryClient.invalidateQueries({
-        queryKey: ["breadcrumbs"],
-      });
     },
   });
 };
