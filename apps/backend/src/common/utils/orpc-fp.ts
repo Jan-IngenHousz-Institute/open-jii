@@ -13,14 +13,12 @@ const ORPC_CODE_BY_STATUS: Record<number, string> = {
   429: "TOO_MANY_REQUESTS",
 };
 
-export function throwOrpcFailure(
-  failure: Failure<AppError>,
+export function throwOrpcError(
+  error: AppError,
   logger: Logger,
   operation?: string,
   context?: string,
 ): never {
-  const error = failure.error;
-
   const logObject: Record<string, unknown> = { msg: error.message, errorCode: error.code };
   if (operation) logObject.operation = operation;
   if (context) logObject.context = context;
@@ -40,4 +38,13 @@ export function throwOrpcFailure(
       ...(process.env.NODE_ENV !== "production" && error.details ? { details: error.details } : {}),
     },
   });
+}
+
+export function throwOrpcFailure(
+  failure: Failure<AppError>,
+  logger: Logger,
+  operation?: string,
+  context?: string,
+): never {
+  return throwOrpcError(failure.error, logger, operation, context);
 }
