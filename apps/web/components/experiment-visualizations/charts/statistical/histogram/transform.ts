@@ -72,6 +72,7 @@ export function transformHistogramData(
             catIndex + yIndex * globalCategoryValues.length,
             colorMap,
             key,
+            baseName,
           );
           return {
             x: orientation === "v" ? values : undefined,

@@ -12,9 +12,13 @@ import { Input } from "@repo/ui/components/input";
 
 import { useExperimentDistinctValues } from "../../../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 import type { ChartFormValues } from "../../../charts/chart-config";
-import { CATEGORY_PALETTE, getCategoryColor } from "../../../charts/colors/palettes";
+import {
+  CATEGORY_PALETTE,
+  composeColorMapKey,
+  getCategoryColor,
+} from "../../../charts/colors/palettes";
 import { toBucketKey } from "../../../charts/data/cell-coercion";
-import { firstDataSourceByRole } from "../../../charts/data/data-sources";
+import { dataSourcesByRole, firstDataSourceByRole } from "../../../charts/data/data-sources";
 
 /** Cap the override list so a high-cardinality column doesn't make the
  *  shelf scrollable into oblivion. The user picks colors for the top N
@@ -25,11 +29,23 @@ interface CategoricalColorMapProps {
   form: UseFormReturn<ChartFormValues>;
 }
 
+interface Category {
+  key: string;
+  label: string;
+}
+
 /**
  * Per-category color picker. Reads the chosen color-dimension column,
  * fetches its distinct values, and renders one row per value with a
- * native color input. Writes to `config.colorMap[bucketKey]`, the same
- * map the renderer's `getCategoryColor` already reads.
+ * native color input.
+ *
+ * - With a single Y series (or none), writes plain `colorMap[categoryKey]`.
+ *   That key applies to every series for that category.
+ * - With 2+ Y series, renders one section per Y series and writes
+ *   composite `colorMap["seriesKey::categoryKey"]` entries. The renderer's
+ *   `getCategoryColor` tries the composite first, falls back to the plain
+ *   category key, then to the palette -- so old single-key colorMaps keep
+ *   working as "default for all series".
  */
 export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   const { t } = useTranslation("experimentVisualizations");
@@ -45,6 +61,15 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   const colorEntry = firstDataSourceByRole(sources, "color");
   const colorColumn = colorEntry?.source.columnName ?? "";
 
+  // Series keys come from Y data sources with a column picked. Mirrors
+  // the renderer's seriesKey choice (`source.alias ?? source.columnName`)
+  // so the swatch keys line up with what `getCategoryColor` looks up.
+  const seriesKeys = useMemo(() => {
+    return dataSourcesByRole(sources, "y")
+      .map(({ source }) => source.alias ?? source.columnName)
+      .filter((s): s is string => Boolean(s) && s.length > 0);
+  }, [sources]);
+
   const {
     values: rawValues,
     truncated,
@@ -59,9 +84,9 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
 
   // Sort for stable visual order across renders (the endpoint may return
   // values in arbitrary order). Stringify once for the comparator.
-  const categories = useMemo(() => {
+  const categories = useMemo<Category[]>(() => {
     const seen = new Set<string>();
-    const out: { key: string; label: string }[] = [];
+    const out: Category[] = [];
     for (const value of rawValues) {
       const key = toBucketKey(value);
       if (seen.has(key)) continue;
@@ -72,13 +97,13 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
     return out;
   }, [rawValues, t]);
 
-  const setOverride = (key: string, hex: string) => {
-    form.setValue("config.colorMap", { ...colorMap, [key]: hex }, { shouldDirty: true });
+  const setOverride = (mapKey: string, hex: string) => {
+    form.setValue("config.colorMap", { ...colorMap, [mapKey]: hex }, { shouldDirty: true });
   };
 
-  const clearOverride = (key: string) => {
+  const clearOverride = (mapKey: string) => {
     const next = { ...colorMap };
-    delete next[key];
+    delete next[mapKey];
     form.setValue("config.colorMap", next, { shouldDirty: true });
   };
 
@@ -87,9 +112,6 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   };
 
   if (!experimentId || !tableName || !colorColumn) {
-    // Outside the workspace (e.g. dashboard preview) or before a column
-    // is picked, just show the palette swatches so users know what they
-    // get by default.
     return <PalettePreview />;
   }
 
@@ -109,7 +131,8 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
     );
   }
 
-  const hasAnyOverride = categories.some((c) => Boolean(colorMap[c.key]));
+  const hasMultipleSeries = seriesKeys.length >= 2;
+  const hasAnyOverride = Object.keys(colorMap).length > 0;
 
   return (
     <div className="space-y-2">
@@ -130,24 +153,86 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
         )}
       </div>
 
-      {/* Bordered container groups the rows visually and scopes the scroll.
-          Scrolls past ~6 rows so a high-cardinality column doesn't push
-          the rest of the shelf off-screen. */}
+      {hasMultipleSeries ? (
+        <div className="space-y-3">
+          {seriesKeys.map((seriesKey) => (
+            <CategorySwatchList
+              key={seriesKey}
+              heading={seriesKey}
+              categories={categories}
+              colorMap={colorMap}
+              keyFor={(c) => composeColorMapKey(seriesKey, c.key)}
+              fallbackKeyFor={(c) => c.key}
+              onSet={setOverride}
+              onClear={clearOverride}
+            />
+          ))}
+        </div>
+      ) : (
+        <CategorySwatchList
+          categories={categories}
+          colorMap={colorMap}
+          keyFor={(c) => c.key}
+          onSet={setOverride}
+          onClear={clearOverride}
+        />
+      )}
+
+      {truncated && (
+        <p className="text-muted-foreground text-[11px] italic">
+          {t("workspace.shelves.colorMap.truncated", { count: MAX_CATEGORIES })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface CategorySwatchListProps {
+  heading?: string;
+  categories: Category[];
+  colorMap: Record<string, string>;
+  /** colorMap key to read/write for this row (plain or composite). */
+  keyFor: (c: Category) => string;
+  /** Fallback colorMap key probed if `keyFor` has no override (used by
+   *  the multi-series mode so categories inherit the plain entry when no
+   *  series-specific override is set). */
+  fallbackKeyFor?: (c: Category) => string;
+  onSet: (mapKey: string, hex: string) => void;
+  onClear: (mapKey: string) => void;
+}
+
+function CategorySwatchList({
+  heading,
+  categories,
+  colorMap,
+  keyFor,
+  fallbackKeyFor,
+  onSet,
+  onClear,
+}: CategorySwatchListProps) {
+  const { t } = useTranslation("experimentVisualizations");
+  return (
+    <div className="space-y-1.5">
+      {heading && (
+        <div className="text-foreground text-xs font-semibold">{heading}</div>
+      )}
       <div className="bg-muted/30 max-h-[220px] overflow-y-auto rounded-md border p-2">
         <ul className="space-y-1">
           {categories.map((c, i) => {
-            const effective = getCategoryColor(i, colorMap, c.key);
-            const isOverridden = Boolean(colorMap[c.key]);
+            const mapKey = keyFor(c);
+            const explicit = colorMap[mapKey];
+            const fallbackKey = fallbackKeyFor?.(c);
+            const fallbackHit = fallbackKey ? colorMap[fallbackKey] : undefined;
+            const effective = explicit ?? fallbackHit ?? getCategoryColor(i, colorMap, c.key);
+            const isOverridden = Boolean(explicit);
             return (
-              <li key={c.key} className="flex items-center gap-2 py-0.5">
+              <li key={mapKey} className="flex items-center gap-2 py-0.5">
                 <span
                   className="text-foreground min-w-0 max-w-[40%] shrink-0 truncate text-xs font-medium"
                   title={c.label}
                 >
                   {c.label}
                 </span>
-                {/* Dotted leader visually ties label to controls and gives the
-                    row a settings-list feel rather than a flat input grid. */}
                 <span
                   aria-hidden
                   className="border-muted-foreground/25 min-w-3 flex-1 border-b border-dotted"
@@ -156,7 +241,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
                   type="color"
                   className="h-7 w-9 shrink-0 p-1"
                   value={effective}
-                  onChange={(e) => setOverride(c.key, e.target.value)}
+                  onChange={(e) => onSet(mapKey, e.target.value)}
                   aria-label={t("workspace.shelves.colorMap.pickerLabel", { name: c.label })}
                 />
                 <Input
@@ -164,7 +249,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
                   className="h-7 w-[74px] shrink-0 px-1.5 font-mono text-[11px] uppercase"
                   placeholder="#000000"
                   value={effective}
-                  onChange={(e) => setOverride(c.key, e.target.value)}
+                  onChange={(e) => onSet(mapKey, e.target.value)}
                   aria-label={t("workspace.shelves.colorMap.pickerLabel", { name: c.label })}
                 />
                 {isOverridden ? (
@@ -173,14 +258,12 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
                     variant="ghost"
                     size="sm"
                     className="text-muted-foreground hover:text-foreground h-7 w-7 shrink-0 p-0"
-                    onClick={() => clearOverride(c.key)}
+                    onClick={() => onClear(mapKey)}
                     aria-label={t("workspace.shelves.colorMap.resetOne", { name: c.label })}
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                   </Button>
                 ) : (
-                  // Keep alignment when the reset button is hidden so the
-                  // row doesn't visually jitter as overrides toggle.
                   <span className="h-7 w-7 shrink-0" aria-hidden />
                 )}
               </li>
@@ -188,12 +271,6 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
           })}
         </ul>
       </div>
-
-      {truncated && (
-        <p className="text-muted-foreground text-[11px] italic">
-          {t("workspace.shelves.colorMap.truncated", { count: MAX_CATEGORIES })}
-        </p>
-      )}
     </div>
   );
 }

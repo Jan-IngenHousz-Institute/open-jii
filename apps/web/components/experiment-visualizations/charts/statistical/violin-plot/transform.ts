@@ -160,6 +160,7 @@ export function transformViolinPlotData(
             catIndex + yIndex * globalCategoryValues.length,
             colorMap,
             key,
+            baseName,
           );
           return baseSeries(
             yValues,

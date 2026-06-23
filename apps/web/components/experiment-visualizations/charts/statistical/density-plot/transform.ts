@@ -138,6 +138,7 @@ export function transformDensityPlotData(
             b.catIndex + b.yIndex * globalCategoryValues.length,
             colorMap,
             b.key,
+            baseName,
           );
           return buildSeries(
             b.values,

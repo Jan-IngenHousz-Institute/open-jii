@@ -284,6 +284,7 @@ export function transformCartesianData(
             catIndex + seriesOrdinal * globalCategoryLabels.length,
             colorMap,
             key,
+            baseName,
           ),
           sizeContext: sizeContextForGroup,
           legendgroup: effectiveYEntries.length > 1 ? baseName : undefined,

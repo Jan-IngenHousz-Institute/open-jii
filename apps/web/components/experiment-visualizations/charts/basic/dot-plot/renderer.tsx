@@ -139,6 +139,7 @@ export function DotPlotRenderer({
           catIndex + yIndex * categoryValues.length,
           colorMap,
           key,
+          baseName,
         );
         const { x, y, rows: pairedRows } = pairedCells(groupRows, xColumn, yRowKey);
         return {
