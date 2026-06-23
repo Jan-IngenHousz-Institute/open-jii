@@ -44,11 +44,12 @@ export function transformDensityPlotData(
     xaxisId: string | undefined,
     yaxisId: string | undefined,
     showlegend: boolean | undefined,
+    fixedRange: [number, number] | undefined,
   ): LineSeriesData | null => {
     if (values.length < 2) {
       return null;
     }
-    const { xs, ys } = computeKDE(values, cumulative);
+    const { xs, ys } = computeKDE(values, cumulative, fixedRange);
     const fillKey = orientation === "v" ? "tozeroy" : "tozerox";
     return {
       x: orientation === "v" ? xs : ys,
@@ -65,26 +66,41 @@ export function transformDensityPlotData(
     };
   };
 
+  // Cumulative curves need a shared x-grid across all series so each CDF
+  // rises from 0 and saturates at 1 over the same span. With per-series
+  // ranges, the curve stops at its own max and Plotly's fill polygon
+  // closes vertically back to the baseline, drawing a wall on the right.
+  const unionRangeOf = (allValues: number[][]): [number, number] | undefined => {
+    if (!cumulative) return undefined;
+    const flat = allValues.flat();
+    if (flat.length < 2) return undefined;
+    return [Math.min(...flat), Math.max(...flat)];
+  };
+
   return buildFacetSeries<LineSeriesData>(
     { rows, facetColumn, colorColumn, chartConfig },
     ({ cellRows, xaxisId, yaxisId, showlegend, globalCategoryKeys, globalCategoryValues }) => {
       if (!colorColumn) {
+        const perSeriesValues = yEntries.map(({ source }) =>
+          cellRows
+            .map((row) => coerceCell(row[source.columnName]))
+            .filter((v): v is number => typeof v === "number"),
+        );
+        const fixedRange = unionRangeOf(perSeriesValues);
         return yEntries
           .map(({ source }, index): LineSeriesData | null => {
-            const values = cellRows
-              .map((row) => coerceCell(row[source.columnName]))
-              .filter((v): v is number => typeof v === "number");
             const seriesColor = Array.isArray(chartConfig.color)
               ? chartConfig.color[index]
               : chartConfig.color;
             return buildSeries(
-              values,
+              perSeriesValues[index] ?? [],
               source.alias ?? source.columnName,
               seriesColor,
               undefined,
               xaxisId,
               yaxisId,
               showlegend,
+              fixedRange,
             );
           })
           .filter((s): s is LineSeriesData => s !== null);
@@ -92,31 +108,47 @@ export function transformDensityPlotData(
 
       const cellIndicesByCategory = bucketIndicesByColumn(cellRows, colorColumn);
 
-      return yEntries
-        .flatMap(({ source }, yIndex) => {
-          const baseName = source.alias ?? source.columnName;
-          return globalCategoryValues.map((categoryValue, catIndex): LineSeriesData | null => {
-            const key = globalCategoryKeys[catIndex];
-            const indices = cellIndicesByCategory.get(key) ?? [];
-            const categoryLabel = categoryValue == null ? "(none)" : String(categoryValue);
-            const values = indices
-              .map((i) => coerceCell(cellRows[i][source.columnName]))
-              .filter((v): v is number => typeof v === "number");
-            const seriesColor = getCategoryColor(
-              catIndex + yIndex * globalCategoryValues.length,
-              colorMap,
-              key,
-            );
-            return buildSeries(
-              values,
-              yEntries.length === 1 ? categoryLabel : `${baseName} - ${categoryLabel}`,
-              seriesColor,
-              yEntries.length > 1 ? baseName : undefined,
-              xaxisId,
-              yaxisId,
-              showlegend,
-            );
-          });
+      // Pre-collect each (yEntry, category) series's values so the cumulative
+      // union range can be computed before the KDE calls.
+      type Bucket = {
+        values: number[];
+        source: (typeof yEntries)[number]["source"];
+        yIndex: number;
+        catIndex: number;
+        categoryValue: unknown;
+        key: string;
+      };
+      const buckets: Bucket[] = yEntries.flatMap(({ source }, yIndex) =>
+        globalCategoryValues.map((categoryValue, catIndex) => {
+          const key = globalCategoryKeys[catIndex];
+          const indices = cellIndicesByCategory.get(key) ?? [];
+          const values = indices
+            .map((i) => coerceCell(cellRows[i][source.columnName]))
+            .filter((v): v is number => typeof v === "number");
+          return { values, source, yIndex, catIndex, categoryValue, key };
+        }),
+      );
+      const fixedRange = unionRangeOf(buckets.map((b) => b.values));
+
+      return buckets
+        .map((b): LineSeriesData | null => {
+          const baseName = b.source.alias ?? b.source.columnName;
+          const categoryLabel = b.categoryValue == null ? "(none)" : String(b.categoryValue);
+          const seriesColor = getCategoryColor(
+            b.catIndex + b.yIndex * globalCategoryValues.length,
+            colorMap,
+            b.key,
+          );
+          return buildSeries(
+            b.values,
+            yEntries.length === 1 ? categoryLabel : `${baseName} - ${categoryLabel}`,
+            seriesColor,
+            yEntries.length > 1 ? baseName : undefined,
+            xaxisId,
+            yaxisId,
+            showlegend,
+            fixedRange,
+          );
         })
         .filter((s): s is LineSeriesData => s !== null);
     },
