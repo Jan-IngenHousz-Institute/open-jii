@@ -410,7 +410,8 @@ function applyManualStacking(
     }
 
     const cumulative = new Array<number>(xLen).fill(0);
-    for (const idx of indices) {
+    for (let pos = 0; pos < indices.length; pos++) {
+      const idx = indices[pos];
       const trace = result[idx];
       if (!trace?.y) continue;
       const newY: number[] = [];
@@ -425,9 +426,11 @@ function applyManualStacking(
         newY.push(cumulative[xi] ?? 0);
       }
       // Clear stackgroup so Plotly doesn't restack the already-cumulative
-      // y values. Force fill: "tonexty" so each band fills between its
-      // line and the previous trace's line.
-      result[idx] = { ...trace, y: newY, stackgroup: undefined, fill: "tonexty" };
+      // y values. The bottom trace in a stack fills from its line down to
+      // the x-axis ("tozeroy"); subsequent traces fill DOWN to the trace
+      // below them ("tonexty"), producing the band-between-lines visual.
+      const fill = pos === 0 ? "tozeroy" : "tonexty";
+      result[idx] = { ...trace, y: newY, stackgroup: undefined, fill };
     }
   }
   return result;
