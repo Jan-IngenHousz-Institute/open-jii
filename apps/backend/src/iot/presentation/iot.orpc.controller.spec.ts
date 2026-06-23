@@ -7,7 +7,7 @@ import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 
-describe("IotController", () => {
+describe("IotOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let awsAdapter: AwsAdapter;
