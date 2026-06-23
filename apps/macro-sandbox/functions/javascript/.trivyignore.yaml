@@ -92,6 +92,13 @@ vulnerabilities:
   - id: CVE-2026-31790
     statement: "RSASVE info disclosure. No RSA key encapsulation."
 
+  - id: CVE-2026-34180
+    statement: >-
+      Heap buffer over-read in ASN.1 decoding. Sandbox parses no
+      certificates and has no TLS. Fixed in amzn2023.0.5; awaiting
+      AWS base image republish.
+    expired_at: 2026-11-05
+
   # libcap RPM bundles a Go binary compiled with a vulnerable Go toolchain.
   # CVE is in Go's html/template package. Sandbox does not render HTML.
   - id: CVE-2026-27142
