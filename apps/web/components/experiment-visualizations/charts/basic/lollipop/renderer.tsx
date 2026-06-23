@@ -24,12 +24,10 @@ export function LollipopRenderer({
   const xColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "x")[0]?.source
     .columnName;
   const yEntry = dataSourcesByRole(visualization.dataConfig.dataSources, "y")[0];
-  const yColumn = yEntry.source.columnName;
-  // When the Y series carries a per-series aggregate (sum/avg/cumsum/…),
-  // the SQL projects it under `aggregateAliasForSource`'s alias scheme,
-  // not under the bare column name. Reading via `rowKeyForSource` keeps
-  // raw + aggregated rows working without a special-case branch here.
-  const yRowKey = rowKeyForSource(yEntry.source, yEntry.index);
+  const yColumn = yEntry?.source.columnName;
+  // rowKeyForSource projects per-series aggregates under an aliased
+  // column; reading via the helper keeps raw + aggregated paths uniform.
+  const yRowKey = yEntry ? rowKeyForSource(yEntry.source, yEntry.index) : undefined;
 
   const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
     orderBy: xColumn,
@@ -58,10 +56,8 @@ export function LollipopRenderer({
     return rows.map((row) => Number(row[yRowKey]));
   }, [rows, yRowKey]);
 
-  // Per-category error magnitudes when the Y series has an `errorColumn`
-  // set. `undefined` when unset so the wrapper skips the error block.
   const errors = useMemo<number[] | undefined>(() => {
-    const errorColumn = yEntry.source.errorColumn;
+    const errorColumn = yEntry?.source.errorColumn;
     if (!errorColumn) {
       return undefined;
     }
@@ -70,7 +66,7 @@ export function LollipopRenderer({
       const n = typeof v === "number" ? v : Number(v);
       return Number.isFinite(n) ? n : 0;
     });
-  }, [rows, yEntry.source.errorColumn]);
+  }, [rows, yEntry?.source.errorColumn]);
 
   const seriesColor = Array.isArray(chartConfig.color) ? chartConfig.color[0] : chartConfig.color;
   const dotSize = typeof chartConfig.marker?.size === "number" ? chartConfig.marker.size : 12;
@@ -95,7 +91,7 @@ export function LollipopRenderer({
         }
       : chartConfig;
 
-  const hasRows = rows.length > 0 && Boolean(xColumn) && Boolean(yColumn);
+  const hasRows = rows.length > 0 && Boolean(xColumn) && Boolean(yColumn) && Boolean(yEntry);
 
   return (
     <ChartFrame
@@ -109,7 +105,7 @@ export function LollipopRenderer({
         <LollipopChart
           categories={categories}
           values={values}
-          name={yEntry.source.alias ?? yColumn}
+          name={yEntry?.source.alias ?? yColumn}
           color={seriesColor}
           orientation={orientation}
           stemWidth={chartConfig.stemWidth}
