@@ -9,12 +9,14 @@ import { tsr } from "~/lib/tsr";
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type {
   BranchCell,
+  CommandCell,
   MacroCell,
   OutputCell,
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
+import { resolveInlineCommand } from "@repo/api/utils/command-payload";
 import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
@@ -136,13 +138,19 @@ export function useWorkbookExecution({
   const { isConnected, isConnecting, deviceInfo, driver, connect, disconnect } =
     useIotCommunication(sensorFamily, connectionType);
 
-  const { executeProtocol } = useIotProtocolExecution(driver, isConnected, sensorFamily);
+  const { executeProtocol, executeCommand } = useIotProtocolExecution(
+    driver,
+    isConnected,
+    sensorFamily,
+  );
   const executeMacroMutation = tsr.macros.executeMacro.useMutation();
 
   const isConnectedRef = useRef(isConnected);
   isConnectedRef.current = isConnected;
   const executeProtocolRef = useRef(executeProtocol);
   executeProtocolRef.current = executeProtocol;
+  const executeCommandRef = useRef(executeCommand);
+  executeCommandRef.current = executeCommand;
   const executeMacroMutationRef = useRef(executeMacroMutation);
   executeMacroMutationRef.current = executeMacroMutation;
 
@@ -200,6 +208,60 @@ export function useWorkbookExecution({
       } catch (err) {
         const executionTime = performance.now() - startTime;
         const message = err instanceof Error ? err.message : "Execution failed";
+        setCellState(cell.id, { status: "error", error: message });
+        return insertOutputAfterCell(
+          currentCells,
+          cell.id,
+          makeErrorOutputCell(cell.id, message, executionTime),
+        );
+      }
+    },
+    [setCellState],
+  );
+
+  // Normalises any non-object device response into the output cell's data shape.
+  const toOutputData = (data: unknown): Record<string, unknown> => {
+    if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+      return data as Record<string, unknown>;
+    }
+    return { response: data };
+  };
+
+  const runCommandCell = useCallback(
+    async (cell: CommandCell, currentCells: WorkbookCell[]) => {
+      let command: string | Record<string, unknown> | unknown[];
+      try {
+        command = resolveInlineCommand(cell.payload);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Invalid command content";
+        setCellState(cell.id, { status: "error", error: message });
+        return insertOutputAfterCell(currentCells, cell.id, makeErrorOutputCell(cell.id, message));
+      }
+
+      if (!isConnectedRef.current) {
+        setCellState(cell.id, { status: "error", error: "No device connected" });
+        return insertOutputAfterCell(
+          currentCells,
+          cell.id,
+          makeErrorOutputCell(cell.id, "No device connected - connect a device to run this command"),
+        );
+      }
+
+      setCellState(cell.id, { status: "running" });
+      const startTime = performance.now();
+
+      try {
+        const data = await executeCommandRef.current(command);
+        const executionTime = performance.now() - startTime;
+        setCellState(cell.id, { status: "completed" });
+        return insertOutputAfterCell(
+          currentCells,
+          cell.id,
+          makeOutputCell(cell.id, toOutputData(data), executionTime, []),
+        );
+      } catch (err) {
+        const executionTime = performance.now() - startTime;
+        const message = err instanceof Error ? err.message : "Command execution failed";
         setCellState(cell.id, { status: "error", error: message });
         return insertOutputAfterCell(
           currentCells,
@@ -271,7 +333,7 @@ export function useWorkbookExecution({
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeErrorOutputCell(cell.id, "Question text is required — add a question before running"),
+          makeErrorOutputCell(cell.id, "Question text is required: add a question before running"),
         );
       }
 
@@ -359,6 +421,8 @@ export function useWorkbookExecution({
       switch (cell.type) {
         case "protocol":
           return runProtocolCell(cell, currentCells);
+        case "command":
+          return runCommandCell(cell, currentCells);
         case "macro":
           return runMacroCell(cell, cellIndex, currentCells);
         case "question":
@@ -369,7 +433,7 @@ export function useWorkbookExecution({
           return currentCells;
       }
     },
-    [runProtocolCell, runMacroCell, runQuestionCell, runBranchCell],
+    [runProtocolCell, runCommandCell, runMacroCell, runQuestionCell, runBranchCell],
   );
 
   // Returns the jump index into `currentCells`, or -1 if no jump.

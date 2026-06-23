@@ -35,6 +35,7 @@ import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
 import type {
   BranchCell,
+  CommandCell,
   MacroCell,
   MarkdownCell,
   OutputCell,
@@ -466,6 +467,26 @@ export function createProtocolCell(overrides: Partial<ProtocolCell> = {}): Proto
   };
 }
 
+export function createCommandCell(
+  overrides: Partial<Omit<CommandCell, "payload">> & {
+    payload?: Partial<{ format: "string" | "json" | "yaml"; content: string; name: string }>;
+  } = {},
+): CommandCell {
+  cellSeq++;
+  const { payload, ...rest } = overrides;
+  return {
+    id: `cell-cmd-${cellSeq}`,
+    type: "command",
+    isCollapsed: false,
+    ...rest,
+    payload: {
+      format: payload?.format ?? "string",
+      content: payload?.content ?? "battery",
+      ...(payload?.name !== undefined ? { name: payload.name } : {}),
+    },
+  };
+}
+
 export function createMacroCell(overrides: Partial<MacroCell> = {}): MacroCell {
   cellSeq++;
   return {
@@ -677,7 +698,7 @@ export function createUpload(overrides: Partial<UploadMetadata> = {}): UploadMet
 
 // ── Helpers ─────────────────────────────────────────────────────
 
-/** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
+/** Reset sequence counters; useful in beforeEach if deterministic IDs matter */
 export function resetFactories() {
   experimentSeq = 0;
   transferSeq = 0;

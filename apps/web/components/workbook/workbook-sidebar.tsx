@@ -40,6 +40,7 @@ import { cn } from "@repo/ui/lib/utils";
 const cellColors: Record<string, string> = {
   question: "#C58AAE",
   protocol: "#2D3142",
+  command: "#119DA4",
   macro: "#6C5CE7",
   branch: "#F29D38",
   markdown: "#6F8596",
@@ -50,6 +51,7 @@ const cellColors: Record<string, string> = {
 const cellActiveBg: Record<string, string> = {
   question: "#F9F3F6",
   protocol: "#EAEBEE",
+  command: "#E7F6F6",
   macro: "#F1EFFD",
   branch: "#FBF3EA",
   markdown: "#F1F3F5",
@@ -58,6 +60,7 @@ const cellActiveBg: Record<string, string> = {
 const cellTypeLabels: Record<string, string> = {
   question: "Question",
   protocol: "Protocol",
+  command: "Command",
   macro: "Macro",
   branch: "Branch",
   markdown: "Markdown",
@@ -80,6 +83,8 @@ function getCellSubtitle(cell: WorkbookCell): string {
       return cell.question.text || "No question yet";
     case "protocol":
       return cell.payload.name ?? "JSON";
+    case "command":
+      return cell.payload.name ?? (cell.payload.content || cell.payload.format);
     case "macro":
       return cell.payload.name ?? capitalize(cell.payload.language);
     case "branch":
@@ -201,7 +206,7 @@ function SidebarRow({
         </div>
       </div>
 
-      {/* Drag handle (visual indicator only — the whole card drags) */}
+      {/* Drag handle (visual indicator only; the whole card drags) */}
       {draggable && (
         <div className="shrink-0">
           <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
