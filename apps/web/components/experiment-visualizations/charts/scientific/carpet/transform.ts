@@ -112,12 +112,15 @@ export function transformCarpetData(
     }
   }
 
-  // contourcarpet wants z[aIdx][bIdx] (rows = a, cols = b). pivotToMatrix
-  // returns z[yi][xi] = z[bIdx][aIdx], so transpose.
+  // Plotly's carpet/heatmap calc bins 1D columns as `_arr[bIdx][aIdx]`
+  // (heatmap/convert_column_xyz.js: rows = b, cols = a). z must match or
+  // interp2d + autoContours collapse to start >= end, emptyPathinfo
+  // returns [], makeCrossings crashes reading `pathinfo[0].z`.
+  // pivotToMatrix already returns z[yi][xi] = z[bIdx][aIdx], pass through.
   const carpetZ: number[][] = [];
-  for (let i = 0; i < aValuesNumeric.length; i++) {
+  for (let j = 0; j < bValuesNumeric.length; j++) {
     const row: number[] = [];
-    for (let j = 0; j < bValuesNumeric.length; j++) {
+    for (let i = 0; i < aValuesNumeric.length; i++) {
       row.push(z[j]?.[i] ?? NaN);
     }
     carpetZ.push(row);
